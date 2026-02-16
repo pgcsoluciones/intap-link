@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 interface PublicData {
+    profileId: string
     slug: string
     themeId: string
-    links: { label: string; url: string }[]
+    name: string | null
+    bio: string | null
+    links: { id: string; label: string; url: string }[]
+    gallery: { image_key: string }[]
     faqs: { question: string; answer: string }[] | null
 }
 
@@ -23,10 +27,21 @@ export default function PublicProfile() {
                 }
                 return res.json()
             })
-            .then(json => setData(json.data))
+            .then(json => {
+                setData(json.data)
+                trackEvent(json.data.profileId, 'view')
+            })
             .catch(() => { })
             .finally(() => setLoading(false))
     }, [slug])
+
+    const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
+        fetch('/api/v1/public/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ profileId, eventType, targetId })
+        })
+    }
 
     if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
     if (errorStatus === 403) return <PrivateBlock slug={slug || ''} />
@@ -44,8 +59,15 @@ export default function PublicProfile() {
         <div className="public-profile" style={{ background: theme.background }}>
             <div className="profile-card" style={{ color: theme.text }}>
                 <div className="profile-header">
-                    <div className="profile-avatar" style={{ background: theme.primary }}>{slug?.charAt(0).toUpperCase()}</div>
-                    <h1 style={{ color: theme.text || 'inherit' }}>@{slug}</h1>
+                    <div className="profile-avatar" style={{ background: theme.primary }}>
+                        {data?.name?.charAt(0).toUpperCase() || slug?.charAt(0).toUpperCase()}
+                    </div>
+                    <h1 style={{ color: theme.text || 'inherit', margin: '0.5rem 0 0.2rem 0' }}>{data?.name || `@${slug}`}</h1>
+                    {data?.bio && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '1rem 0 1.5rem 0', opacity: 0.8, lineHeight: '1.4' }}>
+                            {data.bio}
+                        </p>
+                    )}
                 </div>
 
                 <div className="profile-actions">
@@ -55,6 +77,7 @@ export default function PublicProfile() {
                         style={{ background: theme.primary }}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => trackEvent(data.profileId, 'click', 'whatsapp')}
                     >
                         Enviar WhatsApp
                     </a>
@@ -68,6 +91,7 @@ export default function PublicProfile() {
                                 rel="noopener noreferrer"
                                 className="link-button"
                                 style={{ background: theme.card, color: theme.text, borderColor: theme.border }}
+                                onClick={() => trackEvent(data.profileId, 'click', link.id)}
                             >
                                 {link.label}
                             </a>
