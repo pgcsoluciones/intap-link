@@ -1,0 +1,16 @@
+{
+  "name": "intap-links",
+  "private": true,
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "api:dev": "npm run dev -w api",
+    "web:dev": "npm run dev -w web",
+    "dev": "concurrently \"npm run api:dev\" \"npm run web:dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

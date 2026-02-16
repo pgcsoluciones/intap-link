@@ -1,0 +1,15 @@
+name = "intap-api"
+main = "src/index.ts"
+compatibility_date = "2024-02-08"
+
+# [vars]
+# ENVIRONMENT = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "intap_db"
+database_id = "3a2d724d-5938-4777-a63e-423bb41862c0"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "intap-r2"
