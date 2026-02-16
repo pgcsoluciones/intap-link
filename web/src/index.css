@@ -156,3 +156,157 @@ body {
     transform: rotate(360deg);
   }
 }
+
+/* Public Profile Styles - Premium UX */
+.public-profile {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3rem 1rem;
+  transition: background 0.3s ease;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-header {
+  margin-bottom: 1.5rem;
+}
+
+.profile-avatar {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.profile-header h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.5rem;
+}
+
+.links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.link-button {
+  display: block;
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.link-button:hover {
+  transform: scale(1.02);
+  filter: brightness(1.1);
+}
+
+.btn-whatsapp {
+  display: block;
+  width: 100%;
+  padding: 1.1rem;
+  border-radius: 0.75rem;
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.15);
+  transition: all 0.2s;
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px);
+  filter: saturate(1.2);
+}
+
+.faqs-section {
+  text-align: left;
+  margin-top: 3rem;
+}
+
+.faqs-section h3 {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+.faq-item {
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+.faq-q {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+
+.faq-a {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.public-footer {
+  margin-top: 4rem;
+  padding-bottom: 2rem;
+  font-size: 0.85rem;
+}
+
+.public-footer a {
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.public-footer a:hover {
+  opacity: 1;
+}
+
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
