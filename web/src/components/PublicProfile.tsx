@@ -19,7 +19,8 @@ export default function PublicProfile() {
     const [errorStatus, setErrorStatus] = useState<number | null>(null)
 
     useEffect(() => {
-        fetch(`/api/v1/public/profiles/${slug}`)
+        const apiUrl = import.meta.env.VITE_API_URL || ''
+        fetch(`${apiUrl}/api/v1/public/profiles/${slug}`)
             .then(res => {
                 if (!res.ok) {
                     setErrorStatus(res.status)
@@ -36,7 +37,8 @@ export default function PublicProfile() {
     }, [slug])
 
     const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
-        fetch('/api/v1/public/track', {
+        const apiUrl = import.meta.env.VITE_API_URL || ''
+        fetch(`${apiUrl}/api/v1/public/track`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ profileId, eventType, targetId })
