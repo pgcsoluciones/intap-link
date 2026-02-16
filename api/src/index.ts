@@ -97,7 +97,7 @@ app.get('/api/v1/profile/gallery/:profileId', async (c) => {
 // Perfil Público
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
-  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published FROM profiles WHERE slug = ?').bind(slug).first()
+  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio FROM profiles WHERE slug = ?').bind(slug).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
   if (!profile.is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
@@ -107,7 +107,16 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   return c.json({
     ok: true,
-    data: { profileId: profile.id, slug: profile.slug, themeId: profile.theme_id, links: links.results, gallery: gallery.results, entitlements }
+    data: {
+      profileId: profile.id,
+      slug: profile.slug,
+      themeId: profile.theme_id,
+      name: profile.name,
+      bio: profile.bio,
+      links: links.results,
+      gallery: gallery.results,
+      entitlements
+    }
   })
 })
 
