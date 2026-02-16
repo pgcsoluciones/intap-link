@@ -1,180 +1,45 @@
-:root {
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --bg-dark: #0f172a;
-  --bg-card: #1e293b;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --accent: #22d3ee;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --pro-gold: #f59e0b;
-  --locked: #475569;
+@import "tailwindcss";
+
+@theme {
+  --color-intap-dark: #030712;
+  --color-intap-card: #111827;
+  --color-intap-mint: #0df2c9;
+  --color-intap-blue: #3b82f6;
+
+  --radius-3xl: 24px;
+  --radius-4xl: 32px;
 }
 
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-dark);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
-}
-
-.dashboard-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #334155;
-  padding-bottom: 1rem;
-}
-
-.logo {
-  font-size: 1.5rem;
-  font-weight: 800;
-  background: linear-gradient(to right, var(--primary), var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
-}
-
-.stat-card {
-  background: var(--bg-card);
-  padding: 1.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #334155;
-  transition: transform 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-}
-
-.stat-label {
-  color: var(--text-muted);
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.stat-value {
-  font-size: 1.875rem;
-  font-weight: 700;
-  margin-top: 0.5rem;
-}
-
-.stat-progress-bg {
-  height: 6px;
-  background: #334155;
-  border-radius: 3px;
-  margin-top: 1rem;
-  overflow: hidden;
-}
-
-.stat-progress-bar {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.content-section {
-  background: var(--bg-card);
-  padding: 2rem;
-  border-radius: 1rem;
-  border: 1px solid #334155;
-}
-
-.btn-primary {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-primary:hover {
-  background: var(--primary-hover);
-}
-
-.stat-card.pro {
-  border: 1px solid var(--pro-gold);
-}
-
-.badge-pro {
-  background: var(--pro-gold);
-  color: black;
-  font-size: 0.6rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-weight: 800;
-  margin-left: 0.5rem;
-  vertical-align: middle;
-}
-
-.btn-locked {
-  background: var(--locked);
-  color: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.upsell-msg {
-  font-size: 0.75rem;
-  color: var(--pro-gold);
-  margin-top: 0.5rem;
-  display: block;
-}
-
-.loading-spinner {
-  width: 25px;
-  height: 25px;
-  border: 3px solid rgba(255, 255, 255, .3);
-  border-radius: 50%;
-  border-top-color: #fff;
-  animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+@layer base {
+  body {
+    @apply bg-intap-dark text-white antialiased;
+    font-family: 'Inter', sans-serif;
   }
 }
 
-/* Public Profile Styles - Premium UX */
-.public-profile {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 3rem 1rem;
-  transition: background 0.3s ease;
+@layer components {
+  .btn-gradient {
+    @apply bg-gradient-to-r from-intap-blue to-purple-600 font-bold py-4 px-6 rounded-3xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3;
+  }
+
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 p-4 rounded-2xl transition-colors hover:bg-white/10 cursor-pointer;
+  }
 }
 
-.profile-card {
-  width: 100%;
+.avatar-glow {
+  box-shadow: 0 0 20px rgba(13, 242, 201, 0.4);
+}
+
+.max-width-mobile {
   max-width: 480px;
-  text-align: center;
-  animation: fadeIn 0.6s ease-out;
 }
 
-@keyframes fadeIn {
+@keyframes fade-in {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -186,127 +51,6 @@ body {
   }
 }
 
-.profile-header {
-  margin-bottom: 1.5rem;
-}
-
-.profile-avatar {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  margin: 0 auto 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: white;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-}
-
-.profile-header h1 {
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  margin-bottom: 0.5rem;
-}
-
-.links-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin: 2rem 0;
-}
-
-.link-button {
-  display: block;
-  padding: 1rem 1.5rem;
-  border-radius: 0.75rem;
-  text-decoration: none;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-.link-button:hover {
-  transform: scale(1.02);
-  filter: brightness(1.1);
-}
-
-.btn-whatsapp {
-  display: block;
-  width: 100%;
-  padding: 1.1rem;
-  border-radius: 0.75rem;
-  color: white;
-  font-weight: 700;
-  text-decoration: none;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.15);
-  transition: all 0.2s;
-}
-
-.btn-whatsapp:hover {
-  transform: translateY(-2px);
-  filter: saturate(1.2);
-}
-
-.faqs-section {
-  text-align: left;
-  margin-top: 3rem;
-}
-
-.faqs-section h3 {
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
-  opacity: 0.9;
-}
-
-.faq-item {
-  margin-bottom: 0.75rem;
-  padding: 1rem;
-  border-radius: 0.5rem;
-}
-
-.faq-q {
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin-bottom: 0.4rem;
-}
-
-.faq-a {
-  font-size: 0.85rem;
-  line-height: 1.5;
-  opacity: 0.8;
-}
-
-.public-footer {
-  margin-top: 4rem;
-  padding-bottom: 2rem;
-  font-size: 0.85rem;
-}
-
-.public-footer a {
-  text-decoration: none;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.public-footer a:hover {
-  opacity: 1;
-}
-
-.loading-screen {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.error-page {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
 }

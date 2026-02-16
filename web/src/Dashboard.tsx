@@ -22,10 +22,8 @@ interface ProfileSettings {
 
 function Dashboard() {
     const [data, setData] = useState<DebugResponse | null>(null)
-    const [settings, setSettings] = useState<ProfileSettings>({ themeId: 'classic', isPublished: true })
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [saving, setSaving] = useState(false)
 
     const profileId = 'profile_debug'
 
@@ -43,127 +41,114 @@ function Dashboard() {
             .finally(() => setLoading(false))
     }, [])
 
-    const saveSettings = async (newSettings: Partial<ProfileSettings>) => {
-        setSaving(true)
-        const updated = { ...settings, ...newSettings }
-        try {
-            const res = await fetch('/api/v1/profile/settings', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profileId, ...updated })
-            })
-            if (res.ok) setSettings(updated)
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    if (loading) {
-        return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <div className="loading-spinner"></div>
-            </div>
-        )
-    }
-
-    if (error) {
-        return <div className="dashboard-container"><p style={{ color: 'var(--danger)' }}>{error}</p></div>
-    }
+    if (loading) return <div className="flex items-center justify-center h-screen bg-intap-dark"><div className="loading-spinner"></div></div>
+    if (error) return <div className="p-10 text-red-400 bg-intap-dark min-h-screen">{error}</div>
 
     const limits = data?.finalEntitlements
 
     return (
-        <div className="dashboard-container">
-            <header className="header">
-                <div className="logo">INTAP LINK</div>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Perfil: <strong>{data?.profileId}</strong></div>
-                    <Link to="/admin" style={{ fontSize: '0.7rem', color: 'var(--accent)', textDecoration: 'none' }}>Super Admin</Link>
+        <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex overflow-hidden">
+            {/* Sidebar Mockup Style */}
+            <aside className="w-64 bg-white/5 backdrop-blur-2xl border-r border-white/5 p-6 flex flex-col gap-2">
+                <div className="text-xl font-extrabold mb-10 tracking-tighter bg-gradient-to-r from-intap-mint to-intap-blue bg-clip-text text-transparent">
+                    INTAP LINK
                 </div>
-            </header>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '2rem', alignItems: 'start' }}>
-                <div>
-                    <section className="stats-grid">
-                        <StatCard
-                            label="Enlaces Permitidos"
-                            current={0}
-                            max={limits?.maxLinks || 0}
-                            color="#6366f1"
-                        />
-                        <StatCard
-                            label="vCard"
-                            current={limits?.canUseVCard ? 1 : 0}
-                            max={1}
-                            color={limits?.canUseVCard ? "#10b981" : "var(--locked)"}
-                            isPro={true}
-                            isActive={limits?.canUseVCard}
-                        />
-                        <StatCard
-                            label="Galería Pro"
-                            current={0}
-                            max={Number(limits?.maxPhotos || 0)}
-                            color={Number(limits?.maxPhotos || 0) > 0 ? "var(--accent)" : "var(--locked)"}
-                            isPro={true}
-                            isActive={Number(limits?.maxPhotos || 0) > 0}
-                        />
-                    </section>
-
-                    <main className="content-section">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ margin: 0 }}>Gestión de Enlaces</h2>
-                            <span className="badge-pro">
-                                PLAN: {data?.basePlan.toUpperCase()}
-                            </span>
-                        </div>
-
-                        <div style={{ padding: '3rem', border: '2px dashed #334155', borderRadius: '1rem', textAlign: 'center' }}>
-                            <p>Links creados: <strong>0 / {limits?.maxLinks}</strong></p>
-                            <button className="btn-primary" disabled>+ Crear Nuevo Link</button>
-                        </div>
-
-                        <AnalyticsPanel profileId={profileId} />
-                    </main>
+                <div className="nav-item bg-white/10 text-white font-bold">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    Perfil
                 </div>
+                <div className="nav-item">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 002-2v-3a2 2 0 00-2-2h-3" /></svg>
+                    Estadísticas
+                </div>
+                <div className="nav-item">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                    Módulos PRO
+                </div>
+                <div className="mt-auto opacity-50 text-[10px] text-center">v1.2.5 Final Build</div>
+            </aside>
 
-                <aside className="content-section" style={{ padding: '1.5rem' }}>
-                    <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Personalización</h3>
-
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Tema Visual</label>
-                        <select
-                            value={settings.themeId}
-                            onChange={(e) => saveSettings({ themeId: e.target.value })}
-                            style={{ width: '100%', background: '#0f172a', color: 'white', border: '1px solid #334155', padding: '0.5rem', borderRadius: '0.4rem' }}
-                        >
-                            <option value="classic">Classic Blue</option>
-                            <option value="dark">Total Black</option>
-                            <option value="modern">Modern Mint</option>
-                        </select>
+            {/* Main Content Dashboard */}
+            <main className="flex-1 overflow-y-auto p-10">
+                <header className="flex justify-between items-center mb-10">
+                    <h1 className="text-2xl font-bold">Dashboard</h1>
+                    <div className="flex gap-4">
+                        <Link to="/admin" className="text-xs bg-intap-mint/10 text-intap-mint px-4 py-2 rounded-full font-bold hover:bg-intap-mint/20 transition-all">Super Admin</Link>
                     </div>
+                </header>
 
-                    <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.8rem' }}>Publicado</span>
-                        <input
-                            type="checkbox"
-                            checked={settings.isPublished}
-                            onChange={(e) => saveSettings({ isPublished: e.target.checked })}
-                            style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                        />
-                    </div>
-
-                    <div style={{ padding: '1rem', background: '#0f172a', borderRadius: '0.5rem', fontSize: '0.75rem', border: '1px solid #1e293b' }}>
-                        <div style={{ color: settings.isPublished ? 'var(--success)' : 'var(--danger)', fontWeight: 'bold', marginBottom: '0.4rem' }}>
-                            {settings.isPublished ? '● Perfil Online' : '○ Perfil Privado'}
+                <div className="max-w-4xl">
+                    {/* Gráfica Visitas Mockup */}
+                    <div className="glass-card p-8 mb-8">
+                        <div className="flex justify-between items-end mb-6">
+                            <div>
+                                <h3 className="text-slate-400 text-sm font-medium mb-1">Visitas Últimos 7 Días</h3>
+                                <div className="text-3xl font-bold">4.8K</div>
+                            </div>
+                            <div className="flex gap-1 items-end h-16">
+                                {[40, 60, 45, 90, 65, 80, 100].map((h, i) => (
+                                    <div key={i} className="w-2 bg-intap-mint rounded-full opacity-20 hover:opacity-100 transition-all cursor-help" style={{ height: `${h}%` }} title={`Día ${i + 1}: ${h * 10} visitas`}></div>
+                                ))}
+                            </div>
                         </div>
-                        {saving && <span style={{ color: 'var(--accent)' }}>Guardando...</span>}
+                        {/* Mockup Line Graph SVG */}
+                        <svg className="w-full h-24 text-intap-mint" viewBox="0 0 400 100" preserveAspectRatio="none">
+                            <path d="M0,80 Q50,70 100,50 T200,40 T300,20 T400,10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                            <circle cx="400" cy="10" r="4" fill="currentColor" />
+                        </svg>
+                        <div className="flex justify-between mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span>Lun</span><span>Mar</span><span>Mie</span><span>Jue</span><span>Vie</span><span>Sab</span><span>Dom</span>
+                        </div>
                     </div>
-                </aside>
-            </div>
 
-            <footer style={{ marginTop: '3rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                ID de Base de Datos: 3a2d724d-5938-4777-a63e-423bb41862c0
-            </footer>
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-3 gap-6 mb-8">
+                        <div className="glass-card p-6 border-b-4 border-intap-blue/30">
+                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Total de Clicks</p>
+                            <p className="text-2xl font-black italic">1.2K</p>
+                        </div>
+                        <div className="glass-card p-6 border-b-4 border-purple-500/30">
+                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Tasa Conv.</p>
+                            <p className="text-2xl font-black italic">15%</p>
+                        </div>
+                        <div className="glass-card p-6 border-b-4 border-intap-mint/30">
+                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Modulo vCard</p>
+                            <div className="inline-flex items-center gap-2 bg-intap-mint/20 text-intap-mint text-[10px] font-black px-3 py-1 rounded-full border border-intap-mint/30 uppercase">
+                                Activo <span className="text-sm">✓</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button className="bg-intap-mint text-intap-dark font-black py-4 px-8 rounded-full flex items-center gap-3 mb-10 hover:shadow-[0_0_30px_rgba(13,242,201,0.3)] transition-all transform hover:-translate-y-1">
+                        Desbloquear PRO <span className="text-xl">✨</span>
+                    </button>
+
+                    <h2 className="text-lg font-bold mb-6 flex items-center gap-2">
+                        Tus Módulos PRO <span className="w-2 h-2 bg-intap-mint rounded-full animate-pulse"></span>
+                    </h2>
+
+                    <div className="grid grid-cols-2 gap-6 mb-8">
+                        <div className="glass-card p-8 flex flex-col items-center text-center opacity-60 group cursor-not-allowed">
+                            <div className="w-16 h-16 bg-blue-500/20 rounded-3xl flex items-center justify-center mb-4 relative">
+                                <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                <div className="absolute -top-2 -right-2 bg-intap-dark p-1 rounded-full border border-white/10"><svg className="w-3 h-3 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg></div>
+                            </div>
+                            <h4 className="font-bold text-sm mb-1">Analytics Avanzada</h4>
+                            <p className="text-[10px] text-slate-500">Métricas en tiempo real</p>
+                        </div>
+                        <div className="glass-card p-8 flex flex-col items-center text-center opacity-60 group cursor-not-allowed">
+                            <div className="w-16 h-16 bg-purple-500/20 rounded-3xl flex items-center justify-center mb-4 relative">
+                                <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                                <div className="absolute -top-2 -right-2 bg-intap-dark p-1 rounded-full border border-white/10"><svg className="w-3 h-3 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg></div>
+                            </div>
+                            <h4 className="font-bold text-sm mb-1">Integraciones</h4>
+                            <p className="text-[10px] text-slate-500">Facebook & Google Ads</p>
+                        </div>
+                    </div>
+
+                    <GalleryPanel profileId={profileId} />
+                </div>
+            </main>
         </div>
     )
 }
