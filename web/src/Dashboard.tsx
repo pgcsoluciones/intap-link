@@ -8,47 +8,68 @@ interface Entitlements {
     canUseVCard: boolean
 }
 
-interface DebugResponse {
-    ok: boolean
-    profileId: string
-    basePlan: string
-    finalEntitlements: Entitlements
+interface UserProfile {
+    id: string
+    slug: string
+    plan_id: string
+    theme_id: string
+    is_published: boolean
+    name: string | null
+    bio: string | null
 }
 
-interface ProfileSettings {
-    themeId: string
-    isPublished: boolean
+interface Stats {
+    totalViews: number | string
+    dailyViews: { day: string; count: number }[]
+    topLinks: { label: string; clics: number }[]
+}
+
+interface GalleryPhoto {
+    id: string
+    image_key: string
+    image_url: string
+    sort_order: number
+}
+
+function getAuthToken(): string | null {
+    return localStorage.getItem('intap_token')
 }
 
 function Dashboard() {
-    const [data, setData] = useState<DebugResponse | null>(null)
+    const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const profileId = 'profile_debug'
-
     useEffect(() => {
-        fetch(`/api/debug/entitlements/${profileId}`)
-            .then(res => res.json())
-            .then((json: DebugResponse) => {
-                if (json.ok) {
-                    setData(json)
-                } else {
-                    setError('No se pudo cargar la configuración')
-                }
+        const token = getAuthToken()
+        if (!token) {
+            setError('Debes iniciar sesión para acceder al dashboard.')
+            setLoading(false)
+            return
+        }
+        fetch('/api/v1/me/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+            .then(res => {
+                if (res.status === 401) throw new Error('Sesión expirada. Por favor inicia sesión de nuevo.')
+                if (!res.ok) throw new Error('No se pudo cargar el perfil')
+                return res.json()
             })
-            .catch(() => setError('Error de conexión con la API'))
+            .then(json => {
+                if (json.ok) setProfile(json.profile)
+                else setError(json.error || 'Error al cargar el perfil')
+            })
+            .catch(err => setError(err.message || 'Error de conexión con la API'))
             .finally(() => setLoading(false))
     }, [])
 
     if (loading) return <div className="flex items-center justify-center h-screen bg-intap-dark"><div className="loading-spinner"></div></div>
     if (error) return <div className="p-10 text-red-400 bg-intap-dark min-h-screen">{error}</div>
-
-    const limits = data?.finalEntitlements
+    if (!profile) return null
 
     return (
         <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex overflow-hidden">
-            {/* Sidebar Mockup Style */}
+            {/* Sidebar */}
             <aside className="w-64 bg-white/5 backdrop-blur-2xl border-r border-white/5 p-6 flex flex-col gap-2">
                 <div className="text-xl font-extrabold mb-10 tracking-tighter bg-gradient-to-r from-intap-mint to-intap-blue bg-clip-text text-transparent">
                     INTAP LINK
@@ -65,10 +86,10 @@ function Dashboard() {
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                     Módulos PRO
                 </div>
-                <div className="mt-auto opacity-50 text-[10px] text-center">v1.2.5 Final Build</div>
+                <div className="mt-auto opacity-50 text-[10px] text-center">@{profile.slug}</div>
             </aside>
 
-            {/* Main Content Dashboard */}
+            {/* Main Content */}
             <main className="flex-1 overflow-y-auto p-10">
                 <header className="flex justify-between items-center mb-10">
                     <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -78,48 +99,10 @@ function Dashboard() {
                 </header>
 
                 <div className="max-w-4xl">
-                    {/* Gráfica Visitas Mockup */}
-                    <div className="glass-card p-8 mb-8">
-                        <div className="flex justify-between items-end mb-6">
-                            <div>
-                                <h3 className="text-slate-400 text-sm font-medium mb-1">Visitas Últimos 7 Días</h3>
-                                <div className="text-3xl font-bold">4.8K</div>
-                            </div>
-                            <div className="flex gap-1 items-end h-16">
-                                {[40, 60, 45, 90, 65, 80, 100].map((h, i) => (
-                                    <div key={i} className="w-2 bg-intap-mint rounded-full opacity-20 hover:opacity-100 transition-all cursor-help" style={{ height: `${h}%` }} title={`Día ${i + 1}: ${h * 10} visitas`}></div>
-                                ))}
-                            </div>
-                        </div>
-                        {/* Mockup Line Graph SVG */}
-                        <svg className="w-full h-24 text-intap-mint" viewBox="0 0 400 100" preserveAspectRatio="none">
-                            <path d="M0,80 Q50,70 100,50 T200,40 T300,20 T400,10" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                            <circle cx="400" cy="10" r="4" fill="currentColor" />
-                        </svg>
-                        <div className="flex justify-between mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                            <span>Lun</span><span>Mar</span><span>Mie</span><span>Jue</span><span>Vie</span><span>Sab</span><span>Dom</span>
-                        </div>
-                    </div>
+                    {/* Gráfica Visitas */}
+                    <AnalyticsPanel profileId={profile.id} />
 
-                    {/* Metrics Grid */}
-                    <div className="grid grid-cols-3 gap-6 mb-8">
-                        <div className="glass-card p-6 border-b-4 border-intap-blue/30">
-                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Total de Clicks</p>
-                            <p className="text-2xl font-black italic">1.2K</p>
-                        </div>
-                        <div className="glass-card p-6 border-b-4 border-purple-500/30">
-                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Tasa Conv.</p>
-                            <p className="text-2xl font-black italic">15%</p>
-                        </div>
-                        <div className="glass-card p-6 border-b-4 border-intap-mint/30">
-                            <p className="text-slate-400 text-xs font-bold uppercase mb-2">Modulo vCard</p>
-                            <div className="inline-flex items-center gap-2 bg-intap-mint/20 text-intap-mint text-[10px] font-black px-3 py-1 rounded-full border border-intap-mint/30 uppercase">
-                                Activo <span className="text-sm">✓</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button className="bg-intap-mint text-intap-dark font-black py-4 px-8 rounded-full flex items-center gap-3 mb-10 hover:shadow-[0_0_30px_rgba(13,242,201,0.3)] transition-all transform hover:-translate-y-1">
+                    <button className="bg-intap-mint text-intap-dark font-black py-4 px-8 rounded-full flex items-center gap-3 mb-10 mt-8 hover:shadow-[0_0_30px_rgba(13,242,201,0.3)] transition-all transform hover:-translate-y-1">
                         Desbloquear PRO <span className="text-xl">✨</span>
                     </button>
 
@@ -146,7 +129,7 @@ function Dashboard() {
                         </div>
                     </div>
 
-                    <GalleryPanel profileId={profileId} />
+                    <GalleryPanel profileId={profile.id} />
                 </div>
             </main>
         </div>
@@ -154,7 +137,7 @@ function Dashboard() {
 }
 
 function GalleryPanel({ profileId }: { profileId: string }) {
-    const [photos, setPhotos] = useState<any[]>([])
+    const [photos, setPhotos] = useState<GalleryPhoto[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -171,10 +154,10 @@ function GalleryPanel({ profileId }: { profileId: string }) {
             <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem' }}>Galería de Imágenes Pro</h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                {photos.map((p, i) => (
-                    <div key={i} style={{ aspectRatio: '1', background: '#1e293b', borderRadius: '0.4rem', position: 'relative', overflow: 'hidden' }}>
+                {photos.map((p) => (
+                    <div key={p.id} style={{ aspectRatio: '1', background: '#1e293b', borderRadius: '0.4rem', position: 'relative', overflow: 'hidden' }}>
                         <img
-                            src={`https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${p.image_key}`}
+                            src={p.image_url}
                             alt="Gallery"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
@@ -198,7 +181,7 @@ function GalleryPanel({ profileId }: { profileId: string }) {
 }
 
 function AnalyticsPanel({ profileId }: { profileId: string }) {
-    const [stats, setStats] = useState<any>(null)
+    const [stats, setStats] = useState<Stats | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -210,49 +193,39 @@ function AnalyticsPanel({ profileId }: { profileId: string }) {
             .finally(() => setLoading(false))
     }, [profileId])
 
-    if (loading) return <div style={{ marginTop: '2rem', height: '100px', background: '#0f172a', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando estadísticas...</div>
+    if (loading) return <div className="glass-card p-8 mb-8" style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Cargando estadísticas...</div>
 
     return (
-        <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#0f172a', borderRadius: '0.5rem', border: '1px solid #334155' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem' }}>Estadísticas de Rendimiento</h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div className="glass-card p-8 mb-8">
+            <div className="flex justify-between items-end mb-6">
                 <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Visitas Reales (7 días)</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--accent)' }}>
-                        {stats?.totalViews || 0}
-                    </div>
-                    <div style={{ marginTop: '1rem', display: 'flex', gap: '4px', alignItems: 'flex-end', height: '40px' }}>
-                        {stats?.dailyViews.map((v: any, i: number) => (
-                            <div
-                                key={i}
-                                title={`${v.day}: ${v.count}`}
-                                style={{
-                                    flex: 1,
-                                    background: 'var(--primary)',
-                                    height: `${Math.min((v.count / (stats.totalViews || 1)) * 100 + 10, 100)}%`,
-                                    borderRadius: '2px'
-                                }}
-                            />
+                    <h3 className="text-slate-400 text-sm font-medium mb-1">Visitas Últimos 7 Días</h3>
+                    <div className="text-3xl font-bold">{stats?.totalViews ?? 0}</div>
+                </div>
+                <div className="flex gap-1 items-end h-16">
+                    {(stats?.dailyViews ?? []).map((v, i) => {
+                        const max = Math.max(...(stats?.dailyViews ?? []).map(d => d.count), 1)
+                        return (
+                            <div key={i} className="w-2 bg-intap-mint rounded-full opacity-20 hover:opacity-100 transition-all cursor-help" style={{ height: `${(v.count / max) * 100}%` }} title={`${v.day}: ${v.count} visitas`}></div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs text-slate-500 font-bold uppercase mb-2">Enlaces más clicados</p>
+                {stats?.topLinks && stats.topLinks.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                        {stats.topLinks.map((link, i) => (
+                            <div key={i} className="flex justify-between text-sm">
+                                <span className="text-slate-400">{link.label}</span>
+                                <span className="font-bold">{link.clics} clics</span>
+                            </div>
                         ))}
                     </div>
-                </div>
-
-                <div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Enlaces más Clicados</div>
-                    {stats?.topLinks.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {stats.topLinks.map((link: any, i: number) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                                    <span style={{ color: 'var(--text-muted)' }}>{link.label}</span>
-                                    <span style={{ fontWeight: 'bold' }}>{link.clics} clics</span>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Sin clics registrados.</p>
-                    )}
-                </div>
+                ) : (
+                    <p className="text-xs text-slate-500">Sin clics registrados aún.</p>
+                )}
             </div>
         </div>
     )

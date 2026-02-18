@@ -9,39 +9,63 @@ interface Profile {
     is_published: boolean
 }
 
+function getAuthToken(): string | null {
+    return localStorage.getItem('intap_token')
+}
+
 export default function AdminPanel() {
     const [profiles, setProfiles] = useState<Profile[]>([])
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState('')
-
-    const adminEmail = 'juanluis@intaprd.com'
+    const [unauthorized, setUnauthorized] = useState(false)
 
     useEffect(() => {
+        const token = getAuthToken()
+        if (!token) {
+            setUnauthorized(true)
+            setLoading(false)
+            return
+        }
         fetch('/api/v1/admin/profiles', {
-            headers: { 'X-User-Email': adminEmail }
+            headers: { 'Authorization': `Bearer ${token}` }
         })
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401 || res.status === 403) {
+                    setUnauthorized(true)
+                    return null
+                }
+                return res.json()
+            })
             .then(json => {
-                if (json.ok) setProfiles(json.data)
+                if (json?.ok) setProfiles(json.data)
             })
             .finally(() => setLoading(false))
     }, [])
 
     const activateModule = async (profileId: string, moduleCode: string) => {
+        const token = getAuthToken()
+        if (!token) { setMessage('No autenticado'); return }
+
         const res = await fetch('/api/v1/admin/activate-module', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                profileId,
-                moduleCode,
-                secret: 'intap_master_key'
-            })
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ profileId, moduleCode }),
         })
         const json = await res.json()
         setMessage(json.ok ? `Módulo ${moduleCode} activado correctamente` : json.error)
     }
 
     if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
+
+    if (unauthorized) return (
+        <div className="min-h-screen bg-intap-dark text-white flex flex-col items-center justify-center gap-4">
+            <p className="text-red-400 font-bold">Acceso denegado. Debes iniciar sesión como administrador.</p>
+            <Link to="/" className="text-xs text-intap-mint hover:underline">Volver al inicio</Link>
+        </div>
+    )
 
     return (
         <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4 overflow-x-hidden">

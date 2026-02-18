@@ -2,8 +2,14 @@ name = "intap-api"
 main = "src/index.ts"
 compatibility_date = "2024-02-08"
 
-# [vars]
-# ENVIRONMENT = "production"
+[vars]
+# Orígenes permitidos (separados por coma). Actualizar con el dominio real del frontend.
+ALLOWED_ORIGINS = "https://intap-link.pages.dev,http://localhost:5173"
+# URL pública del bucket R2 (sin barra final)
+R2_PUBLIC_URL = "https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev"
+
+# JWT_SECRET debe configurarse como secreto seguro, NUNCA como variable:
+#   wrangler secret put JWT_SECRET
 
 [[d1_databases]]
 binding = "DB"

@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
+interface GalleryItem {
+    image_key: string
+    image_url: string
+}
+
+interface ProfileLink {
+    id: string
+    label: string
+    url: string
+}
+
 interface PublicData {
     profileId: string
     slug: string
     themeId: string
     name: string | null
     bio: string | null
-    links: { id: string; label: string; url: string }[]
-    gallery: { image_key: string }[]
+    links: ProfileLink[]
+    gallery: GalleryItem[]
     faqs: { question: string; answer: string }[] | null
     entitlements: { canUseVCard: boolean; maxLinks: number; maxPhotos: number; maxFaqs: number }
 }
@@ -42,21 +53,13 @@ export default function PublicProfile() {
         fetch(`${apiUrl}/api/v1/public/track`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ profileId, eventType, targetId })
+            body: JSON.stringify({ profileId, eventType, targetId }),
         })
     }
 
     if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
     if (errorStatus === 403) return <PrivateBlock slug={slug || ''} />
     if (errorStatus || !data) return <NotFound />
-
-    // Temas visuales dinámicos
-    const themeStyles: Record<string, any> = {
-        classic: { background: 'var(--bg-dark)', primary: 'var(--primary)', accent: 'var(--accent)' },
-        dark: { background: '#000', primary: '#fff', accent: '#fff', text: '#fff' },
-        modern: { background: '#f0fdf4', primary: '#059669', accent: '#10b981', text: '#064e3b', card: '#ffffff', border: '#d1fae5' }
-    }
-    const theme = themeStyles[data.themeId] || themeStyles.classic
 
     return (
         <div className="min-h-screen bg-intap-dark flex justify-center items-start pt-12 pb-20 px-4">
@@ -66,7 +69,7 @@ export default function PublicProfile() {
                 <div className="mb-8">
                     <div className="w-24 h-24 rounded-full mx-auto mb-6 border-2 border-intap-mint p-1 shadow-[0_0_20px_rgba(13,242,201,0.3)] bg-intap-card flex items-center justify-center overflow-hidden">
                         {data.gallery && data.gallery.length > 0 ? (
-                            <img src={`https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${data.gallery[0].image_key}`} alt={data.name || ''} className="w-full h-full object-cover rounded-full" />
+                            <img src={data.gallery[0].image_url} alt={data.name || ''} className="w-full h-full object-cover rounded-full" />
                         ) : (
                             <span className="text-3xl font-bold text-intap-mint">
                                 {data.name?.charAt(0).toUpperCase() || slug?.charAt(0).toUpperCase()}
@@ -102,6 +105,7 @@ export default function PublicProfile() {
                                 key={link.id}
                                 href={link.url}
                                 target="_blank"
+                                rel="noopener noreferrer"
                                 className="flex items-center justify-center gap-3 bg-[#25D366] text-white font-bold py-4 rounded-3xl transition-transform hover:scale-[1.01]"
                                 onClick={() => trackEvent(data.profileId, 'click', link.id)}
                             >
@@ -110,14 +114,15 @@ export default function PublicProfile() {
                         ))
                     )}
 
-                    {/* Otros enlaces en grid de 2 columnas para estilo mockup */}
+                    {/* Otros enlaces en grid de 2 columnas */}
                     <div className="grid grid-cols-2 gap-3">
-                        {data.links.filter(l => !l.label.toLowerCase().includes('whatsapp')).map((link, i) => (
+                        {data.links.filter(l => !l.label.toLowerCase().includes('whatsapp')).map((link) => (
                             <a
                                 key={link.id}
                                 href={link.url}
                                 target="_blank"
-                                className={`flex items-center justify-center gap-2 py-3 px-2 rounded-2xl glass-card text-sm font-semibold text-white/90 hover:bg-white/10`}
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 py-3 px-2 rounded-2xl glass-card text-sm font-semibold text-white/90 hover:bg-white/10"
                                 onClick={() => trackEvent(data.profileId, 'click', link.id)}
                             >
                                 <span className="truncate">{link.label}</span>
@@ -152,7 +157,7 @@ export default function PublicProfile() {
                     <div className="grid grid-cols-3 gap-2 mb-10">
                         {data.gallery.slice(1).map((img, i) => (
                             <div key={i} className="aspect-square rounded-xl overflow-hidden glass-card">
-                                <img src={`https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${img.image_key}`} className="w-full h-full object-cover" alt="Pro" />
+                                <img src={img.image_url} className="w-full h-full object-cover" alt="Pro" />
                             </div>
                         ))}
                     </div>
