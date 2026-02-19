@@ -30,25 +30,15 @@ app.get('/api/health', (c) => c.json({ ok: true, status: 'healthy' }))
 
 app.post('/api/v1/auth/magic-link', async (c) => {
   const { email } = await c.req.json()
-  // Simulación: Generamos un código de 6 dígitos
   const code = Math.floor(100000 + Math.random() * 900000).toString()
-
-  // Guardamos en D1 para verificación temporal (Opcional, aquí simulamos que el código es '123456' para el test)
   console.log(`[AUTH] Código enviado a ${email}: ${code}`)
-
   return c.json({ ok: true, message: 'Código enviado (revisa la consola)' })
 })
 
 app.post('/api/v1/auth/verify', async (c) => {
   const { email, code } = await c.req.json()
-
-  // Simulación de verificación
   if (code !== '123456') return c.json({ ok: false, error: 'Código inválido' }, 401)
-
-  // En producción buscaríamos al usuario en D1
-  const payload = { email, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 } // 24h
-  // const token = await jwt.sign(payload, c.env.JWT_SECRET) // Comentado hasta tener el secret en wrangler.toml
-
+  const payload = { email, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 }
   return c.json({ ok: true, token: 'mock-jwt-token', user: { email } })
 })
 
@@ -76,15 +66,11 @@ app.get('/api/v1/profile/stats/:profileId', async (c) => {
 app.post('/api/v1/profile/gallery/upload', async (c) => {
   const { profileId } = await c.req.parseBody()
   const file = (await c.req.formData()).get('file') as File
-
   if (!file) return c.json({ ok: false, error: 'No file' }, 400)
-
   const key = `profiles/${profileId}/${crypto.randomUUID()}-${file.name}`
   await c.env.BUCKET.put(key, file.stream())
-
   const id = crypto.randomUUID()
   await c.env.DB.prepare(`INSERT INTO profile_gallery (id, profile_id, image_key, sort_order) VALUES (?, ?, ?, 0)`).bind(id, profileId, key).run()
-
   return c.json({ ok: true, id, key })
 })
 
@@ -94,15 +80,51 @@ app.get('/api/v1/profile/gallery/:profileId', async (c) => {
   return c.json({ ok: true, photos: photos.results })
 })
 
-// Perfil Público
+// --- Perfil Público (v1.2) ---
+
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
-  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio FROM profiles WHERE slug = ?').bind(slug).first()
+
+  const profile = await c.env.DB.prepare(
+    'SELECT id, slug, theme_id, is_published, name, bio FROM profiles WHERE slug = ?'
+  ).bind(slug).first()
+
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
   if (!profile.is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
-  const links = await c.env.DB.prepare('SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
-  const gallery = await c.env.DB.prepare('SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
+  // Links con type (v1.2)
+  const links = await c.env.DB.prepare(
+    'SELECT id, label, url, type FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC'
+  ).bind(profile.id).all()
+
+  // Avatar desde profile_assets (v1.2)
+  let avatar: string | null = null
+  try {
+    const avatarRow = await c.env.DB.prepare(
+      'SELECT asset_key FROM profile_assets WHERE profile_id = ? AND asset_type = ? LIMIT 1'
+    ).bind(profile.id, 'avatar').first()
+    avatar = avatarRow ? (avatarRow.asset_key as string) : null
+  } catch {
+    avatar = null
+  }
+
+  // Galería Pro
+  const gallery = await c.env.DB.prepare(
+    'SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC'
+  ).bind(profile.id).all()
+
+  // FAQs
+  let faqs: any[] = []
+  try {
+    const faqRows = await c.env.DB.prepare(
+      'SELECT question, answer FROM profile_faqs WHERE profile_id = ? ORDER BY rowid ASC'
+    ).bind(profile.id).all()
+    faqs = faqRows.results
+  } catch {
+    faqs = []
+  }
+
+  // Entitlements con allowedTemplates (v1.2)
   const entitlements = await getEntitlements(c, profile.id as string)
 
   return c.json({
@@ -111,16 +133,19 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       profileId: profile.id,
       slug: profile.slug,
       themeId: profile.theme_id,
-      name: profile.name,
-      bio: profile.bio,
+      name: profile.name ?? null,
+      bio: profile.bio ?? null,
+      avatar,
       links: links.results,
       gallery: gallery.results,
+      faqs,
       entitlements
     }
   })
 })
 
-// Admin
+// --- Admin ---
+
 app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
   const profiles = await c.env.DB.prepare(`SELECT p.id, p.slug, p.plan_id, p.is_published, u.email FROM profiles p JOIN users u ON p.user_id = u.id`).all()
   return c.json({ ok: true, data: profiles.results })
