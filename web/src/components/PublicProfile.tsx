@@ -1,259 +1,238 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 
-interface PublicData {
+type PublicLink = { id: string; label: string; url: string };
+
+type PublicGalleryItem = {
+  image_key: string;
+  image_url?: string | null; // viene resuelto por la API nueva (Plan B assets endpoint)
+};
+
+type PublicFaq = { question: string; answer: string };
+
+type PublicEntitlements = {
+  canUseVCard: boolean;
+  maxLinks: number;
+  maxPhotos: number;
+  maxFaqs: number;
+};
+
+type PublicData = {
   profileId: string;
   slug: string;
   themeId: string;
   name: string | null;
   bio: string | null;
-  links: { id: string; label: string; url: string }[];
-  gallery: { image_key: string; image_url: string | null }[];
-  faqs: { question: string; answer: string }[] | null;
-  entitlements: { canUseVCard: boolean; maxLinks: number; maxPhotos: number; maxFaqs: number };
-}
-export default function PublicProfile() {
-  const params = useParams()
-  const slug =
-    (params.slug as string | undefined) ||
-    new URLSearchParams(window.location.search).get('slug') ||
-    ''
+  links: PublicLink[];
+  gallery: PublicGalleryItem[];
+  faqs: PublicFaq[] | null;
+  entitlements: PublicEntitlements;
+};
 
-  const [data, setData] = useState<PublicData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [errorStatus, setErrorStatus] = useState<number | null>(null)
+function getSlugFromQueryOrPath(): string | undefined {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("slug") || undefined;
+    return q?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeApiBase(raw: string): string {
+  // evita doble // y permite que VITE_API_URL venga con o sin / al final
+  return (raw || "").replace(/\/+$/, "");
+}
+
+function NotFound() {
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
+      <div className="max-w-md w-full text-center">
+        <div className="text-2xl font-bold mb-2">Perfil no encontrado</div>
+        <div className="text-white/70 text-sm mb-6">
+          Verifica el enlace o intenta nuevamente.
+        </div>
+        <Link
+          to="/"
+          className="inline-flex items-center justify-center rounded-lg px-4 py-2 bg-white text-black font-medium"
+        >
+          Ir al inicio
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="text-white/70 text-sm">Cargando perfil...</div>
+    </div>
+  );
+}
+
+export default function PublicProfile() {
+  const params = useParams();
+  const slugFromParams = (params as any)?.slug as string | undefined;
+  const slugFromQuery = useMemo(() => getSlugFromQueryOrPath(), []);
+  const slug = (slugFromParams || slugFromQuery || "").trim();
+
+  const apiBase = useMemo(() => {
+    const env = (import.meta as any).env?.VITE_API_URL || "";
+    return normalizeApiBase(env);
+  }, []);
+
+  const [data, setData] = useState<PublicData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   useEffect(() => {
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    let cancelled = false;
 
-    // Si no hay slug (ni en /:slug ni en ?slug=), no hacemos fetch
-    if (!slug) {
-      setLoading(false)
-      setErrorStatus(404)
-      return
-    }
+    async function run() {
+      if (!slug) {
+        setLoading(false);
+        setErrorStatus(404);
+        return;
+      }
 
-    fetch(`${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`)
-      .then((res) => {
+      setLoading(true);
+      setErrorStatus(null);
+
+      try {
+        const url = `${apiBase}/api/v1/public/profiles/${encodeURIComponent(slug)}`;
+        const res = await fetch(url, { method: "GET" });
+
         if (!res.ok) {
-          setErrorStatus(res.status)
-          throw new Error(`HTTP ${res.status}`)
+          if (!cancelled) {
+            setErrorStatus(res.status);
+            setData(null);
+            setLoading(false);
+          }
+          return;
         }
-        return res.json()
-      })
-      .then((json) => {
-        setData(json.data)
-        trackEvent(json.data.profileId, 'view')
-      })
-      .catch(() => {
-        // Dejamos que la UI muestre NotFound si no hay data
-      })
-      .finally(() => setLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug])
 
-  const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-    fetch(`${apiUrl}/api/v1/public/track`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profileId, eventType, targetId })
-    }).catch(() => {
-      // tracking no debe romper la página
-    })
-  }
+        const json = (await res.json()) as PublicData;
 
-  if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
-  if (errorStatus === 403) return <PrivateBlock slug={slug || ''} />
-  if (errorStatus || !data) return <NotFound />
-
-  // Temas visuales dinámicos
-  const themeStyles: Record<string, any> = {
-    classic: { background: 'var(--bg-dark)', primary: 'var(--primary)', accent: 'var(--accent)' },
-    dark: { background: '#000', primary: '#fff', accent: '#fff', text: '#fff' },
-    modern: {
-      background: '#f0fdf4',
-      primary: '#059669',
-      accent: '#10b981',
-      text: '#064e3b',
-      card: '#ffffff',
-      border: '#d1fae5'
+        if (!cancelled) {
+          setData(json);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setErrorStatus(500);
+          setData(null);
+          setLoading(false);
+        }
+      }
     }
-    const theme = themeStyles[data.themeId] || themeStyles.classic
 
-    return (
-        <div className="min-h-screen bg-intap-dark flex justify-center items-start pt-12 pb-20 px-4">
-            <div className="w-full max-width-mobile text-center animate-fade-in">
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBase, slug]);
 
-                {/* Header: Foto, Nombre, Bio */}
-                <div className="mb-8">
-                    <div className="w-24 h-24 rounded-full mx-auto mb-6 border-2 border-intap-mint p-1 shadow-[0_0_20px_rgba(13,242,201,0.3)] bg-intap-card flex items-center justify-center overflow-hidden">
-                        {data.gallery && data.gallery.length > 0 && data.gallery[0].image_url ? (
-                            <img src={data.gallery[0].image_url} alt={data.name || ''} className="w-full h-full object-cover rounded-full" />
-                        ) : (
-                            <span className="text-3xl font-bold text-intap-mint">
-                                {data.name?.charAt(0).toUpperCase() || slug?.charAt(0).toUpperCase()}
-                            </span>
-                        )}
-                    </div>
-                    <h1 className="text-2xl font-bold text-white mb-2">{data.name || `@${slug}`}</h1>
-                    <p className="text-sm text-slate-400 font-medium px-4 leading-relaxed">
-                        {data.bio || 'Bienvenido a mi perfil digital profesional.'}
-                    </p>
-                </div>
+  if (loading) return <Loading />;
+  if (errorStatus || !data) return <NotFound />;
 
-                {/* Botón Destacado: Guardar Contacto (vCard) */}
-                {data.entitlements?.canUseVCard && (
-                    <a
-                        href={`${import.meta.env.VITE_API_URL || ''}/api/v1/public/vcard/${data.profileId}`}
-                        className="btn-gradient w-full mb-6 transform hover:scale-[1.02] active:scale-95 transition-all"
-                        onClick={() => trackEvent(data.profileId, 'click', 'vcard')}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        Guardar Contacto (vCard)
-                    </a>
-                )}
+  // Avatar: usa la primera imagen de galería si existe, pero ahora por image_url (no construimos URL falsa)
+  const avatarUrl =
+    data.gallery?.[0]?.image_url && String(data.gallery[0].image_url).trim()
+      ? String(data.gallery[0].image_url)
+      : null;
 
-                {/* Enlaces Secundarios */}
-                <div className="grid grid-cols-1 gap-3 mb-8">
-                    {/* Botón WhatsApp prioritario si existe */}
-                    {data.links.some(l => l.label.toLowerCase().includes('whatsapp')) && (
-                        data.links.filter(l => l.label.toLowerCase().includes('whatsapp')).map(link => (
-                            <a
-                                key={link.id}
-                                href={link.url}
-                                target="_blank"
-                                className="flex items-center justify-center gap-3 bg-[#25D366] text-white font-bold py-4 rounded-3xl transition-transform hover:scale-[1.01]"
-                                onClick={() => trackEvent(data.profileId, 'click', link.id)}
-                            >
-                                Enviar WhatsApp
-                            </a>
-                        ))
-                    )}
+  const displayName =
+    (data.name && data.name.trim()) || (data.slug ? data.slug : "Perfil");
 
-                    {/* Otros enlaces en grid de 2 columnas para estilo mockup */}
-                    <div className="grid grid-cols-2 gap-3">
-                        {data.links.filter(l => !l.label.toLowerCase().includes('whatsapp')).map((link, i) => (
-                            <a
-                                key={link.id}
-                                href={link.url}
-                                target="_blank"
-                                className={`flex items-center justify-center gap-2 py-3 px-2 rounded-2xl glass-card text-sm font-semibold text-white/90 hover:bg-white/10`}
-                                onClick={() => trackEvent(data.profileId, 'click', link.id)}
-                            >
-                                <span className="truncate">{link.label}</span>
-                            </a>
-                        ))}
-                    </div>
-                </div>
+  return (
+    <div className="min-h-screen bg-black text-white flex justify-center px-4 pt-10 pb-14">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center">
+          <div className="mx-auto w-24 h-24 rounded-full overflow-hidden border border-white/15 bg-white/5 flex items-center justify-center">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
+            ) : (
+              <span className="text-2xl font-bold text-white/60">
+                {displayName.charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
 
-                {/* FAQs Accordion */}
-                {data.faqs && data.faqs.length > 0 && (
-                    <div className="text-left mb-8">
-                        <div className="flex flex-col gap-3">
-                            {data.faqs.map((faq, i) => (
-                                <details key={i} className="group glass-card overflow-hidden">
-                                    <summary className="flex items-center justify-between p-4 cursor-pointer list-none font-bold text-sm">
-                                        {faq.question}
-                                        <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </summary>
-                                    <div className="px-4 pb-4 text-sm text-slate-400 leading-relaxed border-t border-white/5 pt-3">
-                                        {faq.answer}
-                                    </div>
-                                </details>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Galería Pro */}
-                {data.gallery && data.gallery.length > 1 && (
-                    <div className="grid grid-cols-3 gap-2 mb-10">
-                        {data.gallery.slice(1).filter((img) => img.image_url).map((img, i) => (
-                            <div key={i} className="aspect-square rounded-xl overflow-hidden glass-card">
-                                <img src={img.image_url!} className="w-full h-full object-cover" alt="Pro" />
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                <footer className="mt-12 opacity-40 text-xs font-medium tracking-tight">
-                    <Link to="/">Crea tu propio perfil en <span className="font-bold">INTAP LINK</span></Link>
-                </footer>
-            </div>
+          <h1 className="mt-4 text-2xl font-bold">{displayName}</h1>
+          <p className="mt-2 text-sm text-white/70 leading-relaxed px-2">
+            {data.bio || "Bienvenido a mi perfil digital."}
+          </p>
         </div>
 
-        {/* Botón Destacado: Guardar Contacto (vCard) */}
-        {data.entitlements?.canUseVCard && (
-          <a
-            href={`${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/public/vcard/${data.profileId}`}
-            className="btn-gradient w-full mb-6 transform hover:scale-[1.02] active:scale-95 transition-all"
-            onClick={() => trackEvent(data.profileId, 'click', 'vcard')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            Guardar Contacto (vCard)
-          </a>
+        {/* Links */}
+        <div className="mt-6 space-y-3">
+          {(data.links || []).map((l) => (
+            <a
+              key={l.id}
+              href={l.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-full rounded-xl border border-white/12 bg-white/5 hover:bg-white/10 transition px-4 py-3 text-center font-medium"
+            >
+              {l.label}
+            </a>
+          ))}
+        </div>
+
+        {/* Gallery */}
+        {Array.isArray(data.gallery) && data.gallery.length > 0 && (
+          <div className="mt-8">
+            <div className="text-sm font-semibold text-white/80 mb-3">
+              Galería
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {data.gallery
+                .filter((g) => g.image_url && String(g.image_url).trim())
+                .map((g) => (
+                  <a
+                    key={g.image_key}
+                    href={String(g.image_url)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block aspect-square rounded-lg overflow-hidden border border-white/10 bg-white/5"
+                    title="Ver imagen"
+                  >
+                    <img
+                      src={String(g.image_url)}
+                      alt="Galería"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </a>
+                ))}
+            </div>
+          </div>
         )}
 
-        {/* Enlaces Secundarios */}
-        <div className="grid grid-cols-1 gap-3 mb-8">
-          {/* Botón WhatsApp prioritario si existe */}
-          {data.links.some((l) => l.label.toLowerCase().includes('whatsapp')) && (
-            data.links
-              .filter((l) => l.label.toLowerCase().includes('whatsapp'))
-              .map((link) => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-3 bg-[#25D366] text-white font-bold py-4 rounded-3xl transition-transform hover:scale-[1.01]"
-                  onClick={() => trackEvent(data.profileId, 'click', link.id)}
-                >
-                  Enviar WhatsApp
-                </a>
-              ))
-          )}
-
-          {/* Otros enlaces en grid de 2 columnas */}
-          <div className="grid grid-cols-2 gap-3">
-            {data.links
-              .filter((l) => !l.label.toLowerCase().includes('whatsapp'))
-              .map((link) => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-2 py-3 px-2 rounded-2xl glass-card text-sm font-semibold text-white/90 hover:bg-white/10"
-                  onClick={() => trackEvent(data.profileId, 'click', link.id)}
-                >
-                  <span className="truncate">{link.label}</span>
-                </a>
-              ))}
-          </div>
-        </div>
-
-        {/* FAQs Accordion */}
+        {/* FAQs */}
         {data.faqs && data.faqs.length > 0 && (
-          <div className="text-left mb-8">
-            <div className="flex flex-col gap-3">
-              {data.faqs.map((faq, i) => (
-                <details key={i} className="group glass-card overflow-hidden">
-                  <summary className="flex items-center justify-between p-4 cursor-pointer list-none font-bold text-sm">
-                    {faq.question}
-                    <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+          <div className="mt-8 text-left">
+            <div className="text-sm font-semibold text-white/80 mb-3">
+              Preguntas frecuentes
+            </div>
+            <div className="space-y-3">
+              {data.faqs.map((f, idx) => (
+                <details
+                  key={`${idx}-${f.question}`}
+                  className="rounded-xl border border-white/12 bg-white/5 px-4 py-3"
+                >
+                  <summary className="cursor-pointer font-medium">
+                    {f.question}
                   </summary>
-                  <div className="px-4 pb-4 text-sm text-slate-400 leading-relaxed border-t border-white/5 pt-3">
-                    {faq.answer}
+                  <div className="mt-2 text-sm text-white/70 leading-relaxed">
+                    {f.answer}
                   </div>
                 </details>
               ))}
@@ -261,53 +240,13 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* Galería Pro */}
-        {data.gallery && data.gallery.length > 1 && (
-          <div className="grid grid-cols-3 gap-2 mb-10">
-            {data.gallery.slice(1).map((img, i) => (
-              <div key={i} className="aspect-square rounded-xl overflow-hidden glass-card">
-                <img
-                  src={`https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${img.image_key}`}
-                  className="w-full h-full object-cover"
-                  alt="Pro"
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        <footer className="mt-12 opacity-40 text-xs font-medium tracking-tight">
-          <Link to="/">Crea tu propio perfil en <span className="font-bold">INTAP LINK</span></Link>
+        {/* Footer */}
+        <footer className="mt-10 text-center text-xs text-white/50">
+          <Link to="/" className="hover:text-white/80 transition">
+            Crea tu propio perfil en <span className="font-semibold">INTAP LINK</span>
+          </Link>
         </footer>
       </div>
     </div>
-  )
-}
-
-function PrivateBlock({ slug }: { slug: string }) {
-  return (
-    <div className="public-profile error-page">
-      <div className="profile-card">
-        <h1>Perfil Privado 🔒</h1>
-        <p>El perfil de <strong>@{slug}</strong> no está disponible públicamente en este momento.</p>
-        <Link to="/" className="btn-primary" style={{ marginTop: '1.5rem', display: 'inline-block', textDecoration: 'none' }}>
-          Volver al Inicio
-        </Link>
-      </div>
-    </div>
-  )
-}
-
-function NotFound() {
-  return (
-    <div className="public-profile error-page">
-      <div className="profile-card">
-        <h1>Slug No Encontrado</h1>
-        <p>El perfil que buscas no existe o ha sido movido.</p>
-        <Link to="/" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none', marginTop: '1.5rem' }}>
-          Crear mi perfil ahora
-        </Link>
-      </div>
-    </div>
-  )
+  );
 }
