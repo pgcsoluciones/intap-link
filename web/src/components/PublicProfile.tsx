@@ -333,17 +333,29 @@ function Accordion({ items, renderHeader, renderBody }: {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function PublicProfile() {
-    const { slug } = useParams()
+    const params = useParams()
+    const slug =
+        (params.slug as string | undefined) ||
+        new URLSearchParams(window.location.search).get('slug') ||
+        ''
+
     const [data, setData] = useState<PublicData | null>(null)
     const [loading, setLoading] = useState(true)
     const [errorStatus, setErrorStatus] = useState<number | null>(null)
     const [modalProduct, setModalProduct] = useState<Product | null>(null)
 
     useEffect(() => {
-        const apiUrl = import.meta.env.VITE_API_URL || ''
-        fetch(`${apiUrl}/api/v1/public/profiles/${slug}`)
+        const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
+        if (!slug) {
+            setLoading(false)
+            setErrorStatus(404)
+            return
+        }
+
+        fetch(`${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`)
             .then(res => {
-                if (!res.ok) { setErrorStatus(res.status); throw new Error() }
+                if (!res.ok) { setErrorStatus(res.status); throw new Error(`HTTP ${res.status}`) }
                 return res.json()
             })
             .then(json => {
@@ -352,15 +364,16 @@ export default function PublicProfile() {
             })
             .catch(() => { })
             .finally(() => setLoading(false))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug])
 
     const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
-        const apiUrl = import.meta.env.VITE_API_URL || ''
+        const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
         fetch(`${apiUrl}/api/v1/public/track`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ profileId, eventType, targetId })
-        })
+        }).catch(() => { })
     }
 
     if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
@@ -414,7 +427,7 @@ export default function PublicProfile() {
                 {/* ── vCard ── */}
                 {data.entitlements?.canUseVCard && (
                     <a
-                        href={`${import.meta.env.VITE_API_URL || ''}/api/v1/public/vcard/${data.profileId}`}
+                        href={`${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/public/vcard/${data.profileId}`}
                         className="btn-gradient w-full mb-6 transform hover:scale-[1.02] active:scale-95 transition-all"
                         onClick={() => trackEvent(data.profileId, 'click', 'vcard')}
                     >
