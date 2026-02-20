@@ -8,7 +8,7 @@ interface PublicData {
     name: string | null
     bio: string | null
     links: { id: string; label: string; url: string }[]
-    gallery: { image_key: string }[]
+    gallery: { image_key: string; image_url: string | null }[]
     faqs: { question: string; answer: string }[] | null
     entitlements: { canUseVCard: boolean; maxLinks: number; maxPhotos: number; maxFaqs: number }
 }
@@ -65,8 +65,8 @@ export default function PublicProfile() {
                 {/* Header: Foto, Nombre, Bio */}
                 <div className="mb-8">
                     <div className="w-24 h-24 rounded-full mx-auto mb-6 border-2 border-intap-mint p-1 shadow-[0_0_20px_rgba(13,242,201,0.3)] bg-intap-card flex items-center justify-center overflow-hidden">
-                        {data.gallery && data.gallery.length > 0 ? (
-                            <img src={`https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${data.gallery[0].image_key}`} alt={data.name || ''} className="w-full h-full object-cover rounded-full" />
+                        {data.gallery && data.gallery.length > 0 && data.gallery[0].image_url ? (
+                            <img src={data.gallery[0].image_url} alt={data.name || ''} className="w-full h-full object-cover rounded-full" />
                         ) : (
                             <span className="text-3xl font-bold text-intap-mint">
                                 {data.name?.charAt(0).toUpperCase() || slug?.charAt(0).toUpperCase()}
@@ -150,9 +150,9 @@ export default function PublicProfile() {
                 {/* Galería Pro */}
                 {data.gallery && data.gallery.length > 1 && (
                     <div className="grid grid-cols-3 gap-2 mb-10">
-                        {data.gallery.slice(1).map((img, i) => (
+                        {data.gallery.slice(1).filter((img) => img.image_url).map((img, i) => (
                             <div key={i} className="aspect-square rounded-xl overflow-hidden glass-card">
-                                <img src={`https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${img.image_key}`} className="w-full h-full object-cover" alt="Pro" />
+                                <img src={img.image_url!} className="w-full h-full object-cover" alt="Pro" />
                             </div>
                         ))}
                     </div>
