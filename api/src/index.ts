@@ -94,6 +94,23 @@ app.get('/api/v1/profile/gallery/:profileId', async (c) => {
   return c.json({ ok: true, photos: photos.results })
 })
 
+// Sirve objetos desde R2 como endpoint público (Plan B: sin CDN público aún)
+app.get('/api/v1/public/assets/*', async (c) => {
+  const key = decodeURIComponent(c.req.path.slice('/api/v1/public/assets/'.length))
+  if (!key) return c.json({ error: 'Key requerida' }, 400)
+
+  const object = await c.env.BUCKET.get(key)
+  if (!object) return c.json({ error: 'Archivo no encontrado' }, 404)
+
+  const contentType = object.httpMetadata?.contentType || 'application/octet-stream'
+  return new Response(object.body as ReadableStream, {
+    headers: {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=86400',
+    },
+  })
+})
+
 // Perfil Público
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
@@ -102,8 +119,25 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   if (!profile.is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
   const links = await c.env.DB.prepare('SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
-  const gallery = await c.env.DB.prepare('SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
+  const rawGallery = await c.env.DB.prepare('SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
   const entitlements = await getEntitlements(c, profile.id as string)
+
+  // Construye URL pública vía el endpoint /assets (Plan B: sin CDN externo)
+  const origin = new URL(c.req.url).origin
+  const toAssetUrl = (key: string): string | null => {
+    if (!key) return null
+    if (key.startsWith('http')) return key
+    const encodedKey = key.split('/').map(encodeURIComponent).join('/')
+    return `${origin}/api/v1/public/assets/${encodedKey}`
+  }
+
+  // Filtra items demo/prueba y agrega image_url resuelta
+  const isDemoKey = (key: string) =>
+    key.startsWith('demo/') || key === 'profile_debug' || key.startsWith('profile_debug')
+
+  const gallery = (rawGallery.results as { image_key: string }[])
+    .filter((g) => g.image_key && !isDemoKey(g.image_key))
+    .map((g) => ({ image_key: g.image_key, image_url: toAssetUrl(g.image_key) }))
 
   return c.json({
     ok: true,
@@ -114,7 +148,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       name: profile.name,
       bio: profile.bio,
       links: links.results,
-      gallery: gallery.results,
+      gallery,
       entitlements
     }
   })
