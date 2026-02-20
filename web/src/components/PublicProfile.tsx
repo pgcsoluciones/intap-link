@@ -14,47 +14,71 @@ interface PublicData {
 }
 
 export default function PublicProfile() {
-    const { slug } = useParams()
-    const [data, setData] = useState<PublicData | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [errorStatus, setErrorStatus] = useState<number | null>(null)
+  const params = useParams()
+  const slug =
+    (params.slug as string | undefined) ||
+    new URLSearchParams(window.location.search).get('slug') ||
+    ''
 
-    useEffect(() => {
-        const apiUrl = import.meta.env.VITE_API_URL || ''
-        fetch(`${apiUrl}/api/v1/public/profiles/${slug}`)
-            .then(res => {
-                if (!res.ok) {
-                    setErrorStatus(res.status)
-                    throw new Error()
-                }
-                return res.json()
-            })
-            .then(json => {
-                setData(json.data)
-                trackEvent(json.data.profileId, 'view')
-            })
-            .catch(() => { })
-            .finally(() => setLoading(false))
-    }, [slug])
+  const [data, setData] = useState<PublicData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [errorStatus, setErrorStatus] = useState<number | null>(null)
 
-    const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
-        const apiUrl = import.meta.env.VITE_API_URL || ''
-        fetch(`${apiUrl}/api/v1/public/track`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ profileId, eventType, targetId })
-        })
+  useEffect(() => {
+    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
+    // Si no hay slug (ni en /:slug ni en ?slug=), no hacemos fetch
+    if (!slug) {
+      setLoading(false)
+      setErrorStatus(404)
+      return
     }
 
-    if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
-    if (errorStatus === 403) return <PrivateBlock slug={slug || ''} />
-    if (errorStatus || !data) return <NotFound />
+    fetch(`${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`)
+      .then((res) => {
+        if (!res.ok) {
+          setErrorStatus(res.status)
+          throw new Error(`HTTP ${res.status}`)
+        }
+        return res.json()
+      })
+      .then((json) => {
+        setData(json.data)
+        trackEvent(json.data.profileId, 'view')
+      })
+      .catch(() => {
+        // Dejamos que la UI muestre NotFound si no hay data
+      })
+      .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug])
 
-    // Temas visuales dinámicos
-    const themeStyles: Record<string, any> = {
-        classic: { background: 'var(--bg-dark)', primary: 'var(--primary)', accent: 'var(--accent)' },
-        dark: { background: '#000', primary: '#fff', accent: '#fff', text: '#fff' },
-        modern: { background: '#f0fdf4', primary: '#059669', accent: '#10b981', text: '#064e3b', card: '#ffffff', border: '#d1fae5' }
+  const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
+    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    fetch(`${apiUrl}/api/v1/public/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId, eventType, targetId })
+    }).catch(() => {
+      // tracking no debe romper la página
+    })
+  }
+
+  if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
+  if (errorStatus === 403) return <PrivateBlock slug={slug || ''} />
+  if (errorStatus || !data) return <NotFound />
+
+  // Temas visuales dinámicos
+  const themeStyles: Record<string, any> = {
+    classic: { background: 'var(--bg-dark)', primary: 'var(--primary)', accent: 'var(--accent)' },
+    dark: { background: '#000', primary: '#fff', accent: '#fff', text: '#fff' },
+    modern: {
+      background: '#f0fdf4',
+      primary: '#059669',
+      accent: '#10b981',
+      text: '#064e3b',
+      card: '#ffffff',
+      border: '#d1fae5'
     }
     const theme = themeStyles[data.themeId] || themeStyles.classic
 
@@ -163,33 +187,128 @@ export default function PublicProfile() {
                 </footer>
             </div>
         </div>
-    )
+
+        {/* Botón Destacado: Guardar Contacto (vCard) */}
+        {data.entitlements?.canUseVCard && (
+          <a
+            href={`${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/public/vcard/${data.profileId}`}
+            className="btn-gradient w-full mb-6 transform hover:scale-[1.02] active:scale-95 transition-all"
+            onClick={() => trackEvent(data.profileId, 'click', 'vcard')}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            Guardar Contacto (vCard)
+          </a>
+        )}
+
+        {/* Enlaces Secundarios */}
+        <div className="grid grid-cols-1 gap-3 mb-8">
+          {/* Botón WhatsApp prioritario si existe */}
+          {data.links.some((l) => l.label.toLowerCase().includes('whatsapp')) && (
+            data.links
+              .filter((l) => l.label.toLowerCase().includes('whatsapp'))
+              .map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-3 bg-[#25D366] text-white font-bold py-4 rounded-3xl transition-transform hover:scale-[1.01]"
+                  onClick={() => trackEvent(data.profileId, 'click', link.id)}
+                >
+                  Enviar WhatsApp
+                </a>
+              ))
+          )}
+
+          {/* Otros enlaces en grid de 2 columnas */}
+          <div className="grid grid-cols-2 gap-3">
+            {data.links
+              .filter((l) => !l.label.toLowerCase().includes('whatsapp'))
+              .map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-2 py-3 px-2 rounded-2xl glass-card text-sm font-semibold text-white/90 hover:bg-white/10"
+                  onClick={() => trackEvent(data.profileId, 'click', link.id)}
+                >
+                  <span className="truncate">{link.label}</span>
+                </a>
+              ))}
+          </div>
+        </div>
+
+        {/* FAQs Accordion */}
+        {data.faqs && data.faqs.length > 0 && (
+          <div className="text-left mb-8">
+            <div className="flex flex-col gap-3">
+              {data.faqs.map((faq, i) => (
+                <details key={i} className="group glass-card overflow-hidden">
+                  <summary className="flex items-center justify-between p-4 cursor-pointer list-none font-bold text-sm">
+                    {faq.question}
+                    <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+                  <div className="px-4 pb-4 text-sm text-slate-400 leading-relaxed border-t border-white/5 pt-3">
+                    {faq.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Galería Pro */}
+        {data.gallery && data.gallery.length > 1 && (
+          <div className="grid grid-cols-3 gap-2 mb-10">
+            {data.gallery.slice(1).map((img, i) => (
+              <div key={i} className="aspect-square rounded-xl overflow-hidden glass-card">
+                <img
+                  src={`https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${img.image_key}`}
+                  className="w-full h-full object-cover"
+                  alt="Pro"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <footer className="mt-12 opacity-40 text-xs font-medium tracking-tight">
+          <Link to="/">Crea tu propio perfil en <span className="font-bold">INTAP LINK</span></Link>
+        </footer>
+      </div>
+    </div>
+  )
 }
 
 function PrivateBlock({ slug }: { slug: string }) {
-    return (
-        <div className="public-profile error-page">
-            <div className="profile-card">
-                <h1>Perfil Privado 🔒</h1>
-                <p>El perfil de <strong>@{slug}</strong> no está disponible públicamente en este momento.</p>
-                <Link to="/" className="btn-primary" style={{ marginTop: '1.5rem', display: 'inline-block', textDecoration: 'none' }}>
-                    Volver al Inicio
-                </Link>
-            </div>
-        </div>
-    )
+  return (
+    <div className="public-profile error-page">
+      <div className="profile-card">
+        <h1>Perfil Privado 🔒</h1>
+        <p>El perfil de <strong>@{slug}</strong> no está disponible públicamente en este momento.</p>
+        <Link to="/" className="btn-primary" style={{ marginTop: '1.5rem', display: 'inline-block', textDecoration: 'none' }}>
+          Volver al Inicio
+        </Link>
+      </div>
+    </div>
+  )
 }
 
 function NotFound() {
-    return (
-        <div className="public-profile error-page">
-            <div className="profile-card">
-                <h1>Slug No Encontrado</h1>
-                <p>El perfil que buscas no existe o ha sido movido.</p>
-                <Link to="/" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none', marginTop: '1.5rem' }}>
-                    Crear mi perfil ahora
-                </Link>
-            </div>
-        </div>
-    )
+  return (
+    <div className="public-profile error-page">
+      <div className="profile-card">
+        <h1>Slug No Encontrado</h1>
+        <p>El perfil que buscas no existe o ha sido movido.</p>
+        <Link to="/" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none', marginTop: '1.5rem' }}>
+          Crear mi perfil ahora
+        </Link>
+      </div>
+    </div>
+  )
 }
