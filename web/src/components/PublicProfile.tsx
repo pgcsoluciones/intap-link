@@ -2,17 +2,16 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 
 interface PublicData {
-    profileId: string
-    slug: string
-    themeId: string
-    name: string | null
-    bio: string | null
-    links: { id: string; label: string; url: string }[]
-    gallery: { image_key: string; image_url: string | null }[]
-    faqs: { question: string; answer: string }[] | null
-    entitlements: { canUseVCard: boolean; maxLinks: number; maxPhotos: number; maxFaqs: number }
+  profileId: string;
+  slug: string;
+  themeId: string;
+  name: string | null;
+  bio: string | null;
+  links: { id: string; label: string; url: string }[];
+  gallery: { image_key: string; image_url: string | null }[];
+  faqs: { question: string; answer: string }[] | null;
+  entitlements: { canUseVCard: boolean; maxLinks: number; maxPhotos: number; maxFaqs: number };
 }
-
 export default function PublicProfile() {
   const params = useParams()
   const slug =
