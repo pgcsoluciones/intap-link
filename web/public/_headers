@@ -1,0 +1,6 @@
+# Prevent Cloudflare edge from caching index.html so aliases like
+# main.intap-web.pages.dev always serve the latest deployed version.
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0
