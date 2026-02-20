@@ -114,13 +114,17 @@ app.get('/api/v1/public/assets/*', async (c) => {
 // Perfil Público
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
-  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio FROM profiles WHERE slug = ?').bind(slug).first()
+  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?').bind(slug).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
   if (!profile.is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
-  const links = await c.env.DB.prepare('SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
-  const rawGallery = await c.env.DB.prepare('SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
-  const entitlements = await getEntitlements(c, profile.id as string)
+  const [links, rawGallery, rawFaqs, rawProducts, entitlements] = await Promise.all([
+    c.env.DB.prepare('SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all(),
+    c.env.DB.prepare('SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all(),
+    c.env.DB.prepare('SELECT id, question, answer, sort_order FROM profile_faqs WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all(),
+    c.env.DB.prepare('SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all(),
+    getEntitlements(c, profile.id as string),
+  ])
 
   // Construye URL pública vía el endpoint /assets (Plan B: sin CDN externo)
   const origin = new URL(c.req.url).origin
@@ -139,6 +143,13 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     .filter((g) => g.image_key && !isDemoKey(g.image_key))
     .map((g) => ({ image_key: g.image_key, image_url: toAssetUrl(g.image_key) }))
 
+  const products = rawProducts.results as {
+    id: string; title: string; description: string | null; price: string | null;
+    image_url: string | null; whatsapp_text: string | null; is_featured: number; sort_order: number
+  }[]
+
+  const featured_product = products.find((p) => p.is_featured === 1) ?? null
+
   return c.json({
     ok: true,
     data: {
@@ -147,8 +158,12 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       themeId: profile.theme_id,
       name: profile.name,
       bio: profile.bio,
+      whatsapp_number: profile.whatsapp_number ?? null,
       links: links.results,
       gallery,
+      faqs: rawFaqs.results,
+      products,
+      featured_product,
       entitlements
     }
   })
