@@ -893,17 +893,17 @@ export default function PublicProfile() {
 
   // ── Promo popup (once per session) ──────────────────────────────────────────
   useEffect(() => {
-    const promo = shouldShowPromoPopup(data.links)
-    if (!promo) return
+  if (!data) return
+  const promo = shouldShowPromoPopup(data.links)
+  if (!promo) return
 
-    const key = `intap_promo_seen_${data.profileId}`
-    const already = sessionStorage.getItem(key) === '1'
-    if (already) return
+  const key = `intap_promo_seen_${data.profileId}`
+  const already = sessionStorage.getItem(key) === '1'
+  if (already) return
 
-    // Abre solo una vez por sesión
-    sessionStorage.setItem(key, '1')
-    setPromoOpen(true)
-  }, [data.links, data.profileId])
+  sessionStorage.setItem(key, '1')
+  setPromoOpen(true)
+}, [data])
 
   const promoLink = shouldShowPromoPopup(data.links)
 
