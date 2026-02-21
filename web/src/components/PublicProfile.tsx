@@ -717,6 +717,16 @@ export default function PublicProfile() {
   const [turnstileSitekey, setTurnstileSitekey] = useState<string | null>(null)
   const [turnstileToken, setTurnstileToken] = useState<string>('')
 
+  // ── Track ───────────────────────────────────────────────────────────────────
+  const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
+    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    fetch(`${apiUrl}/api/v1/public/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId, eventType, targetId })
+    }).catch(() => { })
+  }
+
   // ── Fetch profile ───────────────────────────────────────────────────────────
   useEffect(() => {
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
@@ -744,16 +754,6 @@ export default function PublicProfile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
-  // ── Track ───────────────────────────────────────────────────────────────────
-  const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-    fetch(`${apiUrl}/api/v1/public/track`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ profileId, eventType, targetId })
-    }).catch(() => { })
-  }
-
   // ── Lead modal: ESC + scroll lock ───────────────────────────────────────────
   useEffect(() => {
     if (!leadOpen) return
@@ -778,6 +778,20 @@ export default function PublicProfile() {
     s.setAttribute('data-intap-turnstile', '1')
     document.body.appendChild(s)
   }, [leadOpen, turnstileSitekey])
+
+  // ✅ Promo popup (once per session) — debe ir ANTES de guard clauses (rules of hooks)
+  useEffect(() => {
+    if (!data) return
+    const promo = shouldShowPromoPopup(data.links)
+    if (!promo) return
+
+    const key = `intap_promo_seen_${data.profileId}`
+    const already = sessionStorage.getItem(key) === '1'
+    if (already) return
+
+    sessionStorage.setItem(key, '1')
+    setPromoOpen(true)
+  }, [data])
 
   const submitLead = async () => {
     if (!data) return
@@ -885,25 +899,10 @@ export default function PublicProfile() {
     const url = normalize(l.url)
     const isWhatsApp = label.includes('whatsapp') || url.includes('wa.me') || url.includes('whatsapp')
     const isMap = isMapLink(l)
-    // Si quieres que el mapa NO salga duplicado en “Otros enlaces”, lo excluimos aquí:
     return !isWhatsApp && !isMap
   })
 
-  const sliderImages = data.gallery.slice(1).filter(g => g.image_url).map(g => g.image_url!) // no tocar
-
-  // ── Promo popup (once per session) ──────────────────────────────────────────
-  useEffect(() => {
-  if (!data) return
-  const promo = shouldShowPromoPopup(data.links)
-  if (!promo) return
-
-  const key = `intap_promo_seen_${data.profileId}`
-  const already = sessionStorage.getItem(key) === '1'
-  if (already) return
-
-  sessionStorage.setItem(key, '1')
-  setPromoOpen(true)
-}, [data])
+  const sliderImages = data.gallery.slice(1).filter(g => g.image_url).map(g => g.image_url!)
 
   const promoLink = shouldShowPromoPopup(data.links)
 
