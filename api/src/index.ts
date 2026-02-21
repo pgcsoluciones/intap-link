@@ -58,39 +58,89 @@ app.post('/api/v1/public/track', async (c) => {
   try {
     const { profileId, eventType, targetId } = await c.req.json()
     const id = crypto.randomUUID()
-    await c.env.DB.prepare(`INSERT INTO analytics (id, profile_id, event_type, target_id) VALUES (?, ?, ?, ?)`).bind(id, profileId, eventType, targetId || null).run()
+    await c.env.DB.prepare(
+      `INSERT INTO analytics (id, profile_id, event_type, target_id) VALUES (?, ?, ?, ?)`
+    )
+      .bind(id, profileId, eventType, targetId || null)
+      .run()
     return c.json({ ok: true })
-  } catch (e) { return c.json({ ok: false }, 202) }
+  } catch (e) {
+    return c.json({ ok: false }, 202)
+  }
 })
 
 app.get('/api/v1/profile/stats/:profileId', async (c) => {
   const profileId = c.req.param('profileId')
-  const totalViews = await c.env.DB.prepare(`SELECT COUNT(*) as count FROM analytics WHERE profile_id = ? AND event_type = 'view'`).bind(profileId).first()
-  const dailyViews = await c.env.DB.prepare(`SELECT date(created_at) as day, COUNT(*) as count FROM analytics WHERE profile_id = ? AND event_type = 'view' AND created_at > date('now', '-7 days') GROUP BY day ORDER BY day ASC`).bind(profileId).all()
-  const topLinks = await c.env.DB.prepare(`SELECT l.label, COUNT(a.id) as clics FROM analytics a JOIN profile_links l ON a.target_id = l.id WHERE a.profile_id = ? AND a.event_type = 'click' GROUP BY l.id ORDER BY clics DESC LIMIT 5`).bind(profileId).all()
-  return c.json({ ok: true, stats: { totalViews: totalViews?.count || 0, dailyViews: dailyViews.results, topLinks: topLinks.results } })
+  const totalViews = await c.env.DB.prepare(
+    `SELECT COUNT(*) as count FROM analytics WHERE profile_id = ? AND event_type = 'view'`
+  )
+    .bind(profileId)
+    .first()
+
+  const dailyViews = await c.env.DB.prepare(
+    `SELECT date(created_at) as day, COUNT(*) as count 
+     FROM analytics 
+     WHERE profile_id = ? AND event_type = 'view' AND created_at > date('now', '-7 days') 
+     GROUP BY day ORDER BY day ASC`
+  )
+    .bind(profileId)
+    .all()
+
+  const topLinks = await c.env.DB.prepare(
+    `SELECT l.label, COUNT(a.id) as clics 
+     FROM analytics a 
+     JOIN profile_links l ON a.target_id = l.id 
+     WHERE a.profile_id = ? AND a.event_type = 'click' 
+     GROUP BY l.id ORDER BY clics DESC LIMIT 5`
+  )
+    .bind(profileId)
+    .all()
+
+  return c.json({
+    ok: true,
+    stats: {
+      totalViews: (totalViews as any)?.count || 0,
+      dailyViews: dailyViews.results,
+      topLinks: topLinks.results,
+    },
+  })
 })
 
 // --- Galería (R2) ---
 
 app.post('/api/v1/profile/gallery/upload', async (c) => {
   const { profileId } = await c.req.parseBody()
-  const file = (await c.req.formData()).get('file') as File
 
-  if (!file) return c.json({ ok: false, error: 'No file' }, 400)
+  // ✅ Fix TS: valida tipo File correctamente (sin cast)
+  const fd = await c.req.formData()
+  const fileVal = fd.get('file')
+
+  if (!(fileVal && typeof fileVal === 'object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any))) {
+    return c.json({ ok: false, error: 'No file' }, 400)
+  }
+
+  const file = fileVal as any as File
 
   const key = `profiles/${profileId}/${crypto.randomUUID()}-${file.name}`
   await c.env.BUCKET.put(key, file.stream())
 
   const id = crypto.randomUUID()
-  await c.env.DB.prepare(`INSERT INTO profile_gallery (id, profile_id, image_key, sort_order) VALUES (?, ?, ?, 0)`).bind(id, profileId, key).run()
+  await c.env.DB.prepare(
+    `INSERT INTO profile_gallery (id, profile_id, image_key, sort_order) VALUES (?, ?, ?, 0)`
+  )
+    .bind(id, profileId, key)
+    .run()
 
   return c.json({ ok: true, id, key })
 })
 
 app.get('/api/v1/profile/gallery/:profileId', async (c) => {
   const profileId = c.req.param('profileId')
-  const photos = await c.env.DB.prepare(`SELECT * FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC`).bind(profileId).all()
+  const photos = await c.env.DB.prepare(
+    `SELECT * FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC`
+  )
+    .bind(profileId)
+    .all()
   return c.json({ ok: true, photos: photos.results })
 })
 
@@ -114,13 +164,38 @@ app.get('/api/v1/public/assets/*', async (c) => {
 // Perfil Público
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
-  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio FROM profiles WHERE slug = ?').bind(slug).first()
-  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
-  if (!profile.is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
+  const profile = await c.env.DB.prepare(
+    'SELECT id, slug, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?'
+  )
+    .bind(slug)
+    .first()
 
-  const links = await c.env.DB.prepare('SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
-  const rawGallery = await c.env.DB.prepare('SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC').bind(profile.id).all()
-  const entitlements = await getEntitlements(c, profile.id as string)
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  if (!(profile as any).is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
+
+  const [links, rawGallery, rawFaqs, rawProducts, entitlements] = await Promise.all([
+    c.env.DB.prepare(
+      'SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC'
+    )
+      .bind((profile as any).id)
+      .all(),
+    c.env.DB.prepare(
+      'SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC'
+    )
+      .bind((profile as any).id)
+      .all(),
+    c.env.DB.prepare(
+      'SELECT id, question, answer, sort_order FROM profile_faqs WHERE profile_id = ? ORDER BY sort_order ASC'
+    )
+      .bind((profile as any).id)
+      .all(),
+    c.env.DB.prepare(
+      'SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC'
+    )
+      .bind((profile as any).id)
+      .all(),
+    getEntitlements(c, (profile as any).id as string),
+  ])
 
   // Construye URL pública vía el endpoint /assets (Plan B: sin CDN externo)
   const origin = new URL(c.req.url).origin
@@ -139,31 +214,156 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     .filter((g) => g.image_key && !isDemoKey(g.image_key))
     .map((g) => ({ image_key: g.image_key, image_url: toAssetUrl(g.image_key) }))
 
+  const products = rawProducts.results as {
+    id: string
+    title: string
+    description: string | null
+    price: string | null
+    image_url: string | null
+    whatsapp_text: string | null
+    is_featured: number
+    sort_order: number
+  }[]
+
+  const featured_product = products.find((p) => p.is_featured === 1) ?? null
+
   return c.json({
     ok: true,
     data: {
-      profileId: profile.id,
-      slug: profile.slug,
-      themeId: profile.theme_id,
-      name: profile.name,
-      bio: profile.bio,
+      profileId: (profile as any).id,
+      slug: (profile as any).slug,
+      themeId: (profile as any).theme_id,
+      name: (profile as any).name,
+      bio: (profile as any).bio,
+      whatsapp_number: (profile as any).whatsapp_number ?? null,
       links: links.results,
       gallery,
-      entitlements
-    }
+      faqs: rawFaqs.results,
+      products,
+      featured_product,
+      entitlements,
+    },
   })
 })
 
+/* ============================
+   FASE 3 — Leads (Captura)
+   ============================ */
+
+// --- Leads (Captura de contacto) + Turnstile condicional ---
+
+const TURNSTILE_SITEKEY = '0x4AAAAAACgDVjTSshSRPS5q'
+
+app.post('/api/v1/public/leads', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile_slug = String(body.profile_slug || '').trim()
+  const name = String(body.name || '').trim()
+  const email = String(body.email || '').trim()
+  const phone = String(body.phone || '').trim()
+  const message = String(body.message || '').trim()
+  const honeypot = String(body.hp || '').trim()
+  const source_url = String(body.source_url || '').trim()
+  const turnstile_token = String(body.turnstile_token || '').trim()
+
+  if (!profile_slug || profile_slug.length < 2) return c.json({ ok: false, error: 'profile_slug required' }, 400)
+  if (!name || name.length < 2) return c.json({ ok: false, error: 'name required' }, 400)
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ ok: false, error: 'valid email required' }, 400)
+  if (!message || message.length < 10) return c.json({ ok: false, error: 'message must be at least 10 chars' }, 400)
+
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || ''
+  const ua = c.req.header('user-agent') || ''
+  const ip_hash = await sha256Base64Url(ip || 'unknown')
+
+  // Si honeypot viene lleno → exigir Turnstile (condicional)
+  if (honeypot) {
+    if (!turnstile_token) {
+      return c.json({ ok: false, error: 'turnstile_required', sitekey: TURNSTILE_SITEKEY }, 403)
+    }
+    const ok = await verifyTurnstile(c, turnstile_token, ip)
+    if (!ok) return c.json({ ok: false, error: 'turnstile_failed' }, 403)
+  }
+
+  // Rate limit (5 envíos / 10 min por ip_hash + slug)
+  const rl = await c.env.DB.prepare(
+    `SELECT COUNT(*) as n
+     FROM lead_rate_limits
+     WHERE profile_slug = ?1 AND ip_hash = ?2
+       AND created_at >= datetime('now','-10 minutes')`
+  ).bind(profile_slug, ip_hash).first()
+
+  const count = ((rl as any)?.n || 0) as number
+
+  // Si excedió límite → exigir Turnstile (condicional)
+  if (count >= 5) {
+    if (!turnstile_token) {
+      return c.json({ ok: false, error: 'turnstile_required', sitekey: TURNSTILE_SITEKEY }, 403)
+    }
+    const ok = await verifyTurnstile(c, turnstile_token, ip)
+    if (!ok) return c.json({ ok: false, error: 'turnstile_failed' }, 403)
+  }
+
+  // Insertar lead
+  await c.env.DB.prepare(
+    `INSERT INTO leads (profile_slug, name, email, phone, message, source_url, user_agent, ip_hash)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+  ).bind(profile_slug, name, email, phone, message, source_url, ua, ip_hash).run()
+
+  // Registrar rate token
+  await c.env.DB.prepare(
+    `INSERT INTO lead_rate_limits (profile_slug, ip_hash) VALUES (?1, ?2)`
+  ).bind(profile_slug, ip_hash).run()
+
+  return c.json({ ok: true }, 201)
+})
+
+async function verifyTurnstile(c: any, token: string, ip: string): Promise<boolean> {
+  const secret = (c.env as any).TURNSTILE_SECRET
+  if (!secret) return false
+
+  const form = new FormData()
+  form.append('secret', secret)
+  form.append('response', token)
+  if (ip) form.append('remoteip', ip)
+
+  const resp = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    body: form,
+  })
+
+  // ✅ Fix TS: tipa como any para permitir data.success
+  const data: any = await resp.json().catch(() => null)
+  return !!(data && data.success)
+}
+
+async function sha256Base64Url(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  const bytes = new Uint8Array(hash)
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
 // Admin
 app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
-  const profiles = await c.env.DB.prepare(`SELECT p.id, p.slug, p.plan_id, p.is_published, u.email FROM profiles p JOIN users u ON p.user_id = u.id`).all()
+  const profiles = await c.env.DB.prepare(
+    `SELECT p.id, p.slug, p.plan_id, p.is_published, u.email FROM profiles p JOIN users u ON p.user_id = u.id`
+  ).all()
   return c.json({ ok: true, data: profiles.results })
 })
 
 app.post('/api/v1/admin/activate-module', async (c) => {
   const { profileId, moduleCode, secret } = await c.req.json()
   if (secret !== 'intap_master_key') return c.json({ ok: false, error: 'Unauthorized' }, 401)
-  await c.env.DB.prepare(`INSERT INTO profile_modules (profile_id, module_code, expires_at) VALUES (?, ?, datetime('now', '+1 year')) ON CONFLICT(profile_id, module_code) DO UPDATE SET expires_at = excluded.expires_at`).bind(profileId, moduleCode).run()
+  await c.env.DB.prepare(
+    `INSERT INTO profile_modules (profile_id, module_code, expires_at) 
+     VALUES (?, ?, datetime('now', '+1 year')) 
+     ON CONFLICT(profile_id, module_code) DO UPDATE SET expires_at = excluded.expires_at`
+  )
+    .bind(profileId, moduleCode)
+    .run()
   return c.json({ ok: true, message: `Módulo ${moduleCode} activado` })
 })
 
