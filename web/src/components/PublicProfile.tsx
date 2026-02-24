@@ -458,7 +458,7 @@ function MapModal({
       <div className="bg-intap-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in">
         <div className="p-5">
           <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-white font-bold text-lg">Cómo llegar</h3>
+            <h3 className="text-white font-bold text-lg">Nuestra ubicación</h3>
             <button
               onClick={onClose}
               className="text-slate-400 hover:text-white transition-colors"
@@ -496,7 +496,7 @@ function MapModal({
               onClick={() => window.open(mapUrl, '_blank', 'noopener,noreferrer')}
               className="flex-1 py-3 rounded-2xl bg-intap-mint text-black font-extrabold hover:brightness-110 transition-all active:scale-95"
             >
-              Abrir en Maps
+              Cómo llegar
             </button>
             <button
               type="button"
@@ -943,20 +943,13 @@ export default function PublicProfile() {
 
         {/* ── Fase 3: Botón Mapa (Punto B) ── */}
         {mapLink && (
-          <div className="mb-6 grid grid-cols-2 gap-2">
+          <div className="mb-6">
             <button
               type="button"
               className="w-full rounded-2xl py-3 px-4 text-sm font-semibold bg-intap-mint text-black hover:brightness-110 active:scale-95 transition-all"
               onClick={() => { setMapOpen(true); trackEvent(data.profileId, 'click', 'map-modal') }}
             >
-              Ver mapa
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-2xl py-3 px-4 text-sm font-semibold border border-white/10 text-white/90 glass-card hover:bg-white/10 active:scale-95 transition-all"
-              onClick={() => { window.open(mapLink.url, "_blank", "noopener,noreferrer"); trackEvent(data.profileId, 'click', 'map-open') }}
-            >
-              Cómo llegar
+              Nuestra ubicación
             </button>
           </div>
         )}
