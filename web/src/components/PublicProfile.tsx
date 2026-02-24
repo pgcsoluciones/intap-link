@@ -429,6 +429,7 @@ function MapModal({
 }) {
   const overlayRef = useRef<HTMLDivElement>(null)
   const embedUrl = useMemo(() => toGoogleMapsEmbedUrl(mapUrl), [mapUrl])
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -446,6 +447,18 @@ function MapModal({
     if (e.target === overlayRef.current) onClose()
   }
 
+  const copyLocation = () => {
+    navigator.clipboard.writeText(mapUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  const waShare = () => {
+    const text = encodeURIComponent(`Mi ubicación: ${mapUrl}`)
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div
       ref={overlayRef}
@@ -457,8 +470,17 @@ function MapModal({
     >
       <div className="bg-intap-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in">
         <div className="p-5">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="text-white font-bold text-lg">Nuestra ubicación</h3>
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <div>
+              <h3 className="text-white font-bold text-lg">Nuestra ubicación</h3>
+              <button
+                type="button"
+                onClick={() => window.open(mapUrl, '_blank', 'noopener,noreferrer')}
+                className="text-intap-mint text-sm font-semibold hover:underline cursor-pointer"
+              >
+                Cómo llegar
+              </button>
+            </div>
             <button
               onClick={onClose}
               className="text-slate-400 hover:text-white transition-colors"
@@ -469,7 +491,7 @@ function MapModal({
             </button>
           </div>
 
-          <p className="text-slate-400 text-sm mb-4">
+          <p className="text-slate-400 text-sm mb-4 mt-2">
             {title}
           </p>
 
@@ -490,13 +512,26 @@ function MapModal({
             )}
           </div>
 
+          {copied && (
+            <div className="mt-3 text-sm text-intap-mint text-center font-semibold">
+              ✅ Se copió tu ubicación
+            </div>
+          )}
+
           <div className="mt-4 flex gap-2">
             <button
               type="button"
-              onClick={() => window.open(mapUrl, '_blank', 'noopener,noreferrer')}
+              onClick={copyLocation}
               className="flex-1 py-3 rounded-2xl bg-intap-mint text-black font-extrabold hover:brightness-110 transition-all active:scale-95"
             >
-              Cómo llegar
+              Copiar ubicación
+            </button>
+            <button
+              type="button"
+              onClick={waShare}
+              className="flex-1 py-3 rounded-2xl bg-[#25D366] text-white font-extrabold hover:brightness-110 transition-all active:scale-95"
+            >
+              WhatsApp
             </button>
             <button
               type="button"
