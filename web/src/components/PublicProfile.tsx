@@ -928,6 +928,7 @@ export default function PublicProfile() {
   // ── Derived data ────────────────────────────────────────────────────────────
   const waSource = getWhatsAppSource(data)
   const mapLink = data.links?.find(isMapLink) || null
+  const anyModalOpen = !!(modalProduct || leadOpen || mapOpen || promoOpen)
 
   const otherLinks = data.links.filter(l => {
     const label = normalize(l.label)
@@ -1101,18 +1102,20 @@ export default function PublicProfile() {
       </div>
 
       {/* ── Chat Bubble (Fase 3) ── */}
-      <ChatBubble
-        hasWa={!!waSource}
-        onWhatsApp={() => {
-          if (!waSource) return
-          const url = buildWaUrl(waSource, data.name || slug || '', data.slug)
-          window.open(url, '_blank', 'noopener,noreferrer')
-          trackEvent(data.profileId, 'click', 'chat-whatsapp')
-        }}
-        onLead={() => { setLeadStatus(null); setLeadOpen(true); trackEvent(data.profileId, 'click', 'chat-lead') }}
-        onMap={() => { if (mapLink) { setMapOpen(true); trackEvent(data.profileId, 'click', 'chat-map') } }}
-        canMap={!!mapLink}
-      />
+      {!anyModalOpen && (
+        <ChatBubble
+          hasWa={!!waSource}
+          onWhatsApp={() => {
+            if (!waSource) return
+            const url = buildWaUrl(waSource, data.name || slug || '', data.slug)
+            window.open(url, '_blank', 'noopener,noreferrer')
+            trackEvent(data.profileId, 'click', 'chat-whatsapp')
+          }}
+          onLead={() => { setLeadStatus(null); setLeadOpen(true); trackEvent(data.profileId, 'click', 'chat-lead') }}
+          onMap={() => { if (mapLink) { setMapOpen(true); trackEvent(data.profileId, 'click', 'chat-map') } }}
+          canMap={!!mapLink}
+        />
+      )}
 
       {/* ── Modal Producto ── */}
       {modalProduct && (
