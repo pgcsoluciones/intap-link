@@ -165,7 +165,7 @@ app.get('/api/v1/public/assets/*', async (c) => {
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -173,7 +173,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
   if (!(profile as any).is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
-  const [links, rawGallery, rawFaqs, rawProducts, entitlements] = await Promise.all([
+  const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks] = await Promise.all([
     c.env.DB.prepare(
       'SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC'
     )
@@ -195,6 +195,11 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .bind((profile as any).id)
       .all(),
     getEntitlements(c, (profile as any).id as string),
+    c.env.DB.prepare(
+      'SELECT id, type, url, sort_order FROM profile_social_links WHERE profile_id = ? AND enabled = 1 ORDER BY sort_order ASC'
+    )
+      .bind((profile as any).id)
+      .all(),
   ])
 
   // Construye URL pública vía el endpoint /assets (Plan B: sin CDN externo)
@@ -232,16 +237,56 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     data: {
       profileId: (profile as any).id,
       slug: (profile as any).slug,
+      planId: (profile as any).plan_id,
       themeId: (profile as any).theme_id,
       name: (profile as any).name,
       bio: (profile as any).bio,
       whatsapp_number: (profile as any).whatsapp_number ?? null,
+      social_links: rawSocialLinks.results,
       links: links.results,
       gallery,
       faqs: rawFaqs.results,
       products,
       featured_product,
       entitlements,
+    },
+  })
+})
+
+/* ============================
+   vCard público
+   ============================ */
+
+app.get('/api/v1/public/vcard/:profileId', async (c) => {
+  const profileId = c.req.param('profileId')
+
+  const profile = await c.env.DB.prepare(
+    'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ? AND is_published = 1'
+  ).bind(profileId).first() as { slug: string; name: string | null; bio: string | null; whatsapp_number: string | null } | null
+
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const fn = profile.name || profile.slug
+  const profileUrl = `https://intap.link/${profile.slug}`
+
+  const lines: string[] = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${fn}`,
+    `N:${fn};;;`,
+  ]
+  if (profile.whatsapp_number) lines.push(`TEL;TYPE=CELL:${profile.whatsapp_number}`)
+  if (profile.bio)             lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
+  lines.push(`URL:${profileUrl}`)
+  lines.push('END:VCARD')
+
+  const vcf = lines.join('\r\n') + '\r\n'
+  const filename = `${profile.slug}.vcf`
+
+  return new Response(vcf, {
+    headers: {
+      'Content-Type': 'text/vcard; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
     },
   })
 })

@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import Dashboard from './Dashboard'
 import AdminPanel from './AdminPanel'
 import PublicProfile from './components/PublicProfile'
 
@@ -10,8 +9,8 @@ function RootRoute() {
   // Si viene ?slug=juan => redirige de forma inmediata (sin useEffect)
   if (slug) return <Navigate to={`/${slug}`} replace />
 
-  // Si no, muestra el dashboard normal
-  return <Dashboard />
+  // Sin slug: redirige al perfil demo hasta tener landing propia
+  return <Navigate to="/juan" replace />
 }
 
 function App() {
