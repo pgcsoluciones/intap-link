@@ -247,6 +247,44 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 })
 
 /* ============================
+   vCard público
+   ============================ */
+
+app.get('/api/v1/public/vcard/:profileId', async (c) => {
+  const profileId = c.req.param('profileId')
+
+  const profile = await c.env.DB.prepare(
+    'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ? AND is_published = 1'
+  ).bind(profileId).first() as { slug: string; name: string | null; bio: string | null; whatsapp_number: string | null } | null
+
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const fn = profile.name || profile.slug
+  const profileUrl = `https://intap.link/${profile.slug}`
+
+  const lines: string[] = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${fn}`,
+    `N:${fn};;;`,
+  ]
+  if (profile.whatsapp_number) lines.push(`TEL;TYPE=CELL:${profile.whatsapp_number}`)
+  if (profile.bio)             lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
+  lines.push(`URL:${profileUrl}`)
+  lines.push('END:VCARD')
+
+  const vcf = lines.join('\r\n') + '\r\n'
+  const filename = `${profile.slug}.vcf`
+
+  return new Response(vcf, {
+    headers: {
+      'Content-Type': 'text/vcard; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  })
+})
+
+/* ============================
    FASE 3 — Leads (Captura)
    ============================ */
 

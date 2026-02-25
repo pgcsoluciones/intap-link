@@ -994,6 +994,7 @@ export default function PublicProfile() {
         {data.entitlements?.canUseVCard && (
           <a
             href={`${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/public/vcard/${data.profileId}`}
+            download
             className="btn-gradient w-full mb-6 transform hover:scale-[1.02] active:scale-95 transition-all"
             onClick={() => trackEvent(data.profileId, 'click', 'vcard')}
           >
