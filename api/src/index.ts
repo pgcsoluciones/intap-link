@@ -172,7 +172,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks] = await Promise.all([
+  const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks, rawContact] = await Promise.all([
     c.env.DB.prepare(
       'SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC'
     )
@@ -199,6 +199,11 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     )
       .bind((profile as any).id)
       .all(),
+    c.env.DB.prepare(
+      'SELECT whatsapp, email, phone, hours, address, map_url FROM profile_contact WHERE profile_id = ? LIMIT 1'
+    )
+      .bind((profile as any).id)
+      .first(),
   ])
 
   // Construye URL pública vía el endpoint /assets (Plan B: sin CDN externo)
@@ -248,6 +253,14 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       products,
       featured_product,
       entitlements,
+      contact: rawContact ? {
+        whatsapp: (rawContact as any).whatsapp ?? null,
+        email:    (rawContact as any).email    ?? null,
+        phone:    (rawContact as any).phone    ?? null,
+        hours:    (rawContact as any).hours    ?? null,
+        address:  (rawContact as any).address  ?? null,
+        map_url:  (rawContact as any).map_url  ?? null,
+      } : null,
     },
   })
 })
@@ -259,11 +272,19 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 app.get('/api/v1/public/vcard/:profileId', async (c) => {
   const profileId = c.req.param('profileId')
 
-  const profile = await c.env.DB.prepare(
-    'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ?'
-  ).bind(profileId).first() as { slug: string; name: string | null; bio: string | null; whatsapp_number: string | null } | null
+  const [profile, contactRow] = await Promise.all([
+    c.env.DB.prepare(
+      'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ?'
+    ).bind(profileId).first() as Promise<{ slug: string; name: string | null; bio: string | null; whatsapp_number: string | null } | null>,
+    c.env.DB.prepare(
+      'SELECT whatsapp, phone, email, address FROM profile_contact WHERE profile_id = ? LIMIT 1'
+    ).bind(profileId).first() as Promise<{ whatsapp: string | null; phone: string | null; email: string | null; address: string | null } | null>,
+  ])
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  // Fallback: whatsapp_number → contact.whatsapp → contact.phone
+  const telNumber = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
 
   const fn = profile.name || profile.slug
   const profileUrl = `https://intap.link/${profile.slug}`
@@ -274,8 +295,10 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
     `FN:${fn}`,
     `N:${fn};;;`,
   ]
-  if (profile.whatsapp_number) lines.push(`TEL;TYPE=CELL:${profile.whatsapp_number}`)
-  if (profile.bio)             lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
+  if (telNumber)       lines.push(`TEL;TYPE=CELL:${telNumber}`)
+  if (contactRow?.email) lines.push(`EMAIL:${contactRow.email}`)
+  if (contactRow?.address) lines.push(`ADR;TYPE=WORK:;;${contactRow.address};;;;`)
+  if (profile.bio)     lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
   lines.push(`URL:${profileUrl}`)
   lines.push('END:VCARD')
 
@@ -469,24 +492,34 @@ app.post('/api/v1/public/waitlist', async (c) => {
 
   const email    = String(body.email    || '').trim().toLowerCase()
   const whatsapp = String(body.whatsapp || '').trim().replace(/\s/g, '')
+  const name     = String(body.name     || '').trim()
+  const sector   = String(body.sector   || '').trim()
+  const mode     = String(body.mode     || '').trim()
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
   if (!/^\+?\d{7,15}$/.test(whatsapp))
     return c.json({ ok: false, error: 'WhatsApp inválido (solo números, + opcional)' }, 400)
 
-  // Ya existe → devolver posición actual (idempotente)
+  // Ya existe → actualiza name/sector/mode y devuelve posición actual (idempotente)
   const existing = await c.env.DB.prepare(
-    `SELECT (SELECT COUNT(*) FROM waitlist w2 WHERE w2.rowid <= w.rowid) AS position
+    `SELECT (SELECT COUNT(*) FROM waitlist w2 WHERE w2.rowid <= w.rowid) AS position, w.id
      FROM waitlist w WHERE w.email = ? OR w.whatsapp = ? LIMIT 1`
-  ).bind(email, whatsapp).first() as { position: number } | null
+  ).bind(email, whatsapp).first() as { position: number; id: string } | null
 
-  if (existing) return c.json({ ok: true, position: existing.position })
+  if (existing) {
+    if (name || sector || mode) {
+      await c.env.DB.prepare(
+        `UPDATE waitlist SET name = COALESCE(?1, name), sector = COALESCE(?2, sector), mode = COALESCE(?3, mode) WHERE id = ?4`
+      ).bind(name || null, sector || null, mode || null, existing.id).run()
+    }
+    return c.json({ ok: true, position: existing.position })
+  }
 
   const id = crypto.randomUUID()
   await c.env.DB.prepare(
-    'INSERT INTO waitlist (id, email, whatsapp) VALUES (?, ?, ?)'
-  ).bind(id, email, whatsapp).run()
+    'INSERT INTO waitlist (id, email, whatsapp, name, sector, mode) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(id, email, whatsapp, name || null, sector || null, mode || null).run()
 
   const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM waitlist').first() as { n: number }
   return c.json({ ok: true, position: row.n })
