@@ -323,11 +323,10 @@ app.post('/api/v1/public/waitlist', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const email     = String(body.email     || '').trim().toLowerCase()
-  const whatsapp  = String(body.whatsapp  || '').trim()
-  const name      = String(body.name      || '').trim()
-  const sector    = String(body.sector    || '').trim()
-  const mode      = String(body.mode      || '').trim()
+  const email    = String(body.email    || '').trim().toLowerCase()
+  const name     = String(body.name     || '').trim()
+  const sector   = String(body.sector   || '').trim()
+  const mode     = String(body.mode     || '').trim()
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'valid email required' }, 400)
@@ -338,16 +337,19 @@ app.post('/api/v1/public/waitlist', async (c) => {
   if (!(WAITLIST_MODES as readonly string[]).includes(mode))
     return c.json({ ok: false, error: 'mode must be Virtual, Fisica or Mixta' }, 400)
 
+  const wa = normalizeWhatsApp(String(body.whatsapp || ''))
+  if (!wa) return c.json({ ok: false, error: 'WHATSAPP_INVALID' }, 400)
+
   // Idempotente: si ya existe, actualiza name/sector/mode y devuelve posición
   const existing = await c.env.DB.prepare(
     `SELECT id, position FROM waitlist WHERE email = ?1 OR (whatsapp IS NOT NULL AND whatsapp != '' AND whatsapp = ?2)`
-  ).bind(email, whatsapp || '').first()
+  ).bind(email, wa).first()
 
   if (existing) {
     await c.env.DB.prepare(
       `UPDATE waitlist SET name = ?1, sector = ?2, mode = ?3 WHERE id = ?4`
     ).bind(name, sector, mode, (existing as any).id).run()
-    return c.json({ ok: true, position: (existing as any).position, updated: true })
+    return c.json({ ok: true, position: (existing as any).position, whatsapp: wa, updated: true })
   }
 
   const posRow = await c.env.DB.prepare(`SELECT COUNT(*) as n FROM waitlist`).first()
@@ -356,9 +358,9 @@ app.post('/api/v1/public/waitlist', async (c) => {
   const id = crypto.randomUUID()
   await c.env.DB.prepare(
     `INSERT INTO waitlist (id, email, whatsapp, name, sector, mode, position) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
-  ).bind(id, email, whatsapp || null, name, sector, mode, position).run()
+  ).bind(id, email, wa, name, sector, mode, position).run()
 
-  return c.json({ ok: true, position }, 201)
+  return c.json({ ok: true, position, whatsapp: wa }, 201)
 })
 
 /* ============================
@@ -452,6 +454,21 @@ async function verifyTurnstile(c: any, token: string, ip: string): Promise<boole
   return !!(data && data.success)
 }
 
+function normalizeWhatsApp(input: string): string | null {
+  if (!input) return null
+  const digits = input.replace(/\D/g, '')
+  // RD: 10 dígitos 809/829/849 → +1XXXXXXXXXX
+  if (digits.length === 10 && /^(809|829|849)/.test(digits))
+    return `+1${digits}`
+  // RD: 11 dígitos 1+809/829/849 → +1XXXXXXXXXX
+  if (digits.length === 11 && digits.startsWith('1') && /^(809|829|849)/.test(digits.slice(1)))
+    return `+${digits}`
+  // Internacional: 7-15 dígitos → agrega + si no viene
+  if (digits.length >= 7 && digits.length <= 15)
+    return `+${digits}`
+  return null
+}
+
 async function sha256Base64Url(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
   const hash = await crypto.subtle.digest('SHA-256', data)
@@ -480,49 +497,6 @@ app.post('/api/v1/admin/activate-module', async (c) => {
     .bind(profileId, moduleCode)
     .run()
   return c.json({ ok: true, message: `Módulo ${moduleCode} activado` })
-})
-
-/* ============================
-   Lista de espera (Waitlist)
-   ============================ */
-
-app.post('/api/v1/public/waitlist', async (c) => {
-  let body: any = {}
-  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
-
-  const email    = String(body.email    || '').trim().toLowerCase()
-  const whatsapp = String(body.whatsapp || '').trim().replace(/\s/g, '')
-  const name     = String(body.name     || '').trim()
-  const sector   = String(body.sector   || '').trim()
-  const mode     = String(body.mode     || '').trim()
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    return c.json({ ok: false, error: 'Email inválido' }, 400)
-  if (!/^\+?\d{7,15}$/.test(whatsapp))
-    return c.json({ ok: false, error: 'WhatsApp inválido (solo números, + opcional)' }, 400)
-
-  // Ya existe → actualiza name/sector/mode y devuelve posición actual (idempotente)
-  const existing = await c.env.DB.prepare(
-    `SELECT (SELECT COUNT(*) FROM waitlist w2 WHERE w2.rowid <= w.rowid) AS position, w.id
-     FROM waitlist w WHERE w.email = ? OR w.whatsapp = ? LIMIT 1`
-  ).bind(email, whatsapp).first() as { position: number; id: string } | null
-
-  if (existing) {
-    if (name || sector || mode) {
-      await c.env.DB.prepare(
-        `UPDATE waitlist SET name = COALESCE(?1, name), sector = COALESCE(?2, sector), mode = COALESCE(?3, mode) WHERE id = ?4`
-      ).bind(name || null, sector || null, mode || null, existing.id).run()
-    }
-    return c.json({ ok: true, position: existing.position })
-  }
-
-  const id = crypto.randomUUID()
-  await c.env.DB.prepare(
-    'INSERT INTO waitlist (id, email, whatsapp, name, sector, mode) VALUES (?, ?, ?, ?, ?, ?)'
-  ).bind(id, email, whatsapp, name || null, sector || null, mode || null).run()
-
-  const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM waitlist').first() as { n: number }
-  return c.json({ ok: true, position: row.n })
 })
 
 export default app
