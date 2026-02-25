@@ -492,24 +492,34 @@ app.post('/api/v1/public/waitlist', async (c) => {
 
   const email    = String(body.email    || '').trim().toLowerCase()
   const whatsapp = String(body.whatsapp || '').trim().replace(/\s/g, '')
+  const name     = String(body.name     || '').trim()
+  const sector   = String(body.sector   || '').trim()
+  const mode     = String(body.mode     || '').trim()
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
   if (!/^\+?\d{7,15}$/.test(whatsapp))
     return c.json({ ok: false, error: 'WhatsApp inválido (solo números, + opcional)' }, 400)
 
-  // Ya existe → devolver posición actual (idempotente)
+  // Ya existe → actualiza name/sector/mode y devuelve posición actual (idempotente)
   const existing = await c.env.DB.prepare(
-    `SELECT (SELECT COUNT(*) FROM waitlist w2 WHERE w2.rowid <= w.rowid) AS position
+    `SELECT (SELECT COUNT(*) FROM waitlist w2 WHERE w2.rowid <= w.rowid) AS position, w.id
      FROM waitlist w WHERE w.email = ? OR w.whatsapp = ? LIMIT 1`
-  ).bind(email, whatsapp).first() as { position: number } | null
+  ).bind(email, whatsapp).first() as { position: number; id: string } | null
 
-  if (existing) return c.json({ ok: true, position: existing.position })
+  if (existing) {
+    if (name || sector || mode) {
+      await c.env.DB.prepare(
+        `UPDATE waitlist SET name = COALESCE(?1, name), sector = COALESCE(?2, sector), mode = COALESCE(?3, mode) WHERE id = ?4`
+      ).bind(name || null, sector || null, mode || null, existing.id).run()
+    }
+    return c.json({ ok: true, position: existing.position })
+  }
 
   const id = crypto.randomUUID()
   await c.env.DB.prepare(
-    'INSERT INTO waitlist (id, email, whatsapp) VALUES (?, ?, ?)'
-  ).bind(id, email, whatsapp).run()
+    'INSERT INTO waitlist (id, email, whatsapp, name, sector, mode) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(id, email, whatsapp, name || null, sector || null, mode || null).run()
 
   const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM waitlist').first() as { n: number }
   return c.json({ ok: true, position: row.n })
