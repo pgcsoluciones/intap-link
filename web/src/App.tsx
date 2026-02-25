@@ -1,16 +1,17 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import AdminPanel from './AdminPanel'
 import PublicProfile from './components/PublicProfile'
+import HomeLanding from './components/HomeLanding'
 
 function RootRoute() {
   const location = useLocation()
   const slug = new URLSearchParams(location.search).get('slug')
 
-  // Si viene ?slug=juan => redirige de forma inmediata (sin useEffect)
+  // Si viene ?slug=juan => redirige a /:slug
   if (slug) return <Navigate to={`/${slug}`} replace />
 
-  // Sin slug: redirige al perfil demo hasta tener landing propia
-  return <Navigate to="/juan" replace />
+  // Sin slug: landing propia
+  return <HomeLanding />
 }
 
 function App() {
