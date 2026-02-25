@@ -157,7 +157,7 @@ function SocialIcons({ links }: { links: SocialLink[] }) {
       {links.map(link => (
         <a
           key={link.id}
-          href={link.url}
+          href={link.type === 'email' && !link.url.startsWith('mailto:') ? `mailto:${link.url}` : link.url}
           target={link.type === 'email' ? undefined : '_blank'}
           rel="noopener noreferrer"
           aria-label={link.type}
@@ -982,7 +982,7 @@ export default function PublicProfile() {
   const waSource = getWhatsAppSource(data)
   const mapLink = data.links?.find(isMapLink) || null
   const anyModalOpen = !!(modalProduct || leadOpen || mapOpen || promoOpen)
-  const isFree = data.planId === 'free'
+  const isFree = data.planId === 'basic'
 
   const allOtherLinks = data.links.filter(l => {
     const label = normalize(l.label)
