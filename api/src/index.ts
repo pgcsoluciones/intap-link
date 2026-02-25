@@ -165,7 +165,7 @@ app.get('/api/v1/public/assets/*', async (c) => {
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -173,7 +173,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
   if (!(profile as any).is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
-  const [links, rawGallery, rawFaqs, rawProducts, entitlements] = await Promise.all([
+  const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks] = await Promise.all([
     c.env.DB.prepare(
       'SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC'
     )
@@ -195,6 +195,11 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .bind((profile as any).id)
       .all(),
     getEntitlements(c, (profile as any).id as string),
+    c.env.DB.prepare(
+      'SELECT id, type, url, sort_order FROM profile_social_links WHERE profile_id = ? AND enabled = 1 ORDER BY sort_order ASC'
+    )
+      .bind((profile as any).id)
+      .all(),
   ])
 
   // Construye URL pública vía el endpoint /assets (Plan B: sin CDN externo)
@@ -232,10 +237,12 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     data: {
       profileId: (profile as any).id,
       slug: (profile as any).slug,
+      planId: (profile as any).plan_id,
       themeId: (profile as any).theme_id,
       name: (profile as any).name,
       bio: (profile as any).bio,
       whatsapp_number: (profile as any).whatsapp_number ?? null,
+      social_links: rawSocialLinks.results,
       links: links.results,
       gallery,
       faqs: rawFaqs.results,
