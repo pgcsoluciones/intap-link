@@ -412,4 +412,37 @@ app.post('/api/v1/admin/activate-module', async (c) => {
   return c.json({ ok: true, message: `Módulo ${moduleCode} activado` })
 })
 
+/* ============================
+   Lista de espera (Waitlist)
+   ============================ */
+
+app.post('/api/v1/public/waitlist', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const email    = String(body.email    || '').trim().toLowerCase()
+  const whatsapp = String(body.whatsapp || '').trim().replace(/\s/g, '')
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return c.json({ ok: false, error: 'Email inválido' }, 400)
+  if (!/^\+?\d{7,15}$/.test(whatsapp))
+    return c.json({ ok: false, error: 'WhatsApp inválido (solo números, + opcional)' }, 400)
+
+  // Ya existe → devolver posición actual (idempotente)
+  const existing = await c.env.DB.prepare(
+    `SELECT (SELECT COUNT(*) FROM waitlist w2 WHERE w2.rowid <= w.rowid) AS position
+     FROM waitlist w WHERE w.email = ? OR w.whatsapp = ? LIMIT 1`
+  ).bind(email, whatsapp).first() as { position: number } | null
+
+  if (existing) return c.json({ ok: true, position: existing.position })
+
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(
+    'INSERT INTO waitlist (id, email, whatsapp) VALUES (?, ?, ?)'
+  ).bind(id, email, whatsapp).run()
+
+  const row = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM waitlist').first() as { n: number }
+  return c.json({ ok: true, position: row.n })
+})
+
 export default app
