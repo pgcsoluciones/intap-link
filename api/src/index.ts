@@ -171,7 +171,6 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     .first()
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
-  if (!(profile as any).is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
   const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks] = await Promise.all([
     c.env.DB.prepare(
@@ -261,7 +260,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
   const profileId = c.req.param('profileId')
 
   const profile = await c.env.DB.prepare(
-    'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ? AND is_published = 1'
+    'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ?'
   ).bind(profileId).first() as { slug: string; name: string | null; bio: string | null; whatsapp_number: string | null } | null
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
@@ -289,6 +288,54 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
       'Content-Disposition': `attachment; filename="${filename}"`,
     },
   })
+})
+
+/* ============================
+   Waitlist
+   ============================ */
+
+const WAITLIST_MODES = ['Virtual', 'Fisica', 'Mixta'] as const
+
+app.post('/api/v1/public/waitlist', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const email     = String(body.email     || '').trim().toLowerCase()
+  const whatsapp  = String(body.whatsapp  || '').trim()
+  const name      = String(body.name      || '').trim()
+  const sector    = String(body.sector    || '').trim()
+  const mode      = String(body.mode      || '').trim()
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return c.json({ ok: false, error: 'valid email required' }, 400)
+  if (!name || name.length < 2)
+    return c.json({ ok: false, error: 'name required (min 2 chars)' }, 400)
+  if (!sector || sector.length < 2)
+    return c.json({ ok: false, error: 'sector required' }, 400)
+  if (!(WAITLIST_MODES as readonly string[]).includes(mode))
+    return c.json({ ok: false, error: 'mode must be Virtual, Fisica or Mixta' }, 400)
+
+  // Idempotente: si ya existe, actualiza name/sector/mode y devuelve posición
+  const existing = await c.env.DB.prepare(
+    `SELECT id, position FROM waitlist WHERE email = ?1 OR (whatsapp IS NOT NULL AND whatsapp != '' AND whatsapp = ?2)`
+  ).bind(email, whatsapp || '').first()
+
+  if (existing) {
+    await c.env.DB.prepare(
+      `UPDATE waitlist SET name = ?1, sector = ?2, mode = ?3 WHERE id = ?4`
+    ).bind(name, sector, mode, (existing as any).id).run()
+    return c.json({ ok: true, position: (existing as any).position, updated: true })
+  }
+
+  const posRow = await c.env.DB.prepare(`SELECT COUNT(*) as n FROM waitlist`).first()
+  const position = ((posRow as any)?.n || 0) + 1
+
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO waitlist (id, email, whatsapp, name, sector, mode, position) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`
+  ).bind(id, email, whatsapp || null, name, sector, mode, position).run()
+
+  return c.json({ ok: true, position }, 201)
 })
 
 /* ============================

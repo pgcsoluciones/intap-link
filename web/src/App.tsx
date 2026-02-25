@@ -7,10 +7,9 @@ function RootRoute() {
   const location = useLocation()
   const slug = new URLSearchParams(location.search).get('slug')
 
-  // Si viene ?slug=juan => redirige a /:slug
+  // Si viene ?slug=juan => redirige de forma inmediata
   if (slug) return <Navigate to={`/${slug}`} replace />
 
-  // Sin slug: landing propia
   return <HomeLanding />
 }
 
