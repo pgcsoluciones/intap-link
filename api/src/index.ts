@@ -23,6 +23,12 @@ app.use('*', cors({
 }))
 app.options('*', (c) => c.body(null, 204))
 
+// Global error handler — ensures every uncaught error returns JSON (with CORS headers already set)
+app.onError((err, c) => {
+  console.error('[onError]', err)
+  return c.json({ ok: false, error: 'Internal server error' }, 500)
+})
+
 // --- Auth & Middlewares ---
 
 const requireAdmin = async (c: any, next: any) => {
@@ -70,42 +76,69 @@ app.post('/api/v1/auth/otp/request', async (c) => {
 })
 
 app.post('/api/v1/auth/otp/verify', async (c) => {
-  let body: any = {}
-  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
-  const email = String(body.email || '').trim().toLowerCase()
-  const code  = String(body.code  || '').trim()
-  if (!email || !code) return c.json({ ok: false, error: 'email and code required' }, 400)
+  console.log('[verify] STEP 0 start')
+  try {
+    let body: any = {}
+    try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const codeHash = await sha256Base64Url(code)
-  const otpRow = await c.env.DB.prepare(
-    `SELECT id FROM auth_otp
-     WHERE email = ? AND code_hash = ? AND expires_at > datetime('now') AND used_at IS NULL
-     ORDER BY created_at DESC LIMIT 1`
-  ).bind(email, codeHash).first()
-  if (!otpRow) return c.json({ ok: false, error: 'Código inválido o expirado' }, 401)
+    const email = String(body.email || '').trim().toLowerCase()
+    const code  = String(body.code  || '').trim()
+    if (!email || !code) return c.json({ ok: false, error: 'email and code required' }, 400)
 
-  await c.env.DB.prepare(
-    `UPDATE auth_otp SET used_at = datetime('now') WHERE id = ?`
-  ).bind((otpRow as any).id).run()
+    console.log('[verify] STEP 1 hashing code')
+    const codeHash = await sha256Base64Url(code)
+    console.log('[verify] STEP 1 done')
 
-  // Upsert user
-  await c.env.DB.prepare(
-    `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
-  ).bind(crypto.randomUUID(), email).run()
-  const user = await c.env.DB.prepare(
-    `SELECT id, email FROM users WHERE email = ? LIMIT 1`
-  ).bind(email).first() as { id: string; email: string } | null
-  if (!user) return c.json({ ok: false, error: 'User error' }, 500)
+    console.log('[verify] STEP 2 query auth_otp')
+    const otpRow = await c.env.DB.prepare(
+      `SELECT id, expires_at, used_at FROM auth_otp
+       WHERE email = ? AND code_hash = ?
+       ORDER BY created_at DESC LIMIT 1`
+    ).bind(email, codeHash).first()
+    console.log('[verify] STEP 2 done, found:', !!otpRow)
 
-  // Create session: raw token → client, hash → DB
-  const rawToken = crypto.randomUUID()
-  const tokenHash = await sha256Base64Url(rawToken)
-  await c.env.DB.prepare(
-    `INSERT INTO sessions (id, user_id, token_hash, expires_at)
-     VALUES (?, ?, ?, datetime('now', '+30 days'))`
-  ).bind(crypto.randomUUID(), user.id, tokenHash).run()
+    if (!otpRow) return c.json({ ok: false, error: 'Código inválido' }, 401)
 
-  return c.json({ ok: true, token: rawToken, user: { id: user.id, email: user.email } })
+    const r = otpRow as any
+    if (r.used_at)                           return c.json({ ok: false, error: 'Código ya usado' }, 401)
+    if (r.expires_at < new Date().toISOString().replace('T', ' ').slice(0, 19))
+                                              return c.json({ ok: false, error: 'Código expirado' }, 401)
+
+    console.log('[verify] STEP 3 mark otp used')
+    await c.env.DB.prepare(
+      `UPDATE auth_otp SET used_at = datetime('now') WHERE id = ?`
+    ).bind(r.id).run()
+    console.log('[verify] STEP 3 done')
+
+    console.log('[verify] STEP 4 upsert user')
+    await c.env.DB.prepare(
+      `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
+    ).bind(crypto.randomUUID(), email).run()
+    console.log('[verify] STEP 4 done')
+
+    console.log('[verify] STEP 5 select user')
+    const user = await c.env.DB.prepare(
+      `SELECT id, email FROM users WHERE email = ? LIMIT 1`
+    ).bind(email).first() as { id: string; email: string } | null
+    console.log('[verify] STEP 5 done, user:', !!user)
+    if (!user) return c.json({ ok: false, error: 'Error al obtener usuario' }, 500)
+
+    console.log('[verify] STEP 6 create session')
+    const rawToken = crypto.randomUUID()
+    const tokenHash = await sha256Base64Url(rawToken)
+    await c.env.DB.prepare(
+      `INSERT INTO sessions (id, user_id, token_hash, expires_at)
+       VALUES (?, ?, ?, datetime('now', '+30 days'))`
+    ).bind(crypto.randomUUID(), user.id, tokenHash).run()
+    console.log('[verify] STEP 6 done')
+
+    console.log('[verify] STEP final returning token')
+    return c.json({ ok: true, token: rawToken, user: { id: user.id, email: user.email } })
+
+  } catch (err) {
+    console.error('[verify] UNCAUGHT ERROR', err)
+    return c.json({ ok: false, error: 'Error interno en verify' }, 500)
+  }
 })
 
 // --- /me endpoints (requieren auth) ---
