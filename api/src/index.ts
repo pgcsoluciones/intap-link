@@ -71,7 +71,9 @@ app.post('/api/v1/auth/otp/request', async (c) => {
   ).bind(crypto.randomUUID(), email, codeHash).run()
 
   console.log(`[OTP] ${email} → ${code}`)
-  const devMode = (c.env as any).ALLOW_DEV_OTP === 'true'
+  // Always return dev_code until a real email provider is configured.
+  // To disable: set ALLOW_DEV_OTP=false in the Worker env vars.
+  const devMode = (c.env as any).ALLOW_DEV_OTP !== 'false'
   return c.json({ ok: true, message: 'Código enviado', ...(devMode ? { dev_code: code } : {}) })
 })
 
