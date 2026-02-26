@@ -66,9 +66,14 @@ app.post('/api/v1/auth/otp/request', async (c) => {
 
   const code = String(Math.floor(100000 + Math.random() * 900000))
   const codeHash = await sha256Base64Url(code)
-  await c.env.DB.prepare(
-    `INSERT INTO auth_otp (id, email, code_hash, expires_at) VALUES (?, ?, ?, datetime('now', '+10 minutes'))`
-  ).bind(crypto.randomUUID(), email, codeHash).run()
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO auth_otp (id, email, code_hash, expires_at) VALUES (?, ?, ?, datetime('now', '+10 minutes'))`
+    ).bind(crypto.randomUUID(), email, codeHash).run()
+  } catch (err) {
+    console.error('[otp/request] DB insert failed:', err)
+    return c.json({ ok: false, error: 'Error al guardar OTP (¿migración 0010 aplicada en D1?)' }, 500)
+  }
 
   console.log(`[OTP] ${email} → ${code}`)
   // Always return dev_code until a real email provider is configured.
@@ -99,12 +104,21 @@ app.post('/api/v1/auth/otp/verify', async (c) => {
     ).bind(email, codeHash).first()
     console.log('[verify] STEP 2 done, found:', !!otpRow)
 
-    if (!otpRow) return c.json({ ok: false, error: 'Código inválido' }, 401)
+    if (!otpRow) {
+      console.log('[verify] 401 — no row found for email+code_hash')
+      return c.json({ ok: false, error: 'Código inválido' }, 401)
+    }
 
     const r = otpRow as any
-    if (r.used_at)                           return c.json({ ok: false, error: 'Código ya usado' }, 401)
-    if (r.expires_at < new Date().toISOString().replace('T', ' ').slice(0, 19))
-                                              return c.json({ ok: false, error: 'Código expirado' }, 401)
+    if (r.used_at) {
+      console.log('[verify] 401 — code already used_at:', r.used_at)
+      return c.json({ ok: false, error: 'Código ya usado' }, 401)
+    }
+    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19)
+    if (r.expires_at < nowStr) {
+      console.log('[verify] 401 — code expired. expires_at:', r.expires_at, 'now:', nowStr)
+      return c.json({ ok: false, error: 'Código expirado' }, 401)
+    }
 
     console.log('[verify] STEP 3 mark otp used')
     await c.env.DB.prepare(
@@ -143,9 +157,13 @@ app.post('/api/v1/auth/otp/verify', async (c) => {
   }
 })
 
-// --- /me endpoints (requieren auth) ---
+// --- /me endpoints — sub-app aislado, requireAuth se aplica una sola vez aquí ---
+// De este modo /auth/* y /public/* NUNCA pueden ser afectados por el guard.
 
-app.get('/api/v1/me', requireAuth, async (c) => {
+const me = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+me.use('*', requireAuth)
+
+me.get('/', async (c) => {
   const userId = c.get('userId') as string
   const row = await c.env.DB.prepare(
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
@@ -179,7 +197,7 @@ app.get('/api/v1/me', requireAuth, async (c) => {
   return c.json({ ok: true, data: { ...r, onboardingStatus } })
 })
 
-app.post('/api/v1/me/profile/claim', requireAuth, async (c) => {
+me.post('/profile/claim', async (c) => {
   const userId = c.get('userId') as string
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -208,7 +226,7 @@ app.post('/api/v1/me/profile/claim', requireAuth, async (c) => {
   return c.json({ ok: true, profile_id: profileId, slug }, 201)
 })
 
-app.put('/api/v1/me/profile', requireAuth, async (c) => {
+me.put('/profile', async (c) => {
   const userId = c.get('userId') as string
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -237,7 +255,7 @@ app.put('/api/v1/me/profile', requireAuth, async (c) => {
   return c.json({ ok: true })
 })
 
-app.get('/api/v1/me/contact', requireAuth, async (c) => {
+me.get('/contact', async (c) => {
   const userId = c.get('userId') as string
   const profile = await c.env.DB.prepare(
     `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
@@ -250,7 +268,7 @@ app.get('/api/v1/me/contact', requireAuth, async (c) => {
   return c.json({ ok: true, data: contact || null })
 })
 
-app.put('/api/v1/me/contact', requireAuth, async (c) => {
+me.put('/contact', async (c) => {
   const userId = c.get('userId') as string
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -288,7 +306,7 @@ app.put('/api/v1/me/contact', requireAuth, async (c) => {
   return c.json({ ok: true })
 })
 
-app.get('/api/v1/me/links', requireAuth, async (c) => {
+me.get('/links', async (c) => {
   const userId = c.get('userId') as string
   const profile = await c.env.DB.prepare(
     `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
@@ -302,7 +320,7 @@ app.get('/api/v1/me/links', requireAuth, async (c) => {
   return c.json({ ok: true, data: links.results })
 })
 
-app.post('/api/v1/me/links', requireAuth, async (c) => {
+me.post('/links', async (c) => {
   const userId = c.get('userId') as string
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -329,7 +347,7 @@ app.post('/api/v1/me/links', requireAuth, async (c) => {
 })
 
 // Register /reorder BEFORE /:id to avoid route collision
-app.put('/api/v1/me/links/reorder', requireAuth, async (c) => {
+me.put('/links/reorder', async (c) => {
   const userId = c.get('userId') as string
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -362,7 +380,7 @@ app.put('/api/v1/me/links/reorder', requireAuth, async (c) => {
   return c.json({ ok: true })
 })
 
-app.put('/api/v1/me/links/:id', requireAuth, async (c) => {
+me.put('/links/:id', async (c) => {
   const userId = c.get('userId') as string
   const linkId = c.req.param('id')
   let body: any = {}
@@ -388,7 +406,7 @@ app.put('/api/v1/me/links/:id', requireAuth, async (c) => {
   return c.json({ ok: true })
 })
 
-app.delete('/api/v1/me/links/:id', requireAuth, async (c) => {
+me.delete('/links/:id', async (c) => {
   const userId = c.get('userId') as string
   const linkId = c.req.param('id')
 
@@ -402,6 +420,9 @@ app.delete('/api/v1/me/links/:id', requireAuth, async (c) => {
   ).bind(linkId, (profile as any).id).run()
   return c.json({ ok: true })
 })
+
+// Mount the authenticated sub-app
+app.route('/api/v1/me', me)
 
 // --- Analíticas ---
 
