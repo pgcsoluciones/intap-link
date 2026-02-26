@@ -65,8 +65,8 @@ app.post('/api/v1/auth/otp/request', async (c) => {
   ).bind(crypto.randomUUID(), email, codeHash).run()
 
   console.log(`[OTP] ${email} → ${code}`)
-  const isDev = (c.env as any).ENVIRONMENT === 'dev'
-  return c.json({ ok: true, message: 'Código enviado', ...(isDev ? { dev_code: code } : {}) })
+  const devMode = (c.env as any).ALLOW_DEV_OTP === 'true'
+  return c.json({ ok: true, message: 'Código enviado', ...(devMode ? { dev_code: code } : {}) })
 })
 
 app.post('/api/v1/auth/otp/verify', async (c) => {
