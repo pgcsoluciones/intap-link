@@ -7,16 +7,23 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [devCode, setDevCode] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setDevCode('')
     setLoading(true)
     try {
       const json: any = await apiPost('/auth/otp/request', { email })
       if (json.ok) {
         sessionStorage.setItem('otp_email', email)
-        navigate('/admin/verify')
+        if (json.dev_code) {
+          // Dev mode: show code on screen, user copies it and goes to /verify
+          setDevCode(json.dev_code)
+        } else {
+          navigate('/admin/verify')
+        }
       } else {
         setError(json.error || 'Error al enviar el código')
       }
@@ -52,13 +59,33 @@ export default function AdminLogin() {
 
           {error && <p className="text-xs text-red-400 text-center">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50 transition-opacity"
-          >
-            {loading ? 'Enviando…' : 'Enviar código →'}
-          </button>
+          {devCode && (
+            <div className="rounded-xl bg-intap-mint/10 border border-intap-mint/30 p-4 flex flex-col gap-2">
+              <p className="text-[10px] font-bold text-intap-mint uppercase tracking-widest">
+                Código DEV (no hay email configurado)
+              </p>
+              <p className="text-3xl font-mono font-black text-white tracking-[0.3em] text-center">
+                {devCode}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/verify')}
+                className="w-full bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-2.5 rounded-xl text-sm mt-1"
+              >
+                Ir a verificar →
+              </button>
+            </div>
+          )}
+
+          {!devCode && (
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50 transition-opacity"
+            >
+              {loading ? 'Enviando…' : 'Enviar código →'}
+            </button>
+          )}
         </form>
       </div>
     </div>
