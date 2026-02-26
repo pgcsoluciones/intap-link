@@ -15,7 +15,13 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 const PUBLIC_BASE_URL = 'https://intap-web2.pages.dev'
 
-app.use('*', cors())
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
+}))
+app.options('*', (c) => c.body(null, 204))
 
 // --- Auth & Middlewares ---
 
