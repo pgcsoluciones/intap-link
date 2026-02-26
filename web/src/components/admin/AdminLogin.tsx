@@ -19,7 +19,8 @@ export default function AdminLogin() {
       if (json.ok) {
         sessionStorage.setItem('otp_email', email)
         if (json.dev_code) {
-          // Dev mode: show code on screen, user copies it and goes to /verify
+          // Dev mode: persist code so /admin/verify can auto-fill it
+          sessionStorage.setItem('otp_dev_code', json.dev_code)
           setDevCode(json.dev_code)
         } else {
           navigate('/admin/verify')

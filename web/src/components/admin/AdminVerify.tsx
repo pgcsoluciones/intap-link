@@ -4,7 +4,7 @@ import { apiPost, apiGet } from '../../lib/api'
 
 export default function AdminVerify() {
   const navigate = useNavigate()
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(() => sessionStorage.getItem('otp_dev_code') || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,6 +20,7 @@ export default function AdminVerify() {
 
       localStorage.setItem('intap_token', json.token)
       sessionStorage.removeItem('otp_email')
+      sessionStorage.removeItem('otp_dev_code')
 
       // Check if user has a profile yet
       const me: any = await apiGet('/me')
