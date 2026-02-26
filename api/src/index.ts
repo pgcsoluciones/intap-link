@@ -9,7 +9,11 @@ type Bindings = {
   JWT_SECRET: string
 }
 
-const app = new Hono<{ Bindings: Bindings }>()
+type Variables = { userId: string }
+
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+const PUBLIC_BASE_URL = 'https://intap-web2.pages.dev'
 
 app.use('*', cors())
 
@@ -22,34 +26,340 @@ const requireAdmin = async (c: any, next: any) => {
   await next()
 }
 
+const requireAuth = async (c: any, next: any) => {
+  const auth = c.req.header('Authorization') || ''
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
+  if (!token) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+  const hash = await sha256Base64Url(token)
+  const session = await c.env.DB.prepare(
+    `SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > datetime('now') LIMIT 1`
+  ).bind(hash).first()
+  if (!session) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+  c.set('userId', (session as any).user_id)
+  await next()
+}
+
 // --- Rutas de API ---
 
 app.get('/api/health', (c) => c.json({ ok: true, status: 'healthy' }))
 
-// --- Autenticación MAGIC LINK ---
+// --- Autenticación OTP ---
 
-app.post('/api/v1/auth/magic-link', async (c) => {
-  const { email } = await c.req.json()
-  // Simulación: Generamos un código de 6 dígitos
-  const code = Math.floor(100000 + Math.random() * 900000).toString()
+app.post('/api/v1/auth/otp/request', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const email = String(body.email || '').trim().toLowerCase()
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return c.json({ ok: false, error: 'valid email required' }, 400)
 
-  // Guardamos en D1 para verificación temporal (Opcional, aquí simulamos que el código es '123456' para el test)
-  console.log(`[AUTH] Código enviado a ${email}: ${code}`)
+  const code = String(Math.floor(100000 + Math.random() * 900000))
+  const codeHash = await sha256Base64Url(code)
+  await c.env.DB.prepare(
+    `INSERT INTO auth_otp (id, email, code_hash, expires_at) VALUES (?, ?, ?, datetime('now', '+10 minutes'))`
+  ).bind(crypto.randomUUID(), email, codeHash).run()
 
-  return c.json({ ok: true, message: 'Código enviado (revisa la consola)' })
+  console.log(`[OTP] ${email} → ${code}`)
+  const isDev = (c.env as any).ENVIRONMENT === 'dev'
+  return c.json({ ok: true, message: 'Código enviado', ...(isDev ? { dev_code: code } : {}) })
 })
 
-app.post('/api/v1/auth/verify', async (c) => {
-  const { email, code } = await c.req.json()
+app.post('/api/v1/auth/otp/verify', async (c) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const email = String(body.email || '').trim().toLowerCase()
+  const code  = String(body.code  || '').trim()
+  if (!email || !code) return c.json({ ok: false, error: 'email and code required' }, 400)
 
-  // Simulación de verificación
-  if (code !== '123456') return c.json({ ok: false, error: 'Código inválido' }, 401)
+  const codeHash = await sha256Base64Url(code)
+  const otpRow = await c.env.DB.prepare(
+    `SELECT id FROM auth_otp
+     WHERE email = ? AND code_hash = ? AND expires_at > datetime('now') AND used_at IS NULL
+     ORDER BY created_at DESC LIMIT 1`
+  ).bind(email, codeHash).first()
+  if (!otpRow) return c.json({ ok: false, error: 'Código inválido o expirado' }, 401)
 
-  // En producción buscaríamos al usuario en D1
-  const payload = { email, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 } // 24h
-  // const token = await jwt.sign(payload, c.env.JWT_SECRET) // Comentado hasta tener el secret en wrangler.toml
+  await c.env.DB.prepare(
+    `UPDATE auth_otp SET used_at = datetime('now') WHERE id = ?`
+  ).bind((otpRow as any).id).run()
 
-  return c.json({ ok: true, token: 'mock-jwt-token', user: { email } })
+  // Upsert user
+  await c.env.DB.prepare(
+    `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
+  ).bind(crypto.randomUUID(), email).run()
+  const user = await c.env.DB.prepare(
+    `SELECT id, email FROM users WHERE email = ? LIMIT 1`
+  ).bind(email).first() as { id: string; email: string } | null
+  if (!user) return c.json({ ok: false, error: 'User error' }, 500)
+
+  // Create session: raw token → client, hash → DB
+  const rawToken = crypto.randomUUID()
+  const tokenHash = await sha256Base64Url(rawToken)
+  await c.env.DB.prepare(
+    `INSERT INTO sessions (id, user_id, token_hash, expires_at)
+     VALUES (?, ?, ?, datetime('now', '+30 days'))`
+  ).bind(crypto.randomUUID(), user.id, tokenHash).run()
+
+  return c.json({ ok: true, token: rawToken, user: { id: user.id, email: user.email } })
+})
+
+// --- /me endpoints (requieren auth) ---
+
+app.get('/api/v1/me', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const row = await c.env.DB.prepare(
+    `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
+            p.avatar_url, p.category, p.subcategory, p.is_published
+     FROM users u
+     LEFT JOIN profiles p ON p.user_id = u.id
+     WHERE u.id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!row) return c.json({ ok: false, error: 'User not found' }, 404)
+
+  const r = row as any
+  let hasContact = false
+  let hasLinks = false
+  if (r.profile_id) {
+    const [contactRow, linksRow] = await Promise.all([
+      c.env.DB.prepare(`SELECT profile_id FROM profile_contact WHERE profile_id = ? LIMIT 1`).bind(r.profile_id).first(),
+      c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_links WHERE profile_id = ?`).bind(r.profile_id).first(),
+    ])
+    hasContact = !!contactRow
+    hasLinks = ((linksRow as any)?.n || 0) > 0
+  }
+
+  const onboardingStatus = {
+    hasProfile:  !!r.profile_id,
+    hasSlug:     !!r.slug,
+    hasCategory: !!r.category,
+    hasContact,
+    hasLinks,
+  }
+
+  return c.json({ ok: true, data: { ...r, onboardingStatus } })
+})
+
+app.post('/api/v1/me/profile/claim', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const slug = String(body.slug || '').trim().toLowerCase()
+  const RESERVED_SLUGS = new Set(['admin', 'api', 'auth', 'me', 'assets', 'favicon', 'www'])
+  if (!slug || !/^[a-z0-9_-]{2,32}$/.test(slug))
+    return c.json({ ok: false, error: 'Slug inválido (2–32 chars, a-z 0-9 _ -)' }, 400)
+  if (RESERVED_SLUGS.has(slug))
+    return c.json({ ok: false, error: 'Slug reservado' }, 400)
+
+  const existing = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (existing) return c.json({ ok: false, error: 'Ya tienes un perfil' }, 409)
+
+  const taken = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE slug = ? LIMIT 1`
+  ).bind(slug).first()
+  if (taken) return c.json({ ok: false, error: 'Slug no disponible' }, 409)
+
+  const profileId = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
+     VALUES (?, ?, ?, 'free', 'default', 0)`
+  ).bind(profileId, userId, slug).run()
+  return c.json({ ok: true, profile_id: profileId, slug }, 201)
+})
+
+app.put('/api/v1/me/profile', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const name        = body.name        !== undefined ? String(body.name        || '').trim() : undefined
+  const bio         = body.bio         !== undefined ? String(body.bio         || '').trim() : undefined
+  const avatar_url  = body.avatar_url  !== undefined ? String(body.avatar_url  || '').trim() : undefined
+  const category    = body.category    !== undefined ? String(body.category    || '').trim() : undefined
+  const subcategory = body.subcategory !== undefined ? String(body.subcategory || '').trim() : undefined
+
+  await c.env.DB.prepare(
+    `UPDATE profiles
+     SET name        = COALESCE(?1, name),
+         bio         = COALESCE(?2, bio),
+         avatar_url  = COALESCE(?3, avatar_url),
+         category    = COALESCE(?4, category),
+         subcategory = COALESCE(?5, subcategory),
+         updated_at  = datetime('now')
+     WHERE id = ?6`
+  ).bind(name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+app.get('/api/v1/me/contact', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const contact = await c.env.DB.prepare(
+    `SELECT whatsapp, email, phone, hours, address, map_url FROM profile_contact WHERE profile_id = ? LIMIT 1`
+  ).bind((profile as any).id).first()
+  return c.json({ ok: true, data: contact || null })
+})
+
+app.put('/api/v1/me/contact', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  // Accept whatsapp_number (preferred) or whatsapp (legacy)
+  const waRaw = body.whatsapp_number !== undefined ? body.whatsapp_number : body.whatsapp
+  const whatsapp = waRaw !== undefined ? normalizeWhatsApp(String(waRaw || '')) : undefined
+  const email    = body.email    !== undefined ? String(body.email   || '').trim() : undefined
+  const phone    = body.phone    !== undefined ? String(body.phone   || '').trim() : undefined
+  const hours    = body.hours    !== undefined ? String(body.hours   || '').trim() : undefined
+  const address  = body.address  !== undefined ? String(body.address || '').trim() : undefined
+  const map_url  = body.map_url  !== undefined ? String(body.map_url || '').trim() : undefined
+
+  await c.env.DB.prepare(
+    `INSERT INTO profile_contact (profile_id, whatsapp, email, phone, hours, address, map_url, updated_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
+     ON CONFLICT(profile_id) DO UPDATE SET
+       whatsapp   = COALESCE(?2, whatsapp),
+       email      = COALESCE(?3, email),
+       phone      = COALESCE(?4, phone),
+       hours      = COALESCE(?5, hours),
+       address    = COALESCE(?6, address),
+       map_url    = COALESCE(?7, map_url),
+       updated_at = datetime('now')`
+  ).bind(
+    (profile as any).id,
+    whatsapp ?? null, email ?? null, phone ?? null,
+    hours ?? null, address ?? null, map_url ?? null,
+  ).run()
+  return c.json({ ok: true })
+})
+
+app.get('/api/v1/me/links', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const links = await c.env.DB.prepare(
+    `SELECT id, label, url, sort_order, is_active FROM profile_links
+     WHERE profile_id = ? ORDER BY sort_order ASC`
+  ).bind((profile as any).id).all()
+  return c.json({ ok: true, data: links.results })
+})
+
+app.post('/api/v1/me/links', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const label = String(body.label || '').trim()
+  const url   = String(body.url   || '').trim()
+  if (!label) return c.json({ ok: false, error: 'label required' }, 400)
+  if (!url || !url.startsWith('http')) return c.json({ ok: false, error: 'valid url required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const maxRow = await c.env.DB.prepare(
+    `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_links WHERE profile_id = ?`
+  ).bind((profile as any).id).first()
+  const sortOrder = ((maxRow as any)?.mx ?? -1) + 1
+
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO profile_links (id, profile_id, label, url, sort_order) VALUES (?, ?, ?, ?, ?)`
+  ).bind(id, (profile as any).id, label, url, sortOrder).run()
+  return c.json({ ok: true, id, sort_order: sortOrder }, 201)
+})
+
+// Register /reorder BEFORE /:id to avoid route collision
+app.put('/api/v1/me/links/reorder', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  // Accept orderedIds: string[] (preferred) or legacy items: {id, sort_order}[]
+  const orderedIds: string[] | undefined = Array.isArray(body.orderedIds) ? body.orderedIds : undefined
+  const items: { id: string; sort_order: number }[] | undefined = Array.isArray(body.items) ? body.items : undefined
+  if (!orderedIds && !items)
+    return c.json({ ok: false, error: 'orderedIds array required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  if (orderedIds) {
+    await Promise.all(orderedIds.map((id: string, index: number) =>
+      c.env.DB.prepare(
+        `UPDATE profile_links SET sort_order = ?, updated_at = datetime('now')
+         WHERE id = ? AND profile_id = ?`
+      ).bind(index, id, (profile as any).id).run()
+    ))
+  } else {
+    await Promise.all(items!.map((item) =>
+      c.env.DB.prepare(
+        `UPDATE profile_links SET sort_order = ?, updated_at = datetime('now')
+         WHERE id = ? AND profile_id = ?`
+      ).bind(item.sort_order, item.id, (profile as any).id).run()
+    ))
+  }
+  return c.json({ ok: true })
+})
+
+app.put('/api/v1/me/links/:id', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const linkId = c.req.param('id')
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const label     = body.label     !== undefined ? String(body.label || '').trim() : undefined
+  const url       = body.url       !== undefined ? String(body.url   || '').trim() : undefined
+  const is_active = body.is_active !== undefined ? (body.is_active ? 1 : 0)       : undefined
+
+  await c.env.DB.prepare(
+    `UPDATE profile_links
+     SET label      = COALESCE(?1, label),
+         url        = COALESCE(?2, url),
+         is_active  = COALESCE(?3, is_active),
+         updated_at = datetime('now')
+     WHERE id = ?4 AND profile_id = ?5`
+  ).bind(label ?? null, url ?? null, is_active ?? null, linkId, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+app.delete('/api/v1/me/links/:id', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const linkId = c.req.param('id')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await c.env.DB.prepare(
+    `DELETE FROM profile_links WHERE id = ? AND profile_id = ?`
+  ).bind(linkId, (profile as any).id).run()
+  return c.json({ ok: true })
 })
 
 // --- Analíticas ---
@@ -174,7 +484,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks, rawContact] = await Promise.all([
     c.env.DB.prepare(
-      'SELECT id, label, url FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC'
+      'SELECT id, label, url FROM profile_links WHERE profile_id = ? AND is_active = 1 ORDER BY sort_order ASC'
     )
       .bind((profile as any).id)
       .all(),
@@ -287,7 +597,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
   const telNumber = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
 
   const fn = profile.name || profile.slug
-  const profileUrl = `https://intap.link/${profile.slug}`
+  const profileUrl = `${PUBLIC_BASE_URL}/${profile.slug}`
 
   const lines: string[] = [
     'BEGIN:VCARD',
