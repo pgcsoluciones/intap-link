@@ -68,7 +68,7 @@ app.post('/api/v1/auth/otp/request', async (c) => {
   const codeHash = await sha256Base64Url(code)
   try {
     await c.env.DB.prepare(
-      `INSERT INTO auth_otp (id, email, code_hash, expires_at) VALUES (?, ?, ?, datetime('now', '+10 minutes'))`
+      `INSERT INTO auth_otp (id, email, code_hash, expires_at, created_at) VALUES (?, ?, ?, datetime('now', '+10 minutes'), datetime('now'))`
     ).bind(crypto.randomUUID(), email, codeHash).run()
   } catch (err) {
     console.error('[otp/request] DB insert failed:', err)
@@ -143,8 +143,8 @@ app.post('/api/v1/auth/otp/verify', async (c) => {
     const rawToken = crypto.randomUUID()
     const tokenHash = await sha256Base64Url(rawToken)
     await c.env.DB.prepare(
-      `INSERT INTO sessions (id, user_id, token_hash, expires_at)
-       VALUES (?, ?, ?, datetime('now', '+30 days'))`
+      `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at)
+       VALUES (?, ?, ?, datetime('now', '+30 days'), datetime('now'))`
     ).bind(crypto.randomUUID(), user.id, tokenHash).run()
     console.log('[verify] STEP 6 done')
 
@@ -849,6 +849,29 @@ async function sha256Base64Url(input: string): Promise<string> {
   for (const b of bytes) bin += String.fromCharCode(b)
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
+
+// --- DB check (temporal — para verificar schema en producción) ---
+
+app.get('/api/v1/admin/db-check', async (c) => {
+  const key = c.req.header('X-Admin-Key') || c.req.query('key') || ''
+  if (key !== 'intap_master_key') return c.json({ ok: false, error: 'Forbidden' }, 403)
+
+  const tables = ['users', 'profiles', 'sessions', 'auth_otp', 'profile_links', 'profile_contact']
+  const schema: Record<string, any> = {}
+
+  for (const table of tables) {
+    try {
+      const info = await c.env.DB.prepare(`PRAGMA table_info(${table})`).all()
+      schema[table] = (info.results as any[]).map((r) => ({
+        name: r.name, type: r.type, notnull: r.notnull, dflt_value: r.dflt_value,
+      }))
+    } catch (err) {
+      schema[table] = { error: String(err) }
+    }
+  }
+
+  return c.json({ ok: true, schema })
+})
 
 // Admin
 app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
