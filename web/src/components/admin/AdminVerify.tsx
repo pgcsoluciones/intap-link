@@ -1,86 +1,34 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiPost, apiGet } from '../../lib/api'
 
-export default function AdminVerify() {
+export default function AdminCheckEmail() {
   const navigate = useNavigate()
-  const [code, setCode] = useState(() => sessionStorage.getItem('otp_dev_code') || '')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const email = sessionStorage.getItem('otp_email') || ''
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const json: any = await apiPost('/auth/otp/verify', { email, code: code.trim() })
-      if (!json.ok) { setError(json.error || 'Código inválido'); return }
-
-      localStorage.setItem('intap_token', json.token)
-      sessionStorage.removeItem('otp_email')
-      sessionStorage.removeItem('otp_dev_code')
-
-      // Check if user has a profile yet
-      const me: any = await apiGet('/me')
-      if (me.ok && me.data?.profile_id) {
-        navigate('/admin', { replace: true })
-      } else {
-        navigate('/admin/onboarding/slug', { replace: true })
-      }
-    } catch {
-      setError('Error de conexión')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const email = sessionStorage.getItem('magic_link_email') || ''
 
   return (
     <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter']">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-black mb-1">Ingresa el código</h1>
+          <div className="text-5xl mb-4">📬</div>
+          <h1 className="text-2xl font-black mb-2">Revisa tu correo</h1>
           <p className="text-sm text-slate-400">
-            Enviado a <span className="text-white font-bold">{email || '—'}</span>
+            Enviamos un enlace de acceso a{' '}
+            <span className="text-white font-bold">{email || 'tu correo'}</span>
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="glass-card p-6 flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-              Código de 6 dígitos
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="123456"
-              required
-              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors tracking-[0.5em] font-mono text-center text-lg"
-            />
-          </div>
-
-          {error && <p className="text-xs text-red-400 text-center">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading || code.length < 6}
-            className="w-full bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50 transition-opacity"
-          >
-            {loading ? 'Verificando…' : 'Verificar →'}
-          </button>
-
+        <div className="glass-card p-6 flex flex-col gap-4 text-center">
+          <p className="text-xs text-slate-400 leading-relaxed">
+            El enlace expira en <strong className="text-white">10 minutos</strong> y solo puede
+            usarse una vez. Revisa también tu carpeta de spam.
+          </p>
           <button
             type="button"
             onClick={() => navigate('/admin/login')}
-            className="text-xs text-slate-500 hover:text-white text-center transition-colors"
+            className="text-xs text-slate-500 hover:text-white transition-colors"
           >
             Volver e ingresar otro correo
           </button>
-        </form>
+        </div>
       </div>
     </div>
   )

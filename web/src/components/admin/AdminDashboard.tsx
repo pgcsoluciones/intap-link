@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { apiGet } from '../../lib/api'
+import { apiGet, apiPost } from '../../lib/api'
 
 interface MeData {
   id: string
@@ -29,8 +29,8 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('intap_token')
+  const handleLogout = async () => {
+    try { await apiPost('/auth/logout', {}) } catch { /* ignore */ }
     navigate('/admin/login', { replace: true })
   }
 

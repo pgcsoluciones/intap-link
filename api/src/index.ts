@@ -1,12 +1,18 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { jwt } from 'hono/jwt'
 import { getEntitlements } from './engine/entitlements'
+import { sendMagicLinkEmail } from './lib/email'
 
 type Bindings = {
   DB: D1Database
   BUCKET: R2Bucket
   JWT_SECRET: string
+  RESEND_API_KEY: string
+  GOOGLE_CLIENT_ID: string
+  GOOGLE_CLIENT_SECRET: string
+  APP_URL: string
+  SESSION_SECRET: string
+  ENVIRONMENT: string
 }
 
 type Variables = { userId: string }
@@ -15,21 +21,75 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 const PUBLIC_BASE_URL = 'https://intap-web2.pages.dev'
 
+// ─── CORS — credentials-aware ─────────────────────────────────────────────
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false
+  const exact = [
+    'https://intaprd.com',
+    'https://www.intaprd.com',
+    'https://intap-web2.pages.dev',
+    'http://localhost:5173',
+    'http://localhost:4173',
+  ]
+  if (exact.includes(origin)) return true
+  try {
+    const u = new URL(origin)
+    return (
+      u.protocol === 'https:' &&
+      (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com'))
+    )
+  } catch { return false }
+}
+
 app.use('*', cors({
-  origin: '*',
+  origin: (origin) => isAllowedOrigin(origin) ? origin : '',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
   maxAge: 86400,
 }))
 app.options('*', (c) => c.body(null, 204))
 
-// Global error handler — ensures every uncaught error returns JSON (with CORS headers already set)
+// Global error handler
 app.onError((err, c) => {
   console.error('[onError]', err)
   return c.json({ ok: false, error: 'Internal server error' }, 500)
 })
 
-// --- Auth & Middlewares ---
+// ─── Auth Helpers ─────────────────────────────────────────────────────────
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function generateToken(bytes = 32): string {
+  const array = new Uint8Array(bytes)
+  crypto.getRandomValues(array)
+  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+function parseCookie(header: string, name: string): string | null {
+  const match = header.match(new RegExp(`(?:^|;\\s*)${encodeURIComponent(name)}=([^;]*)`))
+  if (match) return decodeURIComponent(match[1])
+  // Also try unencoded name
+  const match2 = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
+  return match2 ? decodeURIComponent(match2[1]) : null
+}
+
+function buildSessionCookie(value: string, hostname: string, maxAge: number): string {
+  let cookie = `session_id=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
+  if (hostname === 'intaprd.com' || hostname.endsWith('.intaprd.com')) {
+    cookie += '; Domain=.intaprd.com'
+  }
+  return cookie
+}
+
+// ─── Middlewares ──────────────────────────────────────────────────────────
 
 const requireAdmin = async (c: any, next: any) => {
   const adminEmail = 'juanluis@intaprd.com'
@@ -39,126 +99,260 @@ const requireAdmin = async (c: any, next: any) => {
 }
 
 const requireAuth = async (c: any, next: any) => {
-  const auth = c.req.header('Authorization') || ''
-  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : ''
-  if (!token) return c.json({ ok: false, error: 'Unauthorized' }, 401)
-  const hash = await sha256Base64Url(token)
+  const cookieHeader = c.req.header('Cookie') || ''
+  const rawSession = parseCookie(cookieHeader, 'session_id')
+  if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+
+  const sessionHash = await sha256Hex(rawSession)
   const session = await c.env.DB.prepare(
-    `SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > datetime('now') LIMIT 1`
-  ).bind(hash).first()
+    `SELECT id, user_id FROM auth_sessions
+     WHERE session_hash = ? AND expires_at > datetime('now') AND revoked_at IS NULL
+     LIMIT 1`
+  ).bind(sessionHash).first()
+
   if (!session) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+
   c.set('userId', (session as any).user_id)
   await next()
+
+  // Update last_seen_at non-blocking after response
+  c.env.DB.prepare(`UPDATE auth_sessions SET last_seen_at = datetime('now') WHERE id = ?`)
+    .bind((session as any).id)
+    .run()
+    .catch(() => {})
 }
 
-// --- Rutas de API ---
+// ─── Routes ───────────────────────────────────────────────────────────────
 
 app.get('/api/health', (c) => c.json({ ok: true, status: 'healthy' }))
 
-// --- Autenticación OTP ---
+// ─── Magic Link ───────────────────────────────────────────────────────────
 
-app.post('/api/v1/auth/otp/request', async (c) => {
+app.post('/api/v1/auth/magic-link/start', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
   const email = String(body.email || '').trim().toLowerCase()
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    return c.json({ ok: false, error: 'valid email required' }, 400)
+    return c.json({ ok: false, error: 'Email inválido' }, 400)
 
-  const code = String(Math.floor(100000 + Math.random() * 900000))
-  const codeHash = await sha256Base64Url(code)
-  try {
-    await c.env.DB.prepare(
-      `INSERT INTO auth_otp (id, email, code_hash, expires_at, created_at) VALUES (?, ?, ?, datetime('now', '+10 minutes'), datetime('now'))`
-    ).bind(crypto.randomUUID(), email, codeHash).run()
-  } catch (err) {
-    console.error('[otp/request] DB insert failed:', err)
-    return c.json({ ok: false, error: 'Error al guardar OTP (¿migración 0010 aplicada en D1?)' }, 500)
+  // Rate limit: max 5 solicitudes por email por 10 minutos
+  const rlRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) as cnt FROM auth_magic_links
+     WHERE email = ? AND created_at > datetime('now', '-10 minutes')`
+  ).bind(email).first()
+  if (((rlRow as any)?.cnt || 0) >= 5)
+    return c.json({ ok: false, error: 'Demasiados intentos. Espera 10 minutos.' }, 429)
+
+  const rawToken  = generateToken(32)
+  const tokenHash = await sha256Hex(rawToken)
+  const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || ''
+  const ua = c.req.header('User-Agent') || ''
+
+  await c.env.DB.prepare(
+    `INSERT INTO auth_magic_links (id, email, token_hash, expires_at, requested_ip, user_agent, created_at)
+     VALUES (?, ?, ?, datetime('now', '+10 minutes'), ?, ?, datetime('now'))`
+  ).bind(generateToken(16), email, tokenHash, ip, ua).run()
+
+  const appUrl    = (c.env as any).APP_URL || 'https://intaprd.com'
+  const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
+  const resendKey = (c.env as any).RESEND_API_KEY
+
+  if (resendKey) {
+    await sendMagicLinkEmail({ RESEND_API_KEY: resendKey }, email, magicLink)
+  } else {
+    console.log(`[MAGIC LINK] ${email} → ${magicLink}`)
   }
 
-  console.log(`[OTP] ${email} → ${code}`)
-  // Always return dev_code until a real email provider is configured.
-  // To disable: set ALLOW_DEV_OTP=false in the Worker env vars.
-  const devMode = (c.env as any).ALLOW_DEV_OTP !== 'false'
-  return c.json({ ok: true, message: 'Código enviado', ...(devMode ? { dev_code: code } : {}) })
+  return c.json({ ok: true, message: 'Enlace enviado a tu correo' })
 })
 
-app.post('/api/v1/auth/otp/verify', async (c) => {
-  console.log('[verify] STEP 0 start')
-  try {
-    let body: any = {}
-    try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+app.get('/api/v1/auth/magic-link/verify', async (c) => {
+  const rawToken = c.req.query('token') || ''
+  if (!rawToken) return c.json({ ok: false, error: 'Token requerido' }, 400)
 
-    const email = String(body.email || '').trim().toLowerCase()
-    const code  = String(body.code  || '').trim()
-    if (!email || !code) return c.json({ ok: false, error: 'email and code required' }, 400)
+  const tokenHash = await sha256Hex(rawToken)
+  const record = await c.env.DB.prepare(
+    `SELECT id, email FROM auth_magic_links
+     WHERE token_hash = ? AND used_at IS NULL AND expires_at > datetime('now')
+     LIMIT 1`
+  ).bind(tokenHash).first()
 
-    console.log('[verify] STEP 1 hashing code')
-    const codeHash = await sha256Base64Url(code)
-    console.log('[verify] STEP 1 done')
+  if (!record) return c.json({ ok: false, error: 'Enlace inválido o expirado' }, 401)
 
-    console.log('[verify] STEP 2 query auth_otp')
-    const otpRow = await c.env.DB.prepare(
-      `SELECT id, expires_at, used_at FROM auth_otp
-       WHERE email = ? AND code_hash = ?
-       ORDER BY created_at DESC LIMIT 1`
-    ).bind(email, codeHash).first()
-    console.log('[verify] STEP 2 done, found:', !!otpRow)
+  // Marcar como usado (one-time use)
+  await c.env.DB.prepare(
+    `UPDATE auth_magic_links SET used_at = datetime('now') WHERE id = ?`
+  ).bind((record as any).id).run()
 
-    if (!otpRow) {
-      console.log('[verify] 401 — no row found for email+code_hash')
-      return c.json({ ok: false, error: 'Código inválido' }, 401)
-    }
+  const email = (record as any).email
 
-    const r = otpRow as any
-    if (r.used_at) {
-      console.log('[verify] 401 — code already used_at:', r.used_at)
-      return c.json({ ok: false, error: 'Código ya usado' }, 401)
-    }
-    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19)
-    if (r.expires_at < nowStr) {
-      console.log('[verify] 401 — code expired. expires_at:', r.expires_at, 'now:', nowStr)
-      return c.json({ ok: false, error: 'Código expirado' }, 401)
-    }
+  // Upsert usuario
+  await c.env.DB.prepare(
+    `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
+  ).bind(crypto.randomUUID(), email).run()
 
-    console.log('[verify] STEP 3 mark otp used')
+  const user = await c.env.DB.prepare(
+    `SELECT id FROM users WHERE email = ? LIMIT 1`
+  ).bind(email).first()
+  if (!user) return c.json({ ok: false, error: 'Error al crear usuario' }, 500)
+
+  // Crear sesión (30 días)
+  const sessionRaw  = generateToken(32)
+  const sessionHash = await sha256Hex(sessionRaw)
+  const reqIp = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || ''
+  const reqUa = c.req.header('User-Agent') || ''
+
+  await c.env.DB.prepare(
+    `INSERT INTO auth_sessions (id, user_id, session_hash, expires_at, ip, user_agent, created_at)
+     VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
+  ).bind(generateToken(16), (user as any).id, sessionHash, reqIp, reqUa).run()
+
+  const hostname = new URL(c.req.url).hostname
+  const cookie   = buildSessionCookie(sessionRaw, hostname, 30 * 24 * 60 * 60)
+
+  return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
+})
+
+// ─── Google OAuth ─────────────────────────────────────────────────────────
+
+app.get('/api/v1/auth/google/start', async (c) => {
+  const clientId = (c.env as any).GOOGLE_CLIENT_ID
+  if (!clientId) return c.json({ ok: false, error: 'Google OAuth no configurado' }, 503)
+
+  const state      = generateToken(16)
+  const origin     = new URL(c.req.url).origin
+  const redirectUri = `${origin}/api/v1/auth/google/callback`
+
+  const params = new URLSearchParams({
+    client_id:     clientId,
+    redirect_uri:  redirectUri,
+    response_type: 'code',
+    scope:         'openid email profile',
+    state,
+    access_type:   'online',
+    prompt:        'select_account',
+  })
+
+  const headers = new Headers()
+  headers.set('Location', `https://accounts.google.com/o/oauth2/v2/auth?${params}`)
+  headers.set(
+    'Set-Cookie',
+    `oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`,
+  )
+  return new Response(null, { status: 302, headers })
+})
+
+app.get('/api/v1/auth/google/callback', async (c) => {
+  const code       = c.req.query('code')  || ''
+  const state      = c.req.query('state') || ''
+  const oauthError = c.req.query('error') || ''
+
+  const appUrl = (c.env as any).APP_URL || 'https://intaprd.com'
+
+  if (oauthError || !code)
+    return c.redirect(`${appUrl}/admin/login?error=oauth_denied`)
+
+  // Validar state anti-CSRF
+  const cookieHeader = c.req.header('Cookie') || ''
+  const savedState   = parseCookie(cookieHeader, 'oauth_state')
+  if (!savedState || savedState !== state)
+    return c.redirect(`${appUrl}/admin/login?error=oauth_state`)
+
+  const clientId     = (c.env as any).GOOGLE_CLIENT_ID
+  const clientSecret = (c.env as any).GOOGLE_CLIENT_SECRET
+  const origin       = new URL(c.req.url).origin
+  const redirectUri  = `${origin}/api/v1/auth/google/callback`
+
+  // Intercambiar code por access_token
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id:     clientId,
+      client_secret: clientSecret,
+      redirect_uri:  redirectUri,
+      grant_type:    'authorization_code',
+    }),
+  })
+  if (!tokenRes.ok) return c.redirect(`${appUrl}/admin/login?error=oauth_token`)
+
+  const tokenData: any = await tokenRes.json()
+
+  // Obtener info del usuario
+  const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+    headers: { 'Authorization': `Bearer ${tokenData.access_token}` },
+  })
+  if (!userInfoRes.ok) return c.redirect(`${appUrl}/admin/login?error=oauth_userinfo`)
+
+  const googleUser: any = await userInfoRes.json()
+  const email = (googleUser.email || '').toLowerCase().trim()
+  if (!email) return c.redirect(`${appUrl}/admin/login?error=oauth_no_email`)
+
+  // Upsert usuario
+  await c.env.DB.prepare(
+    `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
+  ).bind(crypto.randomUUID(), email).run()
+
+  const user = await c.env.DB.prepare(
+    `SELECT id FROM users WHERE email = ? LIMIT 1`
+  ).bind(email).first()
+  if (!user) return c.redirect(`${appUrl}/admin/login?error=user_error`)
+
+  const userId = (user as any).id
+
+  // Upsert identidad OAuth
+  await c.env.DB.prepare(
+    `INSERT INTO auth_identities (id, user_id, provider, provider_user_id, created_at)
+     VALUES (?, ?, 'google', ?, datetime('now'))
+     ON CONFLICT(provider, provider_user_id) DO NOTHING`
+  ).bind(generateToken(16), userId, String(googleUser.id || '')).run()
+
+  // Crear sesión (30 días)
+  const sessionRaw  = generateToken(32)
+  const sessionHash = await sha256Hex(sessionRaw)
+  const reqIp = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || ''
+  const reqUa = c.req.header('User-Agent') || ''
+
+  await c.env.DB.prepare(
+    `INSERT INTO auth_sessions (id, user_id, session_hash, expires_at, ip, user_agent, created_at)
+     VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
+  ).bind(generateToken(16), userId, sessionHash, reqIp, reqUa).run()
+
+  const hostname      = new URL(c.req.url).hostname
+  const sessionCookie = buildSessionCookie(sessionRaw, hostname, 30 * 24 * 60 * 60)
+  const clearState    = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
+
+  const headers = new Headers()
+  headers.set('Location', `${appUrl}/admin`)
+  headers.append('Set-Cookie', sessionCookie)
+  headers.append('Set-Cookie', clearState)
+  return new Response(null, { status: 302, headers })
+})
+
+// ─── Logout ───────────────────────────────────────────────────────────────
+
+app.post('/api/v1/auth/logout', async (c) => {
+  const cookieHeader = c.req.header('Cookie') || ''
+  const rawSession   = parseCookie(cookieHeader, 'session_id')
+
+  if (rawSession) {
+    const sessionHash = await sha256Hex(rawSession)
     await c.env.DB.prepare(
-      `UPDATE auth_otp SET used_at = datetime('now') WHERE id = ?`
-    ).bind(r.id).run()
-    console.log('[verify] STEP 3 done')
-
-    console.log('[verify] STEP 4 upsert user')
-    await c.env.DB.prepare(
-      `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
-    ).bind(crypto.randomUUID(), email).run()
-    console.log('[verify] STEP 4 done')
-
-    console.log('[verify] STEP 5 select user')
-    const user = await c.env.DB.prepare(
-      `SELECT id, email FROM users WHERE email = ? LIMIT 1`
-    ).bind(email).first() as { id: string; email: string } | null
-    console.log('[verify] STEP 5 done, user:', !!user)
-    if (!user) return c.json({ ok: false, error: 'Error al obtener usuario' }, 500)
-
-    console.log('[verify] STEP 6 create session')
-    const rawToken = crypto.randomUUID()
-    const tokenHash = await sha256Base64Url(rawToken)
-    await c.env.DB.prepare(
-      `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at)
-       VALUES (?, ?, ?, datetime('now', '+30 days'), datetime('now'))`
-    ).bind(crypto.randomUUID(), user.id, tokenHash).run()
-    console.log('[verify] STEP 6 done')
-
-    console.log('[verify] STEP final returning token')
-    return c.json({ ok: true, token: rawToken, user: { id: user.id, email: user.email } })
-
-  } catch (err) {
-    console.error('[verify] UNCAUGHT ERROR', err)
-    return c.json({ ok: false, error: 'Error interno en verify' }, 500)
+      `UPDATE auth_sessions SET revoked_at = datetime('now') WHERE session_hash = ?`
+    ).bind(sessionHash).run()
   }
+
+  const hostname = new URL(c.req.url).hostname
+  let clearCookie = `session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
+  if (hostname === 'intaprd.com' || hostname.endsWith('.intaprd.com'))
+    clearCookie += '; Domain=.intaprd.com'
+
+  return c.json({ ok: true }, 200, { 'Set-Cookie': clearCookie })
 })
 
-// --- /me endpoints — sub-app aislado, requireAuth se aplica una sola vez aquí ---
-// De este modo /auth/* y /public/* NUNCA pueden ser afectados por el guard.
+// ─── /me endpoints — sub-app aislado, requireAuth se aplica una sola vez ──
 
 const me = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 me.use('*', requireAuth)
@@ -176,14 +370,14 @@ me.get('/', async (c) => {
 
   const r = row as any
   let hasContact = false
-  let hasLinks = false
+  let hasLinks   = false
   if (r.profile_id) {
     const [contactRow, linksRow] = await Promise.all([
       c.env.DB.prepare(`SELECT profile_id FROM profile_contact WHERE profile_id = ? LIMIT 1`).bind(r.profile_id).first(),
       c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_links WHERE profile_id = ?`).bind(r.profile_id).first(),
     ])
     hasContact = !!contactRow
-    hasLinks = ((linksRow as any)?.n || 0) > 0
+    hasLinks   = ((linksRow as any)?.n || 0) > 0
   }
 
   const onboardingStatus = {
@@ -278,9 +472,8 @@ me.put('/contact', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  // Accept whatsapp_number (preferred) or whatsapp (legacy)
-  const waRaw = body.whatsapp_number !== undefined ? body.whatsapp_number : body.whatsapp
-  const whatsapp = waRaw !== undefined ? normalizeWhatsApp(String(waRaw || '')) : undefined
+  const waRaw    = body.whatsapp_number !== undefined ? body.whatsapp_number : body.whatsapp
+  const whatsapp = waRaw   !== undefined ? normalizeWhatsApp(String(waRaw   || '')) : undefined
   const email    = body.email    !== undefined ? String(body.email   || '').trim() : undefined
   const phone    = body.phone    !== undefined ? String(body.phone   || '').trim() : undefined
   const hours    = body.hours    !== undefined ? String(body.hours   || '').trim() : undefined
@@ -351,7 +544,6 @@ me.put('/links/reorder', async (c) => {
   const userId = c.get('userId') as string
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
-  // Accept orderedIds: string[] (preferred) or legacy items: {id, sort_order}[]
   const orderedIds: string[] | undefined = Array.isArray(body.orderedIds) ? body.orderedIds : undefined
   const items: { id: string; sort_order: number }[] | undefined = Array.isArray(body.items) ? body.items : undefined
   if (!orderedIds && !items)
@@ -424,7 +616,7 @@ me.delete('/links/:id', async (c) => {
 // Mount the authenticated sub-app
 app.route('/api/v1/me', me)
 
-// --- Analíticas ---
+// ─── Analíticas ───────────────────────────────────────────────────────────
 
 app.post('/api/v1/public/track', async (c) => {
   try {
@@ -450,19 +642,19 @@ app.get('/api/v1/profile/stats/:profileId', async (c) => {
     .first()
 
   const dailyViews = await c.env.DB.prepare(
-    `SELECT date(created_at) as day, COUNT(*) as count 
-     FROM analytics 
-     WHERE profile_id = ? AND event_type = 'view' AND created_at > date('now', '-7 days') 
+    `SELECT date(created_at) as day, COUNT(*) as count
+     FROM analytics
+     WHERE profile_id = ? AND event_type = 'view' AND created_at > date('now', '-7 days')
      GROUP BY day ORDER BY day ASC`
   )
     .bind(profileId)
     .all()
 
   const topLinks = await c.env.DB.prepare(
-    `SELECT l.label, COUNT(a.id) as clics 
-     FROM analytics a 
-     JOIN profile_links l ON a.target_id = l.id 
-     WHERE a.profile_id = ? AND a.event_type = 'click' 
+    `SELECT l.label, COUNT(a.id) as clics
+     FROM analytics a
+     JOIN profile_links l ON a.target_id = l.id
+     WHERE a.profile_id = ? AND a.event_type = 'click'
      GROUP BY l.id ORDER BY clics DESC LIMIT 5`
   )
     .bind(profileId)
@@ -478,13 +670,12 @@ app.get('/api/v1/profile/stats/:profileId', async (c) => {
   })
 })
 
-// --- Galería (R2) ---
+// ─── Galería (R2) ─────────────────────────────────────────────────────────
 
 app.post('/api/v1/profile/gallery/upload', async (c) => {
   const { profileId } = await c.req.parseBody()
 
-  // ✅ Fix TS: valida tipo File correctamente (sin cast)
-  const fd = await c.req.formData()
+  const fd      = await c.req.formData()
   const fileVal = fd.get('file')
 
   if (!(fileVal && typeof fileVal === 'object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any))) {
@@ -516,7 +707,6 @@ app.get('/api/v1/profile/gallery/:profileId', async (c) => {
   return c.json({ ok: true, photos: photos.results })
 })
 
-// Sirve objetos desde R2 como endpoint público (Plan B: sin CDN público aún)
 app.get('/api/v1/public/assets/*', async (c) => {
   const key = decodeURIComponent(c.req.path.slice('/api/v1/public/assets/'.length))
   if (!key) return c.json({ error: 'Key requerida' }, 400)
@@ -533,9 +723,10 @@ app.get('/api/v1/public/assets/*', async (c) => {
   })
 })
 
-// Perfil Público
+// ─── Perfil Público ───────────────────────────────────────────────────────
+
 app.get('/api/v1/public/profiles/:slug', async (c) => {
-  const slug = c.req.param('slug')
+  const slug    = c.req.param('slug')
   const profile = await c.env.DB.prepare(
     'SELECT id, slug, plan_id, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?'
   )
@@ -578,8 +769,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .first(),
   ])
 
-  // Construye URL pública vía el endpoint /assets (Plan B: sin CDN externo)
-  const origin = new URL(c.req.url).origin
+  const origin    = new URL(c.req.url).origin
   const toAssetUrl = (key: string): string | null => {
     if (!key) return null
     if (key.startsWith('http')) return key
@@ -587,7 +777,6 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     return `${origin}/api/v1/public/assets/${encodedKey}`
   }
 
-  // Filtra items demo/prueba y agrega image_url resuelta
   const isDemoKey = (key: string) =>
     key.startsWith('demo/') || key === 'profile_debug' || key.startsWith('profile_debug')
 
@@ -611,17 +800,17 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   return c.json({
     ok: true,
     data: {
-      profileId: (profile as any).id,
-      slug: (profile as any).slug,
-      planId: (profile as any).plan_id,
-      themeId: (profile as any).theme_id,
-      name: (profile as any).name,
-      bio: (profile as any).bio,
+      profileId:      (profile as any).id,
+      slug:           (profile as any).slug,
+      planId:         (profile as any).plan_id,
+      themeId:        (profile as any).theme_id,
+      name:           (profile as any).name,
+      bio:            (profile as any).bio,
       whatsapp_number: (profile as any).whatsapp_number ?? null,
-      social_links: rawSocialLinks.results,
-      links: links.results,
+      social_links:   rawSocialLinks.results,
+      links:          links.results,
       gallery,
-      faqs: rawFaqs.results,
+      faqs:           rawFaqs.results,
       products,
       featured_product,
       entitlements,
@@ -637,9 +826,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   })
 })
 
-/* ============================
-   vCard público
-   ============================ */
+// ─── vCard ────────────────────────────────────────────────────────────────
 
 app.get('/api/v1/public/vcard/:profileId', async (c) => {
   const profileId = c.req.param('profileId')
@@ -655,10 +842,8 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  // Fallback: whatsapp_number → contact.whatsapp → contact.phone
-  const telNumber = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
-
-  const fn = profile.name || profile.slug
+  const telNumber  = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
+  const fn         = profile.name || profile.slug
   const profileUrl = `${PUBLIC_BASE_URL}/${profile.slug}`
 
   const lines: string[] = [
@@ -667,14 +852,14 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
     `FN:${fn}`,
     `N:${fn};;;`,
   ]
-  if (telNumber)       lines.push(`TEL;TYPE=CELL:${telNumber}`)
-  if (contactRow?.email) lines.push(`EMAIL:${contactRow.email}`)
+  if (telNumber)          lines.push(`TEL;TYPE=CELL:${telNumber}`)
+  if (contactRow?.email)  lines.push(`EMAIL:${contactRow.email}`)
   if (contactRow?.address) lines.push(`ADR;TYPE=WORK:;;${contactRow.address};;;;`)
-  if (profile.bio)     lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
+  if (profile.bio)        lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
   lines.push(`URL:${profileUrl}`)
   lines.push('END:VCARD')
 
-  const vcf = lines.join('\r\n') + '\r\n'
+  const vcf      = lines.join('\r\n') + '\r\n'
   const filename = `${profile.slug}.vcf`
 
   return new Response(vcf, {
@@ -685,9 +870,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
   })
 })
 
-/* ============================
-   Waitlist
-   ============================ */
+// ─── Waitlist ─────────────────────────────────────────────────────────────
 
 const WAITLIST_MODES = ['Virtual', 'Fisica', 'Mixta'] as const
 
@@ -695,24 +878,21 @@ app.post('/api/v1/public/waitlist', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const email    = String(body.email    || '').trim().toLowerCase()
-  const name     = String(body.name     || '').trim()
-  const sector   = String(body.sector   || '').trim()
-  const mode     = String(body.mode     || '').trim()
+  const email  = String(body.email  || '').trim().toLowerCase()
+  const name   = String(body.name   || '').trim()
+  const sector = String(body.sector || '').trim()
+  const mode   = String(body.mode   || '').trim()
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'valid email required' }, 400)
-  if (!name || name.length < 2)
-    return c.json({ ok: false, error: 'name required (min 2 chars)' }, 400)
-  if (!sector || sector.length < 2)
-    return c.json({ ok: false, error: 'sector required' }, 400)
+  if (!name   || name.length < 2)   return c.json({ ok: false, error: 'name required (min 2 chars)' }, 400)
+  if (!sector || sector.length < 2) return c.json({ ok: false, error: 'sector required' }, 400)
   if (!(WAITLIST_MODES as readonly string[]).includes(mode))
     return c.json({ ok: false, error: 'mode must be Virtual, Fisica or Mixta' }, 400)
 
   const wa = normalizeWhatsApp(String(body.whatsapp || ''))
   if (!wa) return c.json({ ok: false, error: 'WHATSAPP_INVALID' }, 400)
 
-  // Idempotente: si ya existe, actualiza name/sector/mode y devuelve posición
   const existing = await c.env.DB.prepare(
     `SELECT id, position FROM waitlist WHERE email = ?1 OR (whatsapp IS NOT NULL AND whatsapp != '' AND whatsapp = ?2)`
   ).bind(email, wa).first()
@@ -724,7 +904,7 @@ app.post('/api/v1/public/waitlist', async (c) => {
     return c.json({ ok: true, position: (existing as any).position, whatsapp: wa, updated: true })
   }
 
-  const posRow = await c.env.DB.prepare(`SELECT COUNT(*) as n FROM waitlist`).first()
+  const posRow   = await c.env.DB.prepare(`SELECT COUNT(*) as n FROM waitlist`).first()
   const position = ((posRow as any)?.n || 0) + 1
 
   const id = crypto.randomUUID()
@@ -735,11 +915,7 @@ app.post('/api/v1/public/waitlist', async (c) => {
   return c.json({ ok: true, position, whatsapp: wa }, 201)
 })
 
-/* ============================
-   FASE 3 — Leads (Captura)
-   ============================ */
-
-// --- Leads (Captura de contacto) + Turnstile condicional ---
+// ─── Leads ────────────────────────────────────────────────────────────────
 
 const TURNSTILE_SITEKEY = '0x4AAAAAACgDVjTSshSRPS5q'
 
@@ -747,34 +923,31 @@ app.post('/api/v1/public/leads', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const profile_slug = String(body.profile_slug || '').trim()
-  const name = String(body.name || '').trim()
-  const email = String(body.email || '').trim()
-  const phone = String(body.phone || '').trim()
-  const message = String(body.message || '').trim()
-  const honeypot = String(body.hp || '').trim()
-  const source_url = String(body.source_url || '').trim()
+  const profile_slug    = String(body.profile_slug    || '').trim()
+  const name            = String(body.name            || '').trim()
+  const email           = String(body.email           || '').trim()
+  const phone           = String(body.phone           || '').trim()
+  const message         = String(body.message         || '').trim()
+  const honeypot        = String(body.hp              || '').trim()
+  const source_url      = String(body.source_url      || '').trim()
   const turnstile_token = String(body.turnstile_token || '').trim()
 
   if (!profile_slug || profile_slug.length < 2) return c.json({ ok: false, error: 'profile_slug required' }, 400)
-  if (!name || name.length < 2) return c.json({ ok: false, error: 'name required' }, 400)
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ ok: false, error: 'valid email required' }, 400)
-  if (!message || message.length < 10) return c.json({ ok: false, error: 'message must be at least 10 chars' }, 400)
+  if (!name   || name.length < 2)               return c.json({ ok: false, error: 'name required' }, 400)
+  if (!email  || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ ok: false, error: 'valid email required' }, 400)
+  if (!message || message.length < 10)          return c.json({ ok: false, error: 'message must be at least 10 chars' }, 400)
 
-  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || ''
-  const ua = c.req.header('user-agent') || ''
+  const ip      = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || ''
+  const ua      = c.req.header('user-agent') || ''
   const ip_hash = await sha256Base64Url(ip || 'unknown')
 
-  // Si honeypot viene lleno → exigir Turnstile (condicional)
   if (honeypot) {
-    if (!turnstile_token) {
+    if (!turnstile_token)
       return c.json({ ok: false, error: 'turnstile_required', sitekey: TURNSTILE_SITEKEY }, 403)
-    }
     const ok = await verifyTurnstile(c, turnstile_token, ip)
     if (!ok) return c.json({ ok: false, error: 'turnstile_failed' }, 403)
   }
 
-  // Rate limit (5 envíos / 10 min por ip_hash + slug)
   const rl = await c.env.DB.prepare(
     `SELECT COUNT(*) as n
      FROM lead_rate_limits
@@ -784,28 +957,26 @@ app.post('/api/v1/public/leads', async (c) => {
 
   const count = ((rl as any)?.n || 0) as number
 
-  // Si excedió límite → exigir Turnstile (condicional)
   if (count >= 5) {
-    if (!turnstile_token) {
+    if (!turnstile_token)
       return c.json({ ok: false, error: 'turnstile_required', sitekey: TURNSTILE_SITEKEY }, 403)
-    }
     const ok = await verifyTurnstile(c, turnstile_token, ip)
     if (!ok) return c.json({ ok: false, error: 'turnstile_failed' }, 403)
   }
 
-  // Insertar lead
   await c.env.DB.prepare(
     `INSERT INTO leads (profile_slug, name, email, phone, message, source_url, user_agent, ip_hash)
      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
   ).bind(profile_slug, name, email, phone, message, source_url, ua, ip_hash).run()
 
-  // Registrar rate token
   await c.env.DB.prepare(
     `INSERT INTO lead_rate_limits (profile_slug, ip_hash) VALUES (?1, ?2)`
   ).bind(profile_slug, ip_hash).run()
 
   return c.json({ ok: true }, 201)
 })
+
+// ─── Utility functions ────────────────────────────────────────────────────
 
 async function verifyTurnstile(c: any, token: string, ip: string): Promise<boolean> {
   const secret = (c.env as any).TURNSTILE_SECRET
@@ -821,7 +992,6 @@ async function verifyTurnstile(c: any, token: string, ip: string): Promise<boole
     body: form,
   })
 
-  // ✅ Fix TS: tipa como any para permitir data.success
   const data: any = await resp.json().catch(() => null)
   return !!(data && data.success)
 }
@@ -829,34 +999,37 @@ async function verifyTurnstile(c: any, token: string, ip: string): Promise<boole
 function normalizeWhatsApp(input: string): string | null {
   if (!input) return null
   const digits = input.replace(/\D/g, '')
-  // RD: 10 dígitos 809/829/849 → +1XXXXXXXXXX
   if (digits.length === 10 && /^(809|829|849)/.test(digits))
     return `+1${digits}`
-  // RD: 11 dígitos 1+809/829/849 → +1XXXXXXXXXX
   if (digits.length === 11 && digits.startsWith('1') && /^(809|829|849)/.test(digits.slice(1)))
     return `+${digits}`
-  // Internacional: 7-15 dígitos → agrega + si no viene
   if (digits.length >= 7 && digits.length <= 15)
     return `+${digits}`
   return null
 }
 
+// Kept for leads ip_hash (existing usage)
 async function sha256Base64Url(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input)
-  const hash = await crypto.subtle.digest('SHA-256', data)
+  const data  = new TextEncoder().encode(input)
+  const hash  = await crypto.subtle.digest('SHA-256', data)
   const bytes = new Uint8Array(hash)
   let bin = ''
   for (const b of bytes) bin += String.fromCharCode(b)
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
-// --- DB check (temporal — para verificar schema en producción) ---
+// ─── Admin ────────────────────────────────────────────────────────────────
 
 app.get('/api/v1/admin/db-check', async (c) => {
   const key = c.req.header('X-Admin-Key') || c.req.query('key') || ''
   if (key !== 'intap_master_key') return c.json({ ok: false, error: 'Forbidden' }, 403)
 
-  const tables = ['users', 'profiles', 'sessions', 'auth_otp', 'profile_links', 'profile_contact']
+  const tables = [
+    'users', 'profiles',
+    'sessions', 'auth_otp',
+    'auth_magic_links', 'auth_sessions', 'auth_identities',
+    'profile_links', 'profile_contact',
+  ]
   const schema: Record<string, any> = {}
 
   for (const table of tables) {
@@ -873,7 +1046,6 @@ app.get('/api/v1/admin/db-check', async (c) => {
   return c.json({ ok: true, schema })
 })
 
-// Admin
 app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
   const profiles = await c.env.DB.prepare(
     `SELECT p.id, p.slug, p.plan_id, p.is_published, u.email FROM profiles p JOIN users u ON p.user_id = u.id`
@@ -885,8 +1057,8 @@ app.post('/api/v1/admin/activate-module', async (c) => {
   const { profileId, moduleCode, secret } = await c.req.json()
   if (secret !== 'intap_master_key') return c.json({ ok: false, error: 'Unauthorized' }, 401)
   await c.env.DB.prepare(
-    `INSERT INTO profile_modules (profile_id, module_code, expires_at) 
-     VALUES (?, ?, datetime('now', '+1 year')) 
+    `INSERT INTO profile_modules (profile_id, module_code, expires_at)
+     VALUES (?, ?, datetime('now', '+1 year'))
      ON CONFLICT(profile_id, module_code) DO UPDATE SET expires_at = excluded.expires_at`
   )
     .bind(profileId, moduleCode)

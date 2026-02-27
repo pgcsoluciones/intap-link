@@ -13,12 +13,8 @@ export default function AdminGuard({ children, requireProfile = true }: Props) {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem('intap_token')
-    if (!token) { navigate('/admin/login', { replace: true }); return }
-
     apiGet('/me').then((json: any) => {
       if (!json.ok) {
-        localStorage.removeItem('intap_token')
         navigate('/admin/login', { replace: true })
         return
       }
@@ -28,7 +24,6 @@ export default function AdminGuard({ children, requireProfile = true }: Props) {
       }
       setReady(true)
     }).catch(() => {
-      localStorage.removeItem('intap_token')
       navigate('/admin/login', { replace: true })
     })
   }, [navigate, requireProfile])
