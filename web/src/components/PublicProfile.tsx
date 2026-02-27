@@ -816,6 +816,14 @@ export default function PublicProfile() {
   const [turnstileSitekey, setTurnstileSitekey] = useState<string | null>(null)
   const [turnstileToken, setTurnstileToken] = useState<string>('')
 
+  /** Cierra el modal de contacto y limpia todo el estado relacionado */
+  const closeLead = useCallback(() => {
+    setLeadOpen(false)
+    setTurnstileSitekey(null)
+    setTurnstileToken('')
+    setLeadStatus(null)
+  }, [])
+
   // ── Track ───────────────────────────────────────────────────────────────────
   const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
@@ -856,7 +864,7 @@ export default function PublicProfile() {
   // ── Lead modal: ESC + scroll lock ───────────────────────────────────────────
   useEffect(() => {
     if (!leadOpen) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLeadOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeLead() }
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => {
@@ -1291,7 +1299,7 @@ export default function PublicProfile() {
       {leadOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-24 sm:pb-0"
-          onClick={(e) => { if (e.target === e.currentTarget) setLeadOpen(false) }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeLead() }}
           role="dialog"
           aria-modal="true"
           aria-label="Formulario de contacto"
@@ -1301,7 +1309,7 @@ export default function PublicProfile() {
               <div className="flex items-start justify-between gap-3 mb-2">
                 <h3 className="text-white font-bold text-lg">Contáctame</h3>
                 <button
-                  onClick={() => setLeadOpen(false)}
+                  onClick={() => closeLead()}
                   className="text-slate-400 hover:text-white transition-colors"
                   aria-label="Cerrar"
                   type="button"
