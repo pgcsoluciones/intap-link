@@ -892,7 +892,32 @@ export default function PublicProfile() {
     setPromoOpen(true)
   }, [data])
 
-  const submitLead = async () => {
+  // ── Turnstile helpers ───────────────────────────────────────────────────────
+  const turnstileWidgetIdRef = useRef<string | null>(null)
+  const lastRenderSitekeyRef = useRef<string | null>(null)
+
+  const cleanupTurnstile = useCallback(() => {
+    const container = document.getElementById('intap-turnstile')
+    if (container) {
+      container.removeAttribute('data-rendered')
+      container.innerHTML = ''
+    }
+
+    const w: any = window.turnstile
+    const wid = turnstileWidgetIdRef.current
+    try {
+      if (w && wid) {
+        if (typeof w.remove === 'function') w.remove(wid)
+        if (typeof w.reset === 'function') w.reset(wid)
+      }
+    } catch { /* noop */ }
+
+    turnstileWidgetIdRef.current = null
+    lastRenderSitekeyRef.current = null
+  }, [])
+
+  // ── Submit lead (near-production) ───────────────────────────────────────────
+  const submitLead = useCallback(async (tokenOverride?: string) => {
     if (!data) return
     setLeadStatus(null)
 
@@ -902,6 +927,8 @@ export default function PublicProfile() {
 
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
     setLeadSending(true)
+
+    const tokenToSend = (tokenOverride ?? turnstileToken) || undefined
 
     try {
       const res = await fetch(`${apiUrl}/api/v1/public/leads`, {
@@ -915,7 +942,7 @@ export default function PublicProfile() {
           message: leadMessage.trim(),
           hp: leadHp.trim(),
           source_url: window.location.href,
-          turnstile_token: turnstileToken || undefined
+          turnstile_token: tokenToSend
         })
       })
 
@@ -926,40 +953,10 @@ export default function PublicProfile() {
         const sitekey = String(json.sitekey || '').trim()
         if (!sitekey) { setLeadStatus('⚠️ Verificación requerida, pero falta sitekey.'); return }
 
+        // resetea token previo (evita loops)
+        setTurnstileToken('')
         setTurnstileSitekey(sitekey)
         setLeadStatus('⚠️ Completa la verificación para poder enviar.')
-
-        const renderWidget = () => {
-          const w: any = window.turnstile
-          const container = document.getElementById('intap-turnstile')
-          if (!w || !container) return false
-          if (container.getAttribute('data-rendered') === '1') return true
-
-          container.innerHTML = ''
-          w.render(container, {
-            sitekey,
-            callback: (token: string) => {
-              setTurnstileToken(token || '')
-              setLeadStatus('✅ Verificación lista. Presiona Enviar nuevamente.')
-            },
-            'error-callback': () => {
-              setTurnstileToken('')
-              setLeadStatus('⚠️ Falló la verificación. Intenta de nuevo.')
-            },
-            'expired-callback': () => {
-              setTurnstileToken('')
-              setLeadStatus('⚠️ Verificación expirada. Vuelve a intentar.')
-            }
-          })
-          container.setAttribute('data-rendered', '1')
-          return true
-        }
-
-        if (!renderWidget()) {
-          const t = setInterval(() => { if (renderWidget()) clearInterval(t) }, 250)
-          setTimeout(() => clearInterval(t), 5000)
-        }
-
         return
       }
 
@@ -970,8 +967,10 @@ export default function PublicProfile() {
         setLeadPhone('')
         setLeadMessage('')
         setLeadHp('')
+
         setTurnstileToken('')
         setTurnstileSitekey(null)
+
         setTimeout(() => setLeadOpen(false), 700)
         return
       }
@@ -982,7 +981,74 @@ export default function PublicProfile() {
     } finally {
       setLeadSending(false)
     }
-  }
+  }, [data, leadName, leadEmail, leadPhone, leadMessage, leadHp, turnstileToken])
+
+  // ── Cleanup cuando se cierra el modal ───────────────────────────────────────
+  useEffect(() => {
+    if (leadOpen) return
+    cleanupTurnstile()
+    setTurnstileToken('')
+    setTurnstileSitekey(null)
+    setLeadStatus(null)
+  }, [leadOpen, cleanupTurnstile])
+
+  // ── Render Turnstile + auto-resubmit ────────────────────────────────────────
+  useEffect(() => {
+    if (!leadOpen || !turnstileSitekey) return
+
+    const tryRender = () => {
+      const w: any = window.turnstile
+      const container = document.getElementById('intap-turnstile')
+      if (!w || !container) return false
+
+      // evita rerender si ya está renderizado para ese sitekey
+      if (lastRenderSitekeyRef.current === turnstileSitekey && container.getAttribute('data-rendered') === '1') {
+        return true
+      }
+
+      cleanupTurnstile()
+      container.innerHTML = ''
+
+      const widgetId = w.render(container, {
+        sitekey: turnstileSitekey,
+        callback: (token: string) => {
+          const t = token || ''
+          setTurnstileToken(t)
+          setLeadStatus('✅ Verificación lista. Enviando...')
+          void submitLead(t)
+        },
+        'error-callback': () => {
+          setTurnstileToken('')
+          setLeadStatus('⚠️ Falló la verificación. Intenta de nuevo.')
+        },
+        'expired-callback': () => {
+          setTurnstileToken('')
+          setLeadStatus('⚠️ Verificación expirada. Vuelve a intentar.')
+        }
+      })
+
+      turnstileWidgetIdRef.current = widgetId ? String(widgetId) : null
+      lastRenderSitekeyRef.current = turnstileSitekey
+      container.setAttribute('data-rendered', '1')
+      return true
+    }
+
+    if (tryRender()) return
+
+    const t = setInterval(() => {
+      if (tryRender()) clearInterval(t)
+    }, 250)
+
+    const kill = setTimeout(() => {
+      clearInterval(t)
+      setLeadStatus(prev => prev || '⚠️ No se pudo cargar la verificación. Intenta de nuevo.')
+    }, 5000)
+
+    return () => {
+      clearInterval(t)
+      clearTimeout(kill)
+    }
+  }, [leadOpen, turnstileSitekey, cleanupTurnstile, submitLead])
 
   // ── Guard clauses ───────────────────────────────────────────────────────────
   if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
@@ -1359,7 +1425,7 @@ export default function PublicProfile() {
                 <button
                   type="button"
                   disabled={leadSending}
-                  onClick={submitLead}
+                  onClick={() => void submitLead()}
                   className="w-full py-3.5 rounded-2xl bg-intap-mint text-black font-extrabold hover:brightness-110 transition-all active:scale-95 disabled:opacity-60"
                 >
                   {leadSending ? 'Enviando...' : 'Enviar'}
