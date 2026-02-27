@@ -5,6 +5,7 @@ import HomeLanding from './components/HomeLanding'
 import AdminGuard from './components/admin/AdminGuard'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminVerify from './components/admin/AdminVerify'
+import AuthCallback from './components/admin/AuthCallback'
 import AdminDashboard from './components/admin/AdminDashboard'
 import AdminLinks from './components/admin/AdminLinks'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
@@ -29,8 +30,9 @@ function App() {
         <Route path="/superadmin" element={<AdminPanel />} />
 
         {/* Auth */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/verify" element={<AdminVerify />} />
+        <Route path="/admin/login"      element={<AdminLogin />} />
+        <Route path="/admin/check-email" element={<AdminVerify />} />
+        <Route path="/auth/callback"    element={<AuthCallback />} />
 
         {/* Onboarding wizard (guarded, no profile required) */}
         <Route path="/admin/onboarding/slug"     element={<AdminGuard requireProfile={false}><OnboardingSlug /></AdminGuard>} />
@@ -40,7 +42,7 @@ function App() {
 
         {/* Main admin (requires profile) */}
         <Route path="/admin/links" element={<AdminGuard><AdminLinks /></AdminGuard>} />
-        <Route path="/admin" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+        <Route path="/admin"       element={<AdminGuard><AdminDashboard /></AdminGuard>} />
 
         {/* Public profiles */}
         <Route path="/:slug" element={<PublicProfile />} />
