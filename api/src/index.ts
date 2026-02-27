@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { getEntitlements } from './engine/entitlements'
+import { sendMagicLinkEmail } from './lib/email'
 
 type Bindings = {
   DB: D1Database
@@ -153,28 +154,12 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+10 minutes'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), email, tokenHash, ip, ua).run()
 
-  const appUrl     = (c.env as any).APP_URL || 'https://intaprd.com'
-  const magicLink  = `${appUrl}/auth/callback?token=${rawToken}`
-  const resendKey  = (c.env as any).RESEND_API_KEY
+  const appUrl    = (c.env as any).APP_URL || 'https://intaprd.com'
+  const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
+  const resendKey = (c.env as any).RESEND_API_KEY
 
   if (resendKey) {
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'INTAP Link <noreply@intaprd.com>',
-        to: email,
-        subject: 'Tu enlace de acceso a INTAP Link',
-        html: `<p>Hola,</p>
-<p>Haz clic en el siguiente enlace para acceder a tu cuenta INTAP Link:</p>
-<p><a href="${magicLink}" style="color:#3b82f6">${magicLink}</a></p>
-<p>Este enlace <strong>expira en 10 minutos</strong> y solo puede usarse una vez.<br>
-Si no solicitaste este acceso, ignora este correo.</p>`,
-      }),
-    })
+    await sendMagicLinkEmail({ RESEND_API_KEY: resendKey }, email, magicLink)
   } else {
     console.log(`[MAGIC LINK] ${email} → ${magicLink}`)
   }
