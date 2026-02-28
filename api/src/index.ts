@@ -155,7 +155,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+10 minutes'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), email, tokenHash, ip, ua).run()
 
-  const appUrl    = (c.env as any).APP_URL || 'https://intaprd.com'
+  const appUrl    = (c.env as any).APP_URL || 'https://link.intaprd.com'
   const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
   const resendKey = (c.env as any).RESEND_API_KEY
 
@@ -209,7 +209,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), (user as any).id, sessionHash, reqIp, reqUa).run()
 
-  const appUrl = (c.env as any).APP_URL || 'https://intaprd.com'
+  const appUrl = (c.env as any).APP_URL || 'https://link.intaprd.com'
   const cookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
@@ -265,7 +265,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const state      = c.req.query('state') || ''
   const oauthError = c.req.query('error') || ''
 
-  const appUrl = (c.env as any).APP_URL || 'https://intaprd.com'
+  const appUrl = (c.env as any).APP_URL || 'https://link.intaprd.com'
 
   if (oauthError || !code)
     return c.redirect(`${appUrl}/admin/login?error=oauth_denied`)
@@ -360,7 +360,7 @@ app.post('/api/v1/auth/logout', async (c) => {
     ).bind(sessionHash).run()
   }
 
-  const appUrlLogout = (c.env as any).APP_URL || 'https://intaprd.com'
+  const appUrlLogout = (c.env as any).APP_URL || 'https://link.intaprd.com'
   let clearCookie = `session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
   try {
     const u = new URL(appUrlLogout)
@@ -863,7 +863,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   const telNumber  = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn         = profile.name || profile.slug
-  const appUrl     = (c.env as any).APP_URL || 'https://intaprd.com'
+  const appUrl     = (c.env as any).APP_URL || 'https://link.intaprd.com'
   const profileUrl = `${appUrl}/${profile.slug}`
 
   const lines: string[] = [
