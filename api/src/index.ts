@@ -20,8 +20,6 @@ type Variables = { userId: string }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-const PUBLIC_BASE_URL = 'https://intap-web2.pages.dev'
-
 // ─── CORS — credentials-aware ─────────────────────────────────────────────
 
 function isAllowedOrigin(origin: string): boolean {
@@ -866,7 +864,8 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   const telNumber  = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn         = profile.name || profile.slug
-  const profileUrl = `${PUBLIC_BASE_URL}/${profile.slug}`
+  const appUrl     = (c.env as any).APP_URL || 'https://intaprd.com'
+  const profileUrl = `${appUrl}/${profile.slug}`
 
   const lines: string[] = [
     'BEGIN:VCARD',
