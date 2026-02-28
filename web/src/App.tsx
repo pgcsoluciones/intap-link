@@ -29,20 +29,66 @@ function App() {
         {/* Super-admin (legacy) */}
         <Route path="/superadmin" element={<AdminPanel />} />
 
+        {/* Public auth aliases (so /login and /register are not treated as slugs) */}
+        <Route path="/login" element={<Navigate to="/admin/login" replace />} />
+        <Route path="/register" element={<Navigate to="/admin/onboarding/slug" replace />} />
+
         {/* Auth */}
-        <Route path="/admin/login"      element={<AdminLogin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/check-email" element={<AdminVerify />} />
-        <Route path="/auth/callback"    element={<AuthCallback />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Onboarding wizard (guarded, no profile required) */}
-        <Route path="/admin/onboarding/slug"     element={<AdminGuard requireProfile={false}><OnboardingSlug /></AdminGuard>} />
-        <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false}><OnboardingCategory /></AdminGuard>} />
-        <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false}><OnboardingIdentity /></AdminGuard>} />
-        <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
+        <Route
+          path="/admin/onboarding/slug"
+          element={
+            <AdminGuard requireProfile={false}>
+              <OnboardingSlug />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/onboarding/category"
+          element={
+            <AdminGuard requireProfile={false}>
+              <OnboardingCategory />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/onboarding/identity"
+          element={
+            <AdminGuard requireProfile={false}>
+              <OnboardingIdentity />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/onboarding/contact"
+          element={
+            <AdminGuard requireProfile={false}>
+              <OnboardingContact />
+            </AdminGuard>
+          }
+        />
 
         {/* Main admin (requires profile) */}
-        <Route path="/admin/links" element={<AdminGuard><AdminLinks /></AdminGuard>} />
-        <Route path="/admin"       element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+        <Route
+          path="/admin/links"
+          element={
+            <AdminGuard>
+              <AdminLinks />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminGuard>
+              <AdminDashboard />
+            </AdminGuard>
+          }
+        />
 
         {/* Public profiles */}
         <Route path="/:slug" element={<PublicProfile />} />
