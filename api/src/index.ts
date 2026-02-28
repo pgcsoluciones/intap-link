@@ -10,6 +10,7 @@ type Bindings = {
   RESEND_API_KEY: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
+  API_URL: string
   APP_URL: string
   SESSION_SECRET: string
   ENVIRONMENT: string
@@ -19,8 +20,6 @@ type Variables = { userId: string }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-const PUBLIC_BASE_URL = 'https://intap-web2.pages.dev'
-
 // ─── CORS — credentials-aware ─────────────────────────────────────────────
 
 function isAllowedOrigin(origin: string): boolean {
@@ -28,7 +27,6 @@ function isAllowedOrigin(origin: string): boolean {
   const exact = [
     'https://intaprd.com',
     'https://www.intaprd.com',
-    'https://intap-web2.pages.dev',
     'http://localhost:5173',
     'http://localhost:4173',
   ]
@@ -81,11 +79,14 @@ function parseCookie(header: string, name: string): string | null {
   return match2 ? decodeURIComponent(match2[1]) : null
 }
 
-function buildSessionCookie(value: string, hostname: string, maxAge: number): string {
+function buildSessionCookie(value: string, appUrl: string, maxAge: number): string {
   let cookie = `session_id=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
-  if (hostname === 'intaprd.com' || hostname.endsWith('.intaprd.com')) {
-    cookie += '; Domain=.intaprd.com'
-  }
+  try {
+    const u = new URL(appUrl)
+    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com')) {
+      cookie += '; Domain=.intaprd.com'
+    }
+  } catch { /* appUrl inválida — no agregar Domain */ }
   return cookie
 }
 
@@ -208,8 +209,8 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), (user as any).id, sessionHash, reqIp, reqUa).run()
 
-  const hostname = new URL(c.req.url).hostname
-  const cookie   = buildSessionCookie(sessionRaw, hostname, 30 * 24 * 60 * 60)
+  const appUrl = (c.env as any).APP_URL || 'https://intaprd.com'
+  const cookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
 })
@@ -217,12 +218,20 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
 // ─── Google OAuth ─────────────────────────────────────────────────────────
 
 app.get('/api/v1/auth/google/start', async (c) => {
+  const reqHostname = new URL(c.req.url).hostname
+  if (reqHostname.endsWith('.workers.dev')) {
+    const apiUrl   = (c.env as any).API_URL || 'https://link.intaprd.com'
+    const reqUrl   = new URL(c.req.url)
+    const canonical = new URL(reqUrl.pathname + reqUrl.search, apiUrl)
+    return Response.redirect(canonical.toString(), 301)
+  }
+
   const clientId = (c.env as any).GOOGLE_CLIENT_ID
   if (!clientId) return c.json({ ok: false, error: 'Google OAuth no configurado' }, 503)
 
   const state      = generateToken(16)
-  const origin     = new URL(c.req.url).origin
-  const redirectUri = `${origin}/api/v1/auth/google/callback`
+  const apiUrl     = (c.env as any).API_URL || 'https://link.intaprd.com'
+  const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
   const params = new URLSearchParams({
     client_id:     clientId,
@@ -244,6 +253,14 @@ app.get('/api/v1/auth/google/start', async (c) => {
 })
 
 app.get('/api/v1/auth/google/callback', async (c) => {
+  const reqHostname = new URL(c.req.url).hostname
+  if (reqHostname.endsWith('.workers.dev')) {
+    const apiUrl   = (c.env as any).API_URL || 'https://link.intaprd.com'
+    const reqUrl   = new URL(c.req.url)
+    const canonical = new URL(reqUrl.pathname + reqUrl.search, apiUrl)
+    return Response.redirect(canonical.toString(), 301)
+  }
+
   const code       = c.req.query('code')  || ''
   const state      = c.req.query('state') || ''
   const oauthError = c.req.query('error') || ''
@@ -261,8 +278,8 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
   const clientId     = (c.env as any).GOOGLE_CLIENT_ID
   const clientSecret = (c.env as any).GOOGLE_CLIENT_SECRET
-  const origin       = new URL(c.req.url).origin
-  const redirectUri  = `${origin}/api/v1/auth/google/callback`
+  const apiUrl       = (c.env as any).API_URL || 'https://link.intaprd.com'
+  const redirectUri  = `${apiUrl}/api/v1/auth/google/callback`
 
   // Intercambiar code por access_token
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -320,8 +337,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), userId, sessionHash, reqIp, reqUa).run()
 
-  const hostname      = new URL(c.req.url).hostname
-  const sessionCookie = buildSessionCookie(sessionRaw, hostname, 30 * 24 * 60 * 60)
+  const sessionCookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
   const clearState    = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
 
   const headers = new Headers()
@@ -344,10 +360,13 @@ app.post('/api/v1/auth/logout', async (c) => {
     ).bind(sessionHash).run()
   }
 
-  const hostname = new URL(c.req.url).hostname
+  const appUrlLogout = (c.env as any).APP_URL || 'https://intaprd.com'
   let clearCookie = `session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
-  if (hostname === 'intaprd.com' || hostname.endsWith('.intaprd.com'))
-    clearCookie += '; Domain=.intaprd.com'
+  try {
+    const u = new URL(appUrlLogout)
+    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com'))
+      clearCookie += '; Domain=.intaprd.com'
+  } catch { /* no agregar Domain */ }
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': clearCookie })
 })
@@ -844,7 +863,8 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   const telNumber  = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn         = profile.name || profile.slug
-  const profileUrl = `${PUBLIC_BASE_URL}/${profile.slug}`
+  const appUrl     = (c.env as any).APP_URL || 'https://intaprd.com'
+  const profileUrl = `${appUrl}/${profile.slug}`
 
   const lines: string[] = [
     'BEGIN:VCARD',

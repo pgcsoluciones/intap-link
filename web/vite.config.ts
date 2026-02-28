@@ -7,9 +7,8 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: 'https://intap-api.fliaprince.workers.dev',
+                target: 'https://link.intaprd.com',
                 changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api/, '')
             }
         }
     }

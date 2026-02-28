@@ -50,7 +50,7 @@ export default function OnboardingSlug() {
         <div className="mb-8">
           <p className="text-xs font-bold text-intap-mint uppercase tracking-widest mb-2">Paso 1 de 4</p>
           <h1 className="text-2xl font-black mb-1">Elige tu URL</h1>
-          <p className="text-sm text-slate-400">Esta será tu dirección pública. Ej: intap-web2.pages.dev/tu-slug</p>
+          <p className="text-sm text-slate-400">Esta será tu dirección pública. Ej: intaprd.com/tu-slug</p>
         </div>
 
         <form onSubmit={handleSubmit} className="glass-card p-6 flex flex-col gap-4">
