@@ -27,7 +27,6 @@ function isAllowedOrigin(origin: string): boolean {
   const exact = [
     'https://intaprd.com',
     'https://www.intaprd.com',
-    'https://intap-web2.pages.dev',
     'http://localhost:5173',
     'http://localhost:4173',
   ]
