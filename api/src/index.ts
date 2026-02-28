@@ -155,7 +155,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+10 minutes'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), email, tokenHash, ip, ua).run()
 
-  const appUrl    = (c.env as any).APP_URL || 'https://link.intaprd.com'
+  const appUrl    = (c.env as any).APP_URL || 'https://app.intaprd.com'
   const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
   const resendKey = (c.env as any).RESEND_API_KEY
 
@@ -209,7 +209,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), (user as any).id, sessionHash, reqIp, reqUa).run()
 
-  const appUrl = (c.env as any).APP_URL || 'https://link.intaprd.com'
+  const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
   const cookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
@@ -220,7 +220,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
 app.get('/api/v1/auth/google/start', async (c) => {
   const reqHostname = new URL(c.req.url).hostname
   if (reqHostname.endsWith('.workers.dev')) {
-    const apiUrl   = (c.env as any).API_URL || 'https://link.intaprd.com'
+    const apiUrl   = (c.env as any).API_URL || 'https://intaprd.com'
     const reqUrl   = new URL(c.req.url)
     const canonical = new URL(reqUrl.pathname + reqUrl.search, apiUrl)
     return Response.redirect(canonical.toString(), 301)
@@ -230,7 +230,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
   if (!clientId) return c.json({ ok: false, error: 'Google OAuth no configurado' }, 503)
 
   const state      = generateToken(16)
-  const apiUrl     = (c.env as any).API_URL || 'https://link.intaprd.com'
+  const apiUrl     = (c.env as any).API_URL || 'https://intaprd.com'
   const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
   const params = new URLSearchParams({
@@ -255,7 +255,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
 app.get('/api/v1/auth/google/callback', async (c) => {
   const reqHostname = new URL(c.req.url).hostname
   if (reqHostname.endsWith('.workers.dev')) {
-    const apiUrl   = (c.env as any).API_URL || 'https://link.intaprd.com'
+    const apiUrl   = (c.env as any).API_URL || 'https://intaprd.com'
     const reqUrl   = new URL(c.req.url)
     const canonical = new URL(reqUrl.pathname + reqUrl.search, apiUrl)
     return Response.redirect(canonical.toString(), 301)
@@ -265,7 +265,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const state      = c.req.query('state') || ''
   const oauthError = c.req.query('error') || ''
 
-  const appUrl = (c.env as any).APP_URL || 'https://link.intaprd.com'
+  const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
 
   if (oauthError || !code)
     return c.redirect(`${appUrl}/admin/login?error=oauth_denied`)
@@ -278,7 +278,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
   const clientId     = (c.env as any).GOOGLE_CLIENT_ID
   const clientSecret = (c.env as any).GOOGLE_CLIENT_SECRET
-  const apiUrl       = (c.env as any).API_URL || 'https://link.intaprd.com'
+  const apiUrl       = (c.env as any).API_URL || 'https://intaprd.com'
   const redirectUri  = `${apiUrl}/api/v1/auth/google/callback`
 
   // Intercambiar code por access_token
@@ -360,7 +360,7 @@ app.post('/api/v1/auth/logout', async (c) => {
     ).bind(sessionHash).run()
   }
 
-  const appUrlLogout = (c.env as any).APP_URL || 'https://link.intaprd.com'
+  const appUrlLogout = (c.env as any).APP_URL || 'https://app.intaprd.com'
   let clearCookie = `session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
   try {
     const u = new URL(appUrlLogout)
@@ -415,7 +415,17 @@ me.post('/profile/claim', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
   const slug = String(body.slug || '').trim().toLowerCase()
-  const RESERVED_SLUGS = new Set(['admin', 'api', 'auth', 'me', 'assets', 'favicon', 'www'])
+  const RESERVED_SLUGS = new Set([
+    // rutas del Worker / API
+    'api', 'auth', 'me', 'assets', 'health', 'public',
+    // rutas del panel admin (app.intaprd.com)
+    'admin', 'login', 'logout', 'check-email', 'onboarding',
+    'dashboard', 'settings', 'account', 'profile', 'superadmin',
+    // rutas de la landing (intaprd.com)
+    'about', 'pricing', 'blog', 'help', 'terms', 'privacy', 'contact',
+    // técnicos
+    'www', 'favicon', 'static', 'images', 'app', 'link',
+  ])
   if (!slug || !/^[a-z0-9_-]{2,32}$/.test(slug))
     return c.json({ ok: false, error: 'Slug inválido (2–32 chars, a-z 0-9 _ -)' }, 400)
   if (RESERVED_SLUGS.has(slug))
@@ -863,7 +873,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   const telNumber  = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn         = profile.name || profile.slug
-  const appUrl     = (c.env as any).APP_URL || 'https://link.intaprd.com'
+  const appUrl     = (c.env as any).APP_URL || 'https://app.intaprd.com'
   const profileUrl = `${appUrl}/${profile.slug}`
 
   const lines: string[] = [
