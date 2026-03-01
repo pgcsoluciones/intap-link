@@ -17,6 +17,7 @@ zone_name = "intaprd.com"
 ENVIRONMENT = "production"
 APP_URL = "https://app.intaprd.com"
 API_URL = "https://intaprd.com"
+GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
 
 [[d1_databases]]
 binding = "DB"
