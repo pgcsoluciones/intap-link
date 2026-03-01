@@ -13,8 +13,10 @@ zone_name = "intaprd.com"
 pattern = "app.intaprd.com/api/*"
 zone_name = "intaprd.com"
 
-# [vars]
-# ENVIRONMENT = "production"
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://app.intaprd.com"
+API_URL = "https://intaprd.com"
 
 [[d1_databases]]
 binding = "DB"
