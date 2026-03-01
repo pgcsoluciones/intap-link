@@ -44,11 +44,11 @@ export default function AdminLogin() {
 
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-intap-blue to-purple-600 mb-4 shadow-lg">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M13 10V3L4 14h7v7l9-11h-7z" fill="white" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
-            </svg>
-          </div>
+          <img
+            src="/logo.png"
+            alt="Intap Link"
+            className="w-40 mx-auto mb-4"
+          />
           <h1 className="text-2xl font-black tracking-tight">
             {isRegister ? 'Crea tu cuenta gratis' : 'Bienvenido de nuevo'}
           </h1>
