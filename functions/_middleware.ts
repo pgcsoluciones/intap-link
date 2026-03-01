@@ -13,7 +13,9 @@ export async function onRequest(context: {
   const url = new URL(context.request.url);
 
   // Redirigir rutas /admin al panel admin en app.intaprd.com
-  if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
+  // Sólo desde el dominio público — evita loop si app.intaprd.com usa el mismo proyecto
+  if (url.hostname !== 'app.intaprd.com' &&
+      (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))) {
     const target = 'https://app.intaprd.com' + url.pathname + url.search;
     return Response.redirect(target, 302);
   }
