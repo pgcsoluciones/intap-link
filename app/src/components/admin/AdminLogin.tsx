@@ -39,23 +39,43 @@ export default function AdminLogin() {
   const isRegister = mode === 'register'
 
   return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter']">
-      <div className="w-full max-w-sm animate-fade-in">
+    <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter'] relative overflow-hidden">
+
+      {/* Ambient glow — colores corporativos Intap */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(59,130,246,0.12) 0%, transparent 70%),' +
+            'radial-gradient(ellipse 60% 45% at 75% 100%, rgba(13,242,201,0.08) 0%, transparent 70%)',
+        }}
+      />
+
+      <div className="w-full max-w-sm animate-fade-in relative z-10">
 
         {/* Logo / Brand */}
         <div className="text-center mb-8">
           <img
             src="/logo.png"
             alt="Intap Link"
-            className="w-40 mx-auto mb-4"
+            className="w-full max-w-sm mx-auto mb-3"
           />
-          <h1 className="text-2xl font-black tracking-tight">
-            {isRegister ? 'Crea tu cuenta gratis' : 'Bienvenido de nuevo'}
+          <p className="text-xs text-slate-500 tracking-wide italic">
+            Tu identidad digital comienza aquí.{' '}
+            <span className="text-slate-600">Minimal. Poderoso. Sin exageración.</span>
+          </p>
+        </div>
+
+        {/* Heading */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-black tracking-tight leading-snug">
+            {isRegister ? 'Crea tu identidad digital' : 'Accede a tu identidad digital'}
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
             {isRegister
-              ? 'Empieza a compartir tus links en segundos'
-              : 'Accede a tu panel de control'}
+              ? 'Empieza a compartir tus links en segundos.'
+              : 'Gestiona tu perfil, tus enlaces y tus oportunidades desde un solo lugar.'}
           </p>
         </div>
 
@@ -73,7 +93,7 @@ export default function AdminLogin() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Iniciar sesión
+              Acceder
             </button>
             <button
               type="button"
@@ -84,7 +104,7 @@ export default function AdminLogin() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Registrarse gratis
+              Crear mi perfil gratis
             </button>
           </div>
 
@@ -92,14 +112,14 @@ export default function AdminLogin() {
           <div className="p-5 flex flex-col gap-4">
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                  Correo electrónico
+                <label className="text-xs font-semibold text-slate-400 tracking-wide">
+                  Correo asociado a tu perfil
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@email.com"
+                  placeholder="nombre@email.com"
                   required
                   className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/60 focus:ring-1 focus:ring-intap-mint/20 transition-all"
                 />
@@ -119,14 +139,14 @@ export default function AdminLogin() {
                 {loading
                   ? 'Enviando enlace…'
                   : isRegister
-                    ? 'Crear cuenta gratis →'
-                    : 'Enviar enlace de acceso →'}
+                    ? 'Crear mi perfil gratis →'
+                    : 'Enviarme acceso seguro →'}
               </button>
             </form>
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-white/10" />
-              <span className="text-xs text-slate-500">o</span>
+              <span className="text-xs text-slate-500 whitespace-nowrap">o accede con tu cuenta Google</span>
               <div className="flex-1 h-px bg-white/10" />
             </div>
 
@@ -141,10 +161,9 @@ export default function AdminLogin() {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continuar con Google
+              Acceder con Google
             </button>
 
-            {/* Register extra info */}
             {isRegister && (
               <p className="text-center text-xs text-slate-500 mt-1">
                 Sin tarjeta de crédito · Siempre gratis para empezar
@@ -157,24 +176,24 @@ export default function AdminLogin() {
         <p className="text-center text-xs text-slate-500 mt-5">
           {isRegister ? (
             <>
-              ¿Ya tienes cuenta?{' '}
+              ¿Ya tienes tu perfil?{' '}
               <button
                 type="button"
                 onClick={() => { setMode('login'); setError('') }}
                 className="text-intap-mint hover:underline font-semibold"
               >
-                Iniciar sesión
+                Accede aquí
               </button>
             </>
           ) : (
             <>
-              ¿No tienes cuenta?{' '}
+              ¿Aún no tienes tu perfil inteligente?{' '}
               <button
                 type="button"
                 onClick={() => { setMode('register'); setError('') }}
                 className="text-intap-mint hover:underline font-semibold"
               >
-                Regístrate gratis
+                Créalo gratis en segundos
               </button>
             </>
           )}
