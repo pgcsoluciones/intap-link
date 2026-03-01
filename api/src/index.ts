@@ -6,13 +6,12 @@ import { sendMagicLinkEmail } from './lib/email'
 type Bindings = {
   DB: D1Database
   BUCKET: R2Bucket
-  JWT_SECRET: string
   RESEND_API_KEY: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
+  TURNSTILE_SECRET: string
   API_URL: string
   APP_URL: string
-  SESSION_SECRET: string
   ENVIRONMENT: string
 }
 
