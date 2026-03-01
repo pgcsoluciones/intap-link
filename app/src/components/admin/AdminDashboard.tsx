@@ -40,7 +40,8 @@ export default function AdminDashboard() {
     </div>
   )
 
-  const profileUrl = me?.slug ? `/${me.slug}` : null
+  const WEB_URL = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
+  const profileUrl = me?.slug ? `${WEB_URL}/${me.slug}` : null
 
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">

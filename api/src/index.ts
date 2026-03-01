@@ -7,6 +7,7 @@ type Bindings = {
   DB: D1Database
   BUCKET: R2Bucket
   RESEND_API_KEY: string
+  RESEND_FROM: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
   TURNSTILE_SECRET: string
@@ -160,10 +161,11 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   const rawAppUrl = String((c.env as any).APP_URL || '')
   const appUrl    = rawAppUrl.startsWith('https://app.') ? rawAppUrl : 'https://app.intaprd.com'
   const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
-  const resendKey = (c.env as any).RESEND_API_KEY
+  const resendKey  = (c.env as any).RESEND_API_KEY
+  const resendFrom = (c.env as any).RESEND_FROM
 
   if (resendKey) {
-    await sendMagicLinkEmail({ RESEND_API_KEY: resendKey }, email, magicLink)
+    await sendMagicLinkEmail({ RESEND_API_KEY: resendKey, RESEND_FROM: resendFrom }, email, magicLink)
   } else {
     console.log(`[MAGIC LINK] ${email} → ${magicLink}`)
   }

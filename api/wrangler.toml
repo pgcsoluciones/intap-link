@@ -18,6 +18,10 @@ ENVIRONMENT = "production"
 APP_URL = "https://app.intaprd.com"
 API_URL = "https://intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
+# Remitente del magic link. Debe ser un dominio verificado en Resend.
+# Mientras no esté verificado, Resend solo entrega a la cuenta del owner (plan free).
+# Pasos: 1) Verificar intaprd.com en resend.com/domains  2) Hacer deploy
+RESEND_FROM = "noreply@intaprd.com"
 
 [[d1_databases]]
 binding = "DB"

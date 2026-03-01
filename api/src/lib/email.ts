@@ -1,14 +1,18 @@
 import { Resend } from 'resend'
 
 export async function sendMagicLinkEmail(
-  env: { RESEND_API_KEY: string },
+  env: { RESEND_API_KEY: string; RESEND_FROM?: string },
   to: string,
   link: string,
 ): Promise<void> {
   const resend = new Resend(env.RESEND_API_KEY)
+  // RESEND_FROM debe apuntar a un dominio verificado en Resend (ej: noreply@intaprd.com).
+  // Mientras el dominio no esté verificado, usar 'onboarding@resend.dev' solo entrega
+  // al email del propietario de la cuenta de Resend (restricción del plan free).
+  const from = env.RESEND_FROM || 'onboarding@resend.dev'
 
   await resend.emails.send({
-    from: 'onboarding@resend.dev',
+    from,
     to,
     subject: 'Tu enlace de acceso a INTAP Link',
     html: `
