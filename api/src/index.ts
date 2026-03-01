@@ -1073,26 +1073,97 @@ app.get('/api/v1/admin/db-check', async (c) => {
   const key = c.req.header('X-Admin-Key') || c.req.query('key') || ''
   if (key !== 'intap_master_key') return c.json({ ok: false, error: 'Forbidden' }, 403)
 
-  const tables = [
-    'users', 'profiles',
-    'sessions', 'auth_otp',
-    'auth_magic_links', 'auth_sessions', 'auth_identities',
-    'profile_links', 'profile_contact',
-  ]
-  const schema: Record<string, any> = {}
+  const issues: string[] = []
+  const checks: Record<string, any> = {}
 
-  for (const table of tables) {
-    try {
-      const info = await c.env.DB.prepare(`PRAGMA table_info(${table})`).all()
-      schema[table] = (info.results as any[]).map((r) => ({
-        name: r.name, type: r.type, notnull: r.notnull, dflt_value: r.dflt_value,
-      }))
-    } catch (err) {
-      schema[table] = { error: String(err) }
+  // ── 1. Columnas requeridas en profiles ────────────────────────────────────
+  const REQUIRED_PROFILE_COLS = [
+    'id', 'user_id', 'slug', 'plan_id', 'theme_id',
+    'name', 'bio', 'is_published', 'created_at',
+    'avatar_url', 'category', 'subcategory', 'updated_at',
+    'whatsapp_number', 'is_active',
+  ]
+  try {
+    const info = await c.env.DB.prepare(`PRAGMA table_info(profiles)`).all()
+    const existing = new Set((info.results as any[]).map((r) => r.name))
+    const missing  = REQUIRED_PROFILE_COLS.filter((col) => !existing.has(col))
+    checks.profiles_columns = {
+      ok:       missing.length === 0,
+      present:  [...existing],
+      missing,
     }
+    if (missing.length > 0) issues.push(`profiles falta columnas: ${missing.join(', ')}`)
+  } catch (err) {
+    checks.profiles_columns = { ok: false, error: String(err) }
+    issues.push(`No se pudo leer schema de profiles: ${err}`)
   }
 
-  return c.json({ ok: true, schema })
+  // ── 2. Tablas huérfanas (indicador de migración rota) ─────────────────────
+  try {
+    const orphans = await c.env.DB.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'profiles_%'`
+    ).all()
+    const found = (orphans.results as any[]).map((r) => r.name).filter((n) => n !== 'profile_links' &&
+      n !== 'profile_contact' && n !== 'profile_gallery' &&
+      n !== 'profile_faqs'    && n !== 'profile_products' &&
+      n !== 'profile_social_links' && n !== 'profile_modules')
+    checks.orphan_tables = { ok: found.length === 0, found }
+    if (found.length > 0) issues.push(`Tablas huérfanas: ${found.join(', ')}`)
+  } catch (err) {
+    checks.orphan_tables = { ok: false, error: String(err) }
+  }
+
+  // ── 3. Plan 'free' en plans + plan_limits ─────────────────────────────────
+  try {
+    const plan      = await c.env.DB.prepare(`SELECT id FROM plans WHERE id='free'`).first()
+    const limits    = await c.env.DB.prepare(`SELECT plan_id FROM plan_limits WHERE plan_id='free'`).first()
+    checks.free_plan = {
+      ok:         !!plan && !!limits,
+      plan_row:   !!plan,
+      limits_row: !!limits,
+    }
+    if (!plan)   issues.push(`Plan 'free' no existe en plans`)
+    if (!limits) issues.push(`Plan 'free' no tiene row en plan_limits`)
+  } catch (err) {
+    checks.free_plan = { ok: false, error: String(err) }
+    issues.push(`Error chequeando plan free: ${err}`)
+  }
+
+  // ── 4. Tablas de auth presentes ───────────────────────────────────────────
+  const AUTH_TABLES = ['users', 'auth_magic_links', 'auth_sessions', 'auth_identities']
+  const authStatus: Record<string, boolean> = {}
+  for (const t of AUTH_TABLES) {
+    try {
+      await c.env.DB.prepare(`SELECT 1 FROM ${t} LIMIT 1`).first()
+      authStatus[t] = true
+    } catch {
+      authStatus[t] = false
+      issues.push(`Tabla auth faltante: ${t}`)
+    }
+  }
+  checks.auth_tables = { ok: Object.values(authStatus).every(Boolean), tables: authStatus }
+
+  // ── 5. Conteos rápidos ────────────────────────────────────────────────────
+  try {
+    const [users, profiles] = await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) as n FROM users`).first(),
+      c.env.DB.prepare(`SELECT COUNT(*) as n FROM profiles`).first(),
+    ])
+    checks.counts = {
+      users:    (users as any)?.n ?? 0,
+      profiles: (profiles as any)?.n ?? 0,
+    }
+  } catch (err) {
+    checks.counts = { error: String(err) }
+  }
+
+  const allOk = issues.length === 0
+  return c.json({
+    ok: allOk,
+    status:  allOk ? 'healthy' : 'degraded',
+    issues,
+    checks,
+  }, allOk ? 200 : 200) // siempre 200 para que CC pueda leer el body
 })
 
 app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
