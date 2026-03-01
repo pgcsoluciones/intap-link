@@ -3,12 +3,16 @@
   "private": true,
   "workspaces": [
     "api",
-    "web"
+    "web",
+    "app"
   ],
   "scripts": {
-    "api:dev": "npm run dev -w api",
-    "web:dev": "npm run dev -w web",
-    "dev": "concurrently \"npm run api:dev\" \"npm run web:dev\""
+    "api:dev":   "npm run dev -w api",
+    "web:dev":   "npm run dev -w web",
+    "app:dev":   "npm run dev -w app",
+    "web:build": "npm run build -w web",
+    "app:build": "npm run build -w app",
+    "dev": "concurrently \"npm run api:dev\" \"npm run web:dev\" \"npm run app:dev\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

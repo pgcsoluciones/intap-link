@@ -2,8 +2,22 @@ name = "intap-api"
 main = "src/index.ts"
 compatibility_date = "2024-02-08"
 
-# [vars]
-# ENVIRONMENT = "production"
+# Rutas de producción — el Worker maneja /api/* en ambos dominios.
+# La zona (zone_name) debe existir en la cuenta Cloudflare; si no,
+# también se puede configurar desde el dashboard (Workers → Triggers → Routes).
+[[routes]]
+pattern = "intaprd.com/api/*"
+zone_name = "intaprd.com"
+
+[[routes]]
+pattern = "app.intaprd.com/api/*"
+zone_name = "intaprd.com"
+
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://app.intaprd.com"
+API_URL = "https://intaprd.com"
+GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
 
 [[d1_databases]]
 binding = "DB"
