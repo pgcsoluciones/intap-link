@@ -54,3 +54,24 @@
 .animate-fade-in {
   animation: fade-in 0.6s ease-out forwards;
 }
+
+/* ── Profile themes ──────────────────────────────────────────────────────── */
+
+.theme-light {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+.theme-modern {
+  background: linear-gradient(135deg, #0f0a1e 0%, #1e1040 100%) !important;
+}
+
+.theme-modern .avatar-glow {
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.6);
+}

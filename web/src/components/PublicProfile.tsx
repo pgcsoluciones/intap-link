@@ -1086,7 +1086,7 @@ export default function PublicProfile() {
   const promoLink = shouldShowPromoPopup(data.links)
 
   return (
-    <div className="min-h-screen bg-intap-dark flex justify-center items-start pt-12 pb-20 px-4">
+    <div className={`min-h-screen bg-intap-dark flex justify-center items-start pt-12 pb-20 px-4 theme-${data.themeId || 'default'}`}>
       <div className="w-full max-width-mobile text-center animate-fade-in">
 
         {/* ── Hero ── */}
