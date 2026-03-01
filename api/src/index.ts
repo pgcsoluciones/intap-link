@@ -447,10 +447,15 @@ me.post('/profile/claim', async (c) => {
   if (taken) return c.json({ ok: false, error: 'Slug no disponible' }, 409)
 
   const profileId = crypto.randomUUID()
-  await c.env.DB.prepare(
-    `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
-     VALUES (?, ?, ?, 'free', 'default', 0)`
-  ).bind(profileId, userId, slug).run()
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
+       VALUES (?, ?, ?, 'free', 'default', 0)`
+    ).bind(profileId, userId, slug).run()
+  } catch (e: any) {
+    console.error('[POST /me/profile/claim] D1 error:', e)
+    return c.json({ ok: false, error: e?.message || 'Error al crear perfil' }, 500)
+  }
   return c.json({ ok: true, profile_id: profileId, slug }, 201)
 })
 
@@ -470,16 +475,21 @@ me.put('/profile', async (c) => {
   const category    = body.category    !== undefined ? String(body.category    || '').trim() : undefined
   const subcategory = body.subcategory !== undefined ? String(body.subcategory || '').trim() : undefined
 
-  await c.env.DB.prepare(
-    `UPDATE profiles
-     SET name        = COALESCE(?1, name),
-         bio         = COALESCE(?2, bio),
-         avatar_url  = COALESCE(?3, avatar_url),
-         category    = COALESCE(?4, category),
-         subcategory = COALESCE(?5, subcategory),
-         updated_at  = datetime('now')
-     WHERE id = ?6`
-  ).bind(name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null, (profile as any).id).run()
+  try {
+    await c.env.DB.prepare(
+      `UPDATE profiles
+       SET name        = COALESCE(?1, name),
+           bio         = COALESCE(?2, bio),
+           avatar_url  = COALESCE(?3, avatar_url),
+           category    = COALESCE(?4, category),
+           subcategory = COALESCE(?5, subcategory),
+           updated_at  = datetime('now')
+       WHERE id = ?6`
+    ).bind(name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null, (profile as any).id).run()
+  } catch (e: any) {
+    console.error('[PUT /me/profile] D1 error:', e)
+    return c.json({ ok: false, error: e?.message || 'Error al guardar perfil' }, 500)
+  }
   return c.json({ ok: true })
 })
 
@@ -514,22 +524,27 @@ me.put('/contact', async (c) => {
   const address  = body.address  !== undefined ? String(body.address || '').trim() : undefined
   const map_url  = body.map_url  !== undefined ? String(body.map_url || '').trim() : undefined
 
-  await c.env.DB.prepare(
-    `INSERT INTO profile_contact (profile_id, whatsapp, email, phone, hours, address, map_url, updated_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
-     ON CONFLICT(profile_id) DO UPDATE SET
-       whatsapp   = COALESCE(?2, whatsapp),
-       email      = COALESCE(?3, email),
-       phone      = COALESCE(?4, phone),
-       hours      = COALESCE(?5, hours),
-       address    = COALESCE(?6, address),
-       map_url    = COALESCE(?7, map_url),
-       updated_at = datetime('now')`
-  ).bind(
-    (profile as any).id,
-    whatsapp ?? null, email ?? null, phone ?? null,
-    hours ?? null, address ?? null, map_url ?? null,
-  ).run()
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO profile_contact (profile_id, whatsapp, email, phone, hours, address, map_url, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
+       ON CONFLICT(profile_id) DO UPDATE SET
+         whatsapp   = COALESCE(?2, whatsapp),
+         email      = COALESCE(?3, email),
+         phone      = COALESCE(?4, phone),
+         hours      = COALESCE(?5, hours),
+         address    = COALESCE(?6, address),
+         map_url    = COALESCE(?7, map_url),
+         updated_at = datetime('now')`
+    ).bind(
+      (profile as any).id,
+      whatsapp ?? null, email ?? null, phone ?? null,
+      hours ?? null, address ?? null, map_url ?? null,
+    ).run()
+  } catch (e: any) {
+    console.error('[PUT /me/contact] D1 error:', e)
+    return c.json({ ok: false, error: e?.message || 'Error al guardar contacto' }, 500)
+  }
   return c.json({ ok: true })
 })
 
