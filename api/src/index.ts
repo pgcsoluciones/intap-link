@@ -154,7 +154,11 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+10 minutes'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), email, tokenHash, ip, ua).run()
 
-  const appUrl    = (c.env as any).APP_URL || 'https://app.intaprd.com'
+  // El callback de autenticación SIEMPRE debe apuntar a app.intaprd.com.
+  // Usamos APP_URL solo si apunta al subdominio correcto; en caso contrario
+  // caemos al valor seguro para evitar que el token llegue al dominio principal.
+  const rawAppUrl = String((c.env as any).APP_URL || '')
+  const appUrl    = rawAppUrl.startsWith('https://app.') ? rawAppUrl : 'https://app.intaprd.com'
   const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
   const resendKey = (c.env as any).RESEND_API_KEY
 
@@ -872,8 +876,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   const telNumber  = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn         = profile.name || profile.slug
-  const appUrl     = (c.env as any).APP_URL || 'https://app.intaprd.com'
-  const profileUrl = `${appUrl}/${profile.slug}`
+  const profileUrl = `${(c.env as any).API_URL || 'https://intaprd.com'}/${profile.slug}`
 
   const lines: string[] = [
     'BEGIN:VCARD',
