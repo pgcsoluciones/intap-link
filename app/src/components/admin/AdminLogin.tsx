@@ -41,14 +41,14 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter'] relative overflow-hidden">
 
-      {/* Ambient glow — colores corporativos Intap */}
+      {/* Ambient glow — azul eléctrico corporativo */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(59,130,246,0.12) 0%, transparent 70%),' +
-            'radial-gradient(ellipse 60% 45% at 75% 100%, rgba(13,242,201,0.08) 0%, transparent 70%)',
+            'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(37,99,235,0.13) 0%, transparent 70%),' +
+            'radial-gradient(ellipse 50% 40% at 75% 100%, rgba(59,130,246,0.07) 0%, transparent 70%)',
         }}
       />
 
@@ -61,9 +61,8 @@ export default function AdminLogin() {
             alt="Intap Link"
             className="w-full max-w-sm mx-auto mb-3"
           />
-          <p className="text-xs text-slate-500 tracking-wide italic">
-            Tu identidad digital comienza aquí.{' '}
-            <span className="text-slate-600">Minimal. Poderoso. Sin exageración.</span>
+          <p className="text-xs text-slate-500 tracking-wide">
+            Tu identidad digital comienza aquí.
           </p>
         </div>
 
@@ -72,7 +71,7 @@ export default function AdminLogin() {
           <h1 className="text-2xl font-black tracking-tight leading-snug">
             {isRegister ? 'Crea tu identidad digital' : 'Accede a tu identidad digital'}
           </h1>
-          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+          <p className="text-sm text-slate-300 mt-2 leading-relaxed">
             {isRegister
               ? 'Empieza a compartir tus links en segundos.'
               : 'Gestiona tu perfil, tus enlaces y tus oportunidades desde un solo lugar.'}
@@ -100,7 +99,7 @@ export default function AdminLogin() {
               onClick={() => { setMode('register'); setError('') }}
               className={`flex-1 py-2.5 rounded-[18px] text-sm font-semibold transition-all ${
                 isRegister
-                  ? 'bg-gradient-to-r from-intap-blue to-purple-600 text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#1d4ed8] to-[#2563eb] text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -134,7 +133,7 @@ export default function AdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50 hover:opacity-90 transition-opacity shadow-lg"
+                className="w-full bg-gradient-to-r from-[#2563eb] to-[#3b82f6] text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50 hover:opacity-90 transition-opacity shadow-md"
               >
                 {loading
                   ? 'Enviando enlace…'
@@ -180,7 +179,7 @@ export default function AdminLogin() {
               <button
                 type="button"
                 onClick={() => { setMode('login'); setError('') }}
-                className="text-intap-mint hover:underline font-semibold"
+                className="text-[#3b82f6] hover:underline font-semibold"
               >
                 Accede aquí
               </button>
@@ -191,7 +190,7 @@ export default function AdminLogin() {
               <button
                 type="button"
                 onClick={() => { setMode('register'); setError('') }}
-                className="text-intap-mint hover:underline font-semibold"
+                className="text-[#3b82f6] hover:underline font-semibold"
               >
                 Créalo gratis en segundos
               </button>
