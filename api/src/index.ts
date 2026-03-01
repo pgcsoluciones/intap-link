@@ -447,10 +447,15 @@ me.post('/profile/claim', async (c) => {
   if (taken) return c.json({ ok: false, error: 'Slug no disponible' }, 409)
 
   const profileId = crypto.randomUUID()
-  await c.env.DB.prepare(
-    `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
-     VALUES (?, ?, ?, 'free', 'default', 0)`
-  ).bind(profileId, userId, slug).run()
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
+       VALUES (?, ?, ?, 'free', 'default', 0)`
+    ).bind(profileId, userId, slug).run()
+  } catch (e: any) {
+    console.error('[POST /me/profile/claim] D1 error:', e)
+    return c.json({ ok: false, error: e?.message || 'Error al crear perfil' }, 500)
+  }
   return c.json({ ok: true, profile_id: profileId, slug }, 201)
 })
 
@@ -470,16 +475,21 @@ me.put('/profile', async (c) => {
   const category    = body.category    !== undefined ? String(body.category    || '').trim() : undefined
   const subcategory = body.subcategory !== undefined ? String(body.subcategory || '').trim() : undefined
 
-  await c.env.DB.prepare(
-    `UPDATE profiles
-     SET name        = COALESCE(?1, name),
-         bio         = COALESCE(?2, bio),
-         avatar_url  = COALESCE(?3, avatar_url),
-         category    = COALESCE(?4, category),
-         subcategory = COALESCE(?5, subcategory),
-         updated_at  = datetime('now')
-     WHERE id = ?6`
-  ).bind(name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null, (profile as any).id).run()
+  try {
+    await c.env.DB.prepare(
+      `UPDATE profiles
+       SET name        = COALESCE(?1, name),
+           bio         = COALESCE(?2, bio),
+           avatar_url  = COALESCE(?3, avatar_url),
+           category    = COALESCE(?4, category),
+           subcategory = COALESCE(?5, subcategory),
+           updated_at  = datetime('now')
+       WHERE id = ?6`
+    ).bind(name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null, (profile as any).id).run()
+  } catch (e: any) {
+    console.error('[PUT /me/profile] D1 error:', e)
+    return c.json({ ok: false, error: e?.message || 'Error al guardar perfil' }, 500)
+  }
   return c.json({ ok: true })
 })
 
@@ -514,22 +524,27 @@ me.put('/contact', async (c) => {
   const address  = body.address  !== undefined ? String(body.address || '').trim() : undefined
   const map_url  = body.map_url  !== undefined ? String(body.map_url || '').trim() : undefined
 
-  await c.env.DB.prepare(
-    `INSERT INTO profile_contact (profile_id, whatsapp, email, phone, hours, address, map_url, updated_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
-     ON CONFLICT(profile_id) DO UPDATE SET
-       whatsapp   = COALESCE(?2, whatsapp),
-       email      = COALESCE(?3, email),
-       phone      = COALESCE(?4, phone),
-       hours      = COALESCE(?5, hours),
-       address    = COALESCE(?6, address),
-       map_url    = COALESCE(?7, map_url),
-       updated_at = datetime('now')`
-  ).bind(
-    (profile as any).id,
-    whatsapp ?? null, email ?? null, phone ?? null,
-    hours ?? null, address ?? null, map_url ?? null,
-  ).run()
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO profile_contact (profile_id, whatsapp, email, phone, hours, address, map_url, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
+       ON CONFLICT(profile_id) DO UPDATE SET
+         whatsapp   = COALESCE(?2, whatsapp),
+         email      = COALESCE(?3, email),
+         phone      = COALESCE(?4, phone),
+         hours      = COALESCE(?5, hours),
+         address    = COALESCE(?6, address),
+         map_url    = COALESCE(?7, map_url),
+         updated_at = datetime('now')`
+    ).bind(
+      (profile as any).id,
+      whatsapp ?? null, email ?? null, phone ?? null,
+      hours ?? null, address ?? null, map_url ?? null,
+    ).run()
+  } catch (e: any) {
+    console.error('[PUT /me/contact] D1 error:', e)
+    return c.json({ ok: false, error: e?.message || 'Error al guardar contacto' }, 500)
+  }
   return c.json({ ok: true })
 })
 
@@ -1058,26 +1073,97 @@ app.get('/api/v1/admin/db-check', async (c) => {
   const key = c.req.header('X-Admin-Key') || c.req.query('key') || ''
   if (key !== 'intap_master_key') return c.json({ ok: false, error: 'Forbidden' }, 403)
 
-  const tables = [
-    'users', 'profiles',
-    'sessions', 'auth_otp',
-    'auth_magic_links', 'auth_sessions', 'auth_identities',
-    'profile_links', 'profile_contact',
-  ]
-  const schema: Record<string, any> = {}
+  const issues: string[] = []
+  const checks: Record<string, any> = {}
 
-  for (const table of tables) {
-    try {
-      const info = await c.env.DB.prepare(`PRAGMA table_info(${table})`).all()
-      schema[table] = (info.results as any[]).map((r) => ({
-        name: r.name, type: r.type, notnull: r.notnull, dflt_value: r.dflt_value,
-      }))
-    } catch (err) {
-      schema[table] = { error: String(err) }
+  // ── 1. Columnas requeridas en profiles ────────────────────────────────────
+  const REQUIRED_PROFILE_COLS = [
+    'id', 'user_id', 'slug', 'plan_id', 'theme_id',
+    'name', 'bio', 'is_published', 'created_at',
+    'avatar_url', 'category', 'subcategory', 'updated_at',
+    'whatsapp_number', 'is_active',
+  ]
+  try {
+    const info = await c.env.DB.prepare(`PRAGMA table_info(profiles)`).all()
+    const existing = new Set((info.results as any[]).map((r) => r.name))
+    const missing  = REQUIRED_PROFILE_COLS.filter((col) => !existing.has(col))
+    checks.profiles_columns = {
+      ok:       missing.length === 0,
+      present:  [...existing],
+      missing,
     }
+    if (missing.length > 0) issues.push(`profiles falta columnas: ${missing.join(', ')}`)
+  } catch (err) {
+    checks.profiles_columns = { ok: false, error: String(err) }
+    issues.push(`No se pudo leer schema de profiles: ${err}`)
   }
 
-  return c.json({ ok: true, schema })
+  // ── 2. Tablas huérfanas (indicador de migración rota) ─────────────────────
+  try {
+    const orphans = await c.env.DB.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'profiles_%'`
+    ).all()
+    const found = (orphans.results as any[]).map((r) => r.name).filter((n) => n !== 'profile_links' &&
+      n !== 'profile_contact' && n !== 'profile_gallery' &&
+      n !== 'profile_faqs'    && n !== 'profile_products' &&
+      n !== 'profile_social_links' && n !== 'profile_modules')
+    checks.orphan_tables = { ok: found.length === 0, found }
+    if (found.length > 0) issues.push(`Tablas huérfanas: ${found.join(', ')}`)
+  } catch (err) {
+    checks.orphan_tables = { ok: false, error: String(err) }
+  }
+
+  // ── 3. Plan 'free' en plans + plan_limits ─────────────────────────────────
+  try {
+    const plan      = await c.env.DB.prepare(`SELECT id FROM plans WHERE id='free'`).first()
+    const limits    = await c.env.DB.prepare(`SELECT plan_id FROM plan_limits WHERE plan_id='free'`).first()
+    checks.free_plan = {
+      ok:         !!plan && !!limits,
+      plan_row:   !!plan,
+      limits_row: !!limits,
+    }
+    if (!plan)   issues.push(`Plan 'free' no existe en plans`)
+    if (!limits) issues.push(`Plan 'free' no tiene row en plan_limits`)
+  } catch (err) {
+    checks.free_plan = { ok: false, error: String(err) }
+    issues.push(`Error chequeando plan free: ${err}`)
+  }
+
+  // ── 4. Tablas de auth presentes ───────────────────────────────────────────
+  const AUTH_TABLES = ['users', 'auth_magic_links', 'auth_sessions', 'auth_identities']
+  const authStatus: Record<string, boolean> = {}
+  for (const t of AUTH_TABLES) {
+    try {
+      await c.env.DB.prepare(`SELECT 1 FROM ${t} LIMIT 1`).first()
+      authStatus[t] = true
+    } catch {
+      authStatus[t] = false
+      issues.push(`Tabla auth faltante: ${t}`)
+    }
+  }
+  checks.auth_tables = { ok: Object.values(authStatus).every(Boolean), tables: authStatus }
+
+  // ── 5. Conteos rápidos ────────────────────────────────────────────────────
+  try {
+    const [users, profiles] = await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) as n FROM users`).first(),
+      c.env.DB.prepare(`SELECT COUNT(*) as n FROM profiles`).first(),
+    ])
+    checks.counts = {
+      users:    (users as any)?.n ?? 0,
+      profiles: (profiles as any)?.n ?? 0,
+    }
+  } catch (err) {
+    checks.counts = { error: String(err) }
+  }
+
+  const allOk = issues.length === 0
+  return c.json({
+    ok: allOk,
+    status:  allOk ? 'healthy' : 'degraded',
+    issues,
+    checks,
+  }, allOk ? 200 : 200) // siempre 200 para que CC pueda leer el body
 })
 
 app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {

@@ -1,8 +1,10 @@
 -- 0006_reseed_juan_faqs_products.sql
 -- Re-seed idempotente de FAQs y productos para el perfil "juan".
--- Sin DDL (no ALTER TABLE, no CREATE TABLE) → seguro de re-ejecutar.
--- El ALTER TABLE de whatsapp_number y CREATE TABLE profile_products
--- ya fueron aplicados en 0004; repetirlos aborta el archivo completo.
+-- También garantiza que whatsapp_number existe en profiles (el ALTER TABLE se movió
+-- aquí desde 0004 para que 0004 sea seguro en BDs donde la columna ya existe).
+
+-- Ensure whatsapp_number column exists (succeeds on fresh DBs; already present on prod)
+ALTER TABLE profiles ADD COLUMN whatsapp_number TEXT;
 
 -- WhatsApp (UPDATE es siempre idempotente)
 UPDATE profiles

@@ -1,7 +1,9 @@
--- Migration 0004: Add profile_products table + whatsapp_number + seed data for demo
-
--- Add whatsapp_number to profiles (optional field)
-ALTER TABLE profiles ADD COLUMN whatsapp_number TEXT;
+-- Migration 0004: Add profile_products table + seed data for demo
+--
+-- NOTE: whatsapp_number column addition is handled in migration 0006, because
+-- in production this column was already present when 0001-0004 were first applied.
+-- Separating the ALTER TABLE to 0006 makes this migration idempotent for both
+-- fresh installs and existing databases.
 
 -- Add products/services table
 CREATE TABLE IF NOT EXISTS profile_products (
@@ -20,9 +22,6 @@ CREATE TABLE IF NOT EXISTS profile_products (
 CREATE INDEX IF NOT EXISTS idx_products_profile ON profile_products(profile_id, sort_order);
 
 -- ── Seed data para el perfil demo "juan" ──────────────────────────────────────
-
--- WhatsApp
-UPDATE profiles SET whatsapp_number = '+5493413000000' WHERE slug = 'juan';
 
 -- FAQs
 INSERT OR IGNORE INTO profile_faqs (id, profile_id, question, answer, sort_order)
