@@ -71,11 +71,29 @@ app.get('/api/v1/profile/stats/:profileId', async (c) => {
   return c.json({ ok: true, stats: { totalViews: totalViews?.count || 0, dailyViews: dailyViews.results, topLinks: topLinks.results } })
 })
 
-// --- Galería (R2) ---
+// --- Galería & Avatar (R2) ---
+
+app.post('/api/v1/profile/avatar/upload', async (c) => {
+  try {
+    const { profileId } = await c.req.parseBody()
+    const file = (await c.req.formData()).get('file') as unknown as File
+    if (!file) return c.json({ ok: false, error: 'No file' }, 400)
+
+    const key = `profiles/${profileId}/avatar-${crypto.randomUUID()}-${file.name}`
+    await c.env.BUCKET.put(key, file.stream())
+
+    const avatarUrl = `https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev/${key}`
+    await c.env.DB.prepare(`UPDATE profiles SET avatar_url = ? WHERE id = ?`).bind(avatarUrl, profileId).run()
+
+    return c.json({ ok: true, url: avatarUrl })
+  } catch (e) {
+    return c.json({ ok: false, error: 'Upload failed' }, 500)
+  }
+})
 
 app.post('/api/v1/profile/gallery/upload', async (c) => {
   const { profileId } = await c.req.parseBody()
-  const file = (await c.req.formData()).get('file') as File
+  const file = (await c.req.formData()).get('file') as unknown as File
 
   if (!file) return c.json({ ok: false, error: 'No file' }, 400)
 
@@ -97,7 +115,7 @@ app.get('/api/v1/profile/gallery/:profileId', async (c) => {
 // Perfil Público
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
-  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio FROM profiles WHERE slug = ?').bind(slug).first()
+  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio, avatar_url FROM profiles WHERE slug = ?').bind(slug).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
   if (!profile.is_published) return c.json({ ok: false, error: 'Perfil privado' }, 403)
 
@@ -113,6 +131,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       themeId: profile.theme_id,
       name: profile.name,
       bio: profile.bio,
+      avatarUrl: profile.avatar_url,
       links: links.results,
       gallery: gallery.results,
       entitlements
@@ -120,7 +139,184 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   })
 })
 
+// --- Gestión de Perfil (Resolución por Contexto) ---
+
+app.get('/api/v1/me', async (c) => {
+  const userEmail = c.req.header('X-User-Email') || 'juanluis@intaprd.com' // Mock hasta Auth completo
+
+  const user = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(userEmail).first()
+  if (!user) return c.json({ ok: false, error: 'Usuario no encontrado' }, 404)
+
+  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio, avatar_url, plan_id FROM profiles WHERE user_id = ?').bind(user.id).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const entitlements = await getEntitlements(c, profile.id as string)
+
+  // Calcular estado dinámico
+  const status = profile.plan_id === 'free' ? 'trial' : 'active' // Lógica simplificada para el test
+  const daysLeft = 14 // Mock para el test de UI
+
+  return c.json({
+    ok: true,
+    data: {
+      name: profile.name,
+      slug: profile.slug,
+      avatarUrl: profile.avatar_url,
+      themeId: profile.theme_id,
+      plan: profile.plan_id,
+      status: status,
+      daysLeft: daysLeft,
+      entitlements
+    }
+  })
+})
+
 // Admin
+// --- Gestión de Perfil (Edición) ---
+
+app.get('/api/v1/profile/me/:profileId', async (c) => {
+  const profileId = c.req.param('profileId')
+  const profile = await c.env.DB.prepare('SELECT id, slug, theme_id, is_published, name, bio, avatar_url FROM profiles WHERE id = ?').bind(profileId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const links = await c.env.DB.prepare('SELECT * FROM profile_links WHERE profile_id = ? ORDER BY sort_order ASC').bind(profileId).all()
+  const faqs = await c.env.DB.prepare('SELECT * FROM profile_faqs WHERE profile_id = ?').bind(profileId).all()
+  const gallery = await c.env.DB.prepare('SELECT * FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC').bind(profileId).all()
+  const entitlements = await getEntitlements(c, profileId)
+
+  return c.json({
+    ok: true,
+    data: {
+      ...profile,
+      links: links.results,
+      faqs: faqs.results,
+      gallery: gallery.results,
+      entitlements
+    }
+  })
+})
+
+app.patch('/api/v1/profile/settings', async (c) => {
+  const { profileId, name, bio, themeId, isPublished, avatarUrl } = await c.req.json()
+  await c.env.DB.prepare('UPDATE profiles SET name = ?, bio = ?, theme_id = ?, is_published = ?, avatar_url = ? WHERE id = ?')
+    .bind(name, bio, themeId, isPublished ? 1 : 0, avatarUrl || null, profileId)
+    .run()
+  return c.json({ ok: true })
+})
+
+app.post('/api/v1/profile/links', async (c) => {
+  const { profileId, label, url } = await c.req.json()
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare('INSERT INTO profile_links (id, profile_id, label, url, sort_order) VALUES (?, ?, ?, ?, 0)')
+    .bind(id, profileId, label, url)
+    .run()
+  return c.json({ ok: true, id })
+})
+
+app.delete('/api/v1/profile/links/:id', async (c) => {
+  const id = c.req.param('id')
+  await c.env.DB.prepare('DELETE FROM profile_links WHERE id = ?').bind(id).run()
+  return c.json({ ok: true })
+})
+
+app.post('/api/v1/profile/faqs', async (c) => {
+  const { profileId, question, answer } = await c.req.json()
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare('INSERT INTO profile_faqs (id, profile_id, question, answer) VALUES (?, ?, ?, ?)')
+    .bind(id, profileId, question, answer)
+    .run()
+  return c.json({ ok: true, id })
+})
+
+// --- Gestión de Leads (Admin) ---
+
+app.get('/api/v1/profile/me/:profileId/leads', async (c) => {
+  const profileId = c.req.param('profileId')
+
+  // Gating: Verificar si tiene acceso a Leads Avanzados (opcional, por ahora lo leeremos)
+  // const entitlements = await getEntitlements(c, profileId)
+
+  const query = `
+    SELECT id, name, email, phone, message, source_url, created_at, status, origin, tags 
+    FROM leads 
+    WHERE profile_id = ? 
+    ORDER BY created_at DESC
+  `
+  const leads = await c.env.DB.prepare(query).bind(profileId).all()
+
+  // Transformar el string de tags a array JS
+  const formattedLeads = leads.results.map((l: any) => ({
+    ...l,
+    tags: JSON.parse(l.tags || '[]')
+  }))
+
+  return c.json({ ok: true, data: formattedLeads })
+})
+
+app.patch('/api/v1/profile/me/:profileId/leads/:leadId', async (c) => {
+  const profileId = c.req.param('profileId')
+  const leadId = c.req.param('leadId')
+  const { status, tags } = await c.req.json()
+
+  // tags debe asegurarse de ser stringificado si viene como array
+  const tagsString = Array.isArray(tags) ? JSON.stringify(tags) : tags
+
+  await c.env.DB.prepare('UPDATE leads SET status = coalesce(?, status), tags = coalesce(?, tags) WHERE id = ? AND profile_id = ?')
+    .bind(status ?? null, tagsString ?? null, leadId, profileId)
+    .run()
+
+  return c.json({ ok: true })
+})
+
+app.get('/api/v1/profile/me/:profileId/leads/export', async (c) => {
+  const profileId = c.req.param('profileId')
+
+  const leads = await c.env.DB.prepare('SELECT name, email, phone, message, created_at, status, origin, tags FROM leads WHERE profile_id = ? ORDER BY created_at DESC').bind(profileId).all()
+
+  if (!leads.results || leads.results.length === 0) {
+    return c.text('No hay leads para exportar', 404)
+  }
+
+  // Generación básica de CSV
+  const header = ['Nombre', 'Email', 'Teléfono', 'Mensaje', 'Fecha', 'Estado', 'Origen', 'Etiquetas'].join(',')
+  const rows = leads.results.map((l: any) => {
+    // Escapar comillas dobles y comas en los campos de texto
+    const escapeCsv = (str: string) => `"${(str || '').toString().replace(/"/g, '""')}"`
+
+    return [
+      escapeCsv(l.name),
+      escapeCsv(l.email),
+      escapeCsv(l.phone),
+      escapeCsv(l.message),
+      escapeCsv(l.created_at),
+      escapeCsv(l.status),
+      escapeCsv(l.origin),
+      escapeCsv(l.tags)
+    ].join(',')
+  })
+
+  const csvContent = [header, ...rows].join('\n')
+
+  return c.text(csvContent, 200, {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="leads_${profileId}_${new Date().toISOString().split('T')[0]}.csv"`
+  })
+})
+
+// Debug compatibilidad Dashboard
+app.get('/api/debug/entitlements/:profileId', async (c) => {
+  const profileId = c.req.param('profileId')
+  const profile = await c.env.DB.prepare('SELECT p.id, p.plan_id FROM profiles p WHERE p.id = ?').bind(profileId).first()
+  if (!profile) return c.json({ ok: false, error: 'Not found' }, 404)
+  const entitlements = await getEntitlements(c, profileId)
+  return c.json({
+    ok: true,
+    profileId,
+    basePlan: profile.plan_id,
+    finalEntitlements: entitlements
+  })
+})
+
 app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
   const profiles = await c.env.DB.prepare(`SELECT p.id, p.slug, p.plan_id, p.is_published, u.email FROM profiles p JOIN users u ON p.user_id = u.id`).all()
   return c.json({ ok: true, data: profiles.results })
