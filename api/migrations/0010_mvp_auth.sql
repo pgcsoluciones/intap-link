@@ -27,21 +27,11 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_token  ON sessions (token_hash);
 CREATE INDEX IF NOT EXISTS idx_sessions_user   ON sessions (user_id);
 
--- ── Columnas nuevas en profiles ──────────────────────────────────────────────
-
-ALTER TABLE profiles ADD COLUMN avatar_url  TEXT;
-ALTER TABLE profiles ADD COLUMN category    TEXT;
-ALTER TABLE profiles ADD COLUMN subcategory TEXT;
-ALTER TABLE profiles ADD COLUMN updated_at  DATETIME;
+-- ── Columnas nuevas en profiles / profile_links / profile_contact ─────────────
+-- NOTE: ALTER TABLE ADD COLUMN omitidos — en producción estas columnas ya existen.
+-- SQLite/D1 no soporta ADD COLUMN IF NOT EXISTS, y fallarían con "duplicate column".
+-- La migración 0012 reconstruye estas tablas con el schema completo (seguro para
+-- ambos casos: prod y DBs nuevas).
 
 -- Garantizar 1 usuario = 1 perfil
 CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_user_unique ON profiles (user_id);
-
--- ── Columnas nuevas en profile_links ─────────────────────────────────────────
-
-ALTER TABLE profile_links ADD COLUMN is_active  INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE profile_links ADD COLUMN updated_at DATETIME;
-
--- ── Columnas nuevas en profile_contact ───────────────────────────────────────
-
-ALTER TABLE profile_contact ADD COLUMN updated_at DATETIME;

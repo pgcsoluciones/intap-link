@@ -179,7 +179,10 @@ INSERT OR IGNORE INTO modules (code, name, effects_json, is_active) VALUES
 
 -- Insertar perfil demo SOLO si no existe.
 -- Ojo: tu tabla profiles ya existe. Aquí solo insertamos datos.
-INSERT OR IGNORE INTO profiles (id, user_id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, category, subcategory, is_active)
+-- NOTE: is_active omitido — no existe en profiles tras la reconstrucción de 0012.
+-- user_id=NULL también viola NOT NULL; INSERT OR IGNORE lo saltaría de todas formas.
+-- El perfil 'juan' ya existe desde 0005 (slug UNIQUE → INSERT OR IGNORE lo ignora).
+INSERT OR IGNORE INTO profiles (id, user_id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, category, subcategory)
 VALUES (
   'profile_debug',
   NULL,
@@ -192,8 +195,7 @@ VALUES (
   NULL,
   NULL,
   NULL,
-  NULL,
-  1
+  NULL
 );
 
 -- Activar módulos demo (para que entitlements suban)
