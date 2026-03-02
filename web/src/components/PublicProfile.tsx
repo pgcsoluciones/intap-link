@@ -13,6 +13,14 @@ interface ProfileLink {
   id: string
   label: string
   url: string
+  is_cta?: number
+}
+
+interface VideoItem {
+  id: string
+  title: string
+  url: string
+  sort_order: number
 }
 
 interface SocialLink {
@@ -59,6 +67,9 @@ interface PublicData {
   slug: string
   planId: string
   themeId: string
+  accentColor?: string
+  buttonStyle?: string
+  blocksOrder?: string[]
   name: string | null
   bio: string | null
   avatarUrl: string | null
@@ -68,6 +79,7 @@ interface PublicData {
   gallery: GalleryItem[]
   faqs: FAQ[]
   products: Product[]
+  videos?: VideoItem[]
   featured_product: Product | null
   entitlements: { canUseVCard: boolean; maxLinks: number; maxPhotos: number; maxFaqs: number }
   contact: ContactInfo | null
@@ -183,6 +195,54 @@ function SocialIcons({ links }: { links: SocialLink[] }) {
           )}
         </a>
       ))}
+    </div>
+  )
+}
+
+function getEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+      const vid =
+        u.searchParams.get('v') ||
+        (u.hostname === 'youtu.be' ? u.pathname.slice(1) : null) ||
+        u.pathname.split('/').pop()
+      if (vid) return `https://www.youtube.com/embed/${vid}`
+    }
+    if (u.hostname.includes('vimeo.com')) {
+      const vid = u.pathname.split('/').filter(Boolean).pop()
+      if (vid) return `https://player.vimeo.com/video/${vid}`
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+function VideoBlock({ videos }: { videos: VideoItem[] }) {
+  if (!videos.length) return null
+  return (
+    <div className="mb-8 text-left">
+      <h2 className="text-xs font-bold text-intap-mint uppercase tracking-widest mb-3 px-1">Videos</h2>
+      <div className="flex flex-col gap-4">
+        {videos.map((v) => {
+          const embedUrl = getEmbedUrl(v.url)
+          if (!embedUrl) return null
+          return (
+            <div key={v.id} className="rounded-2xl overflow-hidden">
+              {v.title && <p className="text-sm font-semibold text-white/80 mb-2">{v.title}</p>}
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  src={embedUrl}
+                  title={v.title || 'Video'}
+                  className="absolute inset-0 w-full h-full rounded-2xl"
+                  frameBorder="0"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -1091,19 +1151,46 @@ export default function PublicProfile() {
 
   const promoLink = shouldShowPromoPopup(data.links)
 
-  return (
-    <div className={`min-h-screen bg-intap-dark flex justify-center items-start pb-20 px-4 theme-${data.themeId || 'default'} ${isPreview ? 'pt-14' : 'pt-12'}`}>
-      {/* Preview mode banner */}
-      {isPreview && (
-        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-amber-400 text-black text-xs font-bold py-2 px-4">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          VISTA PREVIA — No visible al público aún
-        </div>
-      )}
+  const accentColor = data.accentColor || '#3B82F6'
+  const buttonStyle = data.buttonStyle || 'rounded'
+  const blocksOrder: string[] = data.blocksOrder?.length ? data.blocksOrder : ['links', 'faqs', 'products', 'video', 'gallery']
 
+  const buttonRadius = buttonStyle === 'pill' ? '9999px' : buttonStyle === 'square' ? '4px' : '12px'
+  const isOutline = buttonStyle === 'outline'
+
+  function LinkButton({ link }: { link: ProfileLink }) {
+    const isCTA = link.is_cta === 1
+    return (
+      <a
+        key={link.id}
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => trackEvent(data!.profileId, 'click', link.id)}
+        className="flex items-center justify-center gap-2 py-3 px-2 text-sm font-semibold transition-colors active:scale-95"
+        style={{
+          borderRadius: buttonRadius,
+          backgroundColor: isCTA
+            ? accentColor
+            : isOutline
+            ? 'transparent'
+            : 'rgba(255,255,255,0.05)',
+          color: isCTA ? '#fff' : isOutline ? accentColor : 'rgba(255,255,255,0.9)',
+          border: isOutline || isCTA ? `2px solid ${accentColor}` : '1px solid rgba(255,255,255,0.08)',
+          boxShadow: isCTA ? `0 4px 18px ${accentColor}55` : undefined,
+        }}
+      >
+        <span className="truncate">{link.label}</span>
+        {isCTA && <span className="shrink-0 text-xs opacity-70">→</span>}
+      </a>
+    )
+  }
+
+  return (
+    <div
+      className={`min-h-screen bg-intap-dark flex justify-center items-start pt-12 pb-20 px-4 theme-${data.themeId || 'default'}`}
+      style={{ '--accent': accentColor } as React.CSSProperties}
+    >
       <div className="w-full max-width-mobile text-center animate-fade-in">
 
         {/* ── Hero ── */}
@@ -1191,76 +1278,78 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* ── Otros enlaces ── */}
-        {otherLinks.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            {otherLinks.map(link => (
-              <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 py-3 px-2 rounded-2xl glass-card text-sm font-semibold text-white/90 hover:bg-white/10 transition-colors"
-                onClick={() => trackEvent(data.profileId, 'click', link.id)}
-              >
-                <span className="truncate">{link.label}</span>
-              </a>
-            ))}
-          </div>
-        )}
+        {/* ── Secciones dinámicas ordenadas por blocksOrder ── */}
+        {blocksOrder.map((blockId) => {
+          if (blockId === 'links' && otherLinks.length > 0) {
+            return (
+              <div key="links" className="grid grid-cols-2 gap-3 mb-8">
+                {otherLinks.map(link => <LinkButton key={link.id} link={link} />)}
+              </div>
+            )
+          }
 
-        {/* ── Slider ── */}
-        {sliderImages.length > 0 && <ImageSlider images={sliderImages} />}
+          if (blockId === 'gallery' && sliderImages.length > 0) {
+            return <div key="gallery" className="mb-8"><ImageSlider images={sliderImages} /></div>
+          }
 
-        {/* ── Productos / Servicios ── */}
-        {data.products && data.products.length > 0 && (
-          <div className="mb-8 text-left">
-            <h2 className="text-xs font-bold text-intap-mint uppercase tracking-widest mb-3 px-1">
-              Servicios
-            </h2>
-            <Accordion
-              items={data.products}
-              renderHeader={(p: Product) => (
-                <span className="flex items-center justify-between gap-2 w-full pr-1">
-                  <span>{p.title}</span>
-                  {p.price && <span className="text-intap-mint text-xs font-bold shrink-0">{p.price}</span>}
-                </span>
-              )}
-              renderBody={(p: Product) => (
-                <div>
-                  {p.description && <p className="mb-3">{p.description}</p>}
-                  {waSource && (
-                    <a
-                      href={buildWaUrl(waSource, data.name || slug || '', data.slug, p.whatsapp_text)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 bg-[#25D366] text-white text-xs font-bold px-4 py-2 rounded-full hover:brightness-110 transition-all"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                      </svg>
-                      Me interesa
-                    </a>
+          if (blockId === 'products' && data.products && data.products.length > 0) {
+            return (
+              <div key="products" className="mb-8 text-left">
+                <h2 className="text-xs font-bold text-intap-mint uppercase tracking-widest mb-3 px-1">
+                  Servicios
+                </h2>
+                <Accordion
+                  items={data.products}
+                  renderHeader={(p: Product) => (
+                    <span className="flex items-center justify-between gap-2 w-full pr-1">
+                      <span>{p.title}</span>
+                      {p.price && <span className="text-intap-mint text-xs font-bold shrink-0">{p.price}</span>}
+                    </span>
                   )}
-                </div>
-              )}
-            />
-          </div>
-        )}
+                  renderBody={(p: Product) => (
+                    <div>
+                      {p.description && <p className="mb-3">{p.description}</p>}
+                      {waSource && (
+                        <a
+                          href={buildWaUrl(waSource, data!.name || slug || '', data!.slug, p.whatsapp_text)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 bg-[#25D366] text-white text-xs font-bold px-4 py-2 rounded-full hover:brightness-110 transition-all"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                          </svg>
+                          Me interesa
+                        </a>
+                      )}
+                    </div>
+                  )}
+                />
+              </div>
+            )
+          }
 
-        {/* ── FAQ ── */}
-        {data.faqs && data.faqs.length > 0 && (
-          <div className="mb-8 text-left">
-            <h2 className="text-xs font-bold text-intap-mint uppercase tracking-widest mb-3 px-1">
-              Preguntas frecuentes
-            </h2>
-            <Accordion
-              items={data.faqs}
-              renderHeader={(f: FAQ) => f.question}
-              renderBody={(f: FAQ) => f.answer}
-            />
-          </div>
-        )}
+          if (blockId === 'video' && data.videos && data.videos.length > 0) {
+            return <VideoBlock key="video" videos={data.videos} />
+          }
+
+          if (blockId === 'faqs' && data.faqs && data.faqs.length > 0) {
+            return (
+              <div key="faqs" className="mb-8 text-left">
+                <h2 className="text-xs font-bold text-intap-mint uppercase tracking-widest mb-3 px-1">
+                  Preguntas frecuentes
+                </h2>
+                <Accordion
+                  items={data.faqs}
+                  renderHeader={(f: FAQ) => f.question}
+                  renderBody={(f: FAQ) => f.answer}
+                />
+              </div>
+            )
+          }
+
+          return null
+        })}
 
         <footer className="mt-12 opacity-40 text-xs font-medium tracking-tight">
           <Link to="/">Crea tu propio perfil en <span className="font-bold">INTAP LINK</span></Link>

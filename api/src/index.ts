@@ -42,7 +42,7 @@ function isAllowedOrigin(origin: string): boolean {
 
 app.use('*', cors({
   origin: (origin) => isAllowedOrigin(origin) ? origin : '',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
   maxAge: 86400,
@@ -641,7 +641,7 @@ me.get('/links', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const links = await c.env.DB.prepare(
-    `SELECT id, label, url, sort_order, is_active FROM profile_links
+    `SELECT id, label, url, sort_order, is_active, is_cta FROM profile_links
      WHERE profile_id = ? ORDER BY sort_order ASC`
   ).bind((profile as any).id).all()
   return c.json({ ok: true, data: links.results })
@@ -744,6 +744,412 @@ me.delete('/links/:id', async (c) => {
   await c.env.DB.prepare(
     `DELETE FROM profile_links WHERE id = ? AND profile_id = ?`
   ).bind(linkId, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+// ─── CTA de link ──────────────────────────────────────────────────────────
+
+me.patch('/links/:id/cta', async (c) => {
+  const userId = c.get('userId') as string
+  const linkId = c.req.param('id')
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+  const is_cta = body.is_cta ? 1 : 0
+
+  // Only one CTA allowed — clear all others if setting to true
+  if (is_cta) {
+    await c.env.DB.prepare(
+      `UPDATE profile_links SET is_cta = 0, updated_at = datetime('now') WHERE profile_id = ?`
+    ).bind(profileId).run()
+  }
+  await c.env.DB.prepare(
+    `UPDATE profile_links SET is_cta = ?, updated_at = datetime('now') WHERE id = ? AND profile_id = ?`
+  ).bind(is_cta, linkId, profileId).run()
+  return c.json({ ok: true })
+})
+
+// ─── FAQs ─────────────────────────────────────────────────────────────────
+
+me.get('/faqs', async (c) => {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const faqs = await c.env.DB.prepare(
+    `SELECT id, question, answer, sort_order FROM profile_faqs
+     WHERE profile_id = ? ORDER BY sort_order ASC`
+  ).bind((profile as any).id).all()
+  return c.json({ ok: true, data: faqs.results })
+})
+
+me.post('/faqs', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const question = String(body.question || '').trim()
+  const answer   = String(body.answer   || '').trim()
+  if (!question) return c.json({ ok: false, error: 'question required' }, 400)
+  if (!answer)   return c.json({ ok: false, error: 'answer required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+  const ent = await getEntitlements(c as any, profileId)
+  const countRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) as n FROM profile_faqs WHERE profile_id = ?`
+  ).bind(profileId).first()
+  if (((countRow as any)?.n || 0) >= ent.maxFaqs)
+    return c.json({ ok: false, error: `Límite de FAQs alcanzado (${ent.maxFaqs})`, limit: ent.maxFaqs }, 403)
+
+  const maxRow = await c.env.DB.prepare(
+    `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_faqs WHERE profile_id = ?`
+  ).bind(profileId).first()
+  const sortOrder = ((maxRow as any)?.mx ?? -1) + 1
+
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO profile_faqs (id, profile_id, question, answer, sort_order) VALUES (?, ?, ?, ?, ?)`
+  ).bind(id, profileId, question, answer, sortOrder).run()
+  return c.json({ ok: true, id, sort_order: sortOrder }, 201)
+})
+
+me.put('/faqs/reorder', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const orderedIds: string[] = Array.isArray(body.orderedIds) ? body.orderedIds : []
+  if (!orderedIds.length) return c.json({ ok: false, error: 'orderedIds array required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await Promise.all(orderedIds.map((id, index) =>
+    c.env.DB.prepare(
+      `UPDATE profile_faqs SET sort_order = ? WHERE id = ? AND profile_id = ?`
+    ).bind(index, id, (profile as any).id).run()
+  ))
+  return c.json({ ok: true })
+})
+
+me.put('/faqs/:id', async (c) => {
+  const userId = c.get('userId') as string
+  const faqId  = c.req.param('id')
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const question = body.question !== undefined ? String(body.question || '').trim() : undefined
+  const answer   = body.answer   !== undefined ? String(body.answer   || '').trim() : undefined
+
+  await c.env.DB.prepare(
+    `UPDATE profile_faqs SET
+       question = COALESCE(?1, question),
+       answer   = COALESCE(?2, answer)
+     WHERE id = ?3 AND profile_id = ?4`
+  ).bind(question ?? null, answer ?? null, faqId, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+me.delete('/faqs/:id', async (c) => {
+  const userId = c.get('userId') as string
+  const faqId  = c.req.param('id')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await c.env.DB.prepare(
+    `DELETE FROM profile_faqs WHERE id = ? AND profile_id = ?`
+  ).bind(faqId, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+// ─── Productos / Servicios ─────────────────────────────────────────────────
+
+me.get('/products', async (c) => {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const products = await c.env.DB.prepare(
+    `SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order
+     FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC`
+  ).bind((profile as any).id).all()
+  return c.json({ ok: true, data: products.results })
+})
+
+me.post('/products', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const title         = String(body.title        || '').trim()
+  const description   = String(body.description  || '').trim()
+  const price         = String(body.price        || '').trim()
+  const whatsapp_text = String(body.whatsapp_text || '').trim()
+  const image_url     = String(body.image_url    || '').trim()
+  const is_featured   = body.is_featured ? 1 : 0
+
+  if (!title) return c.json({ ok: false, error: 'title required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+  const ent = await getEntitlements(c as any, profileId)
+  const countRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) as n FROM profile_products WHERE profile_id = ?`
+  ).bind(profileId).first()
+  if (((countRow as any)?.n || 0) >= ent.maxProducts)
+    return c.json({ ok: false, error: `Límite de productos alcanzado (${ent.maxProducts})`, limit: ent.maxProducts }, 403)
+
+  const maxRow = await c.env.DB.prepare(
+    `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_products WHERE profile_id = ?`
+  ).bind(profileId).first()
+  const sortOrder = ((maxRow as any)?.mx ?? -1) + 1
+
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO profile_products (id, profile_id, title, description, price, image_url, whatsapp_text, is_featured, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(id, profileId, title, description || null, price || null, image_url || null, whatsapp_text || null, is_featured, sortOrder).run()
+  return c.json({ ok: true, id, sort_order: sortOrder }, 201)
+})
+
+me.put('/products/reorder', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const orderedIds: string[] = Array.isArray(body.orderedIds) ? body.orderedIds : []
+  if (!orderedIds.length) return c.json({ ok: false, error: 'orderedIds array required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await Promise.all(orderedIds.map((id, index) =>
+    c.env.DB.prepare(
+      `UPDATE profile_products SET sort_order = ? WHERE id = ? AND profile_id = ?`
+    ).bind(index, id, (profile as any).id).run()
+  ))
+  return c.json({ ok: true })
+})
+
+me.put('/products/:id', async (c) => {
+  const userId    = c.get('userId') as string
+  const productId = c.req.param('id')
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const title         = body.title         !== undefined ? String(body.title         || '').trim() : undefined
+  const description   = body.description   !== undefined ? String(body.description   || '').trim() : undefined
+  const price         = body.price         !== undefined ? String(body.price         || '').trim() : undefined
+  const image_url     = body.image_url     !== undefined ? String(body.image_url     || '').trim() : undefined
+  const whatsapp_text = body.whatsapp_text !== undefined ? String(body.whatsapp_text || '').trim() : undefined
+  const is_featured   = body.is_featured   !== undefined ? (body.is_featured ? 1 : 0)              : undefined
+
+  await c.env.DB.prepare(
+    `UPDATE profile_products SET
+       title         = COALESCE(?1, title),
+       description   = COALESCE(?2, description),
+       price         = COALESCE(?3, price),
+       image_url     = COALESCE(?4, image_url),
+       whatsapp_text = COALESCE(?5, whatsapp_text),
+       is_featured   = COALESCE(?6, is_featured)
+     WHERE id = ?7 AND profile_id = ?8`
+  ).bind(
+    title ?? null, description ?? null, price ?? null,
+    image_url ?? null, whatsapp_text ?? null, is_featured ?? null,
+    productId, (profile as any).id,
+  ).run()
+  return c.json({ ok: true })
+})
+
+me.delete('/products/:id', async (c) => {
+  const userId    = c.get('userId') as string
+  const productId = c.req.param('id')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await c.env.DB.prepare(
+    `DELETE FROM profile_products WHERE id = ? AND profile_id = ?`
+  ).bind(productId, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+// ─── Videos ────────────────────────────────────────────────────────────────
+
+me.get('/videos', async (c) => {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const videos = await c.env.DB.prepare(
+    `SELECT id, title, url, sort_order, is_active FROM profile_videos
+     WHERE profile_id = ? ORDER BY sort_order ASC`
+  ).bind((profile as any).id).all()
+  return c.json({ ok: true, data: videos.results })
+})
+
+me.post('/videos', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const title = String(body.title || '').trim()
+  const url   = String(body.url   || '').trim()
+  if (!url || !url.startsWith('http')) return c.json({ ok: false, error: 'valid url required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+  const ent = await getEntitlements(c as any, profileId)
+  const countRow = await c.env.DB.prepare(
+    `SELECT COUNT(*) as n FROM profile_videos WHERE profile_id = ?`
+  ).bind(profileId).first()
+  if (((countRow as any)?.n || 0) >= ent.maxVideos)
+    return c.json({ ok: false, error: `Límite de videos alcanzado (${ent.maxVideos})`, limit: ent.maxVideos }, 403)
+
+  const maxRow = await c.env.DB.prepare(
+    `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_videos WHERE profile_id = ?`
+  ).bind(profileId).first()
+  const sortOrder = ((maxRow as any)?.mx ?? -1) + 1
+
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO profile_videos (id, profile_id, title, url, sort_order) VALUES (?, ?, ?, ?, ?)`
+  ).bind(id, profileId, title || url, url, sortOrder).run()
+  return c.json({ ok: true, id, sort_order: sortOrder }, 201)
+})
+
+me.put('/videos/:id', async (c) => {
+  const userId  = c.get('userId') as string
+  const videoId = c.req.param('id')
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const title     = body.title     !== undefined ? String(body.title || '').trim()     : undefined
+  const url       = body.url       !== undefined ? String(body.url   || '').trim()     : undefined
+  const is_active = body.is_active !== undefined ? (body.is_active ? 1 : 0)            : undefined
+
+  await c.env.DB.prepare(
+    `UPDATE profile_videos SET
+       title     = COALESCE(?1, title),
+       url       = COALESCE(?2, url),
+       is_active = COALESCE(?3, is_active)
+     WHERE id = ?4 AND profile_id = ?5`
+  ).bind(title ?? null, url ?? null, is_active ?? null, videoId, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+me.delete('/videos/:id', async (c) => {
+  const userId  = c.get('userId') as string
+  const videoId = c.req.param('id')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await c.env.DB.prepare(
+    `DELETE FROM profile_videos WHERE id = ? AND profile_id = ?`
+  ).bind(videoId, (profile as any).id).run()
+  return c.json({ ok: true })
+})
+
+// ─── Orden de bloques y configuración visual ───────────────────────────────
+
+me.patch('/profile/blocks-order', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const VALID_BLOCKS = ['links', 'faqs', 'products', 'video', 'gallery']
+  const blocks: string[] = Array.isArray(body.blocks_order)
+    ? body.blocks_order.filter((b: any) => VALID_BLOCKS.includes(String(b)))
+    : []
+  if (!blocks.length) return c.json({ ok: false, error: 'blocks_order array required' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await c.env.DB.prepare(
+    `UPDATE profiles SET blocks_order = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(JSON.stringify(blocks), (profile as any).id).run()
+  return c.json({ ok: true, blocks_order: blocks })
+})
+
+me.patch('/profile/visual', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const VALID_BUTTON_STYLES = ['rounded', 'pill', 'square', 'outline']
+  const accent_color  = body.accent_color  !== undefined ? String(body.accent_color  || '').trim() : undefined
+  const button_style  = body.button_style  !== undefined &&
+    VALID_BUTTON_STYLES.includes(String(body.button_style))
+    ? String(body.button_style) : undefined
+
+  if (accent_color !== undefined && !/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(accent_color))
+    return c.json({ ok: false, error: 'accent_color debe ser un hex válido (#RGB o #RRGGBB)' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  await c.env.DB.prepare(
+    `UPDATE profiles SET
+       accent_color = COALESCE(?1, accent_color),
+       button_style = COALESCE(?2, button_style),
+       updated_at   = datetime('now')
+     WHERE id = ?3`
+  ).bind(accent_color ?? null, button_style ?? null, (profile as any).id).run()
   return c.json({ ok: true })
 })
 
@@ -864,7 +1270,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -894,9 +1300,9 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     if (!isOwner) return c.json({ ok: false, error: 'Perfil no disponible' }, 404)
   }
 
-  const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks, rawContact] = await Promise.all([
+  const [links, rawGallery, rawFaqs, rawProducts, rawVideos, entitlements, rawSocialLinks, rawContact] = await Promise.all([
     c.env.DB.prepare(
-      'SELECT id, label, url FROM profile_links WHERE profile_id = ? AND is_active = 1 ORDER BY sort_order ASC'
+      'SELECT id, label, url, is_cta FROM profile_links WHERE profile_id = ? AND is_active = 1 ORDER BY sort_order ASC'
     )
       .bind((profile as any).id)
       .all(),
@@ -912,6 +1318,11 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .all(),
     c.env.DB.prepare(
       'SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC'
+    )
+      .bind((profile as any).id)
+      .all(),
+    c.env.DB.prepare(
+      'SELECT id, title, url, sort_order FROM profile_videos WHERE profile_id = ? AND is_active = 1 ORDER BY sort_order ASC'
     )
       .bind((profile as any).id)
       .all(),
@@ -956,22 +1367,33 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   const featured_product = products.find((p) => p.is_featured === 1) ?? null
 
+  let blocksOrder: string[]
+  try {
+    blocksOrder = JSON.parse((profile as any).blocks_order || '["links","faqs","products","video","gallery"]')
+  } catch {
+    blocksOrder = ['links', 'faqs', 'products', 'video', 'gallery']
+  }
+
   return c.json({
     ok: true,
     data: {
-      profileId:      (profile as any).id,
-      slug:           (profile as any).slug,
-      planId:         (profile as any).plan_id,
-      themeId:        (profile as any).theme_id,
-      name:           (profile as any).name,
-      bio:            (profile as any).bio,
-      avatarUrl:      toAssetUrl((profile as any).avatar_url || ''),
+      profileId:       (profile as any).id,
+      slug:            (profile as any).slug,
+      planId:          (profile as any).plan_id,
+      themeId:         (profile as any).theme_id,
+      accentColor:     (profile as any).accent_color  ?? '#3B82F6',
+      buttonStyle:     (profile as any).button_style  ?? 'rounded',
+      blocksOrder,
+      name:            (profile as any).name,
+      bio:             (profile as any).bio,
+      avatarUrl:       toAssetUrl((profile as any).avatar_url || ''),
       whatsapp_number: (profile as any).whatsapp_number ?? null,
-      social_links:   rawSocialLinks.results,
-      links:          links.results,
+      social_links:    rawSocialLinks.results,
+      links:           links.results,
       gallery,
-      faqs:           rawFaqs.results,
+      faqs:            rawFaqs.results,
       products,
+      videos:          rawVideos.results,
       featured_product,
       entitlements,
       contact: rawContact ? {
