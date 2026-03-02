@@ -157,21 +157,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_waitlist_email ON waitlist(email);
 -- 4) Seed de catálogos (planes + límites + módulos)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-INSERT OR IGNORE INTO plans (id, name, price_cents, currency, is_active) VALUES
-  ('basic', 'Básico', 0, 'DOP', 1),
-  ('pro',   'Pro',   59500, 'DOP', 1);
+-- NOTE: plans solo tiene (id, name) según 0001. price_cents/currency/is_active
+-- no existen en la tabla de prod → INSERT usa solo columnas garantizadas.
+INSERT OR IGNORE INTO plans (id, name) VALUES
+  ('basic', 'Básico'),
+  ('pro',   'Pro');
 
-INSERT OR IGNORE INTO plan_limits (plan_id, max_links, max_photos, max_faqs, can_use_vcard) VALUES
-  ('basic', 5, 5, 3, 1),
-  ('pro',   50, 50, 30, 1);
+-- NOTE: can_use_vcard omitido por seguridad — puede no existir si la tabla
+-- fue creada manualmente antes de 0001.
+INSERT OR IGNORE INTO plan_limits (plan_id, max_links, max_photos, max_faqs) VALUES
+  ('basic', 5, 5, 3),
+  ('pro',   50, 50, 30);
 
-INSERT OR IGNORE INTO modules (code, name, effects_json, is_active) VALUES
-  ('links_plus',    'Links Plus',    '{"extraLinks":100}', 1),
-  ('gallery_plus',  'Gallery Plus',  '{"extraPhotos":50}', 1),
-  ('faq_plus',      'FAQ Plus',      '{"extraFaqs":20}', 1),
-  ('vcard',         'vCard',         '{"unlockVCard":true}', 1),
-  ('map',           'Mapa',          '{"enable_features":["map"]}', 1),
-  ('form_contact',  'Formulario',    '{"enable_features":["form_contact"]}', 1);
+-- NOTE: modules en 0001 no tiene is_active → omitido del INSERT.
+INSERT OR IGNORE INTO modules (code, name, effects_json) VALUES
+  ('links_plus',    'Links Plus',    '{"extraLinks":100}'),
+  ('gallery_plus',  'Gallery Plus',  '{"extraPhotos":50}'),
+  ('faq_plus',      'FAQ Plus',      '{"extraFaqs":20}'),
+  ('vcard',         'vCard',         '{"unlockVCard":true}'),
+  ('map',           'Mapa',          '{"enable_features":["map"]}'),
+  ('form_contact',  'Formulario',    '{"enable_features":["form_contact"]}');
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5) Seed perfil DEMO: profile_debug / slug: juan
@@ -179,7 +184,10 @@ INSERT OR IGNORE INTO modules (code, name, effects_json, is_active) VALUES
 
 -- Insertar perfil demo SOLO si no existe.
 -- Ojo: tu tabla profiles ya existe. Aquí solo insertamos datos.
-INSERT OR IGNORE INTO profiles (id, user_id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, category, subcategory, is_active)
+-- NOTE: is_active omitido — no existe en profiles tras la reconstrucción de 0012.
+-- user_id=NULL también viola NOT NULL; INSERT OR IGNORE lo saltaría de todas formas.
+-- El perfil 'juan' ya existe desde 0005 (slug UNIQUE → INSERT OR IGNORE lo ignora).
+INSERT OR IGNORE INTO profiles (id, user_id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, category, subcategory)
 VALUES (
   'profile_debug',
   NULL,
@@ -192,8 +200,7 @@ VALUES (
   NULL,
   NULL,
   NULL,
-  NULL,
-  1
+  NULL
 );
 
 -- Activar módulos demo (para que entitlements suban)

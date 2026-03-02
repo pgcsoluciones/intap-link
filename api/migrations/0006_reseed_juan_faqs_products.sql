@@ -1,10 +1,7 @@
 -- 0006_reseed_juan_faqs_products.sql
 -- Re-seed idempotente de FAQs y productos para el perfil "juan".
--- También garantiza que whatsapp_number existe en profiles (el ALTER TABLE se movió
--- aquí desde 0004 para que 0004 sea seguro en BDs donde la columna ya existe).
-
--- Ensure whatsapp_number column exists (succeeds on fresh DBs; already present on prod)
-ALTER TABLE profiles ADD COLUMN whatsapp_number TEXT;
+-- NOTE: ALTER TABLE profiles ADD COLUMN whatsapp_number removido.
+-- La columna ya existe en producción. SQLite/D1 no soporta ADD COLUMN IF NOT EXISTS.
 
 -- WhatsApp (UPDATE es siempre idempotente)
 UPDATE profiles

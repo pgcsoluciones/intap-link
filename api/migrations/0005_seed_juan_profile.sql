@@ -2,28 +2,30 @@
 -- Seed mínimo para que /public/profiles/juan no devuelva 404
 -- Idempotente: si existe, no duplica.
 --
--- Ajustes al schema real (0001_initial_schema.sql):
---   · id TEXT PRIMARY KEY → generamos un valor fijo
---   · user_id TEXT NOT NULL → requiere un user; lo creamos primero
---   · No existe columna updated_at en profiles → omitida
---   · theme_id default 'default' (no 'light') → usamos 'default'
+-- Compatibilidad con schema real de producción:
+--   · users en prod solo tiene (id, email) → NO insertar created_at explícitamente
+--   · profiles.created_at puede no existir → dejar que el DEFAULT actúe
+--   · plan_id usa COALESCE: 'pro' si existe en plans, sino 'free', sino literal 'pro'
 
--- Usuario propietario (idempotente)
-INSERT OR IGNORE INTO users (id, email, created_at) VALUES
-  ('user-juan-demo', 'juan@demo.intap.link', datetime('now'));
+-- Usuario propietario (idempotente) — solo (id, email), sin created_at
+INSERT OR IGNORE INTO users (id, email) VALUES
+  ('user-juan-demo', 'juan@demo.intap.link');
 
--- Perfil (INSERT solo si no existe)
-INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, name, bio, is_published, created_at)
+-- Perfil (INSERT solo si no existe el slug 'juan') — sin created_at explícito
+INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, name, bio, is_published)
 SELECT
   'profile-juan-demo',
   'user-juan-demo',
   'juan',
-  'pro',
+  COALESCE(
+    (SELECT id FROM plans WHERE id = 'pro'),
+    (SELECT id FROM plans WHERE id = 'free'),
+    'pro'
+  ),
   'default',
   'Juan Carlos',
   'Perfil demo de Intap Link',
-  1,
-  datetime('now')
+  1
 WHERE NOT EXISTS (
   SELECT 1 FROM profiles WHERE slug = 'juan'
 );

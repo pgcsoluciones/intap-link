@@ -37,3 +37,15 @@ export async function apiDelete<T = any>(path: string): Promise<T> {
   })
   return res.json()
 }
+
+// For multipart/form-data uploads (no Content-Type header — browser sets boundary)
+export async function apiUpload<T = any>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+  return res.json()
+}
+
+export { API_BASE }

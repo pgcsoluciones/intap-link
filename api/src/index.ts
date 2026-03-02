@@ -385,7 +385,7 @@ me.get('/', async (c) => {
   const userId = c.get('userId') as string
   const row = await c.env.DB.prepare(
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
-            p.avatar_url, p.category, p.subcategory, p.is_published
+            p.avatar_url, p.category, p.subcategory, p.is_published, p.theme_id
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      WHERE u.id = ? LIMIT 1`
@@ -474,18 +474,27 @@ me.put('/profile', async (c) => {
   const avatar_url  = body.avatar_url  !== undefined ? String(body.avatar_url  || '').trim() : undefined
   const category    = body.category    !== undefined ? String(body.category    || '').trim() : undefined
   const subcategory = body.subcategory !== undefined ? String(body.subcategory || '').trim() : undefined
+  const VALID_THEMES = ['default', 'light', 'modern']
+  const theme_id    = body.theme_id    !== undefined && VALID_THEMES.includes(String(body.theme_id))
+    ? String(body.theme_id) : undefined
+  const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
 
   try {
     await c.env.DB.prepare(
       `UPDATE profiles
-       SET name        = COALESCE(?1, name),
-           bio         = COALESCE(?2, bio),
-           avatar_url  = COALESCE(?3, avatar_url),
-           category    = COALESCE(?4, category),
-           subcategory = COALESCE(?5, subcategory),
-           updated_at  = datetime('now')
-       WHERE id = ?6`
-    ).bind(name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null, (profile as any).id).run()
+       SET name         = COALESCE(?1, name),
+           bio          = COALESCE(?2, bio),
+           avatar_url   = COALESCE(?3, avatar_url),
+           category     = COALESCE(?4, category),
+           subcategory  = COALESCE(?5, subcategory),
+           theme_id     = COALESCE(?6, theme_id),
+           is_published = COALESCE(?7, is_published),
+           updated_at   = datetime('now')
+       WHERE id = ?8`
+    ).bind(
+      name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null,
+      theme_id ?? null, is_published ?? null, (profile as any).id,
+    ).run()
   } catch (e: any) {
     console.error('[PUT /me/profile] D1 error:', e)
     return c.json({ ok: false, error: e?.message || 'Error al guardar perfil' }, 500)

@@ -5,13 +5,13 @@
 --   - profiles.is_active
 --   - profile_links.is_active
 PRAGMA foreign_keys = ON;
-BEGIN;
+-- NOTE: BEGIN/COMMIT removidos — D1 envuelve cada migración en su propia transacción.
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Backfills seguros (no fallan si ya están correctos)
 -- ─────────────────────────────────────────────────────────────────────────────
-UPDATE profiles
-SET is_active = 1
-WHERE is_active IS NULL;
+-- NOTE: UPDATE profiles SET is_active omitido.
+-- is_active no existe en profiles después de que 0012 reconstruye la tabla.
+-- La columna es re-agregada por 0016/0017. El backfill allí usa DEFAULT 1.
 UPDATE profile_links
 SET is_active = 1
 WHERE is_active IS NULL;
@@ -37,7 +37,8 @@ WHERE sort_order IS NULL;
 -- Profiles
 CREATE INDEX IF NOT EXISTS idx_profiles_slug ON profiles(slug);
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
-CREATE INDEX IF NOT EXISTS idx_profiles_active ON profiles(is_active, is_published);
+-- NOTE: idx_profiles_active omitido — is_active no existe aquí (lo agrega 0016/0017).
+-- El índice se recrea en 0016 y 0017.
 -- Links
 CREATE INDEX IF NOT EXISTS idx_profile_links_profile_sort ON profile_links(profile_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_profile_links_profile_active_sort ON profile_links(profile_id, is_active, sort_order);
@@ -58,4 +59,3 @@ CREATE INDEX IF NOT EXISTS idx_lead_rl_slug_ip_created ON lead_rate_limits(profi
 CREATE INDEX IF NOT EXISTS idx_analytics_profile_event_created ON analytics(profile_id, event_type, created_at);
 -- Waitlist (si se usa ranking/posición)
 CREATE INDEX IF NOT EXISTS idx_waitlist_position ON waitlist(position);
-COMMIT;

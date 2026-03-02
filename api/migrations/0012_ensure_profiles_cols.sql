@@ -32,9 +32,11 @@ CREATE TABLE IF NOT EXISTS profiles_new (
 );
 
 -- Copia datos preservando columnas base (las nuevas quedan NULL por defecto)
+-- NOTE: created_at omitido del SELECT — puede no existir en la tabla de prod.
+-- profiles_new.created_at usa DEFAULT (datetime('now')) como fallback.
 INSERT OR IGNORE INTO profiles_new
-  (id, user_id, slug, plan_id, theme_id, name, bio, is_published, created_at, whatsapp_number)
-  SELECT id, user_id, slug, plan_id, theme_id, name, bio, is_published, created_at, whatsapp_number
+  (id, user_id, slug, plan_id, theme_id, name, bio, is_published, whatsapp_number)
+  SELECT id, user_id, slug, plan_id, theme_id, name, bio, is_published, whatsapp_number
   FROM profiles;
 
 DROP TABLE profiles;
@@ -56,9 +58,11 @@ CREATE TABLE IF NOT EXISTS profile_links_new (
   created_at DATETIME NOT NULL DEFAULT (datetime('now'))
 );
 
+-- NOTE: created_at omitido del SELECT — puede no existir en prod.
+-- profile_links_new.created_at usa DEFAULT (datetime('now')).
 INSERT OR IGNORE INTO profile_links_new
-  (id, profile_id, label, url, sort_order, is_active, created_at)
-  SELECT id, profile_id, label, url, sort_order, 1, created_at
+  (id, profile_id, label, url, sort_order, is_active)
+  SELECT id, profile_id, label, url, sort_order, 1
   FROM profile_links;
 
 DROP TABLE profile_links;
