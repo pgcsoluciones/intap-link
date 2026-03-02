@@ -26,7 +26,21 @@ const THEMES = [
     label: 'Clásico Dark',
     description: 'Fondo oscuro con detalles mint',
     bg: '#030712',
-    text: '#ffffff',
+    text: '#0df2c9',
+  },
+  {
+    value: 'classic',
+    label: 'Classic Pro',
+    description: 'Banner + fuente script + pills',
+    bg: '#f0f9ff',
+    text: '#0ea5e9',
+  },
+  {
+    value: 'bento',
+    label: 'Bento Mastery',
+    description: 'Grid modular estilo Apple',
+    bg: '#F5F5F7',
+    text: '#1d1d1f',
   },
   {
     value: 'light',
@@ -40,14 +54,28 @@ const THEMES = [
     label: 'Modern Purple',
     description: 'Gradiente violeta futurista',
     bg: '#0f0a1e',
-    text: '#ffffff',
+    text: '#8b5cf6',
   },
   {
-    value: 'bento',
-    label: 'Bento Mastery',
-    description: 'Grid modular estilo Apple',
-    bg: '#F5F5F7',
-    text: '#1d1d1f',
+    value: 'ocean',
+    label: 'Ocean Dark',
+    description: 'Gradiente azul profundo',
+    bg: '#0c1a2e',
+    text: '#06b6d4',
+  },
+  {
+    value: 'sunset',
+    label: 'Sunset',
+    description: 'Tonos naranjas / atardecer',
+    bg: '#1a0a05',
+    text: '#f97316',
+  },
+  {
+    value: 'midnight',
+    label: 'Midnight',
+    description: 'Negro elegante con dorado',
+    bg: '#09090b',
+    text: '#eab308',
   },
 ]
 
@@ -94,25 +122,26 @@ export default function AdminVisual() {
         {/* Theme selector */}
         <div className="glass-card p-5 mb-5">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">Plantilla de perfil</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {THEMES.map((t) => (
               <button
                 key={t.value}
                 onClick={() => { setThemeId(t.value); setSaved(false) }}
-                className={`p-3 rounded-2xl border-2 text-left transition-colors ${
+                className={`p-2.5 rounded-2xl border-2 text-left transition-colors ${
                   themeId === t.value
                     ? 'border-intap-blue bg-intap-blue/10'
                     : 'border-white/10 hover:border-white/30'
                 }`}
               >
                 <div
-                  className="w-full h-10 rounded-lg mb-2 flex items-center justify-center"
+                  className="w-full h-9 rounded-lg mb-1.5 flex items-center justify-center gap-1"
                   style={{ backgroundColor: t.bg }}
                 >
-                  <div className="w-4 h-1 rounded-full opacity-60" style={{ backgroundColor: t.text }} />
+                  <div className="w-6 h-1 rounded-full opacity-70" style={{ backgroundColor: t.text }} />
+                  <div className="w-3 h-1 rounded-full opacity-40" style={{ backgroundColor: t.text }} />
                 </div>
-                <p className="text-xs font-bold text-white truncate">{t.label}</p>
-                <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{t.description}</p>
+                <p className="text-[11px] font-bold text-white truncate">{t.label}</p>
+                <p className="text-[9px] text-slate-400 leading-tight mt-0.5 truncate">{t.description}</p>
               </button>
             ))}
           </div>

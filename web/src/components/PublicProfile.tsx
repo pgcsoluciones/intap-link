@@ -845,6 +845,382 @@ function ChatBubble({
   )
 }
 
+// ─── Classic Pro Layout ───────────────────────────────────────────────────────
+
+function ClassicAccordion({ items, accentColor }: { items: { id: string; question: string; answer: string }[]; accentColor: string }) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  return (
+    <div className="flex flex-col gap-2">
+      {items.map(item => {
+        const isOpen = openId === item.id
+        return (
+          <div key={item.id} className="classic-faq-item">
+            <button
+              type="button"
+              className="classic-faq-trigger"
+              onClick={() => setOpenId(prev => prev === item.id ? null : item.id)}
+              aria-expanded={isOpen}
+            >
+              <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#0f172a', flex: 1 }}>{item.question}</span>
+              <svg
+                style={{ width: 16, height: 16, flexShrink: 0, color: accentColor, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div className="classic-faq-answer" style={{ maxHeight: isOpen ? '400px' : '0px' }}>
+              <div className="classic-faq-answer-inner">{item.answer}</div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+const WA_SVG = (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+)
+
+function ClassicLayout({
+  data,
+  waSource,
+  slug,
+  accentColor,
+  otherLinks,
+  socialLinks,
+  sliderImages,
+  blocksOrder,
+  onTrack,
+  onOpenLead,
+  onOpenProduct,
+  anyModalOpen,
+  onWhatsApp,
+  onMap,
+  canMap,
+}: {
+  data: PublicData
+  waSource: string | null
+  slug: string
+  accentColor: string
+  otherLinks: ProfileLink[]
+  socialLinks: SocialLink[]
+  sliderImages: string[]
+  blocksOrder: string[]
+  onTrack: (id: string) => void
+  onOpenLead: () => void
+  onOpenProduct: (p: Product) => void
+  anyModalOpen: boolean
+  onWhatsApp: () => void
+  onMap: () => void
+  canMap: boolean
+}) {
+  useEffect(() => {
+    const id = 'intap-dancing-font'
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link')
+      link.id = id
+      link.rel = 'stylesheet'
+      link.href = 'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap'
+      document.head.appendChild(link)
+    }
+  }, [])
+
+  const bannerImage = data.gallery[0]?.image_url ?? null
+
+  const socialLinkHref = (link: SocialLink) =>
+    link.type === 'email' && !link.url.startsWith('mailto:') ? `mailto:${link.url}` : link.url
+
+  return (
+    <div className="min-h-screen theme-classic pb-20">
+
+      {/* ── Banner ── */}
+      <div className="w-full relative overflow-hidden" style={{ height: 200 }}>
+        {bannerImage ? (
+          <img src={bannerImage} alt="portada" className="w-full h-full object-cover" />
+        ) : (
+          <div style={{ height: '100%', background: `linear-gradient(135deg, ${accentColor}55 0%, ${accentColor}cc 100%)` }} />
+        )}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, background: 'linear-gradient(to top, #f0f9ff, transparent)' }} />
+      </div>
+
+      {/* ── Main content ── */}
+      <div className="flex flex-col items-center px-4 animate-fade-in max-width-mobile mx-auto">
+
+        {/* ── Avatar (overlaps banner) ── */}
+        <div className="classic-avatar-wrap">
+          {data.avatarUrl ? (
+            <img src={data.avatarUrl} alt={data.name || ''} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-3xl font-bold" style={{ color: accentColor }}>
+              {data.name?.charAt(0).toUpperCase() || slug?.charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
+
+        {/* ── Name + Bio ── */}
+        <h1 style={{ fontFamily: '"Dancing Script", cursive', fontSize: '2rem', lineHeight: 1.2, marginTop: 10, color: '#0f172a', textAlign: 'center' }}>
+          {data.name || `@${slug}`}
+        </h1>
+        {data.bio && (
+          <p style={{ color: '#64748b', fontSize: '0.875rem', textAlign: 'center', maxWidth: 320, marginTop: 8, lineHeight: 1.6 }}>
+            {data.bio}
+          </p>
+        )}
+
+        {/* ── WhatsApp CTA ── */}
+        {waSource && (
+          <a
+            href={buildWaUrl(waSource, data.name || slug, data.slug)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="classic-wa-btn"
+            style={{ marginTop: 16 }}
+            onClick={() => onTrack('whatsapp-smart')}
+          >
+            {WA_SVG}
+            Enviar WhatsApp
+          </a>
+        )}
+
+        {/* ── Social pills ── */}
+        {socialLinks.length > 0 && (
+          <div className="classic-social-row" style={{ marginTop: 12 }}>
+            {socialLinks.map(link => (
+              <a
+                key={link.id}
+                href={socialLinkHref(link)}
+                target={link.type === 'email' ? undefined : '_blank'}
+                rel="noopener noreferrer"
+                className="classic-pill"
+                style={{ borderColor: accentColor, color: accentColor }}
+                onClick={() => onTrack(link.id)}
+              >
+                <span style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {SOCIAL_ICONS[link.type] ?? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                    </svg>
+                  )}
+                </span>
+                <span className="capitalize">{link.type}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* ── vCard pill ── */}
+        {data.entitlements?.canUseVCard && (
+          <div style={{ marginTop: 8 }}>
+            <a
+              href={`${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/public/vcard/${data.profileId}`}
+              download
+              className="classic-pill"
+              style={{ borderColor: '#94a3b8', color: '#475569' }}
+              onClick={() => onTrack('vcard')}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Guardar Contacto
+            </a>
+          </div>
+        )}
+
+        {/* ── Featured product ── */}
+        {data.featured_product && (
+          <div style={{ width: '100%', marginTop: 20 }}>
+            <p className="classic-section-title">Servicio destacado</p>
+            <div className="classic-product-card" onClick={() => onOpenProduct(data.featured_product!)}>
+              {data.featured_product.image_url && (
+                <img src={data.featured_product.image_url} alt={data.featured_product.title} className="classic-product-img" />
+              )}
+              <div className="classic-product-body">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                  <p className="classic-product-title">{data.featured_product.title}</p>
+                  {data.featured_product.price && (
+                    <span className="classic-product-price" style={{ color: accentColor, whiteSpace: 'nowrap' }}>{data.featured_product.price}</span>
+                  )}
+                </div>
+                {data.featured_product.description && (
+                  <p className="classic-product-desc">{data.featured_product.description}</p>
+                )}
+                <div className="classic-product-actions">
+                  {waSource && (
+                    <a
+                      href={buildWaUrl(waSource, data.name || slug, data.slug, data.featured_product.whatsapp_text)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="classic-btn-wa"
+                      onClick={e => { e.stopPropagation(); onTrack(data.featured_product!.id) }}
+                    >
+                      {WA_SVG}
+                      Compartir
+                    </a>
+                  )}
+                  <button type="button" className="classic-btn-outline" onClick={e => { e.stopPropagation(); onOpenProduct(data.featured_product!) }}>
+                    Ver detalles
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Dynamic sections (respeta blocksOrder) ── */}
+        <div style={{ width: '100%', marginTop: 20 }}>
+          {blocksOrder.map(blockId => {
+
+            if (blockId === 'gallery' && sliderImages.length > 0) {
+              return (
+                <div key="gallery" style={{ marginBottom: 24 }}>
+                  <p className="classic-section-title">Galería</p>
+                  <div className="bento-snap-scroll">
+                    {sliderImages.map((src, i) => (
+                      <div key={i} className="bento-snap-item" style={{ height: 200 }}>
+                        <img src={src} alt={`Imagen ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+
+            if (blockId === 'products' && data.products && data.products.length > 0) {
+              return (
+                <div key="products" style={{ marginBottom: 24 }}>
+                  <p className="classic-section-title">Servicios</p>
+                  {data.products.map(p => (
+                    <div key={p.id} className="classic-product-card" onClick={() => onOpenProduct(p)}>
+                      {p.image_url && <img src={p.image_url} alt={p.title} className="classic-product-img" />}
+                      <div className="classic-product-body">
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                          <p className="classic-product-title">{p.title}</p>
+                          {p.price && <span className="classic-product-price" style={{ color: accentColor, whiteSpace: 'nowrap' }}>{p.price}</span>}
+                        </div>
+                        {p.description && <p className="classic-product-desc">{p.description}</p>}
+                        <div className="classic-product-actions">
+                          {waSource && (
+                            <a
+                              href={buildWaUrl(waSource, data.name || slug, data.slug, p.whatsapp_text)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="classic-btn-wa"
+                              onClick={e => { e.stopPropagation(); onTrack(p.id) }}
+                            >
+                              {WA_SVG}
+                              Compartir
+                            </a>
+                          )}
+                          <button type="button" className="classic-btn-outline" onClick={e => { e.stopPropagation(); onOpenProduct(p) }}>
+                            Ver detalles
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+
+            if (blockId === 'video' && data.videos && data.videos.length > 0) {
+              return (
+                <div key="video" style={{ marginBottom: 24 }}>
+                  <p className="classic-section-title">Videos</p>
+                  {data.videos.map(v => {
+                    const embedUrl = getEmbedUrl(v.url)
+                    if (!embedUrl) return null
+                    return (
+                      <div key={v.id} className="classic-card" style={{ marginBottom: 10 }}>
+                        {v.title && <p style={{ padding: '10px 14px 0', fontWeight: 600, fontSize: '0.8125rem', color: '#0f172a' }}>{v.title}</p>}
+                        <div style={{ position: 'relative', paddingBottom: '56.25%', marginTop: v.title ? 8 : 0 }}>
+                          <iframe
+                            src={embedUrl}
+                            title={v.title || 'Video'}
+                            className="absolute inset-0 w-full h-full"
+                            frameBorder="0"
+                            allowFullScreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            }
+
+            if (blockId === 'faqs' && data.faqs && data.faqs.length > 0) {
+              return (
+                <div key="faqs" style={{ marginBottom: 24 }}>
+                  <p className="classic-section-title">Preguntas frecuentes</p>
+                  <ClassicAccordion items={data.faqs} accentColor={accentColor} />
+                </div>
+              )
+            }
+
+            if (blockId === 'links' && otherLinks.length > 0) {
+              return (
+                <div key="links" style={{ marginBottom: 24 }}>
+                  <p className="classic-section-title">Enlaces</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {otherLinks.map(link => (
+                      <a
+                        key={link.id}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="classic-link-btn"
+                        style={{
+                          borderColor: link.is_cta ? accentColor : '#e2e8f0',
+                          backgroundColor: link.is_cta ? accentColor : '#fff',
+                          color: link.is_cta ? '#fff' : '#0f172a',
+                        }}
+                        onClick={() => onTrack(link.id)}
+                      >
+                        {link.label}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+
+            return null
+          })}
+        </div>
+
+        {/* ── CTA contacto ── */}
+        <button type="button" className="classic-contact-btn" style={{ marginBottom: 16 }} onClick={onOpenLead}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Solicitar información
+        </button>
+
+        {/* ── Footer ── */}
+        <footer className="mt-4 mb-2 opacity-40 text-xs font-medium tracking-tight text-[#0f172a]">
+          <Link to="/">Crea tu perfil en <span className="font-bold">INTAP LINK</span></Link>
+        </footer>
+      </div>
+
+      {/* ── Chat Bubble ── */}
+      {!anyModalOpen && (
+        <ChatBubble
+          hasWa={!!waSource}
+          onWhatsApp={onWhatsApp}
+          onLead={onOpenLead}
+          onMap={onMap}
+          canMap={canMap}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── Bento Mastery Layout ─────────────────────────────────────────────────────
 
 function getBentoVideoEmbed(url: string): { type: 'iframe' | 'video'; src: string } | null {
@@ -1527,6 +1903,73 @@ export default function PublicProfile() {
         <span className="truncate">{link.label}</span>
         {isCTA && <span className="shrink-0 text-xs opacity-70">→</span>}
       </a>
+    )
+  }
+
+  if (data.themeId === 'classic') {
+    return (
+      <>
+        <ClassicLayout
+          data={data}
+          waSource={waSource}
+          slug={slug || ''}
+          accentColor={accentColor}
+          otherLinks={otherLinks}
+          socialLinks={socialLinks}
+          sliderImages={sliderImages}
+          blocksOrder={blocksOrder}
+          onTrack={(id) => trackEvent(data.profileId, 'click', id)}
+          onOpenLead={() => { setLeadStatus(null); setLeadOpen(true); trackEvent(data.profileId, 'click', 'lead-open') }}
+          onOpenProduct={(p) => setModalProduct(p)}
+          anyModalOpen={anyModalOpen}
+          onWhatsApp={() => {
+            if (!waSource) return
+            window.open(buildWaUrl(waSource, data.name || slug || '', data.slug), '_blank', 'noopener,noreferrer')
+            trackEvent(data.profileId, 'click', 'chat-whatsapp')
+          }}
+          onMap={() => { if (mapLink) { setMapOpen(true); trackEvent(data.profileId, 'click', 'chat-map') } }}
+          canMap={!!mapLink}
+        />
+        {modalProduct && (
+          <ProductModal product={modalProduct} name={data.name || slug || ''} slug={data.slug} waSource={waSource} onClose={() => setModalProduct(null)} />
+        )}
+        {mapOpen && mapLink && (
+          <MapModal title={`Ubicación de ${data.name || '@' + data.slug}`} mapUrl={mapLink.url} onClose={() => setMapOpen(false)} />
+        )}
+        {promoOpen && promoLink && (
+          <PromoPopup title={promoLink.label || 'Oferta'} message="Tenemos una promoción disponible. Presiona el botón para ver los detalles." ctaLabel="Ver oferta" ctaUrl={promoLink.url} onClose={() => setPromoOpen(false)} />
+        )}
+        {leadOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-24 sm:pb-0" onClick={(e) => { if (e.target === e.currentTarget) closeLead() }} role="dialog" aria-modal="true" aria-label="Formulario de contacto">
+            <div className="bg-intap-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in">
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h3 className="text-white font-bold text-lg">Contáctame</h3>
+                  <button onClick={() => closeLead()} className="text-slate-400 hover:text-white transition-colors" aria-label="Cerrar" type="button">✕</button>
+                </div>
+                <p className="text-slate-400 text-sm mb-4">Déjame tus datos y te respondo lo antes posible.</p>
+                <input value={leadHp} onChange={(e) => setLeadHp(e.target.value)} autoComplete="off" tabIndex={-1} style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, width: 0 }} />
+                <div className="flex flex-col gap-3">
+                  <input className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="Tu nombre" value={leadName} onChange={(e) => setLeadName(e.target.value)} />
+                  <input className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="Tu correo" value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} />
+                  <input className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="Teléfono (opcional)" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} />
+                  <textarea className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="¿Qué necesitas?" rows={4} value={leadMessage} onChange={(e) => setLeadMessage(e.target.value)} />
+                  {turnstileSitekey && (
+                    <div className="bg-black/20 border border-white/10 rounded-2xl px-4 py-4">
+                      <div className="text-xs text-slate-300 mb-3">Verificación de seguridad</div>
+                      <div id="intap-turnstile" className="flex justify-center" />
+                    </div>
+                  )}
+                  <button type="button" disabled={leadSending} onClick={() => void submitLead()} className="w-full py-3.5 rounded-2xl bg-intap-mint text-black font-extrabold hover:brightness-110 transition-all active:scale-95 disabled:opacity-60">
+                    {leadSending ? 'Enviando...' : 'Enviar'}
+                  </button>
+                  {leadStatus && <div className="text-sm text-slate-200 bg-black/20 border border-white/10 rounded-2xl px-4 py-3">{leadStatus}</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     )
   }
 
