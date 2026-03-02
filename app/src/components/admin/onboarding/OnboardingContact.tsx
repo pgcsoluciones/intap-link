@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiPut } from '../../../lib/api'
+import { apiGet, apiPut } from '../../../lib/api'
 
 function normalizeWhatsApp(input: string): string | null {
   if (!input) return null
@@ -14,15 +14,31 @@ function normalizeWhatsApp(input: string): string | null {
 export default function OnboardingContact() {
   const navigate = useNavigate()
   const [whatsapp, setWhatsapp] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [hours, setHours] = useState('')
-  const [address, setAddress] = useState('')
-  const [mapUrl, setMapUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [email, setEmail]       = useState('')
+  const [phone, setPhone]       = useState('')
+  const [hours, setHours]       = useState('')
+  const [address, setAddress]   = useState('')
+  const [mapUrl, setMapUrl]     = useState('')
+  const [loading, setLoading]   = useState(true)
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState('')
 
   const isOnboarding = window.location.pathname.includes('onboarding')
+
+  // Load existing contact data
+  useEffect(() => {
+    apiGet('/me/contact').then((json: any) => {
+      if (json.ok && json.data) {
+        const d = json.data
+        setWhatsapp(d.whatsapp || '')
+        setEmail(d.email       || '')
+        setPhone(d.phone       || '')
+        setHours(d.hours       || '')
+        setAddress(d.address   || '')
+        setMapUrl(d.map_url    || '')
+      }
+    }).finally(() => setLoading(false))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,7 +49,7 @@ export default function OnboardingContact() {
       if (!normalized) { setError('WhatsApp inválido. Ej: 8091234567 o +1 809 123 4567'); return }
     }
 
-    setLoading(true)
+    setSaving(true)
     try {
       const body: Record<string, string> = {}
       if (whatsapp)  body.whatsapp_number = whatsapp
@@ -45,16 +61,22 @@ export default function OnboardingContact() {
 
       const json: any = await apiPut('/me/contact', body)
       if (json.ok) {
-        navigate(isOnboarding ? '/admin' : '/admin')
+        navigate('/admin')
       } else {
         setError(json.error || 'Error al guardar')
       }
     } catch {
       setError('Error de conexión')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
+
+  if (loading) return (
+    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+      <div className="loading-spinner" />
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
@@ -100,10 +122,10 @@ export default function OnboardingContact() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={saving}
             className="w-full bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50 transition-opacity"
           >
-            {loading ? 'Guardando…' : isOnboarding ? 'Finalizar onboarding →' : 'Guardar cambios'}
+            {saving ? 'Guardando…' : isOnboarding ? 'Finalizar onboarding →' : 'Guardar cambios'}
           </button>
 
           {isOnboarding && (
