@@ -379,6 +379,61 @@ export default function AdminDashboard() {
             <span className="text-slate-400">›</span>
           </Link>
 
+          <Link to="/admin/faqs" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">❓</span>
+              <div>
+                <p className="text-sm font-bold">Preguntas frecuentes</p>
+                <p className="text-xs text-slate-400">FAQs de tu perfil</p>
+              </div>
+            </div>
+            <span className="text-slate-400">›</span>
+          </Link>
+
+          <Link to="/admin/products" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">🛍</span>
+              <div>
+                <p className="text-sm font-bold">Productos y servicios</p>
+                <p className="text-xs text-slate-400">Catálogo con precios</p>
+              </div>
+            </div>
+            <span className="text-slate-400">›</span>
+          </Link>
+
+          <Link to="/admin/videos" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">▶️</span>
+              <div>
+                <p className="text-sm font-bold">Videos</p>
+                <p className="text-xs text-slate-400">YouTube y Vimeo</p>
+              </div>
+            </div>
+            <span className="text-slate-400">›</span>
+          </Link>
+
+          <Link to="/admin/blocks" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">⬛</span>
+              <div>
+                <p className="text-sm font-bold">Orden de secciones</p>
+                <p className="text-xs text-slate-400">Arrastra para reordenar</p>
+              </div>
+            </div>
+            <span className="text-slate-400">›</span>
+          </Link>
+
+          <Link to="/admin/visual" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">🎨</span>
+              <div>
+                <p className="text-sm font-bold">Configuración visual</p>
+                <p className="text-xs text-slate-400">Colores y estilo de botones</p>
+              </div>
+            </div>
+            <span className="text-slate-400">›</span>
+          </Link>
+
           <Link to="/admin/onboarding/identity" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
             <div className="flex items-center gap-3">
               <span className="text-lg">✏️</span>

@@ -5,6 +5,11 @@ import AdminVerify from './components/admin/AdminVerify'
 import AuthCallback from './components/admin/AuthCallback'
 import AdminDashboard from './components/admin/AdminDashboard'
 import AdminLinks from './components/admin/AdminLinks'
+import AdminFAQs from './components/admin/AdminFAQs'
+import AdminProducts from './components/admin/AdminProducts'
+import AdminVideos from './components/admin/AdminVideos'
+import AdminBlocks from './components/admin/AdminBlocks'
+import AdminVisual from './components/admin/AdminVisual'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
@@ -26,8 +31,13 @@ function App() {
         <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
 
         {/* Panel principal (requiere sesión + perfil) */}
-        <Route path="/admin/links" element={<AdminGuard><AdminLinks /></AdminGuard>} />
-        <Route path="/admin"       element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+        <Route path="/admin/links"    element={<AdminGuard><AdminLinks /></AdminGuard>} />
+        <Route path="/admin/faqs"     element={<AdminGuard><AdminFAQs /></AdminGuard>} />
+        <Route path="/admin/products" element={<AdminGuard><AdminProducts /></AdminGuard>} />
+        <Route path="/admin/videos"   element={<AdminGuard><AdminVideos /></AdminGuard>} />
+        <Route path="/admin/blocks"   element={<AdminGuard><AdminBlocks /></AdminGuard>} />
+        <Route path="/admin/visual"   element={<AdminGuard><AdminVisual /></AdminGuard>} />
+        <Route path="/admin"          element={<AdminGuard><AdminDashboard /></AdminGuard>} />
 
         {/* Raíz → redirige al panel */}
         <Route path="/" element={<Navigate to="/admin" replace />} />
