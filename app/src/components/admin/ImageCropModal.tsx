@@ -4,16 +4,36 @@ interface Props {
   file: File
   aspectRatio?: number   // width/height — default 1 (square)
   outputWidth?: number   // canvas output px — default 400
+  /** Maximum dimension (px) of the internal working image. Larger photos are
+   *  pre-downscaled to save memory and speed up the drag interaction.
+   *  Default: 2000 */
+  maxInputDimension?: number
   onSave: (blob: Blob) => void
   onCancel: () => void
 }
 
-const PREVIEW_W = 272
+const PREVIEW_W  = 272
+const JPEG_Q     = 0.82   // output quality — good balance size vs sharpness
+
+/** Downscale a loaded HTMLImageElement to a canvas if either dimension exceeds
+ *  `maxDim`. Returns a data-URL (or the original object-URL unchanged). */
+function preshrink(img: HTMLImageElement, maxDim: number): { src: string; w: number; h: number } {
+  const { naturalWidth: nw, naturalHeight: nh } = img
+  if (nw <= maxDim && nh <= maxDim) return { src: img.src, w: nw, h: nh }
+  const scale = maxDim / Math.max(nw, nh)
+  const tw = Math.round(nw * scale)
+  const th = Math.round(nh * scale)
+  const c = document.createElement('canvas')
+  c.width = tw; c.height = th
+  c.getContext('2d')!.drawImage(img, 0, 0, tw, th)
+  return { src: c.toDataURL('image/jpeg', 0.95), w: tw, h: th }
+}
 
 export default function ImageCropModal({
   file,
   aspectRatio = 1,
   outputWidth = 400,
+  maxInputDimension = 2000,
   onSave,
   onCancel,
 }: Props) {
@@ -31,11 +51,22 @@ export default function ImageCropModal({
   const containerRef = useRef<HTMLDivElement>(null)
   const lastPointerRef = useRef({ x: 0, y: 0 })
 
-  // Load the file as an object URL
+  // Load the file → pre-shrink if oversized → use as working image
   useEffect(() => {
-    const url = URL.createObjectURL(file)
-    setImgSrc(url)
-    return () => URL.revokeObjectURL(url)
+    const objUrl = URL.createObjectURL(file)
+    const tmp = new Image()
+    tmp.onload = () => {
+      const { src, w, h } = preshrink(tmp, maxInputDimension)
+      // If preshrink returned a data-URL we no longer need the object URL
+      if (src !== objUrl) URL.revokeObjectURL(objUrl)
+      setImgSrc(src)
+      setNaturalW(w)
+      setNaturalH(h)
+    }
+    tmp.src = objUrl
+    // Cleanup: only revoke the object URL if preshrink didn't already
+    return () => { if (imgSrc !== objUrl) URL.revokeObjectURL(objUrl) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file])
 
   // Displayed image dimensions inside the preview box
@@ -55,23 +86,20 @@ export default function ImageCropModal({
     [displayW, displayH, PREVIEW_W, PREVIEW_H],
   )
 
-  // Center image when it first loads
+  // Center image when it first renders (natural dims already set by preshrink)
   const handleImageLoad = () => {
     const img = imgRef.current
     if (!img) return
-    setNaturalW(img.naturalWidth)
-    setNaturalH(img.naturalHeight)
+    const nw = img.naturalWidth  || naturalW
+    const nh = img.naturalHeight || naturalH
 
-    // Pick a default zoom so the image fills the preview
-    const fitZoom = Math.max(
-      PREVIEW_W / img.naturalWidth,
-      PREVIEW_H / img.naturalHeight,
-    )
+    // Pick a default zoom so the image fills the preview frame
+    const fitZoom = Math.max(PREVIEW_W / nw, PREVIEW_H / nh)
     const initZoom = Math.max(1, fitZoom)
     setZoom(initZoom)
 
     const dw = PREVIEW_W * initZoom
-    const dh = (img.naturalHeight / img.naturalWidth) * PREVIEW_W * initZoom
+    const dh = (nh / nw) * PREVIEW_W * initZoom
     setOffset({ x: (PREVIEW_W - dw) / 2, y: (PREVIEW_H - dh) / 2 })
   }
 
@@ -119,11 +147,9 @@ export default function ImageCropModal({
 
     ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outputWidth, outputHeight)
     canvas.toBlob(
-      (blob) => {
-        if (blob) onSave(blob)
-      },
+      (blob) => { if (blob) onSave(blob) },
       'image/jpeg',
-      0.92,
+      JPEG_Q,
     )
   }
 
