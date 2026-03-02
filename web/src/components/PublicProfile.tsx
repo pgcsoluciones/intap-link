@@ -61,6 +61,7 @@ interface PublicData {
   themeId: string
   name: string | null
   bio: string | null
+  avatarUrl: string | null
   whatsapp_number: string | null
   social_links: SocialLink[]
   links: ProfileLink[]
@@ -1092,7 +1093,9 @@ export default function PublicProfile() {
         {/* ── Hero ── */}
         <div className="mb-8">
           <div className="w-24 h-24 rounded-full mx-auto mb-6 border-2 border-intap-mint p-1 shadow-[0_0_20px_rgba(13,242,201,0.3)] bg-intap-card flex items-center justify-center overflow-hidden">
-            {data.gallery.length > 0 && data.gallery[0].image_url ? (
+            {data.avatarUrl ? (
+              <img src={data.avatarUrl} alt={data.name || ''} className="w-full h-full object-cover rounded-full" />
+            ) : data.gallery.length > 0 && data.gallery[0].image_url ? (
               <img src={data.gallery[0].image_url} alt={data.name || ''} className="w-full h-full object-cover rounded-full" />
             ) : (
               <span className="text-3xl font-bold text-intap-mint">

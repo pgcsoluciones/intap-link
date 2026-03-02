@@ -502,6 +502,82 @@ me.put('/profile', async (c) => {
   return c.json({ ok: true })
 })
 
+me.post('/profile/avatar', async (c) => {
+  const userId = c.get('userId') as string
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const fd      = await c.req.formData()
+  const fileVal = fd.get('file')
+
+  if (!(fileVal && typeof fileVal === 'object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any))) {
+    return c.json({ ok: false, error: 'Archivo requerido' }, 400)
+  }
+
+  const file = fileVal as any as File
+  const ext  = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+  if (!ALLOWED_EXTS.includes(ext)) return c.json({ ok: false, error: 'Formato no permitido' }, 400)
+
+  const profileId = (profile as any).id
+  const key       = `avatars/${profileId}/${crypto.randomUUID()}.${ext}`
+
+  await c.env.BUCKET.put(key, file.stream(), {
+    httpMetadata: { contentType: file.type || 'image/jpeg' },
+  })
+
+  const origin   = new URL(c.req.url).origin
+  const encodedKey = key.split('/').map(encodeURIComponent).join('/')
+  const avatarUrl  = `${origin}/api/v1/public/assets/${encodedKey}`
+
+  await c.env.DB.prepare(
+    `UPDATE profiles SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(avatarUrl, profileId).run()
+
+  return c.json({ ok: true, avatar_url: avatarUrl })
+})
+
+me.put('/profile/slug', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const newSlug = String(body.slug || '').trim().toLowerCase()
+  const RESERVED_SLUGS = new Set([
+    'api', 'auth', 'me', 'assets', 'health', 'public',
+    'admin', 'login', 'logout', 'check-email', 'onboarding',
+    'dashboard', 'settings', 'account', 'profile', 'superadmin',
+    'about', 'pricing', 'blog', 'help', 'terms', 'privacy', 'contact',
+    'www', 'favicon', 'static', 'images', 'app', 'link',
+  ])
+
+  if (!newSlug || !/^[a-z0-9_-]{2,32}$/.test(newSlug))
+    return c.json({ ok: false, error: 'Slug inválido (2–32 chars, a-z 0-9 _ -)' }, 400)
+  if (RESERVED_SLUGS.has(newSlug))
+    return c.json({ ok: false, error: 'Slug reservado' }, 400)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, slug FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  if ((profile as any).slug === newSlug) return c.json({ ok: true, slug: newSlug })
+
+  const taken = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE slug = ? AND id != ? LIMIT 1`
+  ).bind(newSlug, (profile as any).id).first()
+  if (taken) return c.json({ ok: false, error: 'Slug no disponible' }, 409)
+
+  await c.env.DB.prepare(
+    `UPDATE profiles SET slug = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(newSlug, (profile as any).id).run()
+
+  return c.json({ ok: true, slug: newSlug })
+})
+
 me.get('/contact', async (c) => {
   const userId = c.get('userId') as string
   const profile = await c.env.DB.prepare(
@@ -786,12 +862,13 @@ app.get('/api/v1/public/assets/*', async (c) => {
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug    = c.req.param('slug')
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, whatsapp_number FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  if (!(profile as any).is_published) return c.json({ ok: false, error: 'Perfil no disponible' }, 404)
 
   const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks, rawContact] = await Promise.all([
     c.env.DB.prepare(
@@ -864,6 +941,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       themeId:        (profile as any).theme_id,
       name:           (profile as any).name,
       bio:            (profile as any).bio,
+      avatarUrl:      toAssetUrl((profile as any).avatar_url || ''),
       whatsapp_number: (profile as any).whatsapp_number ?? null,
       social_links:   rawSocialLinks.results,
       links:          links.results,
