@@ -32,9 +32,12 @@ interface GalleryPhoto {
 }
 
 const THEMES = [
-  { id: 'default', label: 'Clásico' },
-  { id: 'light',   label: 'Claro'   },
-  { id: 'modern',  label: 'Moderno' },
+  { id: 'default',  label: 'Clásico',    accent: '#0df2c9', bg: '#030712' },
+  { id: 'light',    label: 'Claro',      accent: '#0f172a', bg: '#f1f5f9' },
+  { id: 'modern',   label: 'Moderno',    accent: '#8b5cf6', bg: '#0f0a1e' },
+  { id: 'ocean',    label: 'Océano',     accent: '#06b6d4', bg: '#0c1a2e' },
+  { id: 'sunset',   label: 'Atardecer',  accent: '#f97316', bg: '#1a0a05' },
+  { id: 'midnight', label: 'Medianoche', accent: '#f59e0b', bg: '#09090b' },
 ]
 
 function photoUrl(key: string) {
@@ -296,21 +299,39 @@ export default function AdminDashboard() {
 
         {/* Theme selector */}
         <div className="glass-card p-5 mb-6">
-          <p className="text-xs text-slate-500 font-bold uppercase mb-3">Tema del perfil</p>
-          <div className="flex gap-2">
-            {THEMES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTheme(t.id)}
-                className={`flex-1 py-2 rounded-2xl text-xs font-bold border transition-colors ${
-                  currentTheme === t.id
-                    ? 'bg-intap-mint/20 border-intap-mint text-intap-mint'
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/30'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <p className="text-xs text-slate-500 font-bold uppercase mb-3">Plantilla del perfil</p>
+          <div className="grid grid-cols-3 gap-2">
+            {THEMES.map((t) => {
+              const active = currentTheme === t.id
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id)}
+                  className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all ${
+                    active
+                      ? 'border-intap-mint bg-intap-mint/10'
+                      : 'border-white/10 bg-white/5 hover:border-white/30'
+                  }`}
+                >
+                  <div
+                    className="w-full h-8 rounded-xl flex items-center justify-center gap-1"
+                    style={{ background: t.bg }}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ background: t.accent }}
+                    />
+                    <span
+                      className="w-6 h-1 rounded-full opacity-50"
+                      style={{ background: t.accent }}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-bold ${active ? 'text-intap-mint' : 'text-slate-400'}`}>
+                    {t.label}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

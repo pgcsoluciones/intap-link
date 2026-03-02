@@ -57,6 +57,7 @@
 
 /* ── Profile themes ──────────────────────────────────────────────────────── */
 
+/* Claro */
 .theme-light {
   background-color: #f1f5f9 !important;
   color: #0f172a !important;
@@ -68,10 +69,38 @@
   color: #0f172a !important;
 }
 
+/* Moderno */
 .theme-modern {
   background: linear-gradient(135deg, #0f0a1e 0%, #1e1040 100%) !important;
 }
 
 .theme-modern .avatar-glow {
   box-shadow: 0 0 24px rgba(139, 92, 246, 0.6);
+}
+
+/* Océano */
+.theme-ocean {
+  background: linear-gradient(135deg, #0c1a2e 0%, #0f3460 100%) !important;
+}
+
+.theme-ocean .avatar-glow {
+  box-shadow: 0 0 24px rgba(6, 182, 212, 0.5);
+}
+
+/* Atardecer */
+.theme-sunset {
+  background: linear-gradient(135deg, #1a0a05 0%, #431407 100%) !important;
+}
+
+.theme-sunset .avatar-glow {
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.5);
+}
+
+/* Medianoche */
+.theme-midnight {
+  background: linear-gradient(135deg, #09090b 0%, #18181b 100%) !important;
+}
+
+.theme-midnight .avatar-glow {
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
 }
