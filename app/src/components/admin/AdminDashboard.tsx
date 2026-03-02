@@ -2,6 +2,53 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE, apiGet, apiPost, apiPut, apiUpload } from '../../lib/api'
 
+// ─── Preview Panel ────────────────────────────────────────────────────────────
+function PreviewPanel({ previewUrl, iframeRef, onClose }: {
+  previewUrl: string
+  iframeRef: React.RefObject<HTMLIFrameElement>
+  onClose: () => void
+}) {
+  const refresh = () => {
+    if (iframeRef.current) {
+      const src = iframeRef.current.src
+      iframeRef.current.src = ''
+      iframeRef.current.src = src
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-intap-dark flex flex-col" style={{ fontFamily: 'Inter, sans-serif' }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0 bg-intap-dark">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Cerrar
+        </button>
+        <span className="text-sm font-bold text-white">Vista previa</span>
+        <button
+          onClick={refresh}
+          className="flex items-center gap-1.5 text-sm text-intap-mint hover:text-white transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Actualizar
+        </button>
+      </div>
+      <iframe
+        ref={iframeRef}
+        src={previewUrl}
+        className="flex-1 w-full border-0"
+        title="Vista previa del perfil"
+      />
+    </div>
+  )
+}
+
 const SLUG_RE  = /^[a-z0-9_-]{2,32}$/
 const RESERVED = new Set(['admin','api','auth','me','assets','health','public','login','logout',
   'check-email','onboarding','dashboard','settings','account','profile','superadmin',
@@ -32,9 +79,12 @@ interface GalleryPhoto {
 }
 
 const THEMES = [
-  { id: 'default', label: 'Clásico' },
-  { id: 'light',   label: 'Claro'   },
-  { id: 'modern',  label: 'Moderno' },
+  { id: 'default',  label: 'Clásico',    accent: '#0df2c9', bg: '#030712' },
+  { id: 'light',    label: 'Claro',      accent: '#0f172a', bg: '#f1f5f9' },
+  { id: 'modern',   label: 'Moderno',    accent: '#8b5cf6', bg: '#0f0a1e' },
+  { id: 'ocean',    label: 'Océano',     accent: '#06b6d4', bg: '#0c1a2e' },
+  { id: 'sunset',   label: 'Atardecer',  accent: '#f97316', bg: '#1a0a05' },
+  { id: 'midnight', label: 'Medianoche', accent: '#f59e0b', bg: '#09090b' },
 ]
 
 function photoUrl(key: string) {
@@ -44,6 +94,7 @@ function photoUrl(key: string) {
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const fileRef  = useRef<HTMLInputElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const [me, setMe]             = useState<MeData | null>(null)
   const [linkCount, setLinkCount] = useState(0)
   const [stats, setStats]       = useState<Stats | null>(null)
@@ -56,6 +107,7 @@ export default function AdminDashboard() {
   const [newSlug, setNewSlug]         = useState('')
   const [slugSaving, setSlugSaving]   = useState(false)
   const [slugError, setSlugError]     = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([apiGet('/me'), apiGet('/me/links')])
@@ -83,19 +135,33 @@ export default function AdminDashboard() {
     navigate('/admin/login', { replace: true })
   }
 
+  const refreshPreview = () => {
+    if (iframeRef.current) {
+      const src = iframeRef.current.src
+      iframeRef.current.src = ''
+      iframeRef.current.src = src
+    }
+  }
+
   const togglePublished = async () => {
     if (!me) return
     setPublishing(true)
     const next = me.is_published ? 0 : 1
     const res: any = await apiPut('/me/profile', { is_published: next === 1 })
-    if (res.ok) setMe({ ...me, is_published: next })
+    if (res.ok) {
+      setMe({ ...me, is_published: next })
+      refreshPreview()
+    }
     setPublishing(false)
   }
 
   const setTheme = async (themeId: string) => {
     if (!me || me.theme_id === themeId) return
     const res: any = await apiPut('/me/profile', { theme_id: themeId })
-    if (res.ok) setMe({ ...me, theme_id: themeId })
+    if (res.ok) {
+      setMe({ ...me, theme_id: themeId })
+      refreshPreview()
+    }
   }
 
   const startSlugEdit = () => {
@@ -149,19 +215,36 @@ export default function AdminDashboard() {
 
   const WEB_URL    = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   const profileUrl = me?.slug && me?.is_published ? `${WEB_URL}/${me.slug}` : null
+  const previewUrl = me?.slug ? `${WEB_URL}/${me.slug}?preview=1` : null
   const currentTheme = me?.theme_id || 'default'
   const maxTopLink = stats?.topLinks?.[0]?.clics || 1
 
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
+      {/* Live preview overlay */}
+      {previewOpen && previewUrl && (
+        <PreviewPanel
+          previewUrl={previewUrl}
+          iframeRef={iframeRef}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
+
       <div className="w-full max-w-lg">
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-xl font-black">Mi Panel</h1>
-          <div className="flex items-center gap-4">
-            {profileUrl && (
-              <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-intap-mint font-bold hover:underline">
-                Ver perfil →
-              </a>
+          <div className="flex items-center gap-3">
+            {previewUrl && (
+              <button
+                onClick={() => setPreviewOpen(true)}
+                className="flex items-center gap-1.5 text-xs bg-intap-mint/10 border border-intap-mint/30 text-intap-mint px-3 py-1.5 rounded-full font-bold hover:bg-intap-mint/20 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Vista previa
+              </button>
             )}
             <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-white transition-colors">
               Salir
@@ -296,21 +379,39 @@ export default function AdminDashboard() {
 
         {/* Theme selector */}
         <div className="glass-card p-5 mb-6">
-          <p className="text-xs text-slate-500 font-bold uppercase mb-3">Tema del perfil</p>
-          <div className="flex gap-2">
-            {THEMES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTheme(t.id)}
-                className={`flex-1 py-2 rounded-2xl text-xs font-bold border transition-colors ${
-                  currentTheme === t.id
-                    ? 'bg-intap-mint/20 border-intap-mint text-intap-mint'
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/30'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <p className="text-xs text-slate-500 font-bold uppercase mb-3">Plantilla del perfil</p>
+          <div className="grid grid-cols-3 gap-2">
+            {THEMES.map((t) => {
+              const active = currentTheme === t.id
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id)}
+                  className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all ${
+                    active
+                      ? 'border-intap-mint bg-intap-mint/10'
+                      : 'border-white/10 bg-white/5 hover:border-white/30'
+                  }`}
+                >
+                  <div
+                    className="w-full h-8 rounded-xl flex items-center justify-center gap-1"
+                    style={{ background: t.bg }}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ background: t.accent }}
+                    />
+                    <span
+                      className="w-6 h-1 rounded-full opacity-50"
+                      style={{ background: t.accent }}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-bold ${active ? 'text-intap-mint' : 'text-slate-400'}`}>
+                    {t.label}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

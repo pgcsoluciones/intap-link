@@ -853,6 +853,7 @@ export default function PublicProfile() {
     (params.slug as string | undefined) ||
     new URLSearchParams(window.location.search).get('slug') ||
     ''
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
 
   const [data, setData] = useState<PublicData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -905,7 +906,11 @@ export default function PublicProfile() {
       return
     }
 
-    fetch(`${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`)
+    const profileUrl = isPreview
+      ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}?preview=1`
+      : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`
+
+    fetch(profileUrl, { credentials: 'include' })
       .then(res => {
         if (!res.ok) {
           setErrorStatus(res.status)
@@ -915,7 +920,7 @@ export default function PublicProfile() {
       })
       .then(json => {
         setData(json.data)
-        trackEvent(json.data.profileId, 'view')
+        if (!isPreview) trackEvent(json.data.profileId, 'view')
       })
       .catch(() => { })
       .finally(() => setLoading(false))
