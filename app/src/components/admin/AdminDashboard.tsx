@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE, apiGet, apiPost, apiPut, apiUpload } from '../../lib/api'
+import ImageCropModal from './ImageCropModal'
 
 // ─── Preview Panel ────────────────────────────────────────────────────────────
 function PreviewPanel({ previewUrl, iframeRef, onClose }: {
@@ -80,6 +81,8 @@ interface GalleryPhoto {
 
 const THEMES = [
   { id: 'default',  label: 'Clásico',    accent: '#0df2c9', bg: '#030712' },
+  { id: 'classic',  label: 'Classic',    accent: '#0ea5e9', bg: '#f0f9ff' },
+  { id: 'bento',    label: 'Bento',      accent: '#1d1d1f', bg: '#F5F5F7' },
   { id: 'light',    label: 'Claro',      accent: '#0f172a', bg: '#f1f5f9' },
   { id: 'modern',   label: 'Moderno',    accent: '#8b5cf6', bg: '#0f0a1e' },
   { id: 'ocean',    label: 'Océano',     accent: '#06b6d4', bg: '#0c1a2e' },
@@ -100,8 +103,11 @@ export default function AdminDashboard() {
   const [stats, setStats]       = useState<Stats | null>(null)
   const [gallery, setGallery]   = useState<GalleryPhoto[]>([])
   const [loading, setLoading]   = useState(true)
-  const [publishing, setPublishing] = useState(false)
-  const [uploading, setUploading]   = useState(false)
+  const [publishing, setPublishing]   = useState(false)
+  const [uploading, setUploading]     = useState(false)
+  const [pendingTheme, setPendingTheme] = useState<string | null>(null)
+  const [themeSaving, setThemeSaving]   = useState(false)
+  const [cropFile, setCropFile]         = useState<File | null>(null)
   // Slug editing
   const [slugEditing, setSlugEditing] = useState(false)
   const [newSlug, setNewSlug]         = useState('')
@@ -155,13 +161,16 @@ export default function AdminDashboard() {
     setPublishing(false)
   }
 
-  const setTheme = async (themeId: string) => {
-    if (!me || me.theme_id === themeId) return
-    const res: any = await apiPut('/me/profile', { theme_id: themeId })
+  const saveTheme = async () => {
+    if (!me || !pendingTheme || pendingTheme === (me.theme_id || 'default')) return
+    setThemeSaving(true)
+    const res: any = await apiPut('/me/profile', { theme_id: pendingTheme })
     if (res.ok) {
-      setMe({ ...me, theme_id: themeId })
+      setMe({ ...me, theme_id: pendingTheme })
+      setPendingTheme(null)
       refreshPreview()
     }
+    setThemeSaving(false)
   }
 
   const startSlugEdit = () => {
@@ -192,19 +201,25 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !me?.profile_id) return
+    if (fileRef.current) fileRef.current.value = ''
+    setCropFile(file)
+  }
+
+  const uploadCroppedGallery = async (blob: Blob) => {
+    if (!me?.profile_id) return
+    setCropFile(null)
     setUploading(true)
     const fd = new FormData()
     fd.append('profileId', me.profile_id)
-    fd.append('file', file)
+    fd.append('file', blob, 'gallery.jpg')
     const res: any = await apiUpload('/profile/gallery/upload', fd)
     if (res.ok && res.key) {
       setGallery((prev) => [...prev, { id: res.id || res.key, image_key: res.key }])
     }
     setUploading(false)
-    if (fileRef.current) fileRef.current.value = ''
   }
 
   if (loading) return (
@@ -216,11 +231,23 @@ export default function AdminDashboard() {
   const WEB_URL    = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   const profileUrl = me?.slug && me?.is_published ? `${WEB_URL}/${me.slug}` : null
   const previewUrl = me?.slug ? `${WEB_URL}/${me.slug}?preview=1` : null
-  const currentTheme = me?.theme_id || 'default'
+  const savedTheme    = me?.theme_id || 'default'
+  const displayTheme  = pendingTheme ?? savedTheme
   const maxTopLink = stats?.topLinks?.[0]?.clics || 1
 
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
+      {/* Image crop modal */}
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          aspectRatio={1}
+          outputWidth={800}
+          onSave={uploadCroppedGallery}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
+
       {/* Live preview overlay */}
       {previewOpen && previewUrl && (
         <PreviewPanel
@@ -380,15 +407,16 @@ export default function AdminDashboard() {
         {/* Theme selector */}
         <div className="glass-card p-5 mb-6">
           <p className="text-xs text-slate-500 font-bold uppercase mb-3">Plantilla del perfil</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2 mb-3">
             {THEMES.map((t) => {
-              const active = currentTheme === t.id
+              const selected = displayTheme === t.id
+              const saved    = savedTheme === t.id
               return (
                 <button
                   key={t.id}
-                  onClick={() => setTheme(t.id)}
+                  onClick={() => setPendingTheme(t.id === savedTheme ? null : t.id)}
                   className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all ${
-                    active
+                    selected
                       ? 'border-intap-mint bg-intap-mint/10'
                       : 'border-white/10 bg-white/5 hover:border-white/30'
                   }`}
@@ -397,22 +425,25 @@ export default function AdminDashboard() {
                     className="w-full h-8 rounded-xl flex items-center justify-center gap-1"
                     style={{ background: t.bg }}
                   >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ background: t.accent }}
-                    />
-                    <span
-                      className="w-6 h-1 rounded-full opacity-50"
-                      style={{ background: t.accent }}
-                    />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.accent }} />
+                    <span className="w-6 h-1 rounded-full opacity-50" style={{ background: t.accent }} />
                   </div>
-                  <span className={`text-[10px] font-bold ${active ? 'text-intap-mint' : 'text-slate-400'}`}>
-                    {t.label}
+                  <span className={`text-[10px] font-bold leading-tight text-center ${selected ? 'text-intap-mint' : 'text-slate-400'}`}>
+                    {t.label}{saved && !selected ? '' : ''}
                   </span>
                 </button>
               )
             })}
           </div>
+          {pendingTheme && pendingTheme !== savedTheme && (
+            <button
+              onClick={saveTheme}
+              disabled={themeSaving}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white text-sm font-bold transition-opacity disabled:opacity-50"
+            >
+              {themeSaving ? 'Guardando…' : 'Guardar plantilla'}
+            </button>
+          )}
         </div>
 
         {/* Analytics — top links */}
