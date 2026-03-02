@@ -120,8 +120,9 @@ ALTER TABLE profile_contact_v17 RENAME TO profile_contact;
 
 -- ── 5. Garantizar plan 'free' (requerido por onboarding /claim) ───────────────
 INSERT OR IGNORE INTO plans (id, name) VALUES ('free', 'Free');
-INSERT OR IGNORE INTO plan_limits (plan_id, max_links, max_photos, max_faqs, can_use_vcard)
-VALUES ('free', 5, 3, 3, 0);
+-- NOTE: can_use_vcard omitido — puede no existir si plan_limits fue creada manualmente.
+INSERT OR IGNORE INTO plan_limits (plan_id, max_links, max_photos, max_faqs)
+VALUES ('free', 5, 3, 3);
 
 COMMIT;
 PRAGMA foreign_keys = ON;
