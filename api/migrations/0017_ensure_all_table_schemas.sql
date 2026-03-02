@@ -18,7 +18,7 @@
 -- que no pudieron setearse antes.
 
 PRAGMA foreign_keys = OFF;
-BEGIN;
+-- NOTE: BEGIN/COMMIT removidos — D1 envuelve cada migración en su propia transacción.
 
 -- ── 1. Limpiar tablas huérfanas de migraciones anteriores fallidas ─────────────
 DROP TABLE IF EXISTS profiles_new;
@@ -124,5 +124,4 @@ INSERT OR IGNORE INTO plans (id, name) VALUES ('free', 'Free');
 INSERT OR IGNORE INTO plan_limits (plan_id, max_links, max_photos, max_faqs)
 VALUES ('free', 5, 3, 3);
 
-COMMIT;
 PRAGMA foreign_keys = ON;

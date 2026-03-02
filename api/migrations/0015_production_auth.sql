@@ -2,7 +2,7 @@
 -- Objetivo: tablas necesarias para auth producción (magic link, sesiones, identidades OAuth).
 -- Idempotente: usa CREATE TABLE IF NOT EXISTS.
 PRAGMA foreign_keys = ON;
-BEGIN;
+-- NOTE: BEGIN/COMMIT removidos — D1 envuelve cada migración en su propia transacción.
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Magic Links (one-time use, 10 min TTL)
@@ -54,4 +54,3 @@ CREATE INDEX IF NOT EXISTS idx_auth_sessions_hash       ON auth_sessions(session
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user       ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_identities_provider ON auth_identities(provider, provider_user_id);
 
-COMMIT;

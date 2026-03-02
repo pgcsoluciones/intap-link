@@ -5,7 +5,7 @@
 --   - profiles.is_active
 --   - profile_links.is_active
 PRAGMA foreign_keys = ON;
-BEGIN;
+-- NOTE: BEGIN/COMMIT removidos — D1 envuelve cada migración en su propia transacción.
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Backfills seguros (no fallan si ya están correctos)
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -59,4 +59,3 @@ CREATE INDEX IF NOT EXISTS idx_lead_rl_slug_ip_created ON lead_rate_limits(profi
 CREATE INDEX IF NOT EXISTS idx_analytics_profile_event_created ON analytics(profile_id, event_type, created_at);
 -- Waitlist (si se usa ranking/posición)
 CREATE INDEX IF NOT EXISTS idx_waitlist_position ON waitlist(position);
-COMMIT;
