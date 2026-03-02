@@ -793,6 +793,7 @@ export default function PublicProfile() {
     (params.slug as string | undefined) ||
     new URLSearchParams(window.location.search).get('slug') ||
     ''
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
 
   const [data, setData] = useState<PublicData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -845,7 +846,11 @@ export default function PublicProfile() {
       return
     }
 
-    fetch(`${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`)
+    const profileUrl = isPreview
+      ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}?preview=1`
+      : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`
+
+    fetch(profileUrl)
       .then(res => {
         if (!res.ok) {
           setErrorStatus(res.status)
@@ -855,7 +860,7 @@ export default function PublicProfile() {
       })
       .then(json => {
         setData(json.data)
-        trackEvent(json.data.profileId, 'view')
+        if (!isPreview) trackEvent(json.data.profileId, 'view')
       })
       .catch(() => { })
       .finally(() => setLoading(false))
@@ -1087,7 +1092,18 @@ export default function PublicProfile() {
   const promoLink = shouldShowPromoPopup(data.links)
 
   return (
-    <div className={`min-h-screen bg-intap-dark flex justify-center items-start pt-12 pb-20 px-4 theme-${data.themeId || 'default'}`}>
+    <div className={`min-h-screen bg-intap-dark flex justify-center items-start pb-20 px-4 theme-${data.themeId || 'default'} ${isPreview ? 'pt-14' : 'pt-12'}`}>
+      {/* Preview mode banner */}
+      {isPreview && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-amber-400 text-black text-xs font-bold py-2 px-4">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          VISTA PREVIA — No visible al público aún
+        </div>
+      )}
+
       <div className="w-full max-width-mobile text-center animate-fade-in">
 
         {/* ── Hero ── */}
