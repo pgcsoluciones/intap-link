@@ -860,7 +860,9 @@ app.get('/api/v1/public/assets/*', async (c) => {
 // ─── Perfil Público ───────────────────────────────────────────────────────
 
 app.get('/api/v1/public/profiles/:slug', async (c) => {
-  const slug    = c.req.param('slug')
+  const slug      = c.req.param('slug')
+  const isPreview = c.req.query('preview') === '1'
+
   const profile = await c.env.DB.prepare(
     'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number FROM profiles WHERE slug = ?'
   )
@@ -868,7 +870,29 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     .first()
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
-  if (!(profile as any).is_published) return c.json({ ok: false, error: 'Perfil no disponible' }, 404)
+
+  // Allow owner to preview unpublished profiles
+  if (!(profile as any).is_published) {
+    let isOwner = false
+    if (isPreview) {
+      try {
+        const rawSession = parseCookie(c.req.header('Cookie') || '', 'session_id')
+        if (rawSession) {
+          const sessionHash = await sha256Hex(rawSession)
+          const session = await c.env.DB.prepare(
+            `SELECT user_id FROM auth_sessions WHERE session_hash = ? AND expires_at > datetime('now') AND revoked_at IS NULL LIMIT 1`
+          ).bind(sessionHash).first()
+          if (session) {
+            const ownerCheck = await c.env.DB.prepare(
+              `SELECT id FROM profiles WHERE id = ? AND user_id = ? LIMIT 1`
+            ).bind((profile as any).id, (session as any).user_id).first()
+            isOwner = !!ownerCheck
+          }
+        }
+      } catch { /* ignore auth errors */ }
+    }
+    if (!isOwner) return c.json({ ok: false, error: 'Perfil no disponible' }, 404)
+  }
 
   const [links, rawGallery, rawFaqs, rawProducts, entitlements, rawSocialLinks, rawContact] = await Promise.all([
     c.env.DB.prepare(

@@ -850,7 +850,7 @@ export default function PublicProfile() {
       ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}?preview=1`
       : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`
 
-    fetch(profileUrl)
+    fetch(profileUrl, { credentials: 'include' })
       .then(res => {
         if (!res.ok) {
           setErrorStatus(res.status)
