@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_BASE, apiGet, apiPut, apiUpload } from '../../../lib/api'
+import ImageCropModal from '../ImageCropModal'
 
 export default function OnboardingIdentity() {
   const navigate   = useNavigate()
@@ -13,6 +14,7 @@ export default function OnboardingIdentity() {
   const [saving, setSaving]       = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError]         = useState('')
+  const [cropFile, setCropFile]   = useState<File | null>(null)
 
   const isOnboarding = window.location.pathname.includes('onboarding')
 
@@ -29,14 +31,20 @@ export default function OnboardingIdentity() {
     }).finally(() => setLoading(false))
   }, [])
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !profileId) return
+    if (fileRef.current) fileRef.current.value = ''
+    setCropFile(file)
+  }
+
+  const uploadCroppedAvatar = async (blob: Blob) => {
+    setCropFile(null)
     setUploading(true)
     setError('')
     try {
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', blob, 'avatar.jpg')
       const res: any = await apiUpload('/me/profile/avatar', fd)
       if (res.ok && res.avatar_url) {
         setAvatarUrl(res.avatar_url)
@@ -47,7 +55,6 @@ export default function OnboardingIdentity() {
       setError('Error de conexión al subir imagen')
     } finally {
       setUploading(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -81,6 +88,16 @@ export default function OnboardingIdentity() {
   )
 
   return (
+    <>
+    {cropFile && (
+      <ImageCropModal
+        file={cropFile}
+        aspectRatio={1}
+        outputWidth={400}
+        onSave={uploadCroppedAvatar}
+        onCancel={() => setCropFile(null)}
+      />
+    )}
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-sm">
         {isOnboarding && (
@@ -186,5 +203,6 @@ export default function OnboardingIdentity() {
         </form>
       </div>
     </div>
+    </>
   )
 }
