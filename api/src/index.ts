@@ -474,7 +474,7 @@ me.put('/profile', async (c) => {
   const avatar_url  = body.avatar_url  !== undefined ? String(body.avatar_url  || '').trim() : undefined
   const category    = body.category    !== undefined ? String(body.category    || '').trim() : undefined
   const subcategory = body.subcategory !== undefined ? String(body.subcategory || '').trim() : undefined
-  const VALID_THEMES = ['default', 'light', 'modern']
+  const VALID_THEMES = ['default', 'light', 'modern', 'bento']
   const theme_id    = body.theme_id    !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
@@ -1130,10 +1130,13 @@ me.patch('/profile/visual', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const VALID_BUTTON_STYLES = ['rounded', 'pill', 'square', 'outline']
+  const VALID_VISUAL_THEMES = ['default', 'light', 'modern', 'bento']
   const accent_color  = body.accent_color  !== undefined ? String(body.accent_color  || '').trim() : undefined
   const button_style  = body.button_style  !== undefined &&
     VALID_BUTTON_STYLES.includes(String(body.button_style))
     ? String(body.button_style) : undefined
+  const theme_id = body.theme_id !== undefined && VALID_VISUAL_THEMES.includes(String(body.theme_id))
+    ? String(body.theme_id) : undefined
 
   if (accent_color !== undefined && !/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(accent_color))
     return c.json({ ok: false, error: 'accent_color debe ser un hex válido (#RGB o #RRGGBB)' }, 400)
@@ -1147,9 +1150,10 @@ me.patch('/profile/visual', async (c) => {
     `UPDATE profiles SET
        accent_color = COALESCE(?1, accent_color),
        button_style = COALESCE(?2, button_style),
+       theme_id     = COALESCE(?3, theme_id),
        updated_at   = datetime('now')
-     WHERE id = ?3`
-  ).bind(accent_color ?? null, button_style ?? null, (profile as any).id).run()
+     WHERE id = ?4`
+  ).bind(accent_color ?? null, button_style ?? null, theme_id ?? null, (profile as any).id).run()
   return c.json({ ok: true })
 })
 

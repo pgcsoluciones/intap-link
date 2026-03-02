@@ -845,6 +845,350 @@ function ChatBubble({
   )
 }
 
+// ─── Bento Mastery Layout ─────────────────────────────────────────────────────
+
+function getBentoVideoEmbed(url: string): { type: 'iframe' | 'video'; src: string } | null {
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+      const vid =
+        u.searchParams.get('v') ||
+        (u.hostname === 'youtu.be' ? u.pathname.slice(1) : null) ||
+        u.pathname.split('/').pop()
+      if (vid)
+        return {
+          type: 'iframe',
+          src: `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&loop=1&playlist=${vid}&controls=0&modestbranding=1&rel=0`,
+        }
+    }
+    if (u.hostname.includes('vimeo.com')) {
+      const vid = u.pathname.split('/').filter(Boolean).pop()
+      if (vid)
+        return {
+          type: 'iframe',
+          src: `https://player.vimeo.com/video/${vid}?autoplay=1&muted=1&loop=1&background=1`,
+        }
+    }
+    if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(url)) return { type: 'video', src: url }
+  } catch { /* ignore */ }
+  return null
+}
+
+function BentoLayout({
+  data,
+  waSource,
+  slug,
+  accentColor,
+  otherLinks,
+  socialLinks,
+  sliderImages,
+  onTrack,
+  onOpenLead,
+  anyModalOpen,
+  onWhatsApp,
+  onMap,
+  canMap,
+}: {
+  data: PublicData
+  waSource: string | null
+  slug: string
+  accentColor: string
+  otherLinks: ProfileLink[]
+  socialLinks: SocialLink[]
+  sliderImages: string[]
+  onTrack: (id: string) => void
+  onOpenLead: () => void
+  anyModalOpen: boolean
+  onWhatsApp: () => void
+  onMap: () => void
+  canMap: boolean
+}) {
+  const firstVideo = data.videos && data.videos.length > 0 ? data.videos[0] : null
+  const videoEmbed = firstVideo ? getBentoVideoEmbed(firstVideo.url) : null
+
+  // Up to 2 social icons placed alongside the video cell
+  const sideIcons = socialLinks.slice(0, 2)
+  // Remaining items for the second row of small cards
+  const extraIcons = [...socialLinks.slice(2), ...otherLinks.slice(0, 4)]
+
+  const renderSocialSvg = (type: string) => {
+    if (type === 'instagram')
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.366.062 2.633.336 3.608 1.311.975.975 1.249 2.242 1.311 3.608.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.062 1.366-.336 2.633-1.311 3.608-.975.975-2.242 1.249-3.608 1.311-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.366-.062-2.633-.336-3.608-1.311-.975-.975-1.249-2.242-1.311-3.608C2.175 15.584 2.163 15.204 2.163 12s.012-3.584.07-4.85c.062-1.366.336-2.633 1.311-3.608.975-.975 2.242-1.249 3.608-1.311C8.416 2.175 8.796 2.163 12 2.163zm0-2.163C8.741 0 8.332.014 7.052.072 5.197.157 3.355.673 2.014 2.014.673 3.355.157 5.197.072 7.052.014 8.332 0 8.741 0 12c0 3.259.014 3.668.072 4.948.085 1.855.601 3.697 1.942 5.038 1.341 1.341 3.183 1.857 5.038 1.942C8.332 23.986 8.741 24 12 24s3.668-.014 4.948-.072c1.855-.085 3.697-.601 5.038-1.942 1.341-1.341 1.857-3.183 1.942-5.038C23.986 15.668 24 15.259 24 12s-.014-3.668-.072-4.948c-.085-1.855-.601-3.697-1.942-5.038C20.645.673 18.803.157 16.948.072 15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zm0 10.162a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+        </svg>
+      )
+    if (type === 'tiktok')
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
+          <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.84 4.84 0 01-1.01-.07z" />
+        </svg>
+      )
+    if (type === 'email')
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7">
+          <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7" />
+        </svg>
+      )
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.1-1.1" />
+      </svg>
+    )
+  }
+
+  return (
+    <div className="min-h-screen theme-bento flex flex-col items-center pb-20 px-4 pt-10">
+      <div className="w-full max-width-mobile animate-fade-in">
+
+        {/* ── Hero ── */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <div
+            className="w-20 h-20 rounded-full mb-4 overflow-hidden flex items-center justify-center bg-white shadow-md"
+            style={{ border: `3px solid ${accentColor}` }}
+          >
+            {data.avatarUrl ? (
+              <img src={data.avatarUrl} alt={data.name || ''} className="w-full h-full object-cover" />
+            ) : data.gallery.length > 0 && data.gallery[0].image_url ? (
+              <img src={data.gallery[0].image_url} alt={data.name || ''} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-2xl font-bold" style={{ color: accentColor }}>
+                {data.name?.charAt(0).toUpperCase() || slug?.charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <h1 className="text-xl font-bold text-[#1d1d1f] mb-1">{data.name || `@${slug}`}</h1>
+          {data.bio && (
+            <p className="text-sm text-[#6e6e73] leading-relaxed max-w-xs">{data.bio}</p>
+          )}
+        </div>
+
+        {/* ── WhatsApp CTA ── */}
+        {waSource && (
+          <div className="mb-4">
+            <a
+              href={buildWaUrl(waSource, data.name || slug, data.slug)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bento-wa-btn"
+              onClick={() => onTrack('whatsapp-smart')}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              Enviar WhatsApp
+            </a>
+          </div>
+        )}
+
+        {/* ── Bento Grid (3 columns) ── */}
+        <div className="bento-grid mb-3">
+
+          {/* Video cell — 2 cols × 2 rows */}
+          <div className="bento-video-cell bento-card">
+            {videoEmbed ? (
+              videoEmbed.type === 'iframe' ? (
+                <iframe
+                  src={videoEmbed.src}
+                  title={firstVideo?.title || 'Último Proyecto'}
+                  className="absolute inset-0 w-full h-full"
+                  frameBorder="0"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  style={{ pointerEvents: 'none' }}
+                />
+              ) : (
+                <video
+                  src={videoEmbed.src}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )
+            ) : (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ backgroundColor: `${accentColor}12` }}
+              >
+                <svg className="w-12 h-12 opacity-25" style={{ color: accentColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            )}
+            {/* Text overlay */}
+            <div
+              className="absolute bottom-0 left-0 right-0 p-3"
+              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)' }}
+            >
+              <p className="text-white text-[10px] font-bold uppercase tracking-widest opacity-80">Último Proyecto</p>
+              {firstVideo?.title && (
+                <p className="text-white/80 text-xs leading-snug mt-0.5 line-clamp-2">{firstVideo.title}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Side icon cells (1×1 each) — first 2 social links */}
+          {sideIcons.length >= 1 && (
+            <div className="bento-icon-cell bento-card">
+              <a
+                href={sideIcons[0].type === 'email' && !sideIcons[0].url.startsWith('mailto:') ? `mailto:${sideIcons[0].url}` : sideIcons[0].url}
+                target={sideIcons[0].type === 'email' ? undefined : '_blank'}
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-1.5 text-[#6e6e73] hover:text-[#1d1d1f] transition-colors w-full h-full justify-center"
+                aria-label={sideIcons[0].type}
+                onClick={() => onTrack(sideIcons[0].id)}
+              >
+                {renderSocialSvg(sideIcons[0].type)}
+                <span className="text-[10px] font-semibold capitalize">{sideIcons[0].type}</span>
+              </a>
+            </div>
+          )}
+          {sideIcons.length >= 2 ? (
+            <div className="bento-icon-cell bento-card">
+              <a
+                href={sideIcons[1].type === 'email' && !sideIcons[1].url.startsWith('mailto:') ? `mailto:${sideIcons[1].url}` : sideIcons[1].url}
+                target={sideIcons[1].type === 'email' ? undefined : '_blank'}
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-1.5 text-[#6e6e73] hover:text-[#1d1d1f] transition-colors w-full h-full justify-center"
+                aria-label={sideIcons[1].type}
+                onClick={() => onTrack(sideIcons[1].id)}
+              >
+                {renderSocialSvg(sideIcons[1].type)}
+                <span className="text-[10px] font-semibold capitalize">{sideIcons[1].type}</span>
+              </a>
+            </div>
+          ) : sideIcons.length === 1 ? (
+            /* Filler cell when only 1 social link */
+            <div className="bento-icon-cell bento-card">
+              <button
+                type="button"
+                onClick={onOpenLead}
+                className="flex flex-col items-center gap-1.5 text-[#6e6e73] hover:text-[#1d1d1f] transition-colors w-full h-full justify-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span className="text-[10px] font-semibold">Contacto</span>
+              </button>
+            </div>
+          ) : (
+            /* 2 filler cells when no social links */
+            <>
+              <div className="bento-icon-cell bento-card">
+                <button
+                  type="button"
+                  onClick={onOpenLead}
+                  className="flex flex-col items-center gap-1.5 text-[#6e6e73] hover:text-[#1d1d1f] transition-colors w-full h-full justify-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <span className="text-[10px] font-semibold">Contacto</span>
+                </button>
+              </div>
+              <div className="bento-icon-cell bento-card">
+                <div className="flex flex-col items-center gap-1.5 text-[#6e6e73]">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 3l14 9-14 9V3z" />
+                  </svg>
+                  <span className="text-[10px] font-semibold">Proyectos</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Image snap-scroll carousel — full width (col-span 3) */}
+          {sliderImages.length > 0 && (
+            <div className="bento-carousel-cell bento-card p-3">
+              <p className="text-[10px] font-bold text-[#6e6e73] uppercase tracking-widest mb-2 px-1">Galería</p>
+              <div className="bento-snap-scroll">
+                {sliderImages.map((src, i) => (
+                  <div key={i} className="bento-snap-item" style={{ height: 160 }}>
+                    <img src={src} alt={`Imagen ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Extra small icon cards (remaining social + links) ── */}
+        {extraIcons.length > 0 && (
+          <div className="bento-grid mb-3">
+            {extraIcons.slice(0, 6).map((item: any) => {
+              const isSocial = 'type' in item
+              const href = isSocial
+                ? (item.type === 'email' && !item.url.startsWith('mailto:') ? `mailto:${item.url}` : item.url)
+                : item.url
+              const label = isSocial ? item.type : item.label
+              return (
+                <div key={item.id} className="bento-icon-cell bento-card" style={{ minHeight: 80 }}>
+                  <a
+                    href={href}
+                    target={isSocial && item.type === 'email' ? undefined : '_blank'}
+                    rel="noopener noreferrer"
+                    className="flex flex-col items-center gap-1.5 text-[#6e6e73] hover:text-[#1d1d1f] transition-colors w-full h-full justify-center py-4"
+                    onClick={() => onTrack(item.id)}
+                  >
+                    {isSocial ? renderSocialSvg(item.type) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.1-1.1" />
+                      </svg>
+                    )}
+                    <span className="text-[10px] font-semibold text-center px-1 truncate w-full text-center capitalize">{label}</span>
+                  </a>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── CTA card — Solicitar información ── */}
+        <button
+          type="button"
+          className="bento-card w-full p-4 mb-3 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
+          onClick={onOpenLead}
+        >
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+            style={{ backgroundColor: `${accentColor}15` }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" style={{ color: accentColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-[#1d1d1f]">Solicitar información</p>
+            <p className="text-xs text-[#6e6e73]">Respondo lo antes posible</p>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#6e6e73] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {/* ── Footer ── */}
+        <footer className="mt-8 text-center opacity-40 text-xs font-medium tracking-tight text-[#1d1d1f]">
+          <Link to="/">Crea tu perfil en <span className="font-bold">INTAP LINK</span></Link>
+        </footer>
+
+        {/* ── Chat Bubble ── */}
+        {!anyModalOpen && (
+          <ChatBubble
+            hasWa={!!waSource}
+            onWhatsApp={onWhatsApp}
+            onLead={onOpenLead}
+            onMap={onMap}
+            canMap={canMap}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function PublicProfile() {
@@ -1183,6 +1527,96 @@ export default function PublicProfile() {
         <span className="truncate">{link.label}</span>
         {isCTA && <span className="shrink-0 text-xs opacity-70">→</span>}
       </a>
+    )
+  }
+
+  if (data.themeId === 'bento') {
+    return (
+      <>
+        <BentoLayout
+          data={data}
+          waSource={waSource}
+          slug={slug || ''}
+          accentColor={accentColor}
+          otherLinks={otherLinks}
+          socialLinks={socialLinks}
+          sliderImages={sliderImages}
+          onTrack={(id) => trackEvent(data.profileId, 'click', id)}
+          onOpenLead={() => { setLeadStatus(null); setLeadOpen(true); trackEvent(data.profileId, 'click', 'lead-open') }}
+          anyModalOpen={anyModalOpen}
+          onWhatsApp={() => {
+            if (!waSource) return
+            const url = buildWaUrl(waSource, data.name || slug || '', data.slug)
+            window.open(url, '_blank', 'noopener,noreferrer')
+            trackEvent(data.profileId, 'click', 'chat-whatsapp')
+          }}
+          onMap={() => { if (mapLink) { setMapOpen(true); trackEvent(data.profileId, 'click', 'chat-map') } }}
+          canMap={!!mapLink}
+        />
+        {modalProduct && (
+          <ProductModal
+            product={modalProduct}
+            name={data.name || slug || ''}
+            slug={data.slug}
+            waSource={waSource}
+            onClose={() => setModalProduct(null)}
+          />
+        )}
+        {mapOpen && mapLink && (
+          <MapModal
+            title={`Ubicación de ${data.name || '@' + data.slug}`}
+            mapUrl={mapLink.url}
+            onClose={() => setMapOpen(false)}
+          />
+        )}
+        {promoOpen && promoLink && (
+          <PromoPopup
+            title={promoLink.label || 'Oferta'}
+            message="Tenemos una promoción disponible. Presiona el botón para ver los detalles."
+            ctaLabel="Ver oferta"
+            ctaUrl={promoLink.url}
+            onClose={() => setPromoOpen(false)}
+          />
+        )}
+        {leadOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm px-4 pb-24 sm:pb-0"
+            onClick={(e) => { if (e.target === e.currentTarget) closeLead() }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Formulario de contacto"
+          >
+            <div className="bg-intap-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border border-white/10 animate-fade-in">
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <h3 className="text-white font-bold text-lg">Contáctame</h3>
+                  <button onClick={() => closeLead()} className="text-slate-400 hover:text-white transition-colors" aria-label="Cerrar" type="button">✕</button>
+                </div>
+                <p className="text-slate-400 text-sm mb-4">Déjame tus datos y te respondo lo antes posible.</p>
+                <input value={leadHp} onChange={(e) => setLeadHp(e.target.value)} autoComplete="off" tabIndex={-1} style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, width: 0 }} />
+                <div className="flex flex-col gap-3">
+                  <input className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="Tu nombre" value={leadName} onChange={(e) => setLeadName(e.target.value)} />
+                  <input className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="Tu correo" value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} />
+                  <input className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="Teléfono (opcional)" value={leadPhone} onChange={(e) => setLeadPhone(e.target.value)} />
+                  <textarea className="w-full px-4 py-3 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/30 outline-none focus:border-intap-mint/50" placeholder="¿Qué necesitas?" rows={4} value={leadMessage} onChange={(e) => setLeadMessage(e.target.value)} />
+                  {turnstileSitekey && (
+                    <div className="bg-black/20 border border-white/10 rounded-2xl px-4 py-4">
+                      <div className="text-xs text-slate-300 mb-3">Verificación de seguridad</div>
+                      <div id="intap-turnstile" className="flex justify-center" />
+                    </div>
+                  )}
+                  <button type="button" disabled={leadSending} onClick={() => void submitLead()} className="w-full py-3.5 rounded-2xl bg-intap-mint text-black font-extrabold hover:brightness-110 transition-all active:scale-95 disabled:opacity-60">
+                    {leadSending ? 'Enviando...' : 'Enviar'}
+                  </button>
+                  {leadStatus && (
+                    <div className="text-sm text-slate-200 bg-black/20 border border-white/10 rounded-2xl px-4 py-3">{leadStatus}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     )
   }
 

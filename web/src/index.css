@@ -104,3 +104,88 @@
 .theme-midnight .avatar-glow {
   box-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
 }
+
+/* ── Bento Mastery (Apple/Dashboard style) ───────────────────────────────── */
+
+.theme-bento {
+  background-color: #F5F5F7 !important;
+  color: #1d1d1f !important;
+}
+
+.bento-card {
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.bento-video-cell {
+  grid-column: span 2;
+  grid-row: span 2;
+  aspect-ratio: 1 / 1;
+  position: relative;
+}
+
+.bento-icon-cell {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.bento-carousel-cell {
+  grid-column: span 3;
+}
+
+.bento-snap-scroll {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+}
+
+.bento-snap-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.bento-snap-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  width: 80%;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.bento-wa-btn {
+  background: #25D366;
+  color: #ffffff;
+  border-radius: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  transition: filter 0.15s ease, transform 0.1s ease;
+  box-shadow: 0 4px 18px rgba(37, 211, 102, 0.35);
+}
+
+.bento-wa-btn:hover {
+  filter: brightness(1.06);
+}
+
+.bento-wa-btn:active {
+  transform: scale(0.97);
+}

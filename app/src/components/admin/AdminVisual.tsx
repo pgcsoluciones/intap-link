@@ -20,17 +20,48 @@ const BUTTON_STYLES = [
   { value: 'outline', label: 'Borde',       preview: 'rounded-xl' },
 ]
 
+const THEMES = [
+  {
+    value: 'default',
+    label: 'Clásico Dark',
+    description: 'Fondo oscuro con detalles mint',
+    bg: '#030712',
+    text: '#ffffff',
+  },
+  {
+    value: 'light',
+    label: 'Light Mode',
+    description: 'Fondo claro y minimalista',
+    bg: '#f1f5f9',
+    text: '#0f172a',
+  },
+  {
+    value: 'modern',
+    label: 'Modern Purple',
+    description: 'Gradiente violeta futurista',
+    bg: '#0f0a1e',
+    text: '#ffffff',
+  },
+  {
+    value: 'bento',
+    label: 'Bento Mastery',
+    description: 'Grid modular estilo Apple',
+    bg: '#F5F5F7',
+    text: '#1d1d1f',
+  },
+]
+
 export default function AdminVisual() {
   const [accentColor, setAccentColor] = useState('#3B82F6')
   const [buttonStyle, setButtonStyle] = useState('rounded')
+  const [themeId, setThemeId] = useState('default')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     apiGet('/me/').then((json: any) => {
-      // Fetch visual settings from the public profile endpoint
-      // We'll also expose them via /me endpoint (future) - for now use default
+      if (json?.data?.theme_id) setThemeId(json.data.theme_id)
       setLoading(false)
     })
   }, [])
@@ -40,6 +71,7 @@ export default function AdminVisual() {
     const json: any = await apiPatch('/me/profile/visual', {
       accent_color: accentColor,
       button_style: buttonStyle,
+      theme_id: themeId,
     })
     if (json.ok) setSaved(true)
     setSaving(false)
@@ -58,6 +90,33 @@ export default function AdminVisual() {
           <Link to="/admin" className="text-slate-400 hover:text-white transition-colors">←</Link>
           <h1 className="text-xl font-black">Configuración visual</h1>
         </header>
+
+        {/* Theme selector */}
+        <div className="glass-card p-5 mb-5">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-4">Plantilla de perfil</p>
+          <div className="grid grid-cols-2 gap-3">
+            {THEMES.map((t) => (
+              <button
+                key={t.value}
+                onClick={() => { setThemeId(t.value); setSaved(false) }}
+                className={`p-3 rounded-2xl border-2 text-left transition-colors ${
+                  themeId === t.value
+                    ? 'border-intap-blue bg-intap-blue/10'
+                    : 'border-white/10 hover:border-white/30'
+                }`}
+              >
+                <div
+                  className="w-full h-10 rounded-lg mb-2 flex items-center justify-center"
+                  style={{ backgroundColor: t.bg }}
+                >
+                  <div className="w-4 h-1 rounded-full opacity-60" style={{ backgroundColor: t.text }} />
+                </div>
+                <p className="text-xs font-bold text-white truncate">{t.label}</p>
+                <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{t.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Color accent */}
         <div className="glass-card p-5 mb-5">
