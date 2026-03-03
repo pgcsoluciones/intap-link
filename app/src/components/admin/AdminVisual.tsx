@@ -89,7 +89,10 @@ export default function AdminVisual() {
 
   useEffect(() => {
     apiGet('/me/').then((json: any) => {
-      if (json?.data?.theme_id) setThemeId(json.data.theme_id)
+      const d = json?.data
+      if (d?.theme_id)    setThemeId(d.theme_id)
+      if (d?.accent_color) setAccentColor(d.accent_color)
+      if (d?.button_style) setButtonStyle(d.button_style)
       setLoading(false)
     })
   }, [])
