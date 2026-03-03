@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiPut } from '../../../lib/api'
+import { getCategoryTemplate } from '../AdminTemplate'
 
 const SECTORS = [
   'Moda y Accesorios', 'Salud y Bienestar', 'Belleza y Estética',
@@ -17,13 +18,17 @@ export default function OnboardingCategory() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const suggested = category ? getCategoryTemplate(category) : null
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!category) return
     setLoading(true)
     setError('')
     try {
-      const json: any = await apiPut('/me/profile', { category, subcategory: subcategory.trim() || undefined })
+      const patch: any = { category, subcategory: subcategory.trim() || undefined }
+      if (suggested) patch.template_id = suggested.id
+      const json: any = await apiPut('/me/profile', patch)
       if (json.ok) {
         navigate('/admin/onboarding/identity')
       } else {
@@ -69,6 +74,15 @@ export default function OnboardingCategory() {
               </button>
             ))}
           </div>
+
+          {suggested && (
+            <div className="flex items-center gap-2 px-1">
+              <span className="text-base">{suggested.icon}</span>
+              <p className="text-xs text-intap-mint">
+                Se aplicará la plantilla <span className="font-bold">{suggested.label}</span> automáticamente
+              </p>
+            </div>
+          )}
 
           {category && (
             <div className="glass-card p-4 flex flex-col gap-2">

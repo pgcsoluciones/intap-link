@@ -387,7 +387,8 @@ me.get('/', async (c) => {
   const row = await c.env.DB.prepare(
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
             p.avatar_url, p.category, p.subcategory, p.is_published, p.theme_id,
-            p.accent_color, p.button_style
+            p.accent_color, p.button_style,
+            p.template_id, p.template_data
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      WHERE u.id = ? LIMIT 1`
@@ -414,7 +415,8 @@ me.get('/', async (c) => {
     hasLinks,
   }
 
-  return c.json({ ok: true, data: { ...r, profileId: r.profile_id, onboardingStatus } })
+  const templateData = (() => { try { return JSON.parse(r.template_data || '{}') } catch { return {} } })()
+  return c.json({ ok: true, data: { ...r, profileId: r.profile_id, onboardingStatus, templateData } })
 })
 
 me.post('/profile/claim', async (c) => {
@@ -480,22 +482,32 @@ me.put('/profile', async (c) => {
   const theme_id    = body.theme_id    !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
+  const VALID_TEMPLATES = ['restaurante', 'servicios', 'eventos']
+  const template_id = body.template_id !== undefined
+    ? (VALID_TEMPLATES.includes(String(body.template_id)) ? String(body.template_id) : null)
+    : undefined
+  const template_data = body.template_data !== undefined
+    ? JSON.stringify(typeof body.template_data === 'object' ? body.template_data : {})
+    : undefined
 
   try {
     await c.env.DB.prepare(
       `UPDATE profiles
-       SET name         = COALESCE(?1, name),
-           bio          = COALESCE(?2, bio),
-           avatar_url   = COALESCE(?3, avatar_url),
-           category     = COALESCE(?4, category),
-           subcategory  = COALESCE(?5, subcategory),
-           theme_id     = COALESCE(?6, theme_id),
-           is_published = COALESCE(?7, is_published),
-           updated_at   = datetime('now')
+       SET name          = COALESCE(?1, name),
+           bio           = COALESCE(?2, bio),
+           avatar_url    = COALESCE(?3, avatar_url),
+           category      = COALESCE(?4, category),
+           subcategory   = COALESCE(?5, subcategory),
+           theme_id      = COALESCE(?6, theme_id),
+           is_published  = COALESCE(?7, is_published),
+           template_id   = COALESCE(?9, template_id),
+           template_data = COALESCE(?10, template_data),
+           updated_at    = datetime('now')
        WHERE id = ?8`
     ).bind(
       name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null,
       theme_id ?? null, is_published ?? null, (profile as any).id,
+      template_id ?? null, template_data ?? null,
     ).run()
   } catch (e: any) {
     console.error('[PUT /me/profile] D1 error:', e)
@@ -1446,7 +1458,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -1564,6 +1576,8 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       bio:             (profile as any).bio,
       avatarUrl:       toAssetUrl((profile as any).avatar_url || ''),
       whatsapp_number: (profile as any).whatsapp_number ?? null,
+      templateId:      (profile as any).template_id ?? null,
+      templateData:    (() => { try { return JSON.parse((profile as any).template_data || '{}') } catch { return {} } })(),
       social_links:    rawSocialLinks.results,
       links:           links.results,
       gallery,

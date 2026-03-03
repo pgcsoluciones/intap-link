@@ -74,6 +74,8 @@ interface PublicData {
   bio: string | null
   avatarUrl: string | null
   whatsapp_number: string | null
+  templateId?: string | null
+  templateData?: Record<string, string>
   social_links: SocialLink[]
   links: ProfileLink[]
   gallery: GalleryItem[]
@@ -172,6 +174,157 @@ const SOCIAL_ICONS: Record<string, React.ReactNode> = {
       <path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
     </svg>
   ),
+}
+
+// ─── Template Block ───────────────────────────────────────────────────────────
+
+function TemplateBlock({ templateId, data, waSource, name, slug }: {
+  templateId: string
+  data: Record<string, string>
+  waSource: string | null
+  name: string | null
+  slug: string
+}) {
+  if (templateId === 'restaurante') {
+    const hasContent = data.menu_highlight || data.reservas_url || data.delivery_url || data.delivery_note
+    if (!hasContent) return null
+    return (
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+          <span className="text-base">🍽️</span>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Nuestro restaurante</p>
+        </div>
+        <div className="p-4 flex flex-col gap-3">
+          {data.menu_highlight && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Especialidad</p>
+              <p className="text-sm text-white/90">{data.menu_highlight}</p>
+            </div>
+          )}
+          {data.delivery_note && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Horario</p>
+              <p className="text-sm text-white/80">{data.delivery_note}</p>
+            </div>
+          )}
+          <div className="flex flex-col gap-2 mt-1">
+            {data.reservas_url && (
+              <a
+                href={data.reservas_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
+              >
+                📅 Reservar mesa
+              </a>
+            )}
+            {data.delivery_url && (
+              <a
+                href={data.delivery_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
+              >
+                🛵 Pedir a domicilio
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (templateId === 'servicios') {
+    const credentials = [data.credential_1, data.credential_2, data.credential_3].filter(Boolean)
+    const hasContent = data.services_intro || data.calendly_url || data.years_experience || credentials.length > 0
+    if (!hasContent) return null
+    return (
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+          <span className="text-base">💼</span>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Servicios profesionales</p>
+        </div>
+        <div className="p-4 flex flex-col gap-3">
+          {data.services_intro && (
+            <p className="text-sm text-white/80 leading-relaxed">{data.services_intro}</p>
+          )}
+          {(data.years_experience || credentials.length > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {data.years_experience && (
+                <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-white/10 border border-white/10 text-white/80">
+                  🏆 {data.years_experience} de experiencia
+                </span>
+              )}
+              {credentials.map((c, i) => (
+                <span key={i} className="text-xs font-bold px-3 py-1.5 rounded-full bg-white/10 border border-white/10 text-white/80">
+                  ✓ {c}
+                </span>
+              ))}
+            </div>
+          )}
+          {data.calendly_url && (
+            <a
+              href={data.calendly_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
+            >
+              📆 Agendar cita
+            </a>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (templateId === 'eventos') {
+    const hasContent = data.event_name || data.event_date || data.event_venue || data.ticket_url || data.lineup
+    if (!hasContent) return null
+    const fmtDate = data.event_date
+      ? new Date(data.event_date + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null
+    return (
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+          <span className="text-base">🎭</span>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Próximo evento</p>
+        </div>
+        <div className="p-4 flex flex-col gap-3">
+          {data.event_name && <p className="text-base font-black text-white">{data.event_name}</p>}
+          <div className="flex flex-wrap gap-3">
+            {fmtDate && (
+              <span className="flex items-center gap-1.5 text-xs text-white/70">
+                📅 {fmtDate}
+              </span>
+            )}
+            {data.event_venue && (
+              <span className="flex items-center gap-1.5 text-xs text-white/70">
+                📍 {data.event_venue}
+              </span>
+            )}
+          </div>
+          {data.lineup && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Programa</p>
+              <p className="text-sm text-white/80 whitespace-pre-line">{data.lineup}</p>
+            </div>
+          )}
+          {data.ticket_url && (
+            <a
+              href={data.ticket_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
+            >
+              🎟️ Comprar boletos
+            </a>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return null
 }
 
 function SocialIcons({ links }: { links: SocialLink[] }) {
@@ -2153,6 +2306,17 @@ export default function PublicProfile() {
               onOpen={() => setModalProduct(data.featured_product)}
             />
           </div>
+        )}
+
+        {/* ── Plantilla vertical ── */}
+        {data.templateId && (
+          <TemplateBlock
+            templateId={data.templateId}
+            data={data.templateData ?? {}}
+            waSource={waSource}
+            name={data.name}
+            slug={data.slug}
+          />
         )}
 
         {/* ── Secciones dinámicas ordenadas por blocksOrder ── */}
