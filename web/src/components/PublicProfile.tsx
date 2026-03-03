@@ -1657,7 +1657,7 @@ export default function PublicProfile() {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
     }
-  }, [leadOpen])
+  }, [leadOpen, closeLead])
 
   // ── Turnstile script load (only when needed) ────────────────────────────────
   useEffect(() => {
