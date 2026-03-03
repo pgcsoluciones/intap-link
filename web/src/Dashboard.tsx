@@ -70,10 +70,7 @@ export default function Dashboard() {
             if (jsonMe.ok) {
                 setSession(jsonMe.data)
 
-                // Extraer el profileId si es posible (en v1/me no viene el profileId, necesitamos agregarlo o usar profile/me/slug)
-                // Por ahora, como el API /me no devuelve el id explícito del perfil, ajustaremos ambos: el frontend para esperar el profileId y el backend para enviarlo.
-                // Usaremos session.id (que agregaremos al backend) para consultar las cosas de profile
-                const pId = jsonMe.data.profileId || 'profile_debug'
+                const pId = jsonMe.data.profileId || jsonMe.data.profile_id
 
                 // Paso 2: Obtener datos de edición (Contextual)
                 const resProfile = await fetch(`${apiUrl}/api/v1/profile/me/${pId}`, { credentials: 'include' })
@@ -587,11 +584,13 @@ function LeadsManager({ profileId }: { profileId: string }) {
     const [leads, setLeads] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [updating, setUpdating] = useState<string | null>(null)
+    const [filterStatus, setFilterStatus] = useState('')
+    const [filterOrigin, setFilterOrigin] = useState('')
+    const [filterFrom, setFilterFrom] = useState('')
+    const [filterTo, setFilterTo] = useState('')
     const apiUrl = import.meta.env.VITE_API_URL || ''
 
-    useEffect(() => {
-        fetchLeads()
-    }, [profileId])
+    useEffect(() => { fetchLeads() }, [profileId])
 
     const fetchLeads = async () => {
         setLoading(true)
@@ -615,59 +614,138 @@ function LeadsManager({ profileId }: { profileId: string }) {
                 credentials: 'include',
                 body: JSON.stringify({ status: newStatus })
             })
-            if (res.ok) {
-                setLeads(leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l))
-            }
+            if (res.ok) setLeads(leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l))
         } finally {
             setUpdating(null)
         }
     }
 
-    const exportCsvUrl = `${apiUrl}/api/v1/profile/me/${profileId}/leads/export`
+    const buildExportUrl = () => {
+        const base = `${apiUrl}/api/v1/profile/me/${profileId}/leads/export`
+        const params = new URLSearchParams()
+        if (filterStatus) params.set('status', filterStatus)
+        if (filterOrigin) params.set('origin', filterOrigin)
+        if (filterFrom)   params.set('from', filterFrom)
+        if (filterTo)     params.set('to', filterTo)
+        const qs = params.toString()
+        return qs ? `${base}?${qs}` : base
+    }
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'new': return 'bg-intap-blue/10 text-intap-blue border-intap-blue/20'
+            case 'new':       return 'bg-intap-blue/10 text-intap-blue border-intap-blue/20'
             case 'contacted': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-            case 'closed': return 'bg-intap-mint/10 text-intap-mint border-intap-mint/20'
+            case 'closed':    return 'bg-intap-mint/10 text-intap-mint border-intap-mint/20'
             case 'discarded': return 'bg-red-500/10 text-red-500 border-red-500/20'
-            default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+            default:          return 'bg-slate-500/10 text-slate-400 border-slate-500/20'
         }
     }
 
+    const filtered = leads.filter(l => {
+        if (filterStatus && l.status !== filterStatus) return false
+        if (filterOrigin && !(l.origin || '').toLowerCase().includes(filterOrigin.toLowerCase())) return false
+        if (filterFrom   && l.created_at < filterFrom) return false
+        if (filterTo     && l.created_at > filterTo + 'T23:59:59') return false
+        return true
+    })
+
+    const origins = [...new Set(leads.map(l => l.origin).filter(Boolean))]
+
     return (
         <section className="bg-white/5 backdrop-blur-md border border-white/10 p-5 md:p-8 rounded-[32px]">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-yellow-400 rounded-full"></span> Mis Contactos Recibidos
+                    <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                    Mis Contactos Recibidos
+                    {leads.length > 0 && (
+                        <span className="bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 text-[9px] font-black px-2 py-0.5 rounded-full">
+                            {filtered.length}/{leads.length}
+                        </span>
+                    )}
                 </h3>
-
                 <a
-                    href={exportCsvUrl}
+                    href={buildExportUrl()}
                     target="_blank"
                     className="shrink-0 bg-white/5 border border-white/10 px-4 py-2 rounded-full text-[10px] font-bold text-white uppercase tracking-widest hover:bg-white/10 transition flex items-center gap-2"
                 >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                     Exportar CSV
                 </a>
             </div>
 
+            {/* Filters */}
+            {leads.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                    <select
+                        value={filterStatus}
+                        onChange={e => setFilterStatus(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 outline-none appearance-none cursor-pointer hover:bg-white/10 transition"
+                    >
+                        <option value="">Todos los estados</option>
+                        <option value="new">Nuevo</option>
+                        <option value="contacted">En Proceso</option>
+                        <option value="closed">Cerrado</option>
+                        <option value="discarded">Descartado</option>
+                    </select>
+
+                    {origins.length > 0 && (
+                        <select
+                            value={filterOrigin}
+                            onChange={e => setFilterOrigin(e.target.value)}
+                            className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 outline-none appearance-none cursor-pointer hover:bg-white/10 transition"
+                        >
+                            <option value="">Todos los orígenes</option>
+                            {origins.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                    )}
+
+                    <input
+                        type="date"
+                        value={filterFrom}
+                        onChange={e => setFilterFrom(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-[10px] font-bold text-slate-400 outline-none cursor-pointer hover:bg-white/10 transition"
+                        title="Desde"
+                    />
+                    <input
+                        type="date"
+                        value={filterTo}
+                        onChange={e => setFilterTo(e.target.value)}
+                        className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-[10px] font-bold text-slate-400 outline-none cursor-pointer hover:bg-white/10 transition"
+                        title="Hasta"
+                    />
+
+                    {(filterStatus || filterOrigin || filterFrom || filterTo) && (
+                        <button
+                            onClick={() => { setFilterStatus(''); setFilterOrigin(''); setFilterFrom(''); setFilterTo('') }}
+                            className="bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/10 transition"
+                        >
+                            ✕ Limpiar
+                        </button>
+                    )}
+                </div>
+            )}
+
             {loading ? (
                 <div className="text-center py-10 text-xs font-black uppercase tracking-widest text-slate-500 animate-pulse">Cargando leads...</div>
-            ) : leads.length === 0 ? (
-                <div className="text-center py-10 text-xs text-slate-500 italic">No tienes contactos registrados todavía.</div>
+            ) : filtered.length === 0 ? (
+                <div className="text-center py-10 text-xs text-slate-500 italic">
+                    {leads.length === 0 ? 'No tienes contactos registrados todavía.' : 'Ningún contacto coincide con los filtros.'}
+                </div>
             ) : (
                 <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse min-w-[600px]">
                         <thead>
                             <tr className="border-b border-white/5">
                                 <th className="p-4 text-[10px] font-black uppercase text-slate-500 tracking-widest">Contacto</th>
-                                <th className="p-4 text-[10px] font-black uppercase text-slate-500 tracking-widest">Métricas</th>
+                                <th className="p-4 text-[10px] font-black uppercase text-slate-500 tracking-widest">Mensaje / Origen</th>
                                 <th className="p-4 text-[10px] font-black uppercase text-slate-500 tracking-widest text-right">Estatus</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {leads.map(lead => (
+                            {filtered.map(lead => (
                                 <tr key={lead.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                                     <td className="p-4">
                                         <p className="text-sm font-bold text-white mb-1">{lead.name}</p>
@@ -675,11 +753,15 @@ function LeadsManager({ profileId }: { profileId: string }) {
                                         {lead.phone && <p className="text-[10px] text-slate-500 mt-1">{lead.phone}</p>}
                                     </td>
                                     <td className="p-4">
-                                        <p className="text-[10px] text-slate-400 max-w-[200px] truncate mb-2" title={lead.message}>
+                                        <p className="text-[10px] text-slate-400 max-w-[220px] truncate mb-2" title={lead.message}>
                                             "{lead.message}"
                                         </p>
-                                        <div className="flex gap-2">
-                                            <span className="text-[8px] uppercase tracking-widest px-2 py-0.5 rounded border border-white/10 text-slate-500 bg-white/5">{lead.origin || 'Web'}</span>
+                                        <div className="flex gap-2 flex-wrap">
+                                            {lead.origin && (
+                                                <span className="text-[8px] uppercase tracking-widest px-2 py-0.5 rounded border border-white/10 text-slate-500 bg-white/5 max-w-[120px] truncate" title={lead.origin}>
+                                                    {lead.origin}
+                                                </span>
+                                            )}
                                             <span className="text-[8px] uppercase tracking-widest px-2 py-0.5 rounded text-slate-600">
                                                 {new Date(lead.created_at).toLocaleDateString()}
                                             </span>
@@ -687,7 +769,7 @@ function LeadsManager({ profileId }: { profileId: string }) {
                                     </td>
                                     <td className="p-4 text-right">
                                         <select
-                                            value={lead.status}
+                                            value={lead.status || 'new'}
                                             onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
                                             disabled={updating === lead.id}
                                             className={`text-[9px] font-black uppercase tracking-widest rounded-full px-3 py-1.5 border appearance-none text-center cursor-pointer outline-none transition-colors ${getStatusColor(lead.status)}`}

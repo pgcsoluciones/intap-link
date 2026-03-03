@@ -1,5 +1,33 @@
 import { Resend } from 'resend'
 
+export async function sendLeadNotificationEmail(
+  env: { RESEND_API_KEY: string; RESEND_FROM?: string },
+  to: string,
+  lead: { name: string; email: string; phone?: string; message: string; origin?: string },
+): Promise<void> {
+  const resend = new Resend(env.RESEND_API_KEY)
+  const from   = env.RESEND_FROM || 'onboarding@resend.dev'
+
+  await resend.emails.send({
+    from,
+    to,
+    subject: `Nuevo contacto: ${lead.name}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto;">
+        <h2 style="color: #111;">Nuevo contacto en INTAP Link</h2>
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          <tr><td style="padding:8px 0; color:#666; width:110px;">Nombre</td><td style="padding:8px 0; font-weight:bold;">${lead.name}</td></tr>
+          <tr><td style="padding:8px 0; color:#666;">Email</td><td style="padding:8px 0;"><a href="mailto:${lead.email}">${lead.email}</a></td></tr>
+          ${lead.phone ? `<tr><td style="padding:8px 0; color:#666;">Teléfono</td><td style="padding:8px 0;">${lead.phone}</td></tr>` : ''}
+          <tr><td style="padding:8px 0; color:#666; vertical-align:top;">Mensaje</td><td style="padding:8px 0;">${lead.message}</td></tr>
+          ${lead.origin ? `<tr><td style="padding:8px 0; color:#666;">Origen</td><td style="padding:8px 0; font-size:12px; color:#888;">${lead.origin}</td></tr>` : ''}
+        </table>
+        <p style="color:#aaa; font-size:11px; margin-top:24px;">Gestiona tus contactos en <a href="https://app.intaprd.com">app.intaprd.com</a></p>
+      </div>
+    `,
+  })
+}
+
 export async function sendMagicLinkEmail(
   env: { RESEND_API_KEY: string; RESEND_FROM?: string },
   to: string,

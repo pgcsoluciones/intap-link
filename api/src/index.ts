@@ -414,7 +414,7 @@ me.get('/', async (c) => {
     hasLinks,
   }
 
-  return c.json({ ok: true, data: { ...r, onboardingStatus } })
+  return c.json({ ok: true, data: { ...r, profileId: r.profile_id, onboardingStatus } })
 })
 
 me.post('/profile/claim', async (c) => {
@@ -1162,6 +1162,141 @@ me.patch('/profile/visual', async (c) => {
 // Mount the authenticated sub-app
 app.route('/api/v1/me', me)
 
+// ─── Profile/me — authenticated profile data ──────────────────────────────
+
+app.get('/api/v1/profile/me/:profileId', requireAuth, async (c) => {
+  const userId    = c.get('userId') as string
+  const profileId = c.req.param('profileId')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, slug, name, bio, theme_id, accent_color, button_style,
+            avatar_url, is_published, category, subcategory, blocks_order
+     FROM profiles WHERE id = ?1 AND user_id = ?2 LIMIT 1`
+  ).bind(profileId, userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const p = profile as any
+  const [linksRes, galleryRes, faqsRes, ents] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT id, label, url, sort_order, is_active, is_cta FROM profile_links
+       WHERE profile_id = ?1 ORDER BY sort_order ASC`
+    ).bind(p.id).all(),
+    c.env.DB.prepare(
+      `SELECT id, image_key, sort_order FROM profile_gallery
+       WHERE profile_id = ?1 ORDER BY sort_order ASC`
+    ).bind(p.id).all(),
+    c.env.DB.prepare(
+      `SELECT id, question, answer, sort_order FROM profile_faqs
+       WHERE profile_id = ?1 ORDER BY sort_order ASC`
+    ).bind(p.id).all(),
+    getEntitlements(c, p.id).catch(() => ({
+      maxLinks: 5, maxPhotos: 3, maxFaqs: 3, maxProducts: 3, maxVideos: 1, canUseVCard: false
+    })),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      ...p,
+      links:        linksRes.results,
+      gallery:      galleryRes.results,
+      faqs:         faqsRes.results,
+      entitlements: ents,
+    },
+  })
+})
+
+// ─── Leads (authenticated owner) ─────────────────────────────────────────
+
+app.get('/api/v1/profile/me/:profileId/leads', requireAuth, async (c) => {
+  const userId    = c.get('userId') as string
+  const profileId = c.req.param('profileId')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT slug FROM profiles WHERE id = ?1 AND user_id = ?2 LIMIT 1`
+  ).bind(profileId, userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Forbidden' }, 403)
+
+  const { status, origin, from, to } = c.req.query()
+
+  const allLeads = await c.env.DB.prepare(
+    `SELECT id, name, email, phone, message,
+            COALESCE(origin, source_url) as origin,
+            COALESCE(status, 'new') as status,
+            created_at
+     FROM leads WHERE profile_slug = ?1
+     ORDER BY created_at DESC LIMIT 500`
+  ).bind((profile as any).slug).all()
+
+  let data = allLeads.results as any[]
+  if (status) data = data.filter(l => l.status === status)
+  if (origin) data = data.filter(l => (l.origin || '').toLowerCase().includes(origin.toLowerCase()))
+  if (from)   data = data.filter(l => l.created_at >= from)
+  if (to)     data = data.filter(l => l.created_at <= to + 'T23:59:59')
+
+  return c.json({ ok: true, data })
+})
+
+app.patch('/api/v1/profile/me/:profileId/leads/:leadId', requireAuth, async (c) => {
+  const userId    = c.get('userId') as string
+  const profileId = c.req.param('profileId')
+  const leadId    = c.req.param('leadId')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT slug FROM profiles WHERE id = ?1 AND user_id = ?2 LIMIT 1`
+  ).bind(profileId, userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Forbidden' }, 403)
+
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const VALID_STATUSES = ['new', 'contacted', 'closed', 'discarded']
+  const newStatus = String(body.status || '').trim()
+  if (!VALID_STATUSES.includes(newStatus))
+    return c.json({ ok: false, error: `status must be one of: ${VALID_STATUSES.join(', ')}` }, 400)
+
+  await c.env.DB.prepare(
+    `UPDATE leads SET status = ?1
+     WHERE id = ?2 AND profile_slug = ?3`
+  ).bind(newStatus, leadId, (profile as any).slug).run()
+
+  return c.json({ ok: true })
+})
+
+app.get('/api/v1/profile/me/:profileId/leads/export', requireAuth, async (c) => {
+  const userId    = c.get('userId') as string
+  const profileId = c.req.param('profileId')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT slug, name FROM profiles WHERE id = ?1 AND user_id = ?2 LIMIT 1`
+  ).bind(profileId, userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Forbidden' }, 403)
+
+  const leads = await c.env.DB.prepare(
+    `SELECT name, email, phone, message,
+            COALESCE(origin, source_url, 'web') as origin,
+            COALESCE(status, 'new') as status,
+            created_at
+     FROM leads WHERE profile_slug = ?1
+     ORDER BY created_at DESC`
+  ).bind((profile as any).slug).all()
+
+  const header = 'Nombre,Email,Teléfono,Mensaje,Origen,Estado,Fecha\r\n'
+  const rows = (leads.results as any[]).map(l => {
+    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    return [esc(l.name), esc(l.email), esc(l.phone), esc(l.message),
+            esc(l.origin), esc(l.status), esc(l.created_at)].join(',')
+  }).join('\r\n')
+
+  const slug = (profile as any).slug
+  return new Response(header + rows, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="leads-${slug}.csv"`,
+    },
+  })
+})
+
 // ─── Analíticas ───────────────────────────────────────────────────────────
 
 app.post('/api/v1/public/track', async (c) => {
@@ -1552,14 +1687,28 @@ app.post('/api/v1/public/leads', async (c) => {
     if (!ok) return c.json({ ok: false, error: 'turnstile_failed' }, 403)
   }
 
+  const origin = String(body.origin || source_url || '').trim()
+
   await c.env.DB.prepare(
-    `INSERT INTO leads (profile_slug, name, email, phone, message, source_url, user_agent, ip_hash)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
-  ).bind(profile_slug, name, email, phone, message, source_url, ua, ip_hash).run()
+    `INSERT INTO leads (profile_slug, name, email, phone, message, source_url, origin, user_agent, ip_hash, status)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'new')`
+  ).bind(profile_slug, name, email, phone, message, source_url, origin || null, ua, ip_hash).run()
 
   await c.env.DB.prepare(
     `INSERT INTO lead_rate_limits (profile_slug, ip_hash) VALUES (?1, ?2)`
   ).bind(profile_slug, ip_hash).run()
+
+  // Notify profile owner (non-blocking)
+  if ((c.env as any).RESEND_API_KEY) {
+    c.env.DB.prepare(
+      `SELECT u.email FROM users u JOIN profiles p ON p.user_id = u.id WHERE p.slug = ?1 LIMIT 1`
+    ).bind(profile_slug).first().then(async (ownerRow: any) => {
+      if (!ownerRow?.email) return
+      const { sendLeadNotificationEmail } = await import('./lib/email')
+      await sendLeadNotificationEmail(c.env as any, ownerRow.email, { name, email, phone, message, origin })
+        .catch(() => {})
+    }).catch(() => {})
+  }
 
   return c.json({ ok: true }, 201)
 })
