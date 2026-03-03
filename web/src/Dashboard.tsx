@@ -51,23 +51,40 @@ export default function Dashboard() {
 
     const apiUrl = import.meta.env.VITE_API_URL || ''
 
+    const [mockEmail, setMockEmail] = useState('intapcard@gmail.com') // Todo: extraer esto de Auth en el futuro
+
     useEffect(() => {
-        initDashboard()
+        // Permitir un querystring para testing fácil: ?email=fliaprince@gmail.com
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('email')) {
+            setMockEmail(params.get('email') as string)
+        }
     }, [])
+
+    useEffect(() => {
+        if (mockEmail) {
+            initDashboard()
+        }
+    }, [mockEmail]) // Recargar al obtener el email
 
     const initDashboard = async () => {
         setLoading(true)
         try {
             // Paso 1: Obtener identidad y plan (Protocolo por Secciones)
             const resMe = await fetch(`${apiUrl}/api/v1/me`, {
-                headers: { 'X-User-Email': 'test@example.com' } // Mock corregido para profile_debug
+                headers: { 'X-User-Email': mockEmail }
             })
             const jsonMe = await resMe.json()
             if (jsonMe.ok) {
                 setSession(jsonMe.data)
 
+                // Extraer el profileId si es posible (en v1/me no viene el profileId, necesitamos agregarlo o usar profile/me/slug)
+                // Por ahora, como el API /me no devuelve el id explícito del perfil, ajustaremos ambos: el frontend para esperar el profileId y el backend para enviarlo.
+                // Usaremos session.id (que agregaremos al backend) para consultar las cosas de profile
+                const pId = jsonMe.data.profileId || 'profile_debug'
+
                 // Paso 2: Obtener datos de edición (Contextual)
-                const resProfile = await fetch(`${apiUrl}/api/v1/profile/me/profile_debug`)
+                const resProfile = await fetch(`${apiUrl}/api/v1/profile/me/${pId}`)
                 const jsonProfile = await resProfile.json()
                 if (jsonProfile.ok) setProfile(jsonProfile.data)
             } else {
@@ -82,14 +99,14 @@ export default function Dashboard() {
 
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
-        if (!file) return
+        if (!file || !profile) return
 
         setAvatarPreview(URL.createObjectURL(file))
         setUploadingAvatar(true)
 
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('profileId', 'profile_debug')
+        formData.append('profileId', profile.id)
 
         try {
             const res = await fetch(`${apiUrl}/api/v1/profile/avatar/upload`, {
@@ -286,16 +303,16 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                             </div>
-                            <GalleryManager profileId="profile_debug" initialPhotos={profile?.gallery || []} />
+                            {profile && <GalleryManager profileId={profile.id} initialPhotos={profile.gallery || []} />}
                         </div>
                     </div>
 
                     <div className="mb-8">
-                        <LinkManager profileId="profile_debug" initialLinks={profile?.links || []} />
+                        {profile && <LinkManager profileId={profile.id} initialLinks={profile.links || []} />}
                     </div>
 
                     <div className="mb-20">
-                        <LeadsManager profileId="profile_debug" />
+                        {profile && <LeadsManager profileId={profile.id} />}
                     </div>
                 </div>
             </main>

@@ -159,6 +159,7 @@ app.get('/api/v1/me', async (c) => {
   return c.json({
     ok: true,
     data: {
+      profileId: profile.id,
       name: profile.name,
       slug: profile.slug,
       avatarUrl: profile.avatar_url,
