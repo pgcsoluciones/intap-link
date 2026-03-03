@@ -1219,20 +1219,28 @@ app.get('/api/v1/profile/me/:profileId/leads', requireAuth, async (c) => {
 
   const { status, origin, from, to } = c.req.query()
 
+  const { tag } = c.req.query()
+
   const allLeads = await c.env.DB.prepare(
     `SELECT id, name, email, phone, message,
             COALESCE(origin, source_url) as origin,
             COALESCE(status, 'new') as status,
+            COALESCE(tags, '[]') as tags,
             created_at
      FROM leads WHERE profile_slug = ?1
      ORDER BY created_at DESC LIMIT 500`
   ).bind((profile as any).slug).all()
 
-  let data = allLeads.results as any[]
+  let data = (allLeads.results as any[]).map(l => ({
+    ...l,
+    tags: (() => { try { return JSON.parse(l.tags) } catch { return [] } })(),
+  }))
+
   if (status) data = data.filter(l => l.status === status)
   if (origin) data = data.filter(l => (l.origin || '').toLowerCase().includes(origin.toLowerCase()))
   if (from)   data = data.filter(l => l.created_at >= from)
   if (to)     data = data.filter(l => l.created_at <= to + 'T23:59:59')
+  if (tag)    data = data.filter(l => l.tags.includes(tag))
 
   return c.json({ ok: true, data })
 })
@@ -1251,14 +1259,29 @@ app.patch('/api/v1/profile/me/:profileId/leads/:leadId', requireAuth, async (c) 
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const VALID_STATUSES = ['new', 'contacted', 'closed', 'discarded']
-  const newStatus = String(body.status || '').trim()
-  if (!VALID_STATUSES.includes(newStatus))
-    return c.json({ ok: false, error: `status must be one of: ${VALID_STATUSES.join(', ')}` }, 400)
+  const updates: string[] = []
+  const params: any[]     = []
 
+  if (body.status !== undefined) {
+    const newStatus = String(body.status || '').trim()
+    if (!VALID_STATUSES.includes(newStatus))
+      return c.json({ ok: false, error: `status must be one of: ${VALID_STATUSES.join(', ')}` }, 400)
+    updates.push(`status = ?${params.push(newStatus)}`)
+  }
+
+  if (body.tags !== undefined) {
+    const tags = Array.isArray(body.tags)
+      ? body.tags.map((t: any) => String(t).trim().slice(0, 32)).filter(Boolean)
+      : []
+    updates.push(`tags = ?${params.push(JSON.stringify(tags))}`)
+  }
+
+  if (updates.length === 0) return c.json({ ok: false, error: 'Nothing to update' }, 400)
+
+  params.push(leadId, (profile as any).slug)
   await c.env.DB.prepare(
-    `UPDATE leads SET status = ?1
-     WHERE id = ?2 AND profile_slug = ?3`
-  ).bind(newStatus, leadId, (profile as any).slug).run()
+    `UPDATE leads SET ${updates.join(', ')} WHERE id = ?${params.length - 1} AND profile_slug = ?${params.length}`
+  ).bind(...params).run()
 
   return c.json({ ok: true })
 })
@@ -1272,20 +1295,32 @@ app.get('/api/v1/profile/me/:profileId/leads/export', requireAuth, async (c) => 
   ).bind(profileId, userId).first()
   if (!profile) return c.json({ ok: false, error: 'Forbidden' }, 403)
 
-  const leads = await c.env.DB.prepare(
+  const { status: fStatus, origin: fOrigin, from: fFrom, to: fTo, tag: fTag } = c.req.query()
+
+  const allLeads = await c.env.DB.prepare(
     `SELECT name, email, phone, message,
-            COALESCE(origin, source_url, 'web') as origin,
+            COALESCE(origin, source_url, '') as origin,
             COALESCE(status, 'new') as status,
+            COALESCE(tags, '[]') as tags,
             created_at
      FROM leads WHERE profile_slug = ?1
      ORDER BY created_at DESC`
   ).bind((profile as any).slug).all()
 
-  const header = 'Nombre,Email,Teléfono,Mensaje,Origen,Estado,Fecha\r\n'
-  const rows = (leads.results as any[]).map(l => {
+  let filtered = (allLeads.results as any[]).map(l => ({
+    ...l, tags: (() => { try { return JSON.parse(l.tags) } catch { return [] } })(),
+  }))
+  if (fStatus) filtered = filtered.filter(l => l.status === fStatus)
+  if (fOrigin) filtered = filtered.filter(l => l.origin.toLowerCase().includes(fOrigin.toLowerCase()))
+  if (fFrom)   filtered = filtered.filter(l => l.created_at >= fFrom)
+  if (fTo)     filtered = filtered.filter(l => l.created_at <= fTo + 'T23:59:59')
+  if (fTag)    filtered = filtered.filter(l => l.tags.includes(fTag))
+
+  const header = 'Nombre,Email,Teléfono,Mensaje,Origen,Estado,Etiquetas,Fecha\r\n'
+  const rows = filtered.map(l => {
     const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
     return [esc(l.name), esc(l.email), esc(l.phone), esc(l.message),
-            esc(l.origin), esc(l.status), esc(l.created_at)].join(',')
+            esc(l.origin), esc(l.status), esc(l.tags.join('; ')), esc(l.created_at)].join(',')
   }).join('\r\n')
 
   const slug = (profile as any).slug
