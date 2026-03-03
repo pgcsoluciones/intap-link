@@ -14,15 +14,21 @@ export default function AdminPanel() {
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState('')
 
-    const adminEmail = 'juanluis@intaprd.com'
-
     useEffect(() => {
         fetch('/api/v1/admin/profiles', {
-            headers: { 'X-User-Email': adminEmail }
+            credentials: 'include'
         })
             .then(res => res.json())
             .then(json => {
-                if (json.ok) setProfiles(json.data)
+                if (json.ok) {
+                    setProfiles(json.data)
+                } else {
+                    // Si falla por sesión o permisos, botar al Login (Dashboard)
+                    window.location.href = '/'
+                }
+            })
+            .catch(() => {
+                window.location.href = '/'
             })
             .finally(() => setLoading(false))
     }, [])

@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { getCookie } from 'hono/cookie'
 import { getEntitlements } from './engine/entitlements'
 import { sendMagicLinkEmail } from './lib/email'
 
@@ -94,7 +95,7 @@ function buildSessionCookie(value: string, appUrl: string, maxAge: number): stri
 
 const requireAdmin = async (c: any, next: any) => {
   const adminEmail = 'juanluis@intaprd.com'
-  const userEmail = c.req.header('X-User-Email')
+  const userEmail = getCookie(c, 'session_token')
   if (userEmail !== adminEmail) return c.json({ ok: false, error: 'Forbidden' }, 403)
   await next()
 }
