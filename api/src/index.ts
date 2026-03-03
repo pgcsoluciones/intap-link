@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { jwt } from 'hono/jwt'
+import { getCookie, setCookie } from 'hono/cookie'
 import { getEntitlements } from './engine/entitlements'
 
 type Bindings = {
@@ -11,13 +12,16 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-app.use('*', cors())
+app.use('*', cors({
+  origin: (origin) => origin, // Permite cualquier origen dinámicamente y expone los headers de credenciales. Requerido para vite local y domains finales.
+  credentials: true,
+}))
 
 // --- Auth & Middlewares ---
 
 const requireAdmin = async (c: any, next: any) => {
   const adminEmail = 'juanluis@intaprd.com'
-  const userEmail = c.req.header('X-User-Email')
+  const userEmail = getCookie(c, 'session_token')
   if (userEmail !== adminEmail) return c.json({ ok: false, error: 'Forbidden' }, 403)
   await next()
 }
@@ -49,7 +53,16 @@ app.post('/api/v1/auth/verify', async (c) => {
   const payload = { email, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 } // 24h
   // const token = await jwt.sign(payload, c.env.JWT_SECRET) // Comentado hasta tener el secret en wrangler.toml
 
-  return c.json({ ok: true, token: 'mock-jwt-token', user: { email } })
+  // Setear sesión HttpOnly Cookie real
+  setCookie(c, 'session_token', email, {
+    path: '/',
+    secure: true,
+    httpOnly: true,
+    maxAge: 60 * 60 * 24, // 24 horas
+    sameSite: 'Lax',
+  })
+
+  return c.json({ ok: true, message: 'Sesión iniciada correctamente', user: { email } })
 })
 
 // --- Analíticas ---
@@ -142,7 +155,8 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 // --- Gestión de Perfil (Resolución por Contexto) ---
 
 app.get('/api/v1/me', async (c) => {
-  const userEmail = c.req.header('X-User-Email') || 'juanluis@intaprd.com' // Mock hasta Auth completo
+  const userEmail = getCookie(c, 'session_token')
+  if (!userEmail) return c.json({ ok: false, error: 'No autorizado. Se requiere inicio de sesión.' }, 401)
 
   const user = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(userEmail).first()
   if (!user) return c.json({ ok: false, error: 'Usuario no encontrado' }, 404)

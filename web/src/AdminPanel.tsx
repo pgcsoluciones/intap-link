@@ -14,11 +14,9 @@ export default function AdminPanel() {
     const [loading, setLoading] = useState(true)
     const [message, setMessage] = useState('')
 
-    const adminEmail = 'juanluis@intaprd.com'
-
     useEffect(() => {
         fetch('/api/v1/admin/profiles', {
-            headers: { 'X-User-Email': adminEmail }
+            credentials: 'include'
         })
             .then(res => res.json())
             .then(json => {

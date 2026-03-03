@@ -51,28 +51,20 @@ export default function Dashboard() {
 
     const apiUrl = import.meta.env.VITE_API_URL || ''
 
-    const [mockEmail, setMockEmail] = useState('intapcard@gmail.com') // Todo: extraer esto de Auth en el futuro
+    const [showLoginModal, setShowLoginModal] = useState(false)
+    const [loginEmail, setLoginEmail] = useState('fliaprince@gmail.com')
+    const [authenticating, setAuthenticating] = useState(false)
 
     useEffect(() => {
-        // Permitir un querystring para testing fácil: ?email=fliaprince@gmail.com
-        const params = new URLSearchParams(window.location.search)
-        if (params.get('email')) {
-            setMockEmail(params.get('email') as string)
-        }
+        initDashboard()
     }, [])
-
-    useEffect(() => {
-        if (mockEmail) {
-            initDashboard()
-        }
-    }, [mockEmail]) // Recargar al obtener el email
 
     const initDashboard = async () => {
         setLoading(true)
         try {
-            // Paso 1: Obtener identidad y plan (Protocolo por Secciones)
+            // Paso 1: Obtener identidad y plan basada en Cookie HttpOnly
             const resMe = await fetch(`${apiUrl}/api/v1/me`, {
-                headers: { 'X-User-Email': mockEmail }
+                credentials: 'include'
             })
             const jsonMe = await resMe.json()
             if (jsonMe.ok) {
@@ -84,16 +76,46 @@ export default function Dashboard() {
                 const pId = jsonMe.data.profileId || 'profile_debug'
 
                 // Paso 2: Obtener datos de edición (Contextual)
-                const resProfile = await fetch(`${apiUrl}/api/v1/profile/me/${pId}`)
+                const resProfile = await fetch(`${apiUrl}/api/v1/profile/me/${pId}`, { credentials: 'include' })
                 const jsonProfile = await resProfile.json()
                 if (jsonProfile.ok) setProfile(jsonProfile.data)
+
+                setShowLoginModal(false)
+            } else if (resMe.status === 401) {
+                // No autorizado, requiere trigger de cookie manual
+                setShowLoginModal(true)
+                setError(null)
             } else {
-                setError('No autorizado o sesión expirada.')
+                setError(jsonMe.error || 'No autorizado o sesión expirada.')
             }
         } catch (e) {
             setError('Error de conexión con INTAP Node.')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleMockLogin = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setAuthenticating(true)
+        try {
+            const res = await fetch(`${apiUrl}/api/v1/auth/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: loginEmail, code: '123456' })
+            })
+            const data = await res.json()
+            if (data.ok) {
+                // Ya la cookie HttpOnly debe estar seteada, recargamos UI
+                await initDashboard()
+            } else {
+                alert('Error al iniciar: ' + data.error)
+            }
+        } catch (err) {
+            console.error('Login error', err)
+        } finally {
+            setAuthenticating(false)
         }
     }
 
@@ -111,6 +133,7 @@ export default function Dashboard() {
         try {
             const res = await fetch(`${apiUrl}/api/v1/profile/avatar/upload`, {
                 method: 'POST',
+                credentials: 'include',
                 body: formData
             })
             const json = await res.json()
@@ -131,6 +154,7 @@ export default function Dashboard() {
             const res = await fetch(`${apiUrl}/api/v1/profile/settings`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     profileId: profile.id,
                     name: profile.name,
@@ -149,6 +173,50 @@ export default function Dashboard() {
         } finally {
             setSaving(false)
         }
+    }
+
+    // --- Modal Login de Prueba (Placeholder hasta que haya App UI Completa) ---
+    if (showLoginModal) {
+        return (
+            <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex items-center justify-center p-6">
+                <form onSubmit={handleMockLogin} className="bg-white/5 border border-white/10 p-8 rounded-3xl w-full max-w-sm backdrop-blur-xl flex flex-col gap-6 animate-fade-in">
+                    <div className="text-center">
+                        <h2 className="text-2xl font-black italic mb-2 tracking-tighter bg-gradient-to-r from-intap-mint to-intap-blue bg-clip-text text-transparent">SESIÓN REQUERIDA</h2>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Etapa 4.5 HttpOnly Test</p>
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2 block">Email Real (Test DB)</label>
+                        <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required className="w-full bg-black/30 border border-white/10 p-4 rounded-xl text-sm font-bold outline-none focus:border-intap-mint transition-colors" />
+                    </div>
+                    <button type="submit" disabled={authenticating} className="bg-intap-mint text-intap-dark font-black py-4 rounded-xl shadow-[0_4px_20px_rgba(13,242,201,0.2)] disabled:opacity-50 mt-2 uppercase text-xs tracking-widest hover:scale-[1.02] transition-transform">
+                        {authenticating ? 'Autenticando...' : 'Obtener Cookie de Sesión'}
+                    </button>
+                    <p className="text-[10px] text-center text-slate-500 font-bold italic">Se usará PIN quemado '123456'</p>
+                </form>
+            </div>
+        )
+    }
+
+    // --- Modal Login de Prueba (Placeholder hasta que haya App UI Completa) ---
+    if (showLoginModal) {
+        return (
+            <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex items-center justify-center p-6">
+                <form onSubmit={handleMockLogin} className="bg-white/5 border border-white/10 p-8 rounded-3xl w-full max-w-sm backdrop-blur-xl flex flex-col gap-6 animate-fade-in">
+                    <div className="text-center">
+                        <h2 className="text-2xl font-black italic mb-2 tracking-tighter bg-gradient-to-r from-intap-mint to-intap-blue bg-clip-text text-transparent">SESIÓN REQUERIDA</h2>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Etapa 4.5 HttpOnly Test</p>
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2 block">Email Real (Test DB)</label>
+                        <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required className="w-full bg-black/30 border border-white/10 p-4 rounded-xl text-sm font-bold outline-none focus:border-intap-mint transition-colors" />
+                    </div>
+                    <button type="submit" disabled={authenticating} className="bg-intap-mint text-intap-dark font-black py-4 rounded-xl shadow-[0_4px_20px_rgba(13,242,201,0.2)] disabled:opacity-50 mt-2 uppercase text-xs tracking-widest hover:scale-[1.02] transition-transform">
+                        {authenticating ? 'Autenticando...' : 'Obtener Cookie de Sesión'}
+                    </button>
+                    <p className="text-[10px] text-center text-slate-500 font-bold italic">Se usará PIN quemado '123456'</p>
+                </form>
+            </div>
+        )
     }
 
     if (loading) return <div className="flex items-center justify-center h-screen bg-intap-dark text-intap-mint font-black italic animate-pulse tracking-widest text-center px-6">CARGANDO INTAP ENGINE...</div>
@@ -364,6 +432,7 @@ function LinkManager({ profileId, initialLinks }: { profileId: string, initialLi
             const res = await fetch(`${apiUrl}/api/v1/profile/links`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ profileId, label: newLabel, url: newUrl })
             })
             const json = await res.json()
@@ -378,7 +447,10 @@ function LinkManager({ profileId, initialLinks }: { profileId: string, initialLi
 
     const deleteLink = async (id: string) => {
         try {
-            const res = await fetch(`${apiUrl}/api/v1/profile/links/${id}`, { method: 'DELETE' })
+            const res = await fetch(`${apiUrl}/api/v1/profile/links/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
             if (res.ok) setLinks(links.filter(l => l.id !== id))
         } catch (e) {
             console.error('Error al eliminar link')
@@ -455,6 +527,7 @@ function GalleryManager({ profileId, initialPhotos }: { profileId: string, initi
         try {
             const res = await fetch(`${apiUrl}/api/v1/profile/gallery/upload`, {
                 method: 'POST',
+                credentials: 'include',
                 body: formData
             })
             const json = await res.json()
@@ -506,7 +579,7 @@ function LeadsManager({ profileId }: { profileId: string }) {
     const fetchLeads = async () => {
         setLoading(true)
         try {
-            const res = await fetch(`${apiUrl}/api/v1/profile/me/${profileId}/leads`)
+            const res = await fetch(`${apiUrl}/api/v1/profile/me/${profileId}/leads`, { credentials: 'include' })
             const json = await res.json()
             if (json.ok) setLeads(json.data)
         } catch (e) {
@@ -522,6 +595,7 @@ function LeadsManager({ profileId }: { profileId: string }) {
             const res = await fetch(`${apiUrl}/api/v1/profile/me/${profileId}/leads/${leadId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ status: newStatus })
             })
             if (res.ok) {
