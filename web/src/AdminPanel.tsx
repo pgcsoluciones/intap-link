@@ -20,7 +20,15 @@ export default function AdminPanel() {
         })
             .then(res => res.json())
             .then(json => {
-                if (json.ok) setProfiles(json.data)
+                if (json.ok) {
+                    setProfiles(json.data)
+                } else {
+                    // Si falla por sesión o permisos, botar al Login (Dashboard)
+                    window.location.href = '/'
+                }
+            })
+            .catch(() => {
+                window.location.href = '/'
             })
             .finally(() => setLoading(false))
     }, [])

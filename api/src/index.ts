@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { jwt } from 'hono/jwt'
-import { getCookie, setCookie } from 'hono/cookie'
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import { getEntitlements } from './engine/entitlements'
 
 type Bindings = {
@@ -15,6 +15,8 @@ const app = new Hono<{ Bindings: Bindings }>()
 app.use('*', cors({
   origin: (origin) => origin, // Permite cualquier origen dinámicamente y expone los headers de credenciales. Requerido para vite local y domains finales.
   credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-User-Email', 'X-Store-Id'],
 }))
 
 // --- Auth & Middlewares ---
@@ -63,6 +65,15 @@ app.post('/api/v1/auth/verify', async (c) => {
   })
 
   return c.json({ ok: true, message: 'Sesión iniciada correctamente', user: { email } })
+})
+
+app.post('/api/v1/auth/logout', async (c) => {
+  deleteCookie(c, 'session_token', {
+    path: '/',
+    secure: true,
+    sameSite: 'Lax',
+  })
+  return c.json({ ok: true, message: 'Sesión terminada' })
 })
 
 // --- Analíticas ---

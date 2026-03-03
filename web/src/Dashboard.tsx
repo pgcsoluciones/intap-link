@@ -119,6 +119,18 @@ export default function Dashboard() {
         }
     }
 
+    const handleLogout = async () => {
+        try {
+            await fetch(`${apiUrl}/api/v1/auth/logout`, {
+                method: 'POST',
+                credentials: 'include'
+            })
+            window.location.reload()
+        } catch (e) {
+            console.error('Error logout', e)
+        }
+    }
+
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file || !profile) return
@@ -273,10 +285,15 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                             {session && (
-                                <a href={`/${session.slug}`} target="_blank" className="bg-white/5 border border-white/10 p-2 lg:px-6 lg:py-3 rounded-full text-[10px] lg:text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2">
-                                    <span className="hidden lg:inline">Ver Perfil Público</span>
-                                    <svg className="w-4 h-4 lg:w-3 lg:h-3 text-intap-mint lg:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                </a>
+                                <div className="flex items-center gap-2">
+                                    <a href={`/${session.slug}`} target="_blank" className="bg-white/5 border border-white/10 p-2 lg:px-6 lg:py-3 rounded-full text-[10px] lg:text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2">
+                                        <span className="hidden lg:inline">Ver Perfil Público</span>
+                                        <svg className="w-4 h-4 lg:w-3 lg:h-3 text-intap-mint lg:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                    </a>
+                                    <button onClick={handleLogout} className="bg-red-500/10 border border-red-500/20 text-red-400 p-2 lg:px-4 lg:py-3 rounded-full text-[10px] lg:text-xs font-bold hover:bg-red-500/20 transition-all">
+                                        Cerrar sesión
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
