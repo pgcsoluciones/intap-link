@@ -22,6 +22,7 @@ GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleuse
 # Mientras no esté verificado, Resend solo entrega a la cuenta del owner (plan free).
 # Pasos: 1) Verificar intaprd.com en resend.com/domains  2) Hacer deploy
 RESEND_FROM = "noreply@intaprd.com"
+ADMIN_EMAILS = "fliaprince@gmail.com"
 
 [[d1_databases]]
 binding = "DB"

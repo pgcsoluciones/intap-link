@@ -94,9 +94,36 @@ function buildSessionCookie(value: string, appUrl: string, maxAge: number): stri
 // ─── Middlewares ──────────────────────────────────────────────────────────
 
 const requireAdmin = async (c: any, next: any) => {
-  const adminEmail = 'juanluis@intaprd.com'
-  const userEmail = getCookie(c, 'session_token')
-  if (userEmail !== adminEmail) return c.json({ ok: false, error: 'Forbidden' }, 403)
+  // 1) Validar que hay sesión activa
+  const cookieHeader = c.req.header('Cookie') || ''
+  const rawSession = parseCookie(cookieHeader, 'session_id')
+  if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+
+  const sessionHash = await sha256Hex(rawSession)
+  const session = await c.env.DB.prepare(
+    `SELECT user_id FROM auth_sessions
+     WHERE session_hash = ? AND expires_at > datetime('now') AND revoked_at IS NULL
+     LIMIT 1`
+  ).bind(sessionHash).first()
+  if (!session) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+
+  // 2) Obtener email del usuario
+  const userRow = await c.env.DB.prepare(
+    `SELECT email FROM users WHERE id = ? LIMIT 1`
+  ).bind((session as any).user_id).first()
+  if (!userRow) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+
+  // 3) Validar contra ADMIN_EMAILS (coma-separado, case-insensitive)
+  const adminEmailsRaw: string = c.env.ADMIN_EMAILS || ''
+  const adminList = adminEmailsRaw
+    .split(',')
+    .map((e: string) => e.trim().toLowerCase())
+    .filter(Boolean)
+  if (adminList.length === 0) return c.json({ ok: false, error: 'Forbidden' }, 403)
+
+  const userEmail = String((userRow as any).email || '').trim().toLowerCase()
+  if (!adminList.includes(userEmail)) return c.json({ ok: false, error: 'Forbidden' }, 403)
+
   await next()
 }
 
