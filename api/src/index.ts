@@ -15,6 +15,8 @@ type Bindings = {
   API_URL: string
   APP_URL: string
   ENVIRONMENT: string
+  ADMIN_EMAILS: string
+  ADMIN_API_KEY: string
 }
 
 type Variables = { userId: string }
@@ -1835,7 +1837,9 @@ async function sha256Base64Url(input: string): Promise<string> {
 
 app.get('/api/v1/admin/db-check', async (c) => {
   const key = c.req.header('X-Admin-Key') || c.req.query('key') || ''
-  if (key !== 'intap_master_key') return c.json({ ok: false, error: 'Forbidden' }, 403)
+  const adminApiKey = String((c.env as any).ADMIN_API_KEY || '')
+  if (!adminApiKey) return c.json({ ok: false, error: 'Admin API key not configured' }, 503)
+  if (key !== adminApiKey) return c.json({ ok: false, error: 'Forbidden' }, 403)
 
   const issues: string[] = []
   const checks: Record<string, any> = {}
@@ -1939,7 +1943,9 @@ app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
 
 app.post('/api/v1/admin/activate-module', async (c) => {
   const { profileId, moduleCode, secret } = await c.req.json()
-  if (secret !== 'intap_master_key') return c.json({ ok: false, error: 'Unauthorized' }, 401)
+  const adminApiKey = String((c.env as any).ADMIN_API_KEY || '')
+  if (!adminApiKey) return c.json({ ok: false, error: 'Admin API key not configured' }, 503)
+  if (secret !== adminApiKey) return c.json({ ok: false, error: 'Unauthorized' }, 401)
   await c.env.DB.prepare(
     `INSERT INTO profile_modules (profile_id, module_code, expires_at)
      VALUES (?, ?, datetime('now', '+1 year'))
