@@ -88,7 +88,7 @@ export default function AdminVisual() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    apiGet('/me/').then((json: any) => {
+    apiGet('/me').then((json: any) => {
       const d = json?.data
       if (d?.theme_id)    setThemeId(d.theme_id)
       if (d?.accent_color) setAccentColor(d.accent_color)
