@@ -262,19 +262,11 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
 // ─── Google OAuth ─────────────────────────────────────────────────────────
 
 app.get('/api/v1/auth/google/start', async (c) => {
-  const reqHostname = new URL(c.req.url).hostname
-  if (reqHostname.endsWith('.workers.dev')) {
-    const apiUrl   = (c.env as any).API_URL || 'https://intaprd.com'
-    const reqUrl   = new URL(c.req.url)
-    const canonical = new URL(reqUrl.pathname + reqUrl.search, apiUrl)
-    return Response.redirect(canonical.toString(), 301)
-  }
-
   const clientId = (c.env as any).GOOGLE_CLIENT_ID
   if (!clientId) return c.json({ ok: false, error: 'Google OAuth no configurado' }, 503)
 
   const state      = generateToken(16)
-  const apiUrl     = (c.env as any).API_URL || 'https://intaprd.com'
+  const apiUrl     = new URL(c.req.url).origin
   const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
   const params = new URLSearchParams({
@@ -297,14 +289,6 @@ app.get('/api/v1/auth/google/start', async (c) => {
 })
 
 app.get('/api/v1/auth/google/callback', async (c) => {
-  const reqHostname = new URL(c.req.url).hostname
-  if (reqHostname.endsWith('.workers.dev')) {
-    const apiUrl   = (c.env as any).API_URL || 'https://intaprd.com'
-    const reqUrl   = new URL(c.req.url)
-    const canonical = new URL(reqUrl.pathname + reqUrl.search, apiUrl)
-    return Response.redirect(canonical.toString(), 301)
-  }
-
   const code       = c.req.query('code')  || ''
   const state      = c.req.query('state') || ''
   const oauthError = c.req.query('error') || ''
@@ -322,7 +306,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
   const clientId     = (c.env as any).GOOGLE_CLIENT_ID
   const clientSecret = (c.env as any).GOOGLE_CLIENT_SECRET
-  const apiUrl       = (c.env as any).API_URL || 'https://intaprd.com'
+  const apiUrl       = new URL(c.req.url).origin
   const redirectUri  = `${apiUrl}/api/v1/auth/google/callback`
 
   // Intercambiar code por access_token
