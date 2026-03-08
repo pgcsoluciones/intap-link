@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiPost } from '../../lib/api'
-
-const API_ORIGIN = import.meta.env.VITE_API_URL ?? ''
+import { API_BASE, apiPost } from '../../lib/api'
 
 type Mode = 'login' | 'register'
 
@@ -33,7 +31,7 @@ export default function AdminLogin() {
   }
 
   const handleGoogle = () => {
-    window.location.href = `${API_ORIGIN}/api/v1/auth/google/start`
+    window.location.href = `${API_BASE}/auth/google/start`
   }
 
   const isRegister = mode === 'register'
