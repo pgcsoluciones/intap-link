@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import PublicProfile from './components/PublicProfile'
-import HomeLanding from './components/HomeLanding'
+import MarketingLanding from './components/MarketingLanding'
 
 function RootRoute() {
   const location = useLocation()
   const slug = new URLSearchParams(location.search).get('slug')
   if (slug) return <Navigate to={`/${slug}`} replace />
-  return <HomeLanding />
+  return <MarketingLanding />
 }
 
 function App() {

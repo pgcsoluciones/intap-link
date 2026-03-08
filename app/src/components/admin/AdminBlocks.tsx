@@ -68,7 +68,7 @@ export default function AdminBlocks() {
   const sensors = useSensors(useSensor(PointerSensor))
 
   useEffect(() => {
-    apiGet('/me/').then((json: any) => {
+    apiGet('/me').then((json: any) => {
       // blocks_order lives on the profile, retrieved via public endpoint
       // We'll load from /me — which doesn't expose it, so we fall back to default
       // (blocks_order is exposed on the public endpoint and could be loaded from there
