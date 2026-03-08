@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { getCookie } from 'hono/cookie'
 import { getEntitlements } from './engine/entitlements'
+import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 
 type Bindings = {
@@ -15,6 +16,8 @@ type Bindings = {
   API_URL: string
   APP_URL: string
   ENVIRONMENT: string
+  ADMIN_EMAILS: string
+  ADMIN_API_KEY: string
 }
 
 type Variables = { userId: string }
@@ -694,15 +697,27 @@ me.post('/links', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
+  const profileId = (profile as any).id
+
+  const limitError = await checkPlanLimit(c as any, profileId, 'links')
+  if (limitError) return limitError
+
   const maxRow = await c.env.DB.prepare(
     `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_links WHERE profile_id = ?`
-  ).bind((profile as any).id).first()
+  ).bind(profileId).first()
   const sortOrder = ((maxRow as any)?.mx ?? -1) + 1
 
   const id = crypto.randomUUID()
   await c.env.DB.prepare(
     `INSERT INTO profile_links (id, profile_id, label, url, sort_order) VALUES (?, ?, ?, ?, ?)`
-  ).bind(id, (profile as any).id, label, url, sortOrder).run()
+  ).bind(id, profileId, label, url, sortOrder).run()
+
+  console.log(JSON.stringify({
+    level: 'info', event: 'link_created',
+    route: '/api/v1/me/links', userId, profileId, linkId: id,
+    requestId: c.req.header('cf-ray') || '',
+  }))
+
   return c.json({ ok: true, id, sort_order: sortOrder }, 201)
 })
 
@@ -840,12 +855,9 @@ me.post('/faqs', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const profileId = (profile as any).id
-  const ent = await getEntitlements(c as any, profileId)
-  const countRow = await c.env.DB.prepare(
-    `SELECT COUNT(*) as n FROM profile_faqs WHERE profile_id = ?`
-  ).bind(profileId).first()
-  if (((countRow as any)?.n || 0) >= ent.maxFaqs)
-    return c.json({ ok: false, error: `Límite de FAQs alcanzado (${ent.maxFaqs})`, limit: ent.maxFaqs }, 403)
+
+  const limitError = await checkPlanLimit(c as any, profileId, 'faqs')
+  if (limitError) return limitError
 
   const maxRow = await c.env.DB.prepare(
     `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_faqs WHERE profile_id = ?`
@@ -856,6 +868,13 @@ me.post('/faqs', async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO profile_faqs (id, profile_id, question, answer, sort_order) VALUES (?, ?, ?, ?, ?)`
   ).bind(id, profileId, question, answer, sortOrder).run()
+
+  console.log(JSON.stringify({
+    level: 'info', event: 'faq_created',
+    route: '/api/v1/me/faqs', userId, profileId, faqId: id,
+    requestId: c.req.header('cf-ray') || '',
+  }))
+
   return c.json({ ok: true, id, sort_order: sortOrder }, 201)
 })
 
@@ -953,12 +972,9 @@ me.post('/products', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const profileId = (profile as any).id
-  const ent = await getEntitlements(c as any, profileId)
-  const countRow = await c.env.DB.prepare(
-    `SELECT COUNT(*) as n FROM profile_products WHERE profile_id = ?`
-  ).bind(profileId).first()
-  if (((countRow as any)?.n || 0) >= ent.maxProducts)
-    return c.json({ ok: false, error: `Límite de productos alcanzado (${ent.maxProducts})`, limit: ent.maxProducts }, 403)
+
+  const limitError = await checkPlanLimit(c as any, profileId, 'products')
+  if (limitError) return limitError
 
   const maxRow = await c.env.DB.prepare(
     `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_products WHERE profile_id = ?`
@@ -970,6 +986,13 @@ me.post('/products', async (c) => {
     `INSERT INTO profile_products (id, profile_id, title, description, price, image_url, whatsapp_text, is_featured, sort_order)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(id, profileId, title, description || null, price || null, image_url || null, whatsapp_text || null, is_featured, sortOrder).run()
+
+  console.log(JSON.stringify({
+    level: 'info', event: 'product_created',
+    route: '/api/v1/me/products', userId, profileId, productId: id,
+    requestId: c.req.header('cf-ray') || '',
+  }))
+
   return c.json({ ok: true, id, sort_order: sortOrder }, 201)
 })
 
@@ -1074,12 +1097,9 @@ me.post('/videos', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const profileId = (profile as any).id
-  const ent = await getEntitlements(c as any, profileId)
-  const countRow = await c.env.DB.prepare(
-    `SELECT COUNT(*) as n FROM profile_videos WHERE profile_id = ?`
-  ).bind(profileId).first()
-  if (((countRow as any)?.n || 0) >= ent.maxVideos)
-    return c.json({ ok: false, error: `Límite de videos alcanzado (${ent.maxVideos})`, limit: ent.maxVideos }, 403)
+
+  const limitError = await checkPlanLimit(c as any, profileId, 'videos')
+  if (limitError) return limitError
 
   const maxRow = await c.env.DB.prepare(
     `SELECT COALESCE(MAX(sort_order), -1) as mx FROM profile_videos WHERE profile_id = ?`
@@ -1090,6 +1110,13 @@ me.post('/videos', async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO profile_videos (id, profile_id, title, url, sort_order) VALUES (?, ?, ?, ?, ?)`
   ).bind(id, profileId, title || url, url, sortOrder).run()
+
+  console.log(JSON.stringify({
+    level: 'info', event: 'video_created',
+    route: '/api/v1/me/videos', userId, profileId, videoId: id,
+    requestId: c.req.header('cf-ray') || '',
+  }))
+
   return c.json({ ok: true, id, sort_order: sortOrder }, 201)
 })
 
@@ -1419,8 +1446,20 @@ app.get('/api/v1/profile/stats/:profileId', async (c) => {
 
 // ─── Galería (R2) ─────────────────────────────────────────────────────────
 
-app.post('/api/v1/profile/gallery/upload', async (c) => {
-  const { profileId } = await c.req.parseBody()
+app.post('/api/v1/profile/gallery/upload', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+
+  // Resolve profile from session — NEVER trust profileId from frontend
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+
+  // Check plan limit BEFORE uploading to R2 to avoid wasting storage
+  const limitError = await checkPlanLimit(c as any, profileId, 'photos')
+  if (limitError) return limitError
 
   const fd      = await c.req.formData()
   const fileVal = fd.get('file')
@@ -1430,16 +1469,25 @@ app.post('/api/v1/profile/gallery/upload', async (c) => {
   }
 
   const file = fileVal as any as File
+  const ext  = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+  if (!ALLOWED_EXTS.includes(ext)) return c.json({ ok: false, error: 'Formato no permitido' }, 400)
 
   const key = `profiles/${profileId}/${crypto.randomUUID()}-${file.name}`
-  await c.env.BUCKET.put(key, file.stream())
+  await c.env.BUCKET.put(key, file.stream(), {
+    httpMetadata: { contentType: file.type || 'image/jpeg' },
+  })
 
   const id = crypto.randomUUID()
   await c.env.DB.prepare(
     `INSERT INTO profile_gallery (id, profile_id, image_key, sort_order) VALUES (?, ?, ?, 0)`
-  )
-    .bind(id, profileId, key)
-    .run()
+  ).bind(id, profileId, key).run()
+
+  console.log(JSON.stringify({
+    level: 'info', event: 'gallery_upload_success',
+    route: '/api/v1/profile/gallery/upload', userId, profileId, key,
+    requestId: c.req.header('cf-ray') || '',
+  }))
 
   return c.json({ ok: true, id, key })
 })
@@ -1827,7 +1875,9 @@ async function sha256Base64Url(input: string): Promise<string> {
 
 app.get('/api/v1/admin/db-check', async (c) => {
   const key = c.req.header('X-Admin-Key') || c.req.query('key') || ''
-  if (key !== 'intap_master_key') return c.json({ ok: false, error: 'Forbidden' }, 403)
+  const adminApiKey = String((c.env as any).ADMIN_API_KEY || '')
+  if (!adminApiKey) return c.json({ ok: false, error: 'Admin API key not configured' }, 503)
+  if (key !== adminApiKey) return c.json({ ok: false, error: 'Forbidden' }, 403)
 
   const issues: string[] = []
   const checks: Record<string, any> = {}
@@ -1931,7 +1981,9 @@ app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
 
 app.post('/api/v1/admin/activate-module', async (c) => {
   const { profileId, moduleCode, secret } = await c.req.json()
-  if (secret !== 'intap_master_key') return c.json({ ok: false, error: 'Unauthorized' }, 401)
+  const adminApiKey = String((c.env as any).ADMIN_API_KEY || '')
+  if (!adminApiKey) return c.json({ ok: false, error: 'Admin API key not configured' }, 503)
+  if (secret !== adminApiKey) return c.json({ ok: false, error: 'Unauthorized' }, 401)
   await c.env.DB.prepare(
     `INSERT INTO profile_modules (profile_id, module_code, expires_at)
      VALUES (?, ?, datetime('now', '+1 year'))
