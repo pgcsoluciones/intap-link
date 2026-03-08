@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AdminGuard from './components/admin/AdminGuard'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminVerify from './components/admin/AdminVerify'
@@ -41,8 +41,8 @@ function App() {
         <Route path="/admin/template" element={<AdminGuard><AdminTemplate /></AdminGuard>} />
         <Route path="/admin"          element={<AdminGuard><AdminDashboard /></AdminGuard>} />
 
-        {/* Raíz → redirige al panel */}
-        <Route path="/" element={<Navigate to="/admin" replace />} />
+        {/* Entrada protegida */}
+        <Route path="/" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
       </Routes>
     </BrowserRouter>
   )

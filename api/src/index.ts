@@ -50,6 +50,14 @@ app.use('*', cors({
 }))
 app.options('*', (c) => c.body(null, 204))
 
+
+app.use('/api/*', async (c, next) => {
+  await next()
+  c.header('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0')
+  c.header('Pragma', 'no-cache')
+  c.header('Vary', 'Cookie, Origin')
+})
+
 // Global error handler
 app.onError((err, c) => {
   console.error('[onError]', err)
