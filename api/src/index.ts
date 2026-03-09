@@ -2025,38 +2025,49 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  const [totalRow, rows] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT COUNT(*) AS cnt
-       FROM users u
-       LEFT JOIN profiles p ON p.user_id = u.id
-       ${where}`
-    ).bind(...bindings).first<{ cnt: number }>(),
+  const fromWhere = `FROM users u LEFT JOIN profiles p ON p.user_id = u.id ${where}`
 
-    c.env.DB.prepare(
-      `SELECT
-         u.id          AS user_id,
-         u.email,
-         u.created_at  AS user_created_at,
-         p.id          AS profile_id,
-         p.slug,
-         p.name        AS profile_name,
-         p.plan_id,
-         p.is_active,
-         p.is_published,
-         p.trial_ends_at,
-         p.admin_notes,
-         (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id)    AS links_count,
-         (SELECT COUNT(*) FROM profile_modules pm
-          WHERE pm.profile_id = p.id
-            AND (pm.expires_at IS NULL OR pm.expires_at > datetime('now'))) AS active_modules
-       FROM users u
-       LEFT JOIN profiles p ON p.user_id = u.id
-       ${where}
-       ORDER BY u.created_at DESC
-       LIMIT ? OFFSET ?`
-    ).bind(...bindings, limit, offset).all(),
-  ])
+  // Try full query (includes migration-0023 columns trial_ends_at, admin_notes).
+  // Falls back to compat query returning NULL for those columns if 0023 not applied yet.
+  let totalRow: { cnt: number } | null | undefined
+  let rows: any
+
+  try {
+    ;[totalRow, rows] = await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fromWhere}`)
+        .bind(...bindings).first<{ cnt: number }>(),
+      c.env.DB.prepare(
+        `SELECT u.id AS user_id, u.email, u.created_at AS user_created_at,
+                p.id AS profile_id, p.slug, p.name AS profile_name,
+                p.plan_id, p.is_active, p.is_published,
+                p.trial_ends_at, p.admin_notes,
+                (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id) AS links_count,
+                (SELECT COUNT(*) FROM profile_modules pm
+                 WHERE pm.profile_id = p.id
+                   AND (pm.expires_at IS NULL OR pm.expires_at > datetime('now'))) AS active_modules
+         ${fromWhere}
+         ORDER BY u.created_at DESC LIMIT ? OFFSET ?`
+      ).bind(...bindings, limit, offset).all(),
+    ])
+  } catch {
+    // Fallback: migration 0023 columns not yet present in DB — return NULL for them
+    ;[totalRow, rows] = await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fromWhere}`)
+        .bind(...bindings).first<{ cnt: number }>(),
+      c.env.DB.prepare(
+        `SELECT u.id AS user_id, u.email, u.created_at AS user_created_at,
+                p.id AS profile_id, p.slug, p.name AS profile_name,
+                p.plan_id, p.is_active, p.is_published,
+                NULL AS trial_ends_at, NULL AS admin_notes,
+                (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id) AS links_count,
+                (SELECT COUNT(*) FROM profile_modules pm
+                 WHERE pm.profile_id = p.id
+                   AND (pm.expires_at IS NULL OR pm.expires_at > datetime('now'))) AS active_modules
+         ${fromWhere}
+         ORDER BY u.created_at DESC LIMIT ? OFFSET ?`
+      ).bind(...bindings, limit, offset).all(),
+    ])
+  }
 
   return c.json({
     ok:   true,
@@ -2094,7 +2105,18 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
            JOIN modules m ON pm.module_code = m.code
            WHERE pm.profile_id = ?
            ORDER BY pm.activated_at DESC`
-        ).bind(profileId).all()
+        ).bind(profileId).all().catch(() =>
+          // Fallback: migration 0023 columns not yet present — return NULLs
+          c.env.DB.prepare(
+            `SELECT pm.module_code, pm.expires_at, pm.activated_at,
+                    NULL AS assigned_by, NULL AS assignment_reason,
+                    m.name AS module_name
+             FROM profile_modules pm
+             JOIN modules m ON pm.module_code = m.code
+             WHERE pm.profile_id = ?
+             ORDER BY pm.activated_at DESC`
+          ).bind(profileId).all()
+        )
       : Promise.resolve({ results: [] }),
 
     profileId
@@ -2216,20 +2238,29 @@ app.get('/api/v1/superadmin/audit', requireSuperAdmin('viewer'), async (c) => {
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
-  const [totalRow, rows] = await Promise.all([
-    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM admin_audit_log a ${where}`)
-      .bind(...bindings).first<{ cnt: number }>(),
-    c.env.DB.prepare(
-      `SELECT a.id, a.admin_user_id, u.email AS admin_email,
-              a.action, a.target_type, a.target_id,
-              a.before_json, a.after_json, a.ip, a.created_at
-       FROM admin_audit_log a
-       LEFT JOIN users u ON a.admin_user_id = u.id
-       ${where}
-       ORDER BY a.created_at DESC
-       LIMIT ? OFFSET ?`
-    ).bind(...bindings, limit, offset).all(),
-  ])
+  let totalRow: { cnt: number } | null | undefined
+  let rows: any
+
+  try {
+    ;[totalRow, rows] = await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM admin_audit_log a ${where}`)
+        .bind(...bindings).first<{ cnt: number }>(),
+      c.env.DB.prepare(
+        `SELECT a.id, a.admin_user_id, u.email AS admin_email,
+                a.action, a.target_type, a.target_id,
+                a.before_json, a.after_json, a.ip, a.created_at
+         FROM admin_audit_log a
+         LEFT JOIN users u ON a.admin_user_id = u.id
+         ${where}
+         ORDER BY a.created_at DESC
+         LIMIT ? OFFSET ?`
+      ).bind(...bindings, limit, offset).all(),
+    ])
+  } catch {
+    // admin_audit_log table doesn't exist yet (migration 0023 pending) — return empty
+    totalRow = { cnt: 0 }
+    rows = { results: [] }
+  }
 
   return c.json({
     ok:   true,
@@ -2241,15 +2272,21 @@ app.get('/api/v1/superadmin/audit', requireSuperAdmin('viewer'), async (c) => {
 // ── GET /api/v1/superadmin/admins ────────────────────────────────────────────
 // Lista todos los usuarios con acceso admin (desde tabla admin_users).
 app.get('/api/v1/superadmin/admins', requireSuperAdmin('super_admin'), async (c) => {
-  const rows = await c.env.DB.prepare(
-    `SELECT au.user_id, au.role, au.granted_at, au.notes,
-            u.email,
-            gb.email AS granted_by_email
-     FROM admin_users au
-     JOIN users u ON au.user_id = u.id
-     LEFT JOIN users gb ON au.granted_by = gb.id
-     ORDER BY au.granted_at DESC`
-  ).all()
+  let rows: any
+  try {
+    rows = await c.env.DB.prepare(
+      `SELECT au.user_id, au.role, au.granted_at, au.notes,
+              u.email,
+              gb.email AS granted_by_email
+       FROM admin_users au
+       JOIN users u ON au.user_id = u.id
+       LEFT JOIN users gb ON au.granted_by = gb.id
+       ORDER BY au.granted_at DESC`
+    ).all()
+  } catch {
+    // admin_users table doesn't exist yet (migration 0023 pending) — return empty
+    rows = { results: [] }
+  }
   return c.json({ ok: true, data: rows.results })
 })
 
