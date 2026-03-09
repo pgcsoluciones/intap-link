@@ -2,9 +2,14 @@
 -- Super Admin Foundation: admin_users, admin_audit_log, profile_plan_overrides
 -- + columnas nuevas en profiles y profile_modules
 --
--- NOTA: SQLite/D1 no soporta ALTER TABLE ADD COLUMN IF NOT EXISTS.
--- Las secciones 4 y 5 usan el patrón rename-table (igual que 0012 y 0017)
--- para garantizar idempotencia real en producción.
+-- ⚠️  MIGRACIÓN ONE-TIME — gestionada por Wrangler (d1_migrations).
+--     Wrangler la ejecuta exactamente una vez y nunca la re-aplica.
+--     NO re-ejecutar manualmente: las secciones 4 y 5 usan DROP TABLE,
+--     y SQLite no permite SELECT de columnas que aún no existen, por lo que
+--     es imposible lograr idempotencia real en SQL puro para este patrón.
+--
+-- Secciones 1-3: CREATE TABLE IF NOT EXISTS → seguras en cualquier re-run.
+-- Secciones 4-5: rename-table (patrón 0012/0017) → seguras solo en first-run.
 
 -- ── 1. Tabla admin_users ─────────────────────────────────────────────────────
 -- Roles: 'super_admin' | 'support' | 'viewer'
@@ -66,9 +71,12 @@ CREATE TABLE IF NOT EXISTS profile_plan_overrides (
 );
 
 -- ── 4. Nuevas columnas en profiles ───────────────────────────────────────────
--- Patrón rename-table: crea tabla nueva con schema completo, copia datos de
--- columnas garantizadas (0001→0022), descarta la vieja, renombra la nueva.
--- Las columnas nuevas quedan NULL — correcto para perfiles existentes.
+-- Patrón rename-table (one-time): crea tabla nueva con schema completo,
+-- copia las columnas garantizadas (0001→0022), descarta la vieja, renombra.
+-- Las columnas nuevas (trial_ends_at, deactivation_reason, admin_notes) no se
+-- pueden copiar aquí porque no existen en la tabla origen en el primer run;
+-- incluirlas en el SELECT causaría "no such column" en SQLite/D1.
+-- En re-run manual: datos de esas columnas se perderían — por eso es one-time.
 
 PRAGMA foreign_keys = OFF;
 
@@ -101,8 +109,8 @@ CREATE TABLE profiles_v23 (
   admin_notes         TEXT
 );
 
--- Solo se copian las columnas garantizadas desde 0017+0018+0022.
--- Las tres columnas nuevas quedan NULL (sin datos previos que preservar).
+-- Copia columnas garantizadas 0017+0018+0022.
+-- Las tres columnas nuevas quedan NULL en todos los perfiles existentes.
 INSERT OR IGNORE INTO profiles_v23 (
   id, user_id, slug, plan_id, theme_id, name, bio,
   is_published, created_at, whatsapp_number, avatar_url,
@@ -144,8 +152,9 @@ CREATE INDEX        IF NOT EXISTS idx_profiles_active      ON profiles (is_activ
 CREATE INDEX        IF NOT EXISTS idx_profiles_template    ON profiles (template_id) WHERE template_id IS NOT NULL;
 
 -- ── 5. Nuevas columnas en profile_modules ────────────────────────────────────
--- Mismo patrón rename-table. Las columnas nuevas quedan NULL.
--- Columnas de origen: las de 0001 (activated_at).
+-- Mismo patrón rename-table one-time. Las columnas nuevas (assigned_by,
+-- assignment_reason) quedan NULL. Misma limitación que sección 4:
+-- incluirlas en el SELECT fallaría en first-run.
 
 DROP TABLE IF EXISTS profile_modules_v23;
 
