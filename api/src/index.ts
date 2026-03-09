@@ -2037,7 +2037,7 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
       c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fromWhere}`)
         .bind(...bindings).first<{ cnt: number }>(),
       c.env.DB.prepare(
-        `SELECT u.id AS user_id, u.email, u.created_at AS user_created_at,
+        `SELECT u.id AS user_id, u.email, p.created_at AS user_created_at,
                 p.id AS profile_id, p.slug, p.name AS profile_name,
                 p.plan_id, p.is_active, p.is_published,
                 p.trial_ends_at, p.admin_notes,
@@ -2046,11 +2046,10 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
                  WHERE pm.profile_id = p.id
                    AND (pm.expires_at IS NULL OR pm.expires_at > datetime('now'))) AS active_modules
          ${fromWhere}
-         ORDER BY u.created_at DESC LIMIT ? OFFSET ?`
+         ORDER BY p.created_at DESC, u.id DESC LIMIT ? OFFSET ?`
       ).bind(...bindings, limit, offset).all(),
     ])
   } catch (err: any) {
-    // Surface the real D1 error so it appears in wrangler tail and response body
     const errMsg = err?.message ?? String(err)
     console.error('[subscribers] query failed:', errMsg, err)
     return c.json({ ok: false, error: 'subscribers_query_failed', detail: errMsg }, 500)
@@ -2069,7 +2068,7 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
   const targetUserId = c.req.param('userId')
 
   const [userRow, profileRow] = await Promise.all([
-    c.env.DB.prepare(`SELECT id, email, created_at FROM users WHERE id = ? LIMIT 1`)
+    c.env.DB.prepare(`SELECT id, email, NULL AS created_at FROM users WHERE id = ? LIMIT 1`)
       .bind(targetUserId).first(),
     c.env.DB.prepare(
       `SELECT p.*, pl.max_links, pl.max_photos, pl.max_faqs, pl.max_products, pl.max_videos, pl.can_use_vcard
