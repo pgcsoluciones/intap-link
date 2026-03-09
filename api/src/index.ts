@@ -2049,24 +2049,11 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
          ORDER BY u.created_at DESC LIMIT ? OFFSET ?`
       ).bind(...bindings, limit, offset).all(),
     ])
-  } catch {
-    // Fallback: migration 0023 columns not yet present in DB — return NULL for them
-    ;[totalRow, rows] = await Promise.all([
-      c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fromWhere}`)
-        .bind(...bindings).first<{ cnt: number }>(),
-      c.env.DB.prepare(
-        `SELECT u.id AS user_id, u.email, u.created_at AS user_created_at,
-                p.id AS profile_id, p.slug, p.name AS profile_name,
-                p.plan_id, p.is_active, p.is_published,
-                NULL AS trial_ends_at, NULL AS admin_notes,
-                (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id) AS links_count,
-                (SELECT COUNT(*) FROM profile_modules pm
-                 WHERE pm.profile_id = p.id
-                   AND (pm.expires_at IS NULL OR pm.expires_at > datetime('now'))) AS active_modules
-         ${fromWhere}
-         ORDER BY u.created_at DESC LIMIT ? OFFSET ?`
-      ).bind(...bindings, limit, offset).all(),
-    ])
+  } catch (err: any) {
+    // Surface the real D1 error so it appears in wrangler tail and response body
+    const errMsg = err?.message ?? String(err)
+    console.error('[subscribers] query failed:', errMsg, err)
+    return c.json({ ok: false, error: 'subscribers_query_failed', detail: errMsg }, 500)
   }
 
   return c.json({
