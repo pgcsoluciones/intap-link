@@ -2158,10 +2158,10 @@ app.get('/api/v1/superadmin/metrics/overview', requireSuperAdmin('viewer'), asyn
     ).all(),
     c.env.DB.prepare(
       `SELECT COUNT(*) AS cnt FROM users WHERE created_at >= datetime('now', '-7 days')`
-    ).first<{ cnt: number }>(),
+    ).first<{ cnt: number }>().catch(() => ({ cnt: 0 })),
     c.env.DB.prepare(
       `SELECT COUNT(*) AS cnt FROM users WHERE created_at >= datetime('now', '-30 days')`
-    ).first<{ cnt: number }>(),
+    ).first<{ cnt: number }>().catch(() => ({ cnt: 0 })),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM profiles WHERE is_active = 1`).first<{ cnt: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM profiles WHERE is_active = 0`).first<{ cnt: number }>(),
     c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM leads`).first<{ cnt: number }>().catch(() => ({ cnt: 0 })),

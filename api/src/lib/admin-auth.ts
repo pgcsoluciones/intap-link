@@ -71,9 +71,10 @@ export function requireSuperAdmin(minRole: AdminRole = 'viewer') {
     const userId: string = (session as any).user_id
 
     // 2. Look up role in admin_users table first
+    // .catch(() => null): si la tabla aún no existe (pre-migración 0023), cae al fallback ADMIN_EMAILS
     const adminRow = await c.env.DB.prepare(
       `SELECT role FROM admin_users WHERE user_id = ? LIMIT 1`
-    ).bind(userId).first<{ role: AdminRole }>()
+    ).bind(userId).first<{ role: AdminRole }>().catch(() => null)
 
     let resolvedRole: AdminRole | null = adminRow?.role ?? null
 
