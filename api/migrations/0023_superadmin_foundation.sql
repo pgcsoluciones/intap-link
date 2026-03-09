@@ -171,13 +171,12 @@ CREATE TABLE profile_modules_v23 (
 );
 
 INSERT OR IGNORE INTO profile_modules_v23 (
-  profile_id, module_code, expires_at, activated_at
+  profile_id, module_code, expires_at
 )
 SELECT
   profile_id,
   module_code,
-  expires_at,
-  COALESCE(activated_at, datetime('now'))
+  expires_at
 FROM profile_modules;
 
 DROP TABLE profile_modules;
