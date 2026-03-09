@@ -4,6 +4,7 @@ import { getCookie } from 'hono/cookie'
 import { getEntitlements } from './engine/entitlements'
 import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
+import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 
 type Bindings = {
   DB: D1Database
@@ -1992,6 +1993,264 @@ app.post('/api/v1/admin/activate-module', async (c) => {
     .bind(profileId, moduleCode)
     .run()
   return c.json({ ok: true, message: `Módulo ${moduleCode} activado` })
+})
+
+// ─── Super Admin — Fase 7.2A (solo lectura) ──────────────────────────────────
+// Todos los endpoints requieren rol mínimo 'viewer' salvo que se indique otro.
+// URL base: /api/v1/superadmin/
+
+// ── GET /api/v1/superadmin/subscribers ────────────────────────────────────────
+// Lista paginada de suscriptores (usuario + perfil + plan).
+// Query params: page (default 1), limit (default 25, max 100),
+//               plan (plan_id filter), status ('active'|'inactive'),
+//               q (search by email or slug, case-insensitive).
+app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c) => {
+  const page   = Math.max(1, parseInt(c.req.query('page')  || '1', 10))
+  const limit  = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '25', 10)))
+  const plan   = (c.req.query('plan')   || '').trim()
+  const status = (c.req.query('status') || '').trim()  // 'active' | 'inactive'
+  const q      = (c.req.query('q')      || '').trim()
+  const offset = (page - 1) * limit
+
+  const conditions: string[] = []
+  const bindings: unknown[]  = []
+
+  if (plan)   { conditions.push(`p.plan_id = ?`);   bindings.push(plan) }
+  if (status === 'active')   conditions.push(`p.is_active = 1`)
+  if (status === 'inactive') conditions.push(`p.is_active = 0`)
+  if (q) {
+    conditions.push(`(u.email LIKE ? OR p.slug LIKE ?)`)
+    bindings.push(`%${q}%`, `%${q}%`)
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  const [totalRow, rows] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS cnt
+       FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       ${where}`
+    ).bind(...bindings).first<{ cnt: number }>(),
+
+    c.env.DB.prepare(
+      `SELECT
+         u.id          AS user_id,
+         u.email,
+         u.created_at  AS user_created_at,
+         p.id          AS profile_id,
+         p.slug,
+         p.name        AS profile_name,
+         p.plan_id,
+         p.is_active,
+         p.is_published,
+         p.trial_ends_at,
+         p.admin_notes,
+         (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id)    AS links_count,
+         (SELECT COUNT(*) FROM profile_modules pm
+          WHERE pm.profile_id = p.id
+            AND (pm.expires_at IS NULL OR pm.expires_at > datetime('now'))) AS active_modules
+       FROM users u
+       LEFT JOIN profiles p ON p.user_id = u.id
+       ${where}
+       ORDER BY u.created_at DESC
+       LIMIT ? OFFSET ?`
+    ).bind(...bindings, limit, offset).all(),
+  ])
+
+  return c.json({
+    ok:   true,
+    meta: { page, limit, total: totalRow?.cnt ?? 0, pages: Math.ceil((totalRow?.cnt ?? 0) / limit) },
+    data: rows.results,
+  })
+})
+
+// ── GET /api/v1/superadmin/subscribers/:userId ────────────────────────────────
+// Detalle completo de un suscriptor: usuario + perfil + módulos + overrides + audit.
+app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), async (c) => {
+  const targetUserId = c.req.param('userId')
+
+  const [userRow, profileRow] = await Promise.all([
+    c.env.DB.prepare(`SELECT id, email, created_at FROM users WHERE id = ? LIMIT 1`)
+      .bind(targetUserId).first(),
+    c.env.DB.prepare(
+      `SELECT p.*, pl.max_links, pl.max_photos, pl.max_faqs, pl.max_products, pl.max_videos, pl.can_use_vcard
+       FROM profiles p
+       LEFT JOIN plan_limits pl ON p.plan_id = pl.plan_id
+       WHERE p.user_id = ? LIMIT 1`
+    ).bind(targetUserId).first(),
+  ])
+
+  if (!userRow) return c.json({ ok: false, error: 'User not found' }, 404)
+
+  const profileId = (profileRow as any)?.id ?? null
+
+  const [modules, overrides, recentAudit, linkCount, leadCount] = await Promise.all([
+    profileId
+      ? c.env.DB.prepare(
+          `SELECT pm.module_code, pm.expires_at, pm.activated_at, pm.assigned_by, pm.assignment_reason,
+                  m.name AS module_name
+           FROM profile_modules pm
+           JOIN modules m ON pm.module_code = m.code
+           WHERE pm.profile_id = ?
+           ORDER BY pm.activated_at DESC`
+        ).bind(profileId).all()
+      : Promise.resolve({ results: [] }),
+
+    profileId
+      ? c.env.DB.prepare(
+          `SELECT * FROM profile_plan_overrides WHERE profile_id = ? LIMIT 1`
+        ).bind(profileId).first().catch(() => null)
+      : Promise.resolve(null),
+
+    c.env.DB.prepare(
+      `SELECT action, target_type, target_id, before_json, after_json, created_at
+       FROM admin_audit_log
+       WHERE target_id = ? OR target_id = ?
+       ORDER BY created_at DESC LIMIT 20`
+    ).bind(targetUserId, profileId ?? '').all().catch(() => ({ results: [] })),
+
+    profileId
+      ? c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM profile_links WHERE profile_id = ?`)
+          .bind(profileId).first<{ cnt: number }>()
+      : Promise.resolve({ cnt: 0 }),
+
+    profileId
+      ? c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM leads WHERE profile_slug = (SELECT slug FROM profiles WHERE id = ?)`)
+          .bind(profileId).first<{ cnt: number }>().catch(() => ({ cnt: 0 }))
+      : Promise.resolve({ cnt: 0 }),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      user:           userRow,
+      profile:        profileRow,
+      plan_overrides: overrides,
+      active_modules: (modules as any).results,
+      stats: {
+        links_count: linkCount?.cnt ?? 0,
+        leads_count: leadCount?.cnt ?? 0,
+      },
+      recent_audit: (recentAudit as any).results,
+    },
+  })
+})
+
+// ── GET /api/v1/superadmin/metrics/overview ───────────────────────────────────
+// Métricas agregadas del negocio: totales por plan, altas semanales, activos.
+app.get('/api/v1/superadmin/metrics/overview', requireSuperAdmin('viewer'), async (c) => {
+  const [
+    totalUsers,
+    totalProfiles,
+    byPlan,
+    newUsersWeek,
+    newUsersMonth,
+    activeProfiles,
+    inactiveProfiles,
+    totalLeads,
+    leadsWeek,
+  ] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM users`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM profiles`).first<{ cnt: number }>(),
+    c.env.DB.prepare(
+      `SELECT plan_id, COUNT(*) AS cnt FROM profiles GROUP BY plan_id ORDER BY cnt DESC`
+    ).all(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS cnt FROM users WHERE created_at >= datetime('now', '-7 days')`
+    ).first<{ cnt: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS cnt FROM users WHERE created_at >= datetime('now', '-30 days')`
+    ).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM profiles WHERE is_active = 1`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM profiles WHERE is_active = 0`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM leads`).first<{ cnt: number }>().catch(() => ({ cnt: 0 })),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS cnt FROM leads WHERE created_at >= datetime('now', '-7 days')`
+    ).first<{ cnt: number }>().catch(() => ({ cnt: 0 })),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      users: {
+        total:       totalUsers?.cnt        ?? 0,
+        new_7d:      newUsersWeek?.cnt      ?? 0,
+        new_30d:     newUsersMonth?.cnt     ?? 0,
+      },
+      profiles: {
+        total:       totalProfiles?.cnt     ?? 0,
+        active:      activeProfiles?.cnt    ?? 0,
+        inactive:    inactiveProfiles?.cnt  ?? 0,
+        by_plan:     byPlan.results,
+      },
+      leads: {
+        total:       totalLeads?.cnt        ?? 0,
+        new_7d:      leadsWeek?.cnt         ?? 0,
+      },
+    },
+  })
+})
+
+// ── GET /api/v1/superadmin/audit ──────────────────────────────────────────────
+// Audit log paginado con filtros.
+// Query params: page, limit, admin_user_id, action, target_type, from (ISO date), to.
+app.get('/api/v1/superadmin/audit', requireSuperAdmin('viewer'), async (c) => {
+  const page        = Math.max(1, parseInt(c.req.query('page')  || '1',  10))
+  const limit       = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50', 10)))
+  const adminFilter = (c.req.query('admin_user_id') || '').trim()
+  const actionFilter= (c.req.query('action')        || '').trim()
+  const typeFilter  = (c.req.query('target_type')   || '').trim()
+  const fromDate    = (c.req.query('from')           || '').trim()
+  const toDate      = (c.req.query('to')             || '').trim()
+  const offset      = (page - 1) * limit
+
+  const conditions: string[] = []
+  const bindings: unknown[]  = []
+
+  if (adminFilter) { conditions.push(`a.admin_user_id = ?`); bindings.push(adminFilter) }
+  if (actionFilter){ conditions.push(`a.action = ?`);        bindings.push(actionFilter) }
+  if (typeFilter)  { conditions.push(`a.target_type = ?`);   bindings.push(typeFilter)   }
+  if (fromDate)    { conditions.push(`a.created_at >= ?`);   bindings.push(fromDate)     }
+  if (toDate)      { conditions.push(`a.created_at <= ?`);   bindings.push(toDate)       }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  const [totalRow, rows] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM admin_audit_log a ${where}`)
+      .bind(...bindings).first<{ cnt: number }>(),
+    c.env.DB.prepare(
+      `SELECT a.id, a.admin_user_id, u.email AS admin_email,
+              a.action, a.target_type, a.target_id,
+              a.before_json, a.after_json, a.ip, a.created_at
+       FROM admin_audit_log a
+       LEFT JOIN users u ON a.admin_user_id = u.id
+       ${where}
+       ORDER BY a.created_at DESC
+       LIMIT ? OFFSET ?`
+    ).bind(...bindings, limit, offset).all(),
+  ])
+
+  return c.json({
+    ok:   true,
+    meta: { page, limit, total: totalRow?.cnt ?? 0, pages: Math.ceil((totalRow?.cnt ?? 0) / limit) },
+    data: rows.results,
+  })
+})
+
+// ── GET /api/v1/superadmin/admins ────────────────────────────────────────────
+// Lista todos los usuarios con acceso admin (desde tabla admin_users).
+app.get('/api/v1/superadmin/admins', requireSuperAdmin('super_admin'), async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT au.user_id, au.role, au.granted_at, au.notes,
+            u.email,
+            gb.email AS granted_by_email
+     FROM admin_users au
+     JOIN users u ON au.user_id = u.id
+     LEFT JOIN users gb ON au.granted_by = gb.id
+     ORDER BY au.granted_at DESC`
+  ).all()
+  return c.json({ ok: true, data: rows.results })
 })
 
 export default app
