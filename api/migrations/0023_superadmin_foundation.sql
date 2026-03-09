@@ -1,7 +1,10 @@
 -- 0023_superadmin_foundation.sql
 -- Super Admin Foundation: admin_users, admin_audit_log, profile_plan_overrides
 -- + columnas nuevas en profiles y profile_modules
--- Todas las sentencias son idempotentes (IF NOT EXISTS / IF NOT EXIST).
+--
+-- NOTA: SQLite/D1 no soporta ALTER TABLE ADD COLUMN IF NOT EXISTS.
+-- Las secciones 4 y 5 usan el patrón rename-table (igual que 0012 y 0017)
+-- para garantizar idempotencia real en producción.
 
 -- ── 1. Tabla admin_users ─────────────────────────────────────────────────────
 -- Roles: 'super_admin' | 'support' | 'viewer'
@@ -63,15 +66,115 @@ CREATE TABLE IF NOT EXISTS profile_plan_overrides (
 );
 
 -- ── 4. Nuevas columnas en profiles ───────────────────────────────────────────
+-- Patrón rename-table: crea tabla nueva con schema completo, copia datos de
+-- columnas garantizadas (0001→0022), descarta la vieja, renombra la nueva.
+-- Las columnas nuevas quedan NULL — correcto para perfiles existentes.
 
-ALTER TABLE profiles ADD COLUMN trial_ends_at        DATETIME;
-ALTER TABLE profiles ADD COLUMN deactivation_reason  TEXT;
-ALTER TABLE profiles ADD COLUMN admin_notes          TEXT;
+PRAGMA foreign_keys = OFF;
+
+DROP TABLE IF EXISTS profiles_v23;
+
+CREATE TABLE profiles_v23 (
+  id                  TEXT     PRIMARY KEY,
+  user_id             TEXT     NOT NULL,
+  slug                TEXT     UNIQUE NOT NULL,
+  plan_id             TEXT     NOT NULL DEFAULT 'free',
+  theme_id            TEXT     NOT NULL DEFAULT 'default',
+  name                TEXT,
+  bio                 TEXT,
+  is_published        INTEGER  NOT NULL DEFAULT 0,
+  created_at          DATETIME NOT NULL DEFAULT (datetime('now')),
+  whatsapp_number     TEXT,
+  avatar_url          TEXT,
+  category            TEXT,
+  subcategory         TEXT,
+  updated_at          DATETIME,
+  is_active           INTEGER  NOT NULL DEFAULT 1,
+  blocks_order        TEXT     DEFAULT '["links","faqs","products","video","gallery"]',
+  accent_color        TEXT     DEFAULT '#3B82F6',
+  button_style        TEXT     DEFAULT 'rounded',
+  template_id         TEXT,
+  template_data       TEXT     NOT NULL DEFAULT '{}',
+  -- columnas 0023 (admin)
+  trial_ends_at       DATETIME,
+  deactivation_reason TEXT,
+  admin_notes         TEXT
+);
+
+-- Solo se copian las columnas garantizadas desde 0017+0018+0022.
+-- Las tres columnas nuevas quedan NULL (sin datos previos que preservar).
+INSERT OR IGNORE INTO profiles_v23 (
+  id, user_id, slug, plan_id, theme_id, name, bio,
+  is_published, created_at, whatsapp_number, avatar_url,
+  category, subcategory, updated_at, is_active,
+  blocks_order, accent_color, button_style,
+  template_id, template_data
+)
+SELECT
+  id,
+  user_id,
+  slug,
+  COALESCE(plan_id,       'free'),
+  COALESCE(theme_id,      'default'),
+  name,
+  bio,
+  COALESCE(is_published,  0),
+  COALESCE(created_at,    datetime('now')),
+  whatsapp_number,
+  avatar_url,
+  category,
+  subcategory,
+  updated_at,
+  COALESCE(is_active,     1),
+  COALESCE(blocks_order,  '["links","faqs","products","video","gallery"]'),
+  COALESCE(accent_color,  '#3B82F6'),
+  COALESCE(button_style,  'rounded'),
+  template_id,
+  COALESCE(template_data, '{}')
+FROM profiles;
+
+DROP TABLE profiles;
+ALTER TABLE profiles_v23 RENAME TO profiles;
+
+-- Recrear todos los índices de profiles (0017 + 0022)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_slug        ON profiles (slug);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_profiles_user_unique ON profiles (user_id);
+CREATE INDEX        IF NOT EXISTS idx_profiles_user_id     ON profiles (user_id);
+CREATE INDEX        IF NOT EXISTS idx_profiles_active      ON profiles (is_active, is_published);
+CREATE INDEX        IF NOT EXISTS idx_profiles_template    ON profiles (template_id) WHERE template_id IS NOT NULL;
 
 -- ── 5. Nuevas columnas en profile_modules ────────────────────────────────────
+-- Mismo patrón rename-table. Las columnas nuevas quedan NULL.
+-- Columnas de origen: las de 0001 (activated_at).
 
-ALTER TABLE profile_modules ADD COLUMN assigned_by         TEXT;   -- user_id del admin
-ALTER TABLE profile_modules ADD COLUMN assignment_reason   TEXT;
+DROP TABLE IF EXISTS profile_modules_v23;
+
+CREATE TABLE profile_modules_v23 (
+  profile_id         TEXT NOT NULL,
+  module_code        TEXT NOT NULL,
+  expires_at         DATETIME,
+  activated_at       DATETIME NOT NULL DEFAULT (datetime('now')),
+  assigned_by        TEXT,   -- user_id del admin
+  assignment_reason  TEXT,
+  PRIMARY KEY (profile_id, module_code),
+  FOREIGN KEY (profile_id)   REFERENCES profiles(id)     ON DELETE CASCADE,
+  FOREIGN KEY (module_code)  REFERENCES modules(code)
+);
+
+INSERT OR IGNORE INTO profile_modules_v23 (
+  profile_id, module_code, expires_at, activated_at
+)
+SELECT
+  profile_id,
+  module_code,
+  expires_at,
+  COALESCE(activated_at, datetime('now'))
+FROM profile_modules;
+
+DROP TABLE profile_modules;
+ALTER TABLE profile_modules_v23 RENAME TO profile_modules;
+
+PRAGMA foreign_keys = ON;
 
 -- ── 6. Seed: primer superadmin ───────────────────────────────────────────────
 -- El user_id se resuelve por email en runtime; este seed es de respaldo manual.
