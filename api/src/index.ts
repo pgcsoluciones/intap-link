@@ -411,7 +411,7 @@ me.get('/', async (c) => {
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
             p.avatar_url, p.category, p.subcategory, p.is_published, p.theme_id,
             p.accent_color, p.button_style,
-            p.template_id, p.template_data
+            p.template_id, p.template_data, p.plan_id
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
      WHERE u.id = ? LIMIT 1`
