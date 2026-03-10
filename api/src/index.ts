@@ -2159,6 +2159,90 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
   })
 })
 
+// ── PATCH /api/v1/superadmin/subscribers/:userId/plan ────────────────────────
+// Cambia el plan base de un suscriptor desde Super Admin.
+// Requiere rol mínimo 'support'.
+// Body: { plan_id: string, reason?: string }
+// Responde: { ok: true, data: { user_id, profile_id, old_plan_id, new_plan_id } }
+app.patch('/api/v1/superadmin/subscribers/:userId/plan', requireSuperAdmin('support'), async (c) => {
+  const adminUserId  = c.get('adminUserId') as string
+  const targetUserId = c.req.param('userId')
+
+  // Parse + validate body
+  let body: { plan_id?: unknown; reason?: unknown }
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const newPlanId = typeof body.plan_id === 'string' ? body.plan_id.trim() : ''
+  const reason    = typeof body.reason  === 'string' ? body.reason.trim()  : null
+
+  const VALID_PLANS = ['free', 'starter', 'pro', 'agency']
+  if (!VALID_PLANS.includes(newPlanId)) {
+    return c.json({
+      ok: false,
+      error: 'Invalid plan_id',
+      valid_plans: VALID_PLANS,
+    }, 400)
+  }
+
+  // Verify user exists
+  const userRow = await c.env.DB.prepare(
+    `SELECT id FROM users WHERE id = ? LIMIT 1`
+  ).bind(targetUserId).first<{ id: string }>()
+  if (!userRow) return c.json({ ok: false, error: 'User not found' }, 404)
+
+  // Fetch current profile (need profile_id and old plan)
+  const profileRow = await c.env.DB.prepare(
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(targetUserId).first<{ id: string; plan_id: string }>()
+  if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
+
+  const profileId  = profileRow.id
+  const oldPlanId  = profileRow.plan_id
+
+  // No-op guard
+  if (oldPlanId === newPlanId) {
+    return c.json({
+      ok: true,
+      data: { user_id: targetUserId, profile_id: profileId, old_plan_id: oldPlanId, new_plan_id: newPlanId },
+      message: 'Plan unchanged (same value)',
+    })
+  }
+
+  // UPDATE + INSERT audit como un batch D1 (transacción implícita).
+  // Si cualquiera de los dos falla, el batch entero hace rollback.
+  // D1 no expone BEGIN/COMMIT explícito, pero db.batch([...]) garantiza
+  // que ambas sentencias se ejecutan atómicamente en el backend SQLite.
+  const auditId = crypto.randomUUID()
+  const ip      = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE profiles SET plan_id = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(newPlanId, profileId),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, 'plan_changed', 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      profileId,
+      JSON.stringify({ plan_id: oldPlanId }),
+      JSON.stringify({ plan_id: newPlanId, ...(reason ? { reason } : {}) }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    data: { user_id: targetUserId, profile_id: profileId, old_plan_id: oldPlanId, new_plan_id: newPlanId },
+  })
+})
+
 // ── GET /api/v1/superadmin/metrics/overview ───────────────────────────────────
 // Métricas agregadas del negocio: totales por plan, altas semanales, activos.
 app.get('/api/v1/superadmin/metrics/overview', requireSuperAdmin('viewer'), async (c) => {
