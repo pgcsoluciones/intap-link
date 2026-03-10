@@ -2212,22 +2212,30 @@ app.patch('/api/v1/superadmin/subscribers/:userId/plan', requireSuperAdmin('supp
     })
   }
 
-  // Apply change
-  await c.env.DB.prepare(
-    `UPDATE profiles SET plan_id = ?, updated_at = datetime('now') WHERE id = ?`
-  ).bind(newPlanId, profileId).run()
+  // UPDATE + INSERT audit como un batch D1 (transacción implícita).
+  // Si cualquiera de los dos falla, el batch entero hace rollback.
+  // D1 no expone BEGIN/COMMIT explícito, pero db.batch([...]) garantiza
+  // que ambas sentencias se ejecutan atómicamente en el backend SQLite.
+  const auditId = crypto.randomUUID()
+  const ip      = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
 
-  // Audit log
-  await logAdminAction({
-    db:          c.env.DB,
-    adminUserId,
-    action:      'plan_changed',
-    targetType:  'profile',
-    targetId:    profileId,
-    before:      { plan_id: oldPlanId },
-    after:       { plan_id: newPlanId, reason: reason ?? undefined },
-    ip:          c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null,
-  })
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE profiles SET plan_id = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(newPlanId, profileId),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, 'plan_changed', 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      profileId,
+      JSON.stringify({ plan_id: oldPlanId }),
+      JSON.stringify({ plan_id: newPlanId, ...(reason ? { reason } : {}) }),
+      ip,
+    ),
+  ])
 
   return c.json({
     ok: true,
