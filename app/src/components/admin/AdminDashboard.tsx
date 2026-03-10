@@ -67,6 +67,7 @@ interface MeData {
   category: string | null
   is_published: number
   theme_id: string | null
+  plan_id: string | null
 }
 
 interface Stats {
@@ -138,7 +139,9 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     try { await apiPost('/auth/logout', {}) } catch { /* ignore */ }
-    navigate('/admin/login', { replace: true })
+    // Hard redirect (not SPA navigate) so the full page reloads and all
+    // React state is cleared. AdminGuard will re-check the session from scratch.
+    window.location.replace('/admin/login')
   }
 
   const refreshPreview = () => {
@@ -400,7 +403,7 @@ export default function AdminDashboard() {
           </div>
           <div className="glass-card p-4 text-center">
             <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Plan</p>
-            <p className="text-xs font-black mt-1 text-intap-mint">Free</p>
+            <p className="text-xs font-black mt-1 text-intap-mint capitalize">{me?.plan_id ?? 'free'}</p>
           </div>
         </div>
 
