@@ -8,6 +8,7 @@ import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 
 type Bindings = {
   DB: D1Database
+  AGENTS_DB: D1Database
   BUCKET: R2Bucket
   RESEND_API_KEY: string
   RESEND_FROM: string
@@ -160,7 +161,7 @@ const requireAuth = async (c: any, next: any) => {
   c.env.DB.prepare(`UPDATE auth_sessions SET last_seen_at = datetime('now') WHERE id = ?`)
     .bind((session as any).id)
     .run()
-    .catch(() => {})
+    .catch(() => { })
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────
@@ -185,7 +186,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   if (((rlRow as any)?.cnt || 0) >= 5)
     return c.json({ ok: false, error: 'Demasiados intentos. Espera 10 minutos.' }, 429)
 
-  const rawToken  = generateToken(32)
+  const rawToken = generateToken(32)
   const tokenHash = await sha256Hex(rawToken)
   const ip = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || ''
   const ua = c.req.header('User-Agent') || ''
@@ -199,9 +200,9 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   // Usamos APP_URL solo si apunta al subdominio correcto; en caso contrario
   // caemos al valor seguro para evitar que el token llegue al dominio principal.
   const rawAppUrl = String((c.env as any).APP_URL || '')
-  const appUrl    = rawAppUrl.startsWith('https://app.') ? rawAppUrl : 'https://app.intaprd.com'
+  const appUrl = rawAppUrl.startsWith('https://app.') ? rawAppUrl : 'https://app.intaprd.com'
   const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
-  const resendKey  = (c.env as any).RESEND_API_KEY
+  const resendKey = (c.env as any).RESEND_API_KEY
   const resendFrom = (c.env as any).RESEND_FROM
 
   if (resendKey) {
@@ -244,7 +245,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
   if (!user) return c.json({ ok: false, error: 'Error al crear usuario' }, 500)
 
   // Crear sesión (30 días)
-  const sessionRaw  = generateToken(32)
+  const sessionRaw = generateToken(32)
   const sessionHash = await sha256Hex(sessionRaw)
   const reqIp = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || ''
   const reqUa = c.req.header('User-Agent') || ''
@@ -266,18 +267,18 @@ app.get('/api/v1/auth/google/start', async (c) => {
   const clientId = (c.env as any).GOOGLE_CLIENT_ID
   if (!clientId) return c.json({ ok: false, error: 'Google OAuth no configurado' }, 503)
 
-  const state      = generateToken(16)
-  const apiUrl     = new URL(c.req.url).origin
+  const state = generateToken(16)
+  const apiUrl = new URL(c.req.url).origin
   const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
   const params = new URLSearchParams({
-    client_id:     clientId,
-    redirect_uri:  redirectUri,
+    client_id: clientId,
+    redirect_uri: redirectUri,
     response_type: 'code',
-    scope:         'openid email profile',
+    scope: 'openid email profile',
     state,
-    access_type:   'online',
-    prompt:        'select_account',
+    access_type: 'online',
+    prompt: 'select_account',
   })
 
   const headers = new Headers()
@@ -290,8 +291,8 @@ app.get('/api/v1/auth/google/start', async (c) => {
 })
 
 app.get('/api/v1/auth/google/callback', async (c) => {
-  const code       = c.req.query('code')  || ''
-  const state      = c.req.query('state') || ''
+  const code = c.req.query('code') || ''
+  const state = c.req.query('state') || ''
   const oauthError = c.req.query('error') || ''
 
   const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
@@ -301,14 +302,14 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
   // Validar state anti-CSRF
   const cookieHeader = c.req.header('Cookie') || ''
-  const savedState   = parseCookie(cookieHeader, 'oauth_state')
+  const savedState = parseCookie(cookieHeader, 'oauth_state')
   if (!savedState || savedState !== state)
     return c.redirect(`${appUrl}/admin/login?error=oauth_state`)
 
-  const clientId     = (c.env as any).GOOGLE_CLIENT_ID
+  const clientId = (c.env as any).GOOGLE_CLIENT_ID
   const clientSecret = (c.env as any).GOOGLE_CLIENT_SECRET
-  const apiUrl       = new URL(c.req.url).origin
-  const redirectUri  = `${apiUrl}/api/v1/auth/google/callback`
+  const apiUrl = new URL(c.req.url).origin
+  const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
   // Intercambiar code por access_token
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -316,10 +317,10 @@ app.get('/api/v1/auth/google/callback', async (c) => {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code,
-      client_id:     clientId,
+      client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri:  redirectUri,
-      grant_type:    'authorization_code',
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
     }),
   })
   if (!tokenRes.ok) return c.redirect(`${appUrl}/admin/login?error=oauth_token`)
@@ -356,7 +357,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   ).bind(generateToken(16), userId, String(googleUser.id || '')).run()
 
   // Crear sesión (30 días)
-  const sessionRaw  = generateToken(32)
+  const sessionRaw = generateToken(32)
   const sessionHash = await sha256Hex(sessionRaw)
   const reqIp = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || ''
   const reqUa = c.req.header('User-Agent') || ''
@@ -367,7 +368,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   ).bind(generateToken(16), userId, sessionHash, reqIp, reqUa).run()
 
   const sessionCookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
-  const clearState    = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
+  const clearState = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
 
   const headers = new Headers()
   headers.set('Location', `${appUrl}/admin`)
@@ -380,7 +381,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
 app.post('/api/v1/auth/logout', async (c) => {
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession   = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, 'session_id')
 
   if (rawSession) {
     const sessionHash = await sha256Hex(rawSession)
@@ -420,19 +421,19 @@ me.get('/', async (c) => {
 
   const r = row as any
   let hasContact = false
-  let hasLinks   = false
+  let hasLinks = false
   if (r.profile_id) {
     const [contactRow, linksRow] = await Promise.all([
       c.env.DB.prepare(`SELECT profile_id FROM profile_contact WHERE profile_id = ? LIMIT 1`).bind(r.profile_id).first(),
       c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_links WHERE profile_id = ?`).bind(r.profile_id).first(),
     ])
     hasContact = !!contactRow
-    hasLinks   = ((linksRow as any)?.n || 0) > 0
+    hasLinks = ((linksRow as any)?.n || 0) > 0
   }
 
   const onboardingStatus = {
-    hasProfile:  !!r.profile_id,
-    hasSlug:     !!r.slug,
+    hasProfile: !!r.profile_id,
+    hasSlug: !!r.slug,
     hasCategory: !!r.category,
     hasContact,
     hasLinks,
@@ -496,13 +497,13 @@ me.put('/profile', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const name        = body.name        !== undefined ? String(body.name        || '').trim() : undefined
-  const bio         = body.bio         !== undefined ? String(body.bio         || '').trim() : undefined
-  const avatar_url  = body.avatar_url  !== undefined ? String(body.avatar_url  || '').trim() : undefined
-  const category    = body.category    !== undefined ? String(body.category    || '').trim() : undefined
+  const name = body.name !== undefined ? String(body.name || '').trim() : undefined
+  const bio = body.bio !== undefined ? String(body.bio || '').trim() : undefined
+  const avatar_url = body.avatar_url !== undefined ? String(body.avatar_url || '').trim() : undefined
+  const category = body.category !== undefined ? String(body.category || '').trim() : undefined
   const subcategory = body.subcategory !== undefined ? String(body.subcategory || '').trim() : undefined
   const VALID_THEMES = ['default', 'light', 'modern', 'bento', 'classic', 'ocean', 'sunset', 'midnight']
-  const theme_id    = body.theme_id    !== undefined && VALID_THEMES.includes(String(body.theme_id))
+  const theme_id = body.theme_id !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
   const VALID_TEMPLATES = ['restaurante', 'servicios', 'eventos']
@@ -547,7 +548,7 @@ me.post('/profile/avatar', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const fd      = await c.req.formData()
+  const fd = await c.req.formData()
   const fileVal = fd.get('file')
 
   if (!(fileVal && typeof fileVal === 'object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any))) {
@@ -555,20 +556,20 @@ me.post('/profile/avatar', async (c) => {
   }
 
   const file = fileVal as any as File
-  const ext  = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
   const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
   if (!ALLOWED_EXTS.includes(ext)) return c.json({ ok: false, error: 'Formato no permitido' }, 400)
 
   const profileId = (profile as any).id
-  const key       = `avatars/${profileId}/${crypto.randomUUID()}.${ext}`
+  const key = `avatars/${profileId}/${crypto.randomUUID()}.${ext}`
 
   await c.env.BUCKET.put(key, file.stream(), {
     httpMetadata: { contentType: file.type || 'image/jpeg' },
   })
 
-  const origin   = new URL(c.req.url).origin
+  const origin = new URL(c.req.url).origin
   const encodedKey = key.split('/').map(encodeURIComponent).join('/')
-  const avatarUrl  = `${origin}/api/v1/public/assets/${encodedKey}`
+  const avatarUrl = `${origin}/api/v1/public/assets/${encodedKey}`
 
   await c.env.DB.prepare(
     `UPDATE profiles SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`
@@ -638,13 +639,13 @@ me.put('/contact', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const waRaw    = body.whatsapp_number !== undefined ? body.whatsapp_number : body.whatsapp
-  const whatsapp = waRaw   !== undefined ? normalizeWhatsApp(String(waRaw   || '')) : undefined
-  const email    = body.email    !== undefined ? String(body.email   || '').trim() : undefined
-  const phone    = body.phone    !== undefined ? String(body.phone   || '').trim() : undefined
-  const hours    = body.hours    !== undefined ? String(body.hours   || '').trim() : undefined
-  const address  = body.address  !== undefined ? String(body.address || '').trim() : undefined
-  const map_url  = body.map_url  !== undefined ? String(body.map_url || '').trim() : undefined
+  const waRaw = body.whatsapp_number !== undefined ? body.whatsapp_number : body.whatsapp
+  const whatsapp = waRaw !== undefined ? normalizeWhatsApp(String(waRaw || '')) : undefined
+  const email = body.email !== undefined ? String(body.email || '').trim() : undefined
+  const phone = body.phone !== undefined ? String(body.phone || '').trim() : undefined
+  const hours = body.hours !== undefined ? String(body.hours || '').trim() : undefined
+  const address = body.address !== undefined ? String(body.address || '').trim() : undefined
+  const map_url = body.map_url !== undefined ? String(body.map_url || '').trim() : undefined
 
   try {
     await c.env.DB.prepare(
@@ -689,7 +690,7 @@ me.post('/links', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
   const label = String(body.label || '').trim()
-  const url   = String(body.url   || '').trim()
+  const url = String(body.url || '').trim()
   if (!label) return c.json({ ok: false, error: 'label required' }, 400)
   if (!url || !url.startsWith('http')) return c.json({ ok: false, error: 'valid url required' }, 400)
 
@@ -766,9 +767,9 @@ me.put('/links/:id', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const label     = body.label     !== undefined ? String(body.label || '').trim() : undefined
-  const url       = body.url       !== undefined ? String(body.url   || '').trim() : undefined
-  const is_active = body.is_active !== undefined ? (body.is_active ? 1 : 0)       : undefined
+  const label = body.label !== undefined ? String(body.label || '').trim() : undefined
+  const url = body.url !== undefined ? String(body.url || '').trim() : undefined
+  const is_active = body.is_active !== undefined ? (body.is_active ? 1 : 0) : undefined
 
   await c.env.DB.prepare(
     `UPDATE profile_links
@@ -846,9 +847,9 @@ me.post('/faqs', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const question = String(body.question || '').trim()
-  const answer   = String(body.answer   || '').trim()
+  const answer = String(body.answer || '').trim()
   if (!question) return c.json({ ok: false, error: 'question required' }, 400)
-  if (!answer)   return c.json({ ok: false, error: 'answer required' }, 400)
+  if (!answer) return c.json({ ok: false, error: 'answer required' }, 400)
 
   const profile = await c.env.DB.prepare(
     `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
@@ -901,7 +902,7 @@ me.put('/faqs/reorder', async (c) => {
 
 me.put('/faqs/:id', async (c) => {
   const userId = c.get('userId') as string
-  const faqId  = c.req.param('id')
+  const faqId = c.req.param('id')
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
@@ -911,7 +912,7 @@ me.put('/faqs/:id', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const question = body.question !== undefined ? String(body.question || '').trim() : undefined
-  const answer   = body.answer   !== undefined ? String(body.answer   || '').trim() : undefined
+  const answer = body.answer !== undefined ? String(body.answer || '').trim() : undefined
 
   await c.env.DB.prepare(
     `UPDATE profile_faqs SET
@@ -924,7 +925,7 @@ me.put('/faqs/:id', async (c) => {
 
 me.delete('/faqs/:id', async (c) => {
   const userId = c.get('userId') as string
-  const faqId  = c.req.param('id')
+  const faqId = c.req.param('id')
 
   const profile = await c.env.DB.prepare(
     `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
@@ -958,12 +959,12 @@ me.post('/products', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const title         = String(body.title        || '').trim()
-  const description   = String(body.description  || '').trim()
-  const price         = String(body.price        || '').trim()
+  const title = String(body.title || '').trim()
+  const description = String(body.description || '').trim()
+  const price = String(body.price || '').trim()
   const whatsapp_text = String(body.whatsapp_text || '').trim()
-  const image_url     = String(body.image_url    || '').trim()
-  const is_featured   = body.is_featured ? 1 : 0
+  const image_url = String(body.image_url || '').trim()
+  const is_featured = body.is_featured ? 1 : 0
 
   if (!title) return c.json({ ok: false, error: 'title required' }, 400)
 
@@ -1018,7 +1019,7 @@ me.put('/products/reorder', async (c) => {
 })
 
 me.put('/products/:id', async (c) => {
-  const userId    = c.get('userId') as string
+  const userId = c.get('userId') as string
   const productId = c.req.param('id')
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -1028,12 +1029,12 @@ me.put('/products/:id', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const title         = body.title         !== undefined ? String(body.title         || '').trim() : undefined
-  const description   = body.description   !== undefined ? String(body.description   || '').trim() : undefined
-  const price         = body.price         !== undefined ? String(body.price         || '').trim() : undefined
-  const image_url     = body.image_url     !== undefined ? String(body.image_url     || '').trim() : undefined
+  const title = body.title !== undefined ? String(body.title || '').trim() : undefined
+  const description = body.description !== undefined ? String(body.description || '').trim() : undefined
+  const price = body.price !== undefined ? String(body.price || '').trim() : undefined
+  const image_url = body.image_url !== undefined ? String(body.image_url || '').trim() : undefined
   const whatsapp_text = body.whatsapp_text !== undefined ? String(body.whatsapp_text || '').trim() : undefined
-  const is_featured   = body.is_featured   !== undefined ? (body.is_featured ? 1 : 0)              : undefined
+  const is_featured = body.is_featured !== undefined ? (body.is_featured ? 1 : 0) : undefined
 
   await c.env.DB.prepare(
     `UPDATE profile_products SET
@@ -1053,7 +1054,7 @@ me.put('/products/:id', async (c) => {
 })
 
 me.delete('/products/:id', async (c) => {
-  const userId    = c.get('userId') as string
+  const userId = c.get('userId') as string
   const productId = c.req.param('id')
 
   const profile = await c.env.DB.prepare(
@@ -1089,7 +1090,7 @@ me.post('/videos', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const title = String(body.title || '').trim()
-  const url   = String(body.url   || '').trim()
+  const url = String(body.url || '').trim()
   if (!url || !url.startsWith('http')) return c.json({ ok: false, error: 'valid url required' }, 400)
 
   const profile = await c.env.DB.prepare(
@@ -1122,7 +1123,7 @@ me.post('/videos', async (c) => {
 })
 
 me.put('/videos/:id', async (c) => {
-  const userId  = c.get('userId') as string
+  const userId = c.get('userId') as string
   const videoId = c.req.param('id')
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -1132,9 +1133,9 @@ me.put('/videos/:id', async (c) => {
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const title     = body.title     !== undefined ? String(body.title || '').trim()     : undefined
-  const url       = body.url       !== undefined ? String(body.url   || '').trim()     : undefined
-  const is_active = body.is_active !== undefined ? (body.is_active ? 1 : 0)            : undefined
+  const title = body.title !== undefined ? String(body.title || '').trim() : undefined
+  const url = body.url !== undefined ? String(body.url || '').trim() : undefined
+  const is_active = body.is_active !== undefined ? (body.is_active ? 1 : 0) : undefined
 
   await c.env.DB.prepare(
     `UPDATE profile_videos SET
@@ -1147,7 +1148,7 @@ me.put('/videos/:id', async (c) => {
 })
 
 me.delete('/videos/:id', async (c) => {
-  const userId  = c.get('userId') as string
+  const userId = c.get('userId') as string
   const videoId = c.req.param('id')
 
   const profile = await c.env.DB.prepare(
@@ -1192,8 +1193,8 @@ me.patch('/profile/visual', async (c) => {
 
   const VALID_BUTTON_STYLES = ['rounded', 'pill', 'square', 'outline']
   const VALID_VISUAL_THEMES = ['default', 'light', 'modern', 'bento', 'classic', 'ocean', 'sunset', 'midnight']
-  const accent_color  = body.accent_color  !== undefined ? String(body.accent_color  || '').trim() : undefined
-  const button_style  = body.button_style  !== undefined &&
+  const accent_color = body.accent_color !== undefined ? String(body.accent_color || '').trim() : undefined
+  const button_style = body.button_style !== undefined &&
     VALID_BUTTON_STYLES.includes(String(body.button_style))
     ? String(body.button_style) : undefined
   const theme_id = body.theme_id !== undefined && VALID_VISUAL_THEMES.includes(String(body.theme_id))
@@ -1224,7 +1225,7 @@ app.route('/api/v1/me', me)
 // ─── Profile/me — authenticated profile data ──────────────────────────────
 
 app.get('/api/v1/profile/me/:profileId', requireAuth, async (c) => {
-  const userId    = c.get('userId') as string
+  const userId = c.get('userId') as string
   const profileId = c.req.param('profileId')
 
   const profile = await c.env.DB.prepare(
@@ -1257,9 +1258,9 @@ app.get('/api/v1/profile/me/:profileId', requireAuth, async (c) => {
     ok: true,
     data: {
       ...p,
-      links:        linksRes.results,
-      gallery:      galleryRes.results,
-      faqs:         faqsRes.results,
+      links: linksRes.results,
+      gallery: galleryRes.results,
+      faqs: faqsRes.results,
       entitlements: ents,
     },
   })
@@ -1268,7 +1269,7 @@ app.get('/api/v1/profile/me/:profileId', requireAuth, async (c) => {
 // ─── Leads (authenticated owner) ─────────────────────────────────────────
 
 app.get('/api/v1/profile/me/:profileId/leads', requireAuth, async (c) => {
-  const userId    = c.get('userId') as string
+  const userId = c.get('userId') as string
   const profileId = c.req.param('profileId')
 
   const profile = await c.env.DB.prepare(
@@ -1297,17 +1298,17 @@ app.get('/api/v1/profile/me/:profileId/leads', requireAuth, async (c) => {
 
   if (status) data = data.filter(l => l.status === status)
   if (origin) data = data.filter(l => (l.origin || '').toLowerCase().includes(origin.toLowerCase()))
-  if (from)   data = data.filter(l => l.created_at >= from)
-  if (to)     data = data.filter(l => l.created_at <= to + 'T23:59:59')
-  if (tag)    data = data.filter(l => l.tags.includes(tag))
+  if (from) data = data.filter(l => l.created_at >= from)
+  if (to) data = data.filter(l => l.created_at <= to + 'T23:59:59')
+  if (tag) data = data.filter(l => l.tags.includes(tag))
 
   return c.json({ ok: true, data })
 })
 
 app.patch('/api/v1/profile/me/:profileId/leads/:leadId', requireAuth, async (c) => {
-  const userId    = c.get('userId') as string
+  const userId = c.get('userId') as string
   const profileId = c.req.param('profileId')
-  const leadId    = c.req.param('leadId')
+  const leadId = c.req.param('leadId')
 
   const profile = await c.env.DB.prepare(
     `SELECT slug FROM profiles WHERE id = ?1 AND user_id = ?2 LIMIT 1`
@@ -1319,7 +1320,7 @@ app.patch('/api/v1/profile/me/:profileId/leads/:leadId', requireAuth, async (c) 
 
   const VALID_STATUSES = ['new', 'contacted', 'closed', 'discarded']
   const updates: string[] = []
-  const params: any[]     = []
+  const params: any[] = []
 
   if (body.status !== undefined) {
     const newStatus = String(body.status || '').trim()
@@ -1346,7 +1347,7 @@ app.patch('/api/v1/profile/me/:profileId/leads/:leadId', requireAuth, async (c) 
 })
 
 app.get('/api/v1/profile/me/:profileId/leads/export', requireAuth, async (c) => {
-  const userId    = c.get('userId') as string
+  const userId = c.get('userId') as string
   const profileId = c.req.param('profileId')
 
   const profile = await c.env.DB.prepare(
@@ -1371,15 +1372,15 @@ app.get('/api/v1/profile/me/:profileId/leads/export', requireAuth, async (c) => 
   }))
   if (fStatus) filtered = filtered.filter(l => l.status === fStatus)
   if (fOrigin) filtered = filtered.filter(l => l.origin.toLowerCase().includes(fOrigin.toLowerCase()))
-  if (fFrom)   filtered = filtered.filter(l => l.created_at >= fFrom)
-  if (fTo)     filtered = filtered.filter(l => l.created_at <= fTo + 'T23:59:59')
-  if (fTag)    filtered = filtered.filter(l => l.tags.includes(fTag))
+  if (fFrom) filtered = filtered.filter(l => l.created_at >= fFrom)
+  if (fTo) filtered = filtered.filter(l => l.created_at <= fTo + 'T23:59:59')
+  if (fTag) filtered = filtered.filter(l => l.tags.includes(fTag))
 
   const header = 'Nombre,Email,Teléfono,Mensaje,Origen,Estado,Etiquetas,Fecha\r\n'
   const rows = filtered.map(l => {
     const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`
     return [esc(l.name), esc(l.email), esc(l.phone), esc(l.message),
-            esc(l.origin), esc(l.status), esc(l.tags.join('; ')), esc(l.created_at)].join(',')
+    esc(l.origin), esc(l.status), esc(l.tags.join('; ')), esc(l.created_at)].join(',')
   }).join('\r\n')
 
   const slug = (profile as any).slug
@@ -1462,7 +1463,7 @@ app.post('/api/v1/profile/gallery/upload', requireAuth, async (c) => {
   const limitError = await checkPlanLimit(c as any, profileId, 'photos')
   if (limitError) return limitError
 
-  const fd      = await c.req.formData()
+  const fd = await c.req.formData()
   const fileVal = fd.get('file')
 
   if (!(fileVal && typeof fileVal === 'object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any))) {
@@ -1470,7 +1471,7 @@ app.post('/api/v1/profile/gallery/upload', requireAuth, async (c) => {
   }
 
   const file = fileVal as any as File
-  const ext  = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
   const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
   if (!ALLOWED_EXTS.includes(ext)) return c.json({ ok: false, error: 'Formato no permitido' }, 400)
 
@@ -1522,7 +1523,7 @@ app.get('/api/v1/public/assets/*', async (c) => {
 // ─── Perfil Público ───────────────────────────────────────────────────────
 
 app.get('/api/v1/public/profiles/:slug', async (c) => {
-  const slug      = c.req.param('slug')
+  const slug = c.req.param('slug')
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
@@ -1595,7 +1596,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .first(),
   ])
 
-  const origin    = new URL(c.req.url).origin
+  const origin = new URL(c.req.url).origin
   const toAssetUrl = (key: string): string | null => {
     if (!key) return null
     if (key.startsWith('http')) return key
@@ -1633,34 +1634,34 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   return c.json({
     ok: true,
     data: {
-      profileId:       (profile as any).id,
-      slug:            (profile as any).slug,
-      planId:          (profile as any).plan_id,
-      themeId:         (profile as any).theme_id,
-      accentColor:     (profile as any).accent_color  ?? '#3B82F6',
-      buttonStyle:     (profile as any).button_style  ?? 'rounded',
+      profileId: (profile as any).id,
+      slug: (profile as any).slug,
+      planId: (profile as any).plan_id,
+      themeId: (profile as any).theme_id,
+      accentColor: (profile as any).accent_color ?? '#3B82F6',
+      buttonStyle: (profile as any).button_style ?? 'rounded',
       blocksOrder,
-      name:            (profile as any).name,
-      bio:             (profile as any).bio,
-      avatarUrl:       toAssetUrl((profile as any).avatar_url || ''),
+      name: (profile as any).name,
+      bio: (profile as any).bio,
+      avatarUrl: toAssetUrl((profile as any).avatar_url || ''),
       whatsapp_number: (profile as any).whatsapp_number ?? null,
-      templateId:      (profile as any).template_id ?? null,
-      templateData:    (() => { try { return JSON.parse((profile as any).template_data || '{}') } catch { return {} } })(),
-      social_links:    rawSocialLinks.results,
-      links:           links.results,
+      templateId: (profile as any).template_id ?? null,
+      templateData: (() => { try { return JSON.parse((profile as any).template_data || '{}') } catch { return {} } })(),
+      social_links: rawSocialLinks.results,
+      links: links.results,
       gallery,
-      faqs:            rawFaqs.results,
+      faqs: rawFaqs.results,
       products,
-      videos:          rawVideos.results,
+      videos: rawVideos.results,
       featured_product,
       entitlements,
       contact: rawContact ? {
         whatsapp: (rawContact as any).whatsapp ?? null,
-        email:    (rawContact as any).email    ?? null,
-        phone:    (rawContact as any).phone    ?? null,
-        hours:    (rawContact as any).hours    ?? null,
-        address:  (rawContact as any).address  ?? null,
-        map_url:  (rawContact as any).map_url  ?? null,
+        email: (rawContact as any).email ?? null,
+        phone: (rawContact as any).phone ?? null,
+        hours: (rawContact as any).hours ?? null,
+        address: (rawContact as any).address ?? null,
+        map_url: (rawContact as any).map_url ?? null,
       } : null,
     },
   })
@@ -1682,8 +1683,8 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const telNumber  = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
-  const fn         = profile.name || profile.slug
+  const telNumber = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
+  const fn = profile.name || profile.slug
   const profileUrl = `${(c.env as any).API_URL || 'https://intaprd.com'}/${profile.slug}`
 
   const lines: string[] = [
@@ -1692,14 +1693,14 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
     `FN:${fn}`,
     `N:${fn};;;`,
   ]
-  if (telNumber)          lines.push(`TEL;TYPE=CELL:${telNumber}`)
-  if (contactRow?.email)  lines.push(`EMAIL:${contactRow.email}`)
+  if (telNumber) lines.push(`TEL;TYPE=CELL:${telNumber}`)
+  if (contactRow?.email) lines.push(`EMAIL:${contactRow.email}`)
   if (contactRow?.address) lines.push(`ADR;TYPE=WORK:;;${contactRow.address};;;;`)
-  if (profile.bio)        lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
+  if (profile.bio) lines.push(`NOTE:${profile.bio.replace(/\n/g, '\\n')}`)
   lines.push(`URL:${profileUrl}`)
   lines.push('END:VCARD')
 
-  const vcf      = lines.join('\r\n') + '\r\n'
+  const vcf = lines.join('\r\n') + '\r\n'
   const filename = `${profile.slug}.vcf`
 
   return new Response(vcf, {
@@ -1718,14 +1719,14 @@ app.post('/api/v1/public/waitlist', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const email  = String(body.email  || '').trim().toLowerCase()
-  const name   = String(body.name   || '').trim()
+  const email = String(body.email || '').trim().toLowerCase()
+  const name = String(body.name || '').trim()
   const sector = String(body.sector || '').trim()
-  const mode   = String(body.mode   || '').trim()
+  const mode = String(body.mode || '').trim()
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'valid email required' }, 400)
-  if (!name   || name.length < 2)   return c.json({ ok: false, error: 'name required (min 2 chars)' }, 400)
+  if (!name || name.length < 2) return c.json({ ok: false, error: 'name required (min 2 chars)' }, 400)
   if (!sector || sector.length < 2) return c.json({ ok: false, error: 'sector required' }, 400)
   if (!(WAITLIST_MODES as readonly string[]).includes(mode))
     return c.json({ ok: false, error: 'mode must be Virtual, Fisica or Mixta' }, 400)
@@ -1744,7 +1745,7 @@ app.post('/api/v1/public/waitlist', async (c) => {
     return c.json({ ok: true, position: (existing as any).position, whatsapp: wa, updated: true })
   }
 
-  const posRow   = await c.env.DB.prepare(`SELECT COUNT(*) as n FROM waitlist`).first()
+  const posRow = await c.env.DB.prepare(`SELECT COUNT(*) as n FROM waitlist`).first()
   const position = ((posRow as any)?.n || 0) + 1
 
   const id = crypto.randomUUID()
@@ -1763,22 +1764,22 @@ app.post('/api/v1/public/leads', async (c) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const profile_slug    = String(body.profile_slug    || '').trim()
-  const name            = String(body.name            || '').trim()
-  const email           = String(body.email           || '').trim()
-  const phone           = String(body.phone           || '').trim()
-  const message         = String(body.message         || '').trim()
-  const honeypot        = String(body.hp              || '').trim()
-  const source_url      = String(body.source_url      || '').trim()
+  const profile_slug = String(body.profile_slug || '').trim()
+  const name = String(body.name || '').trim()
+  const email = String(body.email || '').trim()
+  const phone = String(body.phone || '').trim()
+  const message = String(body.message || '').trim()
+  const honeypot = String(body.hp || '').trim()
+  const source_url = String(body.source_url || '').trim()
   const turnstile_token = String(body.turnstile_token || '').trim()
 
   if (!profile_slug || profile_slug.length < 2) return c.json({ ok: false, error: 'profile_slug required' }, 400)
-  if (!name   || name.length < 2)               return c.json({ ok: false, error: 'name required' }, 400)
-  if (!email  || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ ok: false, error: 'valid email required' }, 400)
-  if (!message || message.length < 10)          return c.json({ ok: false, error: 'message must be at least 10 chars' }, 400)
+  if (!name || name.length < 2) return c.json({ ok: false, error: 'name required' }, 400)
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ ok: false, error: 'valid email required' }, 400)
+  if (!message || message.length < 10) return c.json({ ok: false, error: 'message must be at least 10 chars' }, 400)
 
-  const ip      = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || ''
-  const ua      = c.req.header('user-agent') || ''
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || ''
+  const ua = c.req.header('user-agent') || ''
   const ip_hash = await sha256Base64Url(ip || 'unknown')
 
   if (honeypot) {
@@ -1823,8 +1824,8 @@ app.post('/api/v1/public/leads', async (c) => {
       if (!ownerRow?.email) return
       const { sendLeadNotificationEmail } = await import('./lib/email')
       await sendLeadNotificationEmail(c.env as any, ownerRow.email, { name, email, phone, message, origin })
-        .catch(() => {})
-    }).catch(() => {})
+        .catch(() => { })
+    }).catch(() => { })
   }
 
   return c.json({ ok: true }, 201)
@@ -1864,8 +1865,8 @@ function normalizeWhatsApp(input: string): string | null {
 
 // Kept for leads ip_hash (existing usage)
 async function sha256Base64Url(input: string): Promise<string> {
-  const data  = new TextEncoder().encode(input)
-  const hash  = await crypto.subtle.digest('SHA-256', data)
+  const data = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', data)
   const bytes = new Uint8Array(hash)
   let bin = ''
   for (const b of bytes) bin += String.fromCharCode(b)
@@ -1893,10 +1894,10 @@ app.get('/api/v1/admin/db-check', async (c) => {
   try {
     const info = await c.env.DB.prepare(`PRAGMA table_info(profiles)`).all()
     const existing = new Set((info.results as any[]).map((r) => r.name))
-    const missing  = REQUIRED_PROFILE_COLS.filter((col) => !existing.has(col))
+    const missing = REQUIRED_PROFILE_COLS.filter((col) => !existing.has(col))
     checks.profiles_columns = {
-      ok:       missing.length === 0,
-      present:  [...existing],
+      ok: missing.length === 0,
+      present: [...existing],
       missing,
     }
     if (missing.length > 0) issues.push(`profiles falta columnas: ${missing.join(', ')}`)
@@ -1912,7 +1913,7 @@ app.get('/api/v1/admin/db-check', async (c) => {
     ).all()
     const found = (orphans.results as any[]).map((r) => r.name).filter((n) => n !== 'profile_links' &&
       n !== 'profile_contact' && n !== 'profile_gallery' &&
-      n !== 'profile_faqs'    && n !== 'profile_products' &&
+      n !== 'profile_faqs' && n !== 'profile_products' &&
       n !== 'profile_social_links' && n !== 'profile_modules')
     checks.orphan_tables = { ok: found.length === 0, found }
     if (found.length > 0) issues.push(`Tablas huérfanas: ${found.join(', ')}`)
@@ -1922,14 +1923,14 @@ app.get('/api/v1/admin/db-check', async (c) => {
 
   // ── 3. Plan 'free' en plans + plan_limits ─────────────────────────────────
   try {
-    const plan      = await c.env.DB.prepare(`SELECT id FROM plans WHERE id='free'`).first()
-    const limits    = await c.env.DB.prepare(`SELECT plan_id FROM plan_limits WHERE plan_id='free'`).first()
+    const plan = await c.env.DB.prepare(`SELECT id FROM plans WHERE id='free'`).first()
+    const limits = await c.env.DB.prepare(`SELECT plan_id FROM plan_limits WHERE plan_id='free'`).first()
     checks.free_plan = {
-      ok:         !!plan && !!limits,
-      plan_row:   !!plan,
+      ok: !!plan && !!limits,
+      plan_row: !!plan,
       limits_row: !!limits,
     }
-    if (!plan)   issues.push(`Plan 'free' no existe en plans`)
+    if (!plan) issues.push(`Plan 'free' no existe en plans`)
     if (!limits) issues.push(`Plan 'free' no tiene row en plan_limits`)
   } catch (err) {
     checks.free_plan = { ok: false, error: String(err) }
@@ -1957,7 +1958,7 @@ app.get('/api/v1/admin/db-check', async (c) => {
       c.env.DB.prepare(`SELECT COUNT(*) as n FROM profiles`).first(),
     ])
     checks.counts = {
-      users:    (users as any)?.n ?? 0,
+      users: (users as any)?.n ?? 0,
       profiles: (profiles as any)?.n ?? 0,
     }
   } catch (err) {
@@ -1967,7 +1968,7 @@ app.get('/api/v1/admin/db-check', async (c) => {
   const allOk = issues.length === 0
   return c.json({
     ok: allOk,
-    status:  allOk ? 'healthy' : 'degraded',
+    status: allOk ? 'healthy' : 'degraded',
     issues,
     checks,
   }, allOk ? 200 : 200) // siempre 200 para que CC pueda leer el body
@@ -2005,18 +2006,18 @@ app.post('/api/v1/admin/activate-module', async (c) => {
 //               plan (plan_id filter), status ('active'|'inactive'),
 //               q (search by email or slug, case-insensitive).
 app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c) => {
-  const page   = Math.max(1, parseInt(c.req.query('page')  || '1', 10))
-  const limit  = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '25', 10)))
-  const plan   = (c.req.query('plan')   || '').trim()
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10))
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '25', 10)))
+  const plan = (c.req.query('plan') || '').trim()
   const status = (c.req.query('status') || '').trim()  // 'active' | 'inactive'
-  const q      = (c.req.query('q')      || '').trim()
+  const q = (c.req.query('q') || '').trim()
   const offset = (page - 1) * limit
 
   const conditions: string[] = []
-  const bindings: unknown[]  = []
+  const bindings: unknown[] = []
 
-  if (plan)   { conditions.push(`p.plan_id = ?`);   bindings.push(plan) }
-  if (status === 'active')   conditions.push(`p.is_active = 1`)
+  if (plan) { conditions.push(`p.plan_id = ?`); bindings.push(plan) }
+  if (status === 'active') conditions.push(`p.is_active = 1`)
   if (status === 'inactive') conditions.push(`p.is_active = 0`)
   if (q) {
     conditions.push(`(u.email LIKE ? OR p.slug LIKE ?)`)
@@ -2070,7 +2071,7 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
   }
 
   return c.json({
-    ok:   true,
+    ok: true,
     meta: { page, limit, total: totalRow?.cnt ?? 0, pages: Math.ceil((totalRow?.cnt ?? 0) / limit) },
     data: rows.results,
   })
@@ -2099,30 +2100,30 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
   const [modules, overrides, recentAudit, linkCount, leadCount] = await Promise.all([
     profileId
       ? c.env.DB.prepare(
-          `SELECT pm.module_code, pm.expires_at, pm.activated_at, pm.assigned_by, pm.assignment_reason,
+        `SELECT pm.module_code, pm.expires_at, pm.activated_at, pm.assigned_by, pm.assignment_reason,
                   m.name AS module_name
            FROM profile_modules pm
            JOIN modules m ON pm.module_code = m.code
            WHERE pm.profile_id = ?
            ORDER BY pm.activated_at DESC`
-        ).bind(profileId).all().catch(() =>
-          // Fallback: migration 0023 columns not yet present — return NULLs
-          c.env.DB.prepare(
-            `SELECT pm.module_code, pm.expires_at, pm.activated_at,
+      ).bind(profileId).all().catch(() =>
+        // Fallback: migration 0023 columns not yet present — return NULLs
+        c.env.DB.prepare(
+          `SELECT pm.module_code, pm.expires_at, pm.activated_at,
                     NULL AS assigned_by, NULL AS assignment_reason,
                     m.name AS module_name
              FROM profile_modules pm
              JOIN modules m ON pm.module_code = m.code
              WHERE pm.profile_id = ?
              ORDER BY pm.activated_at DESC`
-          ).bind(profileId).all()
-        )
+        ).bind(profileId).all()
+      )
       : Promise.resolve({ results: [] }),
 
     profileId
       ? c.env.DB.prepare(
-          `SELECT * FROM profile_plan_overrides WHERE profile_id = ? LIMIT 1`
-        ).bind(profileId).first().catch(() => null)
+        `SELECT * FROM profile_plan_overrides WHERE profile_id = ? LIMIT 1`
+      ).bind(profileId).first().catch(() => null)
       : Promise.resolve(null),
 
     c.env.DB.prepare(
@@ -2134,20 +2135,20 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
 
     profileId
       ? c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM profile_links WHERE profile_id = ?`)
-          .bind(profileId).first<{ cnt: number }>()
+        .bind(profileId).first<{ cnt: number }>()
       : Promise.resolve({ cnt: 0 }),
 
     profileId
       ? c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM leads WHERE profile_slug = (SELECT slug FROM profiles WHERE id = ?)`)
-          .bind(profileId).first<{ cnt: number }>().catch(() => ({ cnt: 0 }))
+        .bind(profileId).first<{ cnt: number }>().catch(() => ({ cnt: 0 }))
       : Promise.resolve({ cnt: 0 }),
   ])
 
   return c.json({
     ok: true,
     data: {
-      user:           userRow,
-      profile:        profileRow,
+      user: userRow,
+      profile: profileRow,
       plan_overrides: overrides,
       active_modules: (modules as any).results,
       stats: {
@@ -2165,7 +2166,7 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
 // Body: { plan_id: string, reason?: string }
 // Responde: { ok: true, data: { user_id, profile_id, old_plan_id, new_plan_id } }
 app.patch('/api/v1/superadmin/subscribers/:userId/plan', requireSuperAdmin('support'), async (c) => {
-  const adminUserId  = c.get('adminUserId') as string
+  const adminUserId = c.get('adminUserId') as string
   const targetUserId = c.req.param('userId')
 
   // Parse + validate body
@@ -2177,7 +2178,7 @@ app.patch('/api/v1/superadmin/subscribers/:userId/plan', requireSuperAdmin('supp
   }
 
   const newPlanId = typeof body.plan_id === 'string' ? body.plan_id.trim() : ''
-  const reason    = typeof body.reason  === 'string' ? body.reason.trim()  : null
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : null
 
   const VALID_PLANS = ['free', 'starter', 'pro', 'agency']
   if (!VALID_PLANS.includes(newPlanId)) {
@@ -2200,8 +2201,8 @@ app.patch('/api/v1/superadmin/subscribers/:userId/plan', requireSuperAdmin('supp
   ).bind(targetUserId).first<{ id: string; plan_id: string }>()
   if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
 
-  const profileId  = profileRow.id
-  const oldPlanId  = profileRow.plan_id
+  const profileId = profileRow.id
+  const oldPlanId = profileRow.plan_id
 
   // No-op guard
   if (oldPlanId === newPlanId) {
@@ -2217,7 +2218,7 @@ app.patch('/api/v1/superadmin/subscribers/:userId/plan', requireSuperAdmin('supp
   // D1 no expone BEGIN/COMMIT explícito, pero db.batch([...]) garantiza
   // que ambas sentencias se ejecutan atómicamente en el backend SQLite.
   const auditId = crypto.randomUUID()
-  const ip      = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
 
   await c.env.DB.batch([
     c.env.DB.prepare(
@@ -2280,19 +2281,19 @@ app.get('/api/v1/superadmin/metrics/overview', requireSuperAdmin('viewer'), asyn
     ok: true,
     data: {
       users: {
-        total:       totalUsers?.cnt        ?? 0,
-        new_7d:      newUsersWeek?.cnt      ?? 0,
-        new_30d:     newUsersMonth?.cnt     ?? 0,
+        total: totalUsers?.cnt ?? 0,
+        new_7d: newUsersWeek?.cnt ?? 0,
+        new_30d: newUsersMonth?.cnt ?? 0,
       },
       profiles: {
-        total:       totalProfiles?.cnt     ?? 0,
-        active:      activeProfiles?.cnt    ?? 0,
-        inactive:    inactiveProfiles?.cnt  ?? 0,
-        by_plan:     byPlan.results,
+        total: totalProfiles?.cnt ?? 0,
+        active: activeProfiles?.cnt ?? 0,
+        inactive: inactiveProfiles?.cnt ?? 0,
+        by_plan: byPlan.results,
       },
       leads: {
-        total:       totalLeads?.cnt        ?? 0,
-        new_7d:      leadsWeek?.cnt         ?? 0,
+        total: totalLeads?.cnt ?? 0,
+        new_7d: leadsWeek?.cnt ?? 0,
       },
     },
   })
@@ -2302,23 +2303,23 @@ app.get('/api/v1/superadmin/metrics/overview', requireSuperAdmin('viewer'), asyn
 // Audit log paginado con filtros.
 // Query params: page, limit, admin_user_id, action, target_type, from (ISO date), to.
 app.get('/api/v1/superadmin/audit', requireSuperAdmin('viewer'), async (c) => {
-  const page        = Math.max(1, parseInt(c.req.query('page')  || '1',  10))
-  const limit       = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50', 10)))
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10))
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '50', 10)))
   const adminFilter = (c.req.query('admin_user_id') || '').trim()
-  const actionFilter= (c.req.query('action')        || '').trim()
-  const typeFilter  = (c.req.query('target_type')   || '').trim()
-  const fromDate    = (c.req.query('from')           || '').trim()
-  const toDate      = (c.req.query('to')             || '').trim()
-  const offset      = (page - 1) * limit
+  const actionFilter = (c.req.query('action') || '').trim()
+  const typeFilter = (c.req.query('target_type') || '').trim()
+  const fromDate = (c.req.query('from') || '').trim()
+  const toDate = (c.req.query('to') || '').trim()
+  const offset = (page - 1) * limit
 
   const conditions: string[] = []
-  const bindings: unknown[]  = []
+  const bindings: unknown[] = []
 
   if (adminFilter) { conditions.push(`a.admin_user_id = ?`); bindings.push(adminFilter) }
-  if (actionFilter){ conditions.push(`a.action = ?`);        bindings.push(actionFilter) }
-  if (typeFilter)  { conditions.push(`a.target_type = ?`);   bindings.push(typeFilter)   }
-  if (fromDate)    { conditions.push(`a.created_at >= ?`);   bindings.push(fromDate)     }
-  if (toDate)      { conditions.push(`a.created_at <= ?`);   bindings.push(toDate)       }
+  if (actionFilter) { conditions.push(`a.action = ?`); bindings.push(actionFilter) }
+  if (typeFilter) { conditions.push(`a.target_type = ?`); bindings.push(typeFilter) }
+  if (fromDate) { conditions.push(`a.created_at >= ?`); bindings.push(fromDate) }
+  if (toDate) { conditions.push(`a.created_at <= ?`); bindings.push(toDate) }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
@@ -2347,7 +2348,7 @@ app.get('/api/v1/superadmin/audit', requireSuperAdmin('viewer'), async (c) => {
   }
 
   return c.json({
-    ok:   true,
+    ok: true,
     meta: { page, limit, total: totalRow?.cnt ?? 0, pages: Math.ceil((totalRow?.cnt ?? 0) / limit) },
     data: rows.results,
   })
@@ -2372,6 +2373,44 @@ app.get('/api/v1/superadmin/admins', requireSuperAdmin('super_admin'), async (c)
     rows = { results: [] }
   }
   return c.json({ ok: true, data: rows.results })
+})
+
+// --- INTAP Agents MVP (Aislado) ---
+
+app.post('/api/v1/agents/workspaces', async (c) => {
+  const { ownerId, name } = await c.req.json()
+  if (!ownerId || !name) return c.json({ ok: false, error: 'Faltan campos obligatorios' }, 400)
+
+  const id = crypto.randomUUID()
+  await c.env.AGENTS_DB.prepare('INSERT INTO agents_workspaces (id, owner_id, name) VALUES (?, ?, ?)')
+    .bind(id, ownerId, name)
+    .run()
+
+  return c.json({ ok: true, id })
+})
+
+app.post('/api/v1/agents/chat/sessions', async (c) => {
+  const { workspaceId, title } = await c.req.json()
+  if (!workspaceId) return c.json({ ok: false, error: 'workspaceId requerido' }, 400)
+
+  const id = crypto.randomUUID()
+  await c.env.AGENTS_DB.prepare('INSERT INTO agents_chat_sessions (id, workspace_id, title) VALUES (?, ?, ?)')
+    .bind(id, workspaceId, title || 'Nuevo Chat')
+    .run()
+
+  return c.json({ ok: true, id })
+})
+
+app.post('/api/v1/agents/chat/messages', async (c) => {
+  const { sessionId, role, content } = await c.req.json()
+  if (!sessionId || !role || !content) return c.json({ ok: false, error: 'Faltan campos' }, 400)
+
+  const id = crypto.randomUUID()
+  await c.env.AGENTS_DB.prepare('INSERT INTO agents_chat_messages (id, session_id, role, content) VALUES (?, ?, ?, ?)')
+    .bind(id, sessionId, role, content)
+    .run()
+
+  return c.json({ ok: true, id })
 })
 
 export default app

@@ -33,3 +33,9 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "intap-r2"
+
+[[d1_databases]]
+binding = "AGENTS_DB"
+database_name = "intap_agents_db"
+database_id = "93c7f5d9-7c44-454b-9e62-073322127c46"
+
