@@ -1,1 +1,6 @@
+# Redirigir rutas de admin al panel en app.intaprd.com
+/admin https://app.intaprd.com/admin/login 302
+/admin/* https://app.intaprd.com/admin/:splat 302
+
+# SPA fallback — debe ir al final
 /* /index.html 200

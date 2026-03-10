@@ -10,6 +10,17 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
     rel="stylesheet">
+  <!-- Redirect ?slug=VALUE → /VALUE before React loads.
+       Placed in the HTML so it works regardless of JS bundle version cached at edge. -->
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var slug = params.get('slug');
+      if (slug && window.location.pathname === '/') {
+        window.location.replace('/' + encodeURIComponent(slug));
+      }
+    })();
+  </script>
 </head>
 
 <body>

@@ -1,19 +1,23 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Dashboard from './Dashboard'
-import AdminPanel from './AdminPanel'
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import PublicProfile from './components/PublicProfile'
+import MarketingLanding from './components/MarketingLanding'
+
+function RootRoute() {
+  const location = useLocation()
+  const slug = new URLSearchParams(location.search).get('slug')
+  if (slug) return <Navigate to={`/${slug}`} replace />
+  return <MarketingLanding />
+}
 
 function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/admin" element={<AdminPanel />} />
-                {/* Captura de slugs públicos */}
-                <Route path="/:slug" element={<PublicProfile />} />
-            </Routes>
-        </BrowserRouter>
-    )
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/:slug" element={<PublicProfile />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App
