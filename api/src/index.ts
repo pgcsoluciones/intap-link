@@ -6,6 +6,7 @@ import { getEntitlements } from './engine/entitlements'
 
 type Bindings = {
   DB: D1Database
+  AGENTS_DB: D1Database
   BUCKET: R2Bucket
   JWT_SECRET: string
 }
@@ -26,6 +27,22 @@ const requireAdmin = async (c: any, next: any) => {
   const userEmail = getCookie(c, 'session_token')
   if (userEmail !== adminEmail) return c.json({ ok: false, error: 'Forbidden' }, 403)
   await next()
+}
+
+const requireProfileOwner = async (c: any, profileIdToMutate: string) => {
+  const userEmail = getCookie(c, 'session_token')
+  if (!userEmail) return { ok: false, status: 401, error: 'No autorizado' }
+
+  const user = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(userEmail).first()
+  if (!user) return { ok: false, status: 401, error: 'Usuario no encontrado' }
+
+  // Usamos limit 1 en base a la relación, para evitar depender de columnas inexistentes
+  const ownerProfile = await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id = ? LIMIT 1').bind(user.id).first()
+  if (!ownerProfile || ownerProfile.id !== profileIdToMutate) {
+    return { ok: false, status: 403, error: 'forbidden' }
+  }
+
+  return { ok: true }
 }
 
 // --- Rutas de API ---
@@ -100,6 +117,9 @@ app.get('/api/v1/profile/stats/:profileId', async (c) => {
 app.post('/api/v1/profile/avatar/upload', async (c) => {
   try {
     const { profileId } = await c.req.parseBody()
+    const authCheck = await requireProfileOwner(c, profileId as string)
+    if (!authCheck.ok) return c.json({ error: authCheck.error }, authCheck.status)
+
     const file = (await c.req.formData()).get('file') as unknown as File
     if (!file) return c.json({ ok: false, error: 'No file' }, 400)
 
@@ -117,6 +137,9 @@ app.post('/api/v1/profile/avatar/upload', async (c) => {
 
 app.post('/api/v1/profile/gallery/upload', async (c) => {
   const { profileId } = await c.req.parseBody()
+  const authCheck = await requireProfileOwner(c, profileId as string)
+  if (!authCheck.ok) return c.json({ error: authCheck.error }, authCheck.status)
+
   const file = (await c.req.formData()).get('file') as unknown as File
 
   if (!file) return c.json({ ok: false, error: 'No file' }, 400)
@@ -224,6 +247,9 @@ app.get('/api/v1/profile/me/:profileId', async (c) => {
 
 app.patch('/api/v1/profile/settings', async (c) => {
   const { profileId, name, bio, themeId, isPublished, avatarUrl } = await c.req.json()
+  const authCheck = await requireProfileOwner(c, profileId)
+  if (!authCheck.ok) return c.json({ error: authCheck.error }, authCheck.status)
+
   await c.env.DB.prepare('UPDATE profiles SET name = ?, bio = ?, theme_id = ?, is_published = ?, avatar_url = ? WHERE id = ?')
     .bind(name, bio, themeId, isPublished ? 1 : 0, avatarUrl || null, profileId)
     .run()
@@ -232,6 +258,9 @@ app.patch('/api/v1/profile/settings', async (c) => {
 
 app.post('/api/v1/profile/links', async (c) => {
   const { profileId, label, url } = await c.req.json()
+  const authCheck = await requireProfileOwner(c, profileId)
+  if (!authCheck.ok) return c.json({ error: authCheck.error }, authCheck.status)
+
   const id = crypto.randomUUID()
   await c.env.DB.prepare('INSERT INTO profile_links (id, profile_id, label, url, sort_order) VALUES (?, ?, ?, ?, 0)')
     .bind(id, profileId, label, url)
@@ -247,6 +276,9 @@ app.delete('/api/v1/profile/links/:id', async (c) => {
 
 app.post('/api/v1/profile/faqs', async (c) => {
   const { profileId, question, answer } = await c.req.json()
+  const authCheck = await requireProfileOwner(c, profileId)
+  if (!authCheck.ok) return c.json({ error: authCheck.error }, authCheck.status)
+
   const id = crypto.randomUUID()
   await c.env.DB.prepare('INSERT INTO profile_faqs (id, profile_id, question, answer) VALUES (?, ?, ?, ?)')
     .bind(id, profileId, question, answer)
@@ -353,6 +385,105 @@ app.post('/api/v1/admin/activate-module', async (c) => {
   if (secret !== 'intap_master_key') return c.json({ ok: false, error: 'Unauthorized' }, 401)
   await c.env.DB.prepare(`INSERT INTO profile_modules (profile_id, module_code, expires_at) VALUES (?, ?, datetime('now', '+1 year')) ON CONFLICT(profile_id, module_code) DO UPDATE SET expires_at = excluded.expires_at`).bind(profileId, moduleCode).run()
   return c.json({ ok: true, message: `Módulo ${moduleCode} activado` })
+})
+
+// --- Marketing Pages (Superadmin) ---
+
+app.get('/api/v1/marketing-pages/:slug', async (c) => {
+  const slug = c.req.param('slug')
+  const page = await c.env.DB.prepare('SELECT content_json FROM marketing_pages WHERE slug = ?').bind(slug).first()
+  if (!page) return c.json({ ok: false, error: 'Página no encontrada' }, 404)
+  return c.json({ ok: true, data: JSON.parse(page.content_json as string) })
+})
+
+app.put('/api/v1/superadmin/marketing-pages/:slug', requireAdmin, async (c) => {
+  const slug = c.req.param('slug')
+  const content_json = await c.req.json()
+  const now = Math.floor(Date.now() / 1000)
+  const id = crypto.randomUUID()
+
+  await c.env.DB.prepare(`
+    INSERT INTO marketing_pages (id, slug, content_json, created_at, updated_at) 
+    VALUES (?, ?, ?, ?, ?) 
+    ON CONFLICT(slug) DO UPDATE SET content_json = excluded.content_json, updated_at = excluded.updated_at
+  `).bind(id, slug, JSON.stringify(content_json), now, now).run()
+
+  return c.json({ ok: true })
+})
+
+app.post('/api/v1/superadmin/marketing-pages/upload', requireAdmin, async (c) => {
+  const body = await c.req.parseBody()
+  const file = body['file']
+
+  if (!file || !(file instanceof File)) {
+    return c.json({ ok: false, error: 'Archivo no válido' }, 400)
+  }
+
+  const fileId = crypto.randomUUID()
+  const extension = file.name.split('.').pop()
+  const fileName = `marketing/${fileId}.${extension}`
+
+  await c.env.BUCKET.put(fileName, await file.arrayBuffer(), {
+    httpMetadata: { contentType: file.type }
+  })
+
+  // Obtener el origen de la request para retornar URL absoluta.
+  // En Cloudflare Workers, a veces r.url incluye el host correcto, sino fallback dinámico.
+  const url = new URL(c.req.url)
+  const publicUrl = `${url.origin}/api/v1/marketing-pages/assets/${fileName}`
+
+  return c.json({ ok: true, url: publicUrl })
+})
+
+app.get('/api/v1/marketing-pages/assets/marketing/:filename', async (c) => {
+  const filename = c.req.param('filename')
+  const object = await c.env.BUCKET.get(`marketing/${filename}`)
+
+  if (!object) return c.text('Not found', 404)
+
+  const headers = new Headers()
+  object.writeHttpMetadata(headers)
+  headers.set('etag', object.httpEtag)
+
+  return new Response(object.body, { headers })
+})
+
+// --- INTAP Agents MVP (Aislado) ---
+
+app.post('/api/v1/agents/workspaces', async (c) => {
+  const { ownerId, name } = await c.req.json()
+  if (!ownerId || !name) return c.json({ ok: false, error: 'Faltan campos obligatorios' }, 400)
+
+  const id = crypto.randomUUID()
+  await c.env.AGENTS_DB.prepare('INSERT INTO agents_workspaces (id, owner_id, name) VALUES (?, ?, ?)')
+    .bind(id, ownerId, name)
+    .run()
+
+  return c.json({ ok: true, id })
+})
+
+app.post('/api/v1/agents/chat/sessions', async (c) => {
+  const { workspaceId, title } = await c.req.json()
+  if (!workspaceId) return c.json({ ok: false, error: 'workspaceId requerido' }, 400)
+
+  const id = crypto.randomUUID()
+  await c.env.AGENTS_DB.prepare('INSERT INTO agents_chat_sessions (id, workspace_id, title) VALUES (?, ?, ?)')
+    .bind(id, workspaceId, title || 'Nuevo Chat')
+    .run()
+
+  return c.json({ ok: true, id })
+})
+
+app.post('/api/v1/agents/chat/messages', async (c) => {
+  const { sessionId, role, content } = await c.req.json()
+  if (!sessionId || !role || !content) return c.json({ ok: false, error: 'Faltan campos' }, 400)
+
+  const id = crypto.randomUUID()
+  await c.env.AGENTS_DB.prepare('INSERT INTO agents_chat_messages (id, session_id, role, content) VALUES (?, ?, ?, ?)')
+    .bind(id, sessionId, role, content)
+    .run()
+
+  return c.json({ ok: true, id })
 })
 
 export default app
