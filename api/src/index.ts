@@ -2375,6 +2375,102 @@ app.get('/api/v1/superadmin/admins', requireSuperAdmin('super_admin'), async (c)
   return c.json({ ok: true, data: rows.results })
 })
 
+// ── POST /api/v1/superadmin/profiles/:id/change-plan ─────────────────────────
+// Cambia el plan base de un perfil (por profileId) desde Super Admin.
+// Requiere rol mínimo 'support'.
+// Body: { planId: string, reason?: string }
+// Responde: { ok: true, message: "Plan updated", data: { profile_id, user_id, old_plan_id, new_plan_id, plan_name, audit_id } }
+app.post('/api/v1/superadmin/profiles/:id/change-plan', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const profileId   = c.req.param('id')
+
+  // Parse + validate body
+  let body: { planId?: unknown; reason?: unknown }
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const newPlanId = typeof body.planId === 'string' ? body.planId.trim() : ''
+  const reason    = typeof body.reason === 'string' ? body.reason.trim() : null
+
+  if (!newPlanId) {
+    return c.json({ ok: false, error: 'planId is required' }, 400)
+  }
+
+  // Verify plan exists and has operational limits (plans.is_active doesn't exist
+  // in production — schema 0001 only has id+name. The canonical validation is
+  // the presence of a plan_limits row, which is required for entitlements to work.)
+  const planRow = await c.env.DB.prepare(
+    `SELECT p.id, p.name
+     FROM plans p
+     INNER JOIN plan_limits pl ON pl.plan_id = p.id
+     WHERE p.id = ? LIMIT 1`
+  ).bind(newPlanId).first<{ id: string; name: string }>()
+  if (!planRow) {
+    return c.json({ ok: false, error: 'Plan not found or has no limits configured', plan_id: newPlanId }, 400)
+  }
+
+  // Fetch current profile (need old plan + userId for audit context)
+  const profileRow = await c.env.DB.prepare(
+    `SELECT id, user_id, plan_id, slug FROM profiles WHERE id = ? LIMIT 1`
+  ).bind(profileId).first<{ id: string; user_id: string; plan_id: string; slug: string }>()
+  if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
+
+  const oldPlanId = profileRow.plan_id
+
+  // No-op guard
+  if (oldPlanId === newPlanId) {
+    return c.json({
+      ok: true,
+      message: 'Plan unchanged',
+      data: {
+        profile_id: profileId,
+        user_id:    profileRow.user_id,
+        old_plan_id: oldPlanId,
+        new_plan_id: newPlanId,
+      },
+    })
+  }
+
+  // UPDATE + INSERT audit en batch atómico (mismo patrón que PATCH /subscribers/:userId/plan)
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE profiles SET plan_id = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(newPlanId, profileId),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, 'plan_changed', 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      profileId,
+      JSON.stringify({ plan_id: oldPlanId, slug: profileRow.slug, user_id: profileRow.user_id }),
+      JSON.stringify({ plan_id: newPlanId, plan_name: planRow.name, ...(reason ? { reason } : {}) }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    message: 'Plan updated',
+    data: {
+      profile_id:  profileId,
+      user_id:     profileRow.user_id,
+      slug:        profileRow.slug,
+      old_plan_id: oldPlanId,
+      new_plan_id: newPlanId,
+      plan_name:   planRow.name,
+      audit_id:    auditId,
+    },
+  })
+})
+
 // --- INTAP Agents MVP (Aislado) ---
 
 app.post('/api/v1/agents/workspaces', async (c) => {
