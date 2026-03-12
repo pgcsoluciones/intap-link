@@ -2471,6 +2471,98 @@ app.post('/api/v1/superadmin/profiles/:id/change-plan', requireSuperAdmin('suppo
   })
 })
 
+// ── POST /api/v1/superadmin/profiles/:id/modules ──────────────────────────────
+// Asigna manualmente un módulo a un perfil desde Super Admin.
+// Requiere rol mínimo 'support'.
+// Body: { moduleCode: string, reason?: string }
+// Responde: { ok: true, message: "...", data: { profile_id, user_id, slug, module_code, module_name, audit_id } }
+app.post('/api/v1/superadmin/profiles/:id/modules', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const profileId   = c.req.param('id')
+
+  // Parse + validate body
+  let body: { moduleCode?: unknown; reason?: unknown }
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const moduleCode = typeof body.moduleCode === 'string' ? body.moduleCode.trim() : ''
+  const reason     = typeof body.reason === 'string' ? body.reason.trim() : null
+
+  if (!moduleCode) {
+    return c.json({ ok: false, error: 'moduleCode is required' }, 400)
+  }
+
+  // Verify module exists and is active (is_active added in migration 0013, DEFAULT 1)
+  const moduleRow = await c.env.DB.prepare(
+    `SELECT code, name FROM modules WHERE code = ? AND is_active = 1 LIMIT 1`
+  ).bind(moduleCode).first<{ code: string; name: string }>()
+  if (!moduleRow) {
+    return c.json({ ok: false, error: 'Module not found', module_code: moduleCode }, 400)
+  }
+
+  // Verify profile exists
+  const profileRow = await c.env.DB.prepare(
+    `SELECT id, user_id, slug FROM profiles WHERE id = ? LIMIT 1`
+  ).bind(profileId).first<{ id: string; user_id: string; slug: string }>()
+  if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
+
+  // No-op guard — check if module already assigned to this profile
+  const existing = await c.env.DB.prepare(
+    `SELECT 1 FROM profile_modules WHERE profile_id = ? AND module_code = ? LIMIT 1`
+  ).bind(profileId, moduleCode).first()
+  if (existing) {
+    return c.json({
+      ok: true,
+      message: 'Module already assigned',
+      data: {
+        profile_id:  profileId,
+        user_id:     profileRow.user_id,
+        module_code: moduleCode,
+        module_name: moduleRow.name,
+      },
+    })
+  }
+
+  // INSERT + audit en batch atómico
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO profile_modules (profile_id, module_code, assigned_by, assignment_reason)
+       VALUES (?, ?, ?, ?)`
+    ).bind(profileId, moduleCode, adminUserId, reason),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, 'module_assigned', 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      profileId,
+      JSON.stringify({ module_code: null, slug: profileRow.slug, user_id: profileRow.user_id }),
+      JSON.stringify({ module_code: moduleCode, module_name: moduleRow.name, ...(reason ? { reason } : {}) }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    message: 'Module assigned',
+    data: {
+      profile_id:  profileId,
+      user_id:     profileRow.user_id,
+      slug:        profileRow.slug,
+      module_code: moduleCode,
+      module_name: moduleRow.name,
+      audit_id:    auditId,
+    },
+  })
+})
+
 // --- INTAP Agents MVP (Aislado) ---
 
 app.post('/api/v1/agents/workspaces', async (c) => {
