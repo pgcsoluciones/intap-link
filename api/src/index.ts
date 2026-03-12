@@ -2399,12 +2399,17 @@ app.post('/api/v1/superadmin/profiles/:id/change-plan', requireSuperAdmin('suppo
     return c.json({ ok: false, error: 'planId is required' }, 400)
   }
 
-  // Verify plan exists and is active (against actual plans table)
+  // Verify plan exists and has operational limits (plans.is_active doesn't exist
+  // in production — schema 0001 only has id+name. The canonical validation is
+  // the presence of a plan_limits row, which is required for entitlements to work.)
   const planRow = await c.env.DB.prepare(
-    `SELECT id, name FROM plans WHERE id = ? AND is_active = 1 LIMIT 1`
+    `SELECT p.id, p.name
+     FROM plans p
+     INNER JOIN plan_limits pl ON pl.plan_id = p.id
+     WHERE p.id = ? LIMIT 1`
   ).bind(newPlanId).first<{ id: string; name: string }>()
   if (!planRow) {
-    return c.json({ ok: false, error: 'Plan not found or inactive', plan_id: newPlanId }, 400)
+    return c.json({ ok: false, error: 'Plan not found or has no limits configured', plan_id: newPlanId }, 400)
   }
 
   // Fetch current profile (need old plan + userId for audit context)
@@ -2419,7 +2424,7 @@ app.post('/api/v1/superadmin/profiles/:id/change-plan', requireSuperAdmin('suppo
   if (oldPlanId === newPlanId) {
     return c.json({
       ok: true,
-      message: 'Plan unchanged (same value)',
+      message: 'Plan unchanged',
       data: {
         profile_id: profileId,
         user_id:    profileRow.user_id,
