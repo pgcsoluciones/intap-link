@@ -2495,9 +2495,9 @@ app.post('/api/v1/superadmin/profiles/:id/modules', requireSuperAdmin('support')
     return c.json({ ok: false, error: 'moduleCode is required' }, 400)
   }
 
-  // Verify module exists in catalog (modules table is canonical; is_active added in 0013)
+  // Verify module exists and is active (is_active added in migration 0013, DEFAULT 1)
   const moduleRow = await c.env.DB.prepare(
-    `SELECT code, name FROM modules WHERE code = ? LIMIT 1`
+    `SELECT code, name FROM modules WHERE code = ? AND is_active = 1 LIMIT 1`
   ).bind(moduleCode).first<{ code: string; name: string }>()
   if (!moduleRow) {
     return c.json({ ok: false, error: 'Module not found', module_code: moduleCode }, 400)
