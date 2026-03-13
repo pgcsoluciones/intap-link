@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE, apiGet, apiPost, apiPut, apiUpload } from '../../lib/api'
 import ImageCropModal from './ImageCropModal'
+import RetentionPanel from './RetentionPanel'
 
 // ─── Preview Panel ────────────────────────────────────────────────────────────
 function PreviewPanel({ previewUrl, iframeRef, onClose }: {
@@ -68,6 +69,11 @@ interface MeData {
   is_published: number
   theme_id: string | null
   plan_id: string | null
+  plan_code?: string
+  trial_status?: 'active' | 'expired' | 'none'
+  trial_expires_at?: string | null
+  paused_features_count?: number
+  recoverable_items_count?: number
 }
 
 interface Stats {
@@ -406,6 +412,9 @@ export default function AdminDashboard() {
             <p className="text-xs font-black mt-1 text-intap-mint capitalize">{me?.plan_id ?? 'free'}</p>
           </div>
         </div>
+
+        {/* Retention panel — trial/downgrade notices + selector */}
+        {me?.profile_id && <RetentionPanel profileId={me.profile_id} />}
 
         {/* Theme selector */}
         <div className="glass-card p-5 mb-6">
