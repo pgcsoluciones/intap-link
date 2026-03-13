@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { getCookie } from 'hono/cookie'
-import { getEntitlements } from './engine/entitlements'
+import { getEntitlements, getRetentionStatus, logPlanEvent } from './engine/entitlements'
 import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
@@ -422,13 +422,70 @@ me.get('/', async (c) => {
   const r = row as any
   let hasContact = false
   let hasLinks = false
+  // Plan / trial / retention summary (nullable if no profile yet)
+  let planSummary: {
+    plan_code: string
+    trial_status: 'active' | 'expired' | 'none'
+    trial_expires_at: string | null
+    paused_features_count: number
+    recoverable_items_count: number
+  } | null = null
+
   if (r.profile_id) {
-    const [contactRow, linksRow] = await Promise.all([
+    const [contactRow, linksRow, overrideRow] = await Promise.all([
       c.env.DB.prepare(`SELECT profile_id FROM profile_contact WHERE profile_id = ? LIMIT 1`).bind(r.profile_id).first(),
       c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_links WHERE profile_id = ?`).bind(r.profile_id).first(),
+      // Trial info — silenced if table doesn't exist (pre-migration 0023)
+      c.env.DB.prepare(`SELECT trial_ends_at FROM profile_plan_overrides WHERE profile_id = ? LIMIT 1`)
+        .bind(r.profile_id).first().catch(() => null),
     ])
     hasContact = !!contactRow
-    hasLinks = ((linksRow as any)?.n || 0) > 0
+    hasLinks   = ((linksRow as any)?.n || 0) > 0
+
+    const trialEndsAt  = (overrideRow as any)?.trial_ends_at ?? null
+    const trialActive  = trialEndsAt ? new Date(trialEndsAt + 'Z') > new Date() : false
+    const trialExpired = trialEndsAt ? !trialActive : false
+    const trialStatus: 'active' | 'expired' | 'none' =
+      trialActive ? 'active' : (trialExpired ? 'expired' : 'none')
+
+    // Light retention counts (no full ID arrays) to keep /me fast
+    const [exceededLinks, exceededPhotos, exceededFaqs, exceededProducts, exceededVideos, expiredModCount] =
+      await Promise.all([
+        c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_links WHERE profile_id = ?`).bind(r.profile_id).first().then(row => (row as any)?.n ?? 0).catch(() => 0),
+        c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_gallery WHERE profile_id = ?`).bind(r.profile_id).first().then(row => (row as any)?.n ?? 0).catch(() => 0),
+        c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_faqs WHERE profile_id = ?`).bind(r.profile_id).first().then(row => (row as any)?.n ?? 0).catch(() => 0),
+        c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_products WHERE profile_id = ?`).bind(r.profile_id).first().then(row => (row as any)?.n ?? 0).catch(() => 0),
+        c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_videos WHERE profile_id = ?`).bind(r.profile_id).first().then(row => (row as any)?.n ?? 0).catch(() => 0),
+        c.env.DB.prepare(`SELECT COUNT(*) as n FROM profile_modules pm WHERE pm.profile_id = ? AND pm.expires_at IS NOT NULL AND pm.expires_at <= datetime('now')`).bind(r.profile_id).first().then(row => (row as any)?.n ?? 0).catch(() => 0),
+      ])
+
+    // Use current entitlements to compute exceeded counts for the summary
+    const ents = await getEntitlements(c, r.profile_id).catch(() => null)
+    let recoverable = 0
+    let pausedFeatures = expiredModCount > 0 ? 1 : 0
+    if (ents) {
+      const exceeded = {
+        links:    Math.max(0, exceededLinks    - ents.maxLinks),
+        photos:   Math.max(0, exceededPhotos   - ents.maxPhotos),
+        faqs:     Math.max(0, exceededFaqs     - ents.maxFaqs),
+        products: Math.max(0, exceededProducts - ents.maxProducts),
+        videos:   Math.max(0, exceededVideos   - ents.maxVideos),
+      }
+      recoverable      = exceeded.links + exceeded.photos + exceeded.faqs + exceeded.products + exceeded.videos
+      pausedFeatures  += (exceeded.links    > 0 ? 1 : 0) +
+                         (exceeded.photos   > 0 ? 1 : 0) +
+                         (exceeded.faqs     > 0 ? 1 : 0) +
+                         (exceeded.products > 0 ? 1 : 0) +
+                         (exceeded.videos   > 0 ? 1 : 0)
+    }
+
+    planSummary = {
+      plan_code:               r.plan_id ?? 'free',
+      trial_status:            trialStatus,
+      trial_expires_at:        trialEndsAt,
+      paused_features_count:   pausedFeatures,
+      recoverable_items_count: recoverable,
+    }
   }
 
   const onboardingStatus = {
@@ -440,7 +497,17 @@ me.get('/', async (c) => {
   }
 
   const templateData = (() => { try { return JSON.parse(r.template_data || '{}') } catch { return {} } })()
-  return c.json({ ok: true, data: { ...r, profileId: r.profile_id, onboardingStatus, templateData } })
+  return c.json({
+    ok: true,
+    data: {
+      ...r,
+      profileId: r.profile_id,
+      onboardingStatus,
+      templateData,
+      // Plan / retention summary — null if user has no profile yet
+      ...(planSummary ?? {}),
+    },
+  })
 })
 
 me.post('/profile/claim', async (c) => {
@@ -1219,8 +1286,269 @@ me.patch('/profile/visual', async (c) => {
   return c.json({ ok: true })
 })
 
+// ─── GET /api/v1/me/plan-impact-preview?target=<plan_id> ─────────────────────
+// Simula el impacto de un downgrade al plan `target` sin aplicar ningún cambio.
+// Responde: qué recursos quedan activos, cuáles se pausan, si hace falta selección.
+
+me.get('/plan-impact-preview', async (c) => {
+  const userId = c.get('userId') as string
+  const targetPlanId = (c.req.query('target') || 'free').trim().toLowerCase()
+
+  const VALID_PLANS = ['free', 'starter', 'pro', 'agency']
+  if (!VALID_PLANS.includes(targetPlanId)) {
+    return c.json({ ok: false, error: `target must be one of: ${VALID_PLANS.join(', ')}` }, 400)
+  }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId    = (profile as any).id
+  const currentPlanId = (profile as any).plan_id
+
+  // Límites del plan objetivo (sin módulos — simulación base)
+  const targetLimits = await c.env.DB.prepare(
+    `SELECT max_links, max_photos, max_faqs, max_products, max_videos, can_use_vcard
+     FROM plan_limits WHERE plan_id = ?`
+  ).bind(targetPlanId).first()
+
+  if (!targetLimits) return c.json({ ok: false, error: 'Plan no encontrado' }, 404)
+
+  const tl = targetLimits as any
+  const simEnts = {
+    maxLinks:    Number(tl.max_links),
+    maxPhotos:   Number(tl.max_photos),
+    maxFaqs:     Number(tl.max_faqs),
+    maxProducts: Number(tl.max_products ?? 3),
+    maxVideos:   Number(tl.max_videos   ?? 1),
+    canUseVCard: Boolean(tl.can_use_vcard),
+  }
+
+  // Recursos actuales ordenados por sort_order (determina cuáles quedan activos)
+  const [linksRes, photosRes, faqsRes, productsRes, videosRes, currentEnts] = await Promise.all([
+    c.env.DB.prepare(`SELECT id, label FROM profile_links   WHERE profile_id = ? ORDER BY sort_order ASC`).bind(profileId).all(),
+    c.env.DB.prepare(`SELECT id FROM profile_gallery         WHERE profile_id = ? ORDER BY sort_order ASC`).bind(profileId).all(),
+    c.env.DB.prepare(`SELECT id, question FROM profile_faqs  WHERE profile_id = ? ORDER BY sort_order ASC`).bind(profileId).all(),
+    c.env.DB.prepare(`SELECT id, title FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC`).bind(profileId).all(),
+    c.env.DB.prepare(`SELECT id, title FROM profile_videos   WHERE profile_id = ? ORDER BY sort_order ASC`).bind(profileId).all(),
+    getEntitlements(c, profileId).catch(() => null),
+  ])
+
+  const buildImpact = (items: any[], allowed: number, labelField = 'id') => ({
+    total:              items.length,
+    active:             items.slice(0, allowed).map(i => ({ id: i.id, label: (i[labelField] ?? i.id) || i.id })),
+    paused:             items.slice(allowed).map(i => ({ id: i.id, label: (i[labelField] ?? i.id) || i.id })),
+    exceeds_plan:       items.length > allowed,
+    requires_selection: items.length > allowed,
+  })
+
+  const links    = buildImpact(linksRes.results    as any[], simEnts.maxLinks,    'label')
+  const photos   = buildImpact(photosRes.results   as any[], simEnts.maxPhotos)
+  const faqs     = buildImpact(faqsRes.results     as any[], simEnts.maxFaqs,    'question')
+  const products = buildImpact(productsRes.results as any[], simEnts.maxProducts, 'title')
+  const videos   = buildImpact(videosRes.results   as any[], simEnts.maxVideos,   'title')
+
+  const totalToPause =
+    links.paused.length + photos.paused.length + faqs.paused.length +
+    products.paused.length + videos.paused.length
+
+  return c.json({
+    ok: true,
+    data: {
+      current_plan: currentPlanId,
+      target_plan:  targetPlanId,
+      is_downgrade: currentPlanId !== targetPlanId,
+      target_limits: simEnts,
+      resources: { links, photos, faqs, products, videos },
+      modules: {
+        // Módulos pagos se conservan independientemente del plan base
+        loses_vcard: !!(currentEnts?.canUseVCard && !simEnts.canUseVCard),
+      },
+      summary: {
+        items_to_pause:     totalToPause,
+        requires_selection: totalToPause > 0,
+      },
+    },
+  })
+})
+
+// ─── POST /api/v1/me/retention/selection ─────────────────────────────────────
+// El usuario selecciona qué recursos mantener activos dentro del límite del plan.
+// Regla: los `keep_ids` se reordenan a sort_order 0,1,2,... (quedan "activos").
+// Los demás se empujan más allá del límite (quedan "bloqueados pero conservados").
+// Nunca borra datos. Solo reordena.
+//
+// Body: { resource: 'links'|'faqs'|'products'|'videos'|'photos', keep_ids: string[] }
+
+me.post('/retention/selection', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const VALID_RESOURCES = ['links', 'faqs', 'products', 'videos', 'photos'] as const
+  type ResourceType = typeof VALID_RESOURCES[number]
+
+  const resource = String(body.resource || '').trim() as ResourceType
+  const keepIds  = Array.isArray(body.keep_ids) ? (body.keep_ids as string[]).filter(Boolean) : null
+
+  if (!VALID_RESOURCES.includes(resource)) {
+    return c.json({ ok: false, error: `resource must be one of: ${VALID_RESOURCES.join(', ')}` }, 400)
+  }
+  if (!keepIds || keepIds.length === 0) {
+    return c.json({ ok: false, error: 'keep_ids array required (must have at least one item)' }, 400)
+  }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  const profileId = (profile as any).id
+
+  // Validar contra el plan vigente
+  let ents: Awaited<ReturnType<typeof getEntitlements>>
+  try {
+    ents = await getEntitlements(c, profileId)
+  } catch (e) {
+    return c.json({ ok: false, error: 'Error loading plan entitlements' }, 500)
+  }
+
+  const LIMIT_MAP: Record<ResourceType, number> = {
+    links:    ents.maxLinks,
+    faqs:     ents.maxFaqs,
+    products: ents.maxProducts,
+    videos:   ents.maxVideos,
+    photos:   ents.maxPhotos,
+  }
+  const TABLE_MAP: Record<ResourceType, string> = {
+    links:    'profile_links',
+    faqs:     'profile_faqs',
+    products: 'profile_products',
+    videos:   'profile_videos',
+    photos:   'profile_gallery',
+  }
+
+  const allowed = LIMIT_MAP[resource]
+  if (keepIds.length > allowed) {
+    return c.json({
+      ok: false,
+      error: `keep_ids count (${keepIds.length}) exceeds plan limit (${allowed}) for ${resource}`,
+      limit: allowed,
+    }, 422)
+  }
+
+  const table = TABLE_MAP[resource]
+
+  // Obtener todos los IDs actuales del recurso (order by sort_order)
+  const allItems = await c.env.DB.prepare(
+    `SELECT id FROM ${table} WHERE profile_id = ? ORDER BY sort_order ASC`
+  ).bind(profileId).all()
+  const allIds = (allItems.results as any[]).map(r => r.id)
+
+  // Verificar ownership de todos los keep_ids
+  const allIdsSet = new Set(allIds)
+  const invalidId = keepIds.find(id => !allIdsSet.has(id))
+  if (invalidId) {
+    return c.json({ ok: false, error: `ID ${invalidId} not found or not owned by this profile` }, 400)
+  }
+
+  // Nueva ordenación: keep_ids primero (0,1,2,...), el resto en su orden original
+  const keepIdsSet  = new Set(keepIds)
+  const remainingIds = allIds.filter(id => !keepIdsSet.has(id))
+  const newOrdering  = [...keepIds, ...remainingIds]
+
+  // Actualizar sort_order de todos los ítems
+  await Promise.all(newOrdering.map((id, index) =>
+    c.env.DB.prepare(
+      `UPDATE ${table} SET sort_order = ? WHERE id = ? AND profile_id = ?`
+    ).bind(index, id, profileId).run()
+  ))
+
+  // Auditoría (fire-and-forget)
+  logPlanEvent(c.env.DB, {
+    profileId,
+    eventType: 'retention_selection',
+    triggeredBy: userId,
+    eventData: {
+      resource,
+      keep_ids:        keepIds,
+      beyond_plan_ids: newOrdering.slice(allowed),
+      allowed,
+      total:           allIds.length,
+    },
+  }).catch(() => { })
+
+  return c.json({
+    ok: true,
+    data: {
+      resource,
+      active_ids:    keepIds,
+      paused_ids:    newOrdering.slice(allowed),
+      allowed,
+      total:         allIds.length,
+    },
+  })
+})
+
 // Mount the authenticated sub-app
 app.route('/api/v1/me', me)
+
+// ─── GET /api/v1/entitlements ─────────────────────────────────────────────────
+// Endpoint dedicado de entitlements con estado completo de retención.
+// Requiere sesión autenticada. Devuelve límites vigentes + estado funcional
+// de todos los recursos (activos, excedidos, módulos pausados, etc.).
+
+app.get('/api/v1/entitlements', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+
+  let ents: Awaited<ReturnType<typeof getEntitlements>>
+  try {
+    ents = await getEntitlements(c, profileId)
+  } catch (e) {
+    console.error('[GET /api/v1/entitlements] error:', String(e))
+    return c.json({ ok: false, error: 'Error loading entitlements' }, 500)
+  }
+
+  const retention = await getRetentionStatus(c, profileId, ents).catch(e => {
+    console.warn('[GET /api/v1/entitlements] retention status failed:', String(e))
+    return null
+  })
+
+  return c.json({
+    ok: true,
+    data: {
+      // Límites vigentes (plan + módulos + overrides)
+      limits: {
+        max_links:     ents.maxLinks,
+        max_photos:    ents.maxPhotos,
+        max_faqs:      ents.maxFaqs,
+        max_products:  ents.maxProducts,
+        max_videos:    ents.maxVideos,
+        can_use_vcard: ents.canUseVCard,
+      },
+      // Uso actual + estado de retención por recurso
+      resources: retention?.resources ?? null,
+      // Módulos pagos vencidos (conservados pero no activos)
+      paused_modules: retention?.paused_modules ?? [],
+      // Flags de alerta
+      requires_selection:      retention?.requires_selection      ?? false,
+      paused_features_count:   retention?.paused_features_count   ?? 0,
+      recoverable_items_count: retention?.recoverable_items_count ?? 0,
+      // Trial / plan info
+      plan_code:               retention?.plan_code               ?? (profile as any).plan_id,
+      trial_status:            retention?.trial_status            ?? 'none',
+      trial_expires_at:        retention?.trial_expires_at        ?? null,
+      downgrade_effective_at:  retention?.downgrade_effective_at  ?? null,
+    },
+  })
+})
 
 // ─── Profile/me — authenticated profile data ──────────────────────────────
 

@@ -11,6 +11,7 @@ import AdminVideos from './components/admin/AdminVideos'
 import AdminBlocks from './components/admin/AdminBlocks'
 import AdminVisual from './components/admin/AdminVisual'
 import AdminTemplate from './components/admin/AdminTemplate'
+import AdminRetention from './components/admin/AdminRetention'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
@@ -38,8 +39,9 @@ function App() {
         <Route path="/admin/videos"   element={<AdminGuard><AdminVideos /></AdminGuard>} />
         <Route path="/admin/blocks"   element={<AdminGuard><AdminBlocks /></AdminGuard>} />
         <Route path="/admin/visual"    element={<AdminGuard><AdminVisual /></AdminGuard>} />
-        <Route path="/admin/template" element={<AdminGuard><AdminTemplate /></AdminGuard>} />
-        <Route path="/admin"          element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+        <Route path="/admin/template"   element={<AdminGuard><AdminTemplate /></AdminGuard>} />
+        <Route path="/admin/retention"  element={<AdminGuard><AdminRetention /></AdminGuard>} />
+        <Route path="/admin"            element={<AdminGuard><AdminDashboard /></AdminGuard>} />
 
         {/* Entrada protegida */}
         <Route path="/" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
