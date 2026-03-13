@@ -671,15 +671,14 @@ export default function AdminRetention() {
           <p className="text-xs text-slate-400 mb-4">
             Al actualizar tu plan, todos los ítems en pausa vuelven a estar activos automáticamente.
           </p>
-          <button
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white text-sm font-bold hover:opacity-90 transition-opacity"
-            onClick={() => {
-              // TODO: conectar a página de planes cuando esté disponible
-              alert('Próximamente: gestión de planes desde el dashboard')
-            }}
+          <a
+            href="https://intaprd.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full py-3 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white text-sm font-bold hover:opacity-90 transition-opacity text-center"
           >
-            Actualizar plan →
-          </button>
+            Ver planes disponibles →
+          </a>
           <p className="text-[11px] text-slate-500 mt-3">
             Tu contenido nunca se borra · todo sigue guardado
           </p>

@@ -2,14 +2,18 @@
  * RetentionPanel — bloque embebido en el dashboard del admin.
  *
  * Fuentes de verdad:
- *   GET /api/v1/entitlements  → estado completo de retención
- *   GET /api/v1/me/*          → items con labels (cargados al abrir el selector)
+ *   Props iniciales (de /me): usados para render inmediato — sin esperar fetch
+ *   GET /api/v1/entitlements: enriquece datos para el selector modal
  *   POST /api/v1/me/retention/selection → guarda la selección del usuario
  *
  * Principio rector: nunca presentar como pérdida.
  *   "Tu configuración sigue guardada"
  *   "Algunas funciones quedaron en pausa"
  *   "Puedes elegir qué mantener activo"
+ *
+ * Bug fix: el panel se renderiza con los datos de /me (ya disponibles en el padre)
+ * sin esperar a /entitlements. El fetch de /entitlements es background-only
+ * y enriquece el selector cuando se abre — no es el gatekeep del render.
  */
 
 import { useEffect, useState, useCallback } from 'react'
@@ -165,14 +169,24 @@ function TrialBanner({ trialStatus, trialExpiresAt, onViewDetails }: {
 
 // ─── RetentionSummaryCard ─────────────────────────────────────────────────────
 
-function RetentionSummaryCard({ ent, onSelectItems, onViewDetails }: {
-  ent: EntData
+function RetentionSummaryCard({
+  pausedFeaturesCount,
+  recoverableItemsCount,
+  requiresSelection,
+  resources,
+  pausedModules,
+  onSelectItems,
+  onViewDetails,
+}: {
+  pausedFeaturesCount: number
+  recoverableItemsCount: number
+  requiresSelection: boolean
+  resources: EntData['resources'] | null
+  pausedModules: EntData['paused_modules']
   onSelectItems: () => void
   onViewDetails: () => void
 }) {
-  const { paused_features_count, recoverable_items_count, requires_selection, paused_modules } = ent
-
-  if (paused_features_count === 0 && paused_modules.length === 0) return null
+  if (pausedFeaturesCount === 0 && pausedModules.length === 0) return null
 
   return (
     <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 mb-4">
@@ -190,24 +204,24 @@ function RetentionSummaryCard({ ent, onSelectItems, onViewDetails }: {
       {/* Counts */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div className="bg-white/5 rounded-xl p-3 text-center">
-          <p className="text-xl font-black text-white">{paused_features_count}</p>
+          <p className="text-xl font-black text-white">{pausedFeaturesCount}</p>
           <p className="text-[10px] text-slate-400 uppercase font-bold mt-0.5">
-            {paused_features_count === 1 ? 'función pausada' : 'funciones pausadas'}
+            {pausedFeaturesCount === 1 ? 'función pausada' : 'funciones pausadas'}
           </p>
         </div>
         <div className="bg-white/5 rounded-xl p-3 text-center">
-          <p className="text-xl font-black text-amber-300">{recoverable_items_count}</p>
+          <p className="text-xl font-black text-amber-300">{recoverableItemsCount}</p>
           <p className="text-[10px] text-slate-400 uppercase font-bold mt-0.5">
-            {recoverable_items_count === 1 ? 'ítem recuperable' : 'ítems recuperables'}
+            {recoverableItemsCount === 1 ? 'ítem recuperable' : 'ítems recuperables'}
           </p>
         </div>
       </div>
 
-      {/* Per-resource badges */}
-      {ent.resources && (
+      {/* Per-resource badges — only when entitlements loaded */}
+      {resources && (
         <div className="flex flex-wrap gap-1.5 mb-4">
           {(['links', 'photos', 'faqs', 'products', 'videos'] as ResourceKey[]).map(key => {
-            const res = ent.resources![key]
+            const res = resources[key]
             if (!res || res.exceeded === 0) return null
             const meta = RESOURCE_LABELS[key]
             return (
@@ -217,7 +231,7 @@ function RetentionSummaryCard({ ent, onSelectItems, onViewDetails }: {
               </span>
             )
           })}
-          {paused_modules.map(m => (
+          {pausedModules.map(m => (
             <span key={m.module_code} className="inline-flex items-center gap-1 text-[11px] bg-purple-500/10 border border-purple-500/20 px-2.5 py-1 rounded-full text-purple-300">
               <span>🔌</span>
               <span>{m.module_name} pausado</span>
@@ -228,7 +242,7 @@ function RetentionSummaryCard({ ent, onSelectItems, onViewDetails }: {
 
       {/* CTAs */}
       <div className="flex gap-2">
-        {requires_selection && (
+        {requiresSelection && (
           <button
             onClick={onSelectItems}
             className="flex-1 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500/30 transition-colors"
@@ -238,9 +252,9 @@ function RetentionSummaryCard({ ent, onSelectItems, onViewDetails }: {
         )}
         <button
           onClick={onViewDetails}
-          className={`${requires_selection ? '' : 'flex-1'} py-2.5 px-4 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 transition-colors`}
+          className={`${requiresSelection ? '' : 'flex-1'} py-2.5 px-4 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-bold hover:bg-white/10 transition-colors`}
         >
-          {requires_selection ? 'Ver detalles' : 'Ver detalles y recuperar'}
+          {requiresSelection ? 'Ver detalles' : 'Ver detalles y recuperar'}
         </button>
       </div>
     </div>
@@ -424,7 +438,6 @@ function RetentionSelectorModal({ ent, profileId, onClose, onSuccess }: {
           ) : (
             <div className="flex flex-col gap-2">
               {(items[activeTab] ?? [])
-                // Ordenar: primero los que están en allIds (por sort_order), luego el resto
                 .sort((a, b) => {
                   const ai = allIds.indexOf(a.id)
                   const bi = allIds.indexOf(b.id)
@@ -513,21 +526,37 @@ function RetentionSelectorModal({ ent, profileId, onClose, onSuccess }: {
 }
 
 // ─── RetentionPanel (componente principal) ─────────────────────────────────────
+//
+// IMPORTANTE: recibe datos iniciales de /me desde el padre (AdminDashboard).
+// Esto garantiza que el panel se renderice SIEMPRE que haya datos relevantes,
+// sin depender del fetch a /entitlements. El fetch a /entitlements es background-only
+// y solo se usa para enriquecer el selector modal cuando se abre.
 
-export default function RetentionPanel({ profileId }: { profileId: string }) {
+export default function RetentionPanel({
+  profileId,
+  initialPausedFeaturesCount = 0,
+  initialRecoverableItemsCount = 0,
+  initialTrialStatus = 'none',
+  initialTrialExpiresAt = null,
+}: {
+  profileId: string
+  initialPausedFeaturesCount?: number
+  initialRecoverableItemsCount?: number
+  initialTrialStatus?: 'active' | 'expired' | 'none'
+  initialTrialExpiresAt?: string | null
+}) {
   const navigate = useNavigate()
   const [ent, setEnt] = useState<EntData | null>(null)
-  const [loading, setLoading] = useState(true)
   const [selectorOpen, setSelectorOpen] = useState(false)
 
+  // Fetch /entitlements en background para enriquecer el selector
+  // Si falla, el panel sigue visible usando los datos iniciales de /me
   const loadEntitlements = useCallback(async () => {
     try {
       const json: any = await apiGet('/entitlements')
       if (json.ok) setEnt(json.data)
-    } catch {
-      // silencio — no rompe el dashboard
-    } finally {
-      setLoading(false)
+    } catch (e) {
+      console.error('[RetentionPanel] /entitlements fetch failed:', e)
     }
   }, [])
 
@@ -537,28 +566,28 @@ export default function RetentionPanel({ profileId }: { profileId: string }) {
 
   const handleSelectionSuccess = () => {
     setSelectorOpen(false)
-    setLoading(true)
     loadEntitlements()
   }
 
-  // No mostrar nada si está cargando o no hay datos relevantes
-  if (loading) return (
-    <div className="flex justify-center py-4 mb-4">
-      <div className="w-4 h-4 border-2 border-white/10 border-t-white/40 rounded-full animate-spin" />
-    </div>
-  )
+  // Datos derivados: ent (si cargó) toma precedencia sobre props iniciales
+  const pausedFeaturesCount     = ent?.paused_features_count     ?? initialPausedFeaturesCount
+  const recoverableItemsCount   = ent?.recoverable_items_count   ?? initialRecoverableItemsCount
+  const trialStatus             = ent?.trial_status              ?? initialTrialStatus
+  const trialExpiresAt          = ent?.trial_expires_at          ?? initialTrialExpiresAt
+  const requiresSelection       = ent?.requires_selection        ?? (initialPausedFeaturesCount > 0)
+  const pausedModules           = ent?.paused_modules            ?? []
+  const resources               = ent?.resources                 ?? null
 
-  if (!ent) return null
+  const showTrialBanner   = trialStatus === 'expired' || trialStatus === 'active'
+  const showRetentionCard = pausedFeaturesCount > 0 || pausedModules.length > 0
 
-  const showTrialBanner = ent.trial_status === 'expired' || ent.trial_status === 'active'
-  const showRetentionCard = ent.paused_features_count > 0 || ent.paused_modules.length > 0
-
+  // No renderizar si no hay nada que mostrar
   if (!showTrialBanner && !showRetentionCard) return null
 
   return (
     <>
-      {/* Selector modal */}
-      {selectorOpen && (
+      {/* Selector modal — solo se monta cuando ent está disponible y usuario lo abre */}
+      {selectorOpen && ent && (
         <RetentionSelectorModal
           ent={ent}
           profileId={profileId}
@@ -570,8 +599,8 @@ export default function RetentionPanel({ profileId }: { profileId: string }) {
       {/* Trial banner */}
       {showTrialBanner && (
         <TrialBanner
-          trialStatus={ent.trial_status as 'active' | 'expired'}
-          trialExpiresAt={ent.trial_expires_at}
+          trialStatus={trialStatus as 'active' | 'expired'}
+          trialExpiresAt={trialExpiresAt}
           onViewDetails={() => navigate('/admin/retention')}
         />
       )}
@@ -579,7 +608,11 @@ export default function RetentionPanel({ profileId }: { profileId: string }) {
       {/* Retention summary card */}
       {showRetentionCard && (
         <RetentionSummaryCard
-          ent={ent}
+          pausedFeaturesCount={pausedFeaturesCount}
+          recoverableItemsCount={recoverableItemsCount}
+          requiresSelection={requiresSelection}
+          resources={resources}
+          pausedModules={pausedModules}
           onSelectItems={() => setSelectorOpen(true)}
           onViewDetails={() => navigate('/admin/retention')}
         />

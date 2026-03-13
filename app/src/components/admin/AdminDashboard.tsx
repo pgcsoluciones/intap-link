@@ -413,8 +413,18 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Retention panel — trial/downgrade notices + selector */}
-        {me?.profile_id && <RetentionPanel profileId={me.profile_id} />}
+        {/* Retention panel — trial/downgrade notices + selector.
+            Passa os dados de /me como props iniciais para render imediato
+            (sem esperar fetch de /entitlements). */}
+        {me?.profile_id && (
+          <RetentionPanel
+            profileId={me.profile_id}
+            initialPausedFeaturesCount={me.paused_features_count ?? 0}
+            initialRecoverableItemsCount={me.recoverable_items_count ?? 0}
+            initialTrialStatus={me.trial_status ?? 'none'}
+            initialTrialExpiresAt={me.trial_expires_at ?? null}
+          />
+        )}
 
         {/* Theme selector */}
         <div className="glass-card p-5 mb-6">
