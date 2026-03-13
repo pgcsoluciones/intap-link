@@ -2657,43 +2657,63 @@ app.delete('/api/v1/superadmin/profiles/:id/modules/:module_code', requireSuperA
 })
 
 // ── POST /api/v1/superadmin/profiles/:id/override ─────────────────────────────
-// Crea o reemplaza el override de límites/capacidades para un perfil.
+// Crea o actualiza (PATCH-like) el override de límites/capacidades para un perfil.
 // Requiere rol mínimo 'support'.
 // Body: { max_links?, max_photos?, max_faqs?, max_products?, max_videos?,
 //         can_use_vcard?, trial_plan_id?, trial_ends_at?, reason? }
-// Todos los campos son opcionales. NULL/omitido = sin override para ese campo.
-// profile_plan_overrides tiene profile_id como PRIMARY KEY → es UPSERT.
+// Semántica: campo OMITIDO → conserva valor previo. null EXPLÍCITO → limpia ese campo.
+// Al menos un campo de override debe estar presente en el body (guard contra no-op).
 // Responde: { ok: true, message: "...", data: { profile_id, user_id, slug, override, audit_id } }
 app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'), async (c) => {
   const adminUserId = c.get('adminUserId') as string
   const profileId   = c.req.param('id')
 
   // Parse body
-  let body: {
-    max_links?:     unknown; max_photos?:   unknown; max_faqs?:     unknown;
-    max_products?:  unknown; max_videos?:   unknown; can_use_vcard?: unknown;
-    trial_plan_id?: unknown; trial_ends_at?: unknown; reason?:       unknown;
-  }
+  let body: Record<string, unknown>
   try {
     body = await c.req.json()
   } catch {
     return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
   }
 
-  // Helpers: NULL if omitted/null, otherwise coerce to expected type
+  // Guard: al menos un campo de override debe estar presente en el body
+  const OVERRIDE_KEYS = ['max_links', 'max_photos', 'max_faqs', 'max_products', 'max_videos', 'can_use_vcard', 'trial_plan_id', 'trial_ends_at']
+  if (!OVERRIDE_KEYS.some(k => k in body)) {
+    return c.json({ ok: false, error: 'Body must include at least one override field' }, 400)
+  }
+
+  // Helpers: distinguen omitido (undefined) de null explícito
   const toIntOrNull  = (v: unknown) => (v === null || v === undefined) ? null : Number.isInteger(v) ? (v as number) : null
   const toTextOrNull = (v: unknown) => (typeof v === 'string' && v.trim()) ? v.trim() : null
   const toBoolOrNull = (v: unknown) => (v === null || v === undefined) ? null : v ? 1 : 0
 
-  const max_links    = toIntOrNull(body.max_links)
-  const max_photos   = toIntOrNull(body.max_photos)
-  const max_faqs     = toIntOrNull(body.max_faqs)
-  const max_products = toIntOrNull(body.max_products)
-  const max_videos   = toIntOrNull(body.max_videos)
-  const can_use_vcard   = toBoolOrNull(body.can_use_vcard)
-  const trial_plan_id   = toTextOrNull(body.trial_plan_id)
-  const trial_ends_at   = toTextOrNull(body.trial_ends_at)
-  const override_reason = toTextOrNull(body.reason)
+  // Parsear solo los campos presentes en body — ausentes quedan como undefined
+  const sent = {
+    max_links:     'max_links'     in body ? toIntOrNull(body.max_links)       : undefined,
+    max_photos:    'max_photos'    in body ? toIntOrNull(body.max_photos)      : undefined,
+    max_faqs:      'max_faqs'      in body ? toIntOrNull(body.max_faqs)        : undefined,
+    max_products:  'max_products'  in body ? toIntOrNull(body.max_products)    : undefined,
+    max_videos:    'max_videos'    in body ? toIntOrNull(body.max_videos)      : undefined,
+    can_use_vcard: 'can_use_vcard' in body ? toBoolOrNull(body.can_use_vcard)  : undefined,
+    trial_plan_id: 'trial_plan_id' in body ? toTextOrNull(body.trial_plan_id)  : undefined,
+    trial_ends_at: 'trial_ends_at' in body ? toTextOrNull(body.trial_ends_at)  : undefined,
+    reason:        'reason'        in body ? toTextOrNull(body.reason)         : undefined,
+  }
+
+  // Validar trial_plan_id si fue enviado y no es null
+  if (sent.trial_plan_id !== undefined && sent.trial_plan_id !== null) {
+    const planCheck = await c.env.DB.prepare(
+      `SELECT id FROM plans WHERE id = ? LIMIT 1`
+    ).bind(sent.trial_plan_id).first()
+    if (!planCheck) return c.json({ ok: false, error: 'trial_plan_id not found', trial_plan_id: sent.trial_plan_id }, 400)
+  }
+
+  // Validar trial_ends_at si fue enviado y no es null (formato datetime básico)
+  if (sent.trial_ends_at !== undefined && sent.trial_ends_at !== null) {
+    if (isNaN(new Date(sent.trial_ends_at).getTime())) {
+      return c.json({ ok: false, error: 'trial_ends_at is not a valid datetime' }, 400)
+    }
+  }
 
   // Verify profile exists
   const profileRow = await c.env.DB.prepare(
@@ -2701,22 +2721,35 @@ app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'
   ).bind(profileId).first<{ id: string; user_id: string; slug: string }>()
   if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
 
-  // Snapshot before (may be null if no prior override)
+  // Snapshot before — necesario para el merge PATCH-like Y para auditoría
   const before = await c.env.DB.prepare(
     `SELECT max_links, max_photos, max_faqs, max_products, max_videos,
             can_use_vcard, trial_plan_id, trial_ends_at, override_reason,
             overridden_by, overridden_at
      FROM profile_plan_overrides WHERE profile_id = ? LIMIT 1`
-  ).bind(profileId).first()
+  ).bind(profileId).first<{
+    max_links: number|null; max_photos: number|null; max_faqs: number|null;
+    max_products: number|null; max_videos: number|null; can_use_vcard: number|null;
+    trial_plan_id: string|null; trial_ends_at: string|null; override_reason: string|null;
+    overridden_by: string; overridden_at: string;
+  }>()
+
+  // Merge PATCH-like: sent !== undefined → usar nuevo valor (incluso si es null)
+  //                   sent === undefined → conservar valor previo
+  const merged = {
+    max_links:       sent.max_links     !== undefined ? sent.max_links     : (before?.max_links     ?? null),
+    max_photos:      sent.max_photos    !== undefined ? sent.max_photos    : (before?.max_photos    ?? null),
+    max_faqs:        sent.max_faqs      !== undefined ? sent.max_faqs      : (before?.max_faqs      ?? null),
+    max_products:    sent.max_products  !== undefined ? sent.max_products  : (before?.max_products  ?? null),
+    max_videos:      sent.max_videos    !== undefined ? sent.max_videos    : (before?.max_videos    ?? null),
+    can_use_vcard:   sent.can_use_vcard !== undefined ? sent.can_use_vcard : (before?.can_use_vcard ?? null),
+    trial_plan_id:   sent.trial_plan_id !== undefined ? sent.trial_plan_id : (before?.trial_plan_id ?? null),
+    trial_ends_at:   sent.trial_ends_at !== undefined ? sent.trial_ends_at : (before?.trial_ends_at ?? null),
+    override_reason: sent.reason        !== undefined ? sent.reason        : (before?.override_reason ?? null),
+  }
 
   const auditId = crypto.randomUUID()
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
-
-  const overridePayload = {
-    max_links, max_photos, max_faqs, max_products, max_videos,
-    can_use_vcard, trial_plan_id, trial_ends_at, override_reason,
-    overridden_by: adminUserId,
-  }
 
   await c.env.DB.batch([
     c.env.DB.prepare(
@@ -2738,8 +2771,10 @@ app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'
          overridden_by   = excluded.overridden_by,
          overridden_at   = datetime('now')`
     ).bind(
-      profileId, max_links, max_photos, max_faqs, max_products, max_videos,
-      can_use_vcard, trial_plan_id, trial_ends_at, override_reason, adminUserId,
+      profileId,
+      merged.max_links, merged.max_photos, merged.max_faqs, merged.max_products, merged.max_videos,
+      merged.can_use_vcard, merged.trial_plan_id, merged.trial_ends_at, merged.override_reason,
+      adminUserId,
     ),
     c.env.DB.prepare(
       `INSERT INTO admin_audit_log
@@ -2750,7 +2785,7 @@ app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'
       adminUserId,
       profileId,
       JSON.stringify(before ?? null),
-      JSON.stringify({ ...overridePayload, slug: profileRow.slug, user_id: profileRow.user_id }),
+      JSON.stringify({ ...merged, overridden_by: adminUserId, slug: profileRow.slug, user_id: profileRow.user_id }),
       ip,
     ),
   ])
@@ -2762,7 +2797,7 @@ app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'
       profile_id: profileId,
       user_id:    profileRow.user_id,
       slug:       profileRow.slug,
-      override:   overridePayload,
+      override:   { ...merged, overridden_by: adminUserId },
       audit_id:   auditId,
     },
   })
