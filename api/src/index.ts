@@ -2844,6 +2844,107 @@ app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'
   })
 })
 
+// ── PATCH /api/v1/superadmin/profiles/:id/status ──────────────────────────────
+// Activa o desactiva un perfil a nivel admin (campo is_active).
+// Requiere rol mínimo 'support'.
+// Body: { is_active: boolean | 1 | 0, reason?: string }
+// Desactivar: sets is_active=0, guarda deactivation_reason si viene reason.
+// Reactivar:  sets is_active=1, limpia deactivation_reason (ya no aplica).
+// No-op limpio si el estado ya es el solicitado.
+// Responde: { ok: true, message: "...", data: { profile_id, user_id, slug, is_active, audit_id? } }
+app.patch('/api/v1/superadmin/profiles/:id/status', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const profileId   = c.req.param('id')
+
+  let body: Record<string, unknown>
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  // is_active es requerido y validado de forma estricta
+  if (!('is_active' in body)) {
+    return c.json({ ok: false, error: 'is_active is required' }, 400)
+  }
+  const v = body.is_active
+  let newIsActive: 0 | 1
+  if      (v === true  || v === 1) newIsActive = 1
+  else if (v === false || v === 0) newIsActive = 0
+  else return c.json({ ok: false, error: 'is_active must be true, false, 1 or 0' }, 400)
+
+  const reason = (typeof body.reason === 'string' && body.reason.trim()) ? body.reason.trim() : null
+
+  // Verify profile exists + snapshot current state
+  const profileRow = await c.env.DB.prepare(
+    `SELECT id, user_id, slug, is_active, deactivation_reason FROM profiles WHERE id = ? LIMIT 1`
+  ).bind(profileId).first<{ id: string; user_id: string; slug: string; is_active: number; deactivation_reason: string | null }>()
+  if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
+
+  // No-op guard — estado ya es el solicitado
+  if (profileRow.is_active === newIsActive) {
+    return c.json({
+      ok: true,
+      message: 'Status unchanged',
+      data: {
+        profile_id: profileId,
+        user_id:    profileRow.user_id,
+        slug:       profileRow.slug,
+        is_active:  newIsActive === 1,
+      },
+    })
+  }
+
+  const auditId = crypto.randomUUID()
+  const ip      = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+  const action  = newIsActive === 1 ? 'profile_activated' : 'profile_deactivated'
+
+  // deactivation_reason: se guarda al desactivar (reason o null); se borra al reactivar
+  const newDeactivationReason = newIsActive === 0 ? reason : null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE profiles
+       SET is_active = ?, deactivation_reason = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    ).bind(newIsActive, newDeactivationReason, profileId),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, ?, 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      action,
+      profileId,
+      JSON.stringify({
+        is_active:          profileRow.is_active === 1,
+        deactivation_reason: profileRow.deactivation_reason,
+        slug:               profileRow.slug,
+        user_id:            profileRow.user_id,
+      }),
+      JSON.stringify({
+        is_active:          newIsActive === 1,
+        deactivation_reason: newDeactivationReason,
+      }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    message: newIsActive === 1 ? 'Profile activated' : 'Profile deactivated',
+    data: {
+      profile_id:          profileId,
+      user_id:             profileRow.user_id,
+      slug:                profileRow.slug,
+      is_active:           newIsActive === 1,
+      deactivation_reason: newDeactivationReason,
+      audit_id:            auditId,
+    },
+  })
+})
+
 // --- INTAP Agents MVP (Aislado) ---
 
 app.post('/api/v1/agents/workspaces', async (c) => {
