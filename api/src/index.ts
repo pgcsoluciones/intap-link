@@ -2588,13 +2588,13 @@ app.delete('/api/v1/superadmin/profiles/:id/modules/:module_code', requireSuperA
   ).bind(profileId).first<{ id: string; user_id: string; slug: string }>()
   if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
 
-  // Check if assignment exists
+  // Check if assignment exists (columnas reales: no created_at, sí activated_at)
   const existing = await c.env.DB.prepare(
-    `SELECT module_code, assigned_by, assignment_reason, expires_at, created_at
+    `SELECT module_code, assigned_by, assignment_reason, expires_at, activated_at
      FROM profile_modules WHERE profile_id = ? AND module_code = ? LIMIT 1`
   ).bind(profileId, moduleCode).first<{
     module_code: string; assigned_by: string | null;
-    assignment_reason: string | null; expires_at: string | null; created_at: string
+    assignment_reason: string | null; expires_at: string | null; activated_at: string
   }>()
 
   // No-op: módulo no estaba asignado — respuesta limpia sin error
@@ -2633,6 +2633,7 @@ app.delete('/api/v1/superadmin/profiles/:id/modules/:module_code', requireSuperA
         assigned_by:       existing.assigned_by,
         assignment_reason: existing.assignment_reason,
         expires_at:        existing.expires_at,
+        activated_at:      existing.activated_at,
         slug:              profileRow.slug,
         user_id:           profileRow.user_id,
       }),
