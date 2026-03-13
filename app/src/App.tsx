@@ -16,6 +16,11 @@ import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
 import OnboardingContact from './components/admin/onboarding/OnboardingContact'
+import SuperAdminGuard from './components/superadmin/SuperAdminGuard'
+import SuperAdminOverview from './components/superadmin/SuperAdminOverview'
+import SuperAdminSubscribers from './components/superadmin/SuperAdminSubscribers'
+import SuperAdminSubscriberDetail from './components/superadmin/SuperAdminSubscriberDetail'
+import SuperAdminAudit from './components/superadmin/SuperAdminAudit'
 
 function App() {
   return (
@@ -33,15 +38,21 @@ function App() {
         <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
 
         {/* Panel principal (requiere sesión + perfil) */}
-        <Route path="/admin/links"    element={<AdminGuard><AdminLinks /></AdminGuard>} />
-        <Route path="/admin/faqs"     element={<AdminGuard><AdminFAQs /></AdminGuard>} />
-        <Route path="/admin/products" element={<AdminGuard><AdminProducts /></AdminGuard>} />
-        <Route path="/admin/videos"   element={<AdminGuard><AdminVideos /></AdminGuard>} />
-        <Route path="/admin/blocks"   element={<AdminGuard><AdminBlocks /></AdminGuard>} />
-        <Route path="/admin/visual"    element={<AdminGuard><AdminVisual /></AdminGuard>} />
+        <Route path="/admin/links"      element={<AdminGuard><AdminLinks /></AdminGuard>} />
+        <Route path="/admin/faqs"       element={<AdminGuard><AdminFAQs /></AdminGuard>} />
+        <Route path="/admin/products"   element={<AdminGuard><AdminProducts /></AdminGuard>} />
+        <Route path="/admin/videos"     element={<AdminGuard><AdminVideos /></AdminGuard>} />
+        <Route path="/admin/blocks"     element={<AdminGuard><AdminBlocks /></AdminGuard>} />
+        <Route path="/admin/visual"     element={<AdminGuard><AdminVisual /></AdminGuard>} />
         <Route path="/admin/template"   element={<AdminGuard><AdminTemplate /></AdminGuard>} />
         <Route path="/admin/retention"  element={<AdminGuard><AdminRetention /></AdminGuard>} />
         <Route path="/admin"            element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+
+        {/* Super Admin (requiere rol admin_users — mismo session_id cookie) */}
+        <Route path="/superadmin"                           element={<SuperAdminGuard><SuperAdminOverview /></SuperAdminGuard>} />
+        <Route path="/superadmin/subscribers"               element={<SuperAdminGuard><SuperAdminSubscribers /></SuperAdminGuard>} />
+        <Route path="/superadmin/subscribers/:userId"       element={<SuperAdminGuard><SuperAdminSubscriberDetail /></SuperAdminGuard>} />
+        <Route path="/superadmin/audit"                     element={<SuperAdminGuard><SuperAdminAudit /></SuperAdminGuard>} />
 
         {/* Entrada protegida */}
         <Route path="/" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
