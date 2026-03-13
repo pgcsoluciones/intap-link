@@ -2563,6 +2563,98 @@ app.post('/api/v1/superadmin/profiles/:id/modules', requireSuperAdmin('support')
   })
 })
 
+// ── DELETE /api/v1/superadmin/profiles/:id/modules/:module_code ───────────────
+// Revoca manualmente un módulo asignado a un perfil desde Super Admin.
+// Requiere rol mínimo 'support'.
+// Query opcional: ?reason=... (también acepta reason en body si se envía JSON)
+// Responde: { ok: true, message: "...", data: { profile_id, user_id, slug, module_code, revoked, audit_id? } }
+app.delete('/api/v1/superadmin/profiles/:id/modules/:module_code', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const profileId   = c.req.param('id')
+  const moduleCode  = c.req.param('module_code').trim()
+
+  // reason: querystring tiene prioridad; si no, intentar body JSON (best-effort)
+  let reason: string | null = c.req.query('reason') ?? null
+  if (!reason) {
+    try {
+      const body = await c.req.json() as { reason?: unknown }
+      if (typeof body.reason === 'string' && body.reason.trim()) reason = body.reason.trim()
+    } catch { /* no body / not JSON — ignorar */ }
+  }
+
+  // Verify profile exists
+  const profileRow = await c.env.DB.prepare(
+    `SELECT id, user_id, slug FROM profiles WHERE id = ? LIMIT 1`
+  ).bind(profileId).first<{ id: string; user_id: string; slug: string }>()
+  if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
+
+  // Check if assignment exists
+  const existing = await c.env.DB.prepare(
+    `SELECT module_code, assigned_by, assignment_reason, expires_at, created_at
+     FROM profile_modules WHERE profile_id = ? AND module_code = ? LIMIT 1`
+  ).bind(profileId, moduleCode).first<{
+    module_code: string; assigned_by: string | null;
+    assignment_reason: string | null; expires_at: string | null; created_at: string
+  }>()
+
+  // No-op: módulo no estaba asignado — respuesta limpia sin error
+  if (!existing) {
+    return c.json({
+      ok: true,
+      message: 'Module was not assigned — nothing to revoke',
+      data: {
+        profile_id:  profileId,
+        user_id:     profileRow.user_id,
+        slug:        profileRow.slug,
+        module_code: moduleCode,
+        revoked:     false,
+      },
+    })
+  }
+
+  // DELETE + audit en batch atómico
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `DELETE FROM profile_modules WHERE profile_id = ? AND module_code = ?`
+    ).bind(profileId, moduleCode),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, 'module_revoked', 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      profileId,
+      JSON.stringify({
+        module_code:       existing.module_code,
+        assigned_by:       existing.assigned_by,
+        assignment_reason: existing.assignment_reason,
+        expires_at:        existing.expires_at,
+        slug:              profileRow.slug,
+        user_id:           profileRow.user_id,
+      }),
+      JSON.stringify({ module_code: null, ...(reason ? { revoke_reason: reason } : {}) }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    message: 'Module revoked',
+    data: {
+      profile_id:  profileId,
+      user_id:     profileRow.user_id,
+      slug:        profileRow.slug,
+      module_code: moduleCode,
+      revoked:     true,
+      audit_id:    auditId,
+    },
+  })
+})
+
 // --- INTAP Agents MVP (Aislado) ---
 
 app.post('/api/v1/agents/workspaces', async (c) => {
