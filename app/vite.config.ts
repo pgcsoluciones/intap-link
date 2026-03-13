@@ -7,7 +7,7 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: 'https://intaprd.com',
+                target: 'https://app.intaprd.com',
                 changeOrigin: true,
             }
         }
