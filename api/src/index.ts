@@ -2656,6 +2656,194 @@ app.delete('/api/v1/superadmin/profiles/:id/modules/:module_code', requireSuperA
   })
 })
 
+// ── POST /api/v1/superadmin/profiles/:id/override ─────────────────────────────
+// Crea o actualiza (PATCH-like) el override de límites/capacidades para un perfil.
+// Requiere rol mínimo 'support'.
+// Body: { max_links?, max_photos?, max_faqs?, max_products?, max_videos?,
+//         can_use_vcard?, trial_plan_id?, trial_ends_at?, reason? }
+// Semántica: campo OMITIDO → conserva valor previo. null EXPLÍCITO → limpia ese campo.
+// Al menos un campo de override debe estar presente en el body (guard contra no-op).
+// Responde: { ok: true, message: "...", data: { profile_id, user_id, slug, override, audit_id } }
+app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const profileId   = c.req.param('id')
+
+  // Parse body
+  let body: Record<string, unknown>
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  // Guard: al menos un campo de override debe estar presente en el body
+  const OVERRIDE_KEYS = ['max_links', 'max_photos', 'max_faqs', 'max_products', 'max_videos', 'can_use_vcard', 'trial_plan_id', 'trial_ends_at']
+  if (!OVERRIDE_KEYS.some(k => k in body)) {
+    return c.json({ ok: false, error: 'Body must include at least one override field' }, 400)
+  }
+
+  // Validators estrictos — devuelven INVALID en lugar de silenciar errores
+  const INVALID = Symbol('INVALID')
+  const strictInt = (v: unknown): number | null | typeof INVALID => {
+    if (v === null || v === undefined) return null
+    if (Number.isInteger(v)) return v as number
+    return INVALID  // string, float, boolean, objeto → rechazo explícito
+  }
+  const strictBool = (v: unknown): 1 | 0 | null | typeof INVALID => {
+    if (v === null || v === undefined) return null
+    if (v === true  || v === 1) return 1
+    if (v === false || v === 0) return 0
+    return INVALID  // string, número distinto de 0/1, objeto → rechazo explícito
+  }
+  const toTextOrNull = (v: unknown): string | null =>
+    (typeof v === 'string' && v.trim()) ? v.trim() : null
+
+  // Parsear + validar cada campo presente en body — ausentes quedan undefined
+  let sent_max_links:    number | null | undefined
+  let sent_max_photos:   number | null | undefined
+  let sent_max_faqs:     number | null | undefined
+  let sent_max_products: number | null | undefined
+  let sent_max_videos:   number | null | undefined
+  let sent_can_use_vcard: 1 | 0 | null | undefined
+
+  if ('max_links' in body) {
+    const r = strictInt(body.max_links)
+    if (r === INVALID) return c.json({ ok: false, error: 'max_links must be an integer or null' }, 400)
+    sent_max_links = r
+  }
+  if ('max_photos' in body) {
+    const r = strictInt(body.max_photos)
+    if (r === INVALID) return c.json({ ok: false, error: 'max_photos must be an integer or null' }, 400)
+    sent_max_photos = r
+  }
+  if ('max_faqs' in body) {
+    const r = strictInt(body.max_faqs)
+    if (r === INVALID) return c.json({ ok: false, error: 'max_faqs must be an integer or null' }, 400)
+    sent_max_faqs = r
+  }
+  if ('max_products' in body) {
+    const r = strictInt(body.max_products)
+    if (r === INVALID) return c.json({ ok: false, error: 'max_products must be an integer or null' }, 400)
+    sent_max_products = r
+  }
+  if ('max_videos' in body) {
+    const r = strictInt(body.max_videos)
+    if (r === INVALID) return c.json({ ok: false, error: 'max_videos must be an integer or null' }, 400)
+    sent_max_videos = r
+  }
+  if ('can_use_vcard' in body) {
+    const r = strictBool(body.can_use_vcard)
+    if (r === INVALID) return c.json({ ok: false, error: 'can_use_vcard must be true, false, 1, 0 or null' }, 400)
+    sent_can_use_vcard = r
+  }
+
+  const sent_trial_plan_id = 'trial_plan_id' in body ? toTextOrNull(body.trial_plan_id) : undefined
+  const sent_trial_ends_at = 'trial_ends_at' in body ? toTextOrNull(body.trial_ends_at) : undefined
+  const sent_reason        = 'reason'        in body ? toTextOrNull(body.reason)        : undefined
+
+  // Validar trial_plan_id si fue enviado y no es null
+  if (sent_trial_plan_id !== undefined && sent_trial_plan_id !== null) {
+    const planCheck = await c.env.DB.prepare(
+      `SELECT id FROM plans WHERE id = ? LIMIT 1`
+    ).bind(sent_trial_plan_id).first()
+    if (!planCheck) return c.json({ ok: false, error: 'trial_plan_id not found', trial_plan_id: sent_trial_plan_id }, 400)
+  }
+
+  // Validar trial_ends_at si fue enviado y no es null (formato datetime básico)
+  if (sent_trial_ends_at !== undefined && sent_trial_ends_at !== null) {
+    if (isNaN(new Date(sent_trial_ends_at).getTime())) {
+      return c.json({ ok: false, error: 'trial_ends_at is not a valid datetime' }, 400)
+    }
+  }
+
+  // Verify profile exists
+  const profileRow = await c.env.DB.prepare(
+    `SELECT id, user_id, slug FROM profiles WHERE id = ? LIMIT 1`
+  ).bind(profileId).first<{ id: string; user_id: string; slug: string }>()
+  if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
+
+  // Snapshot before — necesario para el merge PATCH-like Y para auditoría
+  const before = await c.env.DB.prepare(
+    `SELECT max_links, max_photos, max_faqs, max_products, max_videos,
+            can_use_vcard, trial_plan_id, trial_ends_at, override_reason,
+            overridden_by, overridden_at
+     FROM profile_plan_overrides WHERE profile_id = ? LIMIT 1`
+  ).bind(profileId).first<{
+    max_links: number|null; max_photos: number|null; max_faqs: number|null;
+    max_products: number|null; max_videos: number|null; can_use_vcard: number|null;
+    trial_plan_id: string|null; trial_ends_at: string|null; override_reason: string|null;
+    overridden_by: string; overridden_at: string;
+  }>()
+
+  // Merge PATCH-like: sent_X !== undefined → usar nuevo valor (incluso si es null)
+  //                   sent_X === undefined → conservar valor previo
+  const merged = {
+    max_links:       sent_max_links     !== undefined ? sent_max_links     : (before?.max_links     ?? null),
+    max_photos:      sent_max_photos    !== undefined ? sent_max_photos    : (before?.max_photos    ?? null),
+    max_faqs:        sent_max_faqs      !== undefined ? sent_max_faqs      : (before?.max_faqs      ?? null),
+    max_products:    sent_max_products  !== undefined ? sent_max_products  : (before?.max_products  ?? null),
+    max_videos:      sent_max_videos    !== undefined ? sent_max_videos    : (before?.max_videos    ?? null),
+    can_use_vcard:   sent_can_use_vcard !== undefined ? sent_can_use_vcard : (before?.can_use_vcard ?? null),
+    trial_plan_id:   sent_trial_plan_id !== undefined ? sent_trial_plan_id : (before?.trial_plan_id ?? null),
+    trial_ends_at:   sent_trial_ends_at !== undefined ? sent_trial_ends_at : (before?.trial_ends_at ?? null),
+    override_reason: sent_reason        !== undefined ? sent_reason        : (before?.override_reason ?? null),
+  }
+
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO profile_plan_overrides
+         (profile_id, max_links, max_photos, max_faqs, max_products, max_videos,
+          can_use_vcard, trial_plan_id, trial_ends_at, override_reason,
+          overridden_by, overridden_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(profile_id) DO UPDATE SET
+         max_links       = excluded.max_links,
+         max_photos      = excluded.max_photos,
+         max_faqs        = excluded.max_faqs,
+         max_products    = excluded.max_products,
+         max_videos      = excluded.max_videos,
+         can_use_vcard   = excluded.can_use_vcard,
+         trial_plan_id   = excluded.trial_plan_id,
+         trial_ends_at   = excluded.trial_ends_at,
+         override_reason = excluded.override_reason,
+         overridden_by   = excluded.overridden_by,
+         overridden_at   = datetime('now')`
+    ).bind(
+      profileId,
+      merged.max_links, merged.max_photos, merged.max_faqs, merged.max_products, merged.max_videos,
+      merged.can_use_vcard, merged.trial_plan_id, merged.trial_ends_at, merged.override_reason,
+      adminUserId,
+    ),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, 'override_set', 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      profileId,
+      JSON.stringify(before ?? null),
+      JSON.stringify({ ...merged, overridden_by: adminUserId, slug: profileRow.slug, user_id: profileRow.user_id }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    message: before ? 'Override updated' : 'Override created',
+    data: {
+      profile_id: profileId,
+      user_id:    profileRow.user_id,
+      slug:       profileRow.slug,
+      override:   { ...merged, overridden_by: adminUserId },
+      audit_id:   auditId,
+    },
+  })
+})
+
 // --- INTAP Agents MVP (Aislado) ---
 
 app.post('/api/v1/agents/workspaces', async (c) => {
