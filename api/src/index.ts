@@ -2844,6 +2844,91 @@ app.post('/api/v1/superadmin/profiles/:id/override', requireSuperAdmin('support'
   })
 })
 
+// ── PATCH /api/v1/superadmin/profiles/:id/status ──────────────────────────────
+// Publica o despublica un perfil desde Super Admin (campo is_published).
+// Requiere rol mínimo 'support'.
+// Body: { is_published: boolean | 1 | 0, reason?: string }
+// No-op limpio si el estado ya es el solicitado.
+// Responde: { ok: true, message: "...", data: { profile_id, user_id, slug, is_published, audit_id? } }
+app.patch('/api/v1/superadmin/profiles/:id/status', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const profileId   = c.req.param('id')
+
+  let body: Record<string, unknown>
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  // is_published es requerido y validado de forma estricta
+  if (!('is_published' in body)) {
+    return c.json({ ok: false, error: 'is_published is required' }, 400)
+  }
+  const v = body.is_published
+  let newIsPublished: 0 | 1
+  if      (v === true  || v === 1) newIsPublished = 1
+  else if (v === false || v === 0) newIsPublished = 0
+  else return c.json({ ok: false, error: 'is_published must be true, false, 1 or 0' }, 400)
+
+  const reason = (typeof body.reason === 'string' && body.reason.trim()) ? body.reason.trim() : null
+
+  // Verify profile exists + snapshot current state
+  const profileRow = await c.env.DB.prepare(
+    `SELECT id, user_id, slug, is_published FROM profiles WHERE id = ? LIMIT 1`
+  ).bind(profileId).first<{ id: string; user_id: string; slug: string; is_published: number }>()
+  if (!profileRow) return c.json({ ok: false, error: 'Profile not found' }, 404)
+
+  // No-op guard — estado ya es el solicitado
+  if (profileRow.is_published === newIsPublished) {
+    return c.json({
+      ok: true,
+      message: 'Status unchanged',
+      data: {
+        profile_id:   profileId,
+        user_id:      profileRow.user_id,
+        slug:         profileRow.slug,
+        is_published: newIsPublished === 1,
+      },
+    })
+  }
+
+  const auditId = crypto.randomUUID()
+  const ip      = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+  const action  = newIsPublished === 1 ? 'profile_published' : 'profile_unpublished'
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE profiles SET is_published = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(newIsPublished, profileId),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, ?, 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      action,
+      profileId,
+      JSON.stringify({ is_published: profileRow.is_published === 1, slug: profileRow.slug, user_id: profileRow.user_id }),
+      JSON.stringify({ is_published: newIsPublished === 1, ...(reason ? { reason } : {}) }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    message: newIsPublished === 1 ? 'Profile published' : 'Profile unpublished',
+    data: {
+      profile_id:   profileId,
+      user_id:      profileRow.user_id,
+      slug:         profileRow.slug,
+      is_published: newIsPublished === 1,
+      audit_id:     auditId,
+    },
+  })
+})
+
 // --- INTAP Agents MVP (Aislado) ---
 
 app.post('/api/v1/agents/workspaces', async (c) => {
