@@ -3339,41 +3339,15 @@ app.patch('/api/v1/superadmin/profiles/:id/status', requireSuperAdmin('support')
 })
 
 // --- INTAP Agents MVP (Aislado) ---
+// Deshabilitado temporalmente hasta definir auth, ownership y límites por plan.
+const agentsDisabledResponse = (c: any) => c.json({
+  ok: false,
+  error: 'Agents module disabled',
+  message: 'This module is not available in the current release.',
+}, 410)
 
-app.post('/api/v1/agents/workspaces', async (c) => {
-  const { ownerId, name } = await c.req.json()
-  if (!ownerId || !name) return c.json({ ok: false, error: 'Faltan campos obligatorios' }, 400)
-
-  const id = crypto.randomUUID()
-  await c.env.AGENTS_DB.prepare('INSERT INTO agents_workspaces (id, owner_id, name) VALUES (?, ?, ?)')
-    .bind(id, ownerId, name)
-    .run()
-
-  return c.json({ ok: true, id })
-})
-
-app.post('/api/v1/agents/chat/sessions', async (c) => {
-  const { workspaceId, title } = await c.req.json()
-  if (!workspaceId) return c.json({ ok: false, error: 'workspaceId requerido' }, 400)
-
-  const id = crypto.randomUUID()
-  await c.env.AGENTS_DB.prepare('INSERT INTO agents_chat_sessions (id, workspace_id, title) VALUES (?, ?, ?)')
-    .bind(id, workspaceId, title || 'Nuevo Chat')
-    .run()
-
-  return c.json({ ok: true, id })
-})
-
-app.post('/api/v1/agents/chat/messages', async (c) => {
-  const { sessionId, role, content } = await c.req.json()
-  if (!sessionId || !role || !content) return c.json({ ok: false, error: 'Faltan campos' }, 400)
-
-  const id = crypto.randomUUID()
-  await c.env.AGENTS_DB.prepare('INSERT INTO agents_chat_messages (id, session_id, role, content) VALUES (?, ?, ?, ?)')
-    .bind(id, sessionId, role, content)
-    .run()
-
-  return c.json({ ok: true, id })
-})
+app.post('/api/v1/agents/workspaces', agentsDisabledResponse)
+app.post('/api/v1/agents/chat/sessions', agentsDisabledResponse)
+app.post('/api/v1/agents/chat/messages', agentsDisabledResponse)
 
 export default app
