@@ -2874,6 +2874,238 @@ app.get('/api/v1/superadmin/billing/gateways', requireSuperAdmin('viewer'), asyn
   })
 })
 
+
+// ── POST /api/v1/superadmin/billing/payments/manual ───────────────────────────
+// Registra un pago manual SaaS desde Super Admin.
+// No cambia plan, no activa suscripción y no toca entitlements.
+// Body mínimo: { profile_id: string, amount_cents: number }
+// Body opcional: { currency, status, payment_method_code, admin_reference, external_reference,
+//                 proof_url, proof_asset_id, source_bank_name, customer_reference_text,
+//                 transferred_at, internal_notes, metadata_json }
+app.post('/api/v1/superadmin/billing/payments/manual', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+
+  let body: Record<string, unknown>
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const profileId = typeof body.profile_id === 'string' ? body.profile_id.trim() : ''
+  const amountCentsRaw = body.amount_cents
+  const amountCents = typeof amountCentsRaw === 'number'
+    ? Math.round(amountCentsRaw)
+    : Number.parseInt(String(amountCentsRaw ?? ''), 10)
+
+  const currency = typeof body.currency === 'string' && body.currency.trim()
+    ? body.currency.trim().toUpperCase()
+    : 'DOP'
+
+  const status = typeof body.status === 'string' && body.status.trim()
+    ? body.status.trim()
+    : 'pending'
+
+  const paymentMethodCode = typeof body.payment_method_code === 'string' ? body.payment_method_code.trim() || null : null
+  const adminReference = typeof body.admin_reference === 'string' ? body.admin_reference.trim() || null : null
+  const externalReference = typeof body.external_reference === 'string' ? body.external_reference.trim() || null : null
+  const proofUrl = typeof body.proof_url === 'string' ? body.proof_url.trim() || null : null
+  const proofAssetId = typeof body.proof_asset_id === 'string' ? body.proof_asset_id.trim() || null : null
+  const sourceBankName = typeof body.source_bank_name === 'string' ? body.source_bank_name.trim() || null : null
+  const customerReferenceText = typeof body.customer_reference_text === 'string' ? body.customer_reference_text.trim() || null : null
+  const transferredAt = typeof body.transferred_at === 'string' ? body.transferred_at.trim() || null : null
+  const internalNotes = typeof body.internal_notes === 'string' ? body.internal_notes.trim() || null : null
+
+  let metadataJson: string | null = null
+  if (body.metadata_json !== undefined && body.metadata_json !== null) {
+    if (typeof body.metadata_json === 'string') {
+      metadataJson = body.metadata_json
+    } else {
+      try {
+        metadataJson = JSON.stringify(body.metadata_json)
+      } catch {
+        return c.json({ ok: false, error: 'metadata_json must be valid JSON' }, 400)
+      }
+    }
+  }
+
+  const VALID_STATUSES = [
+    'pending',
+    'proof_submitted',
+    'under_review',
+    'confirmed',
+    'rejected',
+    'refunded',
+    'cancelled',
+    'expired',
+  ]
+
+  if (!profileId) {
+    return c.json({ ok: false, error: 'profile_id is required' }, 400)
+  }
+
+  if (!Number.isFinite(amountCents) || amountCents <= 0) {
+    return c.json({ ok: false, error: 'amount_cents must be a positive integer' }, 400)
+  }
+
+  if (!/^[A-Z]{3}$/.test(currency)) {
+    return c.json({ ok: false, error: 'currency must be a 3-letter currency code' }, 400)
+  }
+
+  if (!VALID_STATUSES.includes(status)) {
+    return c.json({
+      ok: false,
+      error: 'Invalid payment status',
+      valid_statuses: VALID_STATUSES,
+    }, 400)
+  }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, user_id, plan_id, slug
+       FROM profiles
+       WHERE id = ?
+       LIMIT 1`
+  ).bind(profileId).first<{ id: string; user_id: string | null; plan_id: string | null; slug: string | null }>()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Profile not found' }, 404)
+  }
+
+  if (!profile.user_id) {
+    return c.json({ ok: false, error: 'Profile has no user_id assigned' }, 422)
+  }
+
+  if (!profile.plan_id) {
+    return c.json({ ok: false, error: 'Profile has no plan_id assigned' }, 422)
+  }
+
+  const plan = await c.env.DB.prepare(
+    `SELECT id FROM plans WHERE id = ? LIMIT 1`
+  ).bind(profile.plan_id).first<{ id: string }>().catch(() => null)
+
+  if (!plan) {
+    return c.json({ ok: false, error: 'Profile plan_id does not exist in plans' }, 422)
+  }
+
+  const paymentId = crypto.randomUUID()
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  const reviewedAtSql = status === 'under_review' || status === 'confirmed' || status === 'rejected'
+    ? "datetime('now')"
+    : "NULL"
+  const confirmedAtSql = status === 'confirmed' ? "datetime('now')" : "NULL"
+  const rejectedAtSql = status === 'rejected' ? "datetime('now')" : "NULL"
+  const reviewedByAdminId = status === 'under_review' || status === 'confirmed' || status === 'rejected'
+    ? adminUserId
+    : null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      INSERT INTO billing_payments (
+        id,
+        subscription_id,
+        profile_id,
+        user_id,
+        plan_id,
+        amount_cents,
+        currency,
+        status,
+        source,
+        provider,
+        payment_method_code,
+        external_reference,
+        admin_reference,
+        proof_url,
+        proof_asset_id,
+        source_bank_name,
+        customer_reference_text,
+        transferred_at,
+        submitted_at,
+        reviewed_at,
+        confirmed_at,
+        rejected_at,
+        reviewed_by_admin_id,
+        internal_notes,
+        metadata_json,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        ?, NULL, ?, ?, ?, ?, ?, ?, 'manual', 'manual',
+        ?, ?, ?, ?, ?, ?, ?, ?,
+        datetime('now'),
+        ${reviewedAtSql},
+        ${confirmedAtSql},
+        ${rejectedAtSql},
+        ?, ?, ?,
+        datetime('now'),
+        datetime('now')
+      )
+    `).bind(
+      paymentId,
+      profile.id,
+      profile.user_id,
+      profile.plan_id,
+      amountCents,
+      currency,
+      status,
+      paymentMethodCode,
+      externalReference,
+      adminReference,
+      proofUrl,
+      proofAssetId,
+      sourceBankName,
+      customerReferenceText,
+      transferredAt,
+      reviewedByAdminId,
+      internalNotes,
+      metadataJson,
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO admin_audit_log
+        (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+      VALUES
+        (?, ?, 'billing_manual_payment_created', 'billing_payment', ?, NULL, ?, ?, datetime('now'))
+    `).bind(
+      auditId,
+      adminUserId,
+      paymentId,
+      JSON.stringify({
+        payment_id: paymentId,
+        profile_id: profile.id,
+        profile_slug: profile.slug,
+        user_id: profile.user_id,
+        plan_id: profile.plan_id,
+        amount_cents: amountCents,
+        currency,
+        status,
+        source: 'manual',
+        provider: 'manual',
+        admin_reference: adminReference,
+        external_reference: externalReference,
+      }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      payment_id: paymentId,
+      profile_id: profile.id,
+      profile_slug: profile.slug,
+      user_id: profile.user_id,
+      plan_id: profile.plan_id,
+      amount_cents: amountCents,
+      currency,
+      status,
+      source: 'manual',
+      provider: 'manual',
+    },
+  }, 201)
+})
+
 // ── GET /api/v1/superadmin/audit ──────────────────────────────────────────────
 // Audit log paginado con filtros.
 // Query params: page, limit, admin_user_id, action, target_type, from (ISO date), to.
