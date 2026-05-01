@@ -2692,6 +2692,188 @@ app.get('/api/v1/superadmin/metrics/overview', requireSuperAdmin('viewer'), asyn
   })
 })
 
+
+// ── GET /api/v1/superadmin/billing/overview ──────────────────────────────────
+// Resumen read-only de billing SaaS: pagos, suscripciones y pasarelas.
+app.get('/api/v1/superadmin/billing/overview', requireSuperAdmin('viewer'), async (c) => {
+  const [
+    paymentsTotal,
+    paymentsPending,
+    paymentsUnderReview,
+    paymentsConfirmed,
+    confirmedAmount,
+    subscriptionsActive,
+    subscriptionsPastDue,
+    subscriptionsSuspended,
+    gatewaysEnabled,
+  ] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_payments`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_payments WHERE status = 'pending'`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_payments WHERE status = 'under_review'`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_payments WHERE status = 'confirmed'`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COALESCE(SUM(amount_cents), 0) AS amount FROM billing_payments WHERE status = 'confirmed'`).first<{ amount: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_subscriptions WHERE status = 'active'`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_subscriptions WHERE status = 'past_due'`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_subscriptions WHERE status = 'suspended'`).first<{ cnt: number }>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt FROM billing_gateway_configs WHERE status IN ('ready', 'active')`).first<{ cnt: number }>(),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      payments: {
+        total: paymentsTotal?.cnt ?? 0,
+        pending: paymentsPending?.cnt ?? 0,
+        under_review: paymentsUnderReview?.cnt ?? 0,
+        confirmed: paymentsConfirmed?.cnt ?? 0,
+        confirmed_amount_cents: confirmedAmount?.amount ?? 0,
+      },
+      subscriptions: {
+        active: subscriptionsActive?.cnt ?? 0,
+        past_due: subscriptionsPastDue?.cnt ?? 0,
+        suspended: subscriptionsSuspended?.cnt ?? 0,
+      },
+      gateways: {
+        enabled: gatewaysEnabled?.cnt ?? 0,
+      },
+    },
+  })
+})
+
+// ── GET /api/v1/superadmin/billing/payments ──────────────────────────────────
+// Lista read-only de pagos SaaS.
+app.get('/api/v1/superadmin/billing/payments', requireSuperAdmin('viewer'), async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10))
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '25', 10)))
+  const status = (c.req.query('status') || '').trim()
+  const profileId = (c.req.query('profile_id') || '').trim()
+  const q = (c.req.query('q') || '').trim()
+  const offset = (page - 1) * limit
+
+  const conditions: string[] = []
+  const bindings: unknown[] = []
+
+  if (status) { conditions.push(`bp.status = ?`); bindings.push(status) }
+  if (profileId) { conditions.push(`bp.profile_id = ?`); bindings.push(profileId) }
+  if (q) {
+    conditions.push(`(u.email LIKE ? OR p.slug LIKE ? OR bp.external_reference LIKE ? OR bp.admin_reference LIKE ?)`)
+    bindings.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`)
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const fromWhere = `
+    FROM billing_payments bp
+    LEFT JOIN profiles p ON p.id = bp.profile_id
+    LEFT JOIN users u ON u.id = bp.user_id
+    ${where}
+  `
+
+  const [totalRow, rows] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fromWhere}`).bind(...bindings).first<{ cnt: number }>(),
+    c.env.DB.prepare(`
+      SELECT
+        bp.*,
+        u.email AS user_email,
+        p.slug AS profile_slug
+      ${fromWhere}
+      ORDER BY bp.created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(...bindings, limit, offset).all(),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      page,
+      limit,
+      total: totalRow?.cnt ?? 0,
+      payments: rows.results,
+    },
+  })
+})
+
+// ── GET /api/v1/superadmin/billing/subscriptions ─────────────────────────────
+// Lista read-only de suscripciones SaaS.
+app.get('/api/v1/superadmin/billing/subscriptions', requireSuperAdmin('viewer'), async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10))
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '25', 10)))
+  const status = (c.req.query('status') || '').trim()
+  const plan = (c.req.query('plan_id') || '').trim()
+  const profileId = (c.req.query('profile_id') || '').trim()
+  const q = (c.req.query('q') || '').trim()
+  const offset = (page - 1) * limit
+
+  const conditions: string[] = []
+  const bindings: unknown[] = []
+
+  if (status) { conditions.push(`bs.status = ?`); bindings.push(status) }
+  if (plan) { conditions.push(`bs.plan_id = ?`); bindings.push(plan) }
+  if (profileId) { conditions.push(`bs.profile_id = ?`); bindings.push(profileId) }
+  if (q) {
+    conditions.push(`(u.email LIKE ? OR p.slug LIKE ?)`)
+    bindings.push(`%${q}%`, `%${q}%`)
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const fromWhere = `
+    FROM billing_subscriptions bs
+    LEFT JOIN profiles p ON p.id = bs.profile_id
+    LEFT JOIN users u ON u.id = bs.user_id
+    ${where}
+  `
+
+  const [totalRow, rows] = await Promise.all([
+    c.env.DB.prepare(`SELECT COUNT(*) AS cnt ${fromWhere}`).bind(...bindings).first<{ cnt: number }>(),
+    c.env.DB.prepare(`
+      SELECT
+        bs.*,
+        u.email AS user_email,
+        p.slug AS profile_slug
+      ${fromWhere}
+      ORDER BY bs.created_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(...bindings, limit, offset).all(),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      page,
+      limit,
+      total: totalRow?.cnt ?? 0,
+      subscriptions: rows.results,
+    },
+  })
+})
+
+// ── GET /api/v1/superadmin/billing/gateways ──────────────────────────────────
+// Lista read-only de pasarelas configuradas.
+app.get('/api/v1/superadmin/billing/gateways', requireSuperAdmin('viewer'), async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT
+      id,
+      provider,
+      status,
+      display_name,
+      currency,
+      public_config_json,
+      secret_ref,
+      webhook_url,
+      notes,
+      created_at,
+      updated_at
+    FROM billing_gateway_configs
+    ORDER BY provider ASC
+  `).all()
+
+  return c.json({
+    ok: true,
+    data: {
+      gateways: rows.results,
+    },
+  })
+})
+
 // ── GET /api/v1/superadmin/audit ──────────────────────────────────────────────
 // Audit log paginado con filtros.
 // Query params: page, limit, admin_user_id, action, target_type, from (ISO date), to.
