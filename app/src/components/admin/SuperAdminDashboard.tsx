@@ -65,6 +65,41 @@ export default function SuperAdminDashboard() {
 
   const metricData = metrics?.data || metrics?.metrics || {}
 
+  function formatMetricLabel(key: string) {
+    const labels: Record<string, string> = {
+      users: 'Usuarios',
+      profiles: 'Perfiles',
+      leads: 'Leads',
+      plans: 'Planes',
+    }
+    return labels[key] || key.replace(/_/g, ' ')
+  }
+
+  function formatMetricValue(key: string, value: any) {
+    if (value == null) return '0'
+    if (typeof value !== 'object') return String(value)
+
+    if (key === 'users') {
+      return `Total: ${value.total ?? 0} · Nuevos 7 días: ${value.new_7d ?? 0}`
+    }
+
+    if (key === 'profiles') {
+      return `Total: ${value.total ?? 0} · Activos: ${value.active ?? 0} · Inactivos: ${value.inactive ?? 0}`
+    }
+
+    if (key === 'leads') {
+      return `Total: ${value.total ?? 0} · Nuevos 7 días: ${value.new_7d ?? 0}`
+    }
+
+    if (key === 'plans' && Array.isArray(value.by_plan)) {
+      return value.by_plan.map((p: any) => `${p.plan_id || 'sin plan'}: ${p.cnt ?? 0}`).join(' · ')
+    }
+
+    return Object.entries(value)
+      .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : String(v)}`)
+      .join(' · ')
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white px-4 py-8">
       <div className="mx-auto max-w-6xl">
@@ -105,10 +140,10 @@ export default function SuperAdminDashboard() {
               {Object.entries(metricData).slice(0, 8).map(([key, value]) => (
                 <div key={key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                   <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                    {key.replace(/_/g, ' ')}
+                    {formatMetricLabel(key)}
                   </p>
-                  <p className="mt-2 text-2xl font-black">
-                    {typeof value === 'object' ? JSON.stringify(value) : String(value ?? 0)}
+                  <p className="mt-3 text-base font-bold leading-relaxed text-white">
+                    {formatMetricValue(key, value)}
                   </p>
                 </div>
               ))}
