@@ -1763,8 +1763,18 @@ app.post('/api/v1/public/track', async (c) => {
   }
 })
 
-app.get('/api/v1/profile/stats/:profileId', async (c) => {
+app.get('/api/v1/profile/stats/:profileId', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
   const profileId = c.req.param('profileId')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE id = ? AND user_id = ? LIMIT 1`
+  ).bind(profileId, userId).first()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Forbidden' }, 403)
+  }
+
   const totalViews = await c.env.DB.prepare(
     `SELECT COUNT(*) as count FROM analytics WHERE profile_id = ? AND event_type = 'view'`
   )
