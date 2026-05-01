@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet } from '../../lib/api'
+import SuperAdminLayout, { type SuperAdminSection } from './SuperAdminLayout'
 
 interface MetricsOverview {
   ok: boolean
@@ -72,6 +73,7 @@ interface BillingSubscription {
 }
 
 export default function SuperAdminDashboard() {
+  const [currentSection, setCurrentSection] = useState<SuperAdminSection>('dashboard')
   const [metrics, setMetrics] = useState<MetricsOverview | null>(null)
   const [subscribers, setSubscribers] = useState<Subscriber[]>([])
   const [billingOverview, setBillingOverview] = useState<BillingOverview | null>(null)
@@ -192,9 +194,80 @@ export default function SuperAdminDashboard() {
       .join(' · ')
   }
 
+  function renderSectionPlaceholder() {
+    const titles: Record<SuperAdminSection, { title: string; description: string }> = {
+      dashboard: {
+        title: 'Dashboard',
+        description: 'Resumen ejecutivo del SaaS.',
+      },
+      subscribers: {
+        title: 'Suscriptores',
+        description: 'Gestión de usuarios, perfiles, planes y estado comercial.',
+      },
+      billing: {
+        title: 'Billing / Pagos',
+        description: 'Pagos manuales, revisión, confirmación, suscripciones y trazabilidad.',
+      },
+      paymentLinks: {
+        title: 'Enlaces de pago',
+        description: 'Creación y seguimiento de enlaces de pago para planes, servicios o activaciones.',
+      },
+      landing: {
+        title: 'Landing marketing',
+        description: 'Administración de la landing pública de INTAP LINK: hero, beneficios, planes, CTA y contenido comercial.',
+      },
+      plans: {
+        title: 'Planes y módulos',
+        description: 'Control de planes, límites, módulos, trials, overrides y funciones premium.',
+      },
+      gateways: {
+        title: 'Pasarelas',
+        description: 'Configuración y estado de PayPal, Azul, CardNet, Stripe e INTAP Payment Link.',
+      },
+      audit: {
+        title: 'Auditoría',
+        description: 'Historial de acciones administrativas y cambios sensibles del sistema.',
+      },
+      admins: {
+        title: 'Admins / Roles',
+        description: 'Gestión de usuarios administrativos, permisos y roles internos.',
+      },
+      settings: {
+        title: 'Configuración',
+        description: 'Ajustes generales del SaaS y parámetros operativos.',
+      },
+    }
+
+    const current = titles[currentSection]
+
+    return (
+      <div className="rounded-3xl border border-slate-200 bg-white p-8 text-slate-900 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">
+          INTAP LINK
+        </p>
+        <h1 className="mt-3 text-3xl font-black">{current.title}</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+          {current.description}
+        </p>
+
+        <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+          Este módulo ya quedó separado visualmente dentro del Super Admin. En el próximo lote se conecta su contenido funcional real sin cargar todo en una sola pantalla.
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-white px-4 py-8">
-      <div className="mx-auto max-w-6xl">
+    <SuperAdminLayout
+      currentSection={currentSection}
+      onNavigate={setCurrentSection}
+      onLogout={() => {
+        window.location.href = '/admin/login'
+      }}
+    >
+      {currentSection === 'dashboard' ? (
+        <div className="rounded-3xl bg-slate-950 px-4 py-8 text-white shadow-sm">
+          <div className="mx-auto max-w-6xl">
         <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-400">
@@ -402,7 +475,11 @@ export default function SuperAdminDashboard() {
             </section>
           </>
         )}
-      </div>
-    </div>
+          </div>
+        </div>
+      ) : (
+        renderSectionPlaceholder()
+      )}
+    </SuperAdminLayout>
   )
 }
