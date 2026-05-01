@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AdminGuard from './components/admin/AdminGuard'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminVerify from './components/admin/AdminVerify'
@@ -16,6 +16,19 @@ import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
 import OnboardingContact from './components/admin/onboarding/OnboardingContact'
+
+function UnknownAppRouteRedirect() {
+  const location = useLocation()
+  const WEB_URL = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
+
+  if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')) {
+    return <Navigate to="/admin" replace />
+  }
+
+  window.location.replace(`${WEB_URL}${location.pathname}${location.search}${location.hash}`)
+  return null
+}
+
 
 function App() {
   return (
@@ -45,6 +58,10 @@ function App() {
 
         {/* Entrada protegida */}
         <Route path="/" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+
+        {/* Rutas desconocidas en app.intaprd.com:
+            si parecen slug público, redirigir a intaprd.com/{slug} */}
+        <Route path="*" element={<UnknownAppRouteRedirect />} />
       </Routes>
     </BrowserRouter>
   )
