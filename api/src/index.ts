@@ -1858,13 +1858,24 @@ app.post('/api/v1/profile/gallery/upload', requireAuth, async (c) => {
   return c.json({ ok: true, id, key })
 })
 
-app.get('/api/v1/profile/gallery/:profileId', async (c) => {
+app.get('/api/v1/profile/gallery/:profileId', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
   const profileId = c.req.param('profileId')
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE id = ? AND user_id = ? LIMIT 1`
+  ).bind(profileId, userId).first()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Forbidden' }, 403)
+  }
+
   const photos = await c.env.DB.prepare(
     `SELECT * FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC`
   )
     .bind(profileId)
     .all()
+
   return c.json({ ok: true, photos: photos.results })
 })
 
