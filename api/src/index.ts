@@ -3106,6 +3106,176 @@ app.post('/api/v1/superadmin/billing/payments/manual', requireSuperAdmin('suppor
   }, 201)
 })
 
+
+// ── PATCH /api/v1/superadmin/billing/payments/:paymentId/review ───────────────
+// Revisa un pago manual desde Super Admin.
+// Permite moverlo a: under_review, confirmed, rejected o cancelled.
+// No cambia plan, no activa suscripción y no toca entitlements.
+app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const paymentId = c.req.param('paymentId')
+
+  let body: Record<string, unknown>
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const nextStatus = typeof body.status === 'string' ? body.status.trim() : ''
+  const internalNotes = typeof body.internal_notes === 'string' ? body.internal_notes.trim() || null : null
+  const rejectionReason = typeof body.rejection_reason === 'string' ? body.rejection_reason.trim() || null : null
+
+  const VALID_REVIEW_STATUSES = ['under_review', 'confirmed', 'rejected', 'cancelled']
+
+  if (!VALID_REVIEW_STATUSES.includes(nextStatus)) {
+    return c.json({
+      ok: false,
+      error: 'Invalid review status',
+      valid_statuses: VALID_REVIEW_STATUSES,
+    }, 400)
+  }
+
+  if (nextStatus === 'rejected' && !rejectionReason) {
+    return c.json({ ok: false, error: 'rejection_reason is required when status is rejected' }, 400)
+  }
+
+  const current = await c.env.DB.prepare(`
+    SELECT
+      bp.id,
+      bp.profile_id,
+      bp.user_id,
+      bp.plan_id,
+      bp.amount_cents,
+      bp.currency,
+      bp.status,
+      bp.source,
+      bp.provider,
+      bp.admin_reference,
+      bp.external_reference,
+      bp.internal_notes,
+      bp.rejection_reason,
+      p.slug AS profile_slug
+    FROM billing_payments bp
+    LEFT JOIN profiles p ON p.id = bp.profile_id
+    WHERE bp.id = ?
+    LIMIT 1
+  `).bind(paymentId).first<{
+    id: string
+    profile_id: string | null
+    user_id: string | null
+    plan_id: string | null
+    amount_cents: number
+    currency: string
+    status: string
+    source: string
+    provider: string | null
+    admin_reference: string | null
+    external_reference: string | null
+    internal_notes: string | null
+    rejection_reason: string | null
+    profile_slug: string | null
+  }>()
+
+  if (!current) {
+    return c.json({ ok: false, error: 'Payment not found' }, 404)
+  }
+
+  if (current.source !== 'manual') {
+    return c.json({ ok: false, error: 'Only manual payments can be reviewed here' }, 422)
+  }
+
+  if (current.status === nextStatus) {
+    return c.json({
+      ok: true,
+      data: {
+        payment_id: current.id,
+        previous_status: current.status,
+        status: nextStatus,
+      },
+      message: 'Payment already has this status',
+    })
+  }
+
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  const reviewedAtSql = nextStatus === 'under_review' || nextStatus === 'confirmed' || nextStatus === 'rejected'
+    ? "datetime('now')"
+    : "reviewed_at"
+
+  const confirmedAtSql = nextStatus === 'confirmed' ? "datetime('now')" : "NULL"
+  const rejectedAtSql = nextStatus === 'rejected' ? "datetime('now')" : "NULL"
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      UPDATE billing_payments
+      SET
+        status = ?,
+        reviewed_at = ${reviewedAtSql},
+        confirmed_at = ${confirmedAtSql},
+        rejected_at = ${rejectedAtSql},
+        reviewed_by_admin_id = ?,
+        rejection_reason = ?,
+        internal_notes = COALESCE(?, internal_notes),
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      nextStatus,
+      adminUserId,
+      nextStatus === 'rejected' ? rejectionReason : null,
+      internalNotes,
+      paymentId,
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO admin_audit_log
+        (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+      VALUES
+        (?, ?, 'billing_manual_payment_reviewed', 'billing_payment', ?, ?, ?, ?, datetime('now'))
+    `).bind(
+      auditId,
+      adminUserId,
+      paymentId,
+      JSON.stringify({
+        status: current.status,
+        internal_notes: current.internal_notes,
+        rejection_reason: current.rejection_reason,
+      }),
+      JSON.stringify({
+        status: nextStatus,
+        internal_notes: internalNotes,
+        rejection_reason: nextStatus === 'rejected' ? rejectionReason : null,
+        profile_id: current.profile_id,
+        profile_slug: current.profile_slug,
+        user_id: current.user_id,
+        plan_id: current.plan_id,
+        amount_cents: current.amount_cents,
+        currency: current.currency,
+        admin_reference: current.admin_reference,
+        external_reference: current.external_reference,
+      }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      payment_id: current.id,
+      profile_id: current.profile_id,
+      profile_slug: current.profile_slug,
+      user_id: current.user_id,
+      plan_id: current.plan_id,
+      amount_cents: current.amount_cents,
+      currency: current.currency,
+      previous_status: current.status,
+      status: nextStatus,
+      source: current.source,
+      provider: current.provider,
+    },
+  })
+})
+
 // ── GET /api/v1/superadmin/audit ──────────────────────────────────────────────
 // Audit log paginado con filtros.
 // Query params: page, limit, admin_user_id, action, target_type, from (ISO date), to.
