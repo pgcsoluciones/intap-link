@@ -12,6 +12,7 @@ import AdminBlocks from './components/admin/AdminBlocks'
 import AdminVisual from './components/admin/AdminVisual'
 import AdminTemplate from './components/admin/AdminTemplate'
 import AdminRetention from './components/admin/AdminRetention'
+import SuperAdminDashboard from './components/admin/SuperAdminDashboard'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
@@ -44,6 +45,9 @@ function App() {
         <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false}><OnboardingCategory /></AdminGuard>} />
         <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false}><OnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
+
+        {/* Super Admin interno */}
+        <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />
 
         {/* Panel principal (requiere sesión + perfil) */}
         <Route path="/admin/links"    element={<AdminGuard><AdminLinks /></AdminGuard>} />
