@@ -2310,18 +2310,11 @@ app.get('/api/v1/admin/profiles', requireAdmin, async (c) => {
 })
 
 app.post('/api/v1/admin/activate-module', async (c) => {
-  const { profileId, moduleCode, secret } = await c.req.json()
-  const adminApiKey = String((c.env as any).ADMIN_API_KEY || '')
-  if (!adminApiKey) return c.json({ ok: false, error: 'Admin API key not configured' }, 503)
-  if (secret !== adminApiKey) return c.json({ ok: false, error: 'Unauthorized' }, 401)
-  await c.env.DB.prepare(
-    `INSERT INTO profile_modules (profile_id, module_code, expires_at)
-     VALUES (?, ?, datetime('now', '+1 year'))
-     ON CONFLICT(profile_id, module_code) DO UPDATE SET expires_at = excluded.expires_at`
-  )
-    .bind(profileId, moduleCode)
-    .run()
-  return c.json({ ok: true, message: `Módulo ${moduleCode} activado` })
+  return c.json({
+    ok: false,
+    error: 'Deprecated endpoint',
+    message: 'Use Super Admin RBAC endpoints instead.',
+  }, 410)
 })
 
 // ─── Super Admin — Fase 7.2A (solo lectura) ──────────────────────────────────
