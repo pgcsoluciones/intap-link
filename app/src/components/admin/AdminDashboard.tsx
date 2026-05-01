@@ -131,7 +131,7 @@ export default function AdminDashboard() {
           if (data.profile_id) {
             Promise.all([
               apiGet(`/profile/stats/${data.profile_id}`),
-              apiGet(`/profile/gallery/${data.profile_id}`),
+              apiGet('/me/gallery'),
             ]).then(([statsJson, galleryJson]: any[]) => {
               if (statsJson.ok) setStats(statsJson.stats)
               if (galleryJson.ok) setGallery(galleryJson.photos || [])

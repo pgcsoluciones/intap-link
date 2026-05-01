@@ -145,7 +145,7 @@ function ResourceRow({ label, resourceKey, retention, profileId, onSelectionDone
     setLoadingItems(true)
     try {
       if (resourceKey === 'photos') {
-        const json: any = await apiGet(`/profile/gallery/${profileId}`)
+        const json: any = await apiGet('/me/gallery')
         if (json.ok) {
           setItems((json.photos || []).map((p: any) => ({
             id: p.id, label: `Foto`, image_key: p.image_key,

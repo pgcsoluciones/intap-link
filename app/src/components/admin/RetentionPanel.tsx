@@ -294,7 +294,7 @@ function RetentionSelectorModal({ ent, profileId, onClose, onSuccess }: {
     setLoadingItems(prev => ({ ...prev, [key]: true }))
     try {
       if (key === 'photos') {
-        const json: any = await apiGet(`/profile/gallery/${profileId}`)
+        const json: any = await apiGet('/me/gallery')
         if (json.ok) {
           setItems(prev => ({
             ...prev,

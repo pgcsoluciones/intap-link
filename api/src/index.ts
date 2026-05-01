@@ -1491,6 +1491,32 @@ me.post('/retention/selection', async (c) => {
 })
 
 // Mount the authenticated sub-app
+
+// Galería autenticada del perfil propio.
+// No acepta profileId desde frontend: resuelve el perfil por sesión.
+me.get('/gallery', async (c) => {
+  const userId = c.get('userId') as string
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  }
+
+  const profileId = (profile as any).id
+
+  const photos = await c.env.DB.prepare(
+    `SELECT * FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC`
+  )
+    .bind(profileId)
+    .all()
+
+  return c.json({ ok: true, photos: photos.results })
+})
+
+
 app.route('/api/v1/me', me)
 
 // ─── GET /api/v1/entitlements ─────────────────────────────────────────────────
