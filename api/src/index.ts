@@ -1751,12 +1751,33 @@ app.get('/api/v1/profile/me/:profileId/leads/export', requireAuth, async (c) => 
 app.post('/api/v1/public/track', async (c) => {
   try {
     const { profileId, eventType, targetId } = await c.req.json()
+
+    const allowedEvents = new Set(['view', 'click'])
+    if (!profileId || typeof profileId !== 'string') {
+      return c.json({ ok: false, error: 'profileId requerido' }, 400)
+    }
+    if (!allowedEvents.has(eventType)) {
+      return c.json({ ok: false, error: 'eventType no permitido' }, 400)
+    }
+    if (targetId != null && typeof targetId !== 'string') {
+      return c.json({ ok: false, error: 'targetId inválido' }, 400)
+    }
+
+    const profile = await c.env.DB.prepare(
+      `SELECT id FROM profiles WHERE id = ? AND is_active = 1 AND is_published = 1 LIMIT 1`
+    ).bind(profileId).first()
+
+    if (!profile) {
+      return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+    }
+
     const id = crypto.randomUUID()
     await c.env.DB.prepare(
       `INSERT INTO analytics (id, profile_id, event_type, target_id) VALUES (?, ?, ?, ?)`
     )
       .bind(id, profileId, eventType, targetId || null)
       .run()
+
     return c.json({ ok: true })
   } catch (e) {
     return c.json({ ok: false }, 202)
@@ -2047,16 +2068,20 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 app.get('/api/v1/public/vcard/:profileId', async (c) => {
   const profileId = c.req.param('profileId')
 
-  const [profile, contactRow] = await Promise.all([
+  const [profile, contactRow, entitlements] = await Promise.all([
     c.env.DB.prepare(
-      'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ?'
+      'SELECT slug, name, bio, whatsapp_number FROM profiles WHERE id = ? AND is_active = 1 AND is_published = 1'
     ).bind(profileId).first() as Promise<{ slug: string; name: string | null; bio: string | null; whatsapp_number: string | null } | null>,
     c.env.DB.prepare(
       'SELECT whatsapp, phone, email, address FROM profile_contact WHERE profile_id = ? LIMIT 1'
     ).bind(profileId).first() as Promise<{ whatsapp: string | null; phone: string | null; email: string | null; address: string | null } | null>,
+    getEntitlements(c, profileId),
   ])
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  if (!(entitlements as any)?.canUseVCard) {
+    return c.json({ ok: false, error: 'vCard no disponible para este plan' }, 403)
+  }
 
   const telNumber = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn = profile.name || profile.slug
