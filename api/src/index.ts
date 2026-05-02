@@ -3108,8 +3108,8 @@ app.post('/api/v1/superadmin/billing/payments/manual', requireSuperAdmin('suppor
 
 
 // ── PATCH /api/v1/superadmin/billing/payments/:paymentId/review ───────────────
-// Revisa un pago manual desde Super Admin.
-// Permite moverlo a: under_review, confirmed, rejected o cancelled.
+// Revisa un pago desde Super Admin.
+// Permite mover pagos manuales y enlaces de pago a: under_review, confirmed, rejected o cancelled.
 // No cambia plan, no activa suscripción y no toca entitlements.
 app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperAdmin('support'), async (c) => {
   const adminUserId = c.get('adminUserId') as string
@@ -3181,8 +3181,14 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
     return c.json({ ok: false, error: 'Payment not found' }, 404)
   }
 
-  if (current.source !== 'manual') {
-    return c.json({ ok: false, error: 'Only manual payments can be reviewed here' }, 422)
+  const REVIEWABLE_SOURCES = ['manual', 'payment_link']
+
+  if (!REVIEWABLE_SOURCES.includes(current.source)) {
+    return c.json({
+      ok: false,
+      error: 'This payment source cannot be reviewed here',
+      valid_sources: REVIEWABLE_SOURCES,
+    }, 422)
   }
 
   if (current.status === nextStatus) {
@@ -3231,7 +3237,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
       INSERT INTO admin_audit_log
         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
       VALUES
-        (?, ?, 'billing_manual_payment_reviewed', 'billing_payment', ?, ?, ?, ?, datetime('now'))
+        (?, ?, 'billing_payment_reviewed', 'billing_payment', ?, ?, ?, ?, datetime('now'))
     `).bind(
       auditId,
       adminUserId,
