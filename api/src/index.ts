@@ -3280,6 +3280,261 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
 // ── GET /api/v1/superadmin/payment-links ──────────────────────────────────────
 // Lista V1 de enlaces de pago usando billing_payments como base.
 // source='payment_link' identifica estos cobros.
+
+
+// ============================================================
+// Public Payment Link Routes — INTAP LINK V1
+// Base mínima pública para consultar enlace y registrar comprobante.
+// No requiere sesión. Usa metadata_json.public_token como token público.
+// ============================================================
+
+function safePaymentLinkMetadata(raw: unknown): Record<string, any> {
+  if (!raw || typeof raw !== 'string') return {}
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function normalizePublicPaymentLink(row: any) {
+  const metadata = safePaymentLinkMetadata(row?.metadata_json)
+  const amountCents = Number(row?.amount_cents || 0)
+
+  return {
+    id: row?.id,
+    reference_code: row?.admin_reference || metadata.reference_code || '',
+    public_token: metadata.public_token || '',
+    public_url_path: metadata.public_path || (metadata.public_token ? `/pay/${metadata.public_token}` : ''),
+    profile_id: row?.profile_id || null,
+    user_id: row?.user_id || null,
+    plan_id: row?.plan_id || null,
+    amount_cents: amountCents,
+    amount: amountCents / 100,
+    currency: row?.currency || 'DOP',
+    status: row?.status || 'pending',
+    source: row?.source || 'payment_link',
+    provider: row?.provider || 'manual',
+    payment_method_code: row?.payment_method_code || null,
+    concept: metadata.concept || row?.customer_reference_text || '',
+    expires_at: metadata.expires_at || null,
+    notes: metadata.notes || row?.internal_notes || '',
+    proof_url: row?.proof_url || null,
+    proof_asset_id: row?.proof_asset_id || null,
+    source_bank_name: row?.source_bank_name || null,
+    customer_reference_text: row?.customer_reference_text || null,
+    transferred_at: row?.transferred_at || null,
+    submitted_at: row?.submitted_at || null,
+    reviewed_at: row?.reviewed_at || null,
+    confirmed_at: row?.confirmed_at || null,
+    rejected_at: row?.rejected_at || null,
+    rejection_reason: row?.rejection_reason || null,
+    customer: metadata.customer || {},
+    timeline: Array.isArray(metadata.timeline) ? metadata.timeline : [],
+    created_at: row?.created_at || null,
+    updated_at: row?.updated_at || null,
+  }
+}
+
+app.get('/api/v1/public/payment-link/:token', async (c) => {
+  const token = (c.req.param('token') || '').trim()
+
+  if (!token) {
+    return c.json({ ok: false, error: 'Missing payment link token' }, 400)
+  }
+
+  const row = await c.env.DB.prepare(`
+    SELECT
+      bp.*
+    FROM billing_payments bp
+    WHERE json_extract(bp.metadata_json, '$.public_token') = ?
+      AND bp.source = 'payment_link'
+    LIMIT 1
+  `).bind(token).first<any>()
+
+  if (!row) {
+    return c.json({ ok: false, error: 'Payment link not found' }, 404)
+  }
+
+  const item = normalizePublicPaymentLink(row)
+
+  return c.json({
+    ok: true,
+    data: {
+      item,
+      timeline: item.timeline,
+    },
+  })
+})
+
+app.post('/api/v1/public/payment-link/:token/submit', async (c) => {
+  const token = (c.req.param('token') || '').trim()
+
+  if (!token) {
+    return c.json({ ok: false, error: 'Missing payment link token' }, 400)
+  }
+
+  const row = await c.env.DB.prepare(`
+    SELECT
+      bp.*
+    FROM billing_payments bp
+    WHERE json_extract(bp.metadata_json, '$.public_token') = ?
+      AND bp.source = 'payment_link'
+    LIMIT 1
+  `).bind(token).first<any>()
+
+  if (!row) {
+    return c.json({ ok: false, error: 'Payment link not found' }, 404)
+  }
+
+  const metadata = safePaymentLinkMetadata(row.metadata_json)
+
+  let body: any = {}
+  let uploadedProofAssetId = ''
+  let uploadedProofContentType = ''
+  let uploadedProofOriginalName = ''
+
+  const contentType = c.req.header('content-type') || ''
+
+  if (contentType.includes('multipart/form-data')) {
+    const fd = await c.req.formData()
+    const fileVal = fd.get('file') || fd.get('proof') || fd.get('voucher')
+
+    body = {
+      proof_url: String(fd.get('proof_url') || ''),
+      proof_asset_id: String(fd.get('proof_asset_id') || ''),
+      source_bank_name: String(fd.get('source_bank_name') || ''),
+      customer_reference_text: String(fd.get('customer_reference_text') || ''),
+      transferred_at: String(fd.get('transferred_at') || ''),
+      customer_notes: String(fd.get('customer_notes') || ''),
+      customer_name: String(fd.get('customer_name') || ''),
+      customer_email: String(fd.get('customer_email') || ''),
+      customer_phone: String(fd.get('customer_phone') || ''),
+    }
+
+    if (fileVal && typeof fileVal === 'object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any)) {
+      const file = fileVal as any as File
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf']
+
+      if (!ALLOWED_EXTS.includes(ext)) {
+        return c.json({ ok: false, error: 'Formato de comprobante no permitido' }, 400)
+      }
+
+      uploadedProofOriginalName = file.name
+      uploadedProofContentType = file.type || (ext === 'pdf' ? 'application/pdf' : 'image/jpeg')
+      uploadedProofAssetId = `payment-vouchers/${row.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '-')}`
+
+      await c.env.BUCKET.put(uploadedProofAssetId, file.stream(), {
+        httpMetadata: { contentType: uploadedProofContentType },
+        customMetadata: {
+          contentType: uploadedProofContentType,
+          originalName: uploadedProofOriginalName,
+          paymentId: String(row.id),
+        },
+      })
+    }
+  } else {
+    try {
+      body = await c.req.json()
+    } catch {
+      body = {}
+    }
+  }
+
+  const proofUrl = typeof body.proof_url === 'string' ? body.proof_url.trim() : ''
+  const bodyProofAssetId = typeof body.proof_asset_id === 'string' ? body.proof_asset_id.trim() : ''
+  const proofAssetId = uploadedProofAssetId || bodyProofAssetId
+  const sourceBankName = typeof body.source_bank_name === 'string' ? body.source_bank_name.trim() : ''
+  const customerReferenceText = typeof body.customer_reference_text === 'string' ? body.customer_reference_text.trim() : ''
+  const transferredAt = typeof body.transferred_at === 'string' ? body.transferred_at.trim() : ''
+  const customerNotes = typeof body.customer_notes === 'string' ? body.customer_notes.trim() : ''
+
+  const customer = {
+    name: typeof body.customer_name === 'string' ? body.customer_name.trim() : '',
+    email: typeof body.customer_email === 'string' ? body.customer_email.trim() : '',
+    phone: typeof body.customer_phone === 'string' ? body.customer_phone.trim() : '',
+    notes: customerNotes,
+  }
+
+  if (!proofUrl && !proofAssetId) {
+    return c.json({ ok: false, error: 'proof file, proof_url or proof_asset_id is required' }, 400)
+  }
+
+  if (!customerReferenceText) {
+    return c.json({ ok: false, error: 'customer_reference_text is required' }, 400)
+  }
+
+  const previousTimeline = Array.isArray(metadata.timeline) ? metadata.timeline : []
+  const nextTimeline = [
+    ...previousTimeline,
+    {
+      event_type: 'proof_submitted',
+      public_message: 'Comprobante enviado. El pago queda pendiente de validación.',
+      customer_reference_text: customerReferenceText,
+      source_bank_name: sourceBankName,
+      at: new Date().toISOString(),
+    },
+  ]
+
+  const nextMetadata = {
+    ...metadata,
+    customer,
+    proof: {
+      proof_url: proofUrl || row.proof_url || null,
+      proof_asset_id: proofAssetId || row.proof_asset_id || null,
+      proof_content_type: uploadedProofContentType || null,
+      proof_original_name: uploadedProofOriginalName || null,
+      source_bank_name: sourceBankName || null,
+      customer_reference_text: customerReferenceText,
+      transferred_at: transferredAt || null,
+      customer_notes: customerNotes || null,
+    },
+    timeline: nextTimeline,
+    public_status_label: 'Comprobante enviado',
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE billing_payments
+    SET
+      status = 'proof_submitted',
+      proof_url = COALESCE(NULLIF(?, ''), proof_url),
+      proof_asset_id = COALESCE(NULLIF(?, ''), proof_asset_id),
+      source_bank_name = COALESCE(NULLIF(?, ''), source_bank_name),
+      customer_reference_text = ?,
+      transferred_at = COALESCE(NULLIF(?, ''), transferred_at),
+      submitted_at = datetime('now'),
+      metadata_json = ?,
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).bind(
+    proofUrl,
+    proofAssetId,
+    sourceBankName,
+    customerReferenceText,
+    transferredAt,
+    JSON.stringify(nextMetadata),
+    row.id,
+  ).run()
+
+  const updated = await c.env.DB.prepare(`
+    SELECT *
+    FROM billing_payments
+    WHERE id = ?
+    LIMIT 1
+  `).bind(row.id).first<any>()
+
+  return c.json({
+    ok: true,
+    message: 'Comprobante recibido correctamente.',
+    data: {
+      item: normalizePublicPaymentLink(updated),
+    },
+  })
+})
+
+
 app.get('/api/v1/superadmin/payment-links', requireSuperAdmin('viewer'), async (c) => {
   const page = Math.max(1, parseInt(c.req.query('page') || '1', 10))
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '25', 10)))
@@ -3380,6 +3635,197 @@ app.get('/api/v1/superadmin/payment-links', requireSuperAdmin('viewer'), async (
   })
 })
 
+
+
+// ── GET /api/v1/superadmin/payment-links/:id/detail ───────────────────────────
+// Detalle V1 de un enlace de pago generado.
+// Usa billing_payments como fuente real y metadata_json para datos públicos.
+app.get('/api/v1/superadmin/payment-links/:id/detail', requireSuperAdmin('viewer'), async (c) => {
+  const id = (c.req.param('id') || '').trim()
+
+  if (!id) {
+    return c.json({ ok: false, error: 'payment link id is required' }, 400)
+  }
+
+  const row = await c.env.DB.prepare(`
+    SELECT
+      bp.*,
+      p.slug AS profile_slug
+    FROM billing_payments bp
+    LEFT JOIN profiles p ON p.id = bp.profile_id
+    WHERE bp.id = ?
+      AND bp.source = 'payment_link'
+    LIMIT 1
+  `).bind(id).first<any>()
+
+  if (!row) {
+    return c.json({ ok: false, error: 'Payment link not found' }, 404)
+  }
+
+  const metadata = safePaymentLinkMetadata(row.metadata_json)
+  const item = normalizePublicPaymentLink(row)
+
+  const timeline = Array.isArray(metadata.timeline) ? metadata.timeline : []
+
+  const detail = {
+    profile: {
+      id: row.profile_id || null,
+      slug: row.profile_slug || null,
+      display_name: null,
+    },
+    user: {
+      id: row.user_id || null,
+      email: null,
+    },
+    customer: metadata.customer || {},
+    proof: metadata.proof || {
+      proof_url: row.proof_url || null,
+      proof_asset_id: row.proof_asset_id || null,
+      source_bank_name: row.source_bank_name || null,
+      customer_reference_text: row.customer_reference_text || null,
+      transferred_at: row.transferred_at || null,
+    },
+    tracking_events: timeline,
+    timeline,
+    voucher_admin_url: row.proof_asset_id || row.proof_url
+      ? `/api/v1/superadmin/payment-links/${row.id}/voucher`
+      : null,
+    public_url_path: item.public_url_path,
+    public_token: item.public_token,
+    reference_code: item.reference_code,
+    concept: item.concept,
+    notes: item.notes,
+    expires_at: item.expires_at,
+    created_at: row.created_at || null,
+    updated_at: row.updated_at || null,
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      item,
+      detail,
+    },
+    item,
+    detail,
+  })
+})
+
+
+
+
+// ── GET /api/v1/superadmin/payment-links/:id/voucher ──────────────────────────
+// Devuelve el comprobante/voucher adjunto a un enlace de pago.
+// Se usa desde Super Admin para Ver imagen / Imprimir / Descargar.
+app.get('/api/v1/superadmin/payment-links/:id/voucher', requireSuperAdmin('viewer'), async (c) => {
+  const id = (c.req.param('id') || '').trim()
+
+  if (!id) {
+    return c.json({ ok: false, error: 'payment link id is required' }, 400)
+  }
+
+  const row = await c.env.DB.prepare(`
+    SELECT
+      id,
+      admin_reference,
+      metadata_json,
+      proof_url,
+      proof_asset_id
+    FROM billing_payments
+    WHERE id = ?
+      AND source = 'payment_link'
+    LIMIT 1
+  `).bind(id).first<any>()
+
+  if (!row) {
+    return c.json({ ok: false, error: 'Payment link not found' }, 404)
+  }
+
+  const proofAssetId = String(row.proof_asset_id || '').trim()
+  const proofUrl = String(row.proof_url || '').trim()
+  const voucherMetadata = safePaymentLinkMetadata(row.metadata_json)
+  const voucherReference = String(
+    voucherMetadata.reference_code ||
+    row.admin_reference ||
+    row.id
+  ).replace(/[^a-zA-Z0-9_-]/g, '-')
+
+  const buildVoucherResponse = (
+    arrayBuffer: ArrayBuffer,
+    contentType: string,
+  ) => {
+    const safeContentType = contentType || 'application/octet-stream'
+    const extension =
+      safeContentType.includes('pdf') ? 'pdf' :
+      safeContentType.includes('png') ? 'png' :
+      safeContentType.includes('jpeg') || safeContentType.includes('jpg') ? 'jpg' :
+      'bin'
+
+    return new Response(arrayBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': safeContentType,
+        'Content-Disposition': `inline; filename="voucher-${voucherReference}.${extension}"`,
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private, max-age=0',
+        'Access-Control-Allow-Credentials': 'true',
+      },
+    })
+  }
+
+  if (proofAssetId) {
+    try {
+      const object = await c.env.BUCKET.get(proofAssetId)
+
+      if (object) {
+        const contentType =
+          object.httpMetadata?.contentType ||
+          object.customMetadata?.contentType ||
+          'application/octet-stream'
+
+        return buildVoucherResponse(await object.arrayBuffer(), contentType)
+      }
+    } catch {
+      return c.json({ ok: false, error: 'Voucher file could not be loaded from storage' }, 502)
+    }
+  }
+
+  if (proofUrl) {
+    let parsedVoucherUrl: URL
+
+    try {
+      parsedVoucherUrl = new URL(proofUrl)
+    } catch {
+      return c.json({ ok: false, error: 'Voucher URL is invalid' }, 422)
+    }
+
+    if (!['http:', 'https:'].includes(parsedVoucherUrl.protocol)) {
+      return c.json({ ok: false, error: 'Voucher URL protocol is not allowed' }, 422)
+    }
+
+    if (parsedVoucherUrl.hostname === 'example.com') {
+      return c.json({ ok: false, error: 'Voucher file is not available' }, 404)
+    }
+
+    try {
+      const voucherRes = await fetch(parsedVoucherUrl.toString())
+
+      if (!voucherRes.ok) {
+        return c.json({ ok: false, error: 'Voucher file could not be loaded' }, 502)
+      }
+
+      return buildVoucherResponse(
+        await voucherRes.arrayBuffer(),
+        voucherRes.headers.get('content-type') || 'application/octet-stream',
+      )
+    } catch {
+      return c.json({ ok: false, error: 'Voucher fetch failed' }, 502)
+    }
+  }
+
+  return c.json({ ok: false, error: 'Voucher file is not available' }, 404)
+})
+
+
 // ── POST /api/v1/superadmin/payment-links ─────────────────────────────────────
 // Crea un enlace de pago V1 usando billing_payments.
 // No confirma pago, no activa suscripción y no cambia plan.
@@ -3393,7 +3839,7 @@ app.post('/api/v1/superadmin/payment-links', requireSuperAdmin('support'), async
     return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
   }
 
-  const profileId = typeof body.profile_id === 'string' ? body.profile_id.trim() : null
+  const profileId = typeof body.profile_id === 'string' ? body.profile_id.trim() : ''
   const planId = typeof body.plan_id === 'string' ? body.plan_id.trim() || null : null
   const concept = typeof body.concept === 'string' ? body.concept.trim() : ''
   const currency = typeof body.currency === 'string' ? body.currency.trim().toUpperCase() : 'DOP'
@@ -3431,17 +3877,23 @@ app.post('/api/v1/superadmin/payment-links', requireSuperAdmin('support'), async
     slug: string | null
   } | null = null
 
-  if (profileId) {
-    profile = await c.env.DB.prepare(`
-      SELECT id, user_id, plan_id, slug
-      FROM profiles
-      WHERE id = ?
-      LIMIT 1
-    `).bind(profileId).first<any>()
+  if (!profileId) {
+    return c.json({ ok: false, error: 'profile_id is required' }, 400)
+  }
 
-    if (!profile) {
-      return c.json({ ok: false, error: 'Profile not found' }, 404)
-    }
+  profile = await c.env.DB.prepare(`
+    SELECT id, user_id, plan_id, slug
+    FROM profiles
+    WHERE id = ?
+    LIMIT 1
+  `).bind(profileId).first<any>()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Profile not found' }, 404)
+  }
+
+  if (!profile.user_id) {
+    return c.json({ ok: false, error: 'Profile has no user assigned' }, 400)
   }
 
   const paymentId = crypto.randomUUID()
@@ -3513,7 +3965,7 @@ app.post('/api/v1/superadmin/payment-links', requireSuperAdmin('support'), async
           NULL,
           ?,
           NULL,
-          datetime('now'),
+          NULL,
           NULL,
           NULL,
           NULL,

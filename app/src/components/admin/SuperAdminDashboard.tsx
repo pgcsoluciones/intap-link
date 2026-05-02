@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiGet } from '../../lib/api'
+import { apiGet, apiPost } from '../../lib/api'
 import SuperAdminLayout, { type SuperAdminSection } from './SuperAdminLayout'
 
 interface MetricsOverview {
@@ -72,6 +72,34 @@ interface BillingSubscription {
   created_at?: string
 }
 
+interface PaymentLinkItem {
+  id: string
+  profile_slug?: string | null
+  user_email?: string | null
+  plan_id?: string | null
+  amount_cents: number
+  currency: string
+  status: string
+  source?: string
+  provider?: string
+  admin_reference?: string | null
+  concept?: string | null
+  public_token?: string | null
+  public_url_path?: string | null
+  expires_at?: string | null
+  created_at?: string
+}
+
+interface PaymentLinkForm {
+  profile_id: string
+  concept: string
+  amount: string
+  currency: string
+  expires_at: string
+  payment_method_code: string
+  notes: string
+}
+
 export default function SuperAdminDashboard() {
   const [currentSection, setCurrentSection] = useState<SuperAdminSection>('dashboard')
   const [metrics, setMetrics] = useState<MetricsOverview | null>(null)
@@ -80,6 +108,20 @@ export default function SuperAdminDashboard() {
   const [gateways, setGateways] = useState<BillingGateway[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
   const [subscriptions, setSubscriptions] = useState<BillingSubscription[]>([])
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLinkItem[]>([])
+  const [paymentLinksLoading, setPaymentLinksLoading] = useState(false)
+  const [paymentLinksSaving, setPaymentLinksSaving] = useState(false)
+  const [paymentLinksMessage, setPaymentLinksMessage] = useState('')
+  const [paymentLinksError, setPaymentLinksError] = useState('')
+  const [paymentLinkForm, setPaymentLinkForm] = useState<PaymentLinkForm>({
+    profile_id: 'profile_debug',
+    concept: '',
+    amount: '',
+    currency: 'DOP',
+    expires_at: '',
+    payment_method_code: 'bank_transfer',
+    notes: '',
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -127,6 +169,83 @@ export default function SuperAdminDashboard() {
     load()
     return () => { cancelled = true }
   }, [])
+
+  async function loadPaymentLinks() {
+    setPaymentLinksLoading(true)
+    setPaymentLinksError('')
+
+    try {
+      const json: any = await apiGet('/superadmin/payment-links?limit=25')
+      if (!json?.ok) {
+        throw new Error(json?.error || 'No se pudieron cargar los enlaces de pago.')
+      }
+
+      const items = json.data?.items || []
+      setPaymentLinks(Array.isArray(items) ? items : [])
+    } catch (err) {
+      setPaymentLinksError(err instanceof Error ? err.message : 'No se pudieron cargar los enlaces de pago.')
+    } finally {
+      setPaymentLinksLoading(false)
+    }
+  }
+
+  async function createPaymentLink() {
+    setPaymentLinksSaving(true)
+    setPaymentLinksError('')
+    setPaymentLinksMessage('')
+
+    try {
+      const amount = Number(paymentLinkForm.amount)
+
+      if (!paymentLinkForm.concept.trim()) {
+        throw new Error('Debes escribir el concepto del cobro.')
+      }
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Debes indicar un monto válido.')
+      }
+
+      const json: any = await apiPost('/superadmin/payment-links', {
+        profile_id: paymentLinkForm.profile_id || null,
+        concept: paymentLinkForm.concept.trim(),
+        amount,
+        currency: paymentLinkForm.currency,
+        expires_at: paymentLinkForm.expires_at || null,
+        payment_method_code: paymentLinkForm.payment_method_code,
+        notes: paymentLinkForm.notes || null,
+      })
+
+      if (!json?.ok) {
+        throw new Error(json?.error || 'No se pudo generar el enlace de pago.')
+      }
+
+      setPaymentLinksMessage(`Enlace generado: ${json.data?.reference_code || 'sin referencia'}`)
+      setPaymentLinkForm((prev) => ({
+        ...prev,
+        concept: '',
+        amount: '',
+        expires_at: '',
+        notes: '',
+      }))
+      await loadPaymentLinks()
+    } catch (err) {
+      setPaymentLinksError(err instanceof Error ? err.message : 'No se pudo generar el enlace de pago.')
+    } finally {
+      setPaymentLinksSaving(false)
+    }
+  }
+
+  useEffect(() => {
+    if (currentSection !== 'paymentLinks') return
+    loadPaymentLinks()
+  }, [currentSection])
+
+  const paymentLinkStats = {
+    total: paymentLinks.length,
+    pending: paymentLinks.filter((item) => item.status === 'pending').length,
+    paid: paymentLinks.filter((item) => item.status === 'confirmed' || item.status === 'paid').length,
+    expired: paymentLinks.filter((item) => item.status === 'expired').length,
+  }
 
   const metricData = metrics?.data || metrics?.metrics || {}
 
@@ -326,27 +445,6 @@ export default function SuperAdminDashboard() {
   }
 
   function renderPaymentLinksSection() {
-    const mockLinks = [
-      {
-        id: 'demo-1',
-        client: 'Cliente demo',
-        concept: 'Activación plan Basic',
-        amount: 150000,
-        currency: 'DOP',
-        status: 'pending',
-        reference: 'INTAP-LINK-001',
-      },
-      {
-        id: 'demo-2',
-        client: 'Perfil Juan',
-        concept: 'Renovación mensual',
-        amount: 250000,
-        currency: 'DOP',
-        status: 'confirmed',
-        reference: 'INTAP-LINK-002',
-      },
-    ]
-
     return (
       <div className="rounded-3xl bg-white px-4 py-8 text-slate-900 shadow-sm">
         <div className="mx-auto max-w-6xl">
@@ -356,73 +454,84 @@ export default function SuperAdminDashboard() {
             </p>
             <h1 className="mt-2 text-3xl font-black">Enlaces de pago</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              Base operativa para crear cobros compartibles por WhatsApp, registrar pagos manuales,
-              recibir comprobantes y conectar futuras pasarelas.
+              Crea cobros compartibles, registra el concepto del pago y da seguimiento desde Billing.
             </p>
           </header>
 
           <section className="mb-8 grid gap-4 md:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Total enlaces</p>
-              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
-              <p className="mt-1 text-xs text-slate-500">Pendiente de backend</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">{paymentLinkStats.total}</p>
+              <p className="mt-1 text-xs text-slate-500">Creados en backend</p>
             </div>
 
             <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
               <p className="text-[10px] font-black uppercase tracking-wide text-yellow-700">Pendientes</p>
-              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">{paymentLinkStats.pending}</p>
               <p className="mt-1 text-xs text-slate-500">Cobros sin confirmar</p>
             </div>
 
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
               <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Pagados</p>
-              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">{paymentLinkStats.paid}</p>
               <p className="mt-1 text-xs text-slate-500">Pagos confirmados</p>
             </div>
 
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
               <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Vencidos</p>
-              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">{paymentLinkStats.expired}</p>
               <p className="mt-1 text-xs text-slate-500">Enlaces expirados</p>
             </div>
           </section>
+
+          {(paymentLinksMessage || paymentLinksError) && (
+            <div className={`mb-6 rounded-2xl border p-4 text-sm font-bold ${
+              paymentLinksError
+                ? 'border-red-200 bg-red-50 text-red-700'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            }`}>
+              {paymentLinksError || paymentLinksMessage}
+            </div>
+          )}
 
           <section className="mb-8 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-3xl border border-slate-200 bg-white p-6">
               <div className="mb-5">
                 <h2 className="text-xl font-black text-slate-900">Crear enlace de pago</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Formulario base inspirado en Avanxy. En el próximo lote se conectará a endpoints reales de INTAP LINK.
+                  Esta versión crea un registro real en billing_payments con source=payment_link.
                 </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Cliente / Perfil</span>
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Perfil</span>
                   <input
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
-                    placeholder="Seleccionar perfil"
+                    value={paymentLinkForm.profile_id}
+                    onChange={(event) => setPaymentLinkForm((prev) => ({ ...prev, profile_id: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    placeholder="profile_debug"
                   />
                 </label>
 
                 <label className="block">
                   <span className="text-xs font-black uppercase tracking-wide text-slate-500">Tipo de cobro</span>
                   <select
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    value={paymentLinkForm.payment_method_code}
+                    onChange={(event) => setPaymentLinkForm((prev) => ({ ...prev, payment_method_code: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                   >
-                    <option>Suscripción</option>
-                    <option>Activación de plan</option>
-                    <option>Servicio adicional</option>
+                    <option value="bank_transfer">Transferencia bancaria</option>
+                    <option value="manual">Pago manual</option>
                   </select>
                 </label>
 
                 <label className="block md:col-span-2">
                   <span className="text-xs font-black uppercase tracking-wide text-slate-500">Concepto</span>
                   <input
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    value={paymentLinkForm.concept}
+                    onChange={(event) => setPaymentLinkForm((prev) => ({ ...prev, concept: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                     placeholder="Ej: Activación plan Basic mensual"
                   />
                 </label>
@@ -430,51 +539,53 @@ export default function SuperAdminDashboard() {
                 <label className="block">
                   <span className="text-xs font-black uppercase tracking-wide text-slate-500">Monto</span>
                   <input
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
-                    placeholder="1500.00"
+                    value={paymentLinkForm.amount}
+                    onChange={(event) => setPaymentLinkForm((prev) => ({ ...prev, amount: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    placeholder="1800"
                   />
                 </label>
 
                 <label className="block">
                   <span className="text-xs font-black uppercase tracking-wide text-slate-500">Moneda</span>
                   <select
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    value={paymentLinkForm.currency}
+                    onChange={(event) => setPaymentLinkForm((prev) => ({ ...prev, currency: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                   >
-                    <option>DOP</option>
-                    <option>USD</option>
+                    <option value="DOP">DOP</option>
+                    <option value="USD">USD</option>
                   </select>
                 </label>
 
                 <label className="block">
                   <span className="text-xs font-black uppercase tracking-wide text-slate-500">Vence el</span>
                   <input
-                    disabled
+                    value={paymentLinkForm.expires_at}
+                    onChange={(event) => setPaymentLinkForm((prev) => ({ ...prev, expires_at: event.target.value }))}
                     type="date"
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                   />
                 </label>
 
                 <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Método sugerido</span>
-                  <select
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
-                  >
-                    <option>Transferencia bancaria</option>
-                    <option>Pago manual</option>
-                    <option>Pasarela futura</option>
-                  </select>
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Notas internas</span>
+                  <input
+                    value={paymentLinkForm.notes}
+                    onChange={(event) => setPaymentLinkForm((prev) => ({ ...prev, notes: event.target.value }))}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    placeholder="Opcional"
+                  />
                 </label>
               </div>
 
               <button
                 type="button"
-                disabled
-                className="mt-6 rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white opacity-60"
+                onClick={createPaymentLink}
+                disabled={paymentLinksSaving}
+                className="mt-6 rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white disabled:opacity-60"
               >
-                Generar enlace de pago
+                {paymentLinksSaving ? 'Generando...' : 'Generar enlace de pago'}
               </button>
             </div>
 
@@ -482,35 +593,15 @@ export default function SuperAdminDashboard() {
               <div className="mb-5">
                 <h2 className="text-xl font-black text-slate-900">Configuración de cobro</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Información que verá el cliente en el enlace público.
+                  Próximo bloque: bancos, soporte, comprobantes y página pública /pay/token.
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">WhatsApp soporte</span>
-                  <input
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
-                    placeholder="8090000000"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Email soporte</span>
-                  <input
-                    disabled
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
-                    placeholder="soporte@intaprd.com"
-                  />
-                </label>
-
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                  <p className="text-sm font-black text-slate-900">Cuentas bancarias</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Aquí se configurarán bancos, titulares, cuentas y notas de referencia para el pago.
-                  </p>
-                </div>
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <p className="text-sm font-black text-slate-900">Pendiente de conexión</p>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                  La creación y listado ya usan backend real. Falta la página pública del enlace y configuración bancaria.
+                </p>
               </div>
             </div>
           </section>
@@ -520,16 +611,21 @@ export default function SuperAdminDashboard() {
               <div>
                 <h2 className="text-xl font-black text-slate-900">Enlaces recientes</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Vista base de cobros generados. Se reemplazará por datos reales cuando conectemos backend.
+                  Registros reales desde GET /superadmin/payment-links.
                 </p>
               </div>
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-700">
-                Módulo en preparación
-              </span>
+              <button
+                type="button"
+                onClick={loadPaymentLinks}
+                disabled={paymentLinksLoading}
+                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-60"
+              >
+                {paymentLinksLoading ? 'Actualizando...' : 'Actualizar'}
+              </button>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
+              <table className="w-full min-w-[860px] text-left text-sm">
                 <thead className="text-xs uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="border-b border-slate-200 px-3 py-3">Cliente</th>
@@ -537,18 +633,36 @@ export default function SuperAdminDashboard() {
                     <th className="border-b border-slate-200 px-3 py-3">Monto</th>
                     <th className="border-b border-slate-200 px-3 py-3">Estado</th>
                     <th className="border-b border-slate-200 px-3 py-3">Referencia</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Ruta pública</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {mockLinks.map((item) => (
+                  {paymentLinks.map((item) => (
                     <tr key={item.id} className="text-slate-700">
-                      <td className="border-b border-slate-100 px-3 py-3">{item.client}</td>
-                      <td className="border-b border-slate-100 px-3 py-3">{item.concept}</td>
-                      <td className="border-b border-slate-100 px-3 py-3">{formatMoney(item.amount, item.currency)}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{item.profile_slug || item.user_email || '—'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{item.concept || '—'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{formatMoney(item.amount_cents, item.currency || 'DOP')}</td>
                       <td className="border-b border-slate-100 px-3 py-3">{statusLabel(item.status)}</td>
-                      <td className="border-b border-slate-100 px-3 py-3">{item.reference}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{item.admin_reference || '—'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{item.public_url_path || '—'}</td>
                     </tr>
                   ))}
+
+                  {!paymentLinksLoading && paymentLinks.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                        Todavía no hay enlaces de pago registrados.
+                      </td>
+                    </tr>
+                  )}
+
+                  {paymentLinksLoading && (
+                    <tr>
+                      <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                        Cargando enlaces de pago...
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
