@@ -3109,7 +3109,7 @@ app.post('/api/v1/superadmin/billing/payments/manual', requireSuperAdmin('suppor
 
 // ── PATCH /api/v1/superadmin/billing/payments/:paymentId/review ───────────────
 // Revisa un pago desde Super Admin.
-// Permite mover pagos manuales y enlaces de pago a: under_review, confirmed, rejected o cancelled.
+// Permite mover pagos manuales y enlaces de pago a: pending, under_review, confirmed, rejected o cancelled.
 // No cambia plan, no activa suscripción y no toca entitlements.
 app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperAdmin('support'), async (c) => {
   const adminUserId = c.get('adminUserId') as string
@@ -3126,7 +3126,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
   const internalNotes = typeof body.internal_notes === 'string' ? body.internal_notes.trim() || null : null
   const rejectionReason = typeof body.rejection_reason === 'string' ? body.rejection_reason.trim() || null : null
 
-  const VALID_REVIEW_STATUSES = ['under_review', 'confirmed', 'rejected', 'cancelled']
+  const VALID_REVIEW_STATUSES = ['pending', 'under_review', 'confirmed', 'rejected', 'cancelled']
 
   if (!VALID_REVIEW_STATUSES.includes(nextStatus)) {
     return c.json({
