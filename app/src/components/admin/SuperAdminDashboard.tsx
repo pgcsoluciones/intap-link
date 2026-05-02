@@ -364,13 +364,88 @@ export default function SuperAdminDashboard() {
     return Boolean(item.proof_asset_id || item.proof_url)
   }
 
+  function getPaymentVoucherUrl(item: PaymentLinkItem) {
+    return `/api/v1/superadmin/payment-links/${item.id}/voucher`
+  }
+
   function openPaymentVoucher(item: PaymentLinkItem) {
     if (!hasPaymentVoucher(item)) {
       setPaymentLinksError('Este enlace todavía no tiene comprobante adjunto.')
       return
     }
 
-    window.open(`/api/v1/superadmin/payment-links/${item.id}/voucher`, '_blank', 'noopener,noreferrer')
+    window.open(getPaymentVoucherUrl(item), '_blank', 'noopener,noreferrer')
+  }
+
+  function printPaymentVoucher(item: PaymentLinkItem) {
+    if (!hasPaymentVoucher(item)) {
+      setPaymentLinksError('Este enlace todavía no tiene comprobante adjunto.')
+      return
+    }
+
+    const url = getPaymentVoucherUrl(item)
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer')
+
+    if (!printWindow) {
+      setPaymentLinksError('No se pudo abrir la ventana de impresión. Revisa si el navegador bloqueó la ventana emergente.')
+      return
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Imprimir comprobante</title>
+          <style>
+            html, body { margin: 0; height: 100%; }
+            iframe { border: 0; width: 100%; height: 100vh; }
+          </style>
+        </head>
+        <body>
+          <iframe src="${url}" onload="setTimeout(() => { window.focus(); window.print(); }, 500)"></iframe>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
+  async function downloadPaymentVoucher(item: PaymentLinkItem) {
+    if (!hasPaymentVoucher(item)) {
+      setPaymentLinksError('Este enlace todavía no tiene comprobante adjunto.')
+      return
+    }
+
+    try {
+      const res = await fetch(getPaymentVoucherUrl(item), {
+        credentials: 'include',
+      })
+
+      if (!res.ok) {
+        throw new Error('No se pudo descargar el comprobante.')
+      }
+
+      const blob = await res.blob()
+      const contentType = res.headers.get('Content-Type') || blob.type || ''
+      const ext = contentType.includes('pdf')
+        ? 'pdf'
+        : contentType.includes('png')
+          ? 'png'
+          : contentType.includes('jpeg') || contentType.includes('jpg')
+            ? 'jpg'
+            : 'bin'
+
+      const reference = (item.admin_reference || item.public_token || item.id).replace(/[^a-zA-Z0-9_-]/g, '-')
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = `voucher-${reference}.${ext}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      setPaymentLinksError(err instanceof Error ? err.message : 'No se pudo descargar el comprobante.')
+    }
   }
 
   async function reviewPaymentLink(item: PaymentLinkItem, status: 'pending' | 'under_review' | 'confirmed' | 'rejected' | 'cancelled') {
@@ -1072,6 +1147,53 @@ export default function SuperAdminDashboard() {
                       </div>
                     </div>
 
+                    {selectedPaymentLinkDetail.voucher_admin_url && hasPaymentVoucher(selectedPaymentLink) && (
+                      <div className="rounded-2xl border border-slate-200 p-5">
+                        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <h3 className="text-sm font-black text-slate-900">Voucher / comprobante</h3>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Vista previa del archivo recibido para este enlace de pago.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                          <iframe
+                            title="Vista previa del comprobante"
+                            src={getPaymentVoucherUrl(selectedPaymentLink)}
+                            className="h-[420px] w-full bg-white"
+                          />
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => openPaymentVoucher(selectedPaymentLink)}
+                            className="rounded-full border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700"
+                          >
+                            Ver imagen / PDF
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => printPaymentVoucher(selectedPaymentLink)}
+                            className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
+                          >
+                            Imprimir
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => downloadPaymentVoucher(selectedPaymentLink)}
+                            className="rounded-full border border-blue-300 bg-white px-4 py-3 text-sm font-black text-blue-700"
+                          >
+                            Descargar PDF
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="rounded-2xl border border-slate-200 p-5">
                       <h3 className="text-sm font-black text-slate-900">Timeline</h3>
                       <div className="mt-4 space-y-3">
@@ -1097,14 +1219,30 @@ export default function SuperAdminDashboard() {
                         Copiar enlace público
                       </button>
 
-                      {selectedPaymentLinkDetail.voucher_admin_url && (
-                        <button
-                          type="button"
-                          onClick={() => openPaymentVoucher(selectedPaymentLink)}
-                          className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700"
-                        >
-                          Abrir comprobante
-                        </button>
+                      {selectedPaymentLinkDetail.voucher_admin_url && hasPaymentVoucher(selectedPaymentLink) && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openPaymentVoucher(selectedPaymentLink)}
+                            className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700"
+                          >
+                            Ver imagen / PDF
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => printPaymentVoucher(selectedPaymentLink)}
+                            className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
+                          >
+                            Imprimir
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => downloadPaymentVoucher(selectedPaymentLink)}
+                            className="rounded-full border border-blue-300 bg-white px-4 py-3 text-sm font-black text-blue-700"
+                          >
+                            Descargar PDF
+                          </button>
+                        </>
                       )}
 
                       {canMovePaymentToValidation(selectedPaymentLink.status) && (
