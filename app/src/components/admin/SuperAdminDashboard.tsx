@@ -90,6 +90,39 @@ interface PaymentLinkItem {
   created_at?: string
 }
 
+interface PaymentLinkDetail {
+  profile?: {
+    id?: string | null
+    slug?: string | null
+    display_name?: string | null
+  }
+  customer?: {
+    name?: string
+    email?: string
+    phone?: string
+    notes?: string
+  }
+  proof?: {
+    proof_url?: string | null
+    proof_asset_id?: string | null
+    source_bank_name?: string | null
+    customer_reference_text?: string | null
+    transferred_at?: string | null
+    customer_notes?: string | null
+  }
+  timeline?: Array<Record<string, any>>
+  tracking_events?: Array<Record<string, any>>
+  voucher_admin_url?: string | null
+  public_url_path?: string | null
+  public_token?: string | null
+  reference_code?: string | null
+  concept?: string | null
+  notes?: string | null
+  expires_at?: string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
 interface PaymentLinkForm {
   profile_id: string
   concept: string
@@ -113,6 +146,11 @@ export default function SuperAdminDashboard() {
   const [paymentLinksSaving, setPaymentLinksSaving] = useState(false)
   const [paymentLinksMessage, setPaymentLinksMessage] = useState('')
   const [paymentLinksError, setPaymentLinksError] = useState('')
+  const [selectedPaymentLink, setSelectedPaymentLink] = useState<PaymentLinkItem | null>(null)
+  const [selectedPaymentLinkDetail, setSelectedPaymentLinkDetail] = useState<PaymentLinkDetail | null>(null)
+  const [paymentLinkDetailLoading, setPaymentLinkDetailLoading] = useState(false)
+  const [paymentLinkDetailError, setPaymentLinkDetailError] = useState('')
+  const [copiedPaymentLinkId, setCopiedPaymentLinkId] = useState('')
   const [paymentLinkForm, setPaymentLinkForm] = useState<PaymentLinkForm>({
     profile_id: 'profile_debug',
     concept: '',
@@ -233,6 +271,60 @@ export default function SuperAdminDashboard() {
     } finally {
       setPaymentLinksSaving(false)
     }
+  }
+
+  function buildPublicPaymentLink(path?: string | null) {
+    if (!path) return ''
+    if (path.startsWith('http://') || path.startsWith('https://')) return path
+    return `https://intaprd.com${path.startsWith('/') ? path : `/${path}`}`
+  }
+
+  async function copyPaymentLink(item: PaymentLinkItem) {
+    const url = buildPublicPaymentLink(item.public_url_path)
+    if (!url) {
+      setPaymentLinksError('Este enlace no tiene ruta pública disponible.')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedPaymentLinkId(item.id)
+      setPaymentLinksMessage('Enlace público copiado.')
+      window.setTimeout(() => setCopiedPaymentLinkId(''), 1800)
+    } catch {
+      setPaymentLinksError('No se pudo copiar el enlace. Copia la ruta manualmente.')
+    }
+  }
+
+  async function openPaymentLinkDetail(item: PaymentLinkItem) {
+    setSelectedPaymentLink(item)
+    setSelectedPaymentLinkDetail(null)
+    setPaymentLinkDetailError('')
+    setPaymentLinkDetailLoading(true)
+
+    try {
+      const json: any = await apiGet(`/superadmin/payment-links/${item.id}/detail`)
+      if (!json?.ok) {
+        throw new Error(json?.error || 'No se pudo cargar el detalle del enlace.')
+      }
+
+      setSelectedPaymentLinkDetail(json.data?.detail || json.detail || null)
+    } catch (err) {
+      setPaymentLinkDetailError(err instanceof Error ? err.message : 'No se pudo cargar el detalle del enlace.')
+    } finally {
+      setPaymentLinkDetailLoading(false)
+    }
+  }
+
+  function closePaymentLinkDetail() {
+    setSelectedPaymentLink(null)
+    setSelectedPaymentLinkDetail(null)
+    setPaymentLinkDetailError('')
+    setPaymentLinkDetailLoading(false)
+  }
+
+  function openPaymentVoucher(item: PaymentLinkItem) {
+    window.open(`/api/v1/superadmin/payment-links/${item.id}/voucher`, '_blank', 'noopener,noreferrer')
   }
 
   useEffect(() => {
@@ -429,7 +521,7 @@ export default function SuperAdminDashboard() {
 
                 {payments.length === 0 && (
                   <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
                   Todavía no hay pagos registrados.
                 </td>
                   </tr>
@@ -634,6 +726,7 @@ export default function SuperAdminDashboard() {
                     <th className="border-b border-slate-200 px-3 py-3">Estado</th>
                     <th className="border-b border-slate-200 px-3 py-3">Referencia</th>
                     <th className="border-b border-slate-200 px-3 py-3">Ruta pública</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -642,15 +735,46 @@ export default function SuperAdminDashboard() {
                       <td className="border-b border-slate-100 px-3 py-3">{item.profile_slug || item.user_email || '—'}</td>
                       <td className="border-b border-slate-100 px-3 py-3">{item.concept || '—'}</td>
                       <td className="border-b border-slate-100 px-3 py-3">{formatMoney(item.amount_cents, item.currency || 'DOP')}</td>
-                      <td className="border-b border-slate-100 px-3 py-3">{statusLabel(item.status)}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
+                          {statusLabel(item.status)}
+                        </span>
+                      </td>
                       <td className="border-b border-slate-100 px-3 py-3">{item.admin_reference || '—'}</td>
-                      <td className="border-b border-slate-100 px-3 py-3">{item.public_url_path || '—'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">
+                        <span className="font-mono text-xs text-slate-500">{item.public_url_path || '—'}</span>
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openPaymentLinkDetail(item)}
+                            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                          >
+                            Ver detalle
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyPaymentLink(item)}
+                            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 hover:bg-blue-100"
+                          >
+                            {copiedPaymentLinkId === item.id ? 'Copiado' : 'Copiar enlace'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openPaymentVoucher(item)}
+                            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100"
+                          >
+                            Ver comprobante
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
 
                   {!paymentLinksLoading && paymentLinks.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
                         Todavía no hay enlaces de pago registrados.
                       </td>
                     </tr>
@@ -658,7 +782,7 @@ export default function SuperAdminDashboard() {
 
                   {paymentLinksLoading && (
                     <tr>
-                      <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                      <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
                         Cargando enlaces de pago...
                       </td>
                     </tr>
@@ -667,6 +791,116 @@ export default function SuperAdminDashboard() {
               </table>
             </div>
           </section>
+
+          {selectedPaymentLink && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
+              <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">Detalle del enlace</p>
+                    <h2 className="mt-2 text-2xl font-black text-slate-900">
+                      {selectedPaymentLink.concept || selectedPaymentLink.admin_reference || 'Enlace de pago'}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {selectedPaymentLink.admin_reference || 'Sin referencia'} · {statusLabel(selectedPaymentLink.status)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closePaymentLinkDetail}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-black text-slate-700"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+
+                {paymentLinkDetailLoading && (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600">
+                    Cargando detalle...
+                  </div>
+                )}
+
+                {paymentLinkDetailError && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-700">
+                    {paymentLinkDetailError}
+                  </div>
+                )}
+
+                {selectedPaymentLinkDetail && (
+                  <div className="space-y-5">
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="rounded-2xl border border-slate-200 p-4">
+                        <p className="text-xs font-black uppercase text-slate-500">Monto</p>
+                        <p className="mt-2 text-lg font-black text-slate-900">
+                          {formatMoney(selectedPaymentLink.amount_cents, selectedPaymentLink.currency)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 p-4">
+                        <p className="text-xs font-black uppercase text-slate-500">Perfil</p>
+                        <p className="mt-2 text-sm font-bold text-slate-800">
+                          {selectedPaymentLinkDetail.profile?.slug || selectedPaymentLink.profile_slug || '—'}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 p-4">
+                        <p className="text-xs font-black uppercase text-slate-500">Vence</p>
+                        <p className="mt-2 text-sm font-bold text-slate-800">
+                          {selectedPaymentLinkDetail.expires_at || selectedPaymentLink.expires_at || '—'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 p-5">
+                      <h3 className="text-sm font-black text-slate-900">Cliente / comprobante</h3>
+                      <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                        <p><strong>Nombre:</strong> {selectedPaymentLinkDetail.customer?.name || '—'}</p>
+                        <p><strong>Teléfono:</strong> {selectedPaymentLinkDetail.customer?.phone || '—'}</p>
+                        <p><strong>Banco:</strong> {selectedPaymentLinkDetail.proof?.source_bank_name || '—'}</p>
+                        <p><strong>Referencia cliente:</strong> {selectedPaymentLinkDetail.proof?.customer_reference_text || '—'}</p>
+                        <p><strong>Fecha transferencia:</strong> {selectedPaymentLinkDetail.proof?.transferred_at || '—'}</p>
+                        <p><strong>Archivo R2:</strong> {selectedPaymentLinkDetail.proof?.proof_asset_id ? 'Disponible' : 'No adjunto'}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 p-5">
+                      <h3 className="text-sm font-black text-slate-900">Timeline</h3>
+                      <div className="mt-4 space-y-3">
+                        {(selectedPaymentLinkDetail.timeline || []).length > 0 ? (
+                          (selectedPaymentLinkDetail.timeline || []).map((event, index) => (
+                            <div key={`${event.event_type || 'event'}-${index}`} className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                              <p className="font-black text-slate-900">{event.public_message || event.event_type || 'Evento'}</p>
+                              <p className="mt-1 text-xs text-slate-500">{event.at || 'Sin fecha'}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-slate-500">Sin eventos registrados.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => copyPaymentLink(selectedPaymentLink)}
+                        className="rounded-full border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700"
+                      >
+                        Copiar enlace público
+                      </button>
+
+                      {selectedPaymentLinkDetail.voucher_admin_url && (
+                        <button
+                          type="button"
+                          onClick={() => openPaymentVoucher(selectedPaymentLink)}
+                          className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700"
+                        >
+                          Abrir comprobante
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
