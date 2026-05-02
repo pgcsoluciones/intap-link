@@ -1193,6 +1193,85 @@ export default function SuperAdminDashboard() {
                             </span>
                           </div>
 
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            {canMovePaymentToValidation(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 disabled:opacity-60"
+                              >
+                                Pago en validación
+                              </button>
+                            )}
+
+                            {canConfirmPayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
+                              >
+                                Confirmar pago
+                              </button>
+                            )}
+
+                            {canRejectPayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
+                              >
+                                Rechazar
+                              </button>
+                            )}
+
+                            {canCancelPayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+
+                            {canReactivatePayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'pending')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 disabled:opacity-60"
+                              >
+                                Activar / Reactivar
+                              </button>
+                            )}
+
+                            {selectedPaymentLink.status !== 'confirmed' && (
+                              <button
+                                type="button"
+                                disabled
+                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400"
+                                title="Disponible después de confirmar el pago"
+                              >
+                                Preparar pedido
+                              </button>
+                            )}
+
+                            {selectedPaymentLink.status !== 'confirmed' && (
+                              <button
+                                type="button"
+                                disabled
+                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400"
+                                title="Disponible después de confirmar el pago"
+                              >
+                                Enviar pedido
+                              </button>
+                            )}
+                          </div>
+
                           <div className="mt-4 space-y-3">
                             {(selectedPaymentLinkDetail.timeline || []).length > 0 ? (
                               (selectedPaymentLinkDetail.timeline || []).map((event, index) => (
@@ -1215,7 +1294,11 @@ export default function SuperAdminDashboard() {
                         </div>
 
                         <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                          <h3 className="text-sm font-black text-slate-900">Acciones del cobro</h3>
+                          <h3 className="text-sm font-black text-slate-900">Acciones rápidas</h3>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Acciones generales del enlace. El seguimiento del pago se maneja arriba en tracking.
+                          </p>
+
                           <div className="mt-4 flex flex-wrap gap-3">
                             <button
                               type="button"
@@ -1225,60 +1308,21 @@ export default function SuperAdminDashboard() {
                               Copiar enlace público
                             </button>
 
-                            {canMovePaymentToValidation(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-full border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-700 disabled:opacity-60"
-                              >
-                                Marcar en validación
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => copyPaymentReference(selectedPaymentLink)}
+                              className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
+                            >
+                              Copiar referencia
+                            </button>
 
-                            {canConfirmPayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-full border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
-                              >
-                                Confirmar pago
-                              </button>
-                            )}
-
-                            {canRejectPayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-full border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
-                              >
-                                Rechazar
-                              </button>
-                            )}
-
-                            {canCancelPayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-60"
-                              >
-                                Cancelar
-                              </button>
-                            )}
-
-                            {canReactivatePayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'pending')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-full border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 disabled:opacity-60"
-                              >
-                                Activar / Reactivar
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => sendPaymentLinkByWhatsApp(selectedPaymentLink)}
+                              className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700"
+                            >
+                              Enviar por WhatsApp
+                            </button>
                           </div>
                         </div>
                       </div>
