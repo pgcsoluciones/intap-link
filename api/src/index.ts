@@ -3276,6 +3276,318 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
   })
 })
 
+
+// ── GET /api/v1/superadmin/payment-links ──────────────────────────────────────
+// Lista V1 de enlaces de pago usando billing_payments como base.
+// source='payment_link' identifica estos cobros.
+app.get('/api/v1/superadmin/payment-links', requireSuperAdmin('viewer'), async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1', 10))
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '25', 10)))
+  const status = (c.req.query('status') || '').trim()
+  const q = (c.req.query('q') || '').trim()
+  const offset = (page - 1) * limit
+
+  const conditions: string[] = [`bp.source = 'payment_link'`]
+  const bindings: unknown[] = []
+
+  if (status) {
+    conditions.push(`bp.status = ?`)
+    bindings.push(status)
+  }
+
+  if (q) {
+    conditions.push(`(
+      p.slug LIKE ?
+      OR u.email LIKE ?
+      OR bp.admin_reference LIKE ?
+      OR bp.customer_reference_text LIKE ?
+      OR bp.metadata_json LIKE ?
+    )`)
+    const like = `%${q}%`
+    bindings.push(like, like, like, like, like)
+  }
+
+  const where = `WHERE ${conditions.join(' AND ')}`
+
+  const totalRow = await c.env.DB.prepare(`
+    SELECT COUNT(*) AS cnt
+    FROM billing_payments bp
+    LEFT JOIN profiles p ON p.id = bp.profile_id
+    LEFT JOIN users u ON u.id = bp.user_id
+    ${where}
+  `).bind(...bindings).first<{ cnt: number }>()
+
+  const rows = await c.env.DB.prepare(`
+    SELECT
+      bp.id,
+      bp.profile_id,
+      bp.user_id,
+      bp.plan_id,
+      bp.amount_cents,
+      bp.currency,
+      bp.status,
+      bp.source,
+      bp.provider,
+      bp.payment_method_code,
+      bp.admin_reference,
+      bp.customer_reference_text,
+      bp.transferred_at,
+      bp.submitted_at,
+      bp.reviewed_at,
+      bp.confirmed_at,
+      bp.rejected_at,
+      bp.rejection_reason,
+      bp.internal_notes,
+      bp.metadata_json,
+      bp.created_at,
+      bp.updated_at,
+      p.slug AS profile_slug,
+      u.email AS user_email
+    FROM billing_payments bp
+    LEFT JOIN profiles p ON p.id = bp.profile_id
+    LEFT JOIN users u ON u.id = bp.user_id
+    ${where}
+    ORDER BY bp.created_at DESC
+    LIMIT ? OFFSET ?
+  `).bind(...bindings, limit, offset).all()
+
+  const items = (rows.results || []).map((row: any) => {
+    let metadata: any = null
+    try {
+      metadata = row.metadata_json ? JSON.parse(row.metadata_json) : null
+    } catch {
+      metadata = null
+    }
+
+    return {
+      ...row,
+      metadata_json: metadata,
+      public_token: metadata?.public_token || null,
+      concept: metadata?.concept || row.customer_reference_text || null,
+      expires_at: metadata?.expires_at || null,
+      public_url_path: metadata?.public_token ? `/pay/${metadata.public_token}` : null,
+    }
+  })
+
+  return c.json({
+    ok: true,
+    data: {
+      page,
+      limit,
+      total: totalRow?.cnt ?? 0,
+      items,
+    },
+  })
+})
+
+// ── POST /api/v1/superadmin/payment-links ─────────────────────────────────────
+// Crea un enlace de pago V1 usando billing_payments.
+// No confirma pago, no activa suscripción y no cambia plan.
+app.post('/api/v1/superadmin/payment-links', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+
+  let body: Record<string, unknown>
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const profileId = typeof body.profile_id === 'string' ? body.profile_id.trim() : null
+  const planId = typeof body.plan_id === 'string' ? body.plan_id.trim() || null : null
+  const concept = typeof body.concept === 'string' ? body.concept.trim() : ''
+  const currency = typeof body.currency === 'string' ? body.currency.trim().toUpperCase() : 'DOP'
+  const expiresAt = typeof body.expires_at === 'string' ? body.expires_at.trim() || null : null
+  const notes = typeof body.notes === 'string' ? body.notes.trim() || null : null
+  const paymentMethodCode = typeof body.payment_method_code === 'string' ? body.payment_method_code.trim() || 'bank_transfer' : 'bank_transfer'
+  const amountRaw = body.amount_cents ?? body.amount
+
+  let amountCents = 0
+  if (typeof amountRaw === 'number' && Number.isFinite(amountRaw)) {
+    amountCents = body.amount_cents != null ? Math.round(amountRaw) : Math.round(amountRaw * 100)
+  } else if (typeof amountRaw === 'string' && amountRaw.trim()) {
+    const parsed = Number(amountRaw)
+    if (Number.isFinite(parsed)) {
+      amountCents = body.amount_cents != null ? Math.round(parsed) : Math.round(parsed * 100)
+    }
+  }
+
+  if (!concept) {
+    return c.json({ ok: false, error: 'concept is required' }, 400)
+  }
+
+  if (!amountCents || amountCents <= 0) {
+    return c.json({ ok: false, error: 'amount must be greater than zero' }, 400)
+  }
+
+  if (!['DOP', 'USD'].includes(currency)) {
+    return c.json({ ok: false, error: 'currency must be DOP or USD' }, 400)
+  }
+
+  let profile: {
+    id: string
+    user_id: string | null
+    plan_id: string | null
+    slug: string | null
+  } | null = null
+
+  if (profileId) {
+    profile = await c.env.DB.prepare(`
+      SELECT id, user_id, plan_id, slug
+      FROM profiles
+      WHERE id = ?
+      LIMIT 1
+    `).bind(profileId).first<any>()
+
+    if (!profile) {
+      return c.json({ ok: false, error: 'Profile not found' }, 404)
+    }
+  }
+
+  const paymentId = crypto.randomUUID()
+  const publicToken = crypto.randomUUID().replace(/-/g, '')
+  const referenceCode = `INTAP-${publicToken.slice(0, 8).toUpperCase()}`
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  const metadata = {
+    public_token: publicToken,
+    reference_code: referenceCode,
+    concept,
+    expires_at: expiresAt,
+    notes,
+    created_by: 'superadmin',
+    public_path: `/pay/${publicToken}`,
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      INSERT INTO billing_payments
+        (
+          id,
+          subscription_id,
+          profile_id,
+          user_id,
+          plan_id,
+          amount_cents,
+          currency,
+          status,
+          source,
+          provider,
+          payment_method_code,
+          external_reference,
+          admin_reference,
+          proof_url,
+          proof_asset_id,
+          source_bank_name,
+          customer_reference_text,
+          transferred_at,
+          submitted_at,
+          reviewed_at,
+          confirmed_at,
+          rejected_at,
+          reviewed_by_admin_id,
+          rejection_reason,
+          internal_notes,
+          metadata_json,
+          created_at,
+          updated_at
+        )
+      VALUES
+        (
+          ?,
+          NULL,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          'pending',
+          'payment_link',
+          'manual',
+          ?,
+          NULL,
+          ?,
+          NULL,
+          NULL,
+          NULL,
+          ?,
+          NULL,
+          datetime('now'),
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          ?,
+          ?,
+          datetime('now'),
+          datetime('now')
+        )
+    `).bind(
+      paymentId,
+      profile?.id || null,
+      profile?.user_id || null,
+      planId || profile?.plan_id || null,
+      amountCents,
+      currency,
+      paymentMethodCode,
+      referenceCode,
+      concept,
+      notes,
+      JSON.stringify(metadata),
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO admin_audit_log
+        (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+      VALUES
+        (?, ?, 'payment_link_created', 'billing_payment', ?, NULL, ?, ?, datetime('now'))
+    `).bind(
+      auditId,
+      adminUserId,
+      paymentId,
+      JSON.stringify({
+        payment_id: paymentId,
+        profile_id: profile?.id || null,
+        profile_slug: profile?.slug || null,
+        user_id: profile?.user_id || null,
+        plan_id: planId || profile?.plan_id || null,
+        amount_cents: amountCents,
+        currency,
+        status: 'pending',
+        source: 'payment_link',
+        provider: 'manual',
+        reference_code: referenceCode,
+        public_token: publicToken,
+        concept,
+      }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      id: paymentId,
+      payment_id: paymentId,
+      profile_id: profile?.id || null,
+      profile_slug: profile?.slug || null,
+      user_id: profile?.user_id || null,
+      plan_id: planId || profile?.plan_id || null,
+      amount_cents: amountCents,
+      currency,
+      status: 'pending',
+      source: 'payment_link',
+      provider: 'manual',
+      reference_code: referenceCode,
+      public_token: publicToken,
+      public_url_path: `/pay/${publicToken}`,
+      concept,
+      expires_at: expiresAt,
+    },
+  }, 201)
+})
+
 // ── GET /api/v1/superadmin/audit ──────────────────────────────────────────────
 // Audit log paginado con filtros.
 // Query params: page, limit, admin_user_id, action, target_type, from (ISO date), to.
