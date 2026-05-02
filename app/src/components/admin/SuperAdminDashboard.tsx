@@ -86,6 +86,8 @@ interface PaymentLinkItem {
   concept?: string | null
   public_token?: string | null
   public_url_path?: string | null
+  proof_url?: string | null
+  proof_asset_id?: string | null
   expires_at?: string | null
   created_at?: string
 }
@@ -324,7 +326,16 @@ export default function SuperAdminDashboard() {
     setPaymentLinkDetailLoading(false)
   }
 
+  function hasPaymentVoucher(item: PaymentLinkItem) {
+    return Boolean(item.proof_asset_id || item.proof_url)
+  }
+
   function openPaymentVoucher(item: PaymentLinkItem) {
+    if (!hasPaymentVoucher(item)) {
+      setPaymentLinksError('Este enlace todavía no tiene comprobante adjunto.')
+      return
+    }
+
     window.open(`/api/v1/superadmin/payment-links/${item.id}/voucher`, '_blank', 'noopener,noreferrer')
   }
 
@@ -816,13 +827,15 @@ export default function SuperAdminDashboard() {
                           >
                             {copiedPaymentLinkId === item.id ? 'Copiado' : 'Copiar enlace'}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => openPaymentVoucher(item)}
-                            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100"
-                          >
-                            Ver comprobante
-                          </button>
+                          {hasPaymentVoucher(item) && (
+                            <button
+                              type="button"
+                              onClick={() => openPaymentVoucher(item)}
+                              className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100"
+                            >
+                              Ver comprobante
+                            </button>
+                          )}
                           {canReviewPaymentLinkStatus(item.status) && (
                             <>
                               <button

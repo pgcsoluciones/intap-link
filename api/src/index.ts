@@ -3592,6 +3592,8 @@ app.get('/api/v1/superadmin/payment-links', requireSuperAdmin('viewer'), async (
       bp.payment_method_code,
       bp.admin_reference,
       bp.customer_reference_text,
+      bp.proof_url,
+      bp.proof_asset_id,
       bp.transferred_at,
       bp.submitted_at,
       bp.reviewed_at,
