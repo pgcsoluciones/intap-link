@@ -1134,165 +1134,215 @@ export default function SuperAdminDashboard() {
 
                 {selectedPaymentLinkDetail && (
                   <div className="space-y-5">
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div className="rounded-2xl border border-slate-200 p-4">
-                        <p className="text-xs font-black uppercase text-slate-500">Monto</p>
-                        <p className="mt-2 text-lg font-black text-slate-900">
-                          {formatMoney(selectedPaymentLink.amount_cents, selectedPaymentLink.currency)}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 p-4">
-                        <p className="text-xs font-black uppercase text-slate-500">Perfil</p>
-                        <p className="mt-2 text-sm font-bold text-slate-800">
-                          {selectedPaymentLinkDetail.profile?.slug || selectedPaymentLink.profile_slug || '—'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 p-4">
-                        <p className="text-xs font-black uppercase text-slate-500">Vence</p>
-                        <p className="mt-2 text-sm font-bold text-slate-800">
-                          {selectedPaymentLinkDetail.expires_at || selectedPaymentLink.expires_at || '—'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 p-5">
-                      <h3 className="text-sm font-black text-slate-900">Cliente / comprobante</h3>
-                      <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-                        <p><strong>Nombre:</strong> {selectedPaymentLinkDetail.customer?.name || '—'}</p>
-                        <p><strong>Teléfono:</strong> {selectedPaymentLinkDetail.customer?.phone || '—'}</p>
-                        <p><strong>Banco:</strong> {selectedPaymentLinkDetail.proof?.source_bank_name || '—'}</p>
-                        <p><strong>Referencia cliente:</strong> {selectedPaymentLinkDetail.proof?.customer_reference_text || '—'}</p>
-                        <p><strong>Fecha transferencia:</strong> {selectedPaymentLinkDetail.proof?.transferred_at || '—'}</p>
-                        <p><strong>Archivo:</strong> {hasPaymentVoucherDetail(selectedPaymentLinkDetail) ? 'Disponible' : 'No adjunto'}</p>
-                      </div>
-                    </div>
-
-                    {selectedPaymentLinkDetail.voucher_admin_url && hasPaymentVoucherDetail(selectedPaymentLinkDetail) && (
-                      <div className="rounded-2xl border border-slate-200 p-5">
-                        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                          <div>
-                            <h3 className="text-sm font-black text-slate-900">Voucher / comprobante</h3>
-                            <p className="mt-1 text-xs text-slate-500">
-                              Vista previa del archivo recibido para este enlace de pago.
+                    <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+                      <div className="space-y-5">
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-black uppercase text-slate-500">Monto</p>
+                            <p className="mt-2 text-lg font-black text-slate-900">
+                              {formatMoney(selectedPaymentLink.amount_cents, selectedPaymentLink.currency)}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-black uppercase text-slate-500">Perfil</p>
+                            <p className="mt-2 text-sm font-bold text-slate-800">
+                              {selectedPaymentLinkDetail.profile?.slug || selectedPaymentLink.profile_slug || '—'}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-black uppercase text-slate-500">Vence</p>
+                            <p className="mt-2 text-sm font-bold text-slate-800">
+                              {selectedPaymentLinkDetail.expires_at || selectedPaymentLink.expires_at || '—'}
                             </p>
                           </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                          <iframe
-                            title="Vista previa del comprobante"
-                            src={getPaymentVoucherUrl(selectedPaymentLink)}
-                            className="h-[420px] w-full bg-white"
-                          />
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-3">
-                          <button
-                            type="button"
-                            onClick={() => openPaymentVoucher(selectedPaymentLink)}
-                            className="rounded-full border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700"
-                          >
-                            Ver imagen / PDF
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => printPaymentVoucher(selectedPaymentLink)}
-                            className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
-                          >
-                            Imprimir
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => downloadPaymentVoucher(selectedPaymentLink)}
-                            className="rounded-full border border-blue-300 bg-white px-4 py-3 text-sm font-black text-blue-700"
-                          >
-                            Descargar PDF
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="rounded-2xl border border-slate-200 p-5">
-                      <h3 className="text-sm font-black text-slate-900">Timeline</h3>
-                      <div className="mt-4 space-y-3">
-                        {(selectedPaymentLinkDetail.timeline || []).length > 0 ? (
-                          (selectedPaymentLinkDetail.timeline || []).map((event, index) => (
-                            <div key={`${event.event_type || 'event'}-${index}`} className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                              <p className="font-black text-slate-900">{event.public_message || event.event_type || 'Evento'}</p>
-                              <p className="mt-1 text-xs text-slate-500">{event.at || 'Sin fecha'}</p>
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-sm font-black text-slate-900">Cliente / comprobante</h3>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Datos recibidos desde el enlace público.
+                              </p>
                             </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-slate-500">Sin eventos registrados.</p>
-                        )}
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
+                              {statusLabel(selectedPaymentLink.status)}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+                            <p><strong>Nombre:</strong> {selectedPaymentLinkDetail.customer?.name || '—'}</p>
+                            <p><strong>Teléfono:</strong> {selectedPaymentLinkDetail.customer?.phone || '—'}</p>
+                            <p><strong>Banco:</strong> {selectedPaymentLinkDetail.proof?.source_bank_name || '—'}</p>
+                            <p><strong>Referencia cliente:</strong> {selectedPaymentLinkDetail.proof?.customer_reference_text || '—'}</p>
+                            <p><strong>Fecha transferencia:</strong> {selectedPaymentLinkDetail.proof?.transferred_at || '—'}</p>
+                            <p><strong>Archivo:</strong> {hasPaymentVoucherDetail(selectedPaymentLinkDetail) ? 'Disponible' : 'No adjunto'}</p>
+                          </div>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-sm font-black text-slate-900">Notificaciones / tracking</h3>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Historial del cobro y eventos registrados.
+                              </p>
+                            </div>
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                              {(selectedPaymentLinkDetail.timeline || []).length} eventos
+                            </span>
+                          </div>
+
+                          <div className="mt-4 space-y-3">
+                            {(selectedPaymentLinkDetail.timeline || []).length > 0 ? (
+                              (selectedPaymentLinkDetail.timeline || []).map((event, index) => (
+                                <div key={`${event.event_type || 'event'}-${index}`} className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-slate-700 shadow-sm">
+                                    {index + 1}
+                                  </div>
+                                  <div>
+                                    <p className="font-black text-slate-900">{event.public_message || event.event_type || 'Evento'}</p>
+                                    <p className="mt-1 text-xs text-slate-500">{event.at || 'Sin fecha'}</p>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+                                Sin eventos registrados todavía.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5">
+                          <h3 className="text-sm font-black text-slate-900">Acciones del cobro</h3>
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            <button
+                              type="button"
+                              onClick={() => copyPaymentLink(selectedPaymentLink)}
+                              className="rounded-full border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700"
+                            >
+                              Copiar enlace público
+                            </button>
+
+                            {canMovePaymentToValidation(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-full border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-700 disabled:opacity-60"
+                              >
+                                Marcar en validación
+                              </button>
+                            )}
+
+                            {canConfirmPayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-full border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
+                              >
+                                Confirmar pago
+                              </button>
+                            )}
+
+                            {canRejectPayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-full border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
+                              >
+                                Rechazar
+                              </button>
+                            )}
+
+                            {canCancelPayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-60"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+
+                            {canReactivatePayment(selectedPaymentLink.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'pending')}
+                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                className="rounded-full border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 disabled:opacity-60"
+                              >
+                                Activar / Reactivar
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => copyPaymentLink(selectedPaymentLink)}
-                        className="rounded-full border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700"
-                      >
-                        Copiar enlace público
-                      </button>
+                      <aside className="space-y-5">
+                        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                          <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-sm font-black text-slate-900">Voucher / comprobante</h3>
+                              <p className="mt-1 text-xs text-slate-500">
+                                Vista previa y acciones del archivo recibido.
+                              </p>
+                            </div>
+                            <span className={`rounded-full px-3 py-1 text-xs font-black ${hasPaymentVoucherDetail(selectedPaymentLinkDetail) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+                              {hasPaymentVoucherDetail(selectedPaymentLinkDetail) ? 'Disponible' : 'No adjunto'}
+                            </span>
+                          </div>
 
-                      {canMovePaymentToValidation(selectedPaymentLink.status) && (
-                        <button
-                          type="button"
-                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
-                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                          className="rounded-full border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-700 disabled:opacity-60"
-                        >
-                          Marcar en validación
-                        </button>
-                      )}
+                          {selectedPaymentLinkDetail.voucher_admin_url && hasPaymentVoucherDetail(selectedPaymentLinkDetail) ? (
+                            <>
+                              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                <iframe
+                                  title="Vista previa del comprobante"
+                                  src={getPaymentVoucherUrl(selectedPaymentLink)}
+                                  className="h-[460px] w-full bg-white"
+                                />
+                              </div>
 
-                      {canConfirmPayment(selectedPaymentLink.status) && (
-                        <button
-                          type="button"
-                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
-                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                          className="rounded-full border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
-                        >
-                          Confirmar pago
-                        </button>
-                      )}
+                              <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                                <button
+                                  type="button"
+                                  onClick={() => openPaymentVoucher(selectedPaymentLink)}
+                                  className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700"
+                                >
+                                  Ver imagen / PDF
+                                </button>
 
-                      {canRejectPayment(selectedPaymentLink.status) && (
-                        <button
-                          type="button"
-                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
-                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                          className="rounded-full border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
-                        >
-                          Rechazar
-                        </button>
-                      )}
+                                <button
+                                  type="button"
+                                  onClick={() => printPaymentVoucher(selectedPaymentLink)}
+                                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
+                                >
+                                  Imprimir
+                                </button>
 
-                      {canCancelPayment(selectedPaymentLink.status) && (
-                        <button
-                          type="button"
-                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
-                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                          className="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-60"
-                        >
-                          Cancelar
-                        </button>
-                      )}
-
-                      {canReactivatePayment(selectedPaymentLink.status) && (
-                        <button
-                          type="button"
-                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'pending')}
-                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                          className="rounded-full border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 disabled:opacity-60"
-                        >
-                          Activar / Reactivar
-                        </button>
-                      )}
+                                <button
+                                  type="button"
+                                  onClick={() => downloadPaymentVoucher(selectedPaymentLink)}
+                                  className="rounded-2xl border border-blue-300 bg-white px-4 py-3 text-sm font-black text-blue-700"
+                                >
+                                  Descargar PDF
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center">
+                              <p className="text-sm font-black text-slate-700">Este enlace todavía no tiene comprobante disponible.</p>
+                              <p className="mt-2 text-xs text-slate-500">
+                                Cuando el cliente suba un voucher válido, aparecerá aquí la vista previa y las opciones de imprimir o descargar.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </aside>
                     </div>
                   </div>
                 )}
