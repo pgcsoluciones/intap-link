@@ -114,6 +114,9 @@ interface PaymentLinkDetail {
   }
   timeline?: Array<Record<string, any>>
   tracking_events?: Array<Record<string, any>>
+  payment_status?: string | null
+  fulfillment_status?: string | null
+  customer_status_label?: string | null
   voucher_admin_url?: string | null
   public_url_path?: string | null
   public_token?: string | null
@@ -1183,9 +1186,9 @@ export default function SuperAdminDashboard() {
                         <div className="rounded-3xl border border-slate-200 bg-white p-5">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <h3 className="text-sm font-black text-slate-900">Notificaciones / tracking</h3>
+                              <h3 className="text-sm font-black text-slate-900">Seguimiento del pago y proceso</h3>
                               <p className="mt-1 text-xs text-slate-500">
-                                Historial del cobro y eventos registrados.
+                                Flujo separado: primero se confirma el pago, luego se habilita el proceso del pedido.
                               </p>
                             </div>
                             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
@@ -1193,103 +1196,166 @@ export default function SuperAdminDashboard() {
                             </span>
                           </div>
 
-                          <div className="mt-4 flex flex-wrap gap-3">
-                            {canMovePaymentToValidation(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 disabled:opacity-60"
-                              >
-                                Pago en validación
-                              </button>
-                            )}
+                          <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-sm font-black text-slate-900">Seguimiento del pago</h4>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  Estado actual: {statusLabel(selectedPaymentLink.status)}
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-blue-700 shadow-sm">
+                                {selectedPaymentLinkDetail.customer_status_label || statusLabel(selectedPaymentLink.status)}
+                              </span>
+                            </div>
 
-                            {canConfirmPayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
-                              >
-                                Confirmar pago
-                              </button>
-                            )}
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              {canMovePaymentToValidation(selectedPaymentLink.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
+                                  disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                  className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 disabled:opacity-60"
+                                >
+                                  Pago en validación
+                                </button>
+                              )}
 
-                            {canRejectPayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
-                              >
-                                Rechazar
-                              </button>
-                            )}
+                              {canConfirmPayment(selectedPaymentLink.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
+                                  disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                  className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
+                                >
+                                  Confirmar pago
+                                </button>
+                              )}
 
-                            {canCancelPayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
-                              >
-                                Cancelar
-                              </button>
-                            )}
+                              {canRejectPayment(selectedPaymentLink.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
+                                  disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
+                                >
+                                  Rechazar
+                                </button>
+                              )}
 
-                            {canReactivatePayment(selectedPaymentLink.status) && (
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(selectedPaymentLink, 'pending')}
-                                disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                                className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 disabled:opacity-60"
-                              >
-                                Activar / Reactivar
-                              </button>
-                            )}
+                              {canCancelPayment(selectedPaymentLink.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
+                                  disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                  className="rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
+                                >
+                                  Cancelar
+                                </button>
+                              )}
 
-                            {selectedPaymentLink.status !== 'confirmed' && (
-                              <button
-                                type="button"
-                                disabled
-                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400"
-                                title="Disponible después de confirmar el pago"
-                              >
-                                Preparar pedido
-                              </button>
-                            )}
+                              {canReactivatePayment(selectedPaymentLink.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => reviewPaymentLink(selectedPaymentLink, 'pending')}
+                                  disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                  className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 disabled:opacity-60"
+                                >
+                                  Activar / Reactivar
+                                </button>
+                              )}
 
-                            {selectedPaymentLink.status !== 'confirmed' && (
-                              <button
-                                type="button"
-                                disabled
-                                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400"
-                                title="Disponible después de confirmar el pago"
-                              >
-                                Enviar pedido
-                              </button>
-                            )}
+                              {!canMovePaymentToValidation(selectedPaymentLink.status) &&
+                                !canConfirmPayment(selectedPaymentLink.status) &&
+                                !canRejectPayment(selectedPaymentLink.status) &&
+                                !canCancelPayment(selectedPaymentLink.status) &&
+                                !canReactivatePayment(selectedPaymentLink.status) && (
+                                  <p className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-500">
+                                    No hay acciones de pago disponibles para este estado.
+                                  </p>
+                                )}
+                            </div>
                           </div>
 
-                          <div className="mt-4 space-y-3">
-                            {(selectedPaymentLinkDetail.timeline || []).length > 0 ? (
-                              (selectedPaymentLinkDetail.timeline || []).map((event, index) => (
-                                <div key={`${event.event_type || 'event'}-${index}`} className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-slate-700 shadow-sm">
-                                    {index + 1}
+                          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <h4 className="text-sm font-black text-slate-900">Seguimiento del proceso</h4>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  Se habilita cuando el pago esté confirmado.
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700 shadow-sm">
+                                {selectedPaymentLinkDetail.fulfillment_status || 'not_started'}
+                              </span>
+                            </div>
+
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              {[
+                                ['order_processing', 'Orden en proceso'],
+                                ['preparing', 'En producción / preparación'],
+                                ['sent', 'Enviada'],
+                                ['ready_for_pickup', 'Lista para retirar'],
+                                ['delivered', 'Entregada'],
+                                ['received', 'Recibida'],
+                              ].map(([code, label]) => (
+                                <button
+                                  key={code}
+                                  type="button"
+                                  disabled
+                                  className={`rounded-xl border px-4 py-3 text-left text-sm font-black ${
+                                    selectedPaymentLink.status === 'confirmed'
+                                      ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                      : 'border-slate-200 bg-white text-slate-400'
+                                  }`}
+                                  title={
+                                    selectedPaymentLink.status === 'confirmed'
+                                      ? 'Pendiente de conectar al backend de proceso'
+                                      : 'Disponible después de confirmar el pago'
+                                  }
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="mt-5">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                              <h4 className="text-sm font-black text-slate-900">Historial de eventos</h4>
+                              <span className="text-xs font-bold text-slate-500">
+                                Más reciente primero
+                              </span>
+                            </div>
+
+                            <div className="space-y-3">
+                              {(selectedPaymentLinkDetail.timeline || []).length > 0 ? (
+                                (selectedPaymentLinkDetail.timeline || []).map((event, index) => (
+                                  <div key={`${event.event_type || 'event'}-${index}`} className="flex gap-3 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-slate-700 shadow-sm">
+                                      {index + 1}
+                                    </div>
+                                    <div>
+                                      <p className="font-black text-slate-900">
+                                        {event.customer_status_label || event.public_message || event.event_type || 'Evento'}
+                                      </p>
+                                      <p className="mt-1 text-xs text-slate-500">
+                                        {event.created_at || event.at || 'Sin fecha'}
+                                      </p>
+                                      {(event.payment_status || event.fulfillment_status) && (
+                                        <p className="mt-1 text-xs font-bold text-slate-400">
+                                          Pago: {event.payment_status || '—'} · Proceso: {event.fulfillment_status || '—'}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div>
-                                    <p className="font-black text-slate-900">{event.public_message || event.event_type || 'Evento'}</p>
-                                    <p className="mt-1 text-xs text-slate-500">{event.at || 'Sin fecha'}</p>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-                                Sin eventos registrados todavía.
-                              </p>
-                            )}
+                                ))
+                              ) : (
+                                <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+                                  Sin eventos registrados todavía.
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
 
