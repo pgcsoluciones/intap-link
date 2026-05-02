@@ -360,8 +360,28 @@ export default function SuperAdminDashboard() {
     setPaymentLinkDetailLoading(false)
   }
 
+  function isUsableVoucherUrl(rawUrl?: string | null) {
+    const value = String(rawUrl || '').trim()
+    if (!value) return false
+
+    try {
+      const parsed = new URL(value)
+      if (parsed.hostname === 'example.com') return false
+      return ['http:', 'https:'].includes(parsed.protocol)
+    } catch {
+      return false
+    }
+  }
+
   function hasPaymentVoucher(item: PaymentLinkItem) {
-    return Boolean(item.proof_asset_id || item.proof_url)
+    return Boolean(item.proof_asset_id || isUsableVoucherUrl(item.proof_url))
+  }
+
+  function hasPaymentVoucherDetail(detail?: PaymentLinkDetail | null) {
+    return Boolean(
+      detail?.proof?.proof_asset_id ||
+      isUsableVoucherUrl(detail?.proof?.proof_url)
+    )
   }
 
   function getPaymentVoucherUrl(item: PaymentLinkItem) {
@@ -1080,7 +1100,7 @@ export default function SuperAdminDashboard() {
 
           {selectedPaymentLink && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6">
-              <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+              <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">Detalle del enlace</p>
@@ -1143,11 +1163,11 @@ export default function SuperAdminDashboard() {
                         <p><strong>Banco:</strong> {selectedPaymentLinkDetail.proof?.source_bank_name || '—'}</p>
                         <p><strong>Referencia cliente:</strong> {selectedPaymentLinkDetail.proof?.customer_reference_text || '—'}</p>
                         <p><strong>Fecha transferencia:</strong> {selectedPaymentLinkDetail.proof?.transferred_at || '—'}</p>
-                        <p><strong>Archivo R2:</strong> {selectedPaymentLinkDetail.proof?.proof_asset_id ? 'Disponible' : 'No adjunto'}</p>
+                        <p><strong>Archivo:</strong> {hasPaymentVoucherDetail(selectedPaymentLinkDetail) ? 'Disponible' : 'No adjunto'}</p>
                       </div>
                     </div>
 
-                    {selectedPaymentLinkDetail.voucher_admin_url && hasPaymentVoucher(selectedPaymentLink) && (
+                    {selectedPaymentLinkDetail.voucher_admin_url && hasPaymentVoucherDetail(selectedPaymentLinkDetail) && (
                       <div className="rounded-2xl border border-slate-200 p-5">
                         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                           <div>
@@ -1218,32 +1238,6 @@ export default function SuperAdminDashboard() {
                       >
                         Copiar enlace público
                       </button>
-
-                      {selectedPaymentLinkDetail.voucher_admin_url && hasPaymentVoucher(selectedPaymentLink) && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => openPaymentVoucher(selectedPaymentLink)}
-                            className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700"
-                          >
-                            Ver imagen / PDF
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => printPaymentVoucher(selectedPaymentLink)}
-                            className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700"
-                          >
-                            Imprimir
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => downloadPaymentVoucher(selectedPaymentLink)}
-                            className="rounded-full border border-blue-300 bg-white px-4 py-3 text-sm font-black text-blue-700"
-                          >
-                            Descargar PDF
-                          </button>
-                        </>
-                      )}
 
                       {canMovePaymentToValidation(selectedPaymentLink.status) && (
                         <button
