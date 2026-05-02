@@ -339,7 +339,7 @@ export default function SuperAdminDashboard() {
     window.open(`/api/v1/superadmin/payment-links/${item.id}/voucher`, '_blank', 'noopener,noreferrer')
   }
 
-  async function reviewPaymentLink(item: PaymentLinkItem, status: 'under_review' | 'confirmed' | 'rejected' | 'cancelled') {
+  async function reviewPaymentLink(item: PaymentLinkItem, status: 'pending' | 'under_review' | 'confirmed' | 'rejected' | 'cancelled') {
     setPaymentLinksError('')
     setPaymentLinksMessage('')
 
@@ -353,6 +353,7 @@ export default function SuperAdminDashboard() {
     }
 
     const labels: Record<typeof status, string> = {
+      pending: 'reactivado',
       under_review: 'en validación',
       confirmed: 'confirmado',
       rejected: 'rechazado',
@@ -390,8 +391,24 @@ export default function SuperAdminDashboard() {
     }
   }
 
-  function canReviewPaymentLinkStatus(status: string) {
-    return !['confirmed', 'cancelled'].includes(status)
+  function canMovePaymentToValidation(status: string) {
+    return status === 'proof_submitted'
+  }
+
+  function canConfirmPayment(status: string) {
+    return status === 'under_review'
+  }
+
+  function canRejectPayment(status: string) {
+    return status === 'proof_submitted' || status === 'under_review'
+  }
+
+  function canCancelPayment(status: string) {
+    return status === 'pending' || status === 'proof_submitted' || status === 'under_review'
+  }
+
+  function canReactivatePayment(status: string) {
+    return status === 'cancelled' || status === 'rejected'
   }
 
   useEffect(() => {
@@ -836,41 +853,59 @@ export default function SuperAdminDashboard() {
                               Ver comprobante
                             </button>
                           )}
-                          {canReviewPaymentLinkStatus(item.status) && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(item, 'under_review')}
-                                disabled={reviewingPaymentLinkId === item.id}
-                                className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-60"
-                              >
-                                En validación
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(item, 'confirmed')}
-                                disabled={reviewingPaymentLinkId === item.id}
-                                className="rounded-full border border-green-200 bg-green-50 px-3 py-2 text-xs font-black text-green-700 hover:bg-green-100 disabled:opacity-60"
-                              >
-                                Confirmar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(item, 'rejected')}
-                                disabled={reviewingPaymentLinkId === item.id}
-                                className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 disabled:opacity-60"
-                              >
-                                Rechazar
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => reviewPaymentLink(item, 'cancelled')}
-                                disabled={reviewingPaymentLinkId === item.id}
-                                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-100 disabled:opacity-60"
-                              >
-                                Cancelar
-                              </button>
-                            </>
+                          {canMovePaymentToValidation(item.status) && (
+                            <button
+                              type="button"
+                              onClick={() => reviewPaymentLink(item, 'under_review')}
+                              disabled={reviewingPaymentLinkId === item.id}
+                              className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-60"
+                            >
+                              En validación
+                            </button>
+                          )}
+
+                          {canConfirmPayment(item.status) && (
+                            <button
+                              type="button"
+                              onClick={() => reviewPaymentLink(item, 'confirmed')}
+                              disabled={reviewingPaymentLinkId === item.id}
+                              className="rounded-full border border-green-200 bg-green-50 px-3 py-2 text-xs font-black text-green-700 hover:bg-green-100 disabled:opacity-60"
+                            >
+                              Confirmar
+                            </button>
+                          )}
+
+                          {canRejectPayment(item.status) && (
+                            <button
+                              type="button"
+                              onClick={() => reviewPaymentLink(item, 'rejected')}
+                              disabled={reviewingPaymentLinkId === item.id}
+                              className="rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100 disabled:opacity-60"
+                            >
+                              Rechazar
+                            </button>
+                          )}
+
+                          {canCancelPayment(item.status) && (
+                            <button
+                              type="button"
+                              onClick={() => reviewPaymentLink(item, 'cancelled')}
+                              disabled={reviewingPaymentLinkId === item.id}
+                              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+
+                          {canReactivatePayment(item.status) && (
+                            <button
+                              type="button"
+                              onClick={() => reviewPaymentLink(item, 'pending')}
+                              disabled={reviewingPaymentLinkId === item.id}
+                              className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 disabled:opacity-60"
+                            >
+                              Activar
+                            </button>
                           )}
                         </div>
                       </td>
@@ -1001,41 +1036,59 @@ export default function SuperAdminDashboard() {
                         </button>
                       )}
 
-                      {canReviewPaymentLinkStatus(selectedPaymentLink.status) && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
-                            disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                            className="rounded-full border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-700 disabled:opacity-60"
-                          >
-                            Marcar en validación
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
-                            disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                            className="rounded-full border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
-                          >
-                            Confirmar pago
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
-                            disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                            className="rounded-full border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
-                          >
-                            Rechazar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
-                            disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
-                            className="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-60"
-                          >
-                            Cancelar
-                          </button>
-                        </>
+                      {canMovePaymentToValidation(selectedPaymentLink.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'under_review')}
+                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                          className="rounded-full border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black text-amber-700 disabled:opacity-60"
+                        >
+                          Marcar en validación
+                        </button>
+                      )}
+
+                      {canConfirmPayment(selectedPaymentLink.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'confirmed')}
+                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                          className="rounded-full border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700 disabled:opacity-60"
+                        >
+                          Confirmar pago
+                        </button>
+                      )}
+
+                      {canRejectPayment(selectedPaymentLink.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'rejected')}
+                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                          className="rounded-full border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-60"
+                        >
+                          Rechazar
+                        </button>
+                      )}
+
+                      {canCancelPayment(selectedPaymentLink.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'cancelled')}
+                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                          className="rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-60"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+
+                      {canReactivatePayment(selectedPaymentLink.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reviewPaymentLink(selectedPaymentLink, 'pending')}
+                          disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                          className="rounded-full border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 disabled:opacity-60"
+                        >
+                          Activar / Reactivar
+                        </button>
                       )}
                     </div>
                   </div>
