@@ -3155,6 +3155,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
       bp.external_reference,
       bp.internal_notes,
       bp.rejection_reason,
+      bp.metadata_json,
       p.slug AS profile_slug
     FROM billing_payments bp
     LEFT JOIN profiles p ON p.id = bp.profile_id
@@ -3174,6 +3175,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
     external_reference: string | null
     internal_notes: string | null
     rejection_reason: string | null
+    metadata_json: string | null
     profile_slug: string | null
   }>()
 
@@ -3203,6 +3205,53 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
     })
   }
 
+  const currentMetadata = safePaymentLinkMetadata(current.metadata_json)
+  const currentTrackingEvents = Array.isArray(currentMetadata.tracking_events)
+    ? currentMetadata.tracking_events
+    : []
+
+  const previousFulfillmentStatus = typeof currentMetadata.fulfillment_status === 'string'
+    ? currentMetadata.fulfillment_status
+    : 'not_started'
+
+  const nextFulfillmentStatus =
+    nextStatus === 'cancelled' || nextStatus === 'rejected'
+      ? 'cancelled'
+      : nextStatus === 'pending'
+        ? 'not_started'
+        : previousFulfillmentStatus
+
+  const paymentStatusLabels: Record<string, string> = {
+    pending: 'Pendiente de pago',
+    proof_submitted: 'Comprobante enviado',
+    under_review: 'Pago en validación',
+    confirmed: 'Pago confirmado',
+    rejected: 'Pago rechazado',
+    cancelled: 'Cobro cancelado',
+    expired: 'Enlace vencido',
+  }
+
+  const nextCustomerStatusLabel = paymentStatusLabels[nextStatus] || 'Movimiento actualizado'
+
+  const nextTrackingEvents = [
+    {
+      at: new Date().toISOString(),
+      payment_status: nextStatus,
+      fulfillment_status: nextFulfillmentStatus,
+      customer_status_label: nextCustomerStatusLabel,
+      actor_type: 'admin',
+    },
+    ...currentTrackingEvents,
+  ].slice(0, 30)
+
+  const nextMetadata = {
+    ...currentMetadata,
+    payment_status: nextStatus,
+    fulfillment_status: nextFulfillmentStatus,
+    customer_status_label: nextCustomerStatusLabel,
+    tracking_events: nextTrackingEvents,
+  }
+
   const auditId = crypto.randomUUID()
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
 
@@ -3224,6 +3273,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
         reviewed_by_admin_id = ?,
         rejection_reason = ?,
         internal_notes = COALESCE(?, internal_notes),
+        metadata_json = ?,
         updated_at = datetime('now')
       WHERE id = ?
     `).bind(
@@ -3231,6 +3281,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
       adminUserId,
       nextStatus === 'rejected' ? rejectionReason : null,
       internalNotes,
+      JSON.stringify(nextMetadata),
       paymentId,
     ),
     c.env.DB.prepare(`
@@ -3251,6 +3302,8 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
         status: nextStatus,
         internal_notes: internalNotes,
         rejection_reason: nextStatus === 'rejected' ? rejectionReason : null,
+        fulfillment_status: nextFulfillmentStatus,
+        customer_status_label: nextCustomerStatusLabel,
         profile_id: current.profile_id,
         profile_slug: current.profile_slug,
         user_id: current.user_id,
