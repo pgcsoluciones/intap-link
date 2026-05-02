@@ -194,6 +194,137 @@ export default function SuperAdminDashboard() {
       .join(' · ')
   }
 
+  function renderBillingSection() {
+    return (
+      <div className="rounded-3xl bg-white px-4 py-8 text-slate-900 shadow-sm">
+        <div className="mx-auto max-w-6xl">
+          <header className="mb-8">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">
+              INTAP LINK
+            </p>
+            <h1 className="mt-2 text-3xl font-black">Billing / Pagos</h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Control de pagos manuales, revisión, suscripciones billing, pasarelas y trazabilidad financiera.
+            </p>
+          </header>
+
+        <section className="mb-8 grid gap-4 md:grid-cols-4">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Pagos pendientes</p>
+            <p className="mt-3 text-2xl font-black">{billingOverview?.payments?.pending ?? 0}</p>
+          </div>
+
+          <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+            <p className="text-[10px] font-black uppercase tracking-wide text-yellow-700">En revisión</p>
+            <p className="mt-3 text-2xl font-black">{billingOverview?.payments?.under_review ?? 0}</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Pagos confirmados</p>
+            <p className="mt-3 text-2xl font-black">{billingOverview?.payments?.confirmed ?? 0}</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Ingresos confirmados</p>
+            <p className="mt-3 text-2xl font-black">{formatMoney(billingOverview?.payments?.confirmed_amount_cents, 'DOP')}</p>
+          </div>
+        </section>
+
+        <section className="mb-8 grid gap-5 lg:grid-cols-2">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+            <h2 className="text-xl font-black">Pasarelas</h2>
+            <p className="mb-5 mt-1 text-sm text-slate-500">Configuradas para uso futuro. Todas pueden permanecer deshabilitadas hasta activar cobros.</p>
+
+            <div className="space-y-3">
+              {gateways.map((g) => (
+                <div key={g.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div>
+                <p className="font-bold">{g.display_name}</p>
+                <p className="text-xs text-slate-500">{g.provider} · {g.currency}</p>
+                  </div>
+                  <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-700">
+                {statusLabel(g.status)}
+                  </span>
+                </div>
+              ))}
+
+              {gateways.length === 0 && (
+                <p className="py-6 text-center text-sm text-slate-500">No hay pasarelas configuradas.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+            <h2 className="text-xl font-black">Suscripciones billing</h2>
+            <p className="mb-5 mt-1 text-sm text-slate-500">Últimas 10 suscripciones registradas.</p>
+
+            <div className="space-y-3">
+              {subscriptions.map((s) => (
+                <div key={s.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="flex items-center justify-between gap-4">
+                <p className="font-bold">{s.profile_slug || s.user_email || 'Sin perfil'}</p>
+                <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-700">
+                  {statusLabel(s.status)}
+                </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                Plan: {s.plan_id || '—'} · Fuente: {s.source || '—'}
+                  </p>
+                </div>
+              ))}
+
+              {subscriptions.length === 0 && (
+                <p className="py-6 text-center text-sm text-slate-500">Todavía no hay suscripciones billing registradas.</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-5">
+          <h2 className="text-xl font-black">Pagos recientes</h2>
+          <p className="mb-5 mt-1 text-sm text-slate-500">Últimos 10 pagos registrados. El registro manual se conectará en el siguiente lote.</p>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="border-b border-slate-200 px-3 py-3">Cliente</th>
+                  <th className="border-b border-slate-200 px-3 py-3">Perfil</th>
+                  <th className="border-b border-slate-200 px-3 py-3">Plan</th>
+                  <th className="border-b border-slate-200 px-3 py-3">Monto</th>
+                  <th className="border-b border-slate-200 px-3 py-3">Estado</th>
+                  <th className="border-b border-slate-200 px-3 py-3">Origen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id} className="text-slate-700">
+                <td className="border-b border-slate-100 px-3 py-3">{p.user_email || '—'}</td>
+                <td className="border-b border-slate-100 px-3 py-3">{p.profile_slug || '—'}</td>
+                <td className="border-b border-slate-100 px-3 py-3">{p.plan_id || '—'}</td>
+                <td className="border-b border-slate-100 px-3 py-3">{formatMoney(p.amount_cents, p.currency || 'DOP')}</td>
+                <td className="border-b border-slate-100 px-3 py-3">{statusLabel(p.status)}</td>
+                <td className="border-b border-slate-100 px-3 py-3">{p.source || '—'}</td>
+                  </tr>
+                ))}
+
+                {payments.length === 0 && (
+                  <tr>
+                <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                  Todavía no hay pagos registrados.
+                </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        </div>
+      </div>
+    )
+  }
+
   function renderSectionPlaceholder() {
     const titles: Record<SuperAdminSection, { title: string; description: string }> = {
       dashboard: {
@@ -266,29 +397,29 @@ export default function SuperAdminDashboard() {
       }}
     >
       {currentSection === 'dashboard' ? (
-        <div className="rounded-3xl bg-slate-950 px-4 py-8 text-white shadow-sm">
+        <div className="rounded-3xl bg-white px-4 py-8 text-slate-900 shadow-sm">
           <div className="mx-auto max-w-6xl">
         <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-400">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">
               INTAP LINK
             </p>
             <h1 className="mt-2 text-3xl font-black">Super Admin</h1>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-2 text-sm text-slate-600">
               Vista inicial de métricas y suscriptores. Las acciones de cambio de plan, módulos y overrides se conectarán en el siguiente lote.
             </p>
           </div>
 
           <Link
             to="/admin"
-            className="rounded-full border border-white/10 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-300 hover:bg-white/10"
+            className="rounded-full border border-slate-200 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-700 hover:bg-white/10"
           >
             Volver al panel
           </Link>
         </header>
 
         {loading && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-slate-300">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-700">
             Cargando Super Admin...
           </div>
         )}
@@ -303,136 +434,24 @@ export default function SuperAdminDashboard() {
           <>
             <section className="mb-8 grid gap-4 md:grid-cols-4">
               {Object.entries(metricData).slice(0, 8).map(([key, value]) => (
-                <div key={key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                <div key={key} className="rounded-2xl border border-slate-200 bg-white p-5">
                   <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
                     {formatMetricLabel(key)}
                   </p>
-                  <p className="mt-3 text-base font-bold leading-relaxed text-white">
+                  <p className="mt-3 text-base font-bold leading-relaxed text-slate-900">
                     {formatMetricValue(key, value)}
                   </p>
                 </div>
               ))}
 
               {Object.keys(metricData).length === 0 && (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 md:col-span-4">
-                  <p className="text-sm text-slate-400">No se recibieron métricas para mostrar.</p>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 md:col-span-4">
+                  <p className="text-sm text-slate-600">No se recibieron métricas para mostrar.</p>
                 </div>
               )}
             </section>
 
-            <section className="mb-8 grid gap-4 md:grid-cols-4">
-              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.06] p-5">
-                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-300">Pagos pendientes</p>
-                <p className="mt-3 text-2xl font-black">{billingOverview?.payments?.pending ?? 0}</p>
-              </div>
-
-              <div className="rounded-2xl border border-yellow-400/20 bg-yellow-400/[0.06] p-5">
-                <p className="text-[10px] font-black uppercase tracking-wide text-yellow-200">En revisión</p>
-                <p className="mt-3 text-2xl font-black">{billingOverview?.payments?.under_review ?? 0}</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Pagos confirmados</p>
-                <p className="mt-3 text-2xl font-black">{billingOverview?.payments?.confirmed ?? 0}</p>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Ingresos confirmados</p>
-                <p className="mt-3 text-2xl font-black">{formatMoney(billingOverview?.payments?.confirmed_amount_cents, 'DOP')}</p>
-              </div>
-            </section>
-
-            <section className="mb-8 grid gap-5 lg:grid-cols-2">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-                <h2 className="text-xl font-black">Pasarelas</h2>
-                <p className="mb-5 mt-1 text-sm text-slate-500">Configuradas para uso futuro. Todas pueden permanecer deshabilitadas hasta activar cobros.</p>
-
-                <div className="space-y-3">
-                  {gateways.map((g) => (
-                    <div key={g.id} className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                      <div>
-                        <p className="font-bold">{g.display_name}</p>
-                        <p className="text-xs text-slate-500">{g.provider} · {g.currency}</p>
-                      </div>
-                      <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-slate-300">
-                        {statusLabel(g.status)}
-                      </span>
-                    </div>
-                  ))}
-
-                  {gateways.length === 0 && (
-                    <p className="py-6 text-center text-sm text-slate-500">No hay pasarelas configuradas.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-                <h2 className="text-xl font-black">Suscripciones billing</h2>
-                <p className="mb-5 mt-1 text-sm text-slate-500">Últimas 10 suscripciones registradas.</p>
-
-                <div className="space-y-3">
-                  {subscriptions.map((s) => (
-                    <div key={s.id} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="font-bold">{s.profile_slug || s.user_email || 'Sin perfil'}</p>
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-slate-300">
-                          {statusLabel(s.status)}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Plan: {s.plan_id || '—'} · Fuente: {s.source || '—'}
-                      </p>
-                    </div>
-                  ))}
-
-                  {subscriptions.length === 0 && (
-                    <p className="py-6 text-center text-sm text-slate-500">Todavía no hay suscripciones billing registradas.</p>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <section className="mb-8 rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <h2 className="text-xl font-black">Pagos recientes</h2>
-              <p className="mb-5 mt-1 text-sm text-slate-500">Últimos 10 pagos registrados. El registro manual se conectará en el siguiente lote.</p>
-
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="border-b border-white/10 px-3 py-3">Cliente</th>
-                      <th className="border-b border-white/10 px-3 py-3">Perfil</th>
-                      <th className="border-b border-white/10 px-3 py-3">Plan</th>
-                      <th className="border-b border-white/10 px-3 py-3">Monto</th>
-                      <th className="border-b border-white/10 px-3 py-3">Estado</th>
-                      <th className="border-b border-white/10 px-3 py-3">Origen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((p) => (
-                      <tr key={p.id} className="text-slate-300">
-                        <td className="border-b border-white/5 px-3 py-3">{p.user_email || '—'}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{p.profile_slug || '—'}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{p.plan_id || '—'}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{formatMoney(p.amount_cents, p.currency || 'DOP')}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{statusLabel(p.status)}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{p.source || '—'}</td>
-                      </tr>
-                    ))}
-
-                    {payments.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
-                          Todavía no hay pagos registrados.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-5">
               <div className="mb-5 flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-black">Suscriptores</h2>
@@ -444,21 +463,21 @@ export default function SuperAdminDashboard() {
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead className="text-xs uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="border-b border-white/10 px-3 py-3">Email</th>
-                      <th className="border-b border-white/10 px-3 py-3">Slug</th>
-                      <th className="border-b border-white/10 px-3 py-3">Plan</th>
-                      <th className="border-b border-white/10 px-3 py-3">Activo</th>
-                      <th className="border-b border-white/10 px-3 py-3">Publicado</th>
+                      <th className="border-b border-slate-200 px-3 py-3">Email</th>
+                      <th className="border-b border-slate-200 px-3 py-3">Slug</th>
+                      <th className="border-b border-slate-200 px-3 py-3">Plan</th>
+                      <th className="border-b border-slate-200 px-3 py-3">Activo</th>
+                      <th className="border-b border-slate-200 px-3 py-3">Publicado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {subscribers.map((s, index) => (
-                      <tr key={s.user_id || s.id || s.profile_id || index} className="text-slate-300">
-                        <td className="border-b border-white/5 px-3 py-3">{s.email || '—'}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{s.slug || '—'}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{s.plan_id || '—'}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{s.is_active ? 'Sí' : 'No'}</td>
-                        <td className="border-b border-white/5 px-3 py-3">{s.is_published ? 'Sí' : 'No'}</td>
+                      <tr key={s.user_id || s.id || s.profile_id || index} className="text-slate-700">
+                        <td className="border-b border-slate-100 px-3 py-3">{s.email || '—'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3">{s.slug || '—'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3">{s.plan_id || '—'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3">{s.is_active ? 'Sí' : 'No'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3">{s.is_published ? 'Sí' : 'No'}</td>
                       </tr>
                     ))}
 
@@ -477,6 +496,8 @@ export default function SuperAdminDashboard() {
         )}
           </div>
         </div>
+      ) : currentSection === 'billing' ? (
+        renderBillingSection()
       ) : (
         renderSectionPlaceholder()
       )}
