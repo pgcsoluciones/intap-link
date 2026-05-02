@@ -3726,7 +3726,23 @@ app.get('/api/v1/superadmin/payment-links/:id/detail', requireSuperAdmin('viewer
   const metadata = safePaymentLinkMetadata(row.metadata_json)
   const item = normalizePublicPaymentLink(row)
 
-  const timeline = Array.isArray(metadata.timeline) ? metadata.timeline : []
+  const legacyTimeline = Array.isArray(metadata.timeline) ? metadata.timeline : []
+  const trackingEvents = Array.isArray(metadata.tracking_events) ? metadata.tracking_events : []
+
+  const normalizedTrackingTimeline = trackingEvents.map((event: any) => ({
+    event_type: 'tracking_update',
+    actor_type: event?.actor_type || 'admin',
+    public_message: event?.customer_status_label || 'Movimiento actualizado',
+    at: event?.at || null,
+    created_at: event?.at || null,
+    payment_status: event?.payment_status || null,
+    fulfillment_status: event?.fulfillment_status || null,
+    customer_status_label: event?.customer_status_label || '',
+  }))
+
+  const timeline = normalizedTrackingTimeline.length > 0
+    ? normalizedTrackingTimeline
+    : legacyTimeline
 
   const detail = {
     profile: {
@@ -3746,7 +3762,10 @@ app.get('/api/v1/superadmin/payment-links/:id/detail', requireSuperAdmin('viewer
       customer_reference_text: row.customer_reference_text || null,
       transferred_at: row.transferred_at || null,
     },
-    tracking_events: timeline,
+    payment_status: metadata.payment_status || row.status || null,
+    fulfillment_status: metadata.fulfillment_status || 'not_started',
+    customer_status_label: metadata.customer_status_label || null,
+    tracking_events: trackingEvents,
     timeline,
     voucher_admin_url: row.proof_asset_id || row.proof_url
       ? `/api/v1/superadmin/payment-links/${row.id}/voucher`
