@@ -325,6 +325,239 @@ export default function SuperAdminDashboard() {
     )
   }
 
+  function renderPaymentLinksSection() {
+    const mockLinks = [
+      {
+        id: 'demo-1',
+        client: 'Cliente demo',
+        concept: 'Activación plan Basic',
+        amount: 150000,
+        currency: 'DOP',
+        status: 'pending',
+        reference: 'INTAP-LINK-001',
+      },
+      {
+        id: 'demo-2',
+        client: 'Perfil Juan',
+        concept: 'Renovación mensual',
+        amount: 250000,
+        currency: 'DOP',
+        status: 'confirmed',
+        reference: 'INTAP-LINK-002',
+      },
+    ]
+
+    return (
+      <div className="rounded-3xl bg-white px-4 py-8 text-slate-900 shadow-sm">
+        <div className="mx-auto max-w-6xl">
+          <header className="mb-8">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">
+              INTAP LINK
+            </p>
+            <h1 className="mt-2 text-3xl font-black">Enlaces de pago</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              Base operativa para crear cobros compartibles por WhatsApp, registrar pagos manuales,
+              recibir comprobantes y conectar futuras pasarelas.
+            </p>
+          </header>
+
+          <section className="mb-8 grid gap-4 md:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Total enlaces</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
+              <p className="mt-1 text-xs text-slate-500">Pendiente de backend</p>
+            </div>
+
+            <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-wide text-yellow-700">Pendientes</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
+              <p className="mt-1 text-xs text-slate-500">Cobros sin confirmar</p>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Pagados</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
+              <p className="mt-1 text-xs text-slate-500">Pagos confirmados</p>
+            </div>
+
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Vencidos</p>
+              <p className="mt-3 text-2xl font-black text-slate-900">0</p>
+              <p className="mt-1 text-xs text-slate-500">Enlaces expirados</p>
+            </div>
+          </section>
+
+          <section className="mb-8 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6">
+              <div className="mb-5">
+                <h2 className="text-xl font-black text-slate-900">Crear enlace de pago</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Formulario base inspirado en Avanxy. En el próximo lote se conectará a endpoints reales de INTAP LINK.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Cliente / Perfil</span>
+                  <input
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    placeholder="Seleccionar perfil"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Tipo de cobro</span>
+                  <select
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                  >
+                    <option>Suscripción</option>
+                    <option>Activación de plan</option>
+                    <option>Servicio adicional</option>
+                  </select>
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Concepto</span>
+                  <input
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    placeholder="Ej: Activación plan Basic mensual"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Monto</span>
+                  <input
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    placeholder="1500.00"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Moneda</span>
+                  <select
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                  >
+                    <option>DOP</option>
+                    <option>USD</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Vence el</span>
+                  <input
+                    disabled
+                    type="date"
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Método sugerido</span>
+                  <select
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                  >
+                    <option>Transferencia bancaria</option>
+                    <option>Pago manual</option>
+                    <option>Pasarela futura</option>
+                  </select>
+                </label>
+              </div>
+
+              <button
+                type="button"
+                disabled
+                className="mt-6 rounded-full bg-slate-900 px-5 py-3 text-sm font-black text-white opacity-60"
+              >
+                Generar enlace de pago
+              </button>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6">
+              <div className="mb-5">
+                <h2 className="text-xl font-black text-slate-900">Configuración de cobro</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Información que verá el cliente en el enlace público.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">WhatsApp soporte</span>
+                  <input
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    placeholder="8090000000"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">Email soporte</span>
+                  <input
+                    disabled
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+                    placeholder="soporte@intaprd.com"
+                  />
+                </label>
+
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                  <p className="text-sm font-black text-slate-900">Cuentas bancarias</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
+                    Aquí se configurarán bancos, titulares, cuentas y notas de referencia para el pago.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6">
+            <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-xl font-black text-slate-900">Enlaces recientes</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Vista base de cobros generados. Se reemplazará por datos reales cuando conectemos backend.
+                </p>
+              </div>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-700">
+                Módulo en preparación
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="border-b border-slate-200 px-3 py-3">Cliente</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Concepto</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Monto</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Estado</th>
+                    <th className="border-b border-slate-200 px-3 py-3">Referencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mockLinks.map((item) => (
+                    <tr key={item.id} className="text-slate-700">
+                      <td className="border-b border-slate-100 px-3 py-3">{item.client}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{item.concept}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{formatMoney(item.amount, item.currency)}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{statusLabel(item.status)}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">{item.reference}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    )
+  }
+
   function renderSectionPlaceholder() {
     const titles: Record<SuperAdminSection, { title: string; description: string }> = {
       dashboard: {
@@ -498,6 +731,8 @@ export default function SuperAdminDashboard() {
         </div>
       ) : currentSection === 'billing' ? (
         renderBillingSection()
+      ) : currentSection === 'paymentLinks' ? (
+        renderPaymentLinksSection()
       ) : (
         renderSectionPlaceholder()
       )}
