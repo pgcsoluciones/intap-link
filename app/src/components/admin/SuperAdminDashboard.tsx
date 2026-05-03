@@ -523,6 +523,62 @@ export default function SuperAdminDashboard() {
     }
   }
 
+  async function updatePaymentFulfillment(item: PaymentLinkItem, fulfillmentStatus: string) {
+    setPaymentLinksError('')
+    setPaymentLinksMessage('')
+
+    setReviewingPaymentLinkId(item.id)
+
+    try {
+      const json: any = await apiPatch(`/superadmin/payment-links/${item.id}/fulfillment`, {
+        fulfillment_status: fulfillmentStatus,
+      })
+
+      if (!json?.ok) {
+        throw new Error(json?.error || 'No se pudo actualizar el seguimiento del proceso.')
+      }
+
+      setPaymentLinksMessage(json?.message || 'Seguimiento actualizado correctamente.')
+      await loadPaymentLinks()
+
+      if (selectedPaymentLink?.id === item.id) {
+        const detailJson: any = await apiGet(`/superadmin/payment-links/${item.id}/detail`)
+        if (detailJson?.ok) {
+          setSelectedPaymentLinkDetail(detailJson.data?.detail || detailJson.detail || null)
+        }
+      }
+    } catch (err) {
+      setPaymentLinksError(err instanceof Error ? err.message : 'No se pudo actualizar el seguimiento del proceso.')
+    } finally {
+      setReviewingPaymentLinkId('')
+    }
+  }
+
+  const fulfillmentSteps = [
+    { code: 'order_processing', label: 'Orden en proceso' },
+    { code: 'preparing', label: 'En producción / preparación' },
+    { code: 'sent', label: 'Enviada' },
+    { code: 'ready_for_pickup', label: 'Lista para retirar' },
+    { code: 'delivered', label: 'Entregada' },
+    { code: 'received', label: 'Recibida' },
+  ]
+
+  function getAllowedFulfillmentNext(currentStatus?: string | null) {
+    const status = currentStatus || 'not_started'
+
+    const transitions: Record<string, string[]> = {
+      not_started: ['order_processing'],
+      order_processing: ['preparing'],
+      preparing: ['sent', 'ready_for_pickup'],
+      sent: ['delivered'],
+      ready_for_pickup: ['delivered'],
+      delivered: ['received'],
+      received: [],
+    }
+
+    return transitions[status] || []
+  }
+
   function canMovePaymentToValidation(status: string) {
     return status === 'proof_submitted'
   }
@@ -1291,32 +1347,40 @@ export default function SuperAdminDashboard() {
                             </div>
 
                             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                              {[
-                                ['order_processing', 'Orden en proceso'],
-                                ['preparing', 'En producción / preparación'],
-                                ['sent', 'Enviada'],
-                                ['ready_for_pickup', 'Lista para retirar'],
-                                ['delivered', 'Entregada'],
-                                ['received', 'Recibida'],
-                              ].map(([code, label]) => (
-                                <button
-                                  key={code}
-                                  type="button"
-                                  disabled
-                                  className={`rounded-xl border px-4 py-3 text-left text-sm font-black ${
-                                    selectedPaymentLink.status === 'confirmed'
-                                      ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                      : 'border-slate-200 bg-white text-slate-400'
-                                  }`}
-                                  title={
-                                    selectedPaymentLink.status === 'confirmed'
-                                      ? 'Pendiente de conectar al backend de proceso'
-                                      : 'Disponible después de confirmar el pago'
-                                  }
-                                >
-                                  {label}
-                                </button>
-                              ))}
+                              {fulfillmentSteps.map((step) => {
+                                const currentFulfillmentStatus = selectedPaymentLinkDetail.fulfillment_status || 'not_started'
+                                const allowedNext = getAllowedFulfillmentNext(currentFulfillmentStatus)
+                                const isPaymentConfirmed = selectedPaymentLink.status === 'confirmed'
+                                const isCurrent = currentFulfillmentStatus === step.code
+                                const canApply = isPaymentConfirmed && allowedNext.includes(step.code)
+
+                                return (
+                                  <button
+                                    key={step.code}
+                                    type="button"
+                                    disabled={!canApply || reviewingPaymentLinkId === selectedPaymentLink.id}
+                                    onClick={() => updatePaymentFulfillment(selectedPaymentLink, step.code)}
+                                    className={`rounded-xl border px-4 py-3 text-left text-sm font-black disabled:cursor-not-allowed ${
+                                      isCurrent
+                                        ? 'border-green-300 bg-green-50 text-green-700'
+                                        : canApply
+                                          ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                          : 'border-slate-200 bg-white text-slate-400'
+                                    }`}
+                                    title={
+                                      !isPaymentConfirmed
+                                        ? 'Disponible después de confirmar el pago'
+                                        : isCurrent
+                                          ? 'Estado actual del proceso'
+                                          : canApply
+                                            ? 'Actualizar seguimiento'
+                                            : 'Este paso aún no corresponde'
+                                    }
+                                  >
+                                    {step.label}
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
 
