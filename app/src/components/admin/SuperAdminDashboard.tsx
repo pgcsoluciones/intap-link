@@ -88,6 +88,9 @@ interface PaymentLinkItem {
   public_url_path?: string | null
   proof_url?: string | null
   proof_asset_id?: string | null
+  payment_status?: string | null
+  fulfillment_status?: string | null
+  customer_status_label?: string | null
   expires_at?: string | null
   created_at?: string
 }
@@ -400,36 +403,84 @@ export default function SuperAdminDashboard() {
     window.open(getPaymentVoucherUrl(item), '_blank', 'noopener,noreferrer')
   }
 
-  function printPaymentVoucher(item: PaymentLinkItem) {
+  async function printPaymentVoucher(item: PaymentLinkItem) {
     if (!hasPaymentVoucher(item)) {
       setPaymentLinksError('Este enlace todavía no tiene comprobante adjunto.')
       return
     }
 
-    const url = getPaymentVoucherUrl(item)
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer')
+    const printWindow = window.open('', '_blank')
 
     if (!printWindow) {
       setPaymentLinksError('No se pudo abrir la ventana de impresión. Revisa si el navegador bloqueó la ventana emergente.')
       return
     }
 
-    printWindow.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <title>Imprimir comprobante</title>
-          <style>
-            html, body { margin: 0; height: 100%; }
-            iframe { border: 0; width: 100%; height: 100vh; }
-          </style>
-        </head>
-        <body>
-          <iframe src="${url}" onload="setTimeout(() => { window.focus(); window.print(); }, 500)"></iframe>
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
+    printWindow.document.write('<p style="font-family: system-ui; padding: 24px;">Preparando comprobante para imprimir...</p>')
+
+    try {
+      const res = await fetch(getPaymentVoucherUrl(item), {
+        credentials: 'include',
+      })
+
+      if (!res.ok) {
+        throw new Error('No se pudo cargar el comprobante para imprimir.')
+      }
+
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const contentType = res.headers.get('Content-Type') || blob.type || ''
+      const isImage = contentType.startsWith('image/')
+
+      printWindow.document.open()
+      printWindow.document.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <title>Imprimir comprobante</title>
+            <style>
+              html, body {
+                margin: 0;
+                min-height: 100%;
+                background: white;
+              }
+              body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              iframe {
+                border: 0;
+                width: 100%;
+                height: 100vh;
+              }
+              img {
+                max-width: 100%;
+                max-height: 100vh;
+                object-fit: contain;
+              }
+              @media print {
+                body { display: block; }
+                img { width: 100%; max-height: none; }
+              }
+            </style>
+          </head>
+          <body>
+            ${
+              isImage
+                ? `<img src="${objectUrl}" onload="setTimeout(() => { window.focus(); window.print(); }, 400)" />`
+                : `<iframe src="${objectUrl}" onload="setTimeout(() => { window.focus(); window.print(); }, 700)"></iframe>`
+            }
+          </body>
+        </html>
+      `)
+      printWindow.document.close()
+
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60000)
+    } catch (err) {
+      printWindow.close()
+      setPaymentLinksError(err instanceof Error ? err.message : 'No se pudo imprimir el comprobante.')
+    }
   }
 
   async function downloadPaymentVoucher(item: PaymentLinkItem) {
@@ -541,15 +592,65 @@ export default function SuperAdminDashboard() {
         throw new Error(json?.error || 'No se pudo actualizar el seguimiento del proceso.')
       }
 
+      const updatedData = json?.data || {}
+      const nextFulfillmentStatus = updatedData.fulfillment_status || fulfillmentStatus
+      const nextCustomerStatusLabel = updatedData.customer_status_label || ''
+
       setPaymentLinksMessage(json?.message || 'Seguimiento actualizado correctamente.')
-      await loadPaymentLinks()
+
+      setPaymentLinks((current) =>
+        current.map((paymentLink) =>
+          paymentLink.id === item.id
+            ? {
+                ...paymentLink,
+                fulfillment_status: nextFulfillmentStatus,
+                customer_status_label: nextCustomerStatusLabel || paymentLink.customer_status_label,
+              }
+            : paymentLink
+        )
+      )
 
       if (selectedPaymentLink?.id === item.id) {
+        setSelectedPaymentLink((current) =>
+          current
+            ? {
+                ...current,
+                fulfillment_status: nextFulfillmentStatus,
+                customer_status_label: nextCustomerStatusLabel || current.customer_status_label,
+              }
+            : current
+        )
+
+        setSelectedPaymentLinkDetail((current) =>
+          current
+            ? {
+                ...current,
+                fulfillment_status: nextFulfillmentStatus,
+                customer_status_label: nextCustomerStatusLabel || current.customer_status_label,
+                tracking_events: updatedData.tracking_events || current.tracking_events,
+                timeline: updatedData.tracking_events
+                  ? updatedData.tracking_events.map((event: any) => ({
+                      event_type: 'tracking_update',
+                      actor_type: event?.actor_type || 'admin',
+                      public_message: event?.customer_status_label || 'Movimiento actualizado',
+                      at: event?.at || null,
+                      created_at: event?.at || null,
+                      payment_status: event?.payment_status || null,
+                      fulfillment_status: event?.fulfillment_status || null,
+                      customer_status_label: event?.customer_status_label || '',
+                    }))
+                  : current.timeline,
+              }
+            : current
+        )
+
         const detailJson: any = await apiGet(`/superadmin/payment-links/${item.id}/detail`)
         if (detailJson?.ok) {
           setSelectedPaymentLinkDetail(detailJson.data?.detail || detailJson.detail || null)
         }
       }
+
+      await loadPaymentLinks()
     } catch (err) {
       setPaymentLinksError(err instanceof Error ? err.message : 'No se pudo actualizar el seguimiento del proceso.')
     } finally {
@@ -1121,15 +1222,24 @@ export default function SuperAdminDashboard() {
                       Enviar por WhatsApp
                     </button>
 
-                    {hasPaymentVoucher(item) && (
-                      <button
-                        type="button"
-                        onClick={() => openPaymentVoucher(item)}
-                        className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 hover:bg-emerald-100"
-                      >
-                        Ver comprobante
-                      </button>
-                    )}
+                    {item.status === 'confirmed' && (() => {
+                      const nextStep = getPrimaryFulfillmentAction(item.fulfillment_status || 'not_started')
+
+                      return nextStep ? (
+                        <button
+                          type="button"
+                          onClick={() => updatePaymentFulfillment(item, nextStep.code)}
+                          disabled={reviewingPaymentLinkId === item.id}
+                          className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                        >
+                          {nextStep.label}
+                        </button>
+                      ) : (
+                        <span className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-black text-green-700">
+                          Proceso completado
+                        </span>
+                      )
+                    })()}
 
                     <button
                       type="button"
