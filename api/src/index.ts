@@ -3675,6 +3675,8 @@ app.get('/api/v1/superadmin/payment-links', requireSuperAdmin('viewer'), async (
       metadata = null
     }
 
+    const trackingEvents = Array.isArray(metadata?.tracking_events) ? metadata.tracking_events : []
+
     return {
       ...row,
       metadata_json: metadata,
@@ -3682,6 +3684,10 @@ app.get('/api/v1/superadmin/payment-links', requireSuperAdmin('viewer'), async (
       concept: metadata?.concept || row.customer_reference_text || null,
       expires_at: metadata?.expires_at || null,
       public_url_path: metadata?.public_token ? `/pay/${metadata.public_token}` : null,
+      payment_status: metadata?.payment_status || row.status || null,
+      fulfillment_status: metadata?.fulfillment_status || 'not_started',
+      customer_status_label: metadata?.customer_status_label || null,
+      tracking_events: trackingEvents,
     }
   })
 
