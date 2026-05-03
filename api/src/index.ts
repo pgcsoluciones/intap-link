@@ -3793,6 +3793,180 @@ app.get('/api/v1/superadmin/payment-links/:id/detail', requireSuperAdmin('viewer
 
 
 
+// ── PATCH /api/v1/superadmin/payment-links/:id/fulfillment ────────────────────
+// Actualiza el seguimiento operativo del enlace de pago.
+// Solo permite avanzar proceso cuando el pago está confirmado.
+app.patch('/api/v1/superadmin/payment-links/:id/fulfillment', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const id = (c.req.param('id') || '').trim()
+
+  if (!id) {
+    return c.json({ ok: false, error: 'payment link id is required' }, 400)
+  }
+
+  let body: Record<string, unknown>
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON body' }, 400)
+  }
+
+  const nextFulfillmentStatus = typeof body.fulfillment_status === 'string'
+    ? body.fulfillment_status.trim()
+    : ''
+
+  const fulfillmentLabels: Record<string, string> = {
+    order_processing: 'Orden en proceso',
+    preparing: 'En producción / preparación',
+    sent: 'Enviada',
+    ready_for_pickup: 'Lista para retirar',
+    delivered: 'Entregada',
+    received: 'Recibida',
+  }
+
+  const validFulfillmentStatuses = Object.keys(fulfillmentLabels)
+
+  if (!validFulfillmentStatuses.includes(nextFulfillmentStatus)) {
+    return c.json({
+      ok: false,
+      error: 'Invalid fulfillment_status',
+      valid_statuses: validFulfillmentStatuses,
+    }, 400)
+  }
+
+  const row = await c.env.DB.prepare(`
+    SELECT
+      id,
+      status,
+      metadata_json,
+      profile_id,
+      user_id,
+      plan_id,
+      amount_cents,
+      currency,
+      admin_reference
+    FROM billing_payments
+    WHERE id = ?
+      AND source = 'payment_link'
+    LIMIT 1
+  `).bind(id).first<any>()
+
+  if (!row) {
+    return c.json({ ok: false, error: 'Payment link not found' }, 404)
+  }
+
+  if (row.status !== 'confirmed') {
+    return c.json({
+      ok: false,
+      error: 'Payment must be confirmed before updating fulfillment status',
+      current_status: row.status,
+    }, 422)
+  }
+
+  const metadata = safePaymentLinkMetadata(row.metadata_json)
+  const currentFulfillmentStatus = typeof metadata.fulfillment_status === 'string'
+    ? metadata.fulfillment_status
+    : 'not_started'
+
+  const allowedTransitions: Record<string, string[]> = {
+    not_started: ['order_processing'],
+    order_processing: ['preparing'],
+    preparing: ['sent', 'ready_for_pickup'],
+    sent: ['delivered'],
+    ready_for_pickup: ['delivered'],
+    delivered: ['received'],
+    received: [],
+  }
+
+  const allowedNext = allowedTransitions[currentFulfillmentStatus] || []
+
+  if (!allowedNext.includes(nextFulfillmentStatus)) {
+    return c.json({
+      ok: false,
+      error: 'Invalid fulfillment transition',
+      current_fulfillment_status: currentFulfillmentStatus,
+      allowed_next: allowedNext,
+    }, 422)
+  }
+
+  const currentTrackingEvents = Array.isArray(metadata.tracking_events)
+    ? metadata.tracking_events
+    : []
+
+  const customerStatusLabel = fulfillmentLabels[nextFulfillmentStatus]
+  const nextTrackingEvents = [
+    {
+      at: new Date().toISOString(),
+      payment_status: metadata.payment_status || row.status,
+      fulfillment_status: nextFulfillmentStatus,
+      customer_status_label: customerStatusLabel,
+      actor_type: 'admin',
+    },
+    ...currentTrackingEvents,
+  ].slice(0, 30)
+
+  const nextMetadata = {
+    ...metadata,
+    payment_status: metadata.payment_status || row.status,
+    fulfillment_status: nextFulfillmentStatus,
+    customer_status_label: customerStatusLabel,
+    tracking_events: nextTrackingEvents,
+  }
+
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      UPDATE billing_payments
+      SET
+        metadata_json = ?,
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).bind(
+      JSON.stringify(nextMetadata),
+      row.id,
+    ),
+    c.env.DB.prepare(`
+      INSERT INTO admin_audit_log
+        (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+      VALUES
+        (?, ?, 'payment_link_fulfillment_updated', 'billing_payment', ?, ?, ?, ?, datetime('now'))
+    `).bind(
+      auditId,
+      adminUserId,
+      row.id,
+      JSON.stringify({
+        fulfillment_status: currentFulfillmentStatus,
+        customer_status_label: metadata.customer_status_label || null,
+      }),
+      JSON.stringify({
+        fulfillment_status: nextFulfillmentStatus,
+        customer_status_label: customerStatusLabel,
+        profile_id: row.profile_id,
+        user_id: row.user_id,
+        plan_id: row.plan_id,
+        amount_cents: row.amount_cents,
+        currency: row.currency,
+        admin_reference: row.admin_reference,
+      }),
+      ip,
+    ),
+  ])
+
+  return c.json({
+    ok: true,
+    message: 'Seguimiento actualizado correctamente.',
+    data: {
+      payment_id: row.id,
+      payment_status: metadata.payment_status || row.status,
+      fulfillment_status: nextFulfillmentStatus,
+      customer_status_label: customerStatusLabel,
+      tracking_events: nextTrackingEvents,
+    },
+  })
+})
+
 
 // ── GET /api/v1/superadmin/payment-links/:id/voucher ──────────────────────────
 // Devuelve el comprobante/voucher adjunto a un enlace de pago.
