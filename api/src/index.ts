@@ -3126,7 +3126,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
   const internalNotes = typeof body.internal_notes === 'string' ? body.internal_notes.trim() || null : null
   const rejectionReason = typeof body.rejection_reason === 'string' ? body.rejection_reason.trim() || null : null
 
-  const VALID_REVIEW_STATUSES = ['pending', 'under_review', 'confirmed', 'rejected', 'cancelled']
+  const VALID_REVIEW_STATUSES = ['pending', 'proof_submitted', 'under_review', 'confirmed', 'rejected', 'cancelled']
 
   if (!VALID_REVIEW_STATUSES.includes(nextStatus)) {
     return c.json({
@@ -3223,7 +3223,7 @@ app.patch('/api/v1/superadmin/billing/payments/:paymentId/review', requireSuperA
 
   const paymentStatusLabels: Record<string, string> = {
     pending: 'Pendiente de pago',
-    proof_submitted: 'Comprobante enviado',
+    proof_submitted: 'Pago por confirmar',
     under_review: 'Pago en validación',
     confirmed: 'Pago confirmado',
     rejected: 'Pago rechazado',

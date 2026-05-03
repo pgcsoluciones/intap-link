@@ -471,7 +471,7 @@ export default function SuperAdminDashboard() {
     }
   }
 
-  async function reviewPaymentLink(item: PaymentLinkItem, status: 'pending' | 'under_review' | 'confirmed' | 'rejected' | 'cancelled') {
+  async function reviewPaymentLink(item: PaymentLinkItem, status: 'pending' | 'proof_submitted' | 'under_review' | 'confirmed' | 'rejected' | 'cancelled') {
     setPaymentLinksError('')
     setPaymentLinksMessage('')
 
@@ -486,6 +486,7 @@ export default function SuperAdminDashboard() {
 
     const labels: Record<typeof status, string> = {
       pending: 'reactivado',
+      proof_submitted: 'por confirmar',
       under_review: 'en validación',
       confirmed: 'confirmado',
       rejected: 'rechazado',
@@ -498,9 +499,11 @@ export default function SuperAdminDashboard() {
       const json: any = await apiPatch(`/superadmin/billing/payments/${item.id}/review`, {
         status,
         rejection_reason: status === 'rejected' ? rejectionReason : null,
-        internal_notes: status === 'under_review'
-          ? 'Pago marcado en validación desde Enlaces de pago.'
-          : `Pago ${labels[status]} desde Enlaces de pago.`,
+        internal_notes: status === 'proof_submitted'
+          ? 'Pago marcado como por confirmar / voucher recibido desde Enlaces de pago.'
+          : status === 'under_review'
+            ? 'Pago marcado en validación desde Enlaces de pago.'
+            : `Pago ${labels[status]} desde Enlaces de pago.`,
       })
 
       if (!json?.ok) {
@@ -579,6 +582,10 @@ export default function SuperAdminDashboard() {
     return transitions[status] || []
   }
 
+  function canMarkPaymentAsProofSubmitted(status: string) {
+    return status === 'pending'
+  }
+
   function canMovePaymentToValidation(status: string) {
     return status === 'proof_submitted'
   }
@@ -625,7 +632,7 @@ export default function SuperAdminDashboard() {
   function statusLabel(status?: string) {
     const labels: Record<string, string> = {
       pending: 'Pendiente',
-      proof_submitted: 'Comprobante enviado',
+      proof_submitted: 'Pago por confirmar',
       under_review: 'En revisión',
       confirmed: 'Confirmado',
       rejected: 'Rechazado',
@@ -1082,6 +1089,17 @@ export default function SuperAdminDashboard() {
                       </button>
                     )}
 
+                    {canMarkPaymentAsProofSubmitted(item.status) && (
+                      <button
+                        type="button"
+                        onClick={() => reviewPaymentLink(item, 'proof_submitted')}
+                        disabled={reviewingPaymentLinkId === item.id}
+                        className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                      >
+                        Pago por confirmar
+                      </button>
+                    )}
+
                     {canMovePaymentToValidation(item.status) && (
                       <button
                         type="button"
@@ -1266,6 +1284,17 @@ export default function SuperAdminDashboard() {
                             </div>
 
                             <div className="mt-4 flex flex-wrap gap-3">
+                              {canMarkPaymentAsProofSubmitted(selectedPaymentLink.status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => reviewPaymentLink(selectedPaymentLink, 'proof_submitted')}
+                                  disabled={reviewingPaymentLinkId === selectedPaymentLink.id}
+                                  className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-700 disabled:opacity-60"
+                                >
+                                  Pago por confirmar
+                                </button>
+                              )}
+
                               {canMovePaymentToValidation(selectedPaymentLink.status) && (
                                 <button
                                   type="button"
@@ -1321,7 +1350,8 @@ export default function SuperAdminDashboard() {
                                 </button>
                               )}
 
-                              {!canMovePaymentToValidation(selectedPaymentLink.status) &&
+                              {!canMarkPaymentAsProofSubmitted(selectedPaymentLink.status) &&
+                                !canMovePaymentToValidation(selectedPaymentLink.status) &&
                                 !canConfirmPayment(selectedPaymentLink.status) &&
                                 !canRejectPayment(selectedPaymentLink.status) &&
                                 !canCancelPayment(selectedPaymentLink.status) &&
