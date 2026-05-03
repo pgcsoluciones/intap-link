@@ -562,14 +562,58 @@ export default function SuperAdminDashboard() {
       }
 
       setPaymentLinksMessage(`Pago ${labels[status]} correctamente.`)
-      await loadPaymentLinks()
+
+      setPaymentLinks((current) =>
+        current.map((paymentLink) =>
+          paymentLink.id === item.id
+            ? {
+                ...paymentLink,
+                status,
+                payment_status: status,
+                fulfillment_status: status === 'confirmed'
+                  ? (paymentLink.fulfillment_status || 'not_started')
+                  : paymentLink.fulfillment_status,
+                customer_status_label: statusLabel(status),
+              }
+            : paymentLink
+        )
+      )
 
       if (selectedPaymentLink?.id === item.id) {
+        setSelectedPaymentLink((current) =>
+          current
+            ? {
+                ...current,
+                status,
+                payment_status: status,
+                fulfillment_status: status === 'confirmed'
+                  ? (current.fulfillment_status || 'not_started')
+                  : current.fulfillment_status,
+                customer_status_label: statusLabel(status),
+              }
+            : current
+        )
+
+        setSelectedPaymentLinkDetail((current) =>
+          current
+            ? {
+                ...current,
+                payment_status: status,
+                customer_status_label: statusLabel(status),
+                fulfillment_status: status === 'confirmed'
+                  ? (current.fulfillment_status || 'not_started')
+                  : current.fulfillment_status,
+              }
+            : current
+        )
+
         const detailJson: any = await apiGet(`/superadmin/payment-links/${item.id}/detail`)
         if (detailJson?.ok) {
           setSelectedPaymentLinkDetail(detailJson.data?.detail || detailJson.detail || null)
         }
       }
+
+      await loadPaymentLinks()
     } catch (err) {
       setPaymentLinksError(err instanceof Error ? err.message : 'No se pudo actualizar el estado del pago.')
     } finally {
@@ -1221,6 +1265,21 @@ export default function SuperAdminDashboard() {
                     >
                       Enviar por WhatsApp
                     </button>
+
+                    {item.status !== 'confirmed' && (() => {
+                      const primaryAction = getPrimaryPaymentAction(item.status)
+
+                      return primaryAction ? (
+                        <button
+                          type="button"
+                          onClick={() => reviewPaymentLink(item, primaryAction.status)}
+                          disabled={reviewingPaymentLinkId === item.id}
+                          className={primaryAction.className}
+                        >
+                          {primaryAction.label}
+                        </button>
+                      ) : null
+                    })()}
 
                     {item.status === 'confirmed' && (() => {
                       const nextStep = getPrimaryFulfillmentAction(item.fulfillment_status || 'not_started')
