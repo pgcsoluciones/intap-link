@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import PublicProfile from './components/PublicProfile'
-import MarketingLanding from './components/MarketingLanding'
+import MarketingLanding from './components/marketing/MarketingLanding'
 
 function RootRoute() {
   const location = useLocation()

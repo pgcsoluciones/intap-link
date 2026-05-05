@@ -1,0 +1,4195 @@
+:root {
+  --intap-profile-bg: #ffffff;
+}
+
+html,
+body,
+#root {
+  background: #ffffff !important;
+}
+
+.intap-profile-page {
+  --red: #D32F2F;
+  --red-dark: #B71C1C;
+  --red-light: #FFEBEE;
+  --red-mid: #FFCDD2;
+
+  --black: #111111;
+  --gray-dark: #333333;
+  --gray-mid: #666666;
+  --gray-light: #999999;
+  --gray-bg: #F9F9F9;
+  --border: #E8E8E8;
+  --white: #FFFFFF;
+
+  --font: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --max-w: 480px;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.07);
+  --shadow-md: 0 6px 20px rgba(0,0,0,.10);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,.14);
+
+  width: 100%;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  background: var(--white);
+  min-height: 100vh;
+  color: var(--black);
+  font-family: var(--font);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: none;
+  overflow-x: hidden;
+}
+
+.intap-profile-page *,
+.intap-profile-page *::before,
+.intap-profile-page *::after {
+  box-sizing: border-box;
+}
+
+.intap-profile-page a {
+  text-decoration: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.intap-profile-page button {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.intap-profile-page img {
+  display: block;
+  max-width: 100%;
+}
+
+.intap-profile-page ::selection {
+  background: rgba(211,47,47,.16);
+  color: var(--black);
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 24px;
+}
+
+/* HEADER */
+.s-header {
+  background: var(--white);
+  padding: 48px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 6px;
+}
+
+.avatar-wrap img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+  border: 3.5px solid var(--red);
+}
+
+.header-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--red);
+  letter-spacing: -.3px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.header-role {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--gray-dark);
+  margin: 0;
+}
+
+.header-icons {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.hicon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: var(--red);
+  background: var(--white);
+  transition: border-color .2s, color .2s, transform .2s;
+}
+
+.hicon:hover {
+  border-color: var(--red);
+  transform: translateY(-2px);
+}
+
+.hicon i,
+.crow-icon i,
+.redes-icon i,
+.vcard-btn i,
+.faq-cta-btn i {
+  line-height: 1;
+  display: inline-block;
+}
+
+/* CONTACTO */
+.s-contact {
+  padding: 0 0 8px;
+  margin-top: 20px;
+}
+
+.contact-header {
+  background: var(--red);
+  border-radius: 8px;
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  padding: 13px 24px;
+  margin: 0 24px 12px;
+  letter-spacing: .01em;
+}
+
+.contact-list {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 20px 4px;
+  gap: 6px;
+}
+
+.contact-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  transition: background .15s;
+  cursor: pointer;
+  color: var(--black);
+  background: transparent !important;
+  outline: none !important;
+}
+
+.contact-row:hover {
+  background: var(--gray-bg) !important;
+}
+
+.contact-row:active,
+.contact-row:focus,
+.contact-row:focus-visible {
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.crow-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--red);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.crow-text {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--gray-dark);
+  line-height: 1.4;
+}
+
+/* VCARD */
+.s-vcard {
+  padding: 16px 24px 20px;
+}
+
+.vcard-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 15px 24px;
+  border-radius: var(--radius-pill);
+  background: var(--red);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  cursor: pointer;
+  border: none;
+  transition: background .2s, transform .15s, box-shadow .2s;
+}
+
+.vcard-btn:hover {
+  background: var(--red-dark);
+  transform: translateY(-2px);
+}
+
+/* BIO */
+.s-bio {
+  padding: 32px 24px;
+  text-align: left;
+}
+
+.bio-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--red);
+  text-align: center;
+  margin: 0 0 24px;
+  line-height: 1.3;
+}
+
+.bio-text {
+  font-size: 14.5px;
+  font-weight: 400;
+  color: var(--black);
+  line-height: 1.8;
+  margin: 0 0 20px;
+}
+
+.bio-cta {
+  text-align: center;
+  margin: 24px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--black);
+}
+
+.bio-vcard-extra {
+  margin-top: 24px;
+}
+
+/* GALERÍA */
+.s-gallery {
+  padding: 32px 0 24px;
+}
+
+.gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.gallery-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--red);
+  margin: 0;
+}
+
+.gallery-count {
+  background: var(--red-light);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+}
+
+.carousel-wrap {
+  position: relative;
+  overflow: hidden;
+  padding: 0 24px;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 0;
+  transition: transform .35s ease;
+}
+
+.carousel-slide {
+  min-width: 100%;
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.carousel-slide img {
+  width: 100%;
+  height: 350px;
+  object-fit: cover;
+  display: block;
+}
+
+.slide-label {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(17,17,17,.85);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  padding: 10px 24px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  max-width: calc(100% - 40px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--red);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dot.active {
+  background: var(--red);
+}
+
+.carousel-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 20px 24px 0;
+}
+
+.cbtn {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.cbtn.primary {
+  background: var(--red);
+  color: var(--white);
+}
+
+.cbtn.outline {
+  background: transparent;
+  color: var(--red);
+  border: 2px solid var(--red);
+}
+
+/* SERVICIOS */
+.s-services {
+  padding: 32px 24px;
+}
+
+.services-title {
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 800;
+  color: var(--red);
+  text-align: center;
+  margin: 0 0 18px;
+}
+
+.services-intro {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--black);
+  text-align: center;
+  margin: 0 0 22px;
+}
+
+.services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.service-row {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.service-check {
+  color: #16A34A;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.service-row strong {
+  display: inline;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--black);
+  margin-right: 4px;
+}
+
+.service-row span {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--black);
+}
+
+/* FAQ */
+.s-faq {
+  padding: 32px 24px;
+}
+
+.faq-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--red);
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--gray-bg);
+  overflow: hidden;
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  gap: 12px;
+  list-style: none;
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-icon {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--black);
+  transition: transform .25s;
+}
+
+.faq-item[open] .faq-icon {
+  transform: rotate(45deg);
+}
+
+.faq-answer {
+  font-size: 14px;
+  color: var(--gray-dark);
+  padding: 0 20px 18px;
+}
+
+.faq-answer p {
+  margin: 0;
+  line-height: 1.65;
+}
+
+.faq-cta-box {
+  margin-top: 24px;
+  background: var(--gray-bg);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
+}
+
+.faq-cta-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--red);
+  margin: 0 0 8px;
+}
+
+.faq-cta-sub {
+  font-size: 14px;
+  color: var(--black);
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.faq-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 32px;
+  background: var(--red);
+  color: var(--white);
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+/* REDES EMPRESA */
+.s-redes {
+  padding: 32px 24px;
+}
+
+.redes-header-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  background: var(--red);
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.redes-sub {
+  font-size: 13.5px;
+  color: var(--black);
+  text-align: center;
+  margin: 0 0 20px;
+  font-weight: 500;
+}
+
+.redes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.redes-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  color: var(--black);
+}
+
+.redes-row:hover {
+  background: var(--gray-bg);
+}
+
+.redes-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ri-phone { background: #2196F3; color: white; }
+.ri-wa { background: #4CAF50; color: white; }
+.ri-ig { background: #E1306C; color: white; }
+.ri-fb { background: #1877F2; color: white; }
+.ri-mail { background: white; border: 2px solid var(--black); color: var(--black); }
+.ri-web { background: transparent; color: var(--gray-mid); }
+.ri-map { background: #FF1744; color: white; }
+
+.redes-row span {
+  font-size: 14.5px;
+  color: var(--black);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/* FOOTER */
+.s-footer {
+  padding: 20px 24px 36px;
+  text-align: center;
+  background: var(--white);
+}
+
+.footer-credit {
+  font-size: 14px;
+  color: var(--gray-mid);
+  font-weight: 500;
+  margin: 0;
+}
+
+.footer-credit strong {
+  color: var(--red);
+}
+
+/* CHATBOT */
+.chatbot-bubble {
+  position: fixed;
+  bottom: 24px;
+  right: calc(50% - 216px);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.chat-panel {
+  width: 300px;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--red);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: none;
+  flex-direction: column;
+  animation: intapSlideUp .25s ease;
+}
+
+.chat-panel.open {
+  display: flex;
+}
+
+@keyframes intapSlideUp {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.chat-head {
+  background: var(--red);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-head img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.4);
+  object-fit: cover;
+}
+
+.chat-head-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--white);
+  flex: 1;
+}
+
+.chat-close {
+  color: rgba(255,255,255,.8);
+  font-size: 18px;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.chat-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-greeting {
+  font-size: 14px;
+  color: var(--gray-dark);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-line;
+}
+
+.chat-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-opt {
+  padding: 10px 14px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--red);
+  background: var(--white);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background .15s, color .15s;
+}
+
+.chat-opt:hover {
+  background: var(--red);
+  color: var(--white);
+}
+
+.chat-footer {
+  font-size: 12px;
+  color: var(--gray-light);
+  text-align: center;
+  padding: 0 16px 14px;
+  margin: 0;
+}
+
+.chat-trigger {
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: #DE6767;
+  border: 3px solid var(--white);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: transform .2s;
+  padding: 0;
+}
+
+.chat-trigger:hover {
+  transform: scale(1.07);
+}
+
+.chat-trigger img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  background: #EF4444;
+  border-radius: 50%;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--white);
+}
+
+.chat-trigger-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+@media (max-width: 520px) {
+  .intap-profile-page {
+    max-width: 100%;
+  }
+
+  .chatbot-bubble {
+    right: 16px;
+    bottom: 18px;
+  }
+
+  .chat-panel {
+    width: min(300px, calc(100vw - 32px));
+  }
+}
+
+/* =========================================================
+   AJUSTE VISUAL V2 — colores correctos + burbuja fuera del texto
+   ========================================================= */
+
+:root {
+  --intap-v2-red: #e3343a;
+  --intap-v2-red-dark: #d92f35;
+  --intap-v2-text: #222222;
+  --intap-v2-black: #111111;
+  --intap-v2-white: #ffffff;
+}
+
+/* Fondo completamente blanco */
+html,
+body,
+.page {
+  background: #ffffff !important;
+}
+
+/* Nombre principal en rojo como referencia */
+.header-name {
+  color: var(--intap-v2-red) !important;
+}
+
+/* Cargo / texto base */
+.header-role,
+.crow-text,
+.redes-row,
+.bio-text,
+.contact-row,
+.contact-row a,
+.redes-row a {
+  color: var(--intap-v2-text) !important;
+}
+
+/* Iconos rápidos del header: borde oscuro, icono rojo, fondo blanco */
+.header-icons .hicon {
+  background: #ffffff !important;
+  border: 2px solid #111111 !important;
+  color: var(--intap-v2-red) !important;
+  box-shadow: none !important;
+}
+
+.header-icons .hicon i,
+.header-icons .hicon svg {
+  color: var(--intap-v2-red) !important;
+  fill: var(--intap-v2-red) !important;
+}
+
+/* Línea divisora roja fina */
+.divider {
+  background: var(--intap-v2-red) !important;
+  border: 0 !important;
+  height: 1px !important;
+  opacity: 1 !important;
+}
+
+/* Encabezado de contacto */
+.contact-header,
+.redes-header-btn {
+  background: var(--intap-v2-red) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Quitar cualquier azul o resaltado raro de filas/enlaces */
+.contact-list,
+.redes-list,
+.contact-row,
+.redes-row,
+.contact-row:hover,
+.redes-row:hover,
+.contact-row:focus,
+.redes-row:focus,
+.contact-row:active,
+.redes-row:active,
+.contact-row:visited,
+.redes-row:visited {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/* Si alguna fila está heredando estilo “activo” o “primario”, quitarlo */
+.contact-row[class*="active"],
+.contact-row[class*="primary"],
+.redes-row[class*="active"],
+.redes-row[class*="primary"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Iconos de contacto / redes */
+.crow-icon,
+.redes-icon {
+  background: var(--intap-v2-red) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.crow-icon i,
+.crow-icon svg,
+.redes-icon i,
+.redes-icon svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* Botones rojos con texto blanco */
+.vcard-btn,
+.bio-cta,
+.faq-cta-btn,
+.cbtn.primary {
+  background: var(--intap-v2-red) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.vcard-btn *,
+.bio-cta *,
+.faq-cta-btn *,
+.cbtn.primary * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* Botón outline, si aparece */
+.cbtn.outline {
+  background: #ffffff !important;
+  color: var(--intap-v2-red) !important;
+  border: 1.5px solid var(--intap-v2-red) !important;
+  box-shadow: none !important;
+}
+
+/* Chat: launcher más afuera para no montarse sobre el contenido */
+.chat-trigger-wrap,
+.chatbot-bubble {
+  right: max(10px, env(safe-area-inset-right)) !important;
+  bottom: max(14px, env(safe-area-inset-bottom)) !important;
+  left: auto !important;
+  transform: none !important;
+  z-index: 60 !important;
+}
+
+/* Burbuja del trigger */
+.chat-trigger {
+  box-shadow: none !important;
+}
+
+/* Panel del chat un poco más arriba del launcher */
+.chat-panel {
+  right: 0 !important;
+  bottom: 72px !important;
+  left: auto !important;
+}
+
+/* En móvil que no se pegue tanto al contenido */
+@media (max-width: 640px) {
+  .chat-trigger-wrap,
+  .chatbot-bubble {
+    right: 8px !important;
+    bottom: 12px !important;
+  }
+
+  .chat-panel {
+    right: 0 !important;
+    bottom: 68px !important;
+    max-width: min(340px, calc(100vw - 24px)) !important;
+  }
+}
+
+
+/* =========================================================
+   FORCE RED ONLY — PERFIL JPREZ / SIN AZULES NI FRANJAS
+   ========================================================= */
+
+.intap-profile-page {
+  --red: #e02d32 !important;
+  --red-dark: #c91f25 !important;
+  --red-light: #fdeaea !important;
+  --red-mid: #f7c8cb !important;
+  --black: #111111 !important;
+  --gray-dark: #222222 !important;
+  --white: #ffffff !important;
+  background: #ffffff !important;
+}
+
+/* Fondo global blanco */
+html,
+body,
+#root,
+.intap-profile-page {
+  background: #ffffff !important;
+}
+
+/* Títulos principales: nunca azul */
+.intap-profile-page .header-name,
+.intap-profile-page .bio-title,
+.intap-profile-page .gallery-title,
+.intap-profile-page .services-title,
+.intap-profile-page .faq-title,
+.intap-profile-page .faq-cta-title,
+.intap-profile-page .footer-credit strong {
+  color: #e02d32 !important;
+}
+
+/* Textos normales */
+.intap-profile-page .header-role,
+.intap-profile-page .crow-text,
+.intap-profile-page .bio-text,
+.intap-profile-page .redes-row span,
+.intap-profile-page .services-intro,
+.intap-profile-page .service-row strong,
+.intap-profile-page .service-row span,
+.intap-profile-page .faq-question,
+.intap-profile-page .faq-answer,
+.intap-profile-page .footer-credit {
+  color: #222222 !important;
+}
+
+/* Separadores: rojo fino como referencia */
+.intap-profile-page .divider {
+  background: #e02d32 !important;
+  border: 0 !important;
+  height: 1px !important;
+  opacity: 1 !important;
+}
+
+/* Botones y encabezados rojos */
+.intap-profile-page .contact-header,
+.intap-profile-page .redes-header-btn,
+.intap-profile-page .vcard-btn,
+.intap-profile-page .faq-cta-btn,
+.intap-profile-page .cbtn.primary,
+.intap-profile-page .chat-head {
+  background: #e02d32 !important;
+  color: #ffffff !important;
+  border-color: #e02d32 !important;
+  box-shadow: none !important;
+}
+
+/* Todo ícono del header: círculo blanco, borde negro, símbolo rojo */
+.intap-profile-page .hicon {
+  background: #ffffff !important;
+  border: 2px solid #111111 !important;
+  color: #e02d32 !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .hicon i,
+.intap-profile-page .hicon svg {
+  color: #e02d32 !important;
+  fill: #e02d32 !important;
+}
+
+/* Contactos: eliminar franja azul/hover/focus/active */
+.intap-profile-page .contact-row,
+.intap-profile-page .contact-row:hover,
+.intap-profile-page .contact-row:focus,
+.intap-profile-page .contact-row:focus-visible,
+.intap-profile-page .contact-row:active,
+.intap-profile-page .contact-row:visited,
+.intap-profile-page .redes-row,
+.intap-profile-page .redes-row:hover,
+.intap-profile-page .redes-row:focus,
+.intap-profile-page .redes-row:focus-visible,
+.intap-profile-page .redes-row:active,
+.intap-profile-page .redes-row:visited {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #222222 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-color: transparent !important;
+  text-decoration: none !important;
+}
+
+/* Eliminar cualquier color azul heredado por navegación/links */
+.intap-profile-page a,
+.intap-profile-page a:hover,
+.intap-profile-page a:focus,
+.intap-profile-page a:active,
+.intap-profile-page a:visited {
+  color: inherit !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Íconos de contacto: todos rojos, no azul, no verde, no degradado */
+.intap-profile-page .crow-icon,
+.intap-profile-page .redes-icon,
+.intap-profile-page .ri-phone,
+.intap-profile-page .ri-wa,
+.intap-profile-page .ri-ig,
+.intap-profile-page .ri-fb,
+.intap-profile-page .ri-mail,
+.intap-profile-page .ri-web,
+.intap-profile-page .ri-map {
+  background: #e02d32 !important;
+  background-color: #e02d32 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Símbolos dentro de los círculos */
+.intap-profile-page .crow-icon i,
+.intap-profile-page .crow-icon svg,
+.intap-profile-page .redes-icon i,
+.intap-profile-page .redes-icon svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* Quitar color azul específico de FontAwesome / navegador */
+.intap-profile-page .fa,
+.intap-profile-page .fas,
+.intap-profile-page .far,
+.intap-profile-page .fab {
+  color: inherit !important;
+}
+
+/* Botón vCard: texto e icono blanco */
+.intap-profile-page .vcard-btn,
+.intap-profile-page .vcard-btn:hover,
+.intap-profile-page .vcard-btn:focus,
+.intap-profile-page .vcard-btn:active,
+.intap-profile-page .faq-cta-btn,
+.intap-profile-page .faq-cta-btn:hover,
+.intap-profile-page .faq-cta-btn:focus,
+.intap-profile-page .faq-cta-btn:active {
+  background: #e02d32 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .vcard-btn i,
+.intap-profile-page .faq-cta-btn i {
+  color: #ffffff !important;
+}
+
+/* Badges y dots */
+.intap-profile-page .gallery-count {
+  background: #fdeaea !important;
+  color: #e02d32 !important;
+}
+
+.intap-profile-page .dot {
+  border-color: #e02d32 !important;
+}
+
+.intap-profile-page .dot.active {
+  background: #e02d32 !important;
+}
+
+/* Chat: mover más hacia afuera y más abajo para no tapar texto */
+.intap-profile-page .chatbot-bubble {
+  right: 8px !important;
+  bottom: 8px !important;
+  z-index: 40 !important;
+}
+
+.intap-profile-page .chat-trigger {
+  width: 56px !important;
+  height: 56px !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .chat-badge {
+  background: #ff4d57 !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page .chat-panel {
+  right: 0 !important;
+  bottom: 70px !important;
+}
+
+/* En pantallas más anchas, que siga pegado al borde del perfil móvil */
+@media (min-width: 521px) {
+  .intap-profile-page .chatbot-bubble {
+    right: calc(50% - 232px) !important;
+    bottom: 10px !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE TIPOGRAFÍA + ICONOS
+   CONTACTOS / ENLACES / BOTONES
+   ========================================================= */
+
+.intap-profile-page .contact-header,
+.intap-profile-page .redes-header-btn {
+  font-size: clamp(1.18rem, 4.5vw, 1.45rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.15 !important;
+  min-height: 58px !important;
+}
+
+.intap-profile-page .contact-list,
+.intap-profile-page .redes-list {
+  gap: 16px !important;
+}
+
+.intap-profile-page .contact-row,
+.intap-profile-page .redes-row {
+  gap: 14px !important;
+  align-items: center !important;
+  min-height: 52px !important;
+}
+
+.intap-profile-page .crow-icon,
+.intap-profile-page .redes-icon {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  border-radius: 999px !important;
+}
+
+.intap-profile-page .crow-icon i,
+.intap-profile-page .crow-icon svg,
+.intap-profile-page .redes-icon i,
+.intap-profile-page .redes-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+  font-size: 18px !important;
+}
+
+.intap-profile-page .crow-text,
+.intap-profile-page .redes-row span,
+.intap-profile-page .redes-row a,
+.intap-profile-page .contact-row a {
+  font-size: clamp(1.02rem, 3.8vw, 1.14rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.42 !important;
+  letter-spacing: -0.01em !important;
+  color: #2a2a2a !important;
+}
+
+.intap-profile-page .contact-row.address-row .crow-text,
+.intap-profile-page .crow-text.is-address {
+  line-height: 1.5 !important;
+}
+
+.intap-profile-page .vcard-btn,
+.intap-profile-page .faq-cta-btn,
+.intap-profile-page .cbtn.primary,
+.intap-profile-page .cbtn.secondary {
+  font-size: clamp(1.08rem, 4vw, 1.2rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  min-height: 56px !important;
+  padding: 0 22px !important;
+  border-radius: 999px !important;
+}
+
+.intap-profile-page .vcard-btn i,
+.intap-profile-page .faq-cta-btn i,
+.intap-profile-page .cbtn.primary i,
+.intap-profile-page .cbtn.secondary i {
+  font-size: 17px !important;
+}
+
+@media (max-width: 520px) {
+  .intap-profile-page .contact-header,
+  .intap-profile-page .redes-header-btn {
+    font-size: 1.14rem !important;
+    min-height: 56px !important;
+  }
+
+  .intap-profile-page .crow-icon,
+  .intap-profile-page .redes-icon {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+
+  .intap-profile-page .crow-icon i,
+  .intap-profile-page .crow-icon svg,
+  .intap-profile-page .redes-icon i,
+  .intap-profile-page .redes-icon svg {
+    width: 19px !important;
+    height: 19px !important;
+    font-size: 19px !important;
+  }
+
+  .intap-profile-page .crow-text,
+  .intap-profile-page .redes-row span,
+  .intap-profile-page .redes-row a,
+  .intap-profile-page .contact-row a {
+    font-size: 1.05rem !important;
+  }
+
+  .intap-profile-page .vcard-btn,
+  .intap-profile-page .faq-cta-btn,
+  .intap-profile-page .cbtn.primary,
+  .intap-profile-page .cbtn.secondary {
+    font-size: 1.1rem !important;
+    min-height: 58px !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE CONTACTOS — MENOS ESPACIO ENTRE ICONOS
+   ========================================================= */
+
+.intap-profile-page .contact-list {
+  gap: 2px !important;
+  padding-top: 14px !important;
+  padding-bottom: 8px !important;
+}
+
+.intap-profile-page .contact-row {
+  min-height: 46px !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  gap: 12px !important;
+}
+
+.intap-profile-page .crow-icon {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+}
+
+.intap-profile-page .crow-text {
+  font-size: 1.06rem !important;
+  font-weight: 500 !important;
+  line-height: 1.32 !important;
+}
+
+/* Dirección: un poco compacta pero legible */
+.intap-profile-page .contact-row:last-child {
+  align-items: flex-start !important;
+  padding-top: 8px !important;
+}
+
+.intap-profile-page .contact-row:last-child .crow-icon {
+  margin-top: 2px !important;
+}
+
+.intap-profile-page .contact-row:last-child .crow-text {
+  line-height: 1.38 !important;
+}
+
+/* Menos aire antes del botón vCard */
+.intap-profile-page .s-vcard {
+  padding-top: 10px !important;
+}
+
+/* Mantener botón fuerte y compacto */
+.intap-profile-page .vcard-btn {
+  min-height: 54px !important;
+  font-size: 1.08rem !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 520px) {
+  .intap-profile-page .contact-list {
+    gap: 1px !important;
+  }
+
+  .intap-profile-page .contact-row {
+    min-height: 44px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .intap-profile-page .crow-text {
+    font-size: 1.03rem !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE HEADER — FOTO OVALADA + NOMBRE MÁS LEGIBLE
+   ========================================================= */
+
+/* Header más parecido a la muestra móvil */
+.intap-profile-page .s-header {
+  padding-top: 34px !important;
+  padding-bottom: 28px !important;
+}
+
+/* Foto de perfil en óvalo vertical, no círculo */
+.intap-profile-page .avatar-wrap {
+  width: 220px !important;
+  height: 285px !important;
+  max-width: 72vw !important;
+  max-height: 92vw !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
+  margin: 0 auto 26px !important;
+  border: 3px solid #e02d32 !important;
+  background: #ffffff !important;
+}
+
+/* La imagen debe llenar el óvalo completo */
+.intap-profile-page .avatar-wrap img {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+  display: block !important;
+}
+
+/* Nombre: rojo, fuerte, pero con letras menos pegadas */
+.intap-profile-page .header-name {
+  color: #e02d32 !important;
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(1.72rem, 5.8vw, 2.15rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.005em !important;
+  line-height: 1.16 !important;
+  margin-top: 0 !important;
+  margin-bottom: 6px !important;
+  text-rendering: geometricPrecision !important;
+}
+
+/* Cargo debajo del nombre */
+.intap-profile-page .header-role {
+  font-size: clamp(1.02rem, 3.8vw, 1.18rem) !important;
+  font-weight: 400 !important;
+  color: #111111 !important;
+  line-height: 1.35 !important;
+  margin-bottom: 14px !important;
+}
+
+/* Iconos superiores un poco más balanceados con el nuevo óvalo */
+.intap-profile-page .header-icons {
+  gap: 14px !important;
+  margin-top: 8px !important;
+}
+
+.intap-profile-page .header-icons .hicon {
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+  border: 2px solid #111111 !important;
+  background: #ffffff !important;
+  color: #e02d32 !important;
+}
+
+.intap-profile-page .header-icons .hicon i,
+.intap-profile-page .header-icons .hicon svg {
+  font-size: 22px !important;
+  width: 22px !important;
+  height: 22px !important;
+  color: #e02d32 !important;
+}
+
+/* Ajuste móvil fino */
+@media (max-width: 520px) {
+  .intap-profile-page .s-header {
+    padding-top: 30px !important;
+    padding-bottom: 26px !important;
+  }
+
+  .intap-profile-page .avatar-wrap {
+    width: 190px !important;
+    height: 245px !important;
+    margin-bottom: 22px !important;
+  }
+
+  .intap-profile-page .header-name {
+    font-size: 1.7rem !important;
+    letter-spacing: 0.01em !important;
+  }
+
+  .intap-profile-page .header-role {
+    font-size: 1.04rem !important;
+  }
+
+  .intap-profile-page .header-icons .hicon {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE HEADER — ÓVALO MÁS GRANDE + FOTO MÁS CERCA
+   ========================================================= */
+
+/* Óvalo un poco más grande */
+.intap-profile-page .avatar-wrap {
+  width: 232px !important;
+  height: 300px !important;
+  max-width: 76vw !important;
+  max-height: 98vw !important;
+}
+
+/* Acercar y subir la foto dentro del óvalo */
+.intap-profile-page .avatar-wrap img {
+  object-fit: cover !important;
+  object-position: center 18% !important;
+  transform: scale(1.08) translateY(-8px) !important;
+  transform-origin: center top !important;
+}
+
+/* Ajuste móvil */
+@media (max-width: 520px) {
+  .intap-profile-page .avatar-wrap {
+    width: 205px !important;
+    height: 265px !important;
+  }
+
+  .intap-profile-page .avatar-wrap img {
+    object-position: center 16% !important;
+    transform: scale(1.09) translateY(-7px) !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE SOBRE MÍ — FORMATO COMO REFERENCIA + SIN CTA DUPLICADO
+   ========================================================= */
+
+.intap-profile-page .s-bio {
+  padding: 34px 38px 36px !important;
+  text-align: left !important;
+}
+
+/* Título de la sección: más fuerte, con aire y sin romper feo */
+.intap-profile-page .bio-title {
+  max-width: 100% !important;
+  margin: 0 0 24px !important;
+  color: #c61920 !important;
+  font-size: clamp(1.45rem, 4.8vw, 1.72rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.22 !important;
+  letter-spacing: 0.005em !important;
+  text-align: center !important;
+}
+
+/* Cuerpo: ancho y ritmo más parecido a la muestra */
+.intap-profile-page .bio-text {
+  margin: 0 0 22px !important;
+  color: #111111 !important;
+  font-size: clamp(1rem, 3.6vw, 1.08rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.78 !important;
+  letter-spacing: 0.002em !important;
+  text-align: left !important;
+}
+
+/* La última línea de ayuda debe ser texto, no botón rojo */
+.intap-profile-page .bio-cta {
+  display: block !important;
+  width: 100% !important;
+  margin: 26px 0 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #111111 !important;
+  font-size: clamp(1rem, 3.5vw, 1.08rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Por si quedó algún contenedor del botón repetido */
+.intap-profile-page .bio-vcard-extra {
+  display: none !important;
+}
+
+/* En móvil, mantener lectura amplia pero sin apretar bordes */
+@media (max-width: 520px) {
+  .intap-profile-page .s-bio {
+    padding-left: 30px !important;
+    padding-right: 30px !important;
+  }
+
+  .intap-profile-page .bio-title {
+    font-size: 1.38rem !important;
+    line-height: 1.24 !important;
+    margin-bottom: 22px !important;
+  }
+
+  .intap-profile-page .bio-text {
+    font-size: 1rem !important;
+    line-height: 1.76 !important;
+    margin-bottom: 20px !important;
+  }
+
+  .intap-profile-page .bio-cta {
+    font-size: 1rem !important;
+  }
+}
+
+
+/* =========================================================
+   AJUSTE SOBRE MÍ — ANCHO, LÍNEAS Y TÍTULO SEGÚN REFERENCIA
+   ========================================================= */
+
+/* La plantilla necesita más ancho útil para que el texto respire como la referencia */
+.intap-profile-page {
+  --max-w: 620px !important;
+  max-width: 620px !important;
+}
+
+/* Sección Sobre mí: más ancha y con menos cortes de línea */
+.intap-profile-page .s-bio {
+  padding: 34px 54px 38px !important;
+  text-align: left !important;
+}
+
+/* Título en una sola línea como la referencia */
+.intap-profile-page .bio-title {
+  color: #c61920 !important;
+  font-size: clamp(1.28rem, 3.3vw, 1.55rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.003em !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  margin: 0 0 26px !important;
+}
+
+/* Párrafo más ancho, menos alto, más parecido a la muestra */
+.intap-profile-page .bio-text {
+  color: #111111 !important;
+  font-size: clamp(0.98rem, 2.9vw, 1.02rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.68 !important;
+  letter-spacing: 0 !important;
+  text-align: justify !important;
+  text-align-last: left !important;
+  margin: 0 0 24px !important;
+}
+
+/* Línea final de ayuda: una sola vez, sin botón repetido */
+.intap-profile-page .bio-help-line {
+  display: block !important;
+  width: 100% !important;
+  margin: 28px 0 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #111111 !important;
+  font-size: clamp(0.98rem, 2.9vw, 1.02rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.45 !important;
+  text-align: center !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* El CTA duplicado anterior queda apagado si todavía existe en algún cascade */
+.intap-profile-page .bio-cta,
+.intap-profile-page .bio-vcard-extra {
+  display: none !important;
+}
+
+/* Ajuste móvil: mantener título en una línea bajando tamaño y dando más ancho */
+@media (max-width: 520px) {
+  .intap-profile-page {
+    max-width: 100% !important;
+  }
+
+  .intap-profile-page .s-bio {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .intap-profile-page .bio-title {
+    font-size: clamp(1.05rem, 4.4vw, 1.28rem) !important;
+    white-space: nowrap !important;
+    margin-bottom: 24px !important;
+  }
+
+  .intap-profile-page .bio-text {
+    font-size: 0.98rem !important;
+    line-height: 1.68 !important;
+    margin-bottom: 22px !important;
+  }
+
+  .intap-profile-page .bio-help-line {
+    font-size: 0.98rem !important;
+  }
+}
+
+
+/* =========================================================
+   GALERÍA FUNCIONAL — MODALES DE PROYECTOS
+   ========================================================= */
+
+.intap-profile-page .s-gallery {
+  padding-top: 34px !important;
+  padding-bottom: 34px !important;
+}
+
+.intap-profile-page .gallery-header {
+  margin-bottom: 16px !important;
+}
+
+.intap-profile-page .gallery-title {
+  color: #c61920 !important;
+  font-size: clamp(1.35rem, 4.4vw, 1.65rem) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.intap-profile-page .gallery-count {
+  background: #fde9ea !important;
+  color: #c61920 !important;
+  border: 1px solid #f6c8cb !important;
+}
+
+.intap-profile-page .carousel-wrap {
+  padding-left: 34px !important;
+  padding-right: 34px !important;
+}
+
+.intap-profile-page .carousel-slide {
+  border-radius: 18px !important;
+}
+
+.intap-profile-page .carousel-slide img {
+  height: 410px !important;
+  object-fit: cover !important;
+  border-radius: 18px !important;
+  background: #f4f4f4 !important;
+}
+
+.intap-profile-page .slide-label {
+  background: rgba(0, 0, 0, 0.72) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  line-height: 1.05 !important;
+  text-align: center !important;
+  padding: 9px 22px !important;
+}
+
+.intap-profile-page .carousel-btns {
+  padding-top: 18px !important;
+  gap: 12px !important;
+}
+
+.intap-profile-page .cbtn {
+  min-height: 48px !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .cbtn.primary {
+  background: #e02d32 !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page .cbtn.outline {
+  background: #ffffff !important;
+  color: #e02d32 !important;
+  border: 1.5px solid #e02d32 !important;
+}
+
+/* Backdrop general */
+.projects-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0, 0, 0, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+
+/* Caja modal */
+.projects-modal {
+  position: relative;
+  width: min(960px, calc(100vw - 44px));
+  max-height: calc(100vh - 44px);
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+}
+
+/* Botón cerrar */
+.projects-modal-close {
+  position: sticky;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111111;
+  font-size: 2rem;
+  line-height: 1;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  cursor: pointer;
+}
+
+/* Modal listado */
+.projects-modal--list {
+  padding: 28px 20px 24px;
+}
+
+.projects-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 14px;
+}
+
+.projects-modal-head h2 {
+  margin: 0;
+  color: #111111;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.projects-modal-head span {
+  background: #fde9ea;
+  color: #e02d32;
+  border: 1px solid #f6c8cb;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.project-card {
+  overflow: hidden;
+  border: 1px solid #e3e7ef;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.project-card-image {
+  display: block;
+  width: 100%;
+  height: 165px;
+  border: 0;
+  padding: 0;
+  background: #f4f4f4;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.project-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.project-card-body {
+  padding: 14px 14px 16px;
+}
+
+.project-card-body h3 {
+  margin: 0;
+  color: #111111;
+  font-size: 1.02rem;
+  line-height: 1.05;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.project-card-body p {
+  margin: 7px 0 12px;
+  color: #415065;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.project-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 13px;
+}
+
+.project-tags span {
+  background: #ffe8e9;
+  color: #e02d32;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.75rem;
+}
+
+.project-card-btn {
+  width: auto;
+  min-width: 128px;
+  min-height: 42px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 9px auto 0;
+  padding: 0 18px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.project-card-btn.primary {
+  border: 0;
+  background: #e02d32;
+  color: #ffffff;
+}
+
+.project-card-btn.outline {
+  border: 1.5px solid #f3b2b5;
+  background: #ffffff;
+  color: #e02d32;
+}
+
+/* Modal detalle */
+.projects-modal--detail {
+  width: min(980px, calc(100vw - 44px));
+  padding: 36px 18px 24px;
+}
+
+.project-detail-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.project-detail-info h2 {
+  margin: 0;
+  color: #111111;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.project-detail-location {
+  margin: 5px 0 10px;
+  color: #415065;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.project-detail-desc {
+  margin: 0 0 18px;
+  color: #222222;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.project-whatsapp-btn {
+  min-height: 46px;
+  border: 0;
+  border-radius: 999px;
+  background: #e02d32;
+  color: #ffffff;
+  padding: 0 26px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.project-map {
+  margin-top: 18px;
+  width: 100%;
+  height: 230px;
+  border-radius: 0;
+  overflow: hidden;
+  background: #f4f4f4;
+}
+
+.project-map iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.project-map-link {
+  width: fit-content;
+  min-height: 42px;
+  margin: 12px auto 0;
+  border: 1.5px solid #f3b2b5;
+  border-radius: 999px;
+  padding: 0 22px;
+  color: #e02d32;
+  background: #ffffff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-detail-media {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f4f4f4;
+}
+
+.project-detail-media img {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+}
+
+.project-detail-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  background: rgba(224, 45, 50, 0.82);
+  color: #ffffff;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.project-detail-arrow--left {
+  left: 12px;
+}
+
+.project-detail-arrow--right {
+  right: 12px;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .projects-modal-backdrop {
+    padding: 14px;
+  }
+
+  .projects-modal {
+    width: calc(100vw - 28px);
+    max-height: calc(100vh - 28px);
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-card-image {
+    height: 190px;
+  }
+
+  .project-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-detail-info {
+    order: 1;
+  }
+
+  .project-detail-media {
+    order: 2;
+  }
+
+  .project-detail-media img {
+    height: 300px;
+  }
+
+  .intap-profile-page .carousel-slide img {
+    height: 390px !important;
+  }
+}
+
+
+/* =========================================================
+   GALERÍA JPREZ — MÚLTIPLES IMÁGENES POR PROYECTO
+   ========================================================= */
+
+.intap-profile-page .carousel-slide img {
+  object-position: center center !important;
+}
+
+/* Modal detalle con imagen más protagonista */
+.project-detail-media {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  background: #ffffff !important;
+}
+
+.project-detail-media > img {
+  border-radius: 14px !important;
+  overflow: hidden !important;
+}
+
+/* Miniaturas internas del proyecto */
+.project-detail-thumbs {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+  padding-top: 2px !important;
+}
+
+.project-detail-thumb {
+  height: 72px !important;
+  border: 2px solid transparent !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  background: #f4f4f4 !important;
+}
+
+.project-detail-thumb.active {
+  border-color: #e02d32 !important;
+}
+
+.project-detail-thumb img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+/* Flechas encima de la imagen principal */
+.project-detail-arrow {
+  top: 43% !important;
+}
+
+/* En móvil, las miniaturas siguen visibles pero compactas */
+@media (max-width: 760px) {
+  .project-detail-thumbs {
+    gap: 6px !important;
+  }
+
+  .project-detail-thumb {
+    height: 64px !important;
+  }
+}
+
+
+/* =========================================================
+   GALERÍA — COMPORTAMIENTO FINAL, ROJO ÚNICO Y MODALES LIMPIOS
+   ========================================================= */
+
+/* Nada azul dentro de galería y modales */
+.intap-profile-page .s-gallery,
+.intap-profile-page .s-gallery *,
+.projects-modal,
+.projects-modal * {
+  --red: #e02d32 !important;
+  --blue: #e02d32 !important;
+  --primary: #e02d32 !important;
+  accent-color: #e02d32 !important;
+}
+
+/* Títulos en rojo, no azul */
+.intap-profile-page .gallery-title,
+.projects-modal-head h2,
+.project-detail-info h2 {
+  color: #c61920 !important;
+}
+
+/* Badge cantidad */
+.intap-profile-page .gallery-count,
+.projects-modal-head span,
+.project-tags span {
+  background: #fde9ea !important;
+  color: #e02d32 !important;
+  border: 1px solid #f5c7ca !important;
+}
+
+/* Carrusel principal */
+.intap-profile-page .carousel-slide {
+  cursor: pointer !important;
+}
+
+.intap-profile-page .carousel-slide img {
+  height: 410px !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  border-radius: 18px !important;
+}
+
+.intap-profile-page .slide-label {
+  background: rgba(0, 0, 0, 0.74) !important;
+  color: #ffffff !important;
+  font-weight: 900 !important;
+}
+
+/* Botones principales de galería */
+.intap-profile-page .cbtn.primary,
+.projects-modal .project-card-btn.primary,
+.projects-modal .project-whatsapp-btn {
+  background: #e02d32 !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .cbtn.outline,
+.projects-modal .project-card-btn.outline,
+.projects-modal .project-more-btn,
+.projects-modal .project-map-link {
+  background: #ffffff !important;
+  color: #e02d32 !important;
+  border: 1.7px solid #e02d32 !important;
+  box-shadow: none !important;
+}
+
+/* Evitar cualquier color azul de estados */
+.intap-profile-page .cbtn,
+.projects-modal button,
+.projects-modal a {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.intap-profile-page .cbtn:hover,
+.intap-profile-page .cbtn:focus,
+.intap-profile-page .cbtn:active,
+.projects-modal button:hover,
+.projects-modal button:focus,
+.projects-modal button:active,
+.projects-modal a:hover,
+.projects-modal a:focus,
+.projects-modal a:active {
+  box-shadow: none !important;
+}
+
+/* Dots rojos */
+.intap-profile-page .dot {
+  border-color: #e02d32 !important;
+}
+
+.intap-profile-page .dot.active {
+  background: #e02d32 !important;
+}
+
+/* Modal de todos los proyectos */
+.projects-modal-backdrop {
+  background: rgba(0, 0, 0, 0.68) !important;
+}
+
+.projects-modal {
+  background: #ffffff !important;
+}
+
+/* X perfectamente centrada dentro del círculo */
+.projects-modal-close {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  font-size: 2rem !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Cards del listado */
+.project-card-body h3 {
+  color: #111111 !important;
+}
+
+.project-card-body p {
+  color: #344054 !important;
+}
+
+/* Botones en cards */
+.project-card-btn.primary,
+.project-card-btn.outline {
+  font-weight: 900 !important;
+}
+
+/* Detalle: título es nombre del proyecto */
+.project-detail-info h2 {
+  color: #111111 !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.project-detail-location {
+  color: #344054 !important;
+}
+
+.project-detail-desc {
+  color: #222222 !important;
+}
+
+/* Acciones en detalle */
+.project-detail-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin: 18px 0 !important;
+}
+
+.project-detail-actions .project-whatsapp-btn,
+.project-detail-actions .project-more-btn {
+  min-height: 46px !important;
+  border-radius: 999px !important;
+  padding: 0 22px !important;
+  font-size: 0.98rem !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+/* Flechas centradas y rojas */
+.project-detail-arrow {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  padding: 0 !important;
+  border-radius: 999px !important;
+  border: 2px solid rgba(255, 255, 255, 0.9) !important;
+  background: rgba(224, 45, 50, 0.88) !important;
+  color: #ffffff !important;
+  font-size: 2.2rem !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  box-shadow: none !important;
+}
+
+.project-detail-arrow--left {
+  left: 14px !important;
+}
+
+.project-detail-arrow--right {
+  right: 14px !important;
+}
+
+/* Miniaturas */
+.project-detail-thumb.active {
+  border-color: #e02d32 !important;
+}
+
+/* Responsive */
+@media (max-width: 760px) {
+  .project-detail-actions {
+    flex-direction: column !important;
+  }
+
+  .project-detail-actions .project-whatsapp-btn,
+  .project-detail-actions .project-more-btn {
+    width: 100% !important;
+  }
+}
+
+
+/* =========================================================
+   SOBRE LA EMPRESA — FRASE DESTACADA + LOGO + TEXTO
+   ========================================================= */
+
+.intap-profile-page .s-company-about {
+  padding: 34px 54px 38px !important;
+  background: #ffffff !important;
+}
+
+/* Frase destacada entre dos líneas rojas */
+.intap-profile-page .company-highlight {
+  border-top: 1px solid #e02d32 !important;
+  border-bottom: 1px solid #e02d32 !important;
+  padding: 30px 0 !important;
+  margin: 0 0 34px !important;
+}
+
+.intap-profile-page .company-highlight h2 {
+  margin: 0 !important;
+  color: #c61920 !important;
+  font-size: clamp(1.28rem, 3.4vw, 1.58rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+  letter-spacing: 0.002em !important;
+}
+
+/* Logo centrado */
+.intap-profile-page .company-logo-wrap {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  margin: 0 auto 28px !important;
+}
+
+.intap-profile-page .company-logo-wrap img {
+  width: min(270px, 72%) !important;
+  height: auto !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+/* Texto de empresa como la muestra */
+.intap-profile-page .company-copy {
+  max-width: 500px !important;
+  margin: 0 auto !important;
+}
+
+.intap-profile-page .company-copy p {
+  margin: 0 0 24px !important;
+  color: #111111 !important;
+  font-size: clamp(0.98rem, 2.9vw, 1.02rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.68 !important;
+  text-align: justify !important;
+  text-align-last: left !important;
+}
+
+/* Responsive */
+@media (max-width: 520px) {
+  .intap-profile-page .s-company-about {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .intap-profile-page .company-highlight {
+    padding: 26px 0 !important;
+    margin-bottom: 30px !important;
+  }
+
+  .intap-profile-page .company-highlight h2 {
+    font-size: 1.22rem !important;
+  }
+
+  .intap-profile-page .company-logo-wrap img {
+    width: min(250px, 76%) !important;
+  }
+
+  .intap-profile-page .company-copy p {
+    font-size: 0.98rem !important;
+    line-height: 1.68 !important;
+  }
+}
+
+
+/* =========================================================
+   SERVICIOS + CONTACTO EMPRESA + FAQ — AJUSTE SEGÚN REFERENCIA
+   ========================================================= */
+
+/* Evitar línea doble entre galería y Sobre la empresa */
+.intap-profile-page .s-gallery + .divider {
+  margin-top: 0 !important;
+}
+
+/* Servicios / Soluciones */
+.intap-profile-page .s-services {
+  padding: 34px 54px 36px !important;
+  background: #ffffff !important;
+}
+
+.intap-profile-page .services-title {
+  color: #c61920 !important;
+  font-size: clamp(1.45rem, 4.4vw, 1.72rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+  letter-spacing: -0.015em !important;
+  margin: 0 0 22px !important;
+}
+
+.intap-profile-page .services-intro {
+  max-width: 520px !important;
+  margin: 0 auto 26px !important;
+  color: #111111 !important;
+  font-size: clamp(0.98rem, 2.8vw, 1.04rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.65 !important;
+  text-align: center !important;
+}
+
+.intap-profile-page .service-list,
+.intap-profile-page .services-list {
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.intap-profile-page .service-row {
+  display: grid !important;
+  grid-template-columns: 24px 1fr !important;
+  gap: 10px !important;
+  align-items: start !important;
+  color: #111111 !important;
+  font-size: clamp(0.98rem, 2.8vw, 1.03rem) !important;
+  line-height: 1.55 !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+}
+
+.intap-profile-page .service-row strong {
+  font-weight: 900 !important;
+  color: #111111 !important;
+}
+
+/* Check verde real, no rojo ni negro */
+.intap-profile-page .service-row > :first-child,
+.intap-profile-page .service-check,
+.intap-profile-page .service-icon {
+  color: #16b63b !important;
+  background: transparent !important;
+  font-size: 1.08rem !important;
+  font-weight: 900 !important;
+  line-height: 1.4 !important;
+}
+
+/* Contactos empresa después de servicios */
+.intap-profile-page .s-company-contact {
+  padding: 30px 54px 34px !important;
+  background: #ffffff !important;
+}
+
+.intap-profile-page .company-contact-header {
+  width: min(100%, 520px) !important;
+  min-height: 42px !important;
+  margin: 0 auto 6px !important;
+  background: #e02d32 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: clamp(1.05rem, 3.6vw, 1.22rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+}
+
+.intap-profile-page .company-contact-subtitle {
+  max-width: 520px !important;
+  margin: 0 auto 18px !important;
+  color: #111111 !important;
+  font-size: 0.94rem !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+}
+
+.intap-profile-page .company-contact-list {
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.intap-profile-page .company-contact-row {
+  width: 100% !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  display: grid !important;
+  grid-template-columns: 34px 1fr !important;
+  gap: 12px !important;
+  align-items: center !important;
+  color: #111111 !important;
+  text-decoration: none !important;
+  font-size: clamp(1rem, 3vw, 1.08rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  font-family: inherit !important;
+}
+
+.intap-profile-page .company-contact-icon {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  border-radius: 999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #ffffff !important;
+  overflow: hidden !important;
+  line-height: 1 !important;
+}
+
+.intap-profile-page .company-contact-icon i,
+.intap-profile-page .company-contact-icon svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  line-height: 1 !important;
+}
+
+/* Colores reales por canal */
+.intap-profile-page .cc-phone { background: #2d9bf0 !important; }
+.intap-profile-page .cc-whatsapp { background: #25d366 !important; }
+.intap-profile-page .cc-instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%) !important;
+}
+.intap-profile-page .cc-facebook { background: #1877f2 !important; }
+.intap-profile-page .cc-email {
+  background: #ffffff !important;
+  color: #111111 !important;
+  border: 2px solid #111111 !important;
+}
+.intap-profile-page .cc-email i,
+.intap-profile-page .cc-email svg {
+  color: #111111 !important;
+  fill: #111111 !important;
+}
+.intap-profile-page .cc-web { background: #2d9bf0 !important; }
+.intap-profile-page .cc-map { background: #ff0045 !important; }
+
+/* FAQ más limpia, menos gruesa, con aire como referencia */
+.intap-profile-page .s-faq {
+  padding: 34px 54px 44px !important;
+  background: #ffffff !important;
+}
+
+.intap-profile-page .faq-title {
+  color: #c61920 !important;
+  font-size: clamp(1.18rem, 3.7vw, 1.38rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+  margin: 0 0 18px !important;
+}
+
+.intap-profile-page .faq-list {
+  max-width: 560px !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  gap: 0 !important;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 3px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .faq-item,
+.intap-profile-page .faq-card,
+.intap-profile-page .faq-row {
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid #d9d9d9 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .faq-item:last-child,
+.intap-profile-page .faq-card:last-child,
+.intap-profile-page .faq-row:last-child {
+  border-bottom: 0 !important;
+}
+
+.intap-profile-page .faq-question,
+.intap-profile-page .faq-button,
+.intap-profile-page .faq-trigger {
+  min-height: 54px !important;
+  padding: 0 18px !important;
+  color: #111111 !important;
+  font-size: clamp(0.94rem, 2.8vw, 1rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  background: #ffffff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .faq-answer {
+  padding: 0 18px 16px !important;
+  color: #222222 !important;
+  font-size: 0.96rem !important;
+  font-weight: 500 !important;
+  line-height: 1.55 !important;
+  background: #ffffff !important;
+}
+
+@media (max-width: 520px) {
+  .intap-profile-page .s-services,
+  .intap-profile-page .s-company-contact,
+  .intap-profile-page .s-faq {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .intap-profile-page .services-title {
+    font-size: 1.35rem !important;
+  }
+
+  .intap-profile-page .service-list,
+  .intap-profile-page .services-list,
+  .intap-profile-page .company-contact-list,
+  .intap-profile-page .faq-list {
+    max-width: 100% !important;
+  }
+
+  .intap-profile-page .company-contact-row {
+    grid-template-columns: 32px 1fr !important;
+    gap: 10px !important;
+  }
+
+  .intap-profile-page .faq-question,
+  .intap-profile-page .faq-button,
+  .intap-profile-page .faq-trigger {
+    min-height: 52px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+
+/* =========================================================
+   FAQ — UNA ABIERTA A LA VEZ + FRANJAS MÁS ESTRECHAS
+   ========================================================= */
+
+.intap-profile-page .s-faq {
+  padding: 32px 24px 42px !important;
+  background: #ffffff !important;
+}
+
+.intap-profile-page .faq-title {
+  max-width: 520px !important;
+  margin: 0 auto 18px !important;
+  color: #c61920 !important;
+  font-size: clamp(1.22rem, 3.8vw, 1.42rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  text-align: center !important;
+  letter-spacing: -0.018em !important;
+}
+
+/* Contenedor menos ancho, como perfil móvil y no como tabla de escritorio */
+.intap-profile-page .faq-list {
+  width: min(100%, 520px) !important;
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  border: 1px solid #d9d9d9 !important;
+  border-radius: 3px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Cada franja más baja */
+.intap-profile-page .faq-item {
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid #d9d9d9 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .faq-item:last-child {
+  border-bottom: 0 !important;
+}
+
+/* Pregunta en una línea, compacta */
+.intap-profile-page .faq-question {
+  width: 100% !important;
+  min-height: 52px !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 24px !important;
+  align-items: center !important;
+  gap: 12px !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  font-family: inherit !important;
+  text-align: left !important;
+}
+
+.intap-profile-page .faq-question-text {
+  display: block !important;
+  min-width: 0 !important;
+  color: #111111 !important;
+  font-size: clamp(0.95rem, 2.8vw, 1.02rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Símbolo + / x centrado */
+.intap-profile-page .faq-toggle {
+  width: 24px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #111111 !important;
+  font-size: 1.25rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+/* Respuesta solo en la abierta */
+.intap-profile-page .faq-answer {
+  padding: 0 44px 18px 16px !important;
+  color: #5f6d86 !important;
+  background: #ffffff !important;
+  font-size: clamp(0.96rem, 2.9vw, 1.02rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.55 !important;
+  text-align: left !important;
+}
+
+/* Al abrir, mantiene aire pero no se vuelve gigante */
+.intap-profile-page .faq-item.is-open .faq-question {
+  min-height: 56px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+/* En pantallas pequeñas: sigue en una línea con ellipsis */
+@media (max-width: 520px) {
+  .intap-profile-page .s-faq {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .intap-profile-page .faq-list {
+    max-width: 100% !important;
+  }
+
+  .intap-profile-page .faq-question {
+    min-height: 50px !important;
+    padding-left: 14px !important;
+    padding-right: 12px !important;
+  }
+
+  .intap-profile-page .faq-question-text {
+    font-size: 0.94rem !important;
+  }
+
+  .intap-profile-page .faq-answer {
+    padding-left: 14px !important;
+    padding-right: 36px !important;
+    padding-bottom: 16px !important;
+  }
+}
+
+
+/* =========================================================
+   FAQ FINAL — UNA ABIERTA, MÁS ESTRECHA, UNA LÍNEA
+   ========================================================= */
+
+/* Título más parecido al resto de secciones */
+.intap-profile-page .s-faq .faq-title {
+  width: min(100%, 460px) !important;
+  max-width: 460px !important;
+  margin: 0 auto 18px !important;
+  color: #c61920 !important;
+  font-size: clamp(1.28rem, 4vw, 1.55rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.18 !important;
+  letter-spacing: -0.02em !important;
+  text-align: center !important;
+}
+
+/* Bloque FAQ más estrecho, no ancho tipo tabla */
+.intap-profile-page .s-faq .faq-list {
+  width: min(100%, 460px) !important;
+  max-width: 460px !important;
+  margin: 0 auto !important;
+  border: 1px solid #d7d7d7 !important;
+  border-radius: 3px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Cada franja compacta */
+.intap-profile-page .s-faq .faq-item,
+.intap-profile-page .s-faq details {
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid #d7d7d7 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .s-faq .faq-item:last-child,
+.intap-profile-page .s-faq details:last-child {
+  border-bottom: 0 !important;
+}
+
+/* Botón/pregunta compacta */
+.intap-profile-page .s-faq .faq-question,
+.intap-profile-page .s-faq summary {
+  width: 100% !important;
+  min-height: 46px !important;
+  height: 46px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  outline: none !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  box-shadow: none !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 22px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  text-align: left !important;
+}
+
+/* Quitar borde azul del navegador */
+.intap-profile-page .s-faq .faq-question:focus,
+.intap-profile-page .s-faq .faq-question:focus-visible,
+.intap-profile-page .s-faq summary:focus,
+.intap-profile-page .s-faq summary:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* Pregunta en una sola línea */
+.intap-profile-page .s-faq .faq-question,
+.intap-profile-page .s-faq .faq-question *,
+.intap-profile-page .s-faq summary,
+.intap-profile-page .s-faq summary * {
+  font-size: clamp(0.86rem, 2.65vw, 0.96rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.12 !important;
+}
+
+/* El texto de la pregunta no debe partirse en dos líneas */
+.intap-profile-page .s-faq .faq-question-text,
+.intap-profile-page .s-faq .faq-question span:first-child,
+.intap-profile-page .s-faq summary span:first-child {
+  min-width: 0 !important;
+  display: block !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Si el texto está directo dentro del botón */
+.intap-profile-page .s-faq .faq-question {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Símbolo + / x centrado */
+.intap-profile-page .s-faq .faq-toggle,
+.intap-profile-page .s-faq .faq-question > span:last-child,
+.intap-profile-page .s-faq summary > span:last-child {
+  width: 22px !important;
+  height: 22px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #111111 !important;
+  font-size: 1.1rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+/* Respuesta más compacta */
+.intap-profile-page .s-faq .faq-answer {
+  padding: 0 36px 16px 14px !important;
+  color: #5f6d86 !important;
+  background: #ffffff !important;
+  font-size: clamp(0.9rem, 2.8vw, 0.98rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.52 !important;
+  text-align: left !important;
+}
+
+/* La pregunta abierta no debe volverse gigante */
+.intap-profile-page .s-faq .faq-item.is-open .faq-question,
+.intap-profile-page .s-faq details[open] summary {
+  min-height: 46px !important;
+  height: 46px !important;
+}
+
+/* Cierre visual forzado para que nunca haya más de una abierta */
+.intap-profile-page .s-faq .faq-force-closed .faq-answer {
+  display: none !important;
+}
+
+/* Móvil */
+@media (max-width: 520px) {
+  .intap-profile-page .s-faq {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .intap-profile-page .s-faq .faq-title,
+  .intap-profile-page .s-faq .faq-list {
+    max-width: 430px !important;
+  }
+
+  .intap-profile-page .s-faq .faq-question,
+  .intap-profile-page .s-faq summary {
+    min-height: 44px !important;
+    height: 44px !important;
+    padding-left: 12px !important;
+    padding-right: 10px !important;
+  }
+
+  .intap-profile-page .s-faq .faq-question,
+  .intap-profile-page .s-faq .faq-question *,
+  .intap-profile-page .s-faq summary,
+  .intap-profile-page .s-faq summary * {
+    font-size: 0.88rem !important;
+  }
+}
+
+
+/* =========================================================
+   FAQ AJUSTE FINAL — ANCHO CORRECTO, FRANJA FINA, UNA LÍNEA
+   ========================================================= */
+
+/* Sección FAQ */
+.intap-profile-page .s-faq {
+  padding: 32px 18px 42px !important;
+  background: #ffffff !important;
+}
+
+/* Título más legible y parecido al resto */
+.intap-profile-page .s-faq .faq-title {
+  width: min(100%, 720px) !important;
+  max-width: 720px !important;
+  margin: 0 auto 18px !important;
+  color: #c61920 !important;
+  font-size: clamp(1.35rem, 3.8vw, 1.68rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.16 !important;
+  letter-spacing: -0.018em !important;
+  text-align: center !important;
+}
+
+/* Franja más larga para que no corte la pregunta */
+.intap-profile-page .s-faq .faq-list {
+  width: min(100%, 720px) !important;
+  max-width: 720px !important;
+  margin: 0 auto !important;
+  border: 1px solid #d7d7d7 !important;
+  border-radius: 3px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Filas sin grosor excesivo */
+.intap-profile-page .s-faq .faq-item,
+.intap-profile-page .s-faq details,
+.intap-profile-page .s-faq .faq-card,
+.intap-profile-page .s-faq .faq-row {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid #d7d7d7 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .s-faq .faq-item:last-child,
+.intap-profile-page .s-faq details:last-child,
+.intap-profile-page .s-faq .faq-card:last-child,
+.intap-profile-page .s-faq .faq-row:last-child {
+  border-bottom: 0 !important;
+}
+
+/* La pregunta: una línea, menos alta, más horizontal */
+.intap-profile-page .s-faq .faq-question,
+.intap-profile-page .s-faq summary,
+.intap-profile-page .s-faq .faq-button,
+.intap-profile-page .s-faq .faq-trigger {
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  outline: none !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  box-shadow: none !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 24px !important;
+  align-items: center !important;
+  gap: 12px !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  text-align: left !important;
+  appearance: none !important;
+}
+
+/* Quitar borde azul del navegador */
+.intap-profile-page .s-faq .faq-question:focus,
+.intap-profile-page .s-faq .faq-question:focus-visible,
+.intap-profile-page .s-faq summary:focus,
+.intap-profile-page .s-faq summary:focus-visible,
+.intap-profile-page .s-faq .faq-button:focus,
+.intap-profile-page .s-faq .faq-button:focus-visible,
+.intap-profile-page .s-faq .faq-trigger:focus,
+.intap-profile-page .s-faq .faq-trigger:focus-visible {
+  outline: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Texto de pregunta en una sola línea */
+.intap-profile-page .s-faq .faq-question,
+.intap-profile-page .s-faq .faq-question *,
+.intap-profile-page .s-faq summary,
+.intap-profile-page .s-faq summary *,
+.intap-profile-page .s-faq .faq-button,
+.intap-profile-page .s-faq .faq-button *,
+.intap-profile-page .s-faq .faq-trigger,
+.intap-profile-page .s-faq .faq-trigger * {
+  font-size: clamp(0.92rem, 2.4vw, 1rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+}
+
+.intap-profile-page .s-faq .faq-question-text,
+.intap-profile-page .s-faq .faq-question span:first-child,
+.intap-profile-page .s-faq summary span:first-child,
+.intap-profile-page .s-faq .faq-button span:first-child,
+.intap-profile-page .s-faq .faq-trigger span:first-child {
+  display: block !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Símbolo + / x centrado */
+.intap-profile-page .s-faq .faq-toggle,
+.intap-profile-page .s-faq .faq-question > span:last-child,
+.intap-profile-page .s-faq summary > span:last-child,
+.intap-profile-page .s-faq .faq-button > span:last-child,
+.intap-profile-page .s-faq .faq-trigger > span:last-child {
+  width: 24px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #111111 !important;
+  font-size: 1.16rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+/* Respuesta compacta */
+.intap-profile-page .s-faq .faq-answer {
+  padding: 0 48px 16px 16px !important;
+  color: #5f6d86 !important;
+  background: #ffffff !important;
+  font-size: clamp(0.94rem, 2.5vw, 1rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  text-align: left !important;
+}
+
+/* Evitar que al abrir la fila se vuelva gigante */
+.intap-profile-page .s-faq .faq-item.is-open .faq-question,
+.intap-profile-page .s-faq details[open] summary {
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
+}
+
+/* Cierre forzado de cualquier FAQ no activa */
+.intap-profile-page .s-faq .faq-force-closed .faq-answer {
+  display: none !important;
+}
+
+/* En móvil real, conserva ancho completo sin romper */
+@media (max-width: 520px) {
+  .intap-profile-page .s-faq {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .intap-profile-page .s-faq .faq-title,
+  .intap-profile-page .s-faq .faq-list {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .intap-profile-page .s-faq .faq-question,
+  .intap-profile-page .s-faq summary,
+  .intap-profile-page .s-faq .faq-button,
+  .intap-profile-page .s-faq .faq-trigger {
+    height: 46px !important;
+    min-height: 46px !important;
+    max-height: 46px !important;
+    padding-left: 12px !important;
+    padding-right: 10px !important;
+  }
+
+  .intap-profile-page .s-faq .faq-question,
+  .intap-profile-page .s-faq .faq-question *,
+  .intap-profile-page .s-faq summary,
+  .intap-profile-page .s-faq summary *,
+  .intap-profile-page .s-faq .faq-button,
+  .intap-profile-page .s-faq .faq-button *,
+  .intap-profile-page .s-faq .faq-trigger,
+  .intap-profile-page .s-faq .faq-trigger * {
+    font-size: 0.88rem !important;
+  }
+
+  .intap-profile-page .s-faq .faq-answer {
+    padding-left: 12px !important;
+    padding-right: 36px !important;
+  }
+}
+
+
+/* =========================================================
+   CONTACTOS CORPORATIVOS — FORMATO SEGÚN REFERENCIA
+   Orden visual: Servicios → Contactos → FAQ
+   ========================================================= */
+
+.intap-profile-page .s-company-contact {
+  padding: 30px 42px 34px !important;
+  background: #ffffff !important;
+}
+
+/* Encabezado rojo más proporcionado, como la muestra */
+.intap-profile-page .company-contact-header {
+  width: min(100%, 560px) !important;
+  min-height: 44px !important;
+  margin: 0 auto 8px !important;
+  padding: 8px 18px !important;
+  background: #e02d32 !important;
+  color: #ffffff !important;
+  border-radius: 7px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: clamp(1.05rem, 3.4vw, 1.22rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+}
+
+/* Subtítulo debajo del encabezado */
+.intap-profile-page .company-contact-subtitle {
+  width: min(100%, 560px) !important;
+  margin: 0 auto 18px !important;
+  color: #111111 !important;
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+}
+
+/* Lista alineada, compacta y legible */
+.intap-profile-page .company-contact-list {
+  width: min(100%, 520px) !important;
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  gap: 12px !important;
+}
+
+/* Fila de contacto */
+.intap-profile-page .company-contact-row {
+  width: 100% !important;
+  min-height: 34px !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  display: grid !important;
+  grid-template-columns: 32px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: center !important;
+  color: #111111 !important;
+  text-decoration: none !important;
+  font-size: clamp(0.98rem, 3vw, 1.06rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  font-family: inherit !important;
+}
+
+/* Reset: quitar círculo rojo general */
+.intap-profile-page .company-contact-icon {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  line-height: 1 !important;
+}
+
+/* Tamaño base del ícono */
+.intap-profile-page .company-contact-icon i,
+.intap-profile-page .company-contact-icon svg {
+  font-size: 25px !important;
+  width: 25px !important;
+  height: 25px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Teléfono: azul circular */
+.intap-profile-page .cc-phone {
+  background: #2d9bf0 !important;
+  border-radius: 999px !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page .cc-phone i,
+.intap-profile-page .cc-phone svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  font-size: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* WhatsApp: verde oficial */
+.intap-profile-page .cc-whatsapp {
+  background: #25d366 !important;
+  border-radius: 999px !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page .cc-whatsapp i,
+.intap-profile-page .cc-whatsapp svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Instagram: degradado tipo app, sin deformar */
+.intap-profile-page .cc-instagram {
+  border-radius: 8px !important;
+  background:
+    radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 42%, #d6249f 62%, #285aeb 100%) !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page .cc-instagram i,
+.intap-profile-page .cc-instagram svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Facebook: azul oficial, cuadrado con borde suave */
+.intap-profile-page .cc-facebook {
+  background: #1877f2 !important;
+  border-radius: 4px !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page .cc-facebook i,
+.intap-profile-page .cc-facebook svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Email: sobre negro, sin círculo */
+.intap-profile-page .cc-email {
+  background: transparent !important;
+  border-radius: 0 !important;
+  color: #111111 !important;
+  border: 0 !important;
+}
+
+.intap-profile-page .cc-email i,
+.intap-profile-page .cc-email svg {
+  color: #111111 !important;
+  fill: #111111 !important;
+  font-size: 25px !important;
+  width: 25px !important;
+  height: 25px !important;
+}
+
+/* Web: círculo azul con icono blanco */
+.intap-profile-page .cc-web {
+  background: #2d9bf0 !important;
+  border-radius: 999px !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page .cc-web i,
+.intap-profile-page .cc-web svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  font-size: 15px !important;
+  width: 15px !important;
+  height: 15px !important;
+}
+
+/* Ubicación: pin rojo */
+.intap-profile-page .cc-map {
+  background: transparent !important;
+  border-radius: 0 !important;
+  color: #ff0045 !important;
+}
+
+.intap-profile-page .cc-map i,
+.intap-profile-page .cc-map svg {
+  color: #ff0045 !important;
+  fill: #ff0045 !important;
+  font-size: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* Texto de dirección con buen ancho */
+.intap-profile-page .company-contact-row span:last-child {
+  min-width: 0 !important;
+  color: #111111 !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Mantener FAQ después de contactos, con aire superior controlado */
+.intap-profile-page .s-company-contact + .divider {
+  margin-top: 8px !important;
+}
+
+/* Móvil */
+@media (max-width: 520px) {
+  .intap-profile-page .s-company-contact {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+
+  .intap-profile-page .company-contact-header,
+  .intap-profile-page .company-contact-subtitle,
+  .intap-profile-page .company-contact-list {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .intap-profile-page .company-contact-list {
+    gap: 11px !important;
+  }
+
+  .intap-profile-page .company-contact-row {
+    grid-template-columns: 30px minmax(0, 1fr) !important;
+    gap: 9px !important;
+    font-size: 0.98rem !important;
+  }
+
+  .intap-profile-page .company-contact-icon {
+    width: 27px !important;
+    height: 27px !important;
+    min-width: 27px !important;
+    min-height: 27px !important;
+  }
+}
+
+
+/* =========================================================
+   CONTACTOS CORPORATIVOS FINAL — COMO REFERENCIA
+   ========================================================= */
+
+.intap-profile-page .s-company-contact {
+  padding: 26px 42px 30px !important;
+  background: #ffffff !important;
+}
+
+.intap-profile-page .company-contact-header {
+  width: min(100%, 560px) !important;
+  min-height: 42px !important;
+  margin: 0 auto 8px !important;
+  padding: 8px 18px !important;
+  background: #e02d32 !important;
+  color: #ffffff !important;
+  border-radius: 7px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: clamp(1.05rem, 3.4vw, 1.22rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.15 !important;
+}
+
+.intap-profile-page .company-contact-subtitle {
+  width: min(100%, 560px) !important;
+  margin: 0 auto 18px !important;
+  color: #111111 !important;
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+}
+
+.intap-profile-page .company-contact-list {
+  width: min(100%, 520px) !important;
+  max-width: 520px !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  gap: 11px !important;
+}
+
+.intap-profile-page .company-contact-row {
+  width: 100% !important;
+  min-height: 32px !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  display: grid !important;
+  grid-template-columns: 30px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: center !important;
+  color: #111111 !important;
+  text-decoration: none !important;
+  font-size: clamp(0.98rem, 3vw, 1.06rem) !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  font-family: inherit !important;
+}
+
+/* Base icono */
+.intap-profile-page .company-contact-icon {
+  width: 27px !important;
+  height: 27px !important;
+  min-width: 27px !important;
+  min-height: 27px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  overflow: hidden !important;
+  font-weight: 900 !important;
+  box-shadow: none !important;
+}
+
+/* Teléfono */
+.intap-profile-page .company-contact-icon.cc-phone {
+  background: #2d9bf0 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  font-size: 15px !important;
+}
+
+/* WhatsApp */
+.intap-profile-page .company-contact-icon.cc-whatsapp {
+  background: #25d366 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  font-size: 17px !important;
+}
+
+/* Instagram */
+.intap-profile-page .company-contact-icon.cc-instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 6%, #fd5949 42%, #d6249f 62%, #285aeb 100%) !important;
+  color: #ffffff !important;
+  border-radius: 7px !important;
+  font-size: 22px !important;
+}
+
+/* Facebook */
+.intap-profile-page .company-contact-icon.cc-facebook {
+  background: #1877f2 !important;
+  color: #ffffff !important;
+  border-radius: 4px !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 24px !important;
+  font-weight: 900 !important;
+}
+
+/* Email */
+.intap-profile-page .company-contact-icon.cc-email {
+  background: transparent !important;
+  color: #111111 !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  font-size: 28px !important;
+  font-weight: 500 !important;
+}
+
+/* Web */
+.intap-profile-page .company-contact-icon.cc-web {
+  background: #2d9bf0 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.08em !important;
+}
+
+/* Mapa */
+.intap-profile-page .company-contact-icon.cc-map {
+  background: transparent !important;
+  color: #ff0045 !important;
+  border-radius: 0 !important;
+  font-size: 30px !important;
+  position: relative !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-map::before {
+  content: "📍" !important;
+  font-size: 27px !important;
+  line-height: 1 !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-map {
+  font-size: 0 !important;
+}
+
+/* Texto */
+.intap-profile-page .company-contact-row span:last-child {
+  min-width: 0 !important;
+  color: #111111 !important;
+  word-break: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Controlar aire entre contacto y FAQ */
+.intap-profile-page .s-company-contact + .divider {
+  margin-top: 10px !important;
+}
+
+/* Móvil */
+@media (max-width: 520px) {
+  .intap-profile-page .s-company-contact {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+
+  .intap-profile-page .company-contact-header,
+  .intap-profile-page .company-contact-subtitle,
+  .intap-profile-page .company-contact-list {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .intap-profile-page .company-contact-list {
+    gap: 10px !important;
+  }
+
+  .intap-profile-page .company-contact-row {
+    grid-template-columns: 29px minmax(0, 1fr) !important;
+    gap: 9px !important;
+    font-size: 0.98rem !important;
+  }
+
+  .intap-profile-page .company-contact-icon {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    min-height: 26px !important;
+  }
+}
+
+
+/* =========================================================
+   ICONOS CORPORATIVOS CON REACT-ICONS + MODAL MÓVIL REORDENADO
+   ========================================================= */
+
+/* Iconos sociales reales: limpiar restos de glyphs anteriores */
+.intap-profile-page .company-contact-icon {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page .company-contact-icon svg {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  flex: 0 0 auto !important;
+}
+
+/* Teléfono */
+.intap-profile-page .company-contact-icon.cc-phone {
+  background: #2d9bf0 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-phone svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* WhatsApp */
+.intap-profile-page .company-contact-icon.cc-whatsapp {
+  background: #25d366 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-whatsapp svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Instagram */
+.intap-profile-page .company-contact-icon.cc-instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 6%, #fd5949 42%, #d6249f 62%, #285aeb 100%) !important;
+  color: #ffffff !important;
+  border-radius: 7px !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-instagram svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Facebook */
+.intap-profile-page .company-contact-icon.cc-facebook {
+  background: #1877f2 !important;
+  color: #ffffff !important;
+  border-radius: 4px !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-facebook svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Email: negro, como referencia */
+.intap-profile-page .company-contact-icon.cc-email {
+  background: transparent !important;
+  color: #111111 !important;
+  border-radius: 0 !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-email svg {
+  width: 25px !important;
+  height: 25px !important;
+}
+
+/* Web */
+.intap-profile-page .company-contact-icon.cc-web {
+  background: #2d9bf0 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-web svg {
+  width: 17px !important;
+  height: 17px !important;
+}
+
+/* Ubicación */
+.intap-profile-page .company-contact-icon.cc-map {
+  background: transparent !important;
+  color: #ff0045 !important;
+  border-radius: 0 !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-map::before {
+  content: none !important;
+}
+
+.intap-profile-page .company-contact-icon.cc-map svg {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* Filas corporativas más parecidas a la referencia */
+.intap-profile-page .company-contact-list {
+  gap: 10px !important;
+}
+
+.intap-profile-page .company-contact-row {
+  grid-template-columns: 30px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  min-height: 31px !important;
+}
+
+/* =========================================================
+   MODAL DETALLE EN MÓVIL
+   Orden pedido:
+   1. Galería
+   2. Detalles / descripción / características
+   3. Mapa
+   ========================================================= */
+
+@media (max-width: 760px) {
+  .projects-modal {
+    width: calc(100vw - 24px) !important;
+    max-width: 560px !important;
+    max-height: calc(100vh - 36px) !important;
+    padding: 16px !important;
+    overflow-y: auto !important;
+  }
+
+  .project-detail-layout,
+  .project-detail-body,
+  .project-detail-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  /* Galería arriba */
+  .project-detail-media {
+    order: 1 !important;
+    width: 100% !important;
+  }
+
+  .project-detail-media > img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 330px !important;
+    object-fit: cover !important;
+    border-radius: 14px !important;
+  }
+
+  .project-detail-thumbs {
+    order: 2 !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Detalles debajo de la galería */
+  .project-detail-info {
+    order: 2 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .project-detail-info h2 {
+    order: 1 !important;
+    margin-top: 0 !important;
+    text-align: center !important;
+    font-size: 1.25rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .project-detail-location {
+    order: 2 !important;
+    text-align: center !important;
+    margin-bottom: 8px !important;
+  }
+
+  .project-detail-desc {
+    order: 3 !important;
+    text-align: left !important;
+    line-height: 1.55 !important;
+  }
+
+  .project-detail-actions {
+    order: 4 !important;
+  }
+
+  .project-detail-features,
+  .project-features,
+  .project-detail-list {
+    order: 5 !important;
+  }
+
+  /* Mapa siempre debajo de los detalles */
+  .project-map-wrap,
+  .project-map,
+  .project-map-frame,
+  .project-detail-map {
+    order: 99 !important;
+    width: 100% !important;
+  }
+
+  .project-map-wrap iframe,
+  .project-map iframe,
+  .project-map-frame iframe,
+  .project-detail-map iframe {
+    width: 100% !important;
+    min-height: 190px !important;
+    border-radius: 10px !important;
+  }
+
+  .project-map-link {
+    order: 100 !important;
+    align-self: center !important;
+    margin-top: 8px !important;
+  }
+
+  /* X centrada */
+  .projects-modal-close {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+  }
+
+  /* Flechas centradas sobre la imagen */
+  .project-detail-arrow {
+    top: 42% !important;
+    transform: translateY(-50%) !important;
+  }
+}
+
+
+/* =========================================================
+   MICROANIMACIONES — CONTACTOS E ÍCONOS RÁPIDOS
+   ========================================================= */
+
+/* Contactos principales del perfil */
+.intap-profile-page .contact-row,
+.intap-profile-page .contact-link,
+.intap-profile-page .profile-contact-row,
+.intap-profile-page .company-contact-row {
+  transition: color 180ms ease, transform 180ms ease !important;
+}
+
+/* Texto rojo al pasar el mouse */
+.intap-profile-page .contact-row:hover,
+.intap-profile-page .contact-link:hover,
+.intap-profile-page .profile-contact-row:hover,
+.intap-profile-page .company-contact-row:hover,
+.intap-profile-page .contact-row:hover span:last-child,
+.intap-profile-page .contact-link:hover span:last-child,
+.intap-profile-page .profile-contact-row:hover span:last-child,
+.intap-profile-page .company-contact-row:hover span:last-child {
+  color: #e02d32 !important;
+}
+
+/* Íconos de contactos con zoom suave */
+.intap-profile-page .contact-icon,
+.intap-profile-page .profile-contact-icon,
+.intap-profile-page .company-contact-icon {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease !important;
+  transform-origin: center center !important;
+  will-change: transform !important;
+}
+
+.intap-profile-page .contact-row:hover .contact-icon,
+.intap-profile-page .contact-link:hover .contact-icon,
+.intap-profile-page .profile-contact-row:hover .profile-contact-icon,
+.intap-profile-page .company-contact-row:hover .company-contact-icon {
+  transform: scale(1.12) !important;
+  filter: brightness(1.04) !important;
+}
+
+/* Íconos rápidos debajo del perfil */
+.intap-profile-page .quick-actions a,
+.intap-profile-page .quick-actions button,
+.intap-profile-page .profile-actions a,
+.intap-profile-page .profile-actions button,
+.intap-profile-page .intap-v2-header-actions a,
+.intap-profile-page .intap-v2-header-actions button,
+.intap-profile-page .hero-actions a,
+.intap-profile-page .hero-actions button {
+  transition:
+    transform 190ms ease,
+    box-shadow 190ms ease,
+    border-color 190ms ease,
+    color 190ms ease !important;
+  transform-origin: center center !important;
+  will-change: transform !important;
+}
+
+/* Movimiento elegante: pequeño zoom + elevación */
+.intap-profile-page .quick-actions a:hover,
+.intap-profile-page .quick-actions button:hover,
+.intap-profile-page .profile-actions a:hover,
+.intap-profile-page .profile-actions button:hover,
+.intap-profile-page .intap-v2-header-actions a:hover,
+.intap-profile-page .intap-v2-header-actions button:hover,
+.intap-profile-page .hero-actions a:hover,
+.intap-profile-page .hero-actions button:hover {
+  transform: translateY(-3px) scale(1.06) !important;
+  box-shadow: 0 8px 18px rgba(224, 45, 50, 0.18) !important;
+}
+
+/* Animación al presionar */
+.intap-profile-page .quick-actions a:active,
+.intap-profile-page .quick-actions button:active,
+.intap-profile-page .profile-actions a:active,
+.intap-profile-page .profile-actions button:active,
+.intap-profile-page .intap-v2-header-actions a:active,
+.intap-profile-page .intap-v2-header-actions button:active,
+.intap-profile-page .hero-actions a:active,
+.intap-profile-page .hero-actions button:active,
+.intap-profile-page .contact-row:active .contact-icon,
+.intap-profile-page .contact-link:active .contact-icon,
+.intap-profile-page .profile-contact-row:active .profile-contact-icon,
+.intap-profile-page .company-contact-row:active .company-contact-icon {
+  transform: scale(0.96) !important;
+}
+
+/* Accesibilidad: si el usuario prefiere menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .intap-profile-page .contact-row,
+  .intap-profile-page .contact-link,
+  .intap-profile-page .profile-contact-row,
+  .intap-profile-page .company-contact-row,
+  .intap-profile-page .contact-icon,
+  .intap-profile-page .profile-contact-icon,
+  .intap-profile-page .company-contact-icon,
+  .intap-profile-page .quick-actions a,
+  .intap-profile-page .quick-actions button,
+  .intap-profile-page .profile-actions a,
+  .intap-profile-page .profile-actions button,
+  .intap-profile-page .intap-v2-header-actions a,
+  .intap-profile-page .intap-v2-header-actions button,
+  .intap-profile-page .hero-actions a,
+  .intap-profile-page .hero-actions button {
+    transition: none !important;
+  }
+
+  .intap-profile-page .contact-row:hover .contact-icon,
+  .intap-profile-page .contact-link:hover .contact-icon,
+  .intap-profile-page .profile-contact-row:hover .profile-contact-icon,
+  .intap-profile-page .company-contact-row:hover .company-contact-icon,
+  .intap-profile-page .quick-actions a:hover,
+  .intap-profile-page .quick-actions button:hover,
+  .intap-profile-page .profile-actions a:hover,
+  .intap-profile-page .profile-actions button:hover,
+  .intap-profile-page .intap-v2-header-actions a:hover,
+  .intap-profile-page .intap-v2-header-actions button:hover,
+  .intap-profile-page .hero-actions a:hover,
+  .intap-profile-page .hero-actions button:hover {
+    transform: none !important;
+  }
+}
+
+
+/* =========================================================
+   TÍTULO SECCIÓN SOBRE MÍ / PRESENTACIÓN — NO CORTAR + MÓVIL CENTRADO
+   ========================================================= */
+
+/* Título tipo: "Tu propiedad ideal no está lejos..." */
+.intap-profile-page .s-about h2,
+.intap-profile-page .about-title,
+.intap-profile-page .bio-title,
+.intap-profile-page .profile-about-title,
+.intap-profile-page .section-title {
+  max-width: 620px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  color: #c61920 !important;
+  font-size: clamp(1.38rem, 4.4vw, 1.75rem) !important;
+  font-weight: 900 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.018em !important;
+  text-align: center !important;
+
+  /* Evita cortes feos */
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+}
+
+/* Si el contenedor venía con overflow oculto, lo liberamos */
+.intap-profile-page .s-about,
+.intap-profile-page .about-section,
+.intap-profile-page .bio-section {
+  overflow: visible !important;
+}
+
+/* En móvil: centrado, buen ancho y salto natural */
+@media (max-width: 520px) {
+  .intap-profile-page .s-about h2,
+  .intap-profile-page .about-title,
+  .intap-profile-page .bio-title,
+  .intap-profile-page .profile-about-title,
+  .intap-profile-page .section-title {
+    max-width: 92% !important;
+    font-size: 1.42rem !important;
+    line-height: 1.18 !important;
+    text-align: center !important;
+    margin-top: 0 !important;
+    margin-bottom: 22px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
