@@ -110,7 +110,7 @@ export async function onRequest(context: {
 
     const html = await response.text();
     const canonicalUrl = `${url.origin}/novi`;
-    const imageUrl = `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`;
+    const imageUrl = `${url.origin}/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3`;
 
     const updatedHtml = injectHeadMetadata(html, {
       title: 'NoviHome -Noldys Vicente-',
