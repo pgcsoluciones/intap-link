@@ -565,8 +565,8 @@ export default function IntapProfileNoviV4({ profile }: NoviProfileProps) {
               <span>WhatsApp</span>
             </a>
             <a href={NOVI.instagram} target="_blank" rel="noopener noreferrer">
-              <FaBuilding />
-              <span>Propiedades</span>
+              <FaInstagram />
+              <span>Instagram</span>
             </a>
           </div>
 
