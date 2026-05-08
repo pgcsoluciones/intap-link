@@ -305,7 +305,8 @@ function vcardHref() {
     'BEGIN:VCARD',
     'VERSION:3.0',
     `FN:${NOVI.vcardName || NOVI.advisor}`,
-    `ORG:${NOVI.brand}`,
+    'N:Vicente - NoviHome;Noldys;;;',
+    'ORG:NOVIHOME S.R.L.',
     `TITLE:${NOVI.role}`,
     `TEL;TYPE=CELL:${NOVI.phoneRaw}`,
     `EMAIL:${NOVI.email}`,
@@ -570,7 +571,7 @@ export default function IntapProfileNoviV4({ profile }: NoviProfileProps) {
             </a>
           </div>
 
-          <a className="novi-vcard-btn" href={vcardHref()} download="Noldys-Vicente-NOVI-HOME.vcf">
+          <a className="novi-vcard-btn" href={vcardHref()} download="Noldys-Vicente-NoviHome.vcf">
             <FaRegAddressCard />
             Guardar contacto
           </a>
