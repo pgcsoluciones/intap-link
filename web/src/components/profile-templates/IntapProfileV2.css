@@ -4193,3 +4193,1536 @@ body,
   }
 }
 
+
+
+/* About stats card — INTAP V2 */
+.about-stats-card {
+  background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(245,248,245,0.96));
+  border: 1px solid rgba(47, 49, 54, 0.12);
+  border-radius: 28px;
+  padding: 26px 22px;
+  margin-bottom: 24px;
+  text-align: center;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.08);
+}
+
+.about-stats-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.45rem, 5vw, 2rem);
+  line-height: 1.05;
+  font-weight: 900;
+  color: var(--intap-primary, #2F3136);
+}
+
+.about-stats-text {
+  margin: 0 auto 20px;
+  max-width: 520px;
+  color: #555;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.about-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.about-stat-item {
+  background: #fff;
+  border-radius: 22px;
+  padding: 18px 16px;
+  border: 1px solid rgba(37, 200, 74, 0.22);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+}
+
+.about-stat-item strong {
+  display: block;
+  font-size: clamp(1.75rem, 7vw, 2.45rem);
+  line-height: 1;
+  color: #2F3136;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.about-stat-item span {
+  display: block;
+  margin-top: 8px;
+  color: #25C84A;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+@media (min-width: 720px) {
+  .about-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+
+/* =========================================================
+   THEME CREDITORN — ADAPTACIÓN COMPLETA INTAP PROFILE V2
+   Aplica a toda la arquitectura aprobada de la plantilla:
+   header, contactos, vCard, bio, galería, modales, empresa,
+   servicios, contacto corporativo, FAQs, chat y botones.
+   ========================================================= */
+
+.intap-profile-page.theme-creditorn {
+  --red: #25C84A !important;
+  --red-dark: #2F3136 !important;
+  --red-light: #EEFBEF !important;
+  --red-mid: #DDF6E3 !important;
+  --intap-v2-red: #25C84A !important;
+  --intap-v2-red-dark: #2F3136 !important;
+  --intap-v2-text: #1F1F1F !important;
+  --creditorn-dark: #2F3136;
+  --creditorn-green: #25C84A;
+  --creditorn-lime: #9BBE25;
+  --creditorn-soft: #F4F4F4;
+  color: #1F1F1F !important;
+  background: #ffffff !important;
+}
+
+/* Header / logo suelto */
+.intap-profile-page.theme-creditorn .avatar-wrap,
+.intap-profile-page.theme-creditorn .avatar-wrap--logo {
+  width: min(340px, 78vw) !important;
+  height: auto !important;
+  aspect-ratio: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 0 auto 28px !important;
+}
+
+.intap-profile-page.theme-creditorn .avatar-wrap img,
+.intap-profile-page.theme-creditorn .avatar-img--logo {
+  width: min(330px, 76vw) !important;
+  height: auto !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
+.intap-profile-page.theme-creditorn .header-name {
+  color: #2F3136 !important;
+  letter-spacing: -0.03em !important;
+}
+
+.intap-profile-page.theme-creditorn .header-role {
+  color: #6F7277 !important;
+  font-weight: 600 !important;
+}
+
+.intap-profile-page.theme-creditorn .divider {
+  border-color: #9BBE25 !important;
+  background: #9BBE25 !important;
+}
+
+/* Iconos rápidos */
+.intap-profile-page.theme-creditorn .hicon {
+  border-color: #2F3136 !important;
+  color: #25C84A !important;
+  background: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .hicon i {
+  color: #25C84A !important;
+}
+
+/* Contacto principal */
+.intap-profile-page.theme-creditorn .contact-header {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .crow-icon {
+  background: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .crow-icon i,
+.intap-profile-page.theme-creditorn .crow-text {
+  color: inherit !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-row:hover .crow-text {
+  color: #25C84A !important;
+}
+
+/* vCard */
+.intap-profile-page.theme-creditorn .vcard-btn {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+/* Bio / Sobre mí */
+.intap-profile-page.theme-creditorn .bio-title,
+.intap-profile-page.theme-creditorn .bio-help-line {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .bio-text {
+  color: #1F1F1F !important;
+}
+
+/* Galería / catálogo aprobado */
+.intap-profile-page.theme-creditorn .gallery-title,
+.intap-profile-page.theme-creditorn .gallery-header h2 {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .gallery-count {
+  color: #25C84A !important;
+  background: rgba(37, 200, 74, 0.08) !important;
+  border-color: rgba(37, 200, 74, 0.25) !important;
+}
+
+.intap-profile-page.theme-creditorn .slide-label {
+  background: rgba(47, 49, 54, 0.78) !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .dot,
+.intap-profile-page.theme-creditorn .carousel-dots button {
+  background: #DDF6E3 !important;
+  border-color: #DDF6E3 !important;
+}
+
+.intap-profile-page.theme-creditorn .dot.active,
+.intap-profile-page.theme-creditorn .carousel-dots button.active {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .cbtn.primary,
+.intap-profile-page.theme-creditorn .project-card-btn.primary,
+.intap-profile-page.theme-creditorn .project-whatsapp-btn {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .cbtn.outline,
+.intap-profile-page.theme-creditorn .project-card-btn.outline,
+.intap-profile-page.theme-creditorn .project-more-btn {
+  background: #ffffff !important;
+  border-color: #25C84A !important;
+  color: #25C84A !important;
+}
+
+/* Modales de galería */
+.intap-profile-page.theme-creditorn .projects-modal-head h2,
+.intap-profile-page.theme-creditorn .project-card-body h3,
+.intap-profile-page.theme-creditorn .project-detail-info h2,
+.intap-profile-page.theme-creditorn .project-detail-location {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .projects-modal-head span,
+.intap-profile-page.theme-creditorn .project-tags span {
+  color: #25C84A !important;
+  background: rgba(37, 200, 74, 0.08) !important;
+  border-color: rgba(37, 200, 74, 0.22) !important;
+}
+
+.intap-profile-page.theme-creditorn .projects-modal-close,
+.intap-profile-page.theme-creditorn .project-detail-arrow {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .project-detail-thumb.active {
+  border-color: #25C84A !important;
+}
+
+/* Sobre empresa / métricas */
+.intap-profile-page.theme-creditorn .company-highlight,
+.intap-profile-page.theme-creditorn .company-contact-header,
+.intap-profile-page.theme-creditorn .about-stats-title {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .company-copy,
+.intap-profile-page.theme-creditorn .about-stats-text {
+  color: #1F1F1F !important;
+}
+
+.intap-profile-page.theme-creditorn .about-stat-item {
+  border-color: rgba(37, 200, 74, 0.25) !important;
+}
+
+.intap-profile-page.theme-creditorn .about-stat-item strong {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .about-stat-item span {
+  color: #25C84A !important;
+}
+
+/* Servicios */
+.intap-profile-page.theme-creditorn .services-title {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .services-intro {
+  color: #1F1F1F !important;
+}
+
+.intap-profile-page.theme-creditorn .service-check {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .service-row strong {
+  color: #2F3136 !important;
+}
+
+/* Contactos corporativos */
+.intap-profile-page.theme-creditorn .company-contact-subtitle,
+.intap-profile-page.theme-creditorn .company-contact-row,
+.intap-profile-page.theme-creditorn .company-contact-row span,
+.intap-profile-page.theme-creditorn .company-contact-row a {
+  color: #1F1F1F !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-row:hover span,
+.intap-profile-page.theme-creditorn .company-contact-row:hover a {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon {
+  background: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-instagram {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%) !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-facebook {
+  background: #1877F2 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-whatsapp {
+  background: #25D366 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-email {
+  background: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-web {
+  background: #1D8FE3 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-map {
+  background: #EF3F62 !important;
+}
+
+/* FAQs */
+.intap-profile-page.theme-creditorn .faq-title,
+.intap-profile-page.theme-creditorn .faq-cta-title {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .faq-icon {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .faq-question,
+.intap-profile-page.theme-creditorn .faq-question *,
+.intap-profile-page.theme-creditorn .faq-answer {
+  color: #1F1F1F !important;
+}
+
+.intap-profile-page.theme-creditorn .faq-item.is-open .faq-question,
+.intap-profile-page.theme-creditorn .s-faq details[open] summary {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .faq-cta-btn {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+/* Chat */
+.intap-profile-page.theme-creditorn .chat-trigger,
+.intap-profile-page.theme-creditorn .chat-badge,
+.intap-profile-page.theme-creditorn .chat-opt {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head {
+  background: #2F3136 !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head-name,
+.intap-profile-page.theme-creditorn .chat-greeting,
+.intap-profile-page.theme-creditorn .chat-footer {
+  color: #1F1F1F !important;
+}
+
+/* Footer */
+.intap-profile-page.theme-creditorn .footer-credit strong {
+  color: #25C84A !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .intap-profile-page.theme-creditorn .avatar-wrap,
+  .intap-profile-page.theme-creditorn .avatar-wrap img,
+  .intap-profile-page.theme-creditorn .avatar-img--logo {
+    width: min(285px, 78vw) !important;
+  }
+}
+
+/* =========================
+   CREDITORN FINAL UI BLOCK
+   ========================= */
+
+.intap-profile-page.theme-creditorn .header-name {
+  color: #25C84A !important;
+  font-size: clamp(1.9rem, 5.2vw, 2.4rem) !important;
+  line-height: 1.08 !important;
+}
+
+.intap-profile-page.theme-creditorn .header-role {
+  color: #6F7277 !important;
+  font-size: clamp(1.9rem, 5.2vw, 2.4rem) !important;
+  line-height: 1.08 !important;
+  font-weight: 500 !important;
+}
+
+.intap-profile-page.theme-creditorn .header-mini-contacts {
+  margin: 18px auto 6px auto !important;
+  display: grid !important;
+  gap: 10px !important;
+  max-width: 580px !important;
+  text-align: left !important;
+}
+
+.intap-profile-page.theme-creditorn .header-mini-row {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  color: #2F3136 !important;
+  text-decoration: none !important;
+  font-size: 1rem !important;
+  line-height: 1.35 !important;
+}
+
+.intap-profile-page.theme-creditorn .header-mini-row span {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .header-mini-row:hover span {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .header-mini-row .mini-icon {
+  width: 18px !important;
+  min-width: 18px !important;
+  margin-top: 2px !important;
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-header {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .company-highlight {
+  background: transparent !important;
+  border: 2px solid #25C84A !important;
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .company-highlight * {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .bio-title,
+.intap-profile-page.theme-creditorn .bio-help-line,
+.intap-profile-page.theme-creditorn .gallery-title,
+.intap-profile-page.theme-creditorn .gallery-header h2,
+.intap-profile-page.theme-creditorn .services-title,
+.intap-profile-page.theme-creditorn .faq-title,
+.intap-profile-page.theme-creditorn .faq-cta-title {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .bio-text,
+.intap-profile-page.theme-creditorn .services-intro,
+.intap-profile-page.theme-creditorn .company-copy,
+.intap-profile-page.theme-creditorn .about-stats-text {
+  color: #1F1F1F !important;
+}
+
+.intap-profile-page.theme-creditorn .benefits-grid {
+  margin-top: 18px !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-card {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  padding: 14px 16px !important;
+  border: 1px solid rgba(37, 200, 74, 0.24) !important;
+  border-radius: 16px !important;
+  background: rgba(37, 200, 74, 0.05) !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-card span {
+  color: #2F3136 !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-icon {
+  color: #25C84A !important;
+  margin-top: 2px !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-header {
+  background: #25C84A !important;
+  color: #ffffff !important;
+  border-color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-row.cc-whatsapp,
+.intap-profile-page.theme-creditorn .company-contact-row.cc-whatsapp:hover {
+  background: transparent !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-row.cc-whatsapp span,
+.intap-profile-page.theme-creditorn .company-contact-row.cc-whatsapp a {
+  color: #25C84A !important;
+  font-weight: 700 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-whatsapp {
+  background: #25D366 !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-map {
+  background: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-map i {
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .project-tags,
+.intap-profile-page.theme-creditorn .project-card-tags {
+  display: none !important;
+}
+
+.intap-profile-page.theme-creditorn .gallery-count {
+  color: #25C84A !important;
+  background: rgba(37, 200, 74, 0.08) !important;
+  border-color: rgba(37, 200, 74, 0.24) !important;
+}
+
+.intap-profile-page.theme-creditorn .cbtn.primary,
+.intap-profile-page.theme-creditorn .project-card-btn.primary,
+.intap-profile-page.theme-creditorn .project-whatsapp-btn,
+.intap-profile-page.theme-creditorn .vcard-btn,
+.intap-profile-page.theme-creditorn .faq-cta-btn,
+.intap-profile-page.theme-creditorn .chat-trigger,
+.intap-profile-page.theme-creditorn .chat-badge,
+.intap-profile-page.theme-creditorn .chat-opt {
+  background: #25C84A !important;
+  border-color: #25C84A !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .cbtn.outline,
+.intap-profile-page.theme-creditorn .project-card-btn.outline,
+.intap-profile-page.theme-creditorn .project-more-btn {
+  background: #ffffff !important;
+  border-color: #25C84A !important;
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .slide-label {
+  background: rgba(47, 49, 54, 0.78) !important;
+  color: #ffffff !important;
+}
+
+@media (max-width: 768px) {
+  .intap-profile-page.theme-creditorn .benefits-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .intap-profile-page.theme-creditorn .header-mini-contacts {
+    max-width: 100% !important;
+    padding: 0 8px !important;
+  }
+}
+
+
+/* =========================
+   CREDITORN UI REFINEMENT
+   ========================= */
+
+.intap-profile-page.theme-creditorn .company-highlight {
+  display: none !important;
+}
+
+/* Header mini contacts */
+.intap-profile-page.theme-creditorn .header-mini-row {
+  background: transparent !important;
+  border: 0 !important;
+  text-decoration: none !important;
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .header-mini-row:hover span {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .header-mini-row span {
+  color: #2F3136 !important;
+}
+
+/* Contacto corporativo estilo más limpio */
+.intap-profile-page.theme-creditorn .company-contact-header {
+  background: #25C84A !important;
+  color: #ffffff !important;
+  border-radius: 14px !important;
+  text-align: center !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-subtitle {
+  color: #2F3136 !important;
+  text-align: center !important;
+  margin-top: 10px !important;
+  margin-bottom: 18px !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-row {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 8px 0 !important;
+  gap: 12px !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-row span,
+.intap-profile-page.theme-creditorn .company-contact-row a {
+  color: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-row.cc-whatsapp span {
+  color: #25C84A !important;
+  font-weight: 700 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+  width: auto !important;
+  min-width: 22px !important;
+  height: auto !important;
+  border-radius: 0 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-whatsapp {
+  color: #25D366 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-instagram {
+  background: transparent !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-facebook {
+  background: transparent !important;
+  color: #1877F2 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-email {
+  background: transparent !important;
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-row.cc-map .company-contact-icon,
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-map {
+  background: transparent !important;
+  color: #25C84A !important;
+}
+
+/* Beneficios: no cards cerradas, presentación limpia */
+.intap-profile-page.theme-creditorn .benefits-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px 28px !important;
+  margin-top: 20px !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-card span {
+  color: #2F3136 !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-icon {
+  color: #25C84A !important;
+  margin-top: 4px !important;
+}
+
+@media (max-width: 768px) {
+  .intap-profile-page.theme-creditorn .benefits-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Modal servicio: imagen completa, no cortada */
+.intap-profile-page.theme-creditorn .project-detail-media img,
+.intap-profile-page.theme-creditorn .project-detail-main img,
+.intap-profile-page.theme-creditorn .projects-modal-card img {
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .project-detail-main,
+.intap-profile-page.theme-creditorn .project-detail-media {
+  background: #ffffff !important;
+}
+
+/* Botón calcular préstamo */
+.intap-profile-page.theme-creditorn .project-calc-btn {
+  background: #ffffff !important;
+  color: #25C84A !important;
+  border: 1.5px solid #25C84A !important;
+}
+
+/* Chat */
+.intap-profile-page.theme-creditorn .chat-trigger img {
+  display: none !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-trigger::before {
+  content: "\\f4ad";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #25C84A;
+  color: #ffffff;
+}
+
+.intap-profile-page.theme-creditorn .chat-head,
+.intap-profile-page.theme-creditorn .chat-head * {
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head {
+  background: #2F3136 !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-panel,
+.intap-profile-page.theme-creditorn .chat-window {
+  overflow: hidden !important;
+}
+
+
+/* =========================
+   CREDITORN FINAL REFINEMENT — 2026-05-05
+   ========================= */
+
+/* Header estilo referencia Decology */
+.intap-profile-page.theme-creditorn .header-name {
+  color: #25C84A !important;
+  font-size: clamp(2.45rem, 8vw, 4rem) !important;
+  line-height: .98 !important;
+  font-weight: 800 !important;
+  margin-bottom: 12px !important;
+}
+
+.intap-profile-page.theme-creditorn .header-role {
+  color: #6F7277 !important;
+  font-size: clamp(1.35rem, 4.7vw, 2.2rem) !important;
+  line-height: 1.08 !important;
+  font-weight: 500 !important;
+  max-width: 620px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Los contactos no van debajo del nombre; van entre Contáctanos y vCard */
+.intap-profile-page.theme-creditorn .header-mini-contacts {
+  display: none !important;
+}
+
+/* Contactos principales tipo Decology, entre franja y guardar contacto */
+.intap-profile-page.theme-creditorn .s-contact {
+  max-width: 560px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-header {
+  background: #25C84A !important;
+  color: #fff !important;
+  border-radius: 14px !important;
+  font-weight: 800 !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-list {
+  margin-top: 18px !important;
+  display: grid !important;
+  gap: 11px !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-row {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 2px 0 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+}
+
+.intap-profile-page.theme-creditorn .crow-icon {
+  background: transparent !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  height: 24px !important;
+  color: #25C84A !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.intap-profile-page.theme-creditorn .crow-icon i {
+  color: #25C84A !important;
+  font-size: 1.05rem !important;
+}
+
+.intap-profile-page.theme-creditorn .crow-text {
+  color: #2F3136 !important;
+  font-size: 1.04rem !important;
+  line-height: 1.32 !important;
+  font-weight: 500 !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-row:hover .crow-text {
+  color: #25C84A !important;
+}
+
+/* Botón vCard más cercano a referencia Decology */
+.intap-profile-page.theme-creditorn .s-vcard {
+  max-width: 560px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.intap-profile-page.theme-creditorn .vcard-btn {
+  background: #25C84A !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+  font-weight: 800 !important;
+}
+
+/* Beneficios como presentación de valor, sin card encerrada */
+.intap-profile-page.theme-creditorn .bio-text {
+  display: none !important;
+}
+
+.intap-profile-page.theme-creditorn .benefits-grid {
+  max-width: 560px !important;
+  margin: 26px auto 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px 28px !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-card {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  gap: 10px !important;
+  align-items: flex-start !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-card span {
+  color: #2F3136 !important;
+  font-weight: 600 !important;
+  line-height: 1.32 !important;
+}
+
+.intap-profile-page.theme-creditorn .benefit-icon {
+  color: #25C84A !important;
+  margin-top: 4px !important;
+}
+
+/* Quiénes somos / texto final */
+.intap-profile-page.theme-creditorn .company-copy {
+  max-width: 680px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: left !important;
+}
+
+.intap-profile-page.theme-creditorn .company-copy p {
+  color: #2F3136 !important;
+  text-align: left !important;
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  white-space: normal !important;
+  line-height: 1.72 !important;
+  font-weight: 450 !important;
+}
+
+/* Galería: no títulos montados sobre imagen */
+.intap-profile-page.theme-creditorn .slide-label {
+  display: none !important;
+}
+
+/* Modal: imagen completa y clickeable */
+.intap-profile-page.theme-creditorn .project-detail-media {
+  background: #fff !important;
+}
+
+.intap-profile-page.theme-creditorn .project-detail-image-btn {
+  width: 100% !important;
+  border: 0 !important;
+  background: #fff !important;
+  padding: 0 !important;
+  cursor: zoom-in !important;
+  display: block !important;
+}
+
+.intap-profile-page.theme-creditorn .project-detail-image-btn img,
+.intap-profile-page.theme-creditorn .project-detail-media img,
+.intap-profile-page.theme-creditorn .project-card-image img,
+.intap-profile-page.theme-creditorn .carousel-slide img {
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #fff !important;
+}
+
+.intap-profile-page.theme-creditorn .project-detail-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+}
+
+.intap-profile-page.theme-creditorn .project-calc-btn {
+  background: #fff !important;
+  color: #25C84A !important;
+  border: 1.5px solid #25C84A !important;
+  text-decoration: none !important;
+}
+
+.intap-profile-page.theme-creditorn .project-map {
+  margin: 18px 0 14px !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(37, 200, 74, .22) !important;
+}
+
+.intap-profile-page.theme-creditorn .project-map iframe {
+  width: 100% !important;
+  min-height: 220px !important;
+  border: 0 !important;
+  display: block !important;
+}
+
+.intap-profile-page.theme-creditorn .project-map-link {
+  display: inline-flex !important;
+  margin-bottom: 18px !important;
+  color: #25C84A !important;
+  font-weight: 700 !important;
+}
+
+/* Lightbox imagen completa */
+.intap-profile-page .project-image-lightbox {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  background: rgba(0,0,0,.82) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px !important;
+}
+
+.intap-profile-page .project-image-lightbox img {
+  max-width: min(96vw, 1180px) !important;
+  max-height: 88vh !important;
+  object-fit: contain !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+}
+
+.intap-profile-page .project-image-lightbox-close {
+  position: fixed !important;
+  top: 18px !important;
+  right: 20px !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+  background: #25C84A !important;
+  color: #fff !important;
+  font-size: 28px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+/* Contacto corporativo inferior: limpio, sin fondos raros */
+.intap-profile-page.theme-creditorn .company-contact-row,
+.intap-profile-page.theme-creditorn .company-contact-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon,
+.intap-profile-page.theme-creditorn .company-contact-icon svg {
+  color: #25C84A !important;
+  fill: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-email,
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-map,
+.intap-profile-page.theme-creditorn .company-contact-icon.cc-map::before {
+  background: transparent !important;
+  color: #25C84A !important;
+  fill: #25C84A !important;
+}
+
+/* Chat: ícono de servicio, no logo; texto visible */
+.intap-profile-page.theme-creditorn .chat-trigger img,
+.intap-profile-page.theme-creditorn .chat-head img {
+  display: none !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-service-avatar {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  border-radius: 999px !important;
+  background: #25C84A !important;
+  color: #fff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-service-avatar--trigger {
+  width: 58px !important;
+  height: 58px !important;
+  font-size: 28px !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head {
+  background: #2F3136 !important;
+  color: #fff !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head-name,
+.intap-profile-page.theme-creditorn .chat-close {
+  color: #fff !important;
+}
+
+@media (max-width: 768px) {
+  .intap-profile-page.theme-creditorn .benefits-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .intap-profile-page.theme-creditorn .header-name {
+    font-size: clamp(2.4rem, 11vw, 3.4rem) !important;
+  }
+
+  .intap-profile-page.theme-creditorn .header-role {
+    font-size: clamp(1.28rem, 6vw, 1.85rem) !important;
+  }
+}
+
+/* =========================
+   CREDITORN CONTACT ICONS + CHAT AVATAR FIXED — 2026-05-05
+   ========================= */
+
+/* Contactos principales como referencia Decology: iconos sueltos, sin cuadro */
+.intap-profile-page.theme-creditorn .contact-list .contact-row .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row .crow-icon svg {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  width: 26px !important;
+  min-width: 26px !important;
+  height: 26px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Teléfono */
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(1) .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(1) .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(1) .crow-icon svg {
+  color: #34A853 !important;
+  fill: #34A853 !important;
+}
+
+/* WhatsApp */
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(2) .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(2) .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(2) .crow-icon svg {
+  color: #25D366 !important;
+  fill: #25D366 !important;
+}
+
+/* Instagram */
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(3) .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(3) .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(3) .crow-icon svg {
+  color: #E4405F !important;
+  fill: #E4405F !important;
+}
+
+/* Facebook */
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(4) .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(4) .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(4) .crow-icon svg {
+  color: #1877F2 !important;
+  fill: #1877F2 !important;
+}
+
+/* Email */
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(5) .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(5) .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(5) .crow-icon svg {
+  color: #111111 !important;
+  fill: #111111 !important;
+}
+
+/* Web */
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(6) .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(6) .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(6) .crow-icon svg {
+  color: #1E88E5 !important;
+  fill: #1E88E5 !important;
+}
+
+/* Ubicación */
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(7) .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(7) .crow-icon i,
+.intap-profile-page.theme-creditorn .contact-list .contact-row:nth-child(7) .crow-icon svg {
+  color: #EA4335 !important;
+  fill: #EA4335 !important;
+}
+
+/* Chat avatar real */
+.intap-profile-page.theme-creditorn .chat-trigger::before {
+  content: none !important;
+  display: none !important;
+}
+
+.intap-profile-page.theme-creditorn img.chat-service-avatar {
+  display: block !important;
+  object-fit: cover !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head img.chat-service-avatar {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  margin-right: 10px !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-trigger img.chat-service-avatar,
+.intap-profile-page.theme-creditorn img.chat-service-avatar--trigger {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head {
+  background: #2F3136 !important;
+  color: #ffffff !important;
+}
+
+.intap-profile-page.theme-creditorn .chat-head-name,
+.intap-profile-page.theme-creditorn .chat-close {
+  color: #ffffff !important;
+}
+
+
+/* === CREDITORN COMPANY CONTACT BRAND ICONS START === */
+
+/* Bloque empresarial: iconos visuales tipo referencia Decology/JPREZ */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 8px 0 !important;
+  gap: 14px !important;
+  align-items: center !important;
+}
+
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  font-size: 1.15rem !important;
+}
+
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+  color: inherit !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Teléfono — círculo azul como referencia */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-phone,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(1) .company-contact-icon {
+  background: #2EA7F2 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+}
+
+/* WhatsApp — círculo verde con símbolo blanco */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-whatsapp,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(2) .company-contact-icon {
+  background: #25D366 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+}
+
+/* Instagram — degradado oficial aproximado */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-instagram,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(3) .company-contact-icon {
+  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 8%, #fd5949 42%, #d6249f 64%, #285AEB 100%) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+}
+
+/* Facebook — azul con letra blanca */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-facebook,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(4) .company-contact-icon {
+  background: #1877F2 !important;
+  color: #ffffff !important;
+  border-radius: 5px !important;
+}
+
+/* Email — sobre negro, sin fondo */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-email,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(5) .company-contact-icon {
+  background: transparent !important;
+  color: #111111 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-email svg,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(5) .company-contact-icon svg {
+  width: 26px !important;
+  height: 26px !important;
+}
+
+/* Web — círculo azul */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-web,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-website,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-globe,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(6) .company-contact-icon {
+  background: #1E88E5 !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+}
+
+/* Ubicación — pin rojo, sin caja */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-map,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(7) .company-contact-icon {
+  background: transparent !important;
+  color: #FF1744 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-icon.cc-map svg,
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:nth-child(7) .company-contact-icon svg {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+/* Texto del bloque empresarial */
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row span:last-child {
+  color: #2F3136 !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.intap-profile-page.theme-creditorn .s-company-contact .company-contact-row:hover span:last-child {
+  color: #25C84A !important;
+}
+
+/* === CREDITORN COMPANY CONTACT BRAND ICONS END === */\n\n\n\n
+
+
+/* === CREDITORN CONTACTA CONMIGO FINAL DECOLOGY START === */
+
+/* Contacta conmigo: formato tipo Decology, con paleta CreditoRN */
+.intap-profile-page.theme-creditorn .s-contact {
+  max-width: 560px !important;
+  margin: 0 auto !important;
+  padding: 22px 0 18px !important;
+}
+
+.intap-profile-page.theme-creditorn .s-contact .contact-header {
+  width: min(360px, 88vw) !important;
+  margin: 0 auto 22px !important;
+  padding: 14px 20px !important;
+  background: #25C84A !important;
+  color: #ffffff !important;
+  border-radius: 12px !important;
+  text-align: center !important;
+  font-size: clamp(1.18rem, 4.8vw, 1.55rem) !important;
+  line-height: 1.15 !important;
+  font-weight: 800 !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-list-creditorn {
+  width: min(360px, 88vw) !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-list-creditorn .contact-row {
+  display: grid !important;
+  grid-template-columns: 30px 1fr !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-list-creditorn .crow-icon {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-list-creditorn .crow-icon i {
+  font-size: 1.28rem !important;
+  line-height: 1 !important;
+  color: inherit !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-list-creditorn .crow-text {
+  color: #2F3136 !important;
+  font-size: 1.05rem !important;
+  line-height: 1.3 !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+}
+
+/* Todos en verde CreditoRN, estilo Decology */
+.intap-profile-page.theme-creditorn .contact-list-creditorn .contact-row-whatsapp .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list-creditorn .contact-row-phone .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list-creditorn .contact-row-instagram .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list-creditorn .contact-row-email .crow-icon,
+.intap-profile-page.theme-creditorn .contact-list-creditorn .contact-row-map .crow-icon {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .contact-list-creditorn .contact-row:hover .crow-text {
+  color: #25C84A !important;
+}
+
+.intap-profile-page.theme-creditorn .s-vcard {
+  max-width: 560px !important;
+  margin: 0 auto !important;
+  padding: 4px 0 22px !important;
+}
+
+.intap-profile-page.theme-creditorn .s-vcard .vcard-btn {
+  width: min(360px, 88vw) !important;
+  margin: 18px auto 0 !important;
+  padding: 15px 20px !important;
+  background: #25C84A !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  text-decoration: none !important;
+}
+
+.intap-profile-page.theme-creditorn .s-vcard .vcard-btn i {
+  color: #ffffff !important;
+}
+
+/* === CREDITORN CONTACTA CONMIGO FINAL DECOLOGY END === */
+
+
+/* === CREDITORN CALCULATOR CTA START === */
+
+.intap-profile-page.theme-creditorn .creditorn-calculator-cta {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 24px 0 12px !important;
+}
+
+.intap-profile-page.theme-creditorn .creditorn-calculator-cta__button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: min(360px, 88vw) !important;
+  min-height: 54px !important;
+  padding: 15px 24px !important;
+  border-radius: 999px !important;
+  background: #25C84A !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
+  text-align: center !important;
+  font-weight: 800 !important;
+  font-size: 1.02rem !important;
+  line-height: 1.2 !important;
+  border: 0 !important;
+  box-shadow: 0 10px 24px rgba(37, 200, 74, 0.20) !important;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease !important;
+}
+
+.intap-profile-page.theme-creditorn .creditorn-calculator-cta__button:hover {
+  background: #20b843 !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
+  transform: translateY(-2px) scale(1.01) !important;
+  box-shadow: 0 14px 28px rgba(37, 200, 74, 0.28) !important;
+}
+
+.intap-profile-page.theme-creditorn .creditorn-calculator-cta__button:active {
+  transform: translateY(0) scale(0.995) !important;
+  box-shadow: 0 8px 18px rgba(37, 200, 74, 0.18) !important;
+}
+
+.intap-profile-page.theme-creditorn .creditorn-calculator-cta__button:focus-visible {
+  outline: 3px solid rgba(37, 200, 74, 0.28) !important;
+  outline-offset: 3px !important;
+}
+
+/* === CREDITORN CALCULATOR CTA END === */
+
+
+
+/* === CREDITORN GALLERY IMAGE VISIBILITY FIX START === */
+
+.intap-profile-page.theme-creditorn .project-card-image,
+.intap-profile-page.theme-creditorn .carousel-slide,
+.intap-profile-page.theme-creditorn .project-detail-media,
+.intap-profile-page.theme-creditorn .project-detail-image-btn,
+.intap-profile-page.theme-creditorn .projects-modal-card {
+  background: #f7f7f7 !important;
+  overflow: hidden !important;
+}
+
+.intap-profile-page.theme-creditorn .project-card-image img,
+.intap-profile-page.theme-creditorn .carousel-slide img,
+.intap-profile-page.theme-creditorn .project-detail-media img,
+.intap-profile-page.theme-creditorn .project-detail-image-btn img,
+.intap-profile-page.theme-creditorn .projects-modal-card img {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 190px !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+@media (max-width: 768px) {
+  .intap-profile-page.theme-creditorn .project-card-image img,
+  .intap-profile-page.theme-creditorn .carousel-slide img,
+  .intap-profile-page.theme-creditorn .project-detail-media img,
+  .intap-profile-page.theme-creditorn .project-detail-image-btn img,
+  .intap-profile-page.theme-creditorn .projects-modal-card img {
+    min-height: 220px !important;
+  }
+}
+
+/* === CREDITORN GALLERY IMAGE VISIBILITY FIX END === */

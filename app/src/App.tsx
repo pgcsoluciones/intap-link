@@ -7,7 +7,6 @@ import AdminDashboard from './components/admin/AdminDashboard'
 import AdminLinks from './components/admin/AdminLinks'
 import AdminFAQs from './components/admin/AdminFAQs'
 import AdminProducts from './components/admin/AdminProducts'
-import AdminVideos from './components/admin/AdminVideos'
 import AdminBlocks from './components/admin/AdminBlocks'
 import AdminVisual from './components/admin/AdminVisual'
 import AdminTemplate from './components/admin/AdminTemplate'
@@ -53,8 +52,7 @@ function App() {
         <Route path="/admin/links"    element={<AdminGuard><AdminLinks /></AdminGuard>} />
         <Route path="/admin/faqs"     element={<AdminGuard><AdminFAQs /></AdminGuard>} />
         <Route path="/admin/products" element={<AdminGuard><AdminProducts /></AdminGuard>} />
-        <Route path="/admin/videos"   element={<AdminGuard><AdminVideos /></AdminGuard>} />
-        <Route path="/admin/blocks"   element={<AdminGuard><AdminBlocks /></AdminGuard>} />
+<Route path="/admin/blocks"   element={<AdminGuard><AdminBlocks /></AdminGuard>} />
         <Route path="/admin/visual"    element={<AdminGuard><AdminVisual /></AdminGuard>} />
         <Route path="/admin/template"   element={<AdminGuard><AdminTemplate /></AdminGuard>} />
         <Route path="/admin/retention"  element={<AdminGuard><AdminRetention /></AdminGuard>} />

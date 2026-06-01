@@ -1,0 +1,2283 @@
+:root {
+  --rentaord-blue: #156bb7;
+  --rentaord-red: #e52323;
+  --rentaord-black: #050505;
+  --rentaord-text: #17191f;
+  --rentaord-muted: #374151;
+  --rentaord-line: #d9eefb;
+  --rentaord-soft-line: #e7ebf1;
+}
+
+.rentaord-page {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background: #ffffff;
+  color: var(--rentaord-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.rentaord-page * {
+  box-sizing: border-box;
+}
+
+.rentaord-page a,
+.rentaord-page button {
+  font-family: inherit;
+}
+
+.rentaord-page a {
+  text-decoration: none;
+}
+
+.rentaord-shell {
+  width: min(100%, 520px);
+  max-width: 520px;
+  margin: 0 auto;
+  background: #ffffff;
+  box-shadow: none;
+  overflow: visible;
+}
+
+/* HERO LIMPIO */
+.rentaord-hero {
+  width: 100%;
+  position: relative;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.rentaord-hero-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center top;
+}
+
+.rentaord-hero-message {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  max-width: 258px;
+  color: var(--rentaord-blue);
+  text-align: left;
+  z-index: 2;
+}
+
+.rentaord-hero-message strong {
+  display: block;
+  font-size: 28px;
+  line-height: 1.14;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.rentaord-logo-center {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 10px auto 0;
+  padding: 0 24px;
+  background: #ffffff;
+}
+
+.rentaord-logo-center img {
+  width: min(58%, 248px);
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 8px rgba(255,255,255,.95))
+    drop-shadow(0 0 18px rgba(255,255,255,.75));
+}
+
+/* IDENTIDAD */
+.rentaord-identity {
+  margin: 0;
+  padding: 28px 50px 22px;
+  background: #ffffff;
+}
+
+.rentaord-identity h1 {
+  margin: 0;
+  color: var(--rentaord-blue);
+  font-size: 27px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.rentaord-identity h1::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rentaord-blue) 0 50%, var(--rentaord-red) 50% 100%);
+  vertical-align: middle;
+}
+
+.rentaord-identity h2 {
+  margin: 12px 0 0;
+  color: var(--rentaord-blue);
+  font-size: 18px;
+  line-height: 1.22;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.rentaord-lead {
+  margin: 14px 0 0;
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.72;
+}
+
+.rentaord-hero-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* BOTONES */
+.rentaord-btn,
+.rentaord-all-models-btn {
+  margin: 18px auto 0;
+  width: min(100%, 360px);
+  max-width: 360px;
+  display: flex;
+  box-shadow: none;
+}
+
+.rentaord-btn--primary,
+.rentaord-btn--primary:link,
+.rentaord-btn--primary:visited,
+.rentaord-all-models-btn {
+  background: var(--rentaord-blue);
+  border-color: var(--rentaord-blue);
+  color: #ffffff;
+}
+
+.rentaord-btn--primary:hover,
+.rentaord-btn--primary:focus,
+.rentaord-btn--primary:active,
+.rentaord-all-models-btn:hover,
+.rentaord-all-models-btn:focus {
+  background: var(--rentaord-red);
+  border-color: var(--rentaord-red);
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+.rentaord-btn--secondary,
+.rentaord-btn--secondary:link,
+.rentaord-btn--secondary:visited {
+  background: #ffffff;
+  color: var(--rentaord-blue);
+  border-color: var(--rentaord-blue);
+}
+
+.rentaord-btn--secondary:hover,
+.rentaord-btn--secondary:focus,
+.rentaord-btn--secondary:active {
+  color: var(--rentaord-red);
+  border-color: var(--rentaord-red);
+  background: #ffffff;
+}
+
+/* ACCESOS */
+.rentaord-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 18px 18px 8px;
+  background: #ffffff;
+}
+
+.rentaord-quick-grid a {
+  min-height: 58px;
+  border: 1px solid #e7ebf1;
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--rentaord-black);
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px 8px;
+  box-shadow: none;
+  transition: transform .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.rentaord-quick-grid a:first-child {
+  background: var(--rentaord-blue);
+  color: #ffffff;
+  border-color: var(--rentaord-blue);
+}
+
+.rentaord-quick-grid a:hover {
+  transform: translateY(-2px);
+  border-color: var(--rentaord-red);
+  color: var(--rentaord-red);
+}
+
+.rentaord-quick-grid a:first-child:hover {
+  background: var(--rentaord-red);
+  color: #ffffff;
+  border-color: var(--rentaord-red);
+}
+
+/* SECCIONES */
+.rentaord-about,
+.rentaord-contact,
+.rentaord-section {
+  padding: 32px 18px 0;
+  background: #ffffff;
+}
+
+.rentaord-about {
+  padding-top: 26px;
+}
+
+.rentaord-section-mini,
+.rentaord-section-head span,
+.rentaord-modal-head span,
+.rentaord-detail-summary span,
+.rentaord-feature-copy span,
+.rentaord-gallery-copy span {
+  display: inline-block;
+  margin-bottom: 9px;
+  color: var(--rentaord-red);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.rentaord-about h3,
+.rentaord-section-head h3,
+.rentaord-contact h3,
+.rentaord-modal-head h3,
+.rentaord-detail-summary h3 {
+  margin: 0;
+  color: var(--rentaord-blue);
+  font-size: 29px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.rentaord-about p,
+.rentaord-section-head p,
+.rentaord-contact-card p {
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.74;
+}
+
+.rentaord-about p {
+  margin: 14px 0 0;
+}
+
+.rentaord-section-head {
+  margin-bottom: 18px;
+}
+
+.rentaord-section-head p {
+  margin: 8px 0 0;
+  max-width: 94%;
+}
+
+/* CATALOGO */
+.rentaord-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.rentaord-feature-card {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid var(--rentaord-line);
+  box-shadow: 0 2px 6px rgba(10, 162, 232, 0.04);
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  transition: transform .24s ease, border-color .24s ease, box-shadow .24s ease;
+  animation: rentaordCardIn .42s ease both;
+}
+
+.rentaord-feature-card:hover,
+.rentaord-feature-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgba(229, 35, 35, .32);
+  box-shadow: 0 3px 8px rgba(229, 35, 35, 0.05);
+}
+
+.rentaord-feature-media {
+  height: 148px;
+  border-radius: 18px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.rentaord-feature-media img {
+  width: 130%;
+  max-width: 130%;
+  max-height: 130%;
+  object-fit: contain;
+  display: block;
+  background: transparent;
+  transform: scale(1.12);
+  filter: none;
+  transition: transform .25s ease;
+}
+
+.rentaord-feature-card:hover .rentaord-feature-media img {
+  transform: scale(1.18);
+  filter: none;
+}
+
+.rentaord-feature-copy {
+  padding-top: 12px;
+}
+
+.rentaord-feature-copy span {
+  color: var(--rentaord-blue);
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+
+.rentaord-feature-copy h4 {
+  margin: 0;
+  color: var(--rentaord-black);
+  font-size: 21px;
+  line-height: 1.04;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.rentaord-feature-copy small {
+  display: block;
+  margin-top: 9px;
+  color: var(--rentaord-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.rentaord-all-models-btn {
+  margin: 18px auto 0;
+  max-width: 360px;
+  box-shadow: none;
+}
+
+/* BENEFICIOS */
+.rentaord-section--light {
+  padding-top: 36px;
+}
+
+.rentaord-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rentaord-benefits-grid article,
+.rentaord-contact-card,
+.rentaord-faq-item,
+.rentaord-detail-block {
+  border: 1px solid #e7ebf1;
+  border-radius: 22px;
+  padding: 18px 16px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.rentaord-benefits-grid strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--rentaord-blue);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.rentaord-benefits-grid p {
+  margin: 0;
+  color: var(--rentaord-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* CONTACTO / FAQ */
+.rentaord-contact-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.rentaord-section--faq {
+  padding-bottom: 40px;
+}
+
+.rentaord-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.rentaord-faq-item {
+  padding: 0;
+  overflow: hidden;
+}
+
+.rentaord-faq-item button {
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rentaord-faq-item button span {
+  color: var(--rentaord-blue);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.rentaord-faq-item button strong {
+  color: var(--rentaord-red);
+  font-size: 20px;
+}
+
+.rentaord-faq-item p {
+  margin: 0;
+  padding: 0 16px 16px;
+  color: var(--rentaord-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* MODALES */
+.rentaord-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  padding: 16px 12px;
+  background: rgba(5, 8, 14, .64);
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  backdrop-filter: blur(4px);
+}
+
+.rentaord-modal {
+  width: min(100%, 600px);
+  max-width: 600px;
+  margin: 18px auto;
+  background: #ffffff;
+  border-radius: 28px;
+  position: relative;
+  padding: 28px 18px 20px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .18);
+  animation: rentaordModalIn .26s ease both;
+}
+
+.rentaord-modal--detail {
+  max-width: 580px;
+}
+
+.rentaord-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 0;
+  background: #ffffff;
+  color: var(--rentaord-black);
+  font-size: 32px;
+  line-height: 1;
+  box-shadow: 0 7px 16px rgba(0,0,0,.12);
+  cursor: pointer;
+}
+
+.rentaord-modal-head {
+  padding-right: 46px;
+  margin-bottom: 18px;
+}
+
+.rentaord-modal-head h3 {
+  margin: 0;
+  color: var(--rentaord-blue);
+  font-size: 29px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.rentaord-modal-head p {
+  margin: 10px 0 0;
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.rentaord-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rentaord-gallery-card {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid var(--rentaord-line);
+  box-shadow: 0 2px 6px rgba(10, 162, 232, .04);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+
+.rentaord-gallery-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(229, 35, 35, .30);
+  box-shadow: 0 3px 8px rgba(229, 35, 35, .05);
+}
+
+.rentaord-gallery-media {
+  height: 136px;
+  border-radius: 18px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.rentaord-gallery-media img {
+  width: 130%;
+  max-width: 130%;
+  max-height: 130%;
+  object-fit: contain;
+  transform: scale(1.12);
+  background: transparent;
+  filter: none;
+}
+
+.rentaord-gallery-copy {
+  padding-top: 12px;
+}
+
+.rentaord-gallery-copy span {
+  color: var(--rentaord-blue);
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+
+.rentaord-gallery-copy h4 {
+  margin: 0;
+  color: var(--rentaord-black);
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.rentaord-gallery-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.rentaord-gallery-actions .rentaord-btn {
+  min-height: 40px;
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.rentaord-detail-top {
+  display: grid;
+  gap: 16px;
+}
+
+.rentaord-detail-media {
+  min-height: 330px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid var(--rentaord-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.rentaord-detail-media img {
+  max-width: 140%;
+  max-height: 320px;
+  object-fit: contain;
+  transform: scale(1.18);
+  filter: none;
+}
+
+.rentaord-detail-summary h3 {
+  margin: 6px 0 0;
+  color: var(--rentaord-blue);
+  font-size: 32px;
+  line-height: 1.03;
+  font-weight: 950;
+}
+
+.rentaord-detail-summary p {
+  margin: 12px 0 0;
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.rentaord-detail-block {
+  margin-top: 18px;
+}
+
+.rentaord-detail-block h4 {
+  margin: 0 0 12px;
+  color: var(--rentaord-blue);
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.rentaord-detail-block ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 9px;
+}
+
+.rentaord-detail-block li {
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.rentaord-detail-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* ANIMACIONES */
+@keyframes rentaordCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rentaordModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .rentaord-shell {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .rentaord-hero {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .rentaord-hero-img {
+    width: 100%;
+    height: auto;
+  }
+
+  .rentaord-hero-message {
+    top: 28px;
+    left: 26px;
+    max-width: 245px;
+  }
+
+  .rentaord-hero-message strong {
+    font-size: 26px;
+    line-height: 1.15;
+  }
+
+  .rentaord-logo-center {
+    margin-top: 8px;
+    padding: 0 26px;
+  }
+
+  .rentaord-logo-center img {
+    width: min(61%, 240px);
+  }
+
+  .rentaord-identity {
+    padding: 24px 50px 22px;
+  }
+
+  .rentaord-about h3,
+  .rentaord-section-head h3,
+  .rentaord-modal-head h3 {
+    font-size: 26px;
+  }
+
+  .rentaord-showcase-grid,
+  .rentaord-gallery-grid {
+    gap: 12px;
+  }
+
+  .rentaord-feature-card,
+  .rentaord-gallery-card {
+    padding: 10px;
+  }
+
+  .rentaord-feature-media {
+    height: 132px;
+  }
+
+  .rentaord-gallery-media {
+    height: 122px;
+  }
+
+  .rentaord-feature-copy h4,
+  .rentaord-gallery-copy h4 {
+    font-size: 18px;
+  }
+
+  .rentaord-feature-copy small {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .rentaord-hero-message {
+    top: 24px;
+    left: 22px;
+    max-width: 220px;
+  }
+
+  .rentaord-hero-message strong {
+    font-size: 23px;
+  }
+
+  .rentaord-logo-center img {
+    width: min(62%, 216px);
+  }
+
+  .rentaord-identity {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .rentaord-feature-media {
+    height: 116px;
+  }
+
+  .rentaord-gallery-media {
+    height: 108px;
+  }
+
+  .rentaord-feature-copy small {
+    display: none;
+  }
+
+  .rentaord-gallery-actions .rentaord-btn {
+    font-size: 11px;
+  }
+}
+
+
+/* === RENTAO RD — ICONOS EN ACCESOS DIRECTOS === */
+.rentaord-quick-grid a {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rentaord-quick-grid a svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.rentaord-quick-grid a span {
+  display: block;
+  line-height: 1.1;
+}
+
+.rentaord-quick-grid a:first-child svg {
+  width: 22px;
+  height: 22px;
+}
+
+
+/* === RENTAO RD — AJUSTE VCARD / ACCESOS === */
+.rentaord-quick-grid a span {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.rentaord-quick-grid a {
+  min-width: 0;
+}
+
+.rentaord-section-head p,
+.rentaord-about p,
+.rentaord-lead,
+.rentaord-contact-card p,
+.rentaord-detail-summary p,
+.rentaord-detail-block li {
+  color: var(--rentaord-muted);
+}
+
+/* === RENTAO RD — CONSOLIDACION BOTONES / SECCIONES / COPY === */
+
+/* Botones principales: recuperar formato pill aunque exista herencia global */
+.rentaord-page .rentaord-hero-actions {
+  width: 100%;
+  max-width: 420px;
+  margin: 22px auto 0;
+  display: grid;
+  gap: 12px;
+}
+
+.rentaord-page .rentaord-btn,
+.rentaord-page .rentaord-all-models-btn,
+.rentaord-page a.rentaord-btn,
+.rentaord-page button.rentaord-btn,
+.rentaord-page button.rentaord-all-models-btn {
+  width: 100%;
+  min-height: 52px;
+  padding: 13px 20px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.rentaord-page .rentaord-btn--primary,
+.rentaord-page .rentaord-btn--primary:link,
+.rentaord-page .rentaord-btn--primary:visited,
+.rentaord-page .rentaord-all-models-btn {
+  background: var(--rentaord-blue);
+  border-color: var(--rentaord-blue);
+  color: #ffffff;
+}
+
+.rentaord-page .rentaord-btn--secondary,
+.rentaord-page .rentaord-btn--secondary:link,
+.rentaord-page .rentaord-btn--secondary:visited {
+  background: #ffffff;
+  border-color: var(--rentaord-blue);
+  color: var(--rentaord-blue);
+}
+
+.rentaord-page .rentaord-btn--primary:hover,
+.rentaord-page .rentaord-btn--primary:focus,
+.rentaord-page .rentaord-btn--primary:active,
+.rentaord-page .rentaord-all-models-btn:hover,
+.rentaord-page .rentaord-all-models-btn:focus {
+  background: var(--rentaord-red);
+  border-color: var(--rentaord-red);
+  color: #ffffff;
+}
+
+.rentaord-page .rentaord-btn--secondary:hover,
+.rentaord-page .rentaord-btn--secondary:focus,
+.rentaord-page .rentaord-btn--secondary:active {
+  background: #ffffff;
+  border-color: var(--rentaord-red);
+  color: var(--rentaord-red);
+}
+
+/* Botón Ver todos los modelos centrado real */
+.rentaord-page .rentaord-all-models-btn {
+  width: min(100%, 360px);
+  max-width: 360px;
+  margin: 20px auto 0;
+}
+
+/* Centrar títulos de secciones y dar lectura comercial */
+.rentaord-page .rentaord-about,
+.rentaord-page .rentaord-section-head,
+.rentaord-page .rentaord-contact .rentaord-section-head {
+  text-align: center;
+}
+
+.rentaord-page .rentaord-about p,
+.rentaord-page .rentaord-section-head p,
+.rentaord-page .rentaord-contact-card p,
+.rentaord-page .rentaord-lead,
+.rentaord-page .rentaord-detail-summary p,
+.rentaord-page .rentaord-detail-block li {
+  color: var(--rentaord-muted);
+}
+
+.rentaord-page .rentaord-section-head p {
+  max-width: 430px;
+  margin: 10px auto 0;
+  line-height: 1.68;
+}
+
+/* Mantener las cards alineadas aunque el título esté centrado */
+.rentaord-page .rentaord-feature-card,
+.rentaord-page .rentaord-gallery-card {
+  text-align: left;
+}
+
+/* Accesos rápidos: icono + texto estable */
+.rentaord-page .rentaord-quick-grid a {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rentaord-page .rentaord-quick-grid a svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.rentaord-page .rentaord-quick-grid a span {
+  font-size: 12px;
+  line-height: 1.12;
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .rentaord-page .rentaord-hero-actions {
+    max-width: 100%;
+  }
+
+  .rentaord-page .rentaord-about,
+  .rentaord-page .rentaord-section {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+}
+
+/* === RENTAO RD — CTA CATALOGO CENTRADO === */
+.rentaord-page #vehiculos {
+  text-align: center;
+}
+
+.rentaord-page #vehiculos .rentaord-showcase-grid {
+  text-align: left;
+}
+
+.rentaord-page #vehiculos .rentaord-all-models-btn {
+  display: flex;
+  width: min(100%, 360px);
+  max-width: 360px;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  justify-content: center;
+  align-items: center;
+}
+
+/* === RENTAO RD — MODAL CATALOGO DETALLES DESTACADO === */
+.rentaord-page .rentaord-gallery-card {
+  cursor: pointer;
+}
+
+.rentaord-page .rentaord-gallery-card:focus-visible {
+  outline: 3px solid rgba(21, 107, 183, 0.28);
+  outline-offset: 4px;
+}
+
+.rentaord-page .rentaord-gallery-actions .rentaord-btn--details {
+  min-height: 46px;
+  background: #ffffff;
+  border: 1.8px solid var(--rentaord-blue);
+  color: var(--rentaord-blue);
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.rentaord-page .rentaord-gallery-actions .rentaord-btn--details:hover,
+.rentaord-page .rentaord-gallery-actions .rentaord-btn--details:focus {
+  background: #ffffff;
+  border-color: var(--rentaord-red);
+  color: var(--rentaord-red);
+}
+
+.rentaord-page .rentaord-gallery-media,
+.rentaord-page .rentaord-gallery-copy {
+  cursor: pointer;
+}
+
+/* === RENTAO RD — ANIMACION SUAVE IMAGEN DETALLE === */
+.rentaord-page .rentaord-detail-media img {
+  animation: rentaordVehicleDetailZoom 5.5s ease-in-out infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+@keyframes rentaordVehicleDetailZoom {
+  0% {
+    transform: scale(1.12);
+  }
+
+  50% {
+    transform: scale(1.18);
+  }
+
+  100% {
+    transform: scale(1.12);
+  }
+}
+
+/* Respeta usuarios que prefieren menos animación */
+@media (prefers-reduced-motion: reduce) {
+  .rentaord-page .rentaord-detail-media img {
+    animation: none;
+  }
+}
+
+/* === RENTAO RD — CONTACTO STANDARD / FOOTER / CHAT === */
+
+.rentaord-page .rentaord-contact {
+  padding: 42px 28px 0;
+  text-align: center;
+}
+
+.rentaord-page .rentaord-contact-list {
+  margin-top: 24px;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--rentaord-soft-line);
+  border-bottom: 1px solid var(--rentaord-soft-line);
+}
+
+.rentaord-page .rentaord-contact-row {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rentaord-soft-line);
+  color: var(--rentaord-text);
+  text-align: left;
+  transition: color .2s ease, transform .2s ease;
+}
+
+.rentaord-page .rentaord-contact-row:last-child {
+  border-bottom: 0;
+}
+
+.rentaord-page .rentaord-contact-row svg {
+  width: 24px;
+  height: 24px;
+  color: var(--rentaord-blue);
+  transition: transform .2s ease, color .2s ease;
+}
+
+.rentaord-page .rentaord-contact-row strong {
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 850;
+}
+
+.rentaord-page .rentaord-contact-row:hover {
+  color: var(--rentaord-red);
+  transform: translateX(3px);
+}
+
+.rentaord-page .rentaord-contact-row:hover svg {
+  color: var(--rentaord-red);
+  transform: scale(1.08);
+}
+
+.rentaord-contact-cta {
+  margin: 34px 28px 0;
+  padding-top: 30px;
+  border-top: 1px solid var(--rentaord-soft-line);
+  text-align: center;
+}
+
+.rentaord-contact-cta h3 {
+  margin: 0;
+  color: var(--rentaord-text);
+  font-size: 28px;
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.rentaord-contact-cta p {
+  max-width: 390px;
+  margin: 12px auto 20px;
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.62;
+}
+
+.rentaord-contact-cta .rentaord-btn {
+  width: min(100%, 260px);
+  margin: 0 auto;
+}
+
+.rentaord-contact-modal h3 {
+  margin: 0;
+  color: var(--rentaord-text);
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.rentaord-contact-modal p {
+  margin: 10px 0 20px;
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.rentaord-contact-modal label {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--rentaord-text);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.rentaord-contact-modal input,
+.rentaord-contact-modal textarea {
+  width: 100%;
+  border: 1px solid var(--rentaord-line);
+  border-radius: 16px;
+  padding: 14px 16px;
+  color: var(--rentaord-text);
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+.rentaord-contact-modal textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.rentaord-contact-modal input:focus,
+.rentaord-contact-modal textarea:focus {
+  border-color: var(--rentaord-blue);
+  box-shadow: 0 0 0 3px rgba(21, 107, 183, .12);
+}
+
+.rentaord-contact-modal .rentaord-btn {
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.rentaord-footer {
+  padding: 46px 28px 96px;
+  text-align: center;
+  background: #ffffff;
+}
+
+.rentaord-footer strong,
+.rentaord-footer span,
+.rentaord-footer small {
+  display: block;
+}
+
+.rentaord-footer strong {
+  color: var(--rentaord-blue);
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: .14em;
+}
+
+.rentaord-footer span {
+  margin-top: 6px;
+  color: var(--rentaord-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rentaord-footer small {
+  margin-top: 14px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rentaord-chat {
+  position: fixed;
+  right: calc(50% - 250px);
+  bottom: 18px;
+  z-index: 1000;
+}
+
+.rentaord-chat-bubble {
+  width: 68px;
+  height: 68px;
+  border: 1px solid rgba(21, 107, 183, .18);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(21, 107, 183, .18);
+  display: grid;
+  place-items: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.rentaord-chat-bubble img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.rentaord-chat-bubble span {
+  position: absolute;
+  top: -2px;
+  right: -1px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--rentaord-red);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 950;
+  display: grid;
+  place-items: center;
+}
+
+.rentaord-chat-panel {
+  width: min(320px, calc(100vw - 32px));
+  margin-bottom: 12px;
+  border: 1px solid var(--rentaord-line);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .16);
+  overflow: hidden;
+  animation: rentaordModalIn .22s ease both;
+}
+
+.rentaord-chat-head {
+  min-height: 58px;
+  padding: 10px 14px;
+  background: var(--rentaord-blue);
+  color: #ffffff;
+  display: grid;
+  grid-template-columns: 42px 1fr 34px;
+  align-items: center;
+  gap: 10px;
+}
+
+.rentaord-chat-head img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 4px;
+}
+
+.rentaord-chat-head strong {
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.rentaord-chat-head button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.rentaord-chat-body {
+  padding: 18px 16px;
+  text-align: center;
+}
+
+.rentaord-chat-body p {
+  margin: 0 0 14px;
+  color: var(--rentaord-text);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.rentaord-chat-body a {
+  min-height: 44px;
+  margin-top: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--rentaord-blue);
+  border-radius: 999px;
+  color: var(--rentaord-blue);
+  font-size: 13px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.rentaord-chat-body a:hover {
+  background: var(--rentaord-red);
+  border-color: var(--rentaord-red);
+  color: #ffffff;
+}
+
+.rentaord-chat-body small {
+  display: block;
+  margin-top: 13px;
+  color: var(--rentaord-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .rentaord-chat {
+    right: 18px;
+    bottom: 18px;
+  }
+
+  .rentaord-footer {
+    padding-bottom: 104px;
+  }
+}
+
+/* === RENTAO RD — POLISH CONTACTO / SEPARADORES / CHAT === */
+
+/* Contacto: filas limpias, sin franja azul heredada */
+.rentaord-page .rentaord-contact-list {
+  margin-top: 26px;
+  border-top: 1px solid var(--rentaord-soft-line);
+  border-bottom: 1px solid var(--rentaord-soft-line);
+}
+
+.rentaord-page .rentaord-contact-row,
+.rentaord-page .rentaord-contact-row:link,
+.rentaord-page .rentaord-contact-row:visited,
+.rentaord-page .rentaord-contact-row:hover,
+.rentaord-page .rentaord-contact-row:focus,
+.rentaord-page .rentaord-contact-row:active {
+  background: #ffffff !important;
+  color: var(--rentaord-text) !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.rentaord-page .rentaord-contact-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rentaord-soft-line);
+}
+
+.rentaord-page .rentaord-contact-row:hover strong,
+.rentaord-page .rentaord-contact-row:focus strong {
+  color: var(--rentaord-red);
+}
+
+.rentaord-page .rentaord-contact-row svg {
+  color: var(--rentaord-blue) !important;
+}
+
+.rentaord-page .rentaord-contact-row:hover svg,
+.rentaord-page .rentaord-contact-row:focus svg {
+  color: var(--rentaord-red) !important;
+}
+
+/* Más aire entre secciones desde contacto hacia abajo */
+.rentaord-page .rentaord-contact {
+  padding-top: 52px;
+  padding-bottom: 34px;
+}
+
+.rentaord-page .rentaord-contact-cta {
+  margin: 0 28px;
+  padding: 42px 0 44px;
+  border-top: 1px solid var(--rentaord-soft-line);
+  border-bottom: 1px solid var(--rentaord-soft-line);
+}
+
+.rentaord-page .rentaord-section--faq {
+  padding-top: 42px;
+  padding-bottom: 46px;
+  border-bottom: 1px solid var(--rentaord-soft-line);
+}
+
+.rentaord-page .rentaord-footer {
+  padding-top: 44px;
+  padding-bottom: 104px;
+  border-top: 0;
+}
+
+/* Burbuja de chat sin sombra */
+.rentaord-page .rentaord-chat-bubble {
+  box-shadow: none !important;
+  border: 1px solid var(--rentaord-line);
+}
+
+.rentaord-page .rentaord-chat-bubble:hover,
+.rentaord-page .rentaord-chat-bubble:focus {
+  box-shadow: none !important;
+}
+
+@media (max-width: 600px) {
+  .rentaord-page .rentaord-contact {
+    padding-top: 48px;
+    padding-bottom: 32px;
+  }
+
+  .rentaord-page .rentaord-contact-cta {
+    margin-left: 28px;
+    margin-right: 28px;
+    padding-top: 40px;
+    padding-bottom: 42px;
+  }
+
+  .rentaord-page .rentaord-section--faq {
+    padding-top: 40px;
+  }
+
+  .rentaord-page .rentaord-footer {
+    padding-bottom: 110px;
+  }
+}
+
+/* === RENTAO RD — CONTACTO LINEAS LIMPIAS + FAQ CERRADAS === */
+.rentaord-page .rentaord-contact-list {
+  border-top: 1px solid #e5e7eb !important;
+  border-bottom: 0 !important;
+}
+
+.rentaord-page .rentaord-contact-row,
+.rentaord-page .rentaord-contact-row:link,
+.rentaord-page .rentaord-contact-row:visited,
+.rentaord-page .rentaord-contact-row:hover,
+.rentaord-page .rentaord-contact-row:focus,
+.rentaord-page .rentaord-contact-row:active {
+  background: #ffffff !important;
+  color: var(--rentaord-text) !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rentaord-page .rentaord-contact-row:last-child {
+  border-bottom: 0 !important;
+}
+
+.rentaord-page .rentaord-contact-row svg {
+  color: var(--rentaord-blue) !important;
+}
+
+.rentaord-page .rentaord-contact-row:hover svg,
+.rentaord-page .rentaord-contact-row:focus svg {
+  color: var(--rentaord-red) !important;
+}
+
+.rentaord-page .rentaord-contact-cta {
+  border-top: 1px solid #e5e7eb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.rentaord-page .rentaord-section--faq {
+  border-top: 0 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* === RENTAO RD — BENEFITS CON IMAGENES 2X2 === */
+.rentaord-page .rentaord-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rentaord-page .rentaord-benefits-grid article {
+  min-width: 0;
+  padding: 18px 12px 16px;
+  border: 1px solid var(--rentaord-line);
+  border-radius: 22px;
+  background: #ffffff;
+  text-align: center;
+  box-shadow: none;
+  transition: transform .22s ease, border-color .22s ease;
+}
+
+.rentaord-page .rentaord-benefits-grid article:hover {
+  transform: translateY(-3px);
+  border-color: rgba(21, 107, 183, .34);
+}
+
+.rentaord-page .rentaord-benefit-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 12px;
+  display: grid;
+  place-items: center;
+}
+
+.rentaord-page .rentaord-benefit-icon img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  display: block;
+  filter: none;
+}
+
+.rentaord-page .rentaord-benefits-grid strong {
+  display: block;
+  color: var(--rentaord-blue);
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 950;
+}
+
+.rentaord-page .rentaord-benefits-grid p {
+  margin: 8px 0 0;
+  color: var(--rentaord-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* Avatar del chat más limpio */
+.rentaord-page .rentaord-chat-head img,
+.rentaord-page .rentaord-chat-bubble img {
+  object-fit: cover;
+  border-radius: 999px;
+}
+
+/* === RENTAO RD — BENEFITS IMAGENES 110 Y SEPARADORES === */
+.rentaord-page .rentaord-section--light {
+  margin-top: 42px !important;
+  padding-top: 42px !important;
+  padding-bottom: 46px !important;
+  border-top: 1px solid #e5e7eb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.rentaord-page .rentaord-benefit-icon {
+  width: 110px !important;
+  height: 110px !important;
+  margin: 0 auto 12px !important;
+}
+
+.rentaord-page .rentaord-benefit-icon img {
+  width: 110px !important;
+  height: 110px !important;
+  object-fit: contain !important;
+}
+
+.rentaord-page .rentaord-benefits-grid article {
+  padding-top: 18px !important;
+  padding-bottom: 18px !important;
+}
+
+@media (max-width: 360px) {
+  .rentaord-page .rentaord-benefit-icon {
+    width: 96px !important;
+    height: 96px !important;
+  }
+
+  .rentaord-page .rentaord-benefit-icon img {
+    width: 96px !important;
+    height: 96px !important;
+  }
+}
+
+/* === RENTAO RD — SEPARADORES FINOS ENTRE SECCIONES === */
+
+/* Línea fina después de los enlaces rápidos */
+.rentaord-page .rentaord-quick-grid {
+  padding-bottom: 34px !important;
+  margin-bottom: 0 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* Sobre nosotros con aire limpio después de la línea de quick links */
+.rentaord-page .rentaord-about {
+  padding-top: 42px !important;
+  padding-bottom: 42px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* Catálogo: separado por la línea de Sobre Nosotros, sin duplicar borde superior */
+.rentaord-page #vehiculos {
+  padding-top: 42px !important;
+  border-top: 0 !important;
+}
+
+/* Evita que el catálogo pegue demasiado con la sección siguiente */
+.rentaord-page #vehiculos {
+  padding-bottom: 42px !important;
+}
+
+/* Por qué elegirnos mantiene su propio separador, pero sin exceso visual */
+.rentaord-page .rentaord-section--light {
+  margin-top: 0 !important;
+  border-top: 1px solid #e5e7eb !important;
+}
+
+/* Normalización móvil */
+@media (max-width: 600px) {
+  .rentaord-page .rentaord-quick-grid {
+    padding-bottom: 32px !important;
+  }
+
+  .rentaord-page .rentaord-about {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+  }
+
+  .rentaord-page #vehiculos {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+  }
+}
+
+/* === RENTAO RD — PORTADA INICIAL LOGO ANIMADO === */
+.rentaordBootOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  pointer-events: none;
+  opacity: 1;
+  animation: rentaordBootScreenExit 3.2s ease-in-out forwards;
+}
+
+.rentaordBootLogoWrap {
+  width: min(72vw, 260px);
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  transform-origin: center center;
+}
+
+.rentaordBootLogo {
+  width: min(62vw, 230px);
+  height: auto;
+  display: block;
+  object-fit: contain;
+  opacity: 1;
+  transform-origin: center center;
+  filter: drop-shadow(0 10px 22px rgba(21, 107, 183, .10));
+  animation: rentaordBootZoomAndFocus 3.05s cubic-bezier(.18, .82, .22, 1) forwards;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+@keyframes rentaordBootZoomAndFocus {
+  from {
+    transform: scale(.18);
+  }
+
+  to {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes rentaordBootScreenExit {
+  0% {
+    opacity: 1;
+  }
+
+  78% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (max-width: 430px) {
+  .rentaordBootLogoWrap {
+    width: min(74vw, 230px);
+    min-height: 140px;
+  }
+
+  .rentaordBootLogo {
+    width: min(66vw, 210px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rentaordBootOverlay,
+  .rentaordBootLogo {
+    animation: none !important;
+  }
+
+  .rentaordBootOverlay {
+    display: none;
+  }
+}
+
+/* === RENTAO RD — MARBELLA BOAT PRODUCTO INDEPENDIENTE === */
+.rentaord-page .rentaord-marbella-section {
+  padding-top: 46px;
+  padding-bottom: 46px;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rentaord-page .rentaord-marbella-card {
+  margin: 26px auto 0;
+  border: 1px solid rgba(21, 107, 183, .20);
+  border-radius: 28px;
+  background: #ffffff;
+  overflow: hidden;
+  max-width: 560px;
+}
+
+.rentaord-page .rentaord-marbella-slider {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  border: 0;
+  background: #ffffff;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.rentaord-page .rentaord-marbella-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.025);
+  transition: opacity .85s ease, transform 4.6s ease;
+}
+
+.rentaord-page .rentaord-marbella-slide.is-active {
+  opacity: 1;
+  transform: scale(1.09);
+}
+
+.rentaord-page .rentaord-marbella-slider-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.rentaord-page .rentaord-marbella-slider-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .64);
+  box-shadow: 0 0 0 1px rgba(21, 107, 183, .18);
+  transition: width .25s ease, background .25s ease;
+}
+
+.rentaord-page .rentaord-marbella-slider-dots span.is-active {
+  width: 22px;
+  background: #ffffff;
+}
+
+.rentaord-page .rentaord-marbella-copy {
+  padding: 24px 22px 26px;
+  text-align: center;
+}
+
+.rentaord-page .rentaord-marbella-copy p {
+  margin: 0 auto 22px;
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.65;
+  max-width: 460px;
+}
+
+.rentaord-page .rentaord-marbella-card .rentaord-btn {
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.rentaord-page .rentaord-marbella-modal {
+  max-width: 780px;
+  max-height: min(88vh, 920px);
+  overflow: auto;
+}
+
+.rentaord-page .rentaord-marbella-modal-head {
+  text-align: center;
+  padding: 4px 6px 20px;
+}
+
+.rentaord-page .rentaord-marbella-modal-head span {
+  display: block;
+  color: var(--rentaord-red);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .18em;
+}
+
+.rentaord-page .rentaord-marbella-modal-head h3 {
+  margin: 9px 0 0;
+  color: var(--rentaord-blue);
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+
+.rentaord-page .rentaord-marbella-modal-head p {
+  margin: 14px auto 0;
+  color: var(--rentaord-muted);
+  font-size: 15px;
+  line-height: 1.65;
+  max-width: 620px;
+}
+
+.rentaord-page .rentaord-marbella-pills {
+  margin: 18px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rentaord-page .rentaord-marbella-pills span {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(21, 107, 183, .08);
+  color: var(--rentaord-blue);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.rentaord-page .rentaord-marbella-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rentaord-page .rentaord-marbella-gallery-item {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--rentaord-line);
+  border-radius: 18px;
+  background: #ffffff;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.rentaord-page .rentaord-marbella-gallery-item img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  transform: scale(1);
+  transition: transform .55s ease, filter .55s ease;
+  animation: rentaordMarbellaImageFloat 8s ease-in-out infinite alternate;
+}
+
+.rentaord-page .rentaord-marbella-gallery-item:hover img {
+  transform: scale(1.07);
+  filter: saturate(1.06) contrast(1.03);
+}
+
+@keyframes rentaordMarbellaImageFloat {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.035);
+  }
+}
+
+.rentaord-page .rentaord-marbella-detail-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rentaord-page .rentaord-marbella-detail-grid section {
+  padding: 18px;
+  border: 1px solid var(--rentaord-line);
+  border-radius: 20px;
+  background: #ffffff;
+}
+
+.rentaord-page .rentaord-marbella-detail-grid h4 {
+  margin: 0 0 10px;
+  color: var(--rentaord-blue);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.rentaord-page .rentaord-marbella-detail-grid ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--rentaord-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.rentaord-page .rentaord-marbella-detail-grid li + li {
+  margin-top: 6px;
+}
+
+.rentaord-page .rentaord-marbella-wide {
+  grid-column: 1 / -1;
+}
+
+.rentaord-page .rentaord-marbella-actions {
+  margin-top: 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.rentaord-page .rentaord-marbella-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(8, 12, 18, .76);
+  backdrop-filter: blur(8px);
+}
+
+.rentaord-page .rentaord-marbella-zoom-stage {
+  position: relative;
+  width: min(92vw, 940px);
+  max-height: 88vh;
+  border-radius: 24px;
+  background: #ffffff;
+  overflow: hidden;
+  animation: rentaordMarbellaZoomIn .24s ease both;
+}
+
+.rentaord-page .rentaord-marbella-zoom-stage img {
+  width: 100%;
+  max-height: 78vh;
+  object-fit: contain;
+  display: block;
+  background: #ffffff;
+}
+
+.rentaord-page .rentaord-marbella-zoom-close,
+.rentaord-page .rentaord-marbella-zoom-nav {
+  position: absolute;
+  z-index: 2;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  color: #111827;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, .18);
+}
+
+.rentaord-page .rentaord-marbella-zoom-close {
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.rentaord-page .rentaord-marbella-zoom-nav {
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  transform: translateY(-50%);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.rentaord-page .rentaord-marbella-zoom-nav--prev {
+  left: 14px;
+}
+
+.rentaord-page .rentaord-marbella-zoom-nav--next {
+  right: 14px;
+}
+
+.rentaord-page .rentaord-marbella-zoom-count {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, .72);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+@keyframes rentaordMarbellaZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 600px) {
+  .rentaord-page .rentaord-marbella-section {
+    padding-top: 42px;
+    padding-bottom: 42px;
+  }
+
+  .rentaord-page .rentaord-marbella-card {
+    border-radius: 24px;
+  }
+
+  .rentaord-page .rentaord-marbella-gallery,
+  .rentaord-page .rentaord-marbella-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rentaord-page .rentaord-marbella-modal {
+    max-width: calc(100vw - 28px);
+  }
+
+  .rentaord-page .rentaord-marbella-zoom {
+    padding: 12px;
+  }
+
+  .rentaord-page .rentaord-marbella-zoom-stage {
+    width: 96vw;
+    border-radius: 18px;
+  }
+
+  .rentaord-page .rentaord-marbella-zoom-nav {
+    width: 40px;
+    height: 40px;
+    font-size: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rentaord-page .rentaord-marbella-slide,
+  .rentaord-page .rentaord-marbella-gallery-item,
+  .rentaord-page .rentaord-marbella-gallery-item img {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* === RENTAO RD — FIX REAL ANIMACION VISIBLE MODAL MARBELLA === */
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item {
+  opacity: 0;
+  transform: translateY(14px) scale(.965);
+  animation: rentaordMarbellaModalCardEnter .72s cubic-bezier(.22, 1, .36, 1) forwards !important;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:nth-child(1) {
+  animation-delay: .03s !important;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:nth-child(2) {
+  animation-delay: .11s !important;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:nth-child(3) {
+  animation-delay: .19s !important;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:nth-child(4) {
+  animation-delay: .27s !important;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:nth-child(5) {
+  animation-delay: .35s !important;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:nth-child(6) {
+  animation-delay: .43s !important;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item img {
+  transform: scale(1.025);
+  transform-origin: center center;
+  animation: rentaordMarbellaModalPhotoPulse 4.2s ease-in-out infinite alternate !important;
+  transition: transform .45s ease, filter .45s ease !important;
+  will-change: transform;
+}
+
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:hover img,
+.rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item:focus-visible img {
+  transform: scale(1.13) !important;
+  filter: saturate(1.08) contrast(1.04);
+}
+
+@keyframes rentaordMarbellaModalCardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(.965);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rentaordMarbellaModalPhotoPulse {
+  0% {
+    transform: scale(1.025);
+  }
+
+  100% {
+    transform: scale(1.095);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item,
+  .rentaord-page .rentaord-marbella-modal .rentaord-marbella-gallery-item img {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* === RENTAO RD — HERO 2 AJUSTES FINOS === */
+.rentaord-page .rentaord-hero-title,
+.rentaord-page .rentaord-hero-copy h1,
+.rentaord-page .rentaord-hero-copy h2,
+.rentaord-page .rentaord-hero-copy h3,
+.rentaord-page .rentaord-hero-text,
+.rentaord-page .rentaord-hero-text strong {
+  font-weight: 700 !important;
+}
+
+.rentaord-page .rentaord-hero-eyebrow,
+.rentaord-page .rentaord-hero-kicker {
+  font-weight: 700 !important;
+}
+
+.rentaord-page .rentaord-hero img,
+.rentaord-page .rentaord-hero-media img {
+  display: block;
+}
+
+/* === RENTAO RD — HERO TEXTO MENOS BOLD REAL === */
+.rentaord-page .rentaord-hero-message strong,
+.rentaord-hero-message strong {
+  font-weight: 600 !important;
+  letter-spacing: -0.035em !important;
+}
+
+@media (max-width: 600px) {
+  .rentaord-page .rentaord-hero-message strong,
+  .rentaord-hero-message strong {
+    font-weight: 600 !important;
+  }
+}
+
+
+/* === RENTAO RD — X FLOTANTE / STICKY EN MODALES LARGOS === */
+.rentaord-page .rentaord-modal > .rentaord-modal-close {
+  position: sticky !important;
+  top: 12px !important;
+  left: auto !important;
+  right: auto !important;
+  margin: 0 0 -44px auto !important;
+  z-index: 20 !important;
+  transform: translate(8px, -2px);
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .96) !important;
+  color: #111827 !important;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, .16) !important;
+  backdrop-filter: blur(10px);
+}
+
+.rentaord-page .rentaord-modal > .rentaord-modal-close:hover,
+.rentaord-page .rentaord-modal > .rentaord-modal-close:focus-visible {
+  transform: translate(8px, -2px) scale(1.04);
+  color: var(--rentaord-red) !important;
+}
+
+@media (max-width: 600px) {
+  .rentaord-page .rentaord-modal > .rentaord-modal-close {
+    top: max(10px, env(safe-area-inset-top)) !important;
+    width: 44px !important;
+    height: 44px !important;
+    margin-bottom: -42px !important;
+    transform: translate(6px, -2px);
+  }
+
+  .rentaord-page .rentaord-modal > .rentaord-modal-close:hover,
+  .rentaord-page .rentaord-modal > .rentaord-modal-close:focus-visible {
+    transform: translate(6px, -2px) scale(1.04);
+  }
+}
+

@@ -526,8 +526,8 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-lg">🔗</span>
               <div>
-                <p className="text-sm font-bold">Mis links</p>
-                <p className="text-xs text-slate-400">Agregar, editar y reordenar</p>
+                <p className="text-sm font-bold">Enlaces rápidos</p>
+                <p className="text-xs text-slate-400">Botones, links útiles y accesos directos</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>
@@ -538,7 +538,7 @@ export default function AdminDashboard() {
               <span className="text-lg">❓</span>
               <div>
                 <p className="text-sm font-bold">Preguntas frecuentes</p>
-                <p className="text-xs text-slate-400">FAQs de tu perfil</p>
+                <p className="text-xs text-slate-400">Hasta 8 preguntas y respuestas</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>
@@ -548,30 +548,18 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-lg">🛍</span>
               <div>
-                <p className="text-sm font-bold">Productos y servicios</p>
-                <p className="text-xs text-slate-400">Catálogo con precios</p>
+                <p className="text-sm font-bold">Catálogo visual</p>
+                <p className="text-xs text-slate-400">Productos, servicios o proyectos con imagen</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>
           </Link>
-
-          <Link to="/admin/videos" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
-            <div className="flex items-center gap-3">
-              <span className="text-lg">▶️</span>
-              <div>
-                <p className="text-sm font-bold">Videos</p>
-                <p className="text-xs text-slate-400">YouTube y Vimeo</p>
-              </div>
-            </div>
-            <span className="text-slate-400">›</span>
-          </Link>
-
-          <Link to="/admin/blocks" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+<Link to="/admin/blocks" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
             <div className="flex items-center gap-3">
               <span className="text-lg">⬛</span>
               <div>
                 <p className="text-sm font-bold">Orden de secciones</p>
-                <p className="text-xs text-slate-400">Arrastra para reordenar</p>
+                <p className="text-xs text-slate-400">Ordena solo las secciones activas de INTAP V2</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>
@@ -581,8 +569,8 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-lg">🎨</span>
               <div>
-                <p className="text-sm font-bold">Configuración visual</p>
-                <p className="text-xs text-slate-400">Colores y estilo de botones</p>
+                <p className="text-sm font-bold">Colores de marca</p>
+                <p className="text-xs text-slate-400">Color principal, secundario y estilo visual</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>
@@ -592,8 +580,8 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-lg">🏷️</span>
               <div>
-                <p className="text-sm font-bold">Plantilla vertical</p>
-                <p className="text-xs text-slate-400">Restaurante · Servicios · Eventos</p>
+                <p className="text-sm font-bold">Secciones INTAP V2</p>
+                <p className="text-xs text-slate-400">Empresa, redes, CTA, chat y textos visibles</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>
@@ -603,8 +591,8 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-lg">✏️</span>
               <div>
-                <p className="text-sm font-bold">Editar perfil</p>
-                <p className="text-xs text-slate-400">Nombre, bio, foto</p>
+                <p className="text-sm font-bold">Identidad principal</p>
+                <p className="text-xs text-slate-400">Foto o logo, nombre, cargo y descripción</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>
@@ -614,7 +602,7 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <span className="text-lg">📞</span>
               <div>
-                <p className="text-sm font-bold">Datos de contacto</p>
+                <p className="text-sm font-bold">Contacto personal</p>
                 <p className="text-xs text-slate-400">WhatsApp, email, horario…</p>
               </div>
             </div>

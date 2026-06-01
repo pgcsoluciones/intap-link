@@ -58,6 +58,9 @@ export type IntapProfileV2Profile = {
   companyLogo?: string
   company_logo?: string
   companyAbout?: string
+  aboutStats?: { value: string; label: string }[]
+  aboutStatsTitle?: string
+  aboutStatsText?: string
   company_about?: string
   links?: ProfileLink[]
   products?: ProfileProduct[]
@@ -84,6 +87,25 @@ function cleanPhone(phone: string) {
   return phone.replace(/\D/g, '')
 }
 
+function normalizeProfileMedia(url: string) {
+  const value = pick(url)
+  if (!value) return ''
+
+  const brokenAssetsMarker = '/api/v1/public/assets//assets/'
+  if (value.includes(brokenAssetsMarker)) {
+    const [, assetPath] = value.split(brokenAssetsMarker)
+    return `/assets/${assetPath}`
+  }
+
+  const encodedBrokenAssetsMarker = '/api/v1/public/assets/%2Fassets/'
+  if (value.includes(encodedBrokenAssetsMarker)) {
+    const [, assetPath] = value.split(encodedBrokenAssetsMarker)
+    return `/assets/${decodeURIComponent(assetPath)}`
+  }
+
+  return value
+}
+
 function waUrl(phone: string, message: string) {
   const clean = cleanPhone(phone)
   if (!clean) return '#'
@@ -99,7 +121,7 @@ function toParagraphs(text: string) {
 
 function parseServiceLines(raw: string) {
   return raw
-    .split('\n')
+    .replace(/\\n/g, '\n').split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
@@ -165,88 +187,113 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
   const [projectsModalOpen, setProjectsModalOpen] = useState(false)
   const [detailProjectIndex, setDetailProjectIndex] = useState<number | null>(null)
   const [detailImageIndex, setDetailImageIndex] = useState(0)
+  const [lightboxImage, setLightboxImage] = useState('')
 
   useEffect(() => {
     loadFontAwesome()
     loadJakartaFont()
   }, [])
 
-  const td = (profile?.templateData ?? {}) as Record<string, string>
+  const td = (profile?.templateData ?? {}) as Record<string, any>
   const links = profile?.links ?? []
 
   const accent = pick(profile?.accentColor, profile?.accent_color, td.accentColor, '#D32F2F')
-  const name = pick(profile?.name, td.name, 'Enmanuel Pérez')
-  const role = pick(profile?.role, profile?.title, td.role, td.title, 'Gestor de Marketing y Ventas')
-  const avatar = pick(
-    profile?.avatarUrl,
-    profile?.avatar_url,
+  const name = pick(profile?.name, td.name)
+  const role = pick(profile?.role, profile?.title, td.role, td.title)
+  const avatar = normalizeProfileMedia(pick(
     td.avatarUrl,
     td.avatar_url,
+    profile?.avatarUrl,
+    profile?.avatar_url,
     'https://framerusercontent.com/images/Qx4aaXjorgutFi7olgDodGhGLX4.jpg?scale-down-to=1024',
-  )
+  ))
+  const isCreditornProfile =
+    profile?.slug === 'creditorn' ||
+    pick(td.companyName).toLowerCase().includes('reyes & naut') ||
+    pick(td.name, profile?.name).toLowerCase().includes('creditorn')
 
-  const phone = pick(profile?.phone, td.phone, '829 994 3102')
-  const whatsapp = pick(profile?.whatsapp, profile?.whatsappNumber, profile?.whatsapp_number, td.whatsapp, td.phone, '18299943102')
-  const email = pick(profile?.email, td.email, 'ventas@constructorajprez.com')
-  const website = pick(profile?.website, td.website, 'constructorajprez.com')
-  const address = pick(
-    profile?.address,
-    td.address,
-    'Av. Winston Churchill 1550, Plaza Orleans Local 213-214, Santo Domingo, República Dominicana',
-  )
-  const mapUrl = pick(
-    profile?.mapUrl,
-    profile?.map_url,
-    td.mapUrl,
-    td.map_url,
-    'https://www.google.com/maps/search/?api=1&query=Plaza%20Orleans%20Av.%20Winston%20Churchill%20Santo%20Domingo',
-  )
+  const profileImageMode = pick(td.profileImageMode, td.logoMode)
+  const isLooseLogoProfile =
+    isCreditornProfile ||
+    profileImageMode === 'logo' ||
+    profileImageMode === 'loose' ||
+    avatar.includes('logo-rn-01.png')
 
+  const phone = pick(profile?.phone, td.phone)
+  const whatsapp = pick(profile?.whatsapp, profile?.whatsappNumber, profile?.whatsapp_number, td.companyWhatsapp, td.whatsapp, td.phone)
+  const email = pick(profile?.email, td.email)
+  const website = pick(profile?.website, td.website)
+  const address = pick(profile?.address, td.address)
+  const mapUrl = pick(profile?.mapUrl, td.mapUrl)
   const instagramLink = findLink(links, ['instagram'])
   const facebookLink = findLink(links, ['facebook'])
   const whatsappLink = findLink(links, ['whatsapp', 'wa.me'])
 
-  const instagramText = pick(td.instagram, instagramLink?.label, instagramLink?.title, instagramLink?.url ? extractHandle(instagramLink.url) : '@enmanuelperez.jprez')
-  const instagramUrl = pick(td.instagramUrl, instagramLink?.url, 'https://instagram.com/enmanuelperez.jprez')
+  const instagramText = pick(td.instagram, instagramLink?.label, instagramLink?.title, instagramLink?.url ? extractHandle(instagramLink.url) : '')
+  const instagramUrl = pick(td.instagramUrl, instagramLink?.url)
 
-  const facebookText = pick(td.facebook, facebookLink?.label, facebookLink?.title, '@constructorajprez')
-  const facebookUrl = pick(td.facebookUrl, facebookLink?.url, 'https://www.facebook.com/constructorajprez')
-
-  const companyName = pick(profile?.companyName, profile?.company_name, td.companyName, 'Constructora JPREZ')
+  const facebookText = pick(td.facebook, facebookLink?.label, facebookLink?.title)
+  const facebookUrl = pick(td.facebookUrl, facebookLink?.url)
+  const companyName = pick(profile?.companyName, profile?.company_name, td.companyName)
   const companyLogo = pick(
     profile?.companyLogo,
     profile?.company_logo,
     td.companyLogo,
     td.company_logo,
-    '/assets/marketing/mockups/logo_jprez.png',
   )
-  const companyHeadline = pick(td.companyHeadline, 'Más de 22 años creando hogares llenos de vida.')
+  const companyHeadline = pick(td.companyHeadline, '')
   const companyAbout = pick(
     profile?.companyAbout,
     profile?.company_about,
     td.companyAbout,
-    'En Constructora JPREZ nos apasiona construir más que estructuras: creamos hogares con propósito, calidad y visión de futuro. Con más de 22 años de experiencia en el sector inmobiliario de República Dominicana, hemos entregado más de 1,300 viviendas y seguimos desarrollando comunidades con más de 400 unidades actualmente en ejecución.\n\nNos mueve el compromiso con el bienestar de las familias dominicanas, integrando diseño innovador, sostenibilidad y eficiencia en cada proyecto. Creemos en hacer las cosas bien desde el principio, con ética, transparencia y un firme enfoque en la calidad y satisfacción de nuestros clientes.\n\nNuestra visión se refleja en cada detalle de nuestras obras: espacios funcionales, modernos y con un enfoque humano. Trabajamos cada día para ser líderes en el sector de la construcción, aportando valor al país y creando oportunidades de inversión seguras y duraderas.',
   )
   const companyAboutParagraphs = toParagraphs(companyAbout)
-  const companyPhone = pick(td.companyPhone, '(809) 385-1616')
-  const companyInstagram = pick(td.companyInstagram, '@constructorajprez')
-  const companyFacebook = pick(td.companyFacebook, '@constructorajprez')
-  const companyShortAddress = pick(td.companyShortAddress, 'Plaza Orleans, Av. Winston Churchill, Santo Domingo, R. D.')
+  const aboutStats = Array.isArray(td.aboutStats)
+    ? td.aboutStats
+        .map((item: any) => ({
+          value: pick(item?.value),
+          label: pick(item?.label),
+        }))
+        .filter((item: any) => item.value || item.label)
+    : []
+  const aboutStatsTitle = pick(td.aboutStatsTitle)
+  const aboutStatsText = pick(td.aboutStatsText)
+  const companyPhone = pick(td.companyPhone)
+  const companyInstagram = pick(td.companyInstagram)
+  const companyFacebook = pick(td.companyFacebook)
+  const companyShortAddress = pick(td.companyShortAddress)
 
-  const bioHeadline = pick(td.bioHeadline, 'Tu propiedad ideal no está lejos. Empecemos hoy.')
+  const bioHeadline = pick(td.bioHeadline)
   const bio = pick(profile?.bio, td.bio)
   const bioParagraphs = toParagraphs(bio)
 
-  const servicesHeadline = pick(td.servicesHeadline, 'Soluciones integrales para construir con confianza')
-  const servicesIntro = pick(td.servicesIntro, `En ${companyName} te acompañamos en cada paso con un enfoque profesional, humano y de alta calidad:`)
+  const servicesHeadline = pick(td.servicesHeadline)
+  const servicesIntro = pick(td.servicesIntro)
   const services = parseServiceLines(pick(td.servicesList))
+
+
+  const creditornServiceImage = (item: ProfileProduct) => {
+    if (!isCreditornProfile) {
+      return pick(item.image_url, item.imageUrl)
+    }
+
+    const byId: Record<string, string> = {
+      service_creditorn_personal: '/assets/marketing/mockups/personales-01.png?v=creditorn-20260505b',
+      service_creditorn_pymes: '/assets/marketing/mockups/comercial.png?v=creditorn-20260505b',
+      service_creditorn_vehiculo: '/assets/marketing/mockups/vehiculo.png?v=creditorn-20260505b',
+      service_creditorn_electro: '/assets/marketing/mockups/electrodomesticos.png?v=creditorn-20260505b',
+    }
+
+    return byId[String(item.id || '')] || pick(item.image_url, item.imageUrl)
+  }
+
 
   const productGallery = (profile?.products ?? [])
     .map((item) => ({
       id: item.id,
       title: pick(item.title, item.name),
       caption: pick(item.description),
-      image: pick(item.image_url, item.imageUrl),
+      image: creditornServiceImage(item),
       images: [] as string[],
     }))
     .filter((item) => item.image)
@@ -261,65 +308,11 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
     }))
     .filter((item) => item.image)
 
-  const jprezProjectImages = [
-    [
-      '/assets/marketing/mockups/jprez1.png',
-      '/assets/marketing/mockups/jprez2.png',
-      '/assets/marketing/mockups/jprez3.png',
-    ],
-    [
-      '/assets/marketing/mockups/jprez2.png',
-      '/assets/marketing/mockups/jprez4.png',
-      '/assets/marketing/mockups/jprez5.png',
-    ],
-    [
-      '/assets/marketing/mockups/jprez3.png',
-      '/assets/marketing/mockups/jprez5.png',
-      '/assets/marketing/mockups/jprez6.png',
-    ],
-    [
-      '/assets/marketing/mockups/jprez4.png',
-      '/assets/marketing/mockups/jprez1.png',
-      '/assets/marketing/mockups/jprez6.png',
-    ],
-  ]
-
   const finalGallery = useMemo(() => {
-    const source = rawGallery.length ? rawGallery : productGallery
-    const fallback = [
-      {
-        id: 'demo-1',
-        title: 'PRADO RESIDENCES 4',
-        caption: 'Evaristo Morales, Santo Domingo',
-        image: '/assets/marketing/mockups/jprez1.png',
-        images: jprezProjectImages[0],
-      },
-      {
-        id: 'demo-2',
-        title: 'PRADO RESIDENCES 3',
-        caption: 'Ensanche Paraíso, Santo Domingo',
-        image: '/assets/marketing/mockups/jprez2.png',
-        images: jprezProjectImages[1],
-      },
-      {
-        id: 'demo-3',
-        title: 'PRADO SUITES PUERTO PLATA',
-        caption: 'Puerto Plata',
-        image: '/assets/marketing/mockups/jprez3.png',
-        images: jprezProjectImages[2],
-      },
-      {
-        id: 'demo-4',
-        title: 'PRADO SUITES LAS TERRENAS',
-        caption: 'Las Terrenas',
-        image: '/assets/marketing/mockups/jprez4.png',
-        images: jprezProjectImages[3],
-      },
-    ]
+    const source = isCreditornProfile && productGallery.length ? productGallery : (rawGallery.length ? rawGallery : productGallery)
 
-    return (source.length ? source : fallback).map((item, index) => {
-      const localImages = jprezProjectImages[index % jprezProjectImages.length]
-      const images = item.images?.length ? item.images : localImages
+    return source.map((item) => {
+      const images = item.images?.length ? item.images : [item.image].filter(Boolean)
 
       return {
         ...item,
@@ -352,9 +345,11 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
         },
       ]
 
-  const chatTitle = pick(td.chatTitle, 'Enmanuel')
+  const chatTitle = pick(td.chatTitle)
+  const creditornChatAvatar = '/assets/marketing/mockups/avatar%20chat-01.png'
+  const activeChatAvatar = isCreditornProfile ? creditornChatAvatar : avatar
   const chatText = pick(td.chatText, 'Hola 👋 Gracias por tu interés en nuestros proyectos. ¿En qué puedo ayudarte hoy?')
-  const chatMessage = pick(td.chatMessage, 'Hola Enmanuel, vi tu perfil digital y me interesa recibir información de los proyectos.')
+  const chatMessage = pick(td.chatMessage)
 
   const chatOptions = [
     pick(td.chatButton1, 'Quiero agendar una visita a un proyecto'),
@@ -364,18 +359,58 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
   ].filter(Boolean)
 
   const contactTitle = pick(td.contactTitle, '¡A tus órdenes!')
-  const galleryHeadline = pick(td.galleryHeadline, 'Proyectos destacados')
+  const galleryHeadline = pick(td.galleryHeadline, 'Catálogo destacado')
   const companyContactHeadline = pick(td.companyContactHeadline, `¡Conecta con ${companyName}!`)
-  const companyEmail = pick(td.companyEmail, 'ventas@constructorajprez.com')
-  const companyWebsite = pick(td.companyWebsite, 'www.constructorajprez.com')
-  const companyAddress = pick(td.companyAddress, 'Plaza Orleans, Av. Winston Churchill, Santo Domingo, R. D.')
+  const companyWhatsapp = pick(td.companyWhatsapp, td.companyWhatsappLabel, whatsapp)
+  const companyWhatsappLabel = pick(td.companyWhatsappLabel, td.companyWhatsapp, whatsapp)
+  const companyEmail = pick(td.companyEmail)
+  const companyWebsite = pick(td.companyWebsite)
+  const companyAddress = pick(td.companyAddress)
   const companyContactIntro = pick(td.companyContactIntro, 'Llámanos, escríbenos o síguenos en nuestras redes:')
+  const serviceCalculatorLabel = pick(td.ctaSecondaryLabel, 'Calcular préstamo')
+  const serviceCalculatorUrl = pick(td.ctaSecondaryUrl, 'https://creditorn.com/calculadora')
   const faqHeadline = pick(td.faqHeadline, 'Preguntas frecuentes sobre nuestros proyectos')
   const finalCtaTitle = pick(td.finalCtaTitle, '¿Aún tienes dudas?')
   const finalCtaText = pick(td.finalCtaText, 'Escríbenos y recibe asesoría personalizada para elegir el proyecto ideal o resolver cualquier inquietud.')
   const vcardLabel = pick(td.vcardLabel, 'Agrégame a tus contactos')
 
-  const vcardHref = `data:text/vcard;charset=utf-8,BEGIN:VCARD%0AVERSION:3.0%0AFN:${encodeURIComponent(name || companyName || 'Contacto')}${phone ? `%0ATEL:${encodeURIComponent(phone)}` : ''}${email ? `%0AEMAIL:${encodeURIComponent(email)}` : ''}${website ? `%0AURL:${encodeURIComponent(normalizeHttp(website))}` : ''}%0AEND:VCARD`
+  const vcardName = isCreditornProfile
+    ? pick(td.title, name, 'CreditoRN')
+    : pick(name, companyName, 'Contacto')
+  const vcardOrg = isCreditornProfile
+    ? pick(td.subtitle, td.companyName, companyName, 'Corporación de Crédito Reyes & Naut SRL')
+    : pick(companyName, td.subtitle)
+  const vcardPhone = isCreditornProfile
+    ? pick(td.companyPhone, phone, whatsapp)
+    : phone
+  const vcardWhatsapp = isCreditornProfile
+    ? pick(td.companyWhatsapp, td.companyWhatsappLabel, whatsapp)
+    : whatsapp
+  const vcardEmail = isCreditornProfile
+    ? pick(td.companyEmail, email)
+    : email
+  const vcardWebsite = isCreditornProfile
+    ? pick(td.companyWebsite, website)
+    : website
+  const vcardAddress = isCreditornProfile
+    ? pick(td.companyAddress, address)
+    : address
+
+  const vcardLines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${vcardName}`,
+    vcardOrg ? `ORG:${vcardOrg}` : '',
+    vcardPhone ? `TEL;TYPE=WORK,VOICE:${vcardPhone}` : '',
+    vcardWhatsapp && vcardWhatsapp !== vcardPhone ? `TEL;TYPE=CELL:${vcardWhatsapp}` : '',
+    vcardEmail ? `EMAIL;TYPE=WORK:${vcardEmail}` : '',
+    vcardWebsite ? `URL:${normalizeHttp(vcardWebsite)}` : '',
+    vcardAddress ? `ADR;TYPE=WORK:;;${vcardAddress};;;;` : '',
+    'END:VCARD',
+  ].filter(Boolean)
+
+  const vcardHref = `data:text/vcard;charset=utf-8,${encodeURIComponent(vcardLines.join('\\n'))}`
+  const vcardFileName = pick(vcardName, 'contacto').replace(/\s+/g, '-').toLowerCase()
 
   const currentSlide = finalGallery[Math.min(activeSlide, finalGallery.length - 1)]
   const detailProject = detailProjectIndex !== null ? finalGallery[detailProjectIndex] : null
@@ -468,18 +503,84 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
 
   const detailImages = detailProject?.images?.length ? detailProject.images : detailProject?.image ? [detailProject.image] : []
   const detailImage = detailImages[detailImageIndex] || detailProject?.image || ''
+  const galleryLabelSingular = pick(td.galleryLabelSingular, isCreditornProfile ? 'servicio' : 'proyecto')
+  const galleryLabelPlural = pick(td.galleryLabelPlural, isCreditornProfile ? 'servicios' : 'proyectos')
+
+  const companyBenefits = pick(td.companyBenefits, td.benefitsList)
+    .replace(/\\n/g, '\n')
+    .split('\n')
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  const displayBioParagraphs = isCreditornProfile ? [] : bioParagraphs
+
+
 
   return (
-    <main className="intap-profile-page" style={{ ['--red' as string]: accent }}>
+    <main className={`intap-profile-page${isCreditornProfile ? " theme-creditorn" : ""}`} style={{ ['--red' as string]: accent }}>
       <section className="s-header">
         {avatar && (
-          <div className="avatar-wrap">
-            <img src={avatar} alt={name} />
+          <div className={`avatar-wrap${isLooseLogoProfile ? " avatar-wrap--logo" : ""}`}>
+            <img src={avatar} alt={name} className={isLooseLogoProfile ? "avatar-img--logo" : undefined} />
           </div>
         )}
 
         <h1 className="header-name">{name}</h1>
         <p className="header-role">{role}</p>
+
+        {(pick(td.companyWhatsapp, whatsapp) || pick(td.companyPhone, phone) || pick(td.companyEmail, email) || pick(td.companyWebsite, website) || pick(td.companyAddress, address)) && (
+          <div className="header-mini-contacts">
+            {pick(td.companyWhatsapp, whatsapp) && (
+              <a
+                className="header-mini-row"
+                href={waUrl(pick(td.companyWhatsapp, whatsapp), chatMessage)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fa-brands fa-whatsapp mini-icon" aria-hidden="true" />
+                <span>{pick(td.companyWhatsapp, whatsapp)}</span>
+              </a>
+            )}
+
+            {pick(td.companyPhone, phone) && (
+              <a className="header-mini-row" href={`tel:${pick(td.companyPhone, phone).replace(/[^\d+]/g, '')}`}>
+                <i className="fa-solid fa-phone mini-icon" aria-hidden="true" />
+                <span>{pick(td.companyPhone, phone)}</span>
+              </a>
+            )}
+
+            {pick(td.companyEmail, email) && (
+              <a className="header-mini-row" href={`mailto:${pick(td.companyEmail, email)}`}>
+                <i className="fa-solid fa-envelope mini-icon" aria-hidden="true" />
+                <span>{pick(td.companyEmail, email)}</span>
+              </a>
+            )}
+
+            {pick(td.companyWebsite, website) && (
+              <a
+                className="header-mini-row"
+                href={normalizeHttp(pick(td.companyWebsite, website))}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fa-solid fa-globe mini-icon" aria-hidden="true" />
+                <span>{pick(td.companyWebsite, website).replace(/^https?:\/\//, '')}</span>
+              </a>
+            )}
+
+            {pick(td.companyAddress, address) && (
+              <a
+                className="header-mini-row"
+                href={mapUrl || '#'}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <i className="fa-solid fa-location-dot mini-icon" aria-hidden="true" />
+                <span>{pick(td.companyAddress, address)}</span>
+              </a>
+            )}
+          </div>
+        )}
 
         <div className="header-icons" aria-label="Accesos rápidos">
           {phone && (
@@ -505,57 +606,125 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
       <section className="s-contact">
         <div className="contact-header">{contactTitle}</div>
 
-        <div className="contact-list">
-          {whatsapp && (
-            <a href={pick(whatsappLink?.url, waUrl(whatsapp, chatMessage))} className="contact-row" target="_blank" rel="noreferrer">
-              <div className="crow-icon"><i className="fab fa-whatsapp" /></div>
-              <span className="crow-text">{phone || whatsapp}</span>
-            </a>
-          )}
+        {isCreditornProfile ? (
+          <div className="contact-list contact-list-creditorn">
+            {pick(td.companyWhatsapp, td.companyWhatsappLabel, whatsapp) && (
+              <a
+                className="contact-row contact-row-whatsapp"
+                href={waUrl(pick(td.companyWhatsapp, td.companyWhatsappLabel, whatsapp), chatMessage)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="crow-icon" aria-hidden="true">
+                  <i className="fab fa-whatsapp" />
+                </span>
+                <span className="crow-text">{pick(td.companyWhatsappLabel, td.companyWhatsapp, whatsapp)}</span>
+              </a>
+            )}
 
-          {instagramText && (
-            <a href={instagramUrl} className="contact-row" target="_blank" rel="noreferrer">
-              <div className="crow-icon"><i className="fab fa-instagram" /></div>
-              <span className="crow-text">{instagramText}</span>
-            </a>
-          )}
+            {pick(td.companyPhone, phone) && (
+              <a
+                className="contact-row contact-row-phone"
+                href={`tel:${pick(td.companyPhone, phone).replace(/[^\d+]/g, '')}`}
+              >
+                <span className="crow-icon" aria-hidden="true">
+                  <i className="fas fa-phone" />
+                </span>
+                <span className="crow-text">{pick(td.companyPhone, phone)}</span>
+              </a>
+            )}
 
-          {email && (
-            <a href={`mailto:${email}`} className="contact-row">
-              <div className="crow-icon"><i className="fas fa-envelope" /></div>
-              <span className="crow-text">{email}</span>
-            </a>
-          )}
+            {pick(td.companyInstagram, td.instagram, instagramText) && (
+              <a
+                className="contact-row contact-row-instagram"
+                href={normalizeHttp(pick(
+                  td.companyInstagramUrl,
+                  td.instagramUrl,
+                  instagramUrl,
+                  `https://instagram.com/${pick(td.companyInstagram, td.instagram, instagramText).replace(/^@/, '')}`
+                ))}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="crow-icon" aria-hidden="true">
+                  <i className="fab fa-instagram" />
+                </span>
+                <span className="crow-text">{pick(td.companyInstagram, td.instagram, instagramText)}</span>
+              </a>
+            )}
 
-          {website && (
-            <a href={normalizeHttp(website)} className="contact-row" target="_blank" rel="noreferrer">
-              <div className="crow-icon"><i className="fas fa-globe" /></div>
-              <span className="crow-text">{website}</span>
-            </a>
-          )}
+            {pick(td.companyEmail, email) && (
+              <a className="contact-row contact-row-email" href={`mailto:${pick(td.companyEmail, email)}`}>
+                <span className="crow-icon" aria-hidden="true">
+                  <i className="fas fa-envelope" />
+                </span>
+                <span className="crow-text">{pick(td.companyEmail, email)}</span>
+              </a>
+            )}
 
-          {address && (
-            <a href={mapUrl || '#'} className="contact-row" target="_blank" rel="noreferrer">
-              <div className="crow-icon"><i className="fas fa-map-marker-alt" /></div>
-              <span className="crow-text">{address}</span>
-            </a>
-          )}
-        </div>
+            {pick(td.companyAddress, address) && (
+              <a
+                className="contact-row contact-row-map"
+                href={mapUrl || '#'}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="crow-icon" aria-hidden="true">
+                  <i className="fas fa-map-marker-alt" />
+                </span>
+                <span className="crow-text">{pick(td.companyAddress, address)}</span>
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="contact-list">
+            {whatsapp && (
+              <a href={pick(whatsappLink?.url, waUrl(whatsapp, chatMessage))} className="contact-row" target="_blank" rel="noreferrer">
+                <div className="crow-icon"><i className="fab fa-whatsapp" /></div>
+                <span className="crow-text">{phone || whatsapp}</span>
+              </a>
+            )}
+            {instagramUrl && (
+              <a href={instagramUrl} className="contact-row" target="_blank" rel="noreferrer">
+                <div className="crow-icon"><i className="fab fa-instagram" /></div>
+                <span className="crow-text">{instagramText}</span>
+              </a>
+            )}
+            {email && (
+              <a href={`mailto:${email}`} className="contact-row">
+                <div className="crow-icon"><i className="fas fa-envelope" /></div>
+                <span className="crow-text">{email}</span>
+              </a>
+            )}
+            {website && (
+              <a href={normalizeHttp(website)} className="contact-row" target="_blank" rel="noreferrer">
+                <div className="crow-icon"><i className="fas fa-globe" /></div>
+                <span className="crow-text">{website}</span>
+              </a>
+            )}
+            {address && (
+              <a href={mapUrl || '#'} className="contact-row" target="_blank" rel="noreferrer">
+                <div className="crow-icon"><i className="fas fa-map-marker-alt" /></div>
+                <span className="crow-text">{address}</span>
+              </a>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="s-vcard">
-        <a href={vcardHref} className="vcard-btn" download={`${name.replace(/\s+/g, '-').toLowerCase()}.vcf`}>
+        <a href={vcardHref} className="vcard-btn" download={`${vcardFileName}.vcf`}>
           <i className="fas fa-address-book" /> {vcardLabel}
         </a>
       </section>
 
-      {bioParagraphs.length > 0 && (
+      {(displayBioParagraphs.length > 0 || companyBenefits.length > 0) && (
         <>
           <div className="divider" />
           <section className="s-bio">
             <h2 className="bio-title">{bioHeadline}</h2>
 
-            {bioParagraphs.map((paragraph, index) => {
+            {displayBioParagraphs.map((paragraph, index) => {
               const isHelpLine = /¿Tienes dudas\?|Estoy aquí para ayudarte/.test(paragraph)
 
               return (
@@ -564,6 +733,31 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
                 </p>
               )
             })}
+
+            {companyBenefits.length > 0 && (
+              <div className="benefits-grid">
+                {companyBenefits.map((item, index) => (
+                  <div className="benefit-card" key={`${index}-${item}`}>
+                    <i className="fa-solid fa-check benefit-icon" aria-hidden="true" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isCreditornProfile && (
+              <div className="creditorn-calculator-cta">
+                <a
+                  className="creditorn-calculator-cta__button"
+                  href="https://creditorn.com/calculadora"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Calcular mi préstamo
+                </a>
+              </div>
+            )}
+
           </section>
         </>
       )}
@@ -574,7 +768,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
           <section className="s-gallery">
             <div className="gallery-header">
               <h2 className="gallery-title">{galleryHeadline}</h2>
-              <span className="gallery-count">{finalGallery.length} proyectos</span>
+              <span className="gallery-count">{finalGallery.length} {finalGallery.length === 1 ? galleryLabelSingular : galleryLabelPlural}</span>
             </div>
 
             <div className="carousel-wrap">
@@ -585,10 +779,10 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
                     key={item.id || index}
                     type="button"
                     onClick={() => setProjectsModalOpen(true)}
-                    title="Haz clic para ver todos los proyectos"
+                    title={isCreditornProfile ? "Haz clic para ver todos los servicios" : "Haz clic para ver todos los proyectos"}
                   >
                     <img src={item.image} alt={item.title || 'Proyecto'} />
-                    {item.title && <span className="slide-label">{item.title}</span>}
+                    {!isCreditornProfile && item.title && <span className="slide-label">{item.title}</span>}
                   </button>
                 ))}
               </div>
@@ -608,7 +802,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
 
             <div className="carousel-btns">
               <button className="cbtn primary" type="button" onClick={() => setProjectsModalOpen(true)}>
-                Ver proyectos
+                {isCreditornProfile ? 'Ver servicios' : 'Ver catálogo'}
               </button>
               <button
                 className="cbtn outline"
@@ -621,15 +815,15 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
           </section>
 
           {projectsModalOpen && (
-            <div className="projects-modal-backdrop" role="dialog" aria-modal="true" aria-label="Todos los proyectos">
+            <div className="projects-modal-backdrop" role="dialog" aria-modal="true" aria-label={isCreditornProfile ? "Todos los servicios" : "Todos los proyectos"}>
               <div className="projects-modal projects-modal--list">
                 <button className="projects-modal-close" type="button" onClick={() => setProjectsModalOpen(false)} aria-label="Cerrar">
                   ×
                 </button>
 
                 <div className="projects-modal-head">
-                  <h2>Todos los proyectos</h2>
-                  <span>{finalGallery.length} proyectos</span>
+                  <h2>{isCreditornProfile ? "Todos los servicios" : "Todos los proyectos"}</h2>
+                  <span>{finalGallery.length} {finalGallery.length === 1 ? galleryLabelSingular : galleryLabelPlural}</span>
                 </div>
 
                 <div className="projects-grid">
@@ -643,10 +837,12 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
                         {item.title && <h3>{item.title}</h3>}
                         {item.caption && <p>{item.caption}</p>}
 
-                        <div className="project-tags">
-                          <span>Inmobiliaria</span>
-                          <span>Residencial</span>
-                        </div>
+                        {!isCreditornProfile && (
+                          <div className="project-tags">
+                            <span>Inmobiliaria</span>
+                            <span>Residencial</span>
+                          </div>
+                        )}
 
                         <button className="project-card-btn primary" type="button" onClick={() => openProjectDetail(index)}>
                           Ver detalles
@@ -680,24 +876,6 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
                     {detailProject.caption && <p className="project-detail-location">{detailProject.caption}</p>}
                     {detailProject.caption && <p className="project-detail-desc">{detailProject.caption}</p>}
 
-                    <div className="project-detail-actions">
-                      <button
-                        className="project-whatsapp-btn"
-                        type="button"
-                        onClick={() => goToWhatsapp(`Hola, vengo de ver su perfil digital. Me interesa ${detailProject.title || 'este proyecto'} y quiero contactar por WhatsApp.`)}
-                      >
-                        Contactar por WhatsApp
-                      </button>
-
-                      <button
-                        className="project-more-btn"
-                        type="button"
-                        onClick={() => goToWhatsapp(`Hola, vengo de ver su portafolio en su perfil digital. Me gustaría más información sobre ${detailProject.title || 'este proyecto'}.`)}
-                      >
-                        Más información
-                      </button>
-                    </div>
-
                     {projectMapSrc && (
                       <div className="project-map">
                         <iframe
@@ -714,10 +892,49 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
                         Ver en Google Maps
                       </a>
                     )}
+
+                    <div className="project-detail-actions">
+                      <button
+                        className="project-whatsapp-btn"
+                        type="button"
+                        onClick={() => goToWhatsapp(`Hola, vengo de ver su perfil digital. Me interesa ${detailProject.title || 'este proyecto'} y quiero contactar por WhatsApp.`)}
+                      >
+                        Contactar por WhatsApp
+                      </button>
+
+                      <button
+                        className="project-more-btn"
+                        type="button"
+                        onClick={() => goToWhatsapp(`Hola, vengo de ver su portafolio en su perfil digital. Me gustaría más información sobre ${detailProject.title || 'este proyecto'}.`)}
+                      >
+                        Más información
+                      </button>
+
+                      {isCreditornProfile && serviceCalculatorUrl && (
+                        <a
+                          className="project-more-btn project-calc-btn"
+                          href={serviceCalculatorUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {serviceCalculatorLabel}
+                        </a>
+                      )}
+                    </div>
+
                   </div>
 
                   <div className="project-detail-media">
-                    <img src={detailImage} alt={detailProject.title || 'Proyecto'} />
+                    {detailImage && (
+                      <button
+                        className="project-detail-image-btn"
+                        type="button"
+                        onClick={() => setLightboxImage(detailImage)}
+                        aria-label="Ver imagen completa"
+                      >
+                        <img src={detailImage} alt={detailProject.title || 'Proyecto'} />
+                      </button>
+                    )}
 
                     {detailImages.length > 1 && (
                       <>
@@ -752,7 +969,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
         </>
       )}
 
-      {(companyHeadline || companyLogo || companyAboutParagraphs.length > 0) && (
+      {(companyHeadline || companyLogo || companyAboutParagraphs.length > 0 || aboutStats.length > 0 || aboutStatsTitle || aboutStatsText) && (
         <>
           <div className="divider" />
           <section className="s-company-about">
@@ -809,8 +1026,8 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
 
       <div className="divider" />
       <section className="s-company-contact">
-        <div className="company-contact-header">¡Conecta con {companyName}!</div>
-        <p className="company-contact-subtitle">Llámanos, escríbenos o síguenos en nuestras redes:</p>
+        <div className="company-contact-header">{companyContactHeadline}</div>
+        <p className="company-contact-subtitle">{companyContactIntro}</p>
 
         <div className="company-contact-list">
           <a className="company-contact-row" href={`tel:${companyPhone.replace(/\s/g, '')}`}>
@@ -824,7 +1041,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
             onClick={() => goToWhatsapp('Hola, vengo de ver su perfil digital. Me gustaría recibir más información.')}
           >
             <span className="company-contact-icon cc-whatsapp" aria-hidden="true"><FaWhatsapp /></span>
-            <span>Escríbenos por WhatsApp</span>
+            <span>{companyWhatsappLabel || companyWhatsapp}</span>
           </button>
 
           <a
@@ -862,7 +1079,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
             <span>{companyWebsite}</span>
           </a>
 
-          <a className="company-contact-row" href={mapUrl} target="_blank" rel="noreferrer">
+          <a className="company-contact-row cc-map" href={mapUrl} target="_blank" rel="noreferrer">
             <span className="company-contact-icon cc-map" aria-hidden="true"><FaMapMarkerAlt /></span>
             <span>{companyAddress}</span>
           </a>
@@ -898,6 +1115,31 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
 
 
 
+
+      {lightboxImage && (
+        <div
+          className="project-image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Imagen completa"
+          onClick={() => setLightboxImage('')}
+        >
+          <button
+            className="project-image-lightbox-close"
+            type="button"
+            onClick={() => setLightboxImage('')}
+            aria-label="Cerrar imagen"
+          >
+            ×
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Imagen completa"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
+
       <footer className="s-footer">
         <p className="footer-credit">Developed by: <strong>Intap</strong></p>
       </footer>
@@ -906,7 +1148,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
         <div className="chatbot-bubble">
           <div className={`chat-panel ${chatOpen ? 'open' : ''}`}>
             <div className="chat-head">
-              <img src={avatar} alt={chatTitle} />
+              <img className="chat-service-avatar" src={activeChatAvatar} alt={chatTitle || "Chat"} />
               <span className="chat-head-name">{chatTitle}</span>
               <button className="chat-close" type="button" onClick={() => setChatOpen(false)}>✖</button>
             </div>
@@ -930,7 +1172,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
 
           <div className="chat-trigger-wrap">
             <button className="chat-trigger" type="button" onClick={() => setChatOpen((value) => !value)} aria-label="Abrir chat">
-              <img src={avatar} alt="Chat" />
+              <img className="chat-service-avatar chat-service-avatar--trigger" src={activeChatAvatar} alt="Chat" />
             </button>
             <span className="chat-badge">1</span>
           </div>

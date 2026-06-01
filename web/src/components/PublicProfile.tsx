@@ -3,6 +3,10 @@ import { useParams, Link } from 'react-router-dom'
 import IntapProfileV2, { type IntapProfileV2Profile } from './profile-templates/IntapProfileV2'
 import IntapProfileJasonV3 from './profile-templates/IntapProfileJasonV3'
 import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
+import IntapProfileRentaoRd from './profile-templates/IntapProfileRentaoRd'
+import IntapProfile1AEventos from './profile-templates/IntapProfile1AEventos'
+import { applyProfileSeo, buildProfileSeo } from '../lib/profileSeo'
+import { getFallbackProfileSeo } from '../lib/profileFallbackSeo'
 
 declare global {
   interface Window {
@@ -1772,6 +1776,24 @@ export default function PublicProfile() {
     }).catch(() => { })
   }
 
+  // ── GEO / SEO metadata + JSON-LD ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!data) return
+
+    const seo = buildProfileSeo(data)
+    applyProfileSeo(seo)
+  }, [data])
+
+  // ── GEO / SEO fallback metadata para plantillas rápidas ─────────────────────
+  useEffect(() => {
+    if (data) return
+
+    const seo = getFallbackProfileSeo(slug)
+    if (!seo) return
+
+    applyProfileSeo(seo)
+  }, [data, slug])
+
   // ── Fetch profile ───────────────────────────────────────────────────────────
   useEffect(() => {
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
@@ -2014,6 +2036,14 @@ export default function PublicProfile() {
     return <IntapProfileNoviV4 profile={{ slug: 'novi' }} />
   }
 
+  if ((errorStatus || !data) && slug === 'rentaord') {
+    return <IntapProfileRentaoRd profile={{ slug: 'rentaord' }} />
+  }
+
+  if ((errorStatus || !data) && slug === '1aeventos') {
+    return <IntapProfile1AEventos />
+  }
+
   if (errorStatus || !data) return <NotFound />
 
   // ── Derived data ────────────────────────────────────────────────────────────
@@ -2095,6 +2125,14 @@ export default function PublicProfile() {
 
   if (data.slug === 'jason') {
     return <IntapProfileJasonV3 profile={publicProfileV2} />
+  }
+
+  if (data.slug === 'rentaord') {
+    return <IntapProfileRentaoRd profile={publicProfileV2} />
+  }
+
+  if (data.slug === '1aeventos') {
+    return <IntapProfile1AEventos />
   }
 
   return <IntapProfileV2 profile={publicProfileV2} />

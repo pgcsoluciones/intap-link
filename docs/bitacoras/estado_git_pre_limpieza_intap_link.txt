@@ -1,0 +1,28 @@
+ M api/src/index.ts
+ M app/src/App.tsx
+ M app/src/components/admin/AdminDashboard.tsx
+ M app/src/components/admin/AdminProducts.tsx
+ M app/src/components/admin/AdminVisual.tsx
+ M functions/_middleware.ts
+ M web/src/components/PublicProfile.tsx
+ M web/src/components/profile-templates/IntapProfileV2.css
+ M web/src/components/profile-templates/IntapProfileV2.tsx
+?? api/migrations/0027_profile_products_item_type.sql
+?? docs/bitacoras/bitacora_1a_eventos_preloader_novi4b.md
+?? docs/bitacoras/estado_git_pre_limpieza_intap_link.txt
+?? scripts/
+?? "web/public/assets/1A eventos/"
+?? web/public/assets/1aeventos/
+?? "web/public/assets/marketing/mockups/avatar chat-01.png"
+?? web/public/assets/marketing/mockups/comercial.png
+?? web/public/assets/marketing/mockups/electrodomesticos.png
+?? web/public/assets/marketing/mockups/logo-rn-01.png
+?? web/public/assets/marketing/mockups/personales-01.png
+?? web/public/assets/marketing/mockups/vehiculo.png
+?? web/public/assets/rentaord/
+?? web/src/components/profile-templates/IntapProfile1AEventos.css
+?? web/src/components/profile-templates/IntapProfile1AEventos.tsx
+?? web/src/components/profile-templates/IntapProfileRentaoRd.css
+?? web/src/components/profile-templates/IntapProfileRentaoRd.tsx
+?? web/src/lib/profileFallbackSeo.ts
+?? web/src/lib/profileSeo.ts

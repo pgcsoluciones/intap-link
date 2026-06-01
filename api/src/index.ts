@@ -573,7 +573,7 @@ me.put('/profile', async (c) => {
   const theme_id = body.theme_id !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
-  const VALID_TEMPLATES = ['restaurante', 'servicios', 'eventos']
+  const VALID_TEMPLATES = ['intap_profile_v2']
   const template_id = body.template_id !== undefined
     ? (VALID_TEMPLATES.includes(String(body.template_id)) ? String(body.template_id) : null)
     : undefined
@@ -1015,7 +1015,7 @@ me.get('/products', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const products = await c.env.DB.prepare(
-    `SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order
+    `SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order, item_type
      FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC`
   ).bind((profile as any).id).all()
   return c.json({ ok: true, data: products.results })
@@ -1031,6 +1031,8 @@ me.post('/products', async (c) => {
   const price = String(body.price || '').trim()
   const whatsapp_text = String(body.whatsapp_text || '').trim()
   const image_url = String(body.image_url || '').trim()
+  const raw_item_type = String(body.item_type || 'product').trim()
+  const item_type = ['product', 'service', 'project'].includes(raw_item_type) ? raw_item_type : 'product'
   const is_featured = body.is_featured ? 1 : 0
 
   if (!title) return c.json({ ok: false, error: 'title required' }, 400)
@@ -1052,9 +1054,9 @@ me.post('/products', async (c) => {
 
   const id = crypto.randomUUID()
   await c.env.DB.prepare(
-    `INSERT INTO profile_products (id, profile_id, title, description, price, image_url, whatsapp_text, is_featured, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, profileId, title, description || null, price || null, image_url || null, whatsapp_text || null, is_featured, sortOrder).run()
+    `INSERT INTO profile_products (id, profile_id, title, description, price, image_url, whatsapp_text, is_featured, sort_order, item_type)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(id, profileId, title, description || null, price || null, image_url || null, whatsapp_text || null, is_featured, sortOrder, item_type).run()
 
   console.log(JSON.stringify({
     level: 'info', event: 'product_created',
@@ -1101,6 +1103,10 @@ me.put('/products/:id', async (c) => {
   const price = body.price !== undefined ? String(body.price || '').trim() : undefined
   const image_url = body.image_url !== undefined ? String(body.image_url || '').trim() : undefined
   const whatsapp_text = body.whatsapp_text !== undefined ? String(body.whatsapp_text || '').trim() : undefined
+  const raw_item_type = body.item_type !== undefined ? String(body.item_type || 'product').trim() : undefined
+  const item_type = raw_item_type !== undefined
+    ? (['product', 'service', 'project'].includes(raw_item_type) ? raw_item_type : 'product')
+    : undefined
   const is_featured = body.is_featured !== undefined ? (body.is_featured ? 1 : 0) : undefined
 
   await c.env.DB.prepare(
@@ -1110,11 +1116,12 @@ me.put('/products/:id', async (c) => {
        price         = COALESCE(?3, price),
        image_url     = COALESCE(?4, image_url),
        whatsapp_text = COALESCE(?5, whatsapp_text),
-       is_featured   = COALESCE(?6, is_featured)
-     WHERE id = ?7 AND profile_id = ?8`
+       is_featured   = COALESCE(?6, is_featured),
+       item_type     = COALESCE(?7, item_type)
+     WHERE id = ?8 AND profile_id = ?9`
   ).bind(
     title ?? null, description ?? null, price ?? null,
-    image_url ?? null, whatsapp_text ?? null, is_featured ?? null,
+    image_url ?? null, whatsapp_text ?? null, is_featured ?? null, item_type ?? null,
     productId, (profile as any).id,
   ).run()
   return c.json({ ok: true })
@@ -1831,6 +1838,78 @@ app.get('/api/v1/profile/stats/:profileId', requireAuth, async (c) => {
   })
 })
 
+
+// ─── Assets generales del perfil (R2) ──────────────────────────────────────
+
+app.post('/api/v1/me/assets', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+  const fd = await c.req.formData()
+  const fileVal = fd.get('file')
+  const typeRaw = String(fd.get('type') || 'general').trim()
+
+  const allowedTypes = new Set([
+    'profile_avatar',
+    'company_logo',
+    'catalog_item',
+    'gallery',
+    'general',
+  ])
+
+  const assetType = allowedTypes.has(typeRaw) ? typeRaw : 'general'
+
+  if (!(fileVal && typeof fileVal === 'object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any))) {
+    return c.json({ ok: false, error: 'No file' }, 400)
+  }
+
+  const file = fileVal as any as File
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+
+  if (!allowedExts.includes(ext)) {
+    return c.json({ ok: false, error: 'Formato no permitido' }, 400)
+  }
+
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
+  const key = `profiles/${profileId}/${assetType}/${crypto.randomUUID()}-${safeName}`
+
+  await c.env.BUCKET.put(key, file.stream(), {
+    httpMetadata: { contentType: file.type || 'image/jpeg' },
+  })
+
+  const origin = new URL(c.req.url).origin
+  const encodedKey = key.split('/').map(encodeURIComponent).join('/')
+  const url = `${origin}/api/v1/public/assets/${encodedKey}`
+
+  console.log(JSON.stringify({
+    level: 'info',
+    event: 'profile_asset_upload_success',
+    route: '/api/v1/me/assets',
+    userId,
+    profileId,
+    assetType,
+    key,
+    requestId: c.req.header('cf-ray') || '',
+  }))
+
+  return c.json({
+    ok: true,
+    data: {
+      key,
+      url,
+      type: assetType,
+    },
+  })
+})
+
+
 // ─── Galería (R2) ─────────────────────────────────────────────────────────
 
 app.post('/api/v1/profile/gallery/upload', requireAuth, async (c) => {
@@ -1970,7 +2049,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .bind((profile as any).id)
       .all(),
     c.env.DB.prepare(
-      'SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC'
+      'SELECT id, title, description, price, image_url, whatsapp_text, is_featured, sort_order, item_type FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC'
     )
       .bind((profile as any).id)
       .all(),
