@@ -1900,6 +1900,38 @@ app.get('/api/v1/profile/gallery/:profileId', requireAuth, async (c) => {
   return c.json({ ok: true, photos: photos.results })
 })
 
+// DELETE /api/v1/me/gallery/:key — eliminar foto de la galería
+app.delete('/api/v1/me/gallery/:key', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const profileId = (profile as any).id
+  const key = decodeURIComponent(c.req.param('key'))
+
+  // Verificar que la foto pertenece a este perfil
+  const photo = await c.env.DB.prepare(
+    'SELECT id FROM profile_gallery WHERE profile_id = ? AND image_key = ?'
+  ).bind(profileId, key).first()
+
+  if (!photo) return c.json({ ok: false, error: 'Foto no encontrada' }, 404)
+
+  // Eliminar de R2
+  try {
+    await c.env.BUCKET.delete(key)
+  } catch { /* si ya no existe en R2, continuar */ }
+
+  // Eliminar de D1
+  await c.env.DB.prepare(
+    'DELETE FROM profile_gallery WHERE profile_id = ? AND image_key = ?'
+  ).bind(profileId, key).run()
+
+  return c.json({ ok: true })
+})
+
 app.get('/api/v1/public/assets/*', async (c) => {
   const key = decodeURIComponent(c.req.path.slice('/api/v1/public/assets/'.length))
   if (!key) return c.json({ error: 'Key requerida' }, 400)

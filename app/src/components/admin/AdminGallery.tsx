@@ -53,8 +53,8 @@ export default function AdminGallery() {
       formData.append('profileId', profileId)
       formData.append('file', blob, 'photo.jpg')
       const res: any = await apiUpload('/profile/gallery/upload', formData)
-      if (res.ok && res.photo) {
-        setPhotos((prev) => [res.photo, ...prev])
+      if (res.ok && res.key) {
+        setPhotos((prev) => [{ id: res.id || res.key, image_key: res.key }, ...prev])
       }
     } finally {
       setUploading(false)
@@ -82,8 +82,11 @@ export default function AdminGallery() {
     // Optimistically remove from list
     setPhotos((prev) => prev.filter((p) => p.image_key !== photo.image_key))
     try {
-      await apiGet(`/me/gallery/${encodeURIComponent(photo.image_key)}`)
-    } catch { /* ignore if endpoint doesn't exist */ }
+      await fetch(`${API_BASE}/me/gallery/${encodeURIComponent(photo.image_key)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+    } catch { /* ignore */ }
   }
 
   if (loading) {
