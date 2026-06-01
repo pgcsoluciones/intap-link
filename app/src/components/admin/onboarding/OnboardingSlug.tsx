@@ -38,12 +38,12 @@ export default function OnboardingSlug() {
   }
 
   return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter']">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 font-['Inter']">
       <div className="w-full max-w-sm">
         {/* Progress */}
         <div className="flex gap-1 mb-8">
           {[1, 2, 3, 4].map((step) => (
-            <div key={step} className={`h-1 flex-1 rounded-full ${step === 1 ? 'bg-intap-mint' : 'bg-white/10'}`} />
+            <div key={step} className={`h-1 flex-1 rounded-full ${step === 1 ? 'bg-intap-mint' : 'bg-slate-200'}`} />
           ))}
         </div>
 
@@ -55,8 +55,8 @@ export default function OnboardingSlug() {
 
         <form onSubmit={handleSubmit} className="glass-card p-6 flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Tu slug</label>
-            <div className="flex items-center bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus-within:border-intap-mint/50 transition-colors">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Tu slug</label>
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus-within:border-intap-mint/50 transition-colors">
               <span className="text-slate-500 text-sm select-none mr-1">…/</span>
               <input
                 type="text"
@@ -65,7 +65,7 @@ export default function OnboardingSlug() {
                 placeholder="mi-nombre"
                 maxLength={32}
                 required
-                className="bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none flex-1"
+                className="bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-none flex-1"
               />
               {slug.length >= 2 && (
                 <span className={`text-xs font-bold ${isValid ? 'text-intap-mint' : 'text-red-400'}`}>

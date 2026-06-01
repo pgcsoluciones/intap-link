@@ -105,7 +105,7 @@ export default function OnboardingContact() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="loading-spinner" />
     </div>
   )
@@ -158,7 +158,7 @@ export default function OnboardingContact() {
   }
 
   return (
-    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-sm">
         {isOnboarding && (
           <div className="flex gap-1 mb-8">
@@ -186,13 +186,13 @@ export default function OnboardingContact() {
             ] as const
           ).map(({ label, value, set, placeholder, type }) => (
             <div key={label} className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">{label}</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">{label}</label>
               <input
                 type={type}
                 value={value}
                 onChange={(e) => set(e.target.value)}
                 placeholder={placeholder}
-                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+                className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
               />
             </div>
           ))}
@@ -211,7 +211,7 @@ export default function OnboardingContact() {
             <button
               type="button"
               onClick={() => navigate('/admin')}
-              className="text-xs text-slate-500 hover:text-white text-center transition-colors"
+              className="text-xs text-slate-500 hover:text-slate-900 text-center transition-colors"
             >
               Omitir por ahora
             </button>

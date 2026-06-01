@@ -53,7 +53,7 @@ function SortableProduct({
       <button
         {...attributes}
         {...listeners}
-        className="mt-1 text-slate-500 hover:text-white cursor-grab active:cursor-grabbing touch-none"
+        className="mt-1 text-slate-500 hover:text-slate-900 cursor-grab active:cursor-grabbing touch-none"
         title="Arrastrar"
       >
         ⠿
@@ -86,7 +86,7 @@ function SortableProduct({
         </button>
         <button
           onClick={() => onToggleEdit(product.id)}
-          className="text-xs text-slate-400 hover:text-white transition-colors"
+          className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
           title="Editar"
         >
           ✎
@@ -227,74 +227,59 @@ export default function AdminProducts() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="loading-spinner" />
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-lg">
         <header className="flex items-center gap-4 mb-8">
-          <Link to="/admin" className="text-slate-400 hover:text-white transition-colors">←</Link>
+          <Link to="/admin" className="text-slate-400 hover:text-slate-900 transition-colors">←</Link>
           <h1 className="text-xl font-black">Productos y servicios</h1>
         </header>
 
         {/* Add form */}
         <form onSubmit={addProduct} className="glass-card p-5 mb-6 flex flex-col gap-3">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Agregar producto / servicio</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Agregar producto / servicio</p>
           <input
             type="text"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             placeholder="Nombre *"
             required
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
           />
           <input
             type="text"
             value={form.price}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
             placeholder="Precio (ej. RD$1,500)"
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
           />
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="Descripción"
             rows={2}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
           />
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={form.image_url}
-              onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-              placeholder="URL de imagen (opcional)"
-              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
-            />
-            <label className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 cursor-pointer hover:border-white/30 hover:text-white transition-colors ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
-              {uploadingImage ? '⏳' : '📎'} {uploadingImage ? 'Subiendo…' : 'Subir'}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleImageUpload(file, (url) => setForm((f) => ({ ...f, image_url: url })), setUploadingImage)
-                  e.target.value = ''
-                }}
-              />
-            </label>
-          </div>
+          <input
+            type="url"
+            value={form.image_url}
+            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+            placeholder="URL de imagen (opcional)"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
+          />
           <input
             type="text"
             value={form.whatsapp_text}
             onChange={(e) => setForm({ ...form, whatsapp_text: e.target.value })}
             placeholder="Texto para WhatsApp (ej. Quiero info sobre...)"
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
           />
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
             <input
               type="checkbox"
               checked={form.is_featured}
@@ -333,24 +318,24 @@ export default function AdminProducts() {
                       onToggleFeatured={toggleFeatured}
                     />
                     {editingId === product.id && (
-                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 mt-1 flex flex-col gap-3">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-1 flex flex-col gap-3">
                         <input
                           value={editForm.title}
                           onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none"
                           placeholder="Nombre"
                         />
                         <input
                           value={editForm.price}
                           onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none"
                           placeholder="Precio"
                         />
                         <textarea
                           value={editForm.description}
                           onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                           rows={2}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none resize-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none resize-none"
                           placeholder="Descripción"
                         />
                         <div className="flex gap-2">
@@ -378,10 +363,10 @@ export default function AdminProducts() {
                         <input
                           value={editForm.whatsapp_text}
                           onChange={(e) => setEditForm({ ...editForm, whatsapp_text: e.target.value })}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 focus:outline-none"
                           placeholder="Texto WhatsApp"
                         />
-                        <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={editForm.is_featured}
@@ -399,7 +384,7 @@ export default function AdminProducts() {
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="flex-1 bg-white/10 text-slate-300 text-xs font-bold py-2 rounded-xl"
+                            className="flex-1 bg-slate-100 text-slate-600 text-xs font-bold py-2 rounded-xl"
                           >
                             Cancelar
                           </button>

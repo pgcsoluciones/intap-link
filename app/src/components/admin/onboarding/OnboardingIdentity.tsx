@@ -82,7 +82,7 @@ export default function OnboardingIdentity() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="loading-spinner" />
     </div>
   )
@@ -98,12 +98,12 @@ export default function OnboardingIdentity() {
         onCancel={() => setCropFile(null)}
       />
     )}
-    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-sm">
         {isOnboarding && (
           <div className="flex gap-1 mb-8">
             {[1, 2, 3, 4].map((step) => (
-              <div key={step} className={`h-1 flex-1 rounded-full ${step <= 3 ? 'bg-intap-mint' : 'bg-white/10'}`} />
+              <div key={step} className={`h-1 flex-1 rounded-full ${step <= 3 ? 'bg-intap-mint' : 'bg-slate-200'}`} />
             ))}
           </div>
         )}
@@ -118,7 +118,7 @@ export default function OnboardingIdentity() {
 
           {/* Avatar preview + upload */}
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Foto de perfil</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Foto de perfil</label>
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-intap-mint/10 border border-intap-mint/20 flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">
                 {avatarUrl
@@ -152,31 +152,31 @@ export default function OnboardingIdentity() {
               value={avatarUrl}
               onChange={(e) => setAvatarUrl(e.target.value)}
               placeholder="O pega una URL de imagen (https://...)"
-              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Nombre</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Nombre</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Tu nombre o marca"
               maxLength={80}
-              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Bio</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bio</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Descripción corta de lo que haces…"
               maxLength={300}
               rows={3}
-              className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
             />
             <p className="text-[10px] text-slate-600 text-right">{bio.length}/300</p>
           </div>
@@ -195,7 +195,7 @@ export default function OnboardingIdentity() {
             <button
               type="button"
               onClick={() => navigate('/admin/onboarding/contact')}
-              className="text-xs text-slate-500 hover:text-white text-center transition-colors"
+              className="text-xs text-slate-500 hover:text-slate-900 text-center transition-colors"
             >
               Omitir por ahora
             </button>

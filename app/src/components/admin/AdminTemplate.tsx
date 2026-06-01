@@ -220,7 +220,7 @@ export default function AdminTemplate() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="loading-spinner" />
       </div>
     )
@@ -229,16 +229,10 @@ export default function AdminTemplate() {
   const activeTemplate = TEMPLATES.find((t) => t.id === selectedTemplate) ?? null
 
   return (
-    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center pb-28 px-4 pt-8">
-      <div className="w-full max-w-xl">
-
-        {/* Header */}
-        <header className="flex items-center gap-3 mb-7">
-          <button
-            onClick={() => navigate('/admin')}
-            className="text-slate-400 hover:text-white transition-colors"
-            aria-label="Volver"
-          >
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter'] flex flex-col items-center py-10 px-4">
+      <div className="w-full max-w-2xl">
+        <header className="flex items-center gap-3 mb-8">
+          <button onClick={() => navigate('/admin')} className="text-slate-500 hover:text-slate-900 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -246,28 +240,19 @@ export default function AdminTemplate() {
           <h1 className="text-xl font-black">Plantilla activa</h1>
         </header>
 
-        {/* Selector de plantilla */}
-        <section className="mb-6">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Elige tu plantilla</p>
-          <div className="grid grid-cols-2 gap-3">
-            {TEMPLATES.map((t) => {
-              const isActive = selectedTemplate === t.id
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => handleSelectTemplate(t.id)}
-                  className={[
-                    'flex items-center gap-2.5 px-4 py-3 rounded-xl border text-left transition-all',
-                    isActive
-                      ? 'border-intap-mint bg-intap-mint/10 text-white'
-                      : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/25',
-                  ].join(' ')}
-                >
-                  <span className="text-xl leading-none">{t.icon}</span>
-                  <span className="text-sm font-bold">{t.label}</span>
-                </button>
-              )
-            })}
+        <div className="glass-card p-5 mb-5 border-intap-mint/20 bg-intap-mint/5">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">📱</span>
+            <div>
+              <p className="text-sm font-black text-white">Perfil digital INTAP V2</p>
+              <p className="text-xs text-slate-600 leading-relaxed mt-1">
+                La plantilla de tu perfil público ya no se elige por categoría. Ahora todos los perfiles usan una base clara,
+                editable y preparada para foto o logo, datos de contacto, biografía, empresa, servicios, galería, FAQ y WhatsApp.
+              </p>
+              <p className="text-[11px] text-intap-mint font-bold mt-3">
+                Estado: {me?.template_id === BASE_TEMPLATE_ID ? 'Activa en este perfil' : 'Se activará al guardar'}
+              </p>
+            </div>
           </div>
         </section>
 
@@ -312,9 +297,34 @@ export default function AdminTemplate() {
         )}
       </div>
 
-      {/* Botón guardar sticky */}
-      <div className="fixed bottom-0 left-0 right-0 bg-intap-dark/90 backdrop-blur border-t border-white/10 px-4 py-3 flex justify-center">
-        <div className="w-full max-w-xl">
+                  return (
+                    <label key={field.key} className={isTextarea ? 'md:col-span-2' : ''}>
+                      <span className="block text-xs font-bold text-slate-400 mb-1.5">{field.label}</span>
+                      {isTextarea ? (
+                        <textarea
+                          value={fields[field.key] ?? ''}
+                          onChange={(e) => setField(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          rows={4}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
+                        />
+                      ) : (
+                        <input
+                          value={fields[field.key] ?? ''}
+                          onChange={(e) => setField(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
+                        />
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <div className="sticky bottom-4 mt-6">
           <button
             onClick={handleSave}
             disabled={saving || !selectedTemplate}

@@ -58,7 +58,7 @@ function SortableLink({
       <button
         {...attributes}
         {...listeners}
-        className="text-slate-500 hover:text-white cursor-grab active:cursor-grabbing touch-none"
+        className="text-slate-500 hover:text-slate-900 cursor-grab active:cursor-grabbing touch-none"
         title="Arrastrar"
       >
         ⠿
@@ -95,7 +95,7 @@ function SortableLink({
         className={`text-xs px-2 py-1 rounded-full border font-bold transition-colors ${
           link.is_active
             ? 'border-intap-mint/30 text-intap-mint bg-intap-mint/10'
-            : 'border-white/10 text-slate-500'
+            : 'border-slate-200 text-slate-500'
         }`}
       >
         {link.is_active ? 'ON' : 'OFF'}
@@ -176,29 +176,29 @@ export default function AdminLinks() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="loading-spinner" />
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-lg">
         <header className="flex items-center gap-4 mb-8">
-          <Link to="/admin" className="text-slate-400 hover:text-white transition-colors">←</Link>
+          <Link to="/admin" className="text-slate-400 hover:text-slate-900 transition-colors">←</Link>
           <h1 className="text-xl font-black">Mis links</h1>
         </header>
 
         {/* Add new link */}
         <form onSubmit={addLink} className="glass-card p-5 mb-6 flex flex-col gap-3">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Agregar link</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Agregar link</p>
           <input
             type="text"
             value={newLabel}
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Etiqueta (ej. Mi Instagram)"
             required
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
           />
           <input
             type="url"
@@ -206,7 +206,7 @@ export default function AdminLinks() {
             onChange={(e) => setNewUrl(e.target.value)}
             placeholder="https://..."
             required
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
           />
           {error && <p className="text-xs text-red-400">{error}</p>}
           {limitError && (

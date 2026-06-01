@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-intap-dark: #18181b;
-  --color-intap-card: #111827;
+  --color-intap-dark: #f8fafc;
+  --color-intap-card: #ffffff;
   --color-intap-mint: #0df2c9;
   --color-intap-blue: #3b82f6;
 
@@ -12,7 +12,7 @@
 
 @layer base {
   body {
-    @apply bg-intap-dark text-white antialiased;
+    @apply bg-intap-dark text-slate-900 antialiased;
     font-family: 'Inter', sans-serif;
   }
 }
@@ -23,7 +23,9 @@
   }
 
   .glass-card {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
   }
 
   .nav-item {

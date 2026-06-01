@@ -52,7 +52,7 @@ function SortableFAQ({
       <button
         {...attributes}
         {...listeners}
-        className="mt-1 text-slate-500 hover:text-white cursor-grab active:cursor-grabbing touch-none"
+        className="mt-1 text-slate-500 hover:text-slate-900 cursor-grab active:cursor-grabbing touch-none"
         title="Arrastrar"
       >
         ⠿
@@ -66,7 +66,7 @@ function SortableFAQ({
       <div className="flex gap-2 shrink-0">
         <button
           onClick={() => onToggleEdit(faq.id)}
-          className="text-xs text-slate-400 hover:text-white transition-colors"
+          className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
           title="Editar"
         >
           ✎
@@ -159,29 +159,29 @@ export default function AdminFAQs() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
       <div className="loading-spinner" />
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-lg">
         <header className="flex items-center gap-4 mb-8">
-          <Link to="/admin" className="text-slate-400 hover:text-white transition-colors">←</Link>
+          <Link to="/admin" className="text-slate-400 hover:text-slate-900 transition-colors">←</Link>
           <h1 className="text-xl font-black">Preguntas frecuentes</h1>
         </header>
 
         {/* Add new FAQ */}
         <form onSubmit={addFAQ} className="glass-card p-5 mb-6 flex flex-col gap-3">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Agregar FAQ</p>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Agregar FAQ</p>
           <input
             type="text"
             value={newQuestion}
             onChange={(e) => setNewQuestion(e.target.value)}
             placeholder="Pregunta"
             required
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
           />
           <textarea
             value={newAnswer}
@@ -189,7 +189,7 @@ export default function AdminFAQs() {
             placeholder="Respuesta"
             required
             rows={3}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
+            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
           />
           {error && <p className="text-xs text-red-400">{error}</p>}
           {limitError && (
@@ -216,18 +216,18 @@ export default function AdminFAQs() {
                   <div key={faq.id}>
                     <SortableFAQ faq={faq} onToggleEdit={toggleEdit} onDelete={deleteFAQ} />
                     {editingId === faq.id && (
-                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 mt-1 flex flex-col gap-3">
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-1 flex flex-col gap-3">
                         <input
                           value={editQ}
                           onChange={(e) => setEditQ(e.target.value)}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
                           placeholder="Pregunta"
                         />
                         <textarea
                           value={editA}
                           onChange={(e) => setEditA(e.target.value)}
                           rows={3}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none resize-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none resize-none"
                           placeholder="Respuesta"
                         />
                         <div className="flex gap-2">
@@ -239,7 +239,7 @@ export default function AdminFAQs() {
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="flex-1 bg-white/10 text-slate-300 text-xs font-bold py-2 rounded-xl"
+                            className="flex-1 bg-slate-100 text-slate-600 text-xs font-bold py-2 rounded-xl"
                           >
                             Cancelar
                           </button>
