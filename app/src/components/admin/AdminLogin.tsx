@@ -37,7 +37,7 @@ export default function AdminLogin() {
   const isRegister = mode === 'register'
 
   return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter'] relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 font-['Inter'] relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
 
       {/* Ambient glow — azul eléctrico corporativo */}
       <div
