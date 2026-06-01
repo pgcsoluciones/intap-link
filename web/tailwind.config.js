@@ -7,7 +7,7 @@ module.exports = {
         extend: {
             colors: {
                 intap: {
-                    dark: '#030712',
+                    dark: '#18181b',
                     card: '#111827',
                     mint: '#0df2c9',
                     blue: '#3b82f6',

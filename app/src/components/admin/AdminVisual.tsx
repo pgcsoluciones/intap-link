@@ -25,7 +25,7 @@ const THEMES = [
     value: 'default',
     label: 'Clásico Dark',
     description: 'Fondo oscuro con detalles mint',
-    bg: '#030712',
+    bg: '#18181b',
     text: '#0df2c9',
   },
   {
