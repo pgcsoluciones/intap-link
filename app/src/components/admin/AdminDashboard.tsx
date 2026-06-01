@@ -149,7 +149,7 @@ export default function AdminDashboard() {
         </span>
         <button
           onClick={handleLogout}
-          className="text-xs text-slate-500 hover:text-slate-900 transition-colors border border-slate-200 px-3 py-1.5 rounded-full"
+          className="text-xs text-slate-600 hover:text-slate-900 transition-colors border border-slate-200 px-3 py-1.5 rounded-full"
         >
           Cerrar sesión
         </button>
@@ -180,9 +180,9 @@ export default function AdminDashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-slate-900 truncate">{me?.name || me?.email || '—'}</p>
-            {me?.slug && <p className="text-xs text-slate-500">@{me.slug}</p>}
+            {me?.slug && <p className="text-xs text-slate-600">@{me.slug}</p>}
             {me?.category && <p className="text-xs text-intap-mint mt-0.5">{me.category}</p>}
-            {me?.bio && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{me.bio}</p>}
+            {me?.bio && <p className="text-xs text-slate-600 mt-1 line-clamp-2">{me.bio}</p>}
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
         {me?.slug && (
           <div className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">Tu URL pública</p>
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">Tu URL pública</p>
               {!slugEditing && (
                 <button onClick={startSlugEdit} className="text-xs text-intap-mint hover:underline font-bold">
                   Cambiar
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
             {slugEditing ? (
               <div className="flex flex-col gap-2 mt-2">
                 <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus-within:border-intap-mint/50 transition-colors">
-                  <span className="text-slate-400 text-xs select-none mr-1">…/</span>
+                  <span className="text-slate-600 text-xs select-none mr-1">…/</span>
                   <input
                     type="text"
                     value={newSlug}
@@ -221,7 +221,7 @@ export default function AdminDashboard() {
                   <button onClick={handleSlugSave} disabled={slugSaving} className="flex-1 text-xs bg-intap-mint/20 text-intap-mint border border-intap-mint/30 py-2 rounded-xl font-bold hover:bg-intap-mint/30 disabled:opacity-50">
                     {slugSaving ? 'Guardando…' : 'Guardar'}
                   </button>
-                  <button onClick={() => setSlugEditing(false)} className="flex-1 text-xs bg-slate-100 text-slate-500 border border-slate-200 py-2 rounded-xl hover:text-slate-900">
+                  <button onClick={() => setSlugEditing(false)} className="flex-1 text-xs bg-slate-100 text-slate-600 border border-slate-200 py-2 rounded-xl hover:text-slate-900">
                     Cancelar
                   </button>
                 </div>
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
                   {me.is_published ? 'PUBLICADO' : 'NO PUBLICADO'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500">{me.is_published ? 'Visible para todos en tu URL' : 'Solo tú puedes verlo'}</p>
+              <p className="text-xs text-slate-600">{me.is_published ? 'Visible para todos en tu URL' : 'Solo tú puedes verlo'}</p>
             </div>
             <button
               onClick={togglePublished}
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
                 href={previewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-900 transition-colors"
+                className="px-3 py-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-colors"
                 title="Vista previa"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -305,7 +305,7 @@ export default function AdminDashboard() {
 
         {/* ── Edición rápida ── */}
         <div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Edición rápida</p>
+          <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2 px-1">Edición rápida</p>
           <div className="flex flex-col gap-1.5">
             {navItems.map((item) => (
               <button
@@ -317,10 +317,10 @@ export default function AdminDashboard() {
                   <span className="text-xl w-7 text-center">{item.emoji}</span>
                   <div>
                     <p className="text-sm font-bold text-slate-900 leading-tight">{item.label}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{item.sub}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">{item.sub}</p>
                   </div>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
@@ -330,9 +330,9 @@ export default function AdminDashboard() {
 
         {/* ── Mi plan ── */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Mi plan</p>
+          <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Mi plan</p>
           <p className="text-sm font-bold capitalize text-intap-mint">{me?.plan_id ?? 'Free'}</p>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-600 mt-0.5">
             {linkCount} link{linkCount !== 1 ? 's' : ''}
             {stats?.totalViews != null && <> · {stats.totalViews} visitas</>}
           </p>

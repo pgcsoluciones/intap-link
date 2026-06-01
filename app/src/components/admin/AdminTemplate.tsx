@@ -197,7 +197,7 @@ export default function AdminTemplate() {
         <header className="flex items-center gap-3 mb-8">
           <button
             onClick={() => navigate('/admin')}
-            className="text-slate-500 hover:text-slate-900 transition-colors"
+            className="text-slate-600 hover:text-slate-900 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -208,7 +208,7 @@ export default function AdminTemplate() {
 
         {/* Selector de plantilla */}
         <section className="bg-white border border-slate-200 rounded-2xl p-5 mb-5">
-          <h2 className="text-sm font-bold text-slate-500 mb-4">Elige una plantilla</h2>
+          <h2 className="text-sm font-bold text-slate-600 mb-4">Elige una plantilla</h2>
           <div className="grid grid-cols-2 gap-3">
             {TEMPLATES.map((t) => (
               <button
@@ -239,7 +239,7 @@ export default function AdminTemplate() {
               const isTextarea = field.type === 'textarea'
               return (
                 <label key={field.key} className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-slate-500">{field.label}</span>
+                  <span className="text-xs font-bold text-slate-600">{field.label}</span>
                   {isTextarea ? (
                     <textarea
                       value={fields[field.key] ?? ''}
