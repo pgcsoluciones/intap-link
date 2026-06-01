@@ -1,0 +1,4510 @@
+.onea-page {
+  --onea-black: #070707;
+  --onea-charcoal: #111111;
+  --onea-ivory: #f7f2ea;
+  --onea-card: #fffaf2;
+  --onea-gold: #c5a25e;
+  --onea-gold-soft: #ead4a3;
+  --onea-text: #1c1a17;
+  --onea-muted: #766f65;
+
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at top, rgba(197, 162, 94, 0.2), transparent 32rem),
+    linear-gradient(180deg, #070707 0%, #12100d 28rem, var(--onea-ivory) 28rem);
+  color: var(--onea-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.onea-page * {
+  box-sizing: border-box;
+}
+
+.onea-page a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.onea-hero {
+  position: relative;
+  padding-bottom: 1.25rem;
+  background: var(--onea-black);
+  color: #fff;
+}
+
+.onea-hero-media {
+  min-height: 15.5rem;
+  width: 100%;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.76)),
+    url('/assets/landing/1aeventos/hero-1aeventos.jpg') center/cover no-repeat;
+}
+
+.onea-logo-mark {
+  position: absolute;
+  top: 1.2rem;
+  left: 1.15rem;
+  display: grid;
+  gap: .1rem;
+  color: var(--onea-gold-soft);
+  letter-spacing: .16em;
+  text-align: center;
+}
+
+.onea-logo-mark strong {
+  font-size: 2.6rem;
+  line-height: .86;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+}
+
+.onea-logo-mark span {
+  font-size: .62rem;
+  font-weight: 700;
+}
+
+.onea-hero-card {
+  position: relative;
+  z-index: 1;
+  width: min(92%, 28rem);
+  margin: -4.5rem auto 0;
+  padding: 5.25rem 1.2rem 1.2rem;
+  border: 1px solid rgba(234, 212, 163, .24);
+  border-radius: 2rem;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
+    #101010;
+  box-shadow: 0 1.5rem 3.5rem rgba(0,0,0,.38);
+  text-align: center;
+}
+
+.onea-avatar {
+  position: absolute;
+  left: 50%;
+  top: -4.15rem;
+  transform: translateX(-50%);
+  width: 8.3rem;
+  height: 8.3rem;
+  padding: .22rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--onea-gold-soft), var(--onea-gold));
+  box-shadow: 0 1rem 2rem rgba(0,0,0,.34);
+}
+
+.onea-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  background: #2b2b2b;
+}
+
+.onea-kicker,
+.onea-section-head p {
+  margin: 0;
+  color: var(--onea-gold);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.onea-hero-card h1 {
+  margin: .35rem 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(1.85rem, 9vw, 2.45rem);
+  line-height: 1.03;
+  font-weight: 500;
+}
+
+.onea-role {
+  margin: .7rem 0 1.1rem;
+  color: rgba(255,255,255,.72);
+  font-size: .98rem;
+}
+
+.onea-primary-cta,
+.onea-secondary-cta,
+.onea-map-card a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  min-height: 3.25rem;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--onea-gold-soft), var(--onea-gold));
+  color: #16120b !important;
+  font-weight: 900;
+  box-shadow: 0 .8rem 1.5rem rgba(197,162,94,.24);
+}
+
+.onea-quick-links {
+  width: min(92%, 28rem);
+  margin: 1rem auto 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .55rem;
+}
+
+.onea-quick-links a {
+  min-height: 5rem;
+  display: grid;
+  place-items: center;
+  gap: .35rem;
+  padding: .7rem .25rem;
+  border: 1px solid rgba(197,162,94,.22);
+  border-radius: 1.25rem;
+  background: rgba(255,255,255,.06);
+  color: #fff;
+  text-align: center;
+}
+
+.onea-quick-links span {
+  display: grid;
+  place-items: center;
+  color: var(--onea-gold-soft);
+  font-size: 1.1rem;
+}
+
+.onea-quick-links small {
+  font-size: .68rem;
+  color: rgba(255,255,255,.72);
+}
+
+.onea-section,
+.onea-map-card,
+.onea-footer {
+  width: min(92%, 28rem);
+  margin: 1rem auto 0;
+}
+
+.onea-section {
+  padding: 1.05rem;
+  border: 1px solid rgba(0,0,0,.07);
+  border-radius: 1.65rem;
+  background: rgba(255,250,242,.92);
+  box-shadow: 0 .75rem 1.8rem rgba(15,13,10,.06);
+}
+
+.onea-section-head {
+  margin-bottom: .95rem;
+}
+
+.onea-section-head h2 {
+  margin: .25rem 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+  line-height: 1.12;
+  color: var(--onea-text);
+}
+
+.onea-contact-list {
+  display: grid;
+  gap: .5rem;
+}
+
+.onea-contact-list a {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr auto;
+  align-items: center;
+  gap: .7rem;
+  min-height: 3.1rem;
+  padding: .72rem .8rem;
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 1rem;
+  background: rgba(255,255,255,.66);
+  color: var(--onea-text);
+  font-weight: 700;
+}
+
+.onea-contact-list svg {
+  color: var(--onea-gold);
+}
+
+.onea-catalog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.onea-catalog-head button {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(197,162,94,.38);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--onea-gold);
+}
+
+.onea-catalog-slider {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 38%;
+  gap: .65rem;
+  overflow-x: auto;
+  padding-bottom: .5rem;
+  scroll-snap-type: x mandatory;
+}
+
+.onea-catalog-slider::-webkit-scrollbar {
+  display: none;
+}
+
+.onea-catalog-card {
+  position: relative;
+  min-height: 8.25rem;
+  overflow: hidden;
+  border-radius: 1.2rem;
+  background: #191919;
+  scroll-snap-align: start;
+  box-shadow: 0 .75rem 1.3rem rgba(0,0,0,.12);
+}
+
+.onea-catalog-card img {
+  width: 100%;
+  height: 100%;
+  min-height: 8.25rem;
+  display: block;
+  object-fit: cover;
+  opacity: .88;
+}
+
+.onea-catalog-card span {
+  position: absolute;
+  left: .55rem;
+  right: .55rem;
+  bottom: .55rem;
+  padding: .45rem .5rem;
+  border-radius: .85rem;
+  background: rgba(0,0,0,.62);
+  color: #fff;
+  text-align: center;
+  font-size: .83rem;
+  font-weight: 900;
+  backdrop-filter: blur(10px);
+}
+
+.onea-secondary-cta {
+  margin-top: .75rem;
+}
+
+.onea-service-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+
+.onea-service-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  min-height: 2.6rem;
+  padding: .55rem .78rem;
+  border: 1px solid rgba(197,162,94,.28);
+  border-radius: 999px;
+  background: rgba(255,255,255,.7);
+  color: var(--onea-text);
+  font-weight: 800;
+}
+
+.onea-service-chips svg {
+  color: var(--onea-gold);
+}
+
+.onea-about p,
+.onea-trust p {
+  margin: 0;
+  color: var(--onea-muted);
+  line-height: 1.65;
+}
+
+.onea-trust {
+  background:
+    linear-gradient(145deg, rgba(197,162,94,.12), rgba(255,255,255,.02)),
+    var(--onea-charcoal);
+  color: #fff;
+  text-align: center;
+}
+
+.onea-trust h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--onea-gold-soft);
+}
+
+.onea-trust p {
+  margin-top: .45rem;
+  color: rgba(255,255,255,.72);
+}
+
+.onea-stats {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .5rem;
+}
+
+.onea-stats div {
+  padding: .8rem .35rem;
+  border: 1px solid rgba(234,212,163,.18);
+  border-radius: 1rem;
+}
+
+.onea-stats strong {
+  display: block;
+  color: var(--onea-gold-soft);
+  font-size: 1.25rem;
+}
+
+.onea-stats span {
+  display: block;
+  margin-top: .25rem;
+  color: rgba(255,255,255,.72);
+  font-size: .68rem;
+}
+
+.onea-faq-list {
+  display: grid;
+  gap: .5rem;
+}
+
+.onea-faq-list details {
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 1rem;
+  background: rgba(255,255,255,.62);
+  overflow: hidden;
+}
+
+.onea-faq-list summary {
+  cursor: pointer;
+  padding: .85rem;
+  font-weight: 900;
+}
+
+.onea-faq-list p {
+  margin: 0;
+  padding: 0 .85rem .85rem;
+  color: var(--onea-muted);
+  line-height: 1.55;
+}
+
+.onea-map-card {
+  display: grid;
+  gap: .9rem;
+  padding: 1.1rem;
+  border-radius: 1.5rem;
+  background:
+    linear-gradient(135deg, rgba(0,0,0,.34), rgba(0,0,0,.78)),
+    url('/assets/landing/1aeventos/map-preview.jpg') center/cover no-repeat;
+  color: #fff;
+}
+
+.onea-map-card p {
+  margin: 0;
+  color: var(--onea-gold-soft);
+  font-weight: 900;
+}
+
+.onea-map-card h2 {
+  margin: .25rem 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.2rem;
+  line-height: 1.15;
+}
+
+.onea-floating-chat {
+  position: fixed;
+  right: 1rem;
+  bottom: 1.1rem;
+  z-index: 40;
+  width: 3.7rem;
+  height: 3.7rem;
+  display: grid;
+  place-items: center;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--onea-gold-soft), var(--onea-gold));
+  color: #16120b !important;
+  box-shadow: 0 1rem 2rem rgba(0,0,0,.25);
+  font-size: 1.65rem;
+}
+
+.onea-floating-chat span {
+  position: absolute;
+  top: -.25rem;
+  right: -.15rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #c91f2e;
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+.onea-footer {
+  padding: 1.5rem 1rem 5.5rem;
+  color: rgba(255,255,255,.7);
+  text-align: center;
+}
+
+.onea-footer strong,
+.onea-footer span,
+.onea-footer small {
+  display: block;
+}
+
+.onea-footer strong {
+  color: var(--onea-gold-soft);
+}
+
+.onea-footer span {
+  margin-top: .25rem;
+}
+
+.onea-footer small {
+  margin-top: .5rem;
+  color: rgba(255,255,255,.48);
+}
+
+@media (min-width: 720px) {
+  .onea-page {
+    display: grid;
+    justify-content: center;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.6 — Reset limpio basado en patrón JPREZ/NOVI
+   Objetivo:
+   - recuperar centrado mobile-first
+   - secciones sueltas, no encapsuladas en card grande
+   - negro/blanco corporativo
+   - dorado mínimo como acento
+   - sin azul heredado
+   - sin degradados en bloques negros
+   ========================================================== */
+
+.onea-page {
+  --onea-black: #000000;
+  --onea-white: #ffffff;
+  --onea-soft: #f7f6f3;
+  --onea-line: #ded8cc;
+  --onea-gold: #b79a56;
+  --onea-text: #111111;
+  --onea-muted: #5f5f5f;
+
+  background: var(--onea-soft) !important;
+  color: var(--onea-text) !important;
+  overflow-x: hidden !important;
+}
+
+/* Regla de contención correcta: centrado como NOVI/JPREZ */
+.onea-hero-card,
+.onea-quick-links,
+.onea-section,
+.onea-map-card,
+.onea-footer {
+  width: min(92%, 28rem) !important;
+  max-width: 28rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Hero negro sólido, sin degradado */
+.onea-hero {
+  background: #000000 !important;
+  background-image: none !important;
+  padding-bottom: 1.15rem !important;
+}
+
+.onea-hero-media {
+  min-height: 14.5rem !important;
+  background: #000000 url('/assets/landing/1aeventos/hero-1aeventos.jpg') center/cover no-repeat !important;
+}
+
+/* Mientras no haya imagen real, que no se vea roto */
+.onea-hero-media:empty {
+  background-color: #000000 !important;
+}
+
+.onea-hero-card {
+  margin-top: -4.2rem !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  background: #111111 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.onea-logo-mark {
+  color: #ffffff !important;
+}
+
+.onea-logo-mark span {
+  color: rgba(255,255,255,.72) !important;
+}
+
+.onea-avatar {
+  background: #111111 !important;
+  border: 2px solid rgba(183,154,86,.8) !important;
+  box-shadow: none !important;
+}
+
+.onea-avatar img {
+  background: #242424 !important;
+}
+
+/* Tipografía sobria */
+.onea-hero-card h1 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(1.9rem, 8vw, 2.55rem) !important;
+  line-height: 1.04 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.onea-role {
+  color: rgba(255,255,255,.72) !important;
+}
+
+.onea-kicker,
+.onea-section-head p {
+  color: var(--onea-gold) !important;
+  -webkit-text-fill-color: var(--onea-gold) !important;
+  letter-spacing: .13em !important;
+}
+
+/* CTA sin azul, negro/blanco */
+.onea-primary-cta,
+.onea-primary-cta:link,
+.onea-primary-cta:visited,
+.onea-primary-cta:hover,
+.onea-primary-cta:focus,
+.onea-primary-cta:active {
+  background: #000000 !important;
+  background-image: none !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-primary-cta svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+/* Enlaces rápidos: centrados, sin card contenedora */
+.onea-quick-links {
+  margin-top: 1rem !important;
+}
+
+.onea-quick-links a,
+.onea-quick-links a:link,
+.onea-quick-links a:visited,
+.onea-quick-links a:hover,
+.onea-quick-links a:focus,
+.onea-quick-links a:active {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: rgba(255,255,255,.78) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.78) !important;
+}
+
+.onea-quick-links span,
+.onea-quick-links svg {
+  color: var(--onea-gold) !important;
+  fill: currentColor !important;
+}
+
+/* Secciones sueltas: sin encapsulado grande */
+.onea-section {
+  margin-top: 2rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.onea-section-head {
+  margin-bottom: .9rem !important;
+}
+
+.onea-section-head h2 {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(1.45rem, 6vw, 1.9rem) !important;
+  line-height: 1.08 !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.04em !important;
+}
+
+/* Filas funcionales sí quedan como elementos clicables, no como sección-card */
+.onea-contact-list {
+  gap: .62rem !important;
+}
+
+.onea-contact-list a,
+.onea-contact-list a:link,
+.onea-contact-list a:visited,
+.onea-contact-list a:hover,
+.onea-contact-list a:focus,
+.onea-contact-list a:active {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid var(--onea-line) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-contact-list a svg {
+  color: var(--onea-gold) !important;
+  fill: currentColor !important;
+}
+
+/* Catálogo: sección suelta, cards internas conservadas */
+.onea-catalog-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.onea-catalog-head button,
+.onea-catalog-head button:hover,
+.onea-catalog-head button:focus,
+.onea-catalog-head button:active {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid var(--onea-line) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  box-shadow: none !important;
+}
+
+.onea-catalog-slider {
+  grid-auto-columns: 42% !important;
+  gap: .65rem !important;
+  padding-bottom: .65rem !important;
+}
+
+.onea-catalog-card {
+  background: #111111 !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.onea-catalog-card span {
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.onea-secondary-cta,
+.onea-secondary-cta:hover,
+.onea-secondary-cta:focus,
+.onea-secondary-cta:active {
+  background: #000000 !important;
+  background-image: none !important;
+  border: 1px solid #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-secondary-cta svg {
+  color: #ffffff !important;
+}
+
+/* Servicios */
+.onea-service-chips button,
+.onea-service-chips button:hover,
+.onea-service-chips button:focus,
+.onea-service-chips button:active {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid var(--onea-line) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  box-shadow: none !important;
+}
+
+.onea-service-chips button svg {
+  color: var(--onea-gold) !important;
+}
+
+/* Sobre 1A */
+.onea-about p {
+  color: #4d4d4d !important;
+  line-height: 1.72 !important;
+}
+
+/* Confianza: bloque negro sólido especial */
+.onea-trust {
+  margin-top: 2.2rem !important;
+  padding: 1.35rem !important;
+  border: 0 !important;
+  border-radius: 1.35rem !important;
+  background: #000000 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.onea-trust h2 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(2.2rem, 11vw, 3.6rem) !important;
+  line-height: .95 !important;
+  letter-spacing: -0.065em !important;
+}
+
+.onea-trust p {
+  color: rgba(255,255,255,.72) !important;
+}
+
+.onea-stats div {
+  border: 1px solid rgba(183,154,86,.25) !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.onea-stats strong {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+/* FAQ */
+.onea-faq-list details {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid var(--onea-line) !important;
+  box-shadow: none !important;
+}
+
+.onea-faq-list summary {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Mapa: bloque especial negro sólido */
+.onea-map-card {
+  margin-top: 2.2rem !important;
+  padding: 1.15rem !important;
+  border: 0 !important;
+  border-radius: 1.35rem !important;
+  background: #000000 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.onea-map-card p,
+.onea-map-card h2 {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.onea-map-card a,
+.onea-map-card a:link,
+.onea-map-card a:visited,
+.onea-map-card a:hover,
+.onea-map-card a:focus,
+.onea-map-card a:active {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid #ffffff !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  box-shadow: none !important;
+}
+
+/* Burbuja */
+.onea-floating-chat,
+.onea-floating-chat:link,
+.onea-floating-chat:visited,
+.onea-floating-chat:hover,
+.onea-floating-chat:focus,
+.onea-floating-chat:active {
+  background: #000000 !important;
+  background-image: none !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-floating-chat svg {
+  color: #ffffff !important;
+}
+
+/* Footer */
+.onea-footer {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-footer strong {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Anti-azul específico, sin romper layout */
+.onea-page a,
+.onea-page a:visited,
+.onea-page a:hover,
+.onea-page a:focus,
+.onea-page a:active,
+.onea-page button,
+.onea-page button:hover,
+.onea-page button:focus,
+.onea-page button:active {
+  text-decoration: none !important;
+  outline-color: rgba(183,154,86,.45) !important;
+}
+
+/* Desktop: mantener perfil centrado tipo móvil, no expandido */
+@media (min-width: 720px) {
+  .onea-page {
+    display: block !important;
+  }
+
+  .onea-hero-card,
+  .onea-quick-links,
+  .onea-section,
+  .onea-map-card,
+  .onea-footer {
+    width: min(92%, 28rem) !important;
+    max-width: 28rem !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .onea-company-intro-logo {
+    width: min(100%, 7.2rem) !important;
+    max-width: 7.2rem !important;
+  }
+
+  .onea-company-intro h2 {
+    width: min(100%, 19.8rem) !important;
+    font-size: clamp(1.34rem, 6vw, 1.72rem) !important;
+    line-height: 1.16 !important;
+    margin-bottom: 1.05rem !important;
+  }
+
+  .onea-hero-card,
+  .onea-quick-links,
+  .onea-section,
+  .onea-map-card,
+  .onea-footer {
+    width: min(92%, 28rem) !important;
+  }
+
+  .onea-catalog-slider {
+    grid-auto-columns: 43% !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.10 — Hero final sin cápsula, basado en JPREZ
+   Foto protagonista + nombre directo debajo.
+   Negro sólido, blanco, dorado mínimo.
+   ========================================================== */
+
+.onea-hero {
+  position: relative !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  padding: 3.25rem 0 2.25rem !important;
+  text-align: center !important;
+}
+
+.onea-hero-media {
+  display: none !important;
+}
+
+.onea-logo-mark {
+  position: absolute !important;
+  top: 1rem !important;
+  left: 1rem !important;
+  z-index: 2 !important;
+  color: #ffffff !important;
+}
+
+.onea-logo-mark strong {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.onea-logo-mark span {
+  color: rgba(255,255,255,.72) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.72) !important;
+}
+
+/* La hero-card queda solo como contenedor técnico, no como card visual */
+.onea-hero-card {
+  position: relative !important;
+  width: min(92%, 28rem) !important;
+  max-width: 28rem !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  text-align: center !important;
+}
+
+/* Foto estilo referencia JPREZ: grande, vertical y fuera de cápsula */
+.onea-avatar {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  width: min(15.5rem, 66vw) !important;
+  height: min(19rem, 82vw) !important;
+  margin: 0 auto 1.55rem !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  border: 2px solid var(--onea-gold) !important;
+  box-shadow: none !important;
+}
+
+.onea-avatar img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+}
+
+/* Sin rótulo pequeño en hero */
+.onea-kicker {
+  display: none !important;
+}
+
+/* Nombre reducido y más parecido a referencia */
+.onea-hero-card h1 {
+  width: min(100%, 22rem) !important;
+  margin: 0 auto !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(1.45rem, 5.4vw, 1.95rem) !important;
+  line-height: 1.08 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.035em !important;
+}
+
+.onea-role {
+  width: min(100%, 22rem) !important;
+  margin: .55rem auto 1.1rem !important;
+  color: rgba(255,255,255,.76) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.76) !important;
+  font-size: .95rem !important;
+  line-height: 1.35 !important;
+}
+
+/* CTA limpio */
+.onea-primary-cta,
+.onea-primary-cta:link,
+.onea-primary-cta:visited,
+.onea-primary-cta:hover,
+.onea-primary-cta:focus,
+.onea-primary-cta:active {
+  width: min(100%, 22rem) !important;
+  min-height: 3.05rem !important;
+  margin: 0 auto !important;
+  border-radius: 999px !important;
+  background: #000000 !important;
+  background-image: none !important;
+  border: 1px solid rgba(255,255,255,.24) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-primary-cta svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+/* Quitar títulos pequeños de secciones */
+.onea-section-head p {
+  display: none !important;
+}
+
+/* Mantener patrón mobile centered de JPREZ/NOVI */
+.onea-quick-links,
+.onea-section,
+.onea-map-card,
+.onea-footer {
+  width: min(92%, 28rem) !important;
+  max-width: 28rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+@media (max-width: 520px) {
+  .onea-hero {
+    padding-top: 3rem !important;
+    padding-bottom: 2rem !important;
+  }
+
+  .onea-avatar {
+    width: min(13.5rem, 64vw) !important;
+    height: min(16.6rem, 79vw) !important;
+    margin-bottom: 1.35rem !important;
+  }
+
+  .onea-hero-card h1 {
+    font-size: clamp(1.35rem, 6vw, 1.75rem) !important;
+    width: min(100%, 20rem) !important;
+  }
+
+  .onea-role {
+    font-size: .92rem !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.12 — Hero/quick links final estilo NOVI/JPREZ
+   - intro breve dentro del hero
+   - quick links: llamar, instagram, ubicación, guardar
+   - botones negros con borde dorado fino
+   - hover dorado suave + texto negro
+   - sin contactos personales duplicados debajo
+   ========================================================== */
+
+.onea-page {
+  --onea-gold: #b79a56;
+  --onea-gold-hover: #fff8e8;
+  --onea-black: #000000;
+  --onea-white: #ffffff;
+}
+
+/* Hero mantiene estructura limpia */
+.onea-hero {
+  background: #000000 !important;
+  background-image: none !important;
+}
+
+.onea-hero-card {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Intro breve tipo NOVI, debajo del cargo */
+.onea-hero-intro {
+  width: min(100%, 23.5rem) !important;
+  margin: .75rem auto 1.1rem !important;
+  color: rgba(255,255,255,.76) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.76) !important;
+  font-size: .96rem !important;
+  line-height: 1.55 !important;
+  font-weight: 400 !important;
+  text-align: center !important;
+}
+
+/* CTA principal: negro, texto blanco, borde dorado fino */
+.onea-page .onea-primary-cta,
+.onea-page .onea-primary-cta:link,
+.onea-page .onea-primary-cta:visited {
+  width: min(100%, 22rem) !important;
+  min-height: 3.05rem !important;
+  margin: 0 auto !important;
+  border-radius: 999px !important;
+  background: #000000 !important;
+  background-image: none !important;
+  border: 1px solid rgba(183,154,86,.82) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+  transition:
+    background-color .22s ease,
+    border-color .22s ease,
+    color .22s ease,
+    transform .22s ease !important;
+}
+
+.onea-page .onea-primary-cta svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+/* Hover suave, no agresivo */
+.onea-page .onea-primary-cta:hover,
+.onea-page .onea-primary-cta:focus,
+.onea-page .onea-primary-cta:active {
+  background: var(--onea-gold-hover) !important;
+  background-image: none !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  transform: translateY(-1px) !important;
+}
+
+.onea-page .onea-primary-cta:hover svg,
+.onea-page .onea-primary-cta:focus svg,
+.onea-page .onea-primary-cta:active svg {
+  color: #111111 !important;
+  fill: currentColor !important;
+}
+
+/* Quick links dentro del hero, como bloque visual del perfil */
+.onea-page .onea-quick-links-hero {
+  width: min(100%, 24rem) !important;
+  max-width: 24rem !important;
+  margin: 1rem auto 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: .6rem !important;
+}
+
+/* Botones rápidos: negros, texto blanco, borde dorado fino */
+.onea-page .onea-quick-links-hero a,
+.onea-page .onea-quick-links-hero a:link,
+.onea-page .onea-quick-links-hero a:visited {
+  min-height: 4.4rem !important;
+  padding: .68rem .34rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: .42rem !important;
+  border: 1px solid rgba(183,154,86,.82) !important;
+  border-radius: 1.35rem !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+  text-align: center !important;
+  transition:
+    background-color .22s ease,
+    border-color .22s ease,
+    color .22s ease,
+    transform .22s ease !important;
+}
+
+.onea-page .onea-quick-links-hero a span {
+  display: grid !important;
+  place-items: center !important;
+  width: 1.55rem !important;
+  height: 1.55rem !important;
+  color: var(--onea-gold) !important;
+  -webkit-text-fill-color: var(--onea-gold) !important;
+  font-size: 1.22rem !important;
+  line-height: 1 !important;
+}
+
+.onea-page .onea-quick-links-hero a svg {
+  color: var(--onea-gold) !important;
+  fill: currentColor !important;
+  width: 1.12rem !important;
+  height: 1.12rem !important;
+}
+
+.onea-page .onea-quick-links-hero a small {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: .7rem !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+}
+
+/* Hover igual al contacto que gustó: dorado suave, texto negro */
+.onea-page .onea-quick-links-hero a:hover,
+.onea-page .onea-quick-links-hero a:focus,
+.onea-page .onea-quick-links-hero a:active {
+  background: var(--onea-gold-hover) !important;
+  background-image: none !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  transform: translateY(-2px) !important;
+}
+
+.onea-page .onea-quick-links-hero a:hover span,
+.onea-page .onea-quick-links-hero a:hover small,
+.onea-page .onea-quick-links-hero a:hover svg,
+.onea-page .onea-quick-links-hero a:focus span,
+.onea-page .onea-quick-links-hero a:focus small,
+.onea-page .onea-quick-links-hero a:focus svg,
+.onea-page .onea-quick-links-hero a:active span,
+.onea-page .onea-quick-links-hero a:active small,
+.onea-page .onea-quick-links-hero a:active svg {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  fill: currentColor !important;
+}
+
+/* Evitar que algún estilo global meta azul en botones o enlaces */
+.onea-page a,
+.onea-page a:link,
+.onea-page a:visited,
+.onea-page a:hover,
+.onea-page a:focus,
+.onea-page a:active,
+.onea-page button,
+.onea-page button:hover,
+.onea-page button:focus,
+.onea-page button:active {
+  text-decoration: none !important;
+  outline-color: rgba(183,154,86,.55) !important;
+}
+
+/* Catálogo sube porque ya no existe bloque de contacto personal debajo */
+.onea-page .onea-catalog {
+  margin-top: 2.35rem !important;
+}
+
+/* Móvil */
+@media (max-width: 520px) {
+  .onea-hero-intro {
+    width: min(100%, 21rem) !important;
+    font-size: .91rem !important;
+    line-height: 1.52 !important;
+    margin-top: .7rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .onea-page .onea-quick-links-hero {
+    width: min(100%, 23rem) !important;
+    gap: .5rem !important;
+  }
+
+  .onea-page .onea-quick-links-hero a {
+    min-height: 4.05rem !important;
+    border-radius: 1.12rem !important;
+  }
+
+  .onea-page .onea-quick-links-hero a small {
+    font-size: .64rem !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.13 — Sobre 1A Eventos debajo del perfil
+   - sección tipo NOVI: label sutil + título + stats + copy
+   - estadísticas destacadas sin card pesada
+   - foco en soluciones reales para el cliente
+   ========================================================== */
+
+.onea-company-intro {
+  margin-top: 2.45rem !important;
+  text-align: center !important;
+}
+
+.onea-company-intro-brand {
+  margin: 0 auto .55rem !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.onea-company-intro-logo {
+  width: min(100%, 8.5rem) !important;
+  max-width: 8.5rem !important;
+  height: auto !important;
+  display: block !important;
+  object-fit: contain !important;
+}
+
+
+.onea-company-intro-label {
+  margin-bottom: .55rem !important;
+  color: var(--onea-gold) !important;
+  -webkit-text-fill-color: var(--onea-gold) !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  letter-spacing: .18em !important;
+  text-transform: uppercase !important;
+}
+
+.onea-company-intro h2 {
+  width: min(100%, 21.5rem) !important;
+  margin: 0 auto 1.2rem !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(1.45rem, 5.6vw, 1.9rem) !important;
+  line-height: 1.14 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  text-wrap: balance !important;
+}
+
+.onea-company-stats {
+  width: min(100%, 28rem) !important;
+  margin: 0 auto 1.3rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: .55rem !important;
+}
+
+.onea-company-stats div {
+  min-height: 5.15rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: .75rem .35rem !important;
+  border: 1px solid rgba(183,154,86,.55) !important;
+  border-radius: 1.05rem !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-company-stats strong {
+  display: block !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: clamp(1.25rem, 5vw, 1.7rem) !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.onea-company-stats span {
+  display: block !important;
+  margin-top: .35rem !important;
+  color: rgba(255,255,255,.74) !important;
+  -webkit-text-fill-color: rgba(255,255,255,.74) !important;
+  font-size: .68rem !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+}
+
+.onea-company-intro p {
+  width: min(100%, 27rem) !important;
+  margin: 0 auto .95rem !important;
+  color: #4a4a4a !important;
+  -webkit-text-fill-color: #4a4a4a !important;
+  font-size: 1rem !important;
+  line-height: 1.72 !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+}
+
+
+
+
+
+.onea-page .onea-company-intro + .onea-catalog {
+  margin-top: 2.6rem !important;
+}
+
+@media (max-width: 520px) {
+  .onea-company-intro {
+    margin-top: 2.15rem !important;
+  }
+
+  .onea-company-intro h2 {
+    font-size: clamp(1.45rem, 7vw, 1.9rem) !important;
+    width: min(100%, 22rem) !important;
+  }
+
+  .onea-company-stats {
+    gap: .45rem !important;
+  }
+
+  .onea-company-stats div {
+    min-height: 4.75rem !important;
+    border-radius: .95rem !important;
+  }
+
+  .onea-company-stats strong {
+    font-size: 1.25rem !important;
+  }
+
+  .onea-company-stats span {
+    font-size: .62rem !important;
+  }
+
+  .onea-company-intro p {
+    font-size: .95rem !important;
+    line-height: 1.68 !important;
+    width: min(100%, 22.5rem) !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.13-FR — Override limpio logo premium 1A Eventos
+   Reparación: no modifica bloques @media existentes.
+   ========================================================== */
+
+.onea-company-intro-brand {
+  margin: 0 auto .35rem !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.onea-company-intro-logo {
+  width: min(100%, 10.2rem) !important;
+  max-width: 10.2rem !important;
+  height: auto !important;
+  display: block !important;
+  object-fit: contain !important;
+}
+
+.onea-company-intro-label {
+  margin-bottom: .38rem !important;
+  color: var(--onea-gold) !important;
+  -webkit-text-fill-color: var(--onea-gold) !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  letter-spacing: .18em !important;
+  text-transform: uppercase !important;
+}
+
+.onea-company-intro h2 {
+  width: min(100%, 22.2rem) !important;
+  margin: 0 auto .95rem !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(1.42rem, 5.4vw, 1.86rem) !important;
+  line-height: 1.16 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.028em !important;
+  text-wrap: balance !important;
+}
+
+@media (max-width: 520px) {
+  .onea-company-intro-logo {
+    width: min(100%, 8.1rem) !important;
+    max-width: 8.1rem !important;
+  }
+
+  .onea-company-intro h2 {
+    width: min(100%, 20.4rem) !important;
+    font-size: clamp(1.28rem, 5.8vw, 1.62rem) !important;
+    line-height: 1.18 !important;
+    margin-bottom: .95rem !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.14-B — Modal catálogo 1A Eventos
+   - menú hamburguesa funcional
+   - modal móvil con X flotante
+   - páginas del catálogo con lazy load
+   ========================================================== */
+
+.onea-catalog-menu-btn {
+  width: 2.55rem !important;
+  height: 2.55rem !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.75) !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 1.2rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.onea-catalog-menu-btn:hover,
+.onea-catalog-menu-btn:focus {
+  background: #fff8e8 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-catalog-menu {
+  width: min(100%, 28rem) !important;
+  margin: .85rem auto 1rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .55rem !important;
+}
+
+.onea-catalog-menu button {
+  min-height: 2.75rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.65) !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: .82rem !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+}
+
+.onea-catalog-menu button:hover,
+.onea-catalog-menu button:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+}
+
+.onea-catalog-card {
+  cursor: pointer !important;
+  text-align: left !important;
+}
+
+.onea-catalog-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  background: rgba(0,0,0,.72) !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding: .85rem !important;
+}
+
+.onea-catalog-modal {
+  position: relative !important;
+  width: min(100%, 31rem) !important;
+  max-height: 92vh !important;
+  overflow-y: auto !important;
+  border-radius: 1.45rem 1.45rem .7rem .7rem !important;
+  background: #f7f6f3 !important;
+  box-shadow: 0 18px 70px rgba(0,0,0,.38) !important;
+  padding: 1rem .8rem 1.25rem !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.onea-catalog-modal-close {
+  position: sticky !important;
+  top: .35rem !important;
+  z-index: 4 !important;
+  margin-left: auto !important;
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+  display: grid !important;
+  place-items: center !important;
+  border: 1px solid rgba(183,154,86,.75) !important;
+  border-radius: 999px !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 1.75rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.onea-catalog-modal-close:hover,
+.onea-catalog-modal-close:focus {
+  background: #fff8e8 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-catalog-modal-head {
+  width: min(100%, 27rem) !important;
+  margin: -.35rem auto 1rem !important;
+  text-align: center !important;
+}
+
+.onea-catalog-modal-head p {
+  margin: 0 0 .35rem !important;
+  color: var(--onea-gold) !important;
+  -webkit-text-fill-color: var(--onea-gold) !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  letter-spacing: .16em !important;
+  text-transform: uppercase !important;
+}
+
+.onea-catalog-modal-head h2 {
+  margin: 0 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: clamp(1.45rem, 7vw, 2rem) !important;
+  line-height: 1.05 !important;
+  font-weight: 800 !important;
+  letter-spacing: -.04em !important;
+}
+
+.onea-catalog-modal-head span {
+  display: block !important;
+  margin: .55rem auto 0 !important;
+  color: #555555 !important;
+  -webkit-text-fill-color: #555555 !important;
+  font-size: .92rem !important;
+  line-height: 1.45 !important;
+}
+
+.onea-catalog-pages {
+  display: grid !important;
+  gap: .85rem !important;
+}
+
+.onea-catalog-page {
+  margin: 0 !important;
+  padding: .55rem !important;
+  border: 1px solid rgba(183,154,86,.35) !important;
+  border-radius: 1rem !important;
+  background: #ffffff !important;
+}
+
+.onea-catalog-page img {
+  width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  border-radius: .72rem !important;
+  background: #ffffff !important;
+}
+
+.onea-catalog-page figcaption {
+  margin-top: .45rem !important;
+  color: #777777 !important;
+  -webkit-text-fill-color: #777777 !important;
+  font-size: .72rem !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+}
+
+@media (max-width: 520px) {
+  .onea-catalog-modal-backdrop {
+    padding: .55rem !important;
+  }
+
+  .onea-catalog-modal {
+    width: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 1.25rem 1.25rem .5rem .5rem !important;
+    padding: .75rem .55rem 1rem !important;
+  }
+
+  .onea-catalog-menu {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.15-B — Mini-galerías por categoría 1A Eventos
+   - usa nombres visibles correctos
+   - 4 imágenes por categoría
+   - destacadas dentro del modal
+   ========================================================== */
+
+.onea-catalog-card {
+  min-height: 8.6rem !important;
+  padding: .55rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  overflow: hidden !important;
+}
+
+.onea-catalog-card-gallery {
+  position: absolute !important;
+  inset: .45rem .45rem 2.75rem .45rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .28rem !important;
+  z-index: 1 !important;
+}
+
+.onea-catalog-card-gallery img {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  object-fit: contain !important;
+  display: block !important;
+  border-radius: .38rem !important;
+  background: #ffffff !important;
+  opacity: .92 !important;
+  transform: scale(.98) !important;
+  animation: oneaCategoryPulse 4.8s ease-in-out infinite !important;
+}
+
+.onea-catalog-card span {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+@keyframes oneaCategoryPulse {
+  0%, 100% {
+    transform: scale(.98);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.onea-catalog-modal-featured {
+  width: min(100%, 27rem) !important;
+  margin: 0 auto 1rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .6rem !important;
+}
+
+.onea-catalog-modal-featured img {
+  width: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  object-fit: contain !important;
+  display: block !important;
+  border: 1px solid rgba(183,154,86,.35) !important;
+  border-radius: .85rem !important;
+  background: #ffffff !important;
+  padding: .45rem !important;
+}
+
+@media (max-width: 520px) {
+  .onea-catalog-card {
+    min-height: 8.15rem !important;
+  }
+
+  .onea-catalog-card-gallery {
+    inset: .42rem .42rem 2.65rem .42rem !important;
+  }
+
+  .onea-catalog-modal-featured {
+    gap: .45rem !important;
+  }
+
+  .onea-catalog-modal-featured img {
+    border-radius: .72rem !important;
+    padding: .35rem !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.16-A — Reestructura premium catálogo 1A Eventos
+   - 1 imagen destacada por categoría
+   - modal producto con slider, flechas y zoom
+   - catálogo completo tipo revista
+   - botones negro/dorado consistentes
+   ========================================================== */
+
+.onea-page .onea-catalog-premium {
+  margin-top: 2.3rem !important;
+}
+
+.onea-catalog-premium .onea-section-head {
+  align-items: flex-start !important;
+}
+
+.onea-catalog-premium .onea-section-head p {
+  margin: .35rem 0 0 !important;
+  color: #5a5a5a !important;
+  -webkit-text-fill-color: #5a5a5a !important;
+  font-size: .95rem !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.onea-featured-category-slider {
+  width: 100% !important;
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: minmax(13.2rem, 72%) !important;
+  gap: .85rem !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory !important;
+  padding: .25rem .05rem .85rem !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.onea-featured-category-slider::-webkit-scrollbar {
+  display: none !important;
+}
+
+.onea-featured-category-card {
+  position: relative !important;
+  min-height: 12rem !important;
+  border: 1px solid rgba(183,154,86,.72) !important;
+  border-radius: 1.15rem !important;
+  background: #000000 !important;
+  overflow: hidden !important;
+  scroll-snap-align: start !important;
+  box-shadow: 0 14px 32px rgba(0,0,0,.13) !important;
+  cursor: pointer !important;
+  isolation: isolate !important;
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease !important;
+}
+
+.onea-featured-category-card::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: auto 0 0 0 !important;
+  height: 48% !important;
+  background: linear-gradient(to top, rgba(0,0,0,.9), rgba(0,0,0,0)) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+.onea-featured-category-card img {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 12rem !important;
+  object-fit: contain !important;
+  display: block !important;
+  padding: 1rem !important;
+  background: #ffffff !important;
+  transition: transform .35s ease !important;
+}
+
+.onea-featured-category-card span {
+  position: absolute !important;
+  left: .7rem !important;
+  right: .7rem !important;
+  bottom: .7rem !important;
+  z-index: 2 !important;
+  min-height: 2.45rem !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: .55rem .75rem !important;
+  border-radius: 999px !important;
+  background: #000000 !important;
+  border: 1px solid rgba(183,154,86,.75) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: .88rem !important;
+  font-weight: 850 !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+}
+
+.onea-featured-category-card:hover,
+.onea-featured-category-card:focus {
+  transform: translateY(-3px) !important;
+  border-color: var(--onea-gold) !important;
+  box-shadow: 0 18px 38px rgba(0,0,0,.18) !important;
+}
+
+.onea-featured-category-card:hover img,
+.onea-featured-category-card:focus img {
+  transform: scale(1.045) !important;
+}
+
+.onea-featured-category-card:hover span,
+.onea-featured-category-card:focus span {
+  background: #fff8e8 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-catalog-actions {
+  display: grid !important;
+  gap: .7rem !important;
+  margin-top: .35rem !important;
+}
+
+.onea-page .onea-secondary-cta,
+.onea-page .onea-catalog-toggle,
+.onea-page .onea-catalog-menu-btn,
+.onea-page .onea-service-chips button,
+.onea-page .onea-catalog-menu button,
+.onea-book-controls button,
+.onea-modal-cta-row a {
+  transition: transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease !important;
+}
+
+.onea-page .onea-secondary-cta:hover,
+.onea-page .onea-secondary-cta:focus,
+.onea-page .onea-catalog-menu-btn:hover,
+.onea-page .onea-catalog-menu-btn:focus,
+.onea-page .onea-service-chips button:hover,
+.onea-page .onea-service-chips button:focus,
+.onea-page .onea-catalog-menu button:hover,
+.onea-page .onea-catalog-menu button:focus,
+.onea-book-controls button:hover,
+.onea-book-controls button:focus,
+.onea-modal-cta-row a:hover,
+.onea-modal-cta-row a:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.1) !important;
+}
+
+.onea-catalog-modal {
+  width: min(100%, 32rem) !important;
+  background: #f7f6f3 !important;
+}
+
+.onea-catalog-modal-product,
+.onea-catalog-modal-book {
+  padding-bottom: 1rem !important;
+}
+
+.onea-product-viewer,
+.onea-book-viewer {
+  width: min(100%, 28rem) !important;
+  margin: 0 auto !important;
+}
+
+.onea-product-stage,
+.onea-book-stage {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.onea-product-main-image,
+.onea-book-page {
+  width: 100% !important;
+  min-height: 18rem !important;
+  margin: 0 !important;
+  border: 1px solid rgba(183,154,86,.45) !important;
+  border-radius: 1.1rem !important;
+  background: #ffffff !important;
+  overflow: hidden !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: zoom-in !important;
+}
+
+.onea-product-main-image img {
+  width: 100% !important;
+  height: 18rem !important;
+  object-fit: contain !important;
+  display: block !important;
+  padding: 1rem !important;
+}
+
+.onea-book-page img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 68vh !important;
+  object-fit: contain !important;
+  display: block !important;
+  background: #ffffff !important;
+}
+
+.onea-book-page figcaption {
+  width: 100% !important;
+  padding: .6rem !important;
+  color: #6f6f6f !important;
+  -webkit-text-fill-color: #6f6f6f !important;
+  font-size: .78rem !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+}
+
+.onea-product-arrow,
+.onea-book-arrow {
+  position: absolute !important;
+  top: 50% !important;
+  z-index: 3 !important;
+  width: 2.55rem !important;
+  height: 2.55rem !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.78) !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  transform: translateY(-50%) !important;
+  cursor: pointer !important;
+}
+
+.onea-product-arrow-left,
+.onea-book-arrow-left {
+  left: .55rem !important;
+}
+
+.onea-product-arrow-right,
+.onea-book-arrow-right {
+  right: .55rem !important;
+}
+
+.onea-product-arrow:hover,
+.onea-product-arrow:focus,
+.onea-book-arrow:hover,
+.onea-book-arrow:focus {
+  background: #fff8e8 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-product-thumbs {
+  margin-top: .8rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: .5rem !important;
+}
+
+.onea-product-thumbs button {
+  min-height: 4.8rem !important;
+  border-radius: .78rem !important;
+  border: 1px solid rgba(183,154,86,.35) !important;
+  background: #ffffff !important;
+  padding: .28rem !important;
+  cursor: pointer !important;
+  opacity: .72 !important;
+  transition: opacity .2s ease, transform .2s ease, border-color .2s ease !important;
+}
+
+.onea-product-thumbs button.is-active {
+  opacity: 1 !important;
+  border-color: var(--onea-gold) !important;
+  transform: translateY(-2px) !important;
+}
+
+.onea-product-thumbs img {
+  width: 100% !important;
+  height: 4.2rem !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+.onea-product-copy {
+  margin: 1rem auto 0 !important;
+  text-align: center !important;
+}
+
+.onea-product-copy h3 {
+  margin: 0 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: 1.35rem !important;
+  line-height: 1.1 !important;
+  font-weight: 850 !important;
+  letter-spacing: -.035em !important;
+}
+
+.onea-product-copy p {
+  margin: .55rem auto 0 !important;
+  color: #555555 !important;
+  -webkit-text-fill-color: #555555 !important;
+  font-size: .94rem !important;
+  line-height: 1.5 !important;
+}
+
+.onea-book-controls {
+  margin-top: .8rem !important;
+  display: grid !important;
+  grid-template-columns: 1fr auto 1fr !important;
+  gap: .55rem !important;
+  align-items: center !important;
+}
+
+.onea-book-controls button,
+.onea-modal-cta-row a {
+  min-height: 2.85rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.75) !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 850 !important;
+  text-decoration: none !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: pointer !important;
+}
+
+.onea-book-controls span {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-weight: 900 !important;
+  font-size: .85rem !important;
+}
+
+.onea-modal-cta-row {
+  margin-top: .9rem !important;
+  display: grid !important;
+  gap: .65rem !important;
+}
+
+.onea-image-zoom {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10050 !important;
+  background: rgba(0,0,0,.88) !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 1rem !important;
+}
+
+.onea-image-zoom button {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  width: 2.8rem !important;
+  height: 2.8rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.85) !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 1.9rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.onea-image-zoom img {
+  max-width: min(96vw, 38rem) !important;
+  max-height: 86vh !important;
+  object-fit: contain !important;
+  display: block !important;
+  border-radius: 1rem !important;
+  background: #ffffff !important;
+  padding: .75rem !important;
+}
+
+@media (max-width: 520px) {
+  .onea-featured-category-slider {
+    grid-auto-columns: 76% !important;
+  }
+
+  .onea-featured-category-card {
+    min-height: 11.4rem !important;
+  }
+
+  .onea-featured-category-card img {
+    min-height: 11.4rem !important;
+  }
+
+  .onea-product-main-image,
+  .onea-book-page {
+    min-height: 16rem !important;
+  }
+
+  .onea-product-main-image img {
+    height: 16rem !important;
+  }
+
+  .onea-product-arrow-left,
+  .onea-book-arrow-left {
+    left: .35rem !important;
+  }
+
+  .onea-product-arrow-right,
+  .onea-book-arrow-right {
+    right: .35rem !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.17-B — Refinamiento profundo catálogo 1A
+   - slider con todas las categorías
+   - 4 botones visibles + ver categorías completas
+   - sin degradado/sombra pesada
+   - CTAs negro/dorado, sin azul
+   - zoom con flechas
+   ========================================================== */
+
+.onea-catalog-premium .onea-section-head h2 {
+  font-weight: 720 !important;
+  letter-spacing: -0.045em !important;
+  font-size: clamp(1.85rem, 8vw, 2.45rem) !important;
+}
+
+.onea-featured-category-slider {
+  grid-auto-columns: minmax(14.5rem, 82%) !important;
+  gap: .9rem !important;
+  padding-top: .35rem !important;
+}
+
+.onea-featured-category-card {
+  min-height: 14.2rem !important;
+  border: 1px solid rgba(183,154,86,.78) !important;
+  border-radius: 1.15rem !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-featured-category-card::after {
+  display: none !important;
+}
+
+.onea-featured-category-card img {
+  min-height: 14.2rem !important;
+  height: 14.2rem !important;
+  object-fit: contain !important;
+  padding: .85rem .85rem 3.35rem !important;
+  background: #ffffff !important;
+}
+
+.onea-featured-category-card span {
+  left: .8rem !important;
+  right: .8rem !important;
+  bottom: .75rem !important;
+  min-height: 2.65rem !important;
+  background: #000000 !important;
+  border: 1px solid rgba(183,154,86,.9) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-featured-category-card:hover,
+.onea-featured-category-card:focus {
+  transform: translateY(-2px) !important;
+  box-shadow: none !important;
+}
+
+.onea-category-button-panel {
+  margin-top: .95rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .6rem !important;
+}
+
+.onea-category-button-panel button,
+.onea-category-more-link,
+.onea-modal-cta-row button,
+.onea-modal-cta-row a,
+.onea-book-controls button,
+.onea-page .onea-secondary-cta {
+  min-height: 2.85rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.82) !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 850 !important;
+  text-decoration: none !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+}
+
+.onea-category-button-panel button:hover,
+.onea-category-button-panel button:focus,
+.onea-category-more-link:hover,
+.onea-category-more-link:focus,
+.onea-modal-cta-row button:hover,
+.onea-modal-cta-row button:focus,
+.onea-modal-cta-row a:hover,
+.onea-modal-cta-row a:focus,
+.onea-book-controls button:hover,
+.onea-book-controls button:focus,
+.onea-page .onea-secondary-cta:hover,
+.onea-page .onea-secondary-cta:focus {
+  background: #fff8e8 !important;
+  background-image: none !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: none !important;
+}
+
+.onea-category-more-link {
+  width: 100% !important;
+  margin: .75rem auto 0 !important;
+  background: transparent !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  border-color: rgba(183,154,86,.65) !important;
+}
+
+.onea-catalog-actions {
+  margin-top: .85rem !important;
+}
+
+.onea-catalog-menu-btn,
+.onea-catalog-menu {
+  display: none !important;
+}
+
+/* Anti azul definitivo dentro del catálogo */
+.onea-catalog-premium a,
+.onea-catalog-premium button,
+.onea-catalog-modal a,
+.onea-catalog-modal button,
+.onea-image-zoom button {
+  color: inherit;
+  -webkit-text-fill-color: inherit;
+}
+
+.onea-catalog-modal a[href*="wa.me"],
+.onea-catalog-modal a[href*="wa.me"]:link,
+.onea-catalog-modal a[href*="wa.me"]:visited,
+.onea-catalog-modal a[href*="wa.me"]:active,
+.onea-catalog-modal a[href*="wa.me"]:focus,
+.onea-catalog-modal a[href*="wa.me"]:hover {
+  background-image: none !important;
+}
+
+/* Modal categoría: más presencia móvil */
+.onea-product-main-image {
+  min-height: 20rem !important;
+}
+
+.onea-product-main-image img {
+  height: 20rem !important;
+  padding: .75rem !important;
+}
+
+.onea-product-thumbs button {
+  box-shadow: none !important;
+}
+
+.onea-product-copy h3 {
+  font-weight: 760 !important;
+}
+
+/* Zoom con flechas */
+.onea-image-zoom {
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  gap: .65rem !important;
+}
+
+.onea-image-zoom-close {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  z-index: 10060 !important;
+}
+
+.onea-image-zoom-arrow {
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.9) !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: pointer !important;
+}
+
+.onea-image-zoom-arrow:hover,
+.onea-image-zoom-arrow:focus,
+.onea-image-zoom-close:hover,
+.onea-image-zoom-close:focus {
+  background: #fff8e8 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-image-zoom img {
+  width: min(78vw, 38rem) !important;
+  max-height: 84vh !important;
+  box-shadow: none !important;
+}
+
+/* Quitar restos de estilos viejos de cards miniatura */
+.onea-catalog-card-gallery,
+.onea-catalog-card {
+  box-shadow: none !important;
+}
+
+@media (max-width: 520px) {
+  .onea-featured-category-slider {
+    grid-auto-columns: 84% !important;
+  }
+
+  .onea-featured-category-card {
+    min-height: 14.6rem !important;
+  }
+
+  .onea-featured-category-card img {
+    min-height: 14.6rem !important;
+    height: 14.6rem !important;
+  }
+
+  .onea-category-button-panel {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .onea-product-main-image {
+    min-height: 20.5rem !important;
+  }
+
+  .onea-product-main-image img {
+    height: 20.5rem !important;
+  }
+
+  .onea-image-zoom {
+    padding: .65rem !important;
+    gap: .35rem !important;
+  }
+
+  .onea-image-zoom-arrow {
+    width: 2.35rem !important;
+    height: 2.35rem !important;
+  }
+
+  .onea-image-zoom img {
+    width: min(76vw, 32rem) !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.17-C — Corrección visual catálogo / modal / zoom
+   Objetivo:
+   - centrar zoom
+   - flechas visibles en zoom
+   - eliminar azul heredado de modales
+   - botones de categorías tipo chips elegantes
+   - más aire en galería
+   - cards más verticales y completas en móvil
+   ========================================================== */
+
+/* Catálogo: centrar bloque y dar aire */
+.onea-page .onea-catalog-premium {
+  width: min(92%, 30rem) !important;
+  max-width: 30rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  overflow: visible !important;
+}
+
+.onea-catalog-premium .onea-section-head {
+  text-align: left !important;
+  margin-bottom: 1rem !important;
+}
+
+.onea-catalog-premium .onea-section-head h2 {
+  font-weight: 720 !important;
+  line-height: 1.02 !important;
+  margin-bottom: .35rem !important;
+}
+
+.onea-catalog-premium .onea-section-head p {
+  max-width: 24rem !important;
+}
+
+/* Slider: que las cards respiren y no se corten visualmente */
+.onea-featured-category-slider {
+  width: 100% !important;
+  grid-auto-columns: calc((100% - .85rem) / 2) !important;
+  gap: .85rem !important;
+  padding: .25rem 0 1rem !important;
+  overflow-x: auto !important;
+  scroll-padding-left: 0 !important;
+  scroll-padding-right: 0 !important;
+}
+
+.onea-featured-category-card {
+  min-height: 15.4rem !important;
+  border-radius: 1.05rem !important;
+  border: 1px solid rgba(183,154,86,.7) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.onea-featured-category-card img {
+  width: 100% !important;
+  height: 15.4rem !important;
+  min-height: 15.4rem !important;
+  object-fit: contain !important;
+  padding: .8rem .65rem 3.35rem !important;
+  background: #ffffff !important;
+}
+
+.onea-featured-category-card span {
+  left: .55rem !important;
+  right: .55rem !important;
+  bottom: .62rem !important;
+  min-height: 2.55rem !important;
+  padding: .5rem .55rem !important;
+  font-size: .8rem !important;
+  line-height: 1.08 !important;
+}
+
+/* Botones de categorías: igual línea visual que soluciones */
+.onea-category-button-panel {
+  margin-top: 1.05rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .6rem !important;
+}
+
+.onea-category-button-panel button {
+  min-height: 2.55rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.42) !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: .9rem !important;
+  font-weight: 820 !important;
+  line-height: 1.1 !important;
+  box-shadow: none !important;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease, color .2s ease !important;
+}
+
+.onea-category-button-panel button:hover,
+.onea-category-button-panel button:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: none !important;
+}
+
+.onea-category-more-link {
+  min-height: 2.65rem !important;
+  margin-top: .8rem !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid rgba(183,154,86,.55) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-weight: 820 !important;
+  box-shadow: none !important;
+}
+
+.onea-category-more-link:hover,
+.onea-category-more-link:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* CTA catálogo completo permanece fuerte en negro */
+.onea-catalog-actions .onea-secondary-cta {
+  min-height: 3rem !important;
+  margin-top: .15rem !important;
+  background: #000000 !important;
+  background-image: none !important;
+  border: 1px solid #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.onea-catalog-actions .onea-secondary-cta:hover,
+.onea-catalog-actions .onea-secondary-cta:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Modal: eliminar azul heredado de forma más fuerte */
+.onea-page .onea-catalog-modal .onea-modal-cta-row a,
+.onea-page .onea-catalog-modal .onea-modal-cta-row a:link,
+.onea-page .onea-catalog-modal .onea-modal-cta-row a:visited,
+.onea-page .onea-catalog-modal .onea-modal-cta-row a:hover,
+.onea-page .onea-catalog-modal .onea-modal-cta-row a:focus,
+.onea-page .onea-catalog-modal .onea-modal-cta-row a:active,
+.onea-page .onea-catalog-modal .onea-modal-cta-row button,
+.onea-page .onea-catalog-modal .onea-modal-cta-row button:hover,
+.onea-page .onea-catalog-modal .onea-modal-cta-row button:focus,
+.onea-page .onea-catalog-modal .onea-modal-cta-row button:active {
+  min-height: 2.9rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.85) !important;
+  background: #000000 !important;
+  background-color: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 850 !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.onea-page .onea-catalog-modal .onea-modal-cta-row a:hover,
+.onea-page .onea-catalog-modal .onea-modal-cta-row a:focus,
+.onea-page .onea-catalog-modal .onea-modal-cta-row button:hover,
+.onea-page .onea-catalog-modal .onea-modal-cta-row button:focus {
+  background: #fff8e8 !important;
+  background-color: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Modal producto: imagen más centrada y limpia */
+.onea-catalog-modal-product .onea-product-stage {
+  width: 100% !important;
+}
+
+.onea-catalog-modal-product .onea-product-main-image {
+  min-height: 20.75rem !important;
+  border-radius: 1rem !important;
+  box-shadow: none !important;
+}
+
+.onea-catalog-modal-product .onea-product-main-image img {
+  height: 20.75rem !important;
+  object-fit: contain !important;
+  padding: .8rem !important;
+}
+
+.onea-product-arrow {
+  box-shadow: none !important;
+}
+
+/* Zoom: corregir centro y flechas reales */
+.onea-page .onea-image-zoom {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10050 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0,0,0,.9) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1rem !important;
+}
+
+.onea-page .onea-image-zoom img {
+  width: auto !important;
+  max-width: min(88vw, 42rem) !important;
+  max-height: 86vh !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 auto !important;
+  border-radius: 1rem !important;
+  background: #ffffff !important;
+  padding: .8rem !important;
+  box-shadow: none !important;
+}
+
+/* Anular regla vieja que posicionaba todos los botones como cerrar */
+.onea-page .onea-image-zoom .onea-image-zoom-close {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 10070 !important;
+  width: 2.8rem !important;
+  height: 2.8rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.9) !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.onea-page .onea-image-zoom .onea-image-zoom-arrow {
+  position: fixed !important;
+  top: 50% !important;
+  bottom: auto !important;
+  z-index: 10065 !important;
+  width: 2.85rem !important;
+  height: 2.85rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.9) !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  transform: translateY(-50%) !important;
+}
+
+.onea-page .onea-image-zoom .onea-image-zoom-prev {
+  left: .85rem !important;
+  right: auto !important;
+}
+
+.onea-page .onea-image-zoom .onea-image-zoom-next {
+  right: .85rem !important;
+  left: auto !important;
+}
+
+.onea-page .onea-image-zoom .onea-image-zoom-close:hover,
+.onea-page .onea-image-zoom .onea-image-zoom-close:focus,
+.onea-page .onea-image-zoom .onea-image-zoom-arrow:hover,
+.onea-page .onea-image-zoom .onea-image-zoom-arrow:focus {
+  background: #fff8e8 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Mobile fino */
+@media (max-width: 520px) {
+  .onea-featured-category-slider {
+    grid-auto-columns: calc((100% - .72rem) / 2) !important;
+    gap: .72rem !important;
+  }
+
+  .onea-featured-category-card {
+    min-height: 15.75rem !important;
+  }
+
+  .onea-featured-category-card img {
+    height: 15.75rem !important;
+    min-height: 15.75rem !important;
+    padding: .7rem .55rem 3.35rem !important;
+  }
+
+  .onea-featured-category-card span {
+    font-size: .78rem !important;
+    min-height: 2.5rem !important;
+  }
+
+  .onea-catalog-modal-product .onea-product-main-image {
+    min-height: 21rem !important;
+  }
+
+  .onea-catalog-modal-product .onea-product-main-image img {
+    height: 21rem !important;
+  }
+
+  .onea-page .onea-image-zoom img {
+    max-width: 78vw !important;
+    max-height: 82vh !important;
+  }
+
+  .onea-page .onea-image-zoom .onea-image-zoom-arrow {
+    width: 2.45rem !important;
+    height: 2.45rem !important;
+  }
+
+  .onea-page .onea-image-zoom .onea-image-zoom-prev {
+    left: .4rem !important;
+  }
+
+  .onea-page .onea-image-zoom .onea-image-zoom-next {
+    right: .4rem !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.18 — Ajuste CTA catálogo, zoom páginas, FAQ y anti azul
+   ========================================================== */
+
+/* Títulos más minimalistas y centrados en catálogo/modal/FAQ */
+.onea-catalog-premium .onea-section-head,
+.onea-catalog-modal-head,
+.onea-faq .onea-section-head,
+.onea-company .onea-section-head,
+.onea-services .onea-section-head {
+  text-align: center !important;
+}
+
+.onea-catalog-premium .onea-section-head h2,
+.onea-catalog-modal-head h2,
+.onea-faq .onea-section-head h2,
+.onea-company .onea-section-head h2,
+.onea-services .onea-section-head h2 {
+  font-size: clamp(1.55rem, 6.2vw, 2rem) !important;
+  font-weight: 680 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.035em !important;
+  text-align: center !important;
+}
+
+.onea-catalog-premium .onea-section-head p,
+.onea-catalog-modal-head span {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: center !important;
+}
+
+/* Texto del enlace de categorías */
+.onea-category-more-link {
+  font-size: .92rem !important;
+}
+
+.onea-category-more-link,
+.onea-category-more-link:hover,
+.onea-category-more-link:focus {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Catálogo completo: página clicable para ampliar */
+.onea-book-page-zoom {
+  width: 100% !important;
+  display: block !important;
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: zoom-in !important;
+  box-shadow: none !important;
+}
+
+.onea-book-page-zoom img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 68vh !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+/* Flechas del catálogo completo: diferentes al CTA */
+.onea-book-arrow {
+  width: 2.7rem !important;
+  height: 2.7rem !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid rgba(183,154,86,.8) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  box-shadow: none !important;
+}
+
+.onea-book-arrow:hover,
+.onea-book-arrow:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Controles Anterior/Siguiente tipo chip, no CTA pesado */
+.onea-book-controls button {
+  min-height: 2.65rem !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid rgba(183,154,86,.55) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  box-shadow: none !important;
+}
+
+.onea-book-controls button:hover,
+.onea-book-controls button:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Catálogo completo: solo un CTA, centrado */
+.onea-modal-cta-row-single {
+  grid-template-columns: 1fr !important;
+}
+
+.onea-modal-cta-row-single a {
+  width: 100% !important;
+}
+
+/* Anti azul fuerte en todo 1A */
+.onea-page a,
+.onea-page a:link,
+.onea-page a:visited,
+.onea-page a:hover,
+.onea-page a:focus,
+.onea-page a:active,
+.onea-page button,
+.onea-page button:hover,
+.onea-page button:focus,
+.onea-page button:active,
+.onea-page summary,
+.onea-page summary:hover,
+.onea-page summary:focus {
+  outline-color: rgba(183,154,86,.75) !important;
+  -webkit-tap-highlight-color: rgba(183,154,86,.18) !important;
+}
+
+.onea-page .onea-company a,
+.onea-page .onea-company a:link,
+.onea-page .onea-company a:visited,
+.onea-page .onea-company a:hover,
+.onea-page .onea-company a:focus,
+.onea-page .onea-company a:active {
+  background-image: none !important;
+}
+
+.onea-page .onea-company a:hover,
+.onea-page .onea-company a:focus,
+.onea-page .onea-contact-list a:hover,
+.onea-page .onea-contact-list a:focus {
+  background: #fff8e8 !important;
+  border-color: rgba(183,154,86,.85) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* FAQ controlado y sin azul */
+.onea-faq-list details {
+  overflow: hidden !important;
+}
+
+.onea-faq-list summary {
+  cursor: pointer !important;
+  list-style: none !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  outline-color: rgba(183,154,86,.7) !important;
+}
+
+.onea-faq-list summary::-webkit-details-marker {
+  display: none !important;
+}
+
+.onea-faq-list summary::before {
+  content: "›" !important;
+  display: inline-block !important;
+  margin-right: .45rem !important;
+  transform: rotate(0deg) !important;
+  transition: transform .2s ease !important;
+  color: var(--onea-gold) !important;
+  -webkit-text-fill-color: var(--onea-gold) !important;
+}
+
+.onea-faq-list details[open] summary::before {
+  transform: rotate(90deg) !important;
+}
+
+.onea-faq-list details[open] {
+  border-color: rgba(183,154,86,.65) !important;
+}
+
+/* Zoom: cuando viene del catálogo completo, permitir leer detalles */
+.onea-page .onea-image-zoom img {
+  max-width: min(92vw, 48rem) !important;
+  max-height: 88vh !important;
+}
+
+@media (max-width: 520px) {
+  .onea-catalog-premium .onea-section-head h2,
+  .onea-catalog-modal-head h2,
+  .onea-faq .onea-section-head h2,
+  .onea-company .onea-section-head h2,
+  .onea-services .onea-section-head h2 {
+    font-size: clamp(1.45rem, 6vw, 1.85rem) !important;
+  }
+
+  .onea-book-arrow {
+    width: 2.45rem !important;
+    height: 2.45rem !important;
+  }
+
+  .onea-page .onea-image-zoom img {
+    max-width: 84vw !important;
+    max-height: 84vh !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.19 — Items por categoría + ver más categoría + zoom catálogo
+   ========================================================== */
+
+.onea-product-items {
+  margin: 1rem auto 0 !important;
+  width: 100% !important;
+  text-align: left !important;
+  border: 1px solid rgba(183,154,86,.35) !important;
+  border-radius: 1rem !important;
+  background: #ffffff !important;
+  padding: .9rem !important;
+}
+
+.onea-product-items span {
+  display: block !important;
+  margin-bottom: .55rem !important;
+  color: var(--onea-gold) !important;
+  -webkit-text-fill-color: var(--onea-gold) !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+}
+
+.onea-product-items ul {
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .45rem .55rem !important;
+}
+
+.onea-product-items li {
+  position: relative !important;
+  padding-left: .8rem !important;
+  color: #333333 !important;
+  -webkit-text-fill-color: #333333 !important;
+  font-size: .82rem !important;
+  line-height: 1.25 !important;
+  font-weight: 650 !important;
+}
+
+.onea-product-items li::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: .48em !important;
+  width: .32rem !important;
+  height: .32rem !important;
+  border-radius: 999px !important;
+  background: var(--onea-gold) !important;
+}
+
+.onea-book-page-zoom {
+  width: 100% !important;
+  display: block !important;
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: zoom-in !important;
+  box-shadow: none !important;
+}
+
+.onea-book-page-zoom img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 68vh !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+.onea-modal-cta-row-single {
+  grid-template-columns: 1fr !important;
+}
+
+.onea-book-arrow,
+.onea-book-controls button {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid rgba(183,154,86,.65) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  box-shadow: none !important;
+}
+
+.onea-book-arrow:hover,
+.onea-book-arrow:focus,
+.onea-book-controls button:hover,
+.onea-book-controls button:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-page .onea-image-zoom img {
+  max-width: min(94vw, 50rem) !important;
+  max-height: 90vh !important;
+}
+
+@media (max-width: 520px) {
+  .onea-product-items ul {
+    grid-template-columns: 1fr !important;
+  }
+
+  .onea-product-items li {
+    font-size: .84rem !important;
+  }
+
+  .onea-page .onea-image-zoom img {
+    max-width: 86vw !important;
+    max-height: 86vh !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.20-B — Formulario, chat flotante, footer y CTA cálidos
+   ========================================================== */
+
+.onea-contact-cta {
+  text-align: center !important;
+}
+
+.onea-contact-cta-inner {
+  width: 100% !important;
+  border-top: 1px solid rgba(17,17,17,.12) !important;
+  border-bottom: 1px solid rgba(17,17,17,.08) !important;
+  padding: 1.65rem 0 !important;
+}
+
+.onea-contact-cta h2 {
+  max-width: 22rem !important;
+  margin: 0 auto .55rem !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: clamp(1.55rem, 6vw, 2rem) !important;
+  font-weight: 720 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.onea-contact-cta p {
+  max-width: 24rem !important;
+  margin: 0 auto 1.15rem !important;
+  color: #5d5d5d !important;
+  -webkit-text-fill-color: #5d5d5d !important;
+  font-size: .98rem !important;
+  line-height: 1.55 !important;
+}
+
+.onea-contact-cta button,
+.onea-contact-cta button:hover,
+.onea-contact-cta button:focus,
+.onea-contact-cta button:active,
+.onea-footer a,
+.onea-footer a:link,
+.onea-footer a:visited,
+.onea-footer a:hover,
+.onea-footer a:focus,
+.onea-footer a:active,
+.onea-contact-submit,
+.onea-contact-submit:hover,
+.onea-contact-submit:focus,
+.onea-contact-submit:active {
+  width: min(100%, 22rem) !important;
+  min-height: 3rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.9) !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-weight: 850 !important;
+  text-decoration: none !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: none !important;
+  transition: transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease !important;
+}
+
+.onea-contact-cta button:hover,
+.onea-contact-cta button:focus,
+.onea-footer a:hover,
+.onea-footer a:focus,
+.onea-contact-submit:hover,
+.onea-contact-submit:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Chat flotante estilo modal, no enlace directo */
+.onea-floating-chat {
+  position: fixed !important;
+  right: 1rem !important;
+  bottom: 1rem !important;
+  z-index: 9000 !important;
+  width: 3.65rem !important;
+  height: 3.65rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.9) !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: 0 14px 30px rgba(0,0,0,.18) !important;
+  cursor: pointer !important;
+}
+
+.onea-floating-chat svg {
+  width: 1.35rem !important;
+  height: 1.35rem !important;
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+.onea-floating-chat > span {
+  position: absolute !important;
+  top: -.25rem !important;
+  right: -.25rem !important;
+  width: 1.15rem !important;
+  height: 1.15rem !important;
+  border-radius: 999px !important;
+  background: #d92d20 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: .72rem !important;
+  font-weight: 900 !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.onea-chat-panel-backdrop,
+.onea-contact-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9800 !important;
+  background: rgba(0,0,0,.64) !important;
+  display: grid !important;
+  place-items: end center !important;
+  padding: 1rem !important;
+}
+
+.onea-chat-panel,
+.onea-contact-modal {
+  width: min(92vw, 28rem) !important;
+  border-radius: 1.35rem !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  border: 1px solid rgba(183,154,86,.3) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+.onea-chat-head {
+  padding: .95rem 1rem !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.onea-chat-head strong,
+.onea-chat-head span {
+  display: block !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.onea-chat-head span {
+  margin-top: .15rem !important;
+  font-size: .78rem !important;
+  opacity: .72 !important;
+}
+
+.onea-chat-head button,
+.onea-chat-head button:hover,
+.onea-chat-head button:focus,
+.onea-chat-head button:active,
+.onea-contact-modal-close,
+.onea-contact-modal-close:hover,
+.onea-contact-modal-close:focus,
+.onea-contact-modal-close:active {
+  width: 2.45rem !important;
+  height: 2.45rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.75) !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  font-size: 1.35rem !important;
+  line-height: 1 !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: none !important;
+}
+
+.onea-chat-body {
+  padding: 1.2rem !important;
+  text-align: center !important;
+}
+
+.onea-chat-body p {
+  margin: 0 0 .25rem !important;
+  color: #6a6a6a !important;
+  -webkit-text-fill-color: #6a6a6a !important;
+}
+
+.onea-chat-body h2 {
+  margin: 0 auto .35rem !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: 1.25rem !important;
+  line-height: 1.15 !important;
+  font-weight: 760 !important;
+}
+
+.onea-chat-body > span,
+.onea-chat-body small {
+  display: block !important;
+  color: #666666 !important;
+  -webkit-text-fill-color: #666666 !important;
+}
+
+.onea-chat-options {
+  margin-top: 1rem !important;
+  display: grid !important;
+  gap: .65rem !important;
+}
+
+.onea-chat-options a,
+.onea-chat-options a:link,
+.onea-chat-options a:visited,
+.onea-chat-options a:hover,
+.onea-chat-options a:focus,
+.onea-chat-options a:active {
+  min-height: 2.8rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.55) !important;
+  background: #000000 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  text-decoration: none !important;
+  font-weight: 820 !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: none !important;
+}
+
+.onea-chat-options a:hover,
+.onea-chat-options a:focus {
+  background: #fff8e8 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  border-color: var(--onea-gold) !important;
+}
+
+/* Modal formulario */
+.onea-contact-modal {
+  position: relative !important;
+  padding: 1.25rem !important;
+}
+
+.onea-contact-modal-close {
+  position: absolute !important;
+  top: .85rem !important;
+  right: .85rem !important;
+}
+
+.onea-contact-modal h2 {
+  margin: 0 3rem .35rem 0 !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: 1.55rem !important;
+  line-height: 1.1 !important;
+  font-weight: 760 !important;
+}
+
+.onea-contact-modal > p {
+  margin: 0 3rem 1rem 0 !important;
+  color: #555555 !important;
+  -webkit-text-fill-color: #555555 !important;
+  line-height: 1.45 !important;
+}
+
+.onea-contact-modal label {
+  display: grid !important;
+  gap: .4rem !important;
+  margin-top: .85rem !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-size: .86rem !important;
+  font-weight: 850 !important;
+}
+
+.onea-contact-modal input,
+.onea-contact-modal textarea {
+  width: 100% !important;
+  border-radius: .9rem !important;
+  border: 1px solid rgba(183,154,86,.35) !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  padding: .95rem 1rem !important;
+  font: inherit !important;
+  outline-color: rgba(183,154,86,.75) !important;
+  box-shadow: none !important;
+}
+
+.onea-contact-modal textarea {
+  min-height: 6.5rem !important;
+  resize: vertical !important;
+}
+
+.onea-contact-submit {
+  margin-top: 1rem !important;
+}
+
+/* Footer centrado y coherente */
+.onea-footer {
+  width: min(92%, 28rem) !important;
+  margin: 2.6rem auto 1.5rem !important;
+  padding: 0 0 1.5rem !important;
+  display: grid !important;
+  gap: .38rem !important;
+  place-items: center !important;
+  text-align: center !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-footer strong,
+.onea-footer span,
+.onea-footer small {
+  text-align: center !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-footer small {
+  color: #888888 !important;
+  -webkit-text-fill-color: #888888 !important;
+}
+
+.onea-footer a {
+  margin-top: .75rem !important;
+}
+
+/* Anti azul específico para nuevos componentes */
+.onea-contact-cta *,
+.onea-chat-panel *,
+.onea-contact-modal *,
+.onea-footer * {
+  outline-color: rgba(183,154,86,.75) !important;
+  -webkit-tap-highlight-color: rgba(183,154,86,.18) !important;
+}
+
+@media (max-width: 520px) {
+  .onea-chat-panel-backdrop,
+  .onea-contact-modal-backdrop {
+    align-items: end !important;
+    padding: .75rem !important;
+  }
+
+  .onea-chat-panel,
+  .onea-contact-modal {
+    width: 100% !important;
+  }
+
+  .onea-contact-cta h2 {
+    font-size: 1.55rem !important;
+  }
+}
+
+
+/* ==========================================================
+   LOTE 1.20-C — Limpieza azul chat, footer y mapa
+   ========================================================== */
+
+/* Chat: eliminar azul heredado en TODOS los estados */
+.onea-page .onea-chat-panel .onea-chat-options a,
+.onea-page .onea-chat-panel .onea-chat-options a:link,
+.onea-page .onea-chat-panel .onea-chat-options a:visited,
+.onea-page .onea-chat-panel .onea-chat-options a:hover,
+.onea-page .onea-chat-panel .onea-chat-options a:focus,
+.onea-page .onea-chat-panel .onea-chat-options a:active,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child:link,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child:visited,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child:hover,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child:focus,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child:active {
+  background: #000000 !important;
+  background-color: #000000 !important;
+  background-image: none !important;
+  border: 1px solid rgba(183,154,86,.75) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+.onea-page .onea-chat-panel .onea-chat-options a:hover,
+.onea-page .onea-chat-panel .onea-chat-options a:focus,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child:hover,
+.onea-page .onea-chat-panel .onea-chat-options a:first-child:focus {
+  background: #fff8e8 !important;
+  background-color: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+/* Botón mapa: coherente con el sistema premium */
+.onea-page .onea-map-card a,
+.onea-page .onea-map-card a:link,
+.onea-page .onea-map-card a:visited,
+.onea-page .onea-map-card a:hover,
+.onea-page .onea-map-card a:focus,
+.onea-page .onea-map-card a:active {
+  min-height: 3rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(183,154,86,.85) !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-weight: 850 !important;
+  text-decoration: none !important;
+  display: grid !important;
+  place-items: center !important;
+  box-shadow: none !important;
+}
+
+.onea-page .onea-map-card a:hover,
+.onea-page .onea-map-card a:focus {
+  background: #fff8e8 !important;
+  border-color: var(--onea-gold) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Footer: solo datos centrados, sin espacio reservado para CTA */
+.onea-page .onea-footer {
+  margin-top: 2.1rem !important;
+  padding-bottom: 1.35rem !important;
+  gap: .32rem !important;
+}
+
+.onea-page .onea-footer a {
+  display: none !important;
+}
+
+/* Anti azul extra para botones/enlaces visibles del bloque final */
+.onea-page .onea-chat-panel a,
+.onea-page .onea-map-card a,
+.onea-page .onea-footer,
+.onea-page .onea-footer * {
+  outline-color: rgba(183,154,86,.75) !important;
+  -webkit-tap-highlight-color: rgba(183,154,86,.18) !important;
+}
+
+
+/* ==========================================================
+   LOTE 1.21-M — Intro final con logo como background único
+   ========================================================== */
+
+.onea-page .onea-splash,
+.onea-page .onea-welcome-screen,
+.onea-page .onea-welcome-logo-container,
+.onea-page .onea-welcome-logo-img {
+  display: none !important;
+}
+
+.oneaIntroOverlayBg {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #ffffff !important;
+  overflow: hidden !important;
+  pointer-events: all !important;
+  animation: oneaIntroBgOverlayOut .55s ease-in-out 3s forwards !important;
+}
+
+.oneaIntroLogoBg {
+  width: min(300px, 72vw) !important;
+  height: min(300px, 72vw) !important;
+  display: block !important;
+  background-image: url("/assets/1aeventos/perfil/logo-1aeventos.png") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+  opacity: 0 !important;
+  transform: translate3d(0, 38px, 0) scale(.35) !important;
+  transform-origin: center center !important;
+  will-change: transform, opacity !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  animation: oneaIntroBgLogoMove 3s cubic-bezier(.18, .82, .22, 1) forwards !important;
+}
+
+/* Solo dos estados para que el navegador interpole fluido, sin saltos por etapas */
+@keyframes oneaIntroBgLogoMove {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 38px, 0) scale(.35);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, -10px, 0) scale(1.13);
+  }
+}
+
+@keyframes oneaIntroBgOverlayOut {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oneaIntroOverlayBg {
+    animation: oneaIntroBgOverlayOut .3s ease .9s forwards !important;
+  }
+
+  .oneaIntroLogoBg {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+
+
+/* =========================================================
+   1A Eventos — limpieza forense de preloaders anteriores
+   No borrar todavía: se desactivan para evitar loop visual.
+========================================================= */
+.onea-splash,
+.onea-welcome-screen,
+.onea-welcome-logo-container,
+.oneaBootOverlay4B,
+.oneaBootLogoWrap4B,
+.oneaBootLogo4B,
+.oneaBootTextFallback4B,
+.oneaIntroOverlayBg,
+.oneaIntroLogoBg,
+.oneaIntroOverlayFinal {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+
+
+/* =========================================================
+   1A Eventos — Preloader limpio tipo Rentao
+   Patrón aprobado: 1 estado + 1 timeout + 1 img + 1 CSS.
+========================================================= */
+.onea-rentao-style-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  pointer-events: none;
+  animation: oneaIntroExit 3s ease forwards;
+}
+
+.onea-rentao-style-intro-logo {
+  width: min(54vw, 260px);
+  height: auto;
+  display: block;
+  opacity: 1;
+  transform-origin: center center;
+  animation: oneaLogoIntro 2.6s cubic-bezier(.22, 1, .36, 1) forwards;
+}
+
+@keyframes oneaLogoIntro {
+  0% {
+    opacity: 0;
+    transform: scale(.72) translateY(18px);
+    filter: blur(2px);
+  }
+
+  18% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  68% {
+    opacity: 1;
+    transform: scale(1.06) translateY(-6px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.16) translateY(-18px);
+  }
+}
+
+@keyframes oneaIntroExit {
+  0%, 78% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onea-rentao-style-intro,
+  .onea-rentao-style-intro-logo {
+    animation: none;
+  }
+
+  .onea-rentao-style-intro {
+    display: none;
+  }
+}
+
+
+
+/* =========================================================
+   1A Eventos — Preloader limpio tipo Rentao / DOM safe
+   Fix fluidez: preload del logo + entrada y salida separadas.
+========================================================= */
+.onea-rentao-style-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  pointer-events: none;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .74s ease, visibility .74s ease;
+}
+
+.onea-rentao-style-intro-logo {
+  width: min(50vw, 230px);
+  height: auto;
+  display: block;
+  opacity: 0;
+  transform: scale(0.26) translateY(22px);
+  transform-origin: center center;
+  filter: blur(2.5px);
+  will-change: opacity, transform, filter;
+}
+
+.onea-rentao-style-intro--ready .onea-rentao-style-intro-logo {
+  animation: oneaLogoIntroGrow 2.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.onea-rentao-style-intro--hide {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.onea-rentao-style-intro--hide .onea-rentao-style-intro-logo {
+  animation: oneaLogoIntroExit .72s ease forwards;
+}
+
+@keyframes oneaLogoIntroGrow {
+  0% {
+    opacity: 0;
+    transform: scale(0.26) translateY(22px);
+    filter: blur(2.5px);
+  }
+
+  18% {
+    opacity: .38;
+    transform: scale(0.44) translateY(16px);
+    filter: blur(1.6px);
+  }
+
+  36% {
+    opacity: .78;
+    transform: scale(0.66) translateY(9px);
+    filter: blur(.8px);
+  }
+
+  54% {
+    opacity: 1;
+    transform: scale(0.86) translateY(3px);
+    filter: blur(0);
+  }
+
+  74% {
+    opacity: 1;
+    transform: scale(1.01) translateY(-2px);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-5px);
+    filter: blur(0);
+  }
+}
+
+@keyframes oneaLogoIntroExit {
+  0% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-5px);
+    filter: blur(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.16) translateY(-12px);
+    filter: blur(.4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onea-rentao-style-intro {
+    display: none;
+  }
+
+  .onea-rentao-style-intro-logo {
+    animation: none;
+  }
+}
+
+
+
+/* =========================================================
+   1A Eventos — desactivar preloaders anteriores
+   Evita competencia entre Rentao DOM-safe, 4B, splash y wrappers viejos.
+========================================================= */
+.onea-splash,
+.onea-welcome-screen,
+.onea-welcome-logo-container,
+.oneaBootOverlay4B,
+.oneaBootLogoWrap4B,
+.oneaBootLogo4B,
+.oneaBootTextFallback4B,
+.oneaIntroOverlayBg,
+.oneaIntroLogoBg,
+.oneaIntroOverlayFinal,
+.onea-rentao-style-intro,
+.onea-rentao-style-intro-logo {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  animation: none !important;
+}
+
+
+
+/* =========================================================
+   1A Eventos — Preloader patrón JPREZ / Rentao probado
+   Una sola pantalla, logo centrado, zoom fluido y salida limpia.
+========================================================= */
+.onea-jprez-welcome-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: none;
+  transition: opacity .52s ease, visibility .52s ease;
+}
+
+.onea-jprez-welcome-screen--hide {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.onea-jprez-logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  animation: oneaJprezZoomAndFocus 3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform;
+}
+
+.onea-jprez-logo-img {
+  width: min(50vw, 230px);
+  max-width: 230px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes oneaJprezZoomAndFocus {
+  0% {
+    transform: scale(0.28) translateY(20px);
+  }
+
+  18% {
+    transform: scale(0.45) translateY(15px);
+  }
+
+  38% {
+    transform: scale(0.68) translateY(9px);
+  }
+
+  58% {
+    transform: scale(0.88) translateY(3px);
+  }
+
+  78% {
+    transform: scale(1.02) translateY(-2px);
+  }
+
+  100% {
+    transform: scale(1.10) translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onea-jprez-welcome-screen {
+    display: none;
+  }
+
+  .onea-jprez-logo-container {
+    animation: none;
+  }
+}
+
+
+
+/* =========================================================
+   1A Eventos — bloquear preloaders viejos; mantener NOVI exacto
+========================================================= */
+.onea-splash,
+.onea-welcome-screen,
+.onea-welcome-logo-container,
+.oneaBootOverlay4B,
+.oneaBootLogoWrap4B,
+.oneaBootLogo4B,
+.oneaBootTextFallback4B,
+.oneaIntroOverlayBg,
+.oneaIntroLogoBg,
+.oneaIntroOverlayFinal,
+.onea-rentao-style-intro,
+.onea-rentao-style-intro-logo,
+.onea-jprez-welcome-screen,
+.onea-jprez-logo-container,
+.onea-jprez-logo-img {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  animation: none !important;
+}
+
+/* ==========================================================
+   1A EVENTOS — CATÁLOGO MOBILE TIPO RENTAO / FIX FORENSE
+   Base real:
+   - Rentao muestra 2 cards por ciclo con grid repeat(2).
+   - 1A ya cambia visibleCatalogCategories de 2 en 2.
+   - Este bloque NO toca TSX, NO usa selectores globales.
+   ========================================================== */
+
+.onea-page .onea-catalog-premium {
+  overflow: visible !important;
+}
+
+.onea-page .onea-catalog-premium .onea-section-head,
+.onea-page .onea-catalog-premium .onea-catalog-head {
+  width: min(100%, 28rem) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  text-align: left !important;
+}
+
+/* Contenedor real usado en TSX */
+.onea-page .onea-catalog-premium .onea-featured-category-showcase {
+  width: min(100%, 28rem) !important;
+  margin: 1.35rem auto 1.15rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  transform: none !important;
+}
+
+/* Card real usada en TSX */
+.onea-page .onea-catalog-premium .onea-featured-category-card {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  cursor: pointer !important;
+  animation: oneaCatalogRentaoCardIn .42s ease both !important;
+}
+
+/* Imagen-card interna del catálogo */
+.onea-page .onea-catalog-premium .onea-featured-category-card .onea-catalog-card {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: clamp(12.4rem, 44vw, 15rem) !important;
+  border: 1px solid rgba(183, 154, 86, .55) !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  scroll-snap-align: unset !important;
+}
+
+/* La imagen no debe cortarse */
+.onea-page .onea-catalog-premium .onea-featured-category-card .onea-catalog-card img {
+  width: 100% !important;
+  height: calc(100% - 3.3rem) !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  display: block !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  opacity: 1 !important;
+  padding: 13px 10px 6px !important;
+  background: #ffffff !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+/* Botón negro inferior dentro de la card */
+.onea-page .onea-catalog-premium .onea-featured-category-card .onea-catalog-card span {
+  position: absolute !important;
+  left: 10px !important;
+  right: 10px !important;
+  bottom: 10px !important;
+  min-height: 2.35rem !important;
+  padding: .48rem .55rem !important;
+  border-radius: 999px !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: clamp(.72rem, 3.15vw, .86rem) !important;
+  line-height: 1.08 !important;
+  font-weight: 900 !important;
+  white-space: normal !important;
+  backdrop-filter: none !important;
+}
+
+/* Botones de categorías debajo: 2 columnas limpias */
+.onea-page .onea-catalog-premium .onea-category-button-panel {
+  width: min(100%, 28rem) !important;
+  margin: 1rem auto 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: .62rem !important;
+}
+
+.onea-page .onea-catalog-premium .onea-category-button-panel button {
+  min-width: 0 !important;
+  min-height: 2.75rem !important;
+  padding: .62rem .7rem !important;
+  border-radius: 999px !important;
+  white-space: normal !important;
+  line-height: 1.1 !important;
+}
+
+/* Botones largos debajo */
+.onea-page .onea-catalog-premium .onea-category-more-link,
+.onea-page .onea-catalog-premium .onea-catalog-actions,
+.onea-page .onea-catalog-premium .onea-secondary-cta {
+  width: min(100%, 28rem) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.onea-page .onea-catalog-premium .onea-category-more-link {
+  margin-top: .85rem !important;
+}
+
+.onea-page .onea-catalog-premium .onea-catalog-actions {
+  margin-top: .85rem !important;
+}
+
+/* Modal catálogo: X visible y flotante dentro del modal */
+.onea-page .onea-catalog-modal-close {
+  position: sticky !important;
+  top: .65rem !important;
+  z-index: 20 !important;
+  margin-left: auto !important;
+  margin-right: .35rem !important;
+}
+
+/* Catálogo completo: imagen completa, no cortada */
+.onea-page .onea-catalog-modal-book .onea-book-stage {
+  min-height: auto !important;
+  padding: .75rem !important;
+}
+
+.onea-page .onea-catalog-modal-book .onea-book-page,
+.onea-page .onea-catalog-modal-book .onea-book-page-zoom {
+  width: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #ffffff !important;
+  overflow: hidden !important;
+}
+
+.onea-page .onea-catalog-modal-book .onea-book-page img,
+.onea-page .onea-catalog-modal-book .onea-book-page-zoom img {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 58vh !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: #ffffff !important;
+}
+
+@keyframes oneaCatalogRentaoCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 420px) {
+  .onea-page .onea-catalog-premium .onea-featured-category-showcase {
+    gap: 10px !important;
+  }
+
+  .onea-page .onea-catalog-premium .onea-featured-category-card .onea-catalog-card {
+    height: clamp(11.7rem, 47vw, 13.4rem) !important;
+    border-radius: 18px !important;
+  }
+
+  .onea-page .onea-catalog-premium .onea-featured-category-card .onea-catalog-card img {
+    padding: 11px 8px 5px !important;
+  }
+
+  .onea-page .onea-catalog-premium .onea-featured-category-card .onea-catalog-card span {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px !important;
+    min-height: 2.25rem !important;
+    font-size: .72rem !important;
+  }
+}
+
+
+/* =========================================================
+   1A Eventos — Fix quirúrgico aprobado
+   Alcance:
+   - separación fina entre secciones usando clases reales
+   - corrección móvil del modal catálogo completo
+   No tocar:
+   - preloader
+   - cards destacadas del catálogo principal
+========================================================= */
+
+/* Separación elegante entre secciones */
+.onea-page .onea-section + .onea-section {
+  position: relative;
+  margin-top: clamp(26px, 6vw, 52px);
+  padding-top: clamp(34px, 7vw, 64px);
+}
+
+.onea-page .onea-section + .onea-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(84%, 720px);
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(177, 147, 79, 0.18),
+    rgba(177, 147, 79, 0.52),
+    rgba(177, 147, 79, 0.18),
+    transparent
+  );
+}
+
+/* Modal catálogo completo: comportamiento mobile-first sin romper cards destacadas */
+@media (max-width: 768px) {
+  .onea-catalog-modal-backdrop {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 12px calc(env(safe-area-inset-bottom, 0px) + 14px) !important;
+    overflow-y: auto !important;
+  }
+
+  .onea-catalog-modal.onea-catalog-modal-book {
+    width: min(94vw, 430px) !important;
+    max-width: min(94vw, 430px) !important;
+    max-height: calc(100dvh - 34px) !important;
+    padding: 26px 18px 22px !important;
+    border-radius: 28px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .onea-catalog-modal-book .onea-catalog-modal-close {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    min-height: 56px !important;
+    border-radius: 999px !important;
+    background: #000 !important;
+    color: #fff !important;
+    border: 1px solid rgba(177, 147, 79, 0.76) !important;
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28) !important;
+  }
+
+  .onea-catalog-modal-book .onea-catalog-modal-head {
+    padding-inline: 4px !important;
+    margin-top: -22px !important;
+    margin-bottom: 20px !important;
+    text-align: center !important;
+  }
+
+  .onea-catalog-modal-book .onea-catalog-modal-head h2 {
+    font-size: clamp(2rem, 9vw, 2.85rem) !important;
+    line-height: 1.02 !important;
+  }
+
+  .onea-catalog-modal-book .onea-catalog-modal-head p {
+    font-size: clamp(1.05rem, 4.7vw, 1.35rem) !important;
+    line-height: 1.48 !important;
+  }
+
+  .onea-catalog-modal-book .onea-catalog-pages {
+    width: 100% !important;
+    display: block !important;
+    margin: 0 auto !important;
+  }
+
+  .onea-catalog-modal-book .onea-book-page {
+    width: 100% !important;
+    min-height: auto !important;
+    aspect-ratio: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    padding: 14px 12px 16px !important;
+    overflow: hidden !important;
+    background: #fff !important;
+  }
+
+  .onea-catalog-modal-book .onea-book-page-zoom {
+    width: 100% !important;
+    min-height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #fff !important;
+  }
+
+  .onea-catalog-modal-book .onea-book-page img {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 52dvh !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+    background: #fff !important;
+  }
+
+  .onea-catalog-modal-book .onea-book-page figcaption {
+    position: static !important;
+    inset: auto !important;
+    transform: none !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 4px auto 0 !important;
+    text-align: center !important;
+    font-size: 1rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .onea-catalog-modal-book .onea-modal-cta-row {
+    margin-top: 18px !important;
+  }
+
+  .onea-catalog-modal-book .onea-modal-cta-row a,
+  .onea-catalog-modal-book .onea-modal-cta-row button {
+    width: 100% !important;
+    min-height: 58px !important;
+  }
+}
+
+
+/* =========================================================
+   1A Eventos — Ajuste fino de aire entre secciones
+   Solo aumenta respiración visual. No toca catálogo ni modal.
+========================================================= */
+
+.onea-page .onea-section + .onea-section {
+  margin-top: clamp(44px, 8vw, 78px) !important;
+  padding-top: clamp(48px, 8vw, 84px) !important;
+}
+
+.onea-page .onea-section + .onea-section::before {
+  top: 0 !important;
+  width: min(86%, 720px) !important;
+}
+
+@media (max-width: 768px) {
+  .onea-page .onea-section + .onea-section {
+    margin-top: 44px !important;
+    padding-top: 52px !important;
+  }
+}
+
+
+/* =========================================================
+   1A Eventos — FAQ copy vendedor + acordeón cerrado por defecto
+   No toca catálogo, modal ni preloader.
+========================================================= */
+
+.onea-page .onea-faq-selling-copy {
+  max-width: 640px;
+  margin: -4px auto 28px;
+  color: rgba(32, 32, 32, 0.68);
+  font-size: clamp(1.02rem, 3.9vw, 1.2rem);
+  line-height: 1.55;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .onea-page .onea-faq-selling-copy {
+    max-width: 92%;
+    margin: -2px auto 24px;
+  }
+}
+
+/* =========================================================
+   1A Eventos — Modal catálogo completo página full
+   Objetivo:
+   - Ocultar texto lateral "Página X de 27" dentro de la tarjeta.
+   - Dejar la imagen de página ocupando el espacio completo.
+   - Mantener contador inferior Anterior / X / Siguiente.
+   No toca catálogo principal ni preloader.
+========================================================= */
+
+.onea-page .onea-catalog-modal-book .onea-book-page {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-height: clamp(360px, 62dvh, 620px) !important;
+  padding: clamp(10px, 2vw, 18px) !important;
+  background: #ffffff !important;
+  overflow: hidden !important;
+}
+
+.onea-page .onea-catalog-modal-book .onea-book-page-zoom {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: inherit !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #ffffff !important;
+}
+
+.onea-page .onea-catalog-modal-book .onea-book-page img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: clamp(340px, 60dvh, 600px) !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: #ffffff !important;
+}
+
+/* El contador lateral dentro de la tarjeta se oculta.
+   El contador correcto queda abajo entre Anterior / Siguiente. */
+.onea-page .onea-catalog-modal-book .onea-book-page figcaption {
+  display: none !important;
+}
+
+/* Ajuste móvil más compacto */
+@media (max-width: 768px) {
+  .onea-page .onea-catalog-modal-book .onea-book-page {
+    min-height: 48dvh !important;
+    padding: 8px !important;
+  }
+
+  .onea-page .onea-catalog-modal-book .onea-book-page img {
+    max-height: 46dvh !important;
+  }
+}
+
+
+/* =========================================================
+   1A Eventos — FAQ links negros semibold + hover dorado
+========================================================= */
+
+.onea-page .onea-faq a,
+.onea-page .onea-faq a:link,
+.onea-page .onea-faq a:visited,
+.onea-page .onea-faq a:focus,
+.onea-page .onea-faq a:active {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.onea-page .onea-faq a:hover {
+  color: #b1934f !important;
+  -webkit-text-fill-color: #b1934f !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 3px !important;
+}
+
+.onea-page .onea-faq a::selection,
+.onea-page .onea-faq ::selection {
+  background: rgba(177, 147, 79, 0.22) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}

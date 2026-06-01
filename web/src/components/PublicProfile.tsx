@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import IntapProfileV2, { type IntapProfileV2Profile } from './profile-templates/IntapProfileV2'
 import IntapProfileJasonV3 from './profile-templates/IntapProfileJasonV3'
 import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
+import IntapProfile1AEventos from './profile-templates/IntapProfile1AEventos'
+import IntapProfileRentaoRd from './profile-templates/IntapProfileRentaoRd'
 
 declare global {
   interface Window {
@@ -2098,6 +2100,14 @@ export default function PublicProfile() {
     return <IntapProfileNoviV4 profile={{ slug: 'novi' }} />
   }
 
+  if ((errorStatus || !data) && slug === '1aeventos') {
+    return <IntapProfile1AEventos />
+  }
+
+  if ((errorStatus || !data) && slug === 'rentaord') {
+    return <IntapProfileRentaoRd profile={{ slug: 'rentaord' }} />
+  }
+
   if (errorStatus || !data) return <NotFound />
 
   // ── Derived data ────────────────────────────────────────────────────────────
@@ -2179,6 +2189,14 @@ export default function PublicProfile() {
 
   if (data.slug === 'jason') {
     return <IntapProfileJasonV3 profile={publicProfileV2} />
+  }
+
+  if (data.slug === '1aeventos') {
+    return <IntapProfile1AEventos />
+  }
+
+  if (data.slug === 'rentaord') {
+    return <IntapProfileRentaoRd profile={publicProfileV2} />
   }
 
   return <IntapProfileV2 profile={publicProfileV2} />
