@@ -573,7 +573,7 @@ me.put('/profile', async (c) => {
   const theme_id = body.theme_id !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
-  const VALID_TEMPLATES = ['restaurante', 'servicios', 'eventos']
+  const VALID_TEMPLATES = ['restaurante', 'servicios', 'eventos', 'personal']
   const template_id = body.template_id !== undefined
     ? (VALID_TEMPLATES.includes(String(body.template_id)) ? String(body.template_id) : null)
     : undefined

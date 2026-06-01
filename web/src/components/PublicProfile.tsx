@@ -211,6 +211,11 @@ function TemplateBlock({ templateId, data, waSource, name, slug }: {
             </div>
           )}
           <div className="flex flex-col gap-2 mt-1">
+            {data.address_short && (
+              <p className="flex items-center gap-1.5 text-xs text-white/60">
+                📍 {data.address_short}
+              </p>
+            )}
             {data.reservas_url && (
               <a
                 href={data.reservas_url}
@@ -229,6 +234,14 @@ function TemplateBlock({ templateId, data, waSource, name, slug }: {
                 className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
               >
                 🛵 Pedir a domicilio
+              </a>
+            )}
+            {data.phone_order && (
+              <a
+                href={`tel:${data.phone_order}`}
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
+              >
+                📞 Pedir por teléfono
               </a>
             )}
           </div>
@@ -265,6 +278,16 @@ function TemplateBlock({ templateId, data, waSource, name, slug }: {
               ))}
             </div>
           )}
+          {data.portfolio_url && (
+            <a
+              href={data.portfolio_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
+            >
+              🗂️ Ver portafolio
+            </a>
+          )}
           {data.calendly_url && (
             <a
               href={data.calendly_url}
@@ -273,6 +296,16 @@ function TemplateBlock({ templateId, data, waSource, name, slug }: {
               className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
             >
               📆 Agendar cita
+            </a>
+          )}
+          {waSource && (
+            <a
+              href={`https://wa.me/${waSource}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-[#25D366]/20 border border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/30 transition-colors active:scale-95"
+            >
+              💬 {data.whatsapp_cta || 'Contactar por WhatsApp'}
             </a>
           )}
         </div>
@@ -322,6 +355,57 @@ function TemplateBlock({ templateId, data, waSource, name, slug }: {
               🎟️ Comprar boletos
             </a>
           )}
+        </div>
+      </div>
+    )
+  }
+
+  if (templateId === 'personal') {
+    const hasContent = data.role || data.specialty || data.availability || data.portfolio_url || data.cta_url
+    if (!hasContent) return null
+    return (
+      <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+          <span className="text-base">👤</span>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Perfil profesional</p>
+        </div>
+        <div className="p-4 flex flex-col gap-3">
+          {data.role && (
+            <span className="self-start text-sm font-black px-3 py-1.5 rounded-full bg-intap-mint/10 border border-intap-mint/30 text-intap-mint">
+              {data.role}
+            </span>
+          )}
+          {data.specialty && (
+            <p className="text-sm text-white/80 leading-relaxed">{data.specialty}</p>
+          )}
+          {data.availability && (
+            <span className="self-start flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-green-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              {data.availability}
+            </span>
+          )}
+          <div className="flex flex-col gap-2 mt-1">
+            {data.portfolio_url && (
+              <a
+                href={data.portfolio_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-white/10 border border-white/10 text-white hover:bg-white/20 transition-colors active:scale-95"
+              >
+                🗂️ Ver portafolio
+              </a>
+            )}
+            {data.cta_url && (
+              <a
+                href={data.cta_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm bg-intap-mint/20 border border-intap-mint/30 text-intap-mint hover:bg-intap-mint/30 transition-colors active:scale-95"
+              >
+                {data.cta_label || 'Contratarme'}
+              </a>
+            )}
+          </div>
         </div>
       </div>
     )

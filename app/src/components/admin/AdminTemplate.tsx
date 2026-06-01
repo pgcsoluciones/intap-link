@@ -13,7 +13,25 @@ export interface TemplateDef {
   fields: []
 }
 
-export function getCategoryTemplate(_category: string): TemplateDef {
+const PERSONAL_TEMPLATE: TemplateDef = {
+  id: 'personal',
+  label: 'Perfil personal',
+  icon: '👤',
+  description: 'Ideal para freelancers, consultores y profesionales independientes.',
+  categories: ['Arte y Diseño', 'Consultoría y Servicios Profesionales', 'Educación y Formación', 'Tecnología'],
+  fields: [],
+}
+
+export function getCategoryTemplate(category: string): TemplateDef {
+  const personalCategories = [
+    'Arte y Diseño',
+    'Consultoría y Servicios Profesionales',
+    'Educación y Formación',
+    'Tecnología',
+  ]
+  if (personalCategories.includes(category)) {
+    return PERSONAL_TEMPLATE
+  }
   return {
     id: BASE_TEMPLATE_ID,
     label: 'Perfil digital INTAP V2',
