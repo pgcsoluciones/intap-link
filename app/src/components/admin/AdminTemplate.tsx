@@ -33,57 +33,21 @@ export function getCategoryTemplate(category: string): TemplateDef {
   ]
 
   if (restauranteCategories.includes(category)) {
-    return {
-      id: 'restaurante',
-      label: 'Restaurante',
-      icon: '🍽️',
-      description: 'Ideal para restaurantes, cafés y negocios gastronómicos.',
-      categories: restauranteCategories,
-      fields: [],
-    }
+    return { id: 'restaurante', label: 'Restaurante', icon: '🍽️', description: 'Ideal para restaurantes, cafés y negocios gastronómicos.', categories: restauranteCategories, fields: [] }
   }
   if (eventosCategories.includes(category)) {
-    return {
-      id: 'eventos',
-      label: 'Eventos',
-      icon: '🎭',
-      description: 'Ideal para eventos, entretenimiento y actividades culturales.',
-      categories: eventosCategories,
-      fields: [],
-    }
+    return { id: 'eventos', label: 'Eventos', icon: '🎭', description: 'Ideal para eventos, entretenimiento y actividades culturales.', categories: eventosCategories, fields: [] }
   }
   if (personalCategories.includes(category)) {
-    return {
-      id: 'personal',
-      label: 'Personal',
-      icon: '👤',
-      description: 'Ideal para freelancers, consultores y profesionales independientes.',
-      categories: personalCategories,
-      fields: [],
-    }
+    return { id: 'personal', label: 'Personal', icon: '👤', description: 'Ideal para freelancers, consultores y profesionales independientes.', categories: personalCategories, fields: [] }
   }
   if (serviciosCategories.includes(category)) {
-    return {
-      id: 'servicios',
-      label: 'Servicios',
-      icon: '💼',
-      description: 'Ideal para negocios de servicios y profesionales.',
-      categories: serviciosCategories,
-      fields: [],
-    }
+    return { id: 'servicios', label: 'Servicios', icon: '💼', description: 'Ideal para negocios de servicios y profesionales.', categories: serviciosCategories, fields: [] }
   }
-  // Default seguro: servicios
-  return {
-    id: 'servicios',
-    label: 'Servicios',
-    icon: '💼',
-    description: 'Plantilla base para negocios de servicios.',
-    categories: [],
-    fields: [],
-  }
+  return { id: 'servicios', label: 'Servicios', icon: '💼', description: 'Plantilla base para negocios de servicios.', categories: [], fields: [] }
 }
 
-// ── Tipos internos ────────────────────────────────────────────────────────────
+// ── Tipos ─────────────────────────────────────────────────────────────────────
 
 type TemplateId = 'restaurante' | 'servicios' | 'eventos' | 'personal'
 type TemplateData = Record<string, string>
@@ -93,8 +57,6 @@ interface MeData {
   template_data?: TemplateData
   templateData?: TemplateData
 }
-
-// ── Definición de plantillas ──────────────────────────────────────────────────
 
 interface FieldDef {
   key: string
@@ -148,7 +110,7 @@ const TEMPLATES: TemplateCfg[] = [
       { key: 'event_date', label: 'Fecha del evento', placeholder: '', type: 'date' },
       { key: 'event_venue', label: 'Lugar del evento', placeholder: 'Ej. Teatro Nacional, Santo Domingo' },
       { key: 'ticket_url', label: 'URL para comprar boletos', placeholder: 'https://...', type: 'url' },
-      { key: 'lineup', label: 'Programa / lineup', placeholder: 'Ej. 20:00 Apertura · 21:00 Concierto principal · 23:00 DJ set', type: 'textarea' },
+      { key: 'lineup', label: 'Programa / lineup', placeholder: 'Ej. 20:00 Apertura · 21:00 Concierto · 23:00 DJ set', type: 'textarea' },
     ],
   },
   {
@@ -181,8 +143,7 @@ export default function AdminTemplate() {
     apiGet('/me').then((json: any) => {
       if (json.ok) {
         const d = json.data as MeData
-        const tid = d.template_id as TemplateId | null
-        setSelectedTemplate(tid)
+        setSelectedTemplate(d.template_id)
         setFields(d.template_data ?? d.templateData ?? {})
       }
       setLoading(false)
@@ -221,7 +182,7 @@ export default function AdminTemplate() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="loading-spinner" />
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
       </div>
     )
   }
@@ -231,8 +192,13 @@ export default function AdminTemplate() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-2xl">
+
+        {/* Header */}
         <header className="flex items-center gap-3 mb-8">
-          <button onClick={() => navigate('/admin')} className="text-slate-500 hover:text-slate-900 transition-colors">
+          <button
+            onClick={() => navigate('/admin')}
+            className="text-slate-500 hover:text-slate-900 transition-colors"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -240,46 +206,47 @@ export default function AdminTemplate() {
           <h1 className="text-xl font-black">Plantilla activa</h1>
         </header>
 
-        <div className="glass-card p-5 mb-5 border-intap-mint/20 bg-intap-mint/5">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">📱</span>
-            <div>
-              <p className="text-sm font-black text-white">Perfil digital INTAP V2</p>
-              <p className="text-xs text-slate-600 leading-relaxed mt-1">
-                La plantilla de tu perfil público ya no se elige por categoría. Ahora todos los perfiles usan una base clara,
-                editable y preparada para foto o logo, datos de contacto, biografía, empresa, servicios, galería, FAQ y WhatsApp.
-              </p>
-              <p className="text-[11px] text-intap-mint font-bold mt-3">
-                Estado: {me?.template_id === BASE_TEMPLATE_ID ? 'Activa en este perfil' : 'Se activará al guardar'}
-              </p>
-            </div>
+        {/* Selector de plantilla */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-5 mb-5">
+          <h2 className="text-sm font-bold text-slate-500 mb-4">Elige una plantilla</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => handleSelectTemplate(t.id)}
+                className={`flex flex-col items-start gap-1 p-4 rounded-xl border text-left transition-all ${
+                  selectedTemplate === t.id
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <span className="text-2xl">{t.icon}</span>
+                <span className="text-sm font-bold">{t.label}</span>
+              </button>
+            ))}
           </div>
         </section>
 
         {/* Campos de la plantilla */}
-        {!activeTemplate ? (
-          <div className="glass-card p-5 text-center text-slate-400 text-sm">
-            Elige una plantilla para personalizar este bloque
-          </div>
-        ) : (
-          <section className="glass-card p-5 flex flex-col gap-4">
-            <div className="flex items-center gap-2 mb-1">
+        {activeTemplate && (
+          <section className="bg-white border border-slate-200 rounded-2xl p-5 mb-5 flex flex-col gap-4">
+            <div className="flex items-center gap-2">
               <span className="text-lg">{activeTemplate.icon}</span>
-              <h2 className="text-sm font-black text-white">Datos de la plantilla</h2>
+              <h2 className="text-sm font-bold text-slate-700">Datos de la plantilla {activeTemplate.label}</h2>
             </div>
 
             {activeTemplate.fields.map((field) => {
               const isTextarea = field.type === 'textarea'
               return (
                 <label key={field.key} className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-slate-400">{field.label}</span>
+                  <span className="text-xs font-bold text-slate-500">{field.label}</span>
                   {isTextarea ? (
                     <textarea
                       value={fields[field.key] ?? ''}
                       onChange={(e) => setField(field.key, e.target.value)}
                       placeholder={field.placeholder}
                       rows={3}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-400 transition-colors resize-none"
                     />
                   ) : (
                     <input
@@ -287,7 +254,7 @@ export default function AdminTemplate() {
                       value={fields[field.key] ?? ''}
                       onChange={(e) => setField(field.key, e.target.value)}
                       placeholder={field.placeholder}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-400 transition-colors"
                     />
                   )}
                 </label>
@@ -295,44 +262,18 @@ export default function AdminTemplate() {
             })}
           </section>
         )}
-      </div>
 
-                  return (
-                    <label key={field.key} className={isTextarea ? 'md:col-span-2' : ''}>
-                      <span className="block text-xs font-bold text-slate-400 mb-1.5">{field.label}</span>
-                      {isTextarea ? (
-                        <textarea
-                          value={fields[field.key] ?? ''}
-                          onChange={(e) => setField(field.key, e.target.value)}
-                          placeholder={field.placeholder}
-                          rows={4}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
-                        />
-                      ) : (
-                        <input
-                          value={fields[field.key] ?? ''}
-                          onChange={(e) => setField(field.key, e.target.value)}
-                          placeholder={field.placeholder}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
-                        />
-                      )}
-                    </label>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-
+        {/* Botón guardar */}
         <div className="sticky bottom-4 mt-6">
           <button
             onClick={handleSave}
             disabled={saving || !selectedTemplate}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold text-sm disabled:opacity-40 transition-opacity shadow-2xl"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-sm disabled:opacity-40 transition-opacity shadow-lg"
           >
             {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar cambios'}
           </button>
         </div>
+
       </div>
     </div>
   )
