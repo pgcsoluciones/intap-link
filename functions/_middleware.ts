@@ -5,7 +5,7 @@
  * Handles:
  *   1. /admin and /admin/* → redirect to app.intaprd.com (panel admin)
  *   2. /?slug=VALUE        → redirect to /VALUE (perfil público)
- *   3. /novi               → inject Open Graph / Twitter Card metadata
+ *   3. /:slug              → inject Open Graph / Twitter Card metadata dynamically
  */
 export async function onRequest(context: {
   request: Request;
@@ -45,11 +45,11 @@ export async function onRequest(context: {
     const siteName = escapeHtml(metadata.siteName);
 
     const metaBlock = `
-  <!-- INTAP LINK: Open Graph metadata for /novi -->
+  <!-- INTAP LINK: Open Graph metadata -->
   <title>${title}</title>
   <link rel="canonical" href="${pageUrl}" />
   <meta name="description" content="${description}" />
-  <meta property="og:type" content="website" />
+  <meta property="og:type" content="profile" />
   <meta property="og:site_name" content="${siteName}" />
   <meta property="og:title" content="${title}" />
   <meta property="og:description" content="${description}" />
@@ -60,7 +60,7 @@ export async function onRequest(context: {
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="${title}" />
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="${title}" />
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${imageUrl}" />
@@ -73,6 +73,33 @@ export async function onRequest(context: {
     }
 
     return html;
+  };
+
+  const DEFAULT_OG_IMAGE = 'https://intaprd.com/assets/landing/intap-og-default.png';
+
+  /** Resolve avatarUrl to a full URL */
+  const resolveAvatarUrl = (avatarUrl: string | null | undefined): string => {
+    if (!avatarUrl) return DEFAULT_OG_IMAGE;
+    if (avatarUrl.startsWith('http')) return avatarUrl;
+    // R2 key — build public assets URL
+    return `https://intaprd.com/api/v1/public/assets/${avatarUrl}`;
+  };
+
+  /** Returns true if the pathname looks like a system route or static asset */
+  const isSystemPath = (pathname: string): boolean => {
+    if (pathname === '/') return true;
+    if (
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/auth') ||
+      pathname.startsWith('/assets/') ||
+      pathname.startsWith('/favicon') ||
+      pathname === '/robots.txt' ||
+      pathname.startsWith('/sitemap')
+    ) return true;
+    // Has a file extension
+    if (/\.[a-zA-Z0-9]+$/.test(pathname)) return true;
+    return false;
   };
 
   const url = new URL(context.request.url);
@@ -96,38 +123,67 @@ export async function onRequest(context: {
     }
   }
 
-  // Metadata social para perfil NOVI HOME.
-  // Se calcula con el origin actual para soportar:
-  // - https://intaprd.com/novi
-  // - https://link.avanxy.com/novi
-  if (url.pathname === '/novi' || url.pathname === '/novi/') {
-    const response = await context.next();
-    const contentType = response.headers.get('content-type') || '';
+  // Dynamic Open Graph metadata for public profile slugs
+  if (!isSystemPath(url.pathname)) {
+    // Extract slug: strip leading slash and any trailing slash
+    const slug = url.pathname.replace(/^\//, '').replace(/\/$/, '');
 
-    if (!contentType.includes('text/html')) {
-      return withSecurityHeaders(response);
+    if (slug) {
+      try {
+        const apiRes = await fetch(
+          `https://intaprd.com/api/v1/public/profiles/${encodeURIComponent(slug)}`,
+          { headers: { 'Accept': 'application/json' } }
+        );
+
+        if (apiRes.ok) {
+          const body = await apiRes.json() as {
+            ok: boolean;
+            data?: {
+              name?: string;
+              bio?: string;
+              avatarUrl?: string | null;
+              slug?: string;
+            };
+          };
+
+          if (body.ok && body.data) {
+            const profile = body.data;
+            const name = profile.name || slug;
+            const bio = profile.bio || `Perfil de ${name} en INTAP LINK`;
+            const avatarUrl = resolveAvatarUrl(profile.avatarUrl);
+            const canonicalSlug = profile.slug || slug;
+            const canonicalUrl = `https://intaprd.com/${canonicalSlug}`;
+
+            const pageResponse = await context.next();
+            const contentType = pageResponse.headers.get('content-type') || '';
+
+            if (!contentType.includes('text/html')) {
+              return withSecurityHeaders(pageResponse);
+            }
+
+            const html = await pageResponse.text();
+            const updatedHtml = injectHeadMetadata(html, {
+              title: name,
+              description: bio,
+              url: canonicalUrl,
+              image: avatarUrl,
+              siteName: 'INTAP LINK',
+            });
+
+            const headers = new Headers(pageResponse.headers);
+            headers.set('content-type', 'text/html; charset=UTF-8');
+
+            return withSecurityHeaders(new Response(updatedHtml, {
+              status: pageResponse.status,
+              statusText: pageResponse.statusText,
+              headers,
+            }));
+          }
+        }
+      } catch {
+        // Fetch failed or profile not found — fall through to normal response
+      }
     }
-
-    const html = await response.text();
-    const canonicalUrl = `${url.origin}/novi`;
-    const imageUrl = `${url.origin}/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3`;
-
-    const updatedHtml = injectHeadMetadata(html, {
-      title: 'NoviHome -Noldys Vicente-',
-      description: 'Asesora inmobiliaria. Propiedades listas, orientación clara y acompañamiento confiable para comprar o invertir con seguridad.',
-      url: canonicalUrl,
-      image: imageUrl,
-      siteName: 'INTAP LINK',
-    });
-
-    const headers = new Headers(response.headers);
-    headers.set('content-type', 'text/html; charset=UTF-8');
-
-    return withSecurityHeaders(new Response(updatedHtml, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    }));
   }
 
   return withSecurityHeaders(await context.next());
