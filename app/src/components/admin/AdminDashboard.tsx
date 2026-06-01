@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { API_BASE, apiGet, apiPost, apiPut, apiUpload } from '../../lib/api'
-import ImageCropModal from './ImageCropModal'
+import { apiGet, apiPost, apiPut } from '../../lib/api'
 import RetentionPanel from './RetentionPanel'
 
 // ─── Preview Panel ────────────────────────────────────────────────────────────
@@ -81,46 +80,21 @@ interface Stats {
   topLinks: { label: string; clics: number }[]
 }
 
-interface GalleryPhoto {
-  id: string
-  image_key: string
-}
-
-const THEMES = [
-  { id: 'default',  label: 'Clásico',    accent: '#0df2c9', bg: '#030712' },
-  { id: 'classic',  label: 'Classic',    accent: '#0ea5e9', bg: '#f0f9ff' },
-  { id: 'bento',    label: 'Bento',      accent: '#1d1d1f', bg: '#F5F5F7' },
-  { id: 'light',    label: 'Claro',      accent: '#0f172a', bg: '#f1f5f9' },
-  { id: 'modern',   label: 'Moderno',    accent: '#8b5cf6', bg: '#0f0a1e' },
-  { id: 'ocean',    label: 'Océano',     accent: '#06b6d4', bg: '#0c1a2e' },
-  { id: 'sunset',   label: 'Atardecer',  accent: '#f97316', bg: '#1a0a05' },
-  { id: 'midnight', label: 'Medianoche', accent: '#f59e0b', bg: '#09090b' },
-]
-
-function photoUrl(key: string) {
-  return `${API_BASE}/public/assets/${key.split('/').map(encodeURIComponent).join('/')}`
-}
-
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const fileRef  = useRef<HTMLInputElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [me, setMe]             = useState<MeData | null>(null)
   const [linkCount, setLinkCount] = useState(0)
   const [stats, setStats]       = useState<Stats | null>(null)
-  const [gallery, setGallery]   = useState<GalleryPhoto[]>([])
   const [loading, setLoading]   = useState(true)
   const [publishing, setPublishing]   = useState(false)
-  const [uploading, setUploading]     = useState(false)
-  const [pendingTheme, setPendingTheme] = useState<string | null>(null)
-  const [themeSaving, setThemeSaving]   = useState(false)
-  const [cropFile, setCropFile]         = useState<File | null>(null)
   // Slug editing
   const [slugEditing, setSlugEditing] = useState(false)
   const [newSlug, setNewSlug]         = useState('')
   const [slugSaving, setSlugSaving]   = useState(false)
   const [slugError, setSlugError]     = useState('')
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
 
   useEffect(() => {
     Promise.all([apiGet('/me'), apiGet('/me/links')])
@@ -129,12 +103,8 @@ export default function AdminDashboard() {
           const data: MeData = meJson.data
           setMe(data)
           if (data.profile_id) {
-            Promise.all([
-              apiGet(`/profile/stats/${data.profile_id}`),
-              apiGet('/me/gallery'),
-            ]).then(([statsJson, galleryJson]: any[]) => {
+            apiGet(`/profile/stats/${data.profile_id}`).then((statsJson: any) => {
               if (statsJson.ok) setStats(statsJson.stats)
-              if (galleryJson.ok) setGallery(galleryJson.photos || [])
             })
           }
         }
@@ -170,18 +140,6 @@ export default function AdminDashboard() {
     setPublishing(false)
   }
 
-  const saveTheme = async () => {
-    if (!me || !pendingTheme || pendingTheme === (me.theme_id || 'default')) return
-    setThemeSaving(true)
-    const res: any = await apiPut('/me/profile', { theme_id: pendingTheme })
-    if (res.ok) {
-      setMe({ ...me, theme_id: pendingTheme })
-      setPendingTheme(null)
-      refreshPreview()
-    }
-    setThemeSaving(false)
-  }
-
   const startSlugEdit = () => {
     setNewSlug(me?.slug || '')
     setSlugError('')
@@ -210,29 +168,6 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !me?.profile_id) return
-    if (fileRef.current) fileRef.current.value = ''
-    setCropFile(file)
-  }
-
-  const uploadCroppedGallery = async (blob: Blob) => {
-    if (!me?.profile_id) return
-    setCropFile(null)
-    setUploading(true)
-    const fd = new FormData()
-    fd.append('profileId', me.profile_id)
-    fd.append('file', blob, 'gallery.jpg')
-    const res: any = await apiUpload('/profile/gallery/upload', fd)
-    if (res.ok && res.key) {
-      setGallery((prev) => [...prev, { id: res.id || res.key, image_key: res.key }])
-    }
-    setUploading(false)
-  }
-
-  const [shareCopied, setShareCopied] = useState(false)
-
   if (loading) return (
     <div className="min-h-screen bg-intap-dark flex items-center justify-center">
       <div className="loading-spinner" />
@@ -242,9 +177,6 @@ export default function AdminDashboard() {
   const WEB_URL    = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   const profileUrl = me?.slug ? `${WEB_URL}/${me.slug}` : null
   const previewUrl = me?.slug ? `${WEB_URL}/${me.slug}?preview=1` : null
-  const savedTheme    = me?.theme_id || 'default'
-  const displayTheme  = pendingTheme ?? savedTheme
-  const maxTopLink = stats?.topLinks?.[0]?.clics || 1
 
   const handleShare = async () => {
     if (!profileUrl) return
@@ -269,21 +201,11 @@ export default function AdminDashboard() {
     { emoji: '▶️', label: 'Videos',                 sub: 'YouTube y Vimeo',                   to: '/admin/videos' },
     { emoji: '⬛', label: 'Orden de secciones',      sub: 'Arrastra para reordenar',           to: '/admin/blocks' },
     { emoji: '🏷️', label: 'Plantilla vertical',     sub: 'Restaurante · Servicios · Eventos', to: '/admin/template' },
+    { emoji: '📸', label: 'Galería de fotos',        sub: 'Fotos de tu perfil y negocio',      to: '/admin/visual' },
   ]
 
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter']">
-      {/* Image crop modal */}
-      {cropFile && (
-        <ImageCropModal
-          file={cropFile}
-          aspectRatio={1}
-          outputWidth={800}
-          onSave={uploadCroppedGallery}
-          onCancel={() => setCropFile(null)}
-        />
-      )}
-
       {/* Live preview overlay */}
       {previewOpen && previewUrl && (
         <PreviewPanel
@@ -292,9 +214,6 @@ export default function AdminDashboard() {
           onClose={() => setPreviewOpen(false)}
         />
       )}
-
-      {/* Hidden file input for gallery */}
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
 
       {/* ── Top bar ── */}
       <header className="sticky top-0 z-40 bg-intap-dark/95 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center justify-between">
@@ -475,7 +394,7 @@ export default function AdminDashboard() {
           <div className="flex flex-col gap-2">
             {navItems.map((item) => (
               <button
-                key={item.to}
+                key={item.to + item.label}
                 onClick={() => navigate(item.to)}
                 className="glass-card p-4 flex items-center justify-between hover:bg-white/5 active:scale-[0.98] transition-all text-left w-full"
               >
@@ -507,104 +426,6 @@ export default function AdminDashboard() {
             </p>
           </div>
         </div>
-
-        {/* ── Theme selector ── */}
-        <div>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Plantilla del perfil</p>
-          <div className="glass-card p-4">
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {THEMES.map((t) => {
-                const selected = displayTheme === t.id
-                const saved    = savedTheme === t.id
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => setPendingTheme(t.id === savedTheme ? null : t.id)}
-                    className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all ${
-                      selected
-                        ? 'border-intap-mint bg-intap-mint/10'
-                        : 'border-white/10 bg-white/5 hover:border-white/30'
-                    }`}
-                  >
-                    <div
-                      className="w-full h-8 rounded-xl flex items-center justify-center gap-1"
-                      style={{ background: t.bg }}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.accent }} />
-                      <span className="w-6 h-1 rounded-full opacity-50" style={{ background: t.accent }} />
-                    </div>
-                    <span className={`text-[10px] font-bold leading-tight text-center ${selected ? 'text-intap-mint' : 'text-slate-400'}`}>
-                      {t.label}{saved && !selected ? '' : ''}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            {pendingTheme && pendingTheme !== savedTheme && (
-              <button
-                onClick={saveTheme}
-                disabled={themeSaving}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white text-sm font-bold transition-opacity disabled:opacity-50"
-              >
-                {themeSaving ? 'Guardando…' : 'Guardar plantilla'}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Analytics — top links ── */}
-        {stats && stats.topLinks.length > 0 && (
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Links más clicados</p>
-            <div className="glass-card p-4 flex flex-col gap-3">
-              {stats.topLinks.map((link) => (
-                <div key={link.label}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-slate-300 truncate max-w-[75%]">{link.label}</span>
-                    <span className="text-intap-mint font-bold">{link.clics}</span>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-intap-mint rounded-full"
-                      style={{ width: `${Math.round((link.clics / maxTopLink) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Gallery ── */}
-        {me?.profile_id && (
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Galería de fotos</p>
-            <div className="glass-card p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-slate-400">{gallery.length} foto{gallery.length !== 1 ? 's' : ''}</p>
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                  className="text-xs bg-intap-mint/10 border border-intap-mint/20 text-intap-mint px-3 py-1.5 rounded-full hover:bg-intap-mint/20 transition-colors"
-                >
-                  {uploading ? 'Subiendo…' : '+ Foto'}
-                </button>
-              </div>
-              {gallery.length === 0
-                ? <p className="text-xs text-slate-500 text-center py-4">No hay fotos todavía</p>
-                : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {gallery.map((photo) => (
-                      <div key={photo.id} className="aspect-square rounded-xl overflow-hidden bg-white/5">
-                        <img src={photoUrl(photo.image_key)} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                )
-              }
-            </div>
-          </div>
-        )}
 
       </div>
     </div>
