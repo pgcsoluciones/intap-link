@@ -2208,17 +2208,19 @@ function PrivateBlock({ slug }: { slug: string }) {
 
 function NotFound() {
   return (
-    <div className="public-profile error-page">
-      <div className="profile-card">
-        <h1>No encontrado 😕</h1>
-        <p>Este perfil no existe o no está disponible.</p>
-        <Link
-          to="/"
-          className="btn-primary"
-          style={{ marginTop: '1.5rem', display: 'inline-block', textDecoration: 'none' }}
+    <div className="min-h-screen bg-[#030712] flex items-center justify-center px-4">
+      <div className="text-center max-w-sm">
+        <p className="text-4xl mb-4">😕</p>
+        <h1 className="text-xl font-bold text-white mb-2">Este perfil no está disponible</h1>
+        <p className="text-sm text-slate-400 mb-6">
+          Puede que la URL sea incorrecta o el perfil aún no esté publicado.
+        </p>
+        <a
+          href="https://intaprd.com"
+          className="inline-block px-6 py-3 rounded-2xl bg-[#0df2c9] text-black font-bold text-sm hover:brightness-110 transition-all active:scale-95"
         >
-          Volver al Inicio
-        </Link>
+          Volver al inicio
+        </a>
       </div>
     </div>
   )
