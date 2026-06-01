@@ -1,0 +1,44 @@
+/* =========================================================
+   1A Eventos — eliminar franja azul activa en enlaces FAQ
+   Solo afecta los enlaces dentro de respuestas FAQ.
+========================================================= */
+
+.onea-page .onea-faq details p a,
+.onea-page .onea-faq details p a:link,
+.onea-page .onea-faq details p a:visited,
+.onea-page .onea-faq details p a:focus,
+.onea-page .onea-faq details p a:active,
+.onea-page .onea-faq details p a:focus-visible {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: rgba(177, 147, 79, 0.16) !important;
+}
+
+.onea-page .onea-faq details p a:hover {
+  color: #b1934f !important;
+  -webkit-text-fill-color: #b1934f !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 3px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.onea-page .onea-faq details p a::selection,
+.onea-page .onea-faq details p ::selection {
+  background: rgba(177, 147, 79, 0.22) !important;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.onea-page .onea-faq details p a::-moz-selection,
+.onea-page .onea-faq details p ::-moz-selection {
+  background: rgba(177, 147, 79, 0.22) !important;
+  color: #111111 !important;
+}

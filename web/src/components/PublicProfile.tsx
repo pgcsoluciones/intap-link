@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import IntapProfileV2, { type IntapProfileV2Profile } from './profile-templates/IntapProfileV2'
 import IntapProfileJasonV3 from './profile-templates/IntapProfileJasonV3'
 import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
+import IntapProfileRentaoRd from './profile-templates/IntapProfileRentaoRd'
+import IntapProfile1AEventos from './profile-templates/IntapProfile1AEventos'
 
 declare global {
   interface Window {
@@ -2179,6 +2181,14 @@ export default function PublicProfile() {
 
   if (data.slug === 'jason') {
     return <IntapProfileJasonV3 profile={publicProfileV2} />
+  }
+
+  if (data.slug === 'rentaord') {
+    return <IntapProfileRentaoRd profile={{ slug: 'rentaord' }} />
+  }
+
+  if (data.slug === '1aeventos') {
+    return <IntapProfile1AEventos />
   }
 
   return <IntapProfileV2 profile={publicProfileV2} />
