@@ -13,15 +13,15 @@
 
 | Carpeta | Proyecto Cloudflare | Dominio producción |
 |---------|--------------------|--------------------|
-| `app/`  | `intap-link`       | app.intaprd.com    |
-| `web/`  | `intap-web2`       | intaprd.com        |
+| `app/`  | `intap-web2`       | app.intaprd.com    |
+| `web/`  | `intap-link`       | intaprd.com        |
 
 ## Comandos de deploy
 
 ### Panel admin (`app/`)
 ```bash
 cd /workspaces/intap-link/app
-npx wrangler pages deploy dist --project-name=intap-link
+npx wrangler pages deploy dist --project-name=intap-web2 --branch=main --commit-dirty=true
 ```
 > El build genera `dist/` automáticamente antes del deploy.
 
@@ -29,7 +29,7 @@ npx wrangler pages deploy dist --project-name=intap-link
 ```bash
 cd /workspaces/intap-link/web
 npm run build
-npx wrangler pages deploy dist --project-name=intap-web2
+npx wrangler pages deploy dist --project-name=intap-link --branch=main --commit-dirty=true
 ```
 > Requiere `npm run build` explícito antes del deploy.
 
