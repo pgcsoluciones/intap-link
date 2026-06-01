@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../lib/api'
 
-const BASE_TEMPLATE_ID = 'intap_profile_v2'
+// ── Exports requeridos por el onboarding ──────────────────────────────────────
 
 export interface TemplateDef {
   id: string
@@ -33,80 +33,104 @@ export function getCategoryTemplate(category: string): TemplateDef {
     return PERSONAL_TEMPLATE
   }
   return {
-    id: BASE_TEMPLATE_ID,
-    label: 'Perfil digital INTAP V2',
-    icon: '📱',
-    description: 'Plantilla base oficial para perfiles digitales INTAP.',
+    id: 'personal',
+    label: 'Perfil personal',
+    icon: '👤',
+    description: 'Plantilla base para perfiles digitales INTAP.',
     categories: [],
     fields: [],
   }
 }
 
+// ── Tipos internos ────────────────────────────────────────────────────────────
+
+type TemplateId = 'restaurante' | 'servicios' | 'eventos' | 'personal'
 type TemplateData = Record<string, string>
 
 interface MeData {
-  template_id: string | null
-  templateData: TemplateData
-  name?: string | null
-  bio?: string | null
-  category?: string | null
+  template_id: TemplateId | null
+  template_data?: TemplateData
+  templateData?: TemplateData
 }
 
-const FIELD_GROUPS = [
+// ── Definición de plantillas ──────────────────────────────────────────────────
+
+interface FieldDef {
+  key: string
+  label: string
+  placeholder: string
+  type?: 'text' | 'textarea' | 'url' | 'date' | 'tel'
+}
+
+interface TemplateCfg {
+  id: TemplateId
+  icon: string
+  label: string
+  fields: FieldDef[]
+}
+
+const TEMPLATES: TemplateCfg[] = [
   {
-    title: 'Identidad principal',
-    description: 'Datos que ayudan a presentar mejor el perfil público.',
+    id: 'restaurante',
+    icon: '🍽️',
+    label: 'Restaurante',
     fields: [
-      { key: 'title', label: 'Título o cargo', placeholder: 'Ej. Gerente Comercial · Asesor Inmobiliario' },
-      { key: 'bioTitle', label: 'Título de la biografía', placeholder: 'Ej. Conoce más sobre mí' },
-      { key: 'bio', label: 'Biografía personalizada', placeholder: 'Escribe una presentación breve y profesional.', type: 'textarea' },
+      { key: 'menu_highlight', label: 'Especialidad / plato estrella', placeholder: 'Ej. Paella valenciana o corte wagyu' },
+      { key: 'delivery_note', label: 'Horario de entrega / atención', placeholder: 'Ej. Lun–Vie 12–22h · Sáb–Dom 13–23h' },
+      { key: 'address_short', label: 'Dirección corta', placeholder: 'Ej. Av. Abraham Lincoln 456, Santo Domingo' },
+      { key: 'phone_order', label: 'Teléfono para pedidos', placeholder: 'Ej. 8091234567', type: 'tel' },
+      { key: 'reservas_url', label: 'URL para reservar mesa', placeholder: 'https://...', type: 'url' },
+      { key: 'delivery_url', label: 'URL para pedir a domicilio', placeholder: 'https://...', type: 'url' },
     ],
   },
   {
-    title: 'Empresa',
-    description: 'Información que se mostrará en la sección “Sobre la empresa”.',
+    id: 'servicios',
+    icon: '💼',
+    label: 'Servicios',
     fields: [
-      { key: 'companyName', label: 'Nombre de la empresa', placeholder: 'Ej. Constructora JPREZ' },
-      { key: 'companyTitle', label: 'Título de la sección empresa', placeholder: 'Ej. Sobre Constructora JPREZ' },
-      { key: 'companyLogo', label: 'URL del logo de empresa', placeholder: 'https://...' },
-      { key: 'companyAbout', label: 'Texto sobre la empresa', placeholder: 'Describe la empresa, experiencia, misión o propuesta de valor.', type: 'textarea' },
+      { key: 'services_intro', label: 'Descripción de servicios', placeholder: 'Ej. Ofrezco consultoría estratégica para pymes en crecimiento.', type: 'textarea' },
+      { key: 'years_experience', label: 'Años de experiencia', placeholder: 'Ej. 10 años' },
+      { key: 'credential_1', label: 'Credencial / certificación 1', placeholder: 'Ej. MBA · INCAE Business School' },
+      { key: 'credential_2', label: 'Credencial / certificación 2', placeholder: 'Ej. PMP Certified' },
+      { key: 'credential_3', label: 'Credencial / certificación 3', placeholder: 'Ej. Google Analytics Expert' },
+      { key: 'whatsapp_cta', label: 'Texto del botón WhatsApp', placeholder: 'Ej. Solicitar cotización' },
+      { key: 'calendly_url', label: 'URL para agendar cita', placeholder: 'https://calendly.com/...', type: 'url' },
+      { key: 'portfolio_url', label: 'URL de portafolio', placeholder: 'https://...', type: 'url' },
     ],
   },
   {
-    title: 'Contacto y ubicación',
-    description: 'Datos de contacto usados por los botones y enlaces rápidos.',
+    id: 'eventos',
+    icon: '🎭',
+    label: 'Eventos',
     fields: [
-      { key: 'phone', label: 'Teléfono principal', placeholder: 'Ej. 8091234567' },
-      { key: 'whatsapp', label: 'WhatsApp', placeholder: 'Ej. 18091234567' },
-      { key: 'email', label: 'Correo electrónico', placeholder: 'correo@empresa.com' },
-      { key: 'website', label: 'Página web', placeholder: 'www.empresa.com' },
-      { key: 'address', label: 'Dirección', placeholder: 'Av. Principal 123, Santo Domingo' },
-      { key: 'mapUrl', label: 'URL de Google Maps', placeholder: 'https://maps.google.com/...' },
+      { key: 'event_name', label: 'Nombre del evento', placeholder: 'Ej. Noche de Jazz · Edición Verano' },
+      { key: 'event_date', label: 'Fecha del evento', placeholder: '', type: 'date' },
+      { key: 'event_venue', label: 'Lugar del evento', placeholder: 'Ej. Teatro Nacional, Santo Domingo' },
+      { key: 'ticket_url', label: 'URL para comprar boletos', placeholder: 'https://...', type: 'url' },
+      { key: 'lineup', label: 'Programa / lineup', placeholder: 'Ej. 20:00 Apertura · 21:00 Concierto principal · 23:00 DJ set', type: 'textarea' },
     ],
   },
   {
-    title: 'Secciones del perfil',
-    description: 'Textos visibles en bloques como galería, servicios y preguntas frecuentes.',
+    id: 'personal',
+    icon: '👤',
+    label: 'Personal',
     fields: [
-      { key: 'galleryTitle', label: 'Título de galería o proyectos', placeholder: 'Ej. Proyectos destacados' },
-      { key: 'servicesTitle', label: 'Título de servicios', placeholder: 'Ej. Soluciones y servicios' },
-      { key: 'faqTitle', label: 'Título de preguntas frecuentes', placeholder: 'Ej. Preguntas frecuentes' },
-    ],
-  },
-  {
-    title: 'Chat WhatsApp',
-    description: 'Texto del asistente flotante del perfil.',
-    fields: [
-      { key: 'chatTitle', label: 'Nombre del asistente', placeholder: 'Ej. Asistente de ventas' },
-      { key: 'chatText', label: 'Mensaje inicial', placeholder: 'Hola 👋 ¿En qué puedo ayudarte hoy?', type: 'textarea' },
-      { key: 'chatMessage', label: 'Mensaje precargado para WhatsApp', placeholder: 'Hola, vi tu perfil digital y necesito más información.', type: 'textarea' },
+      { key: 'role', label: 'Cargo o rol', placeholder: 'Ej. Diseñadora UX · Freelance' },
+      { key: 'specialty', label: 'Área de especialidad', placeholder: 'Ej. Diseño de producto y branding' },
+      { key: 'availability', label: 'Disponibilidad', placeholder: 'Ej. Disponible para proyectos' },
+      { key: 'cta_label', label: 'Texto del botón principal', placeholder: 'Ej. Contratarme' },
+      { key: 'cta_url', label: 'URL del botón principal', placeholder: 'https://...', type: 'url' },
+      { key: 'portfolio_url', label: 'URL de portafolio', placeholder: 'https://...', type: 'url' },
+      { key: 'linkedin_url', label: 'LinkedIn URL', placeholder: 'https://linkedin.com/in/...', type: 'url' },
     ],
   },
 ]
 
+// ── Componente principal ──────────────────────────────────────────────────────
+
 export default function AdminTemplate() {
   const navigate = useNavigate()
-  const [me, setMe] = useState<MeData | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId | null>(null)
   const [fields, setFields] = useState<TemplateData>({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -116,12 +140,19 @@ export default function AdminTemplate() {
     apiGet('/me').then((json: any) => {
       if (json.ok) {
         const d = json.data as MeData
-        setMe(d)
-        setFields(d.templateData ?? {})
+        const tid = d.template_id as TemplateId | null
+        setSelectedTemplate(tid)
+        setFields(d.template_data ?? d.templateData ?? {})
       }
       setLoading(false)
     })
   }, [])
+
+  const handleSelectTemplate = (id: TemplateId) => {
+    setSelectedTemplate(id)
+    setFields({})
+    setSaved(false)
+  }
 
   const setField = (key: string, value: string) => {
     setFields((prev) => ({ ...prev, [key]: value }))
@@ -129,17 +160,15 @@ export default function AdminTemplate() {
   }
 
   const handleSave = async () => {
+    if (!selectedTemplate) return
     setSaving(true)
     setSaved(false)
-
     try {
       const res: any = await apiPut('/me/profile', {
-        template_id: BASE_TEMPLATE_ID,
+        template_id: selectedTemplate,
         template_data: fields,
       })
-
       if (res.ok) {
-        setMe((prev) => prev ? { ...prev, template_id: BASE_TEMPLATE_ID, templateData: fields } : prev)
         setSaved(true)
         setTimeout(() => setSaved(false), 3000)
       }
@@ -156,85 +185,101 @@ export default function AdminTemplate() {
     )
   }
 
+  const activeTemplate = TEMPLATES.find((t) => t.id === selectedTemplate) ?? null
+
   return (
-    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-2xl">
-        <header className="flex items-center gap-3 mb-8">
-          <button onClick={() => navigate('/admin')} className="text-slate-400 hover:text-white transition-colors">
+    <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center pb-28 px-4 pt-8">
+      <div className="w-full max-w-xl">
+
+        {/* Header */}
+        <header className="flex items-center gap-3 mb-7">
+          <button
+            onClick={() => navigate('/admin')}
+            className="text-slate-400 hover:text-white transition-colors"
+            aria-label="Volver"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <div>
-            <h1 className="text-xl font-black">Plantilla base del perfil</h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Esta es la plantilla oficial activa para tu perfil público.
-            </p>
-          </div>
+          <h1 className="text-xl font-black">Plantilla activa</h1>
         </header>
 
-        <div className="glass-card p-5 mb-5 border-intap-mint/20 bg-intap-mint/5">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">📱</span>
-            <div>
-              <p className="text-sm font-black text-white">Perfil digital INTAP V2</p>
-              <p className="text-xs text-slate-300 leading-relaxed mt-1">
-                La plantilla de tu perfil público ya no se elige por categoría. Ahora todos los perfiles usan una base clara,
-                editable y preparada para foto o logo, datos de contacto, biografía, empresa, servicios, galería, FAQ y WhatsApp.
-              </p>
-              <p className="text-[11px] text-intap-mint font-bold mt-3">
-                Estado: {me?.template_id === BASE_TEMPLATE_ID ? 'Activa en este perfil' : 'Se activará al guardar'}
-              </p>
-            </div>
+        {/* Selector de plantilla */}
+        <section className="mb-6">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Elige tu plantilla</p>
+          <div className="grid grid-cols-2 gap-3">
+            {TEMPLATES.map((t) => {
+              const isActive = selectedTemplate === t.id
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => handleSelectTemplate(t.id)}
+                  className={[
+                    'flex items-center gap-2.5 px-4 py-3 rounded-xl border text-left transition-all',
+                    isActive
+                      ? 'border-intap-mint bg-intap-mint/10 text-white'
+                      : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/25',
+                  ].join(' ')}
+                >
+                  <span className="text-xl leading-none">{t.icon}</span>
+                  <span className="text-sm font-bold">{t.label}</span>
+                </button>
+              )
+            })}
           </div>
-        </div>
+        </section>
 
-        <div className="flex flex-col gap-5">
-          {FIELD_GROUPS.map((group) => (
-            <section key={group.title} className="glass-card p-5">
-              <div className="mb-5">
-                <h2 className="text-sm font-black text-white">{group.title}</h2>
-                <p className="text-xs text-slate-400 mt-1">{group.description}</p>
-              </div>
+        {/* Campos de la plantilla */}
+        {!activeTemplate ? (
+          <div className="glass-card p-5 text-center text-slate-400 text-sm">
+            Elige una plantilla para personalizar este bloque
+          </div>
+        ) : (
+          <section className="glass-card p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">{activeTemplate.icon}</span>
+              <h2 className="text-sm font-black text-white">Datos de la plantilla</h2>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {group.fields.map((field) => {
-                  const isTextarea = field.type === 'textarea'
+            {activeTemplate.fields.map((field) => {
+              const isTextarea = field.type === 'textarea'
+              return (
+                <label key={field.key} className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-400">{field.label}</span>
+                  {isTextarea ? (
+                    <textarea
+                      value={fields[field.key] ?? ''}
+                      onChange={(e) => setField(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      rows={3}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
+                    />
+                  ) : (
+                    <input
+                      type={field.type ?? 'text'}
+                      value={fields[field.key] ?? ''}
+                      onChange={(e) => setField(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+                    />
+                  )}
+                </label>
+              )
+            })}
+          </section>
+        )}
+      </div>
 
-                  return (
-                    <label key={field.key} className={isTextarea ? 'md:col-span-2' : ''}>
-                      <span className="block text-xs font-bold text-slate-400 mb-1.5">{field.label}</span>
-                      {isTextarea ? (
-                        <textarea
-                          value={fields[field.key] ?? ''}
-                          onChange={(e) => setField(field.key, e.target.value)}
-                          placeholder={field.placeholder}
-                          rows={4}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
-                        />
-                      ) : (
-                        <input
-                          value={fields[field.key] ?? ''}
-                          onChange={(e) => setField(field.key, e.target.value)}
-                          placeholder={field.placeholder}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
-                        />
-                      )}
-                    </label>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-
-        <div className="sticky bottom-4 mt-6">
+      {/* Botón guardar sticky */}
+      <div className="fixed bottom-0 left-0 right-0 bg-intap-dark/90 backdrop-blur border-t border-white/10 px-4 py-3 flex justify-center">
+        <div className="w-full max-w-xl">
           <button
             onClick={handleSave}
-            disabled={saving}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold text-sm disabled:opacity-50 transition-opacity shadow-2xl"
+            disabled={saving || !selectedTemplate}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold text-sm disabled:opacity-40 transition-opacity shadow-2xl"
           >
-            {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar plantilla base'}
+            {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar cambios'}
           </button>
         </div>
       </div>
