@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPut } from '../../../lib/api'
+import { apiGet, apiPut, apiPatch } from '../../../lib/api'
 
 function normalizeWhatsApp(input: string): string | null {
   if (!input) return null
@@ -22,6 +22,9 @@ export default function OnboardingContact() {
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
+  const [step, setStep]         = useState<'form' | 'success'>('form')
+  const [profileSlug, setProfileSlug] = useState<string | null>(null)
+  const [copied, setCopied]     = useState(false)
 
   const isOnboarding = window.location.pathname.includes('onboarding')
 
@@ -61,7 +64,26 @@ export default function OnboardingContact() {
 
       const json: any = await apiPut('/me/contact', body)
       if (json.ok) {
-        navigate('/admin')
+        if (isOnboarding) {
+          // Publish profile (best-effort)
+          try {
+            await apiPatch('/me/profile', { is_published: 1 })
+          } catch {
+            // ignore, non-blocking
+          }
+          // Get slug
+          let slug: string | null = null
+          try {
+            const meJson: any = await apiGet('/me')
+            if (meJson.ok && meJson.data?.slug) slug = meJson.data.slug
+          } catch {
+            // ignore
+          }
+          setProfileSlug(slug)
+          setStep('success')
+        } else {
+          navigate('/admin')
+        }
       } else {
         setError(json.error || 'Error al guardar')
       }
@@ -72,19 +94,76 @@ export default function OnboardingContact() {
     }
   }
 
+  const profileUrl = profileSlug ? `https://intaprd.com/${profileSlug}` : null
+
+  const handleCopy = () => {
+    if (!profileUrl) return
+    navigator.clipboard.writeText(profileUrl).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-intap-dark flex items-center justify-center">
       <div className="loading-spinner" />
     </div>
   )
 
+  if (step === 'success') {
+    return (
+      <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center justify-center py-10 px-4">
+        <div className="w-full max-w-sm flex flex-col items-center gap-6">
+          <div className="text-6xl text-center">🎉</div>
+          <div className="text-center">
+            <h1 className="text-2xl font-black mb-2">¡Tu perfil está en línea!</h1>
+            {profileUrl && (
+              <p className="text-sm text-slate-400">Ya puedes compartirlo:</p>
+            )}
+          </div>
+
+          {profileUrl && (
+            <div className="w-full flex flex-col gap-3">
+              <div className="bg-white/10 rounded-xl px-4 py-3 font-mono text-sm text-center break-all">
+                intaprd.com/{profileSlug}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+                >
+                  {copied ? '¡Copiado!' : 'Copiar link'}
+                </button>
+                <a
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl text-sm transition-colors text-center"
+                >
+                  Ver perfil ↗
+                </a>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={() => navigate('/admin')}
+            className="w-full bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-3 rounded-xl text-sm transition-opacity"
+          >
+            Ir a mi panel →
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
       <div className="w-full max-w-sm">
         {isOnboarding && (
           <div className="flex gap-1 mb-8">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="h-1 flex-1 rounded-full bg-intap-mint" />
+            {[1, 2, 3, 4].map((s) => (
+              <div key={s} className="h-1 flex-1 rounded-full bg-intap-mint" />
             ))}
           </div>
         )}
