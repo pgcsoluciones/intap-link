@@ -195,7 +195,7 @@ function WaitlistModal({ onClose }: { onClose: () => void }) {
                 marginTop: '1.1rem', width: '100%',
                 background: loading ? 'rgba(13,242,201,0.3)' : 'linear-gradient(135deg, #0df2c9, #3b82f6)',
                 border: 'none', borderRadius: '999px', padding: '0.875rem',
-                color: '#030712', fontWeight: 800, fontSize: '0.95rem',
+                color: '#18181b', fontWeight: 800, fontSize: '0.95rem',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'opacity 0.2s',
               }}
@@ -301,7 +301,7 @@ export default function HomeLanding() {
               background: 'linear-gradient(135deg, #0df2c9, #3b82f6)',
               border: 'none', borderRadius: '999px',
               padding: '0.9rem 1.75rem',
-              color: '#030712', fontWeight: 800, fontSize: '0.95rem',
+              color: '#18181b', fontWeight: 800, fontSize: '0.95rem',
               cursor: 'pointer',
               boxShadow: '0 0 32px rgba(13,242,201,0.25)',
               letterSpacing: '-0.01em',
@@ -448,7 +448,7 @@ export default function HomeLanding() {
               background: 'linear-gradient(135deg, #0df2c9, #3b82f6)',
               border: 'none', borderRadius: '999px',
               padding: '0.9rem 2rem',
-              color: '#030712', fontWeight: 800, fontSize: '0.95rem',
+              color: '#18181b', fontWeight: 800, fontSize: '0.95rem',
               cursor: 'pointer',
               boxShadow: '0 0 32px rgba(13,242,201,0.2)',
             }}

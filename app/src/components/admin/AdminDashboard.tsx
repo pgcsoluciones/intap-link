@@ -87,7 +87,7 @@ interface GalleryPhoto {
 }
 
 const THEMES = [
-  { id: 'default',  label: 'Clásico',    accent: '#0df2c9', bg: '#030712' },
+  { id: 'default',  label: 'Clásico',    accent: '#0df2c9', bg: '#18181b' },
   { id: 'classic',  label: 'Classic',    accent: '#0ea5e9', bg: '#f0f9ff' },
   { id: 'bento',    label: 'Bento',      accent: '#1d1d1f', bg: '#F5F5F7' },
   { id: 'light',    label: 'Claro',      accent: '#0f172a', bg: '#f1f5f9' },
