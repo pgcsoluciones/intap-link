@@ -15,7 +15,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { apiGet, apiPost, apiPut, apiDelete } from '../../lib/api'
+import { apiGet, apiPost, apiPut, apiDelete, apiUpload } from '../../lib/api'
 
 interface Product {
   id: string
@@ -120,11 +120,31 @@ export default function AdminProducts() {
   const [limitError, setLimitError] = useState('')
 
   const [form, setForm] = useState(EMPTY_FORM)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState(EMPTY_FORM)
+  const [uploadingEditImage, setUploadingEditImage] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor))
+
+  const handleImageUpload = async (
+    file: File,
+    onSuccess: (url: string) => void,
+    setUploading: (v: boolean) => void,
+  ) => {
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res: any = await apiUpload('/profile/gallery/upload', fd)
+      if (res.ok && res.url) {
+        onSuccess(res.url)
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const reload = () =>
     apiGet('/me/products').then((json: any) => {
@@ -245,13 +265,28 @@ export default function AdminProducts() {
             rows={2}
             className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors resize-none"
           />
-          <input
-            type="url"
-            value={form.image_url}
-            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-            placeholder="URL de imagen (opcional)"
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={form.image_url}
+              onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+              placeholder="URL de imagen (opcional)"
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            />
+            <label className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 cursor-pointer hover:border-white/30 hover:text-white transition-colors ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
+              {uploadingImage ? '⏳' : '📎'} {uploadingImage ? 'Subiendo…' : 'Subir'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleImageUpload(file, (url) => setForm((f) => ({ ...f, image_url: url })), setUploadingImage)
+                  e.target.value = ''
+                }}
+              />
+            </label>
+          </div>
           <input
             type="text"
             value={form.whatsapp_text}
@@ -318,6 +353,28 @@ export default function AdminProducts() {
                           className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none resize-none"
                           placeholder="Descripción"
                         />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={editForm.image_url}
+                            onChange={(e) => setEditForm({ ...editForm, image_url: e.target.value })}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none"
+                            placeholder="URL de imagen"
+                          />
+                          <label className={`shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 cursor-pointer hover:border-white/30 hover:text-white transition-colors ${uploadingEditImage ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {uploadingEditImage ? '⏳' : '📎'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) handleImageUpload(file, (url) => setEditForm((f) => ({ ...f, image_url: url })), setUploadingEditImage)
+                                e.target.value = ''
+                              }}
+                            />
+                          </label>
+                        </div>
                         <input
                           value={editForm.whatsapp_text}
                           onChange={(e) => setEditForm({ ...editForm, whatsapp_text: e.target.value })}

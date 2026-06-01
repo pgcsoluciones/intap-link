@@ -13,30 +13,71 @@ export interface TemplateDef {
   fields: []
 }
 
-const PERSONAL_TEMPLATE: TemplateDef = {
-  id: 'personal',
-  label: 'Perfil personal',
-  icon: '👤',
-  description: 'Ideal para freelancers, consultores y profesionales independientes.',
-  categories: ['Arte y Diseño', 'Consultoría y Servicios Profesionales', 'Educación y Formación', 'Tecnología'],
-  fields: [],
-}
-
 export function getCategoryTemplate(category: string): TemplateDef {
-  const personalCategories = [
-    'Arte y Diseño',
-    'Consultoría y Servicios Profesionales',
-    'Educación y Formación',
-    'Tecnología',
+  const restauranteCategories = [
+    'Restaurante y Gastronomía', 'Café y Bebidas', 'Comida Rápida', 'Delivery',
+    'Panadería', 'Catering', 'Gastronomía y Restaurantes',
   ]
-  if (personalCategories.includes(category)) {
-    return PERSONAL_TEMPLATE
+  const serviciosCategories = [
+    'Salud y Bienestar', 'Belleza y Estética', 'Hogar y Reparaciones',
+    'Jurídico y Contabilidad', 'Automotriz', 'Inmobiliaria', 'Finanzas', 'Seguridad',
+    'Construcción y Hogar', 'Moda y Accesorios', 'Agropecuario', 'Retail',
+  ]
+  const eventosCategories = [
+    'Entretenimiento y Eventos', 'Fotografía y Video', 'Música', 'Arte y Cultura',
+    'Deportes', 'Turismo y Viajes', 'Entretenimiento', 'Deportes y Fitness',
+  ]
+  const personalCategories = [
+    'Tecnología', 'Arte y Diseño', 'Consultoría y Servicios Profesionales',
+    'Educación y Formación', 'Marketing y Comunicación', 'Otro', 'Otros',
+  ]
+
+  if (restauranteCategories.includes(category)) {
+    return {
+      id: 'restaurante',
+      label: 'Restaurante',
+      icon: '🍽️',
+      description: 'Ideal para restaurantes, cafés y negocios gastronómicos.',
+      categories: restauranteCategories,
+      fields: [],
+    }
   }
+  if (eventosCategories.includes(category)) {
+    return {
+      id: 'eventos',
+      label: 'Eventos',
+      icon: '🎭',
+      description: 'Ideal para eventos, entretenimiento y actividades culturales.',
+      categories: eventosCategories,
+      fields: [],
+    }
+  }
+  if (personalCategories.includes(category)) {
+    return {
+      id: 'personal',
+      label: 'Personal',
+      icon: '👤',
+      description: 'Ideal para freelancers, consultores y profesionales independientes.',
+      categories: personalCategories,
+      fields: [],
+    }
+  }
+  if (serviciosCategories.includes(category)) {
+    return {
+      id: 'servicios',
+      label: 'Servicios',
+      icon: '💼',
+      description: 'Ideal para negocios de servicios y profesionales.',
+      categories: serviciosCategories,
+      fields: [],
+    }
+  }
+  // Default seguro: servicios
   return {
-    id: 'personal',
-    label: 'Perfil personal',
-    icon: '👤',
-    description: 'Plantilla base para perfiles digitales INTAP.',
+    id: 'servicios',
+    label: 'Servicios',
+    icon: '💼',
+    description: 'Plantilla base para negocios de servicios.',
     categories: [],
     fields: [],
   }
