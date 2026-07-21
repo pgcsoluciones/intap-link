@@ -1,0 +1,1386 @@
+:root {
+  --biopests-green-950: #0b3a20;
+  --biopests-green-900: #0f512a;
+  --biopests-green-800: #146b34;
+  --biopests-green-700: #1f8c3f;
+  --biopests-green-600: #37a844;
+  --biopests-lime: #91d734;
+  --biopests-ink: #13231a;
+  --biopests-muted: #657369;
+  --biopests-line: #dbe6dd;
+  --biopests-soft: #f3f8f3;
+  --biopests-white: #ffffff;
+}
+
+.biopests-page,
+.biopests-page * {
+  box-sizing: border-box;
+}
+
+.biopests-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 5%, rgba(145, 215, 52, 0.18), transparent 34%),
+    linear-gradient(180deg, #edf5ee 0%, #f7faf7 38%, #eef5ef 100%);
+  color: var(--biopests-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  padding: 0 0 84px;
+}
+
+.biopests-page a,
+.biopests-page button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.biopests-shell {
+  width: min(100%, 780px);
+  margin: 0 auto;
+  background: var(--biopests-white);
+  box-shadow: 0 24px 80px rgba(15, 81, 42, 0.14);
+  overflow: hidden;
+}
+
+.biopests-hero {
+  position: relative;
+  min-height: 640px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--biopests-white);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.biopests-hero__slides,
+.biopests-hero__slides img,
+.biopests-hero__overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.biopests-hero__slides img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 0.6s ease, transform 1.1s ease;
+}
+
+.biopests-hero__slides img.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.biopests-hero__overlay {
+  background:
+    linear-gradient(180deg, rgba(4, 35, 17, 0.48) 0%, rgba(4, 38, 19, 0.42) 24%, rgba(5, 45, 23, 0.9) 76%, #082f1b 100%),
+    linear-gradient(90deg, rgba(7, 58, 29, 0.78), transparent 75%);
+  z-index: 1;
+}
+
+.biopests-hero__topbar,
+.biopests-hero__content,
+.biopests-hero__dots {
+  position: relative;
+  z-index: 2;
+}
+
+.biopests-hero__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 22px 0;
+}
+
+.biopests-hero__logo {
+  width: 150px;
+  height: auto;
+  object-fit: contain;
+}
+
+.biopests-hero__sector {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.biopests-hero__content {
+  padding: 130px 24px 92px;
+}
+
+.biopests-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--biopests-lime);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.biopests-kicker::before {
+  content: '';
+  width: 28px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.biopests-kicker--dark {
+  color: var(--biopests-green-700);
+}
+
+.biopests-hero h1 {
+  max-width: 620px;
+  margin: 18px 0 14px;
+  color: var(--biopests-white);
+  font-size: clamp(2.35rem, 8vw, 4.55rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.biopests-hero__content > p {
+  max-width: 560px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1rem;
+  line-height: 1.66;
+}
+
+.biopests-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.biopests-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 50px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 850;
+  text-decoration: none;
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.biopests-btn:active {
+  transform: scale(0.98);
+}
+
+.biopests-btn--primary {
+  background: linear-gradient(135deg, var(--biopests-lime), #62bd3e);
+  color: #103718;
+  box-shadow: 0 12px 28px rgba(80, 185, 63, 0.28);
+}
+
+.biopests-btn--primary:hover {
+  filter: brightness(1.04);
+  box-shadow: 0 15px 34px rgba(80, 185, 63, 0.38);
+}
+
+.biopests-btn--ghost {
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--biopests-white);
+  backdrop-filter: blur(12px);
+}
+
+.biopests-hero__dots {
+  position: absolute;
+  right: 24px;
+  bottom: 40px;
+  display: flex;
+  gap: 7px;
+}
+
+.biopests-hero__dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.biopests-hero__dots button.is-active {
+  width: 26px;
+  background: var(--biopests-lime);
+}
+
+.biopests-quick {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  width: calc(100% - 28px);
+  margin: -34px auto 0;
+  padding: 12px;
+  border: 1px solid rgba(20, 107, 52, 0.1);
+  border-radius: 21px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 48px rgba(13, 72, 35, 0.18);
+  backdrop-filter: blur(18px);
+}
+
+.biopests-quick__item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 76px;
+  border-radius: 14px;
+  color: var(--biopests-green-900);
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.biopests-quick__item:hover {
+  background: var(--biopests-soft);
+}
+
+.biopests-quick__item:active {
+  transform: scale(0.97);
+}
+
+.biopests-quick__item span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(55, 168, 68, 0.1);
+  color: var(--biopests-green-700);
+  font-size: 1rem;
+}
+
+.biopests-quick__item strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biopests-section {
+  padding: 72px 24px;
+}
+
+.biopests-section-heading {
+  max-width: 660px;
+  margin-bottom: 28px;
+}
+
+.biopests-section-heading > span {
+  color: var(--biopests-green-700);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.biopests-section-heading h2 {
+  margin: 10px 0 0;
+  color: var(--biopests-ink);
+  font-size: clamp(1.85rem, 5.8vw, 3.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+}
+
+.biopests-section-heading.is-light > span {
+  color: var(--biopests-lime);
+}
+
+.biopests-section-heading.is-light h2 {
+  color: var(--biopests-white);
+}
+
+.biopests-lead {
+  max-width: 650px;
+  margin: 0;
+  color: var(--biopests-muted);
+  font-size: 1.03rem;
+  line-height: 1.78;
+}
+
+.biopests-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 28px 0 18px;
+}
+
+.biopests-stats > div {
+  padding: 18px 14px;
+  border: 1px solid var(--biopests-line);
+  border-radius: 17px;
+  background: var(--biopests-soft);
+}
+
+.biopests-stats strong,
+.biopests-stats span {
+  display: block;
+}
+
+.biopests-stats strong {
+  color: var(--biopests-green-800);
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.biopests-stats span {
+  margin-top: 5px;
+  color: var(--biopests-muted);
+  font-size: 0.71rem;
+  font-weight: 700;
+}
+
+.biopests-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.biopests-value-card {
+  padding: 20px 16px;
+  border: 1px solid var(--biopests-line);
+  border-radius: 18px;
+  background: var(--biopests-white);
+  box-shadow: 0 12px 30px rgba(15, 81, 42, 0.06);
+}
+
+.biopests-value-card > span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(145, 215, 52, 0.18), rgba(55, 168, 68, 0.12));
+  color: var(--biopests-green-700);
+}
+
+.biopests-value-card h3 {
+  margin: 15px 0 7px;
+  font-size: 0.95rem;
+}
+
+.biopests-value-card p {
+  margin: 0;
+  color: var(--biopests-muted);
+  font-size: 0.79rem;
+  line-height: 1.55;
+}
+
+.biopests-services-section {
+  background: linear-gradient(180deg, #f6faf6 0%, #eef6ef 100%);
+}
+
+.biopests-services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.biopests-service-card {
+  padding: 0;
+  border: 1px solid rgba(20, 107, 52, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--biopests-white);
+  color: inherit;
+  text-align: left;
+  box-shadow: 0 14px 32px rgba(11, 58, 32, 0.08);
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.biopests-service-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 38px rgba(11, 58, 32, 0.13);
+}
+
+.biopests-service-card__image {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  background: #dfeae1;
+}
+
+.biopests-service-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.biopests-service-card:hover img {
+  transform: scale(1.045);
+}
+
+.biopests-service-card__image span {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 3px solid var(--biopests-white);
+  border-radius: 50%;
+  background: var(--biopests-green-700);
+  color: var(--biopests-white);
+  box-shadow: 0 8px 18px rgba(11, 58, 32, 0.24);
+}
+
+.biopests-service-card__body {
+  padding: 18px;
+}
+
+.biopests-service-card__body h3 {
+  margin: 0 0 7px;
+  font-size: 1.04rem;
+}
+
+.biopests-service-card__body p {
+  min-height: 56px;
+  margin: 0;
+  color: var(--biopests-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.biopests-service-card__body small {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  color: var(--biopests-green-700);
+  font-weight: 850;
+}
+
+.biopests-method {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(230px, 0.8fr);
+  gap: 24px;
+  padding: 72px 24px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(145, 215, 52, 0.18), transparent 38%),
+    linear-gradient(145deg, #082e1a 0%, #0e522a 70%, #126833 100%);
+  color: var(--biopests-white);
+}
+
+.biopests-method__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.biopests-method__steps article {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 13px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.biopests-method__steps article > span {
+  display: grid;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(145, 215, 52, 0.16);
+  color: var(--biopests-lime);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.biopests-method__steps h3,
+.biopests-method__steps p {
+  margin: 0;
+}
+
+.biopests-method__steps h3 {
+  font-size: 0.93rem;
+}
+
+.biopests-method__steps p {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.biopests-method__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.biopests-method__visual img {
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.26));
+}
+
+.biopests-tech-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.biopests-tech-card {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  gap: 20px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--biopests-line);
+  border-radius: 20px;
+  background: var(--biopests-white);
+}
+
+.biopests-tech-card__image {
+  height: 130px;
+  border-radius: 15px;
+  background: var(--biopests-soft);
+  overflow: hidden;
+}
+
+.biopests-tech-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.biopests-tech-card > div:last-child > span {
+  color: var(--biopests-green-700);
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.biopests-tech-card h3 {
+  margin: 6px 0 5px;
+  font-size: 1.2rem;
+}
+
+.biopests-tech-card p {
+  margin: 0;
+  color: var(--biopests-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.biopests-trust {
+  padding: 72px 24px;
+  background: linear-gradient(145deg, #eaf4eb, #f9fcf9);
+}
+
+.biopests-trust__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.biopests-trust__header h2 {
+  margin: 10px 0 0;
+  font-size: clamp(1.75rem, 5vw, 2.65rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.biopests-trust__header > svg {
+  flex: 0 0 auto;
+  color: var(--biopests-green-700);
+  font-size: 2.4rem;
+}
+
+.biopests-certifications {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.biopests-certifications article {
+  display: flex;
+  min-height: 205px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px solid var(--biopests-line);
+  border-radius: 20px;
+  background: var(--biopests-white);
+  text-align: center;
+}
+
+.biopests-certifications img {
+  width: 100%;
+  max-width: 230px;
+  height: 105px;
+  object-fit: contain;
+}
+
+.biopests-certifications p {
+  margin: 16px 0 0;
+  color: var(--biopests-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.biopests-permits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.biopests-permits span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--biopests-green-900);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.biopests-permits svg {
+  flex: 0 0 auto;
+  color: var(--biopests-green-600);
+}
+
+.biopests-clients__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(132px, 1fr);
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 8px;
+}
+
+.biopests-clients__track::-webkit-scrollbar {
+  display: none;
+}
+
+.biopests-client-logo {
+  display: grid;
+  min-height: 112px;
+  place-items: center;
+  padding: 18px;
+  border: 1px solid var(--biopests-line);
+  border-radius: 18px;
+  background: var(--biopests-white);
+  scroll-snap-align: start;
+}
+
+.biopests-client-logo img {
+  width: 100%;
+  height: 68px;
+  object-fit: contain;
+}
+
+.biopests-faq {
+  background: var(--biopests-soft);
+}
+
+.biopests-faq__list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.biopests-faq__list article {
+  border: 1px solid var(--biopests-line);
+  border-radius: 16px;
+  background: var(--biopests-white);
+  overflow: hidden;
+}
+
+.biopests-faq__list button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 66px;
+  padding: 15px 17px;
+  border: 0;
+  background: transparent;
+  color: var(--biopests-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biopests-faq__list button b {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--biopests-soft);
+  color: var(--biopests-green-700);
+  font-size: 1.25rem;
+}
+
+.biopests-faq__answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s ease;
+}
+
+.biopests-faq__answer p {
+  min-height: 0;
+  margin: 0;
+  padding: 0 17px;
+  overflow: hidden;
+  color: var(--biopests-muted);
+  font-size: 0.81rem;
+  line-height: 1.62;
+  transition: padding 0.28s ease;
+}
+
+.biopests-faq__list article.is-open .biopests-faq__answer {
+  grid-template-rows: 1fr;
+}
+
+.biopests-faq__list article.is-open .biopests-faq__answer p {
+  padding: 0 17px 17px;
+}
+
+.biopests-contact {
+  padding: 72px 24px;
+  background:
+    linear-gradient(135deg, rgba(5, 51, 26, 0.96), rgba(15, 103, 48, 0.9)),
+    url('/assets/biopestrd/hero/hero-proteccion-logistica.webp') center / cover;
+  color: var(--biopests-white);
+}
+
+.biopests-contact__copy h2 {
+  max-width: 600px;
+  margin: 14px 0 12px;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.biopests-contact__copy p {
+  margin: 0 0 22px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.biopests-contact__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 28px;
+}
+
+.biopests-contact-row {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 11px;
+  align-items: start;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.biopests-contact-row > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(145, 215, 52, 0.16);
+  color: var(--biopests-lime);
+}
+
+.biopests-contact-row small,
+.biopests-contact-row a,
+.biopests-contact-row div > span {
+  display: block;
+}
+
+.biopests-contact-row small {
+  margin-bottom: 5px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.biopests-contact-row a,
+.biopests-contact-row div > span {
+  color: var(--biopests-white);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.biopests-contact-row a + a {
+  margin-top: 3px;
+}
+
+.biopests-map {
+  height: 250px;
+  margin-top: 12px;
+  border: 5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 21px;
+  overflow: hidden;
+}
+
+.biopests-map iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.biopests-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 34px 20px 40px;
+  background: var(--biopests-white);
+  text-align: center;
+}
+
+.biopests-footer img {
+  width: 140px;
+  height: auto;
+}
+
+.biopests-footer p,
+.biopests-footer a {
+  margin: 10px 0 0;
+  color: var(--biopests-muted);
+  font-size: 0.7rem;
+}
+
+.biopests-footer a {
+  margin-top: 7px;
+  color: var(--biopests-green-700);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.biopests-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(2, 25, 12, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.biopests-modal {
+  position: relative;
+  width: min(100%, 620px);
+  max-height: calc(100vh - 36px);
+  border-radius: 24px;
+  background: var(--biopests-white);
+  overflow-y: auto;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
+  animation: biopests-modal-in 0.25s ease both;
+}
+
+@keyframes biopests-modal-in {
+  from { transform: translateY(18px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.biopests-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.56);
+  color: var(--biopests-white);
+  cursor: pointer;
+}
+
+.biopests-modal__image {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+}
+
+.biopests-modal__body {
+  padding: 24px;
+}
+
+.biopests-modal__body h2 {
+  margin: 10px 0;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.biopests-modal__body > p {
+  margin: 0;
+  color: var(--biopests-muted);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.biopests-modal__body ul {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.biopests-modal__body li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--biopests-green-900);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.biopests-modal__body li svg {
+  color: var(--biopests-green-600);
+}
+
+.biopests-chat {
+  position: fixed;
+  right: max(18px, calc((100vw - 780px) / 2 + 18px));
+  bottom: 86px;
+  z-index: 90;
+}
+
+.biopests-chat__trigger {
+  position: relative;
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 4px solid var(--biopests-white);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--biopests-green-700), var(--biopests-lime));
+  color: var(--biopests-white);
+  font-size: 1.25rem;
+  box-shadow: 0 14px 30px rgba(10, 73, 35, 0.28);
+  cursor: pointer;
+}
+
+.biopests-chat__trigger span {
+  position: absolute;
+  top: -5px;
+  right: -2px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid var(--biopests-white);
+  border-radius: 50%;
+  background: #e84949;
+  color: var(--biopests-white);
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.biopests-chat__panel {
+  position: absolute;
+  right: 0;
+  bottom: 72px;
+  width: min(330px, calc(100vw - 36px));
+  border: 1px solid var(--biopests-line);
+  border-radius: 20px;
+  background: var(--biopests-white);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(7, 50, 24, 0.26);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px) scale(0.98);
+  transform-origin: bottom right;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.biopests-chat__panel.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.biopests-chat__head {
+  display: grid;
+  grid-template-columns: 78px 1fr 30px;
+  gap: 10px;
+  align-items: center;
+  min-height: 70px;
+  padding: 12px;
+  background: var(--biopests-soft);
+}
+
+.biopests-chat__head img {
+  width: 72px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.biopests-chat__head strong,
+.biopests-chat__head span {
+  display: block;
+}
+
+.biopests-chat__head strong {
+  color: var(--biopests-green-900);
+  font-size: 0.82rem;
+}
+
+.biopests-chat__head span {
+  margin-top: 3px;
+  color: var(--biopests-muted);
+  font-size: 0.67rem;
+}
+
+.biopests-chat__head button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--biopests-white);
+  color: var(--biopests-muted);
+  cursor: pointer;
+}
+
+.biopests-chat__body {
+  padding: 15px;
+}
+
+.biopests-chat__body p {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.biopests-chat__body button {
+  width: 100%;
+  margin-top: 7px;
+  padding: 11px 12px;
+  border: 1px solid var(--biopests-line);
+  border-radius: 12px;
+  background: var(--biopests-white);
+  color: var(--biopests-green-900);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biopests-chat__body button:hover {
+  background: var(--biopests-soft);
+}
+
+.biopests-mobile-cta {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 8px;
+  padding: 9px max(12px, calc((100vw - 780px) / 2 + 12px));
+  border-top: 1px solid rgba(15, 81, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.biopests-mobile-cta a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border-radius: 13px;
+  background: var(--biopests-soft);
+  color: var(--biopests-green-900);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.biopests-mobile-cta a:last-child {
+  background: #25d366;
+  color: var(--biopests-white);
+}
+
+@media (min-width: 781px) {
+  .biopests-page {
+    padding-top: 26px;
+    padding-bottom: 94px;
+  }
+
+  .biopests-shell {
+    border-radius: 30px;
+  }
+
+  .biopests-hero {
+    border-radius: 30px 30px 0 0;
+  }
+
+  .biopests-modal-backdrop {
+    align-items: center;
+  }
+}
+
+@media (max-width: 620px) {
+  .biopests-hero {
+    min-height: 620px;
+  }
+
+  .biopests-hero__topbar {
+    padding: 20px 18px 0;
+  }
+
+  .biopests-hero__logo {
+    width: 132px;
+  }
+
+  .biopests-hero__sector {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 0.58rem;
+  }
+
+  .biopests-hero__content {
+    padding: 128px 19px 86px;
+  }
+
+  .biopests-hero h1 {
+    font-size: 2.65rem;
+  }
+
+  .biopests-hero__content > p {
+    font-size: 0.9rem;
+  }
+
+  .biopests-hero__actions {
+    display: grid;
+  }
+
+  .biopests-btn {
+    width: 100%;
+  }
+
+  .biopests-quick {
+    width: calc(100% - 20px);
+    padding: 9px;
+  }
+
+  .biopests-quick__item {
+    min-height: 70px;
+  }
+
+  .biopests-section,
+  .biopests-trust,
+  .biopests-contact,
+  .biopests-method {
+    padding: 58px 18px;
+  }
+
+  .biopests-values {
+    grid-template-columns: 1fr;
+  }
+
+  .biopests-value-card {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    column-gap: 12px;
+  }
+
+  .biopests-value-card > span {
+    grid-row: 1 / 3;
+  }
+
+  .biopests-value-card h3 {
+    margin: 0 0 5px;
+  }
+
+  .biopests-services-grid {
+    gap: 10px;
+  }
+
+  .biopests-service-card__image {
+    height: 142px;
+  }
+
+  .biopests-service-card__body {
+    padding: 14px;
+  }
+
+  .biopests-service-card__body h3 {
+    font-size: 0.9rem;
+  }
+
+  .biopests-service-card__body p {
+    min-height: 66px;
+    font-size: 0.72rem;
+  }
+
+  .biopests-service-card__body small {
+    font-size: 0.68rem;
+  }
+
+  .biopests-method {
+    grid-template-columns: 1fr;
+  }
+
+  .biopests-method__visual {
+    min-height: 250px;
+  }
+
+  .biopests-tech-card {
+    grid-template-columns: 120px 1fr;
+    gap: 13px;
+  }
+
+  .biopests-tech-card__image {
+    height: 105px;
+  }
+
+  .biopests-tech-card p {
+    font-size: 0.74rem;
+  }
+
+  .biopests-certifications article {
+    min-height: 178px;
+    padding: 16px;
+  }
+
+  .biopests-certifications img {
+    height: 88px;
+  }
+
+  .biopests-permits,
+  .biopests-contact__details {
+    grid-template-columns: 1fr;
+  }
+
+  .biopests-map {
+    height: 220px;
+  }
+
+  .biopests-modal-backdrop {
+    padding: 10px;
+  }
+
+  .biopests-modal {
+    border-radius: 22px 22px 16px 16px;
+  }
+
+  .biopests-modal__image {
+    height: 220px;
+  }
+
+  .biopests-chat {
+    right: 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  .biopests-hero__sector {
+    display: none;
+  }
+
+  .biopests-hero__content {
+    padding-top: 145px;
+  }
+
+  .biopests-hero h1 {
+    font-size: 2.35rem;
+  }
+
+  .biopests-quick__item strong {
+    font-size: 0.61rem;
+  }
+
+  .biopests-stats {
+    gap: 7px;
+  }
+
+  .biopests-stats > div {
+    padding: 14px 10px;
+  }
+
+  .biopests-services-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .biopests-service-card__image {
+    height: 190px;
+  }
+
+  .biopests-service-card__body p {
+    min-height: auto;
+  }
+
+  .biopests-tech-card {
+    grid-template-columns: 1fr;
+  }
+
+  .biopests-tech-card__image {
+    height: 160px;
+  }
+}
