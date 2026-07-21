@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import PublicProfile from './components/PublicProfile'
 import MarketingLanding from './components/marketing/MarketingLanding'
+import IntapProfileBioPests from './components/profile-templates/IntapProfileBioPests'
 
 function RootRoute() {
   const location = useLocation()
@@ -14,6 +15,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<RootRoute />} />
+        <Route path="/biopestrd" element={<IntapProfileBioPests profile={{ slug: 'biopestrd' }} />} />
         <Route path="/:slug" element={<PublicProfile />} />
       </Routes>
     </BrowserRouter>
