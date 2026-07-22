@@ -4087,3 +4087,167 @@
 }
 
 /* BIOPESTS BRAND COLOR GUARD V9 END */
+
+/* BIOPESTS COLOR OVERRIDE V10 START */
+
+/*
+  Cobertura cromática completa de BioPests.
+  Neutraliza colores azules heredados sin modificar index.css
+  ni afectar otros perfiles.
+*/
+
+/* Encabezados sobre fondos claros */
+
+.biopests-page :is(
+  h1,
+  h2,
+  h3,
+  [class*="heading"],
+  [class*="headline"],
+  [class*="section-title"]
+) {
+  color: var(--green-dark) !important;
+}
+
+/* Subtítulos, roles y textos superiores */
+
+.biopests-page :is(
+  [class*="identity__role"],
+  [class*="identity__subtitle"],
+  [class*="identity__tagline"],
+  [class*="tagline"],
+  [class*="role"]
+) {
+  color: var(--green-dark) !important;
+}
+
+/* Etiquetas pequeñas de sección */
+
+.biopests-page :is(
+  [class*="eyebrow"],
+  [class*="kicker"],
+  [class*="overline"]
+) {
+  color: var(--green) !important;
+}
+
+/* Encabezados sobre secciones oscuras */
+
+.biopests-page :is(
+  [class*="methodology"],
+  [class*="trust"],
+  [class*="certification"],
+  [class*="contact"]
+) :is(
+  h1,
+  h2,
+  h3,
+  [class*="heading"],
+  [class*="headline"],
+  [class*="section-title"]
+) {
+  color: #ffffff !important;
+}
+
+/* Etiquetas sobre fondos oscuros */
+
+.biopests-page :is(
+  [class*="methodology"],
+  [class*="trust"],
+  [class*="certification"],
+  [class*="contact"]
+) :is(
+  [class*="eyebrow"],
+  [class*="kicker"],
+  [class*="overline"]
+) {
+  color: var(--lime) !important;
+}
+
+/* Todos los CTA de WhatsApp del perfil */
+
+body:has(.biopests-page) a[href*="wa.me"],
+body:has(.biopests-page) a[href*="api.whatsapp.com"],
+body:has(.biopests-page) a[href*="whatsapp.com/send"],
+body:has(.biopests-page) button[class*="whatsapp"] {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  background-image: none !important;
+  box-shadow:
+    0 10px 24px rgba(75, 153, 0, 0.22) !important;
+  color: #ffffff !important;
+}
+
+body:has(.biopests-page) a[href*="wa.me"] *,
+body:has(.biopests-page) a[href*="api.whatsapp.com"] *,
+body:has(.biopests-page) a[href*="whatsapp.com/send"] * {
+  color: currentColor !important;
+  fill: currentColor !important;
+}
+
+/* Hover de WhatsApp */
+
+body:has(.biopests-page) a[href*="wa.me"]:hover,
+body:has(.biopests-page) a[href*="api.whatsapp.com"]:hover,
+body:has(.biopests-page) a[href*="whatsapp.com/send"]:hover {
+  border-color: var(--green-dark) !important;
+  background: var(--green-dark) !important;
+  color: #ffffff !important;
+}
+
+/* CTA final sobre fondo verde oscuro: conserva lima */
+
+.biopests-page [class*="contact"]
+a[href*="wa.me"],
+.biopests-page [class*="contact"]
+a[href*="api.whatsapp.com"],
+.biopests-page [class*="contact"]
+a[href*="whatsapp.com/send"] {
+  border-color: var(--lime) !important;
+  background: var(--lime) !important;
+  box-shadow: none !important;
+  color: #153a1f !important;
+}
+
+/* Burbuja flotante, incluso si está fuera del wrapper */
+
+body:has(.biopests-page)
+a[href*="wa.me"][class*="floating"],
+body:has(.biopests-page)
+a[href*="wa.me"][class*="whatsapp"],
+body:has(.biopests-page)
+a[href*="api.whatsapp.com"][class*="floating"],
+body:has(.biopests-page)
+a[href*="api.whatsapp.com"][class*="whatsapp"] {
+  border-color: #ffffff !important;
+  background: var(--green) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+/* Elimina azul de botones genéricos dentro del perfil */
+
+.biopests-page :is(
+  .primary-btn,
+  .btn-primary,
+  .button-primary,
+  [class*="primary-button"],
+  [class*="primary-cta"]
+) {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+/* Foco corporativo */
+
+.biopests-page a:focus-visible,
+.biopests-page button:focus-visible,
+body:has(.biopests-page)
+a[href*="wa.me"]:focus-visible {
+  outline: 3px solid var(--lime) !important;
+  outline-offset: 3px;
+}
+
+/* BIOPESTS COLOR OVERRIDE V10 END */
