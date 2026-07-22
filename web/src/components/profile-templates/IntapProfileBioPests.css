@@ -1,11 +1,11 @@
 .biopests-page {
-  --green-dark: #125a2d;
-  --green: #258c3d;
-  --lime: #82d51f;
-  --ink: #17221b;
+  --green-dark: #0F6A2A;
+  --green: #4B9900;
+  --lime: #93D824;
+  --ink: #111827;
   --muted: #5f6d64;
   --line: #dde7df;
-  --soft: #f4f8f3;
+  --soft: #F6FAF3;
   min-height: 100vh;
   padding-bottom: 72px;
   margin: 0;
@@ -3902,3 +3902,188 @@
 }
 
 /* ADN LAYOUT DOS COLUMNAS V8 END */
+
+/* BIOPESTS BRAND COLOR GUARD V9 START */
+
+/*
+  Evita que clases genéricas de index.css, como .primary-btn
+  y .eyebrow, introduzcan el azul global dentro de BioPests.
+  Todas las reglas están limitadas a este perfil.
+*/
+
+/* Paleta oficial dentro del perfil */
+
+.biopests-page {
+  --green-dark: #0F6A2A;
+  --green: #4B9900;
+  --lime: #93D824;
+  --ink: #111827;
+  --soft: #F6FAF3;
+}
+
+/* Identidad principal */
+
+.biopests-page .biopests-identity .eyebrow,
+.biopests-page .biopests-identity__eyebrow,
+.biopests-page .biopests-identity__role,
+.biopests-page .biopests-identity__subtitle,
+.biopests-page .biopests-identity__headline {
+  color: var(--green-dark) !important;
+}
+
+/* Neutraliza el .eyebrow azul global */
+
+.biopests-page .eyebrow,
+.biopests-page [class$="__eyebrow"] {
+  color: var(--green) !important;
+}
+
+/* En secciones oscuras, el eyebrow conserva el lima original */
+
+.biopests-page .biopests-contact .eyebrow,
+.biopests-page .biopests-contact [class$="__eyebrow"],
+.biopests-page .biopests-contact__eyebrow {
+  color: var(--lime) !important;
+}
+
+/* Neutraliza el botón azul global */
+
+.biopests-page .primary-btn,
+.biopests-page a.primary-btn,
+.biopests-page button.primary-btn,
+.biopests-page .btn-primary,
+.biopests-page .button-primary {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  box-shadow:
+    0 12px 26px rgba(75, 153, 0, 0.22) !important;
+  color: #ffffff !important;
+}
+
+.biopests-page .primary-btn:hover,
+.biopests-page .primary-btn:focus-visible,
+.biopests-page .btn-primary:hover,
+.biopests-page .button-primary:hover {
+  border-color: var(--green-dark) !important;
+  background: var(--green-dark) !important;
+  color: #ffffff !important;
+}
+
+/* CTA principal del encabezado */
+
+.biopests-page .biopests-identity__cta,
+.biopests-page .biopests-hero__cta,
+.biopests-page .biopests-whatsapp-cta {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  color: #ffffff !important;
+}
+
+.biopests-page .biopests-identity__cta svg,
+.biopests-page .biopests-hero__cta svg,
+.biopests-page .biopests-whatsapp-cta svg {
+  color: currentColor !important;
+}
+
+/* Acceso rápido central de WhatsApp */
+
+.biopests-page
+.biopests-quick__item:nth-child(2) {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  color: #ffffff !important;
+}
+
+.biopests-page
+.biopests-quick__item:nth-child(2) span,
+.biopests-page
+.biopests-quick__item:nth-child(2) strong,
+.biopests-page
+.biopests-quick__item:nth-child(2) svg {
+  color: #ffffff !important;
+}
+
+.biopests-page
+.biopests-quick__item:nth-child(2):hover {
+  border-color: var(--green-dark) !important;
+  background: var(--green-dark) !important;
+  color: #ffffff !important;
+}
+
+/* Bloque final oscuro */
+
+.biopests-page .biopests-contact h2,
+.biopests-page .biopests-contact__title,
+.biopests-page .biopests-contact__headline {
+  color: #ffffff !important;
+}
+
+.biopests-page .biopests-contact > p,
+.biopests-page .biopests-contact__description {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* El CTA final conserva el diseño lima original */
+
+.biopests-page .biopests-contact__cta {
+  border-color: var(--lime) !important;
+  background: var(--lime) !important;
+  box-shadow: none !important;
+  color: #153A1F !important;
+}
+
+.biopests-page .biopests-contact__cta:hover,
+.biopests-page .biopests-contact__cta:focus-visible {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--green-dark) !important;
+}
+
+/* Burbuja flotante completamente corporativa */
+
+.biopests-floating-whatsapp {
+  border-color: #ffffff !important;
+  background: #4B9900 !important;
+  color: #ffffff !important;
+}
+
+.biopests-floating-whatsapp:hover,
+.biopests-floating-whatsapp:focus-visible {
+  background: #0F6A2A !important;
+  color: #ffffff !important;
+}
+
+/* Evita azul en estados visitados */
+
+.biopests-page .primary-btn:visited,
+.biopests-page .biopests-identity__cta:visited,
+.biopests-page .biopests-hero__cta:visited,
+.biopests-page
+.biopests-quick__item:nth-child(2):visited {
+  color: #ffffff !important;
+}
+
+.biopests-page .biopests-contact__cta:visited {
+  color: #153A1F !important;
+}
+
+.biopests-floating-whatsapp:visited {
+  color: #ffffff !important;
+}
+
+/* Foco y selección táctil dentro de BioPests */
+
+.biopests-page a,
+.biopests-page button {
+  -webkit-tap-highlight-color:
+    rgba(147, 216, 36, 0.2);
+}
+
+.biopests-page a:focus-visible,
+.biopests-page button:focus-visible,
+.biopests-floating-whatsapp:focus-visible {
+  outline: 3px solid #93D824 !important;
+  outline-offset: 3px;
+}
+
+/* BIOPESTS BRAND COLOR GUARD V9 END */
