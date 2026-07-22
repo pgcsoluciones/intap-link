@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import IntapProfileBioPests from './profile-templates/IntapProfileBioPests'
 import IntapProfileV2, { type IntapProfileV2Profile } from './profile-templates/IntapProfileV2'
 import IntapProfileJasonV3 from './profile-templates/IntapProfileJasonV3'
 import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
@@ -2092,6 +2093,11 @@ export default function PublicProfile() {
 
   // Preview controlado: permite desarrollar la plantilla nueva /jason aunque el slug aún no exista en D1.
   // Cuando el perfil jason esté sembrado en DB, seguirá usando el flujo normal con data real.
+  // Perfil corporativo BioPests.
+  if ((errorStatus || !data) && slug === 'biopestrd') {
+    return <IntapProfileBioPests />
+  }
+
   if ((errorStatus || !data) && slug === 'jason') {
     return <IntapProfileJasonV3 profile={{ slug: 'jason' }} />
   }
@@ -2181,6 +2187,10 @@ export default function PublicProfile() {
     companyAbout: (data as any).companyAbout ?? (data as any).company_about,
     mapUrl: (data as any).mapUrl ?? (data as any).map_url,
     templateData: (data as any).templateData ?? {},
+  }
+
+  if (data.slug === 'biopestrd') {
+    return <IntapProfileBioPests />
   }
 
   if (data.slug === 'novi') {
