@@ -141,19 +141,76 @@ export async function onRequest(context: {
     const slug = url.pathname.replace(/^\//, '').replace(/\/$/, '');
 
     if (slug) {
-      // BIOPESTS GRAPH CARD V1
-      if (slug === 'biopestrd') {
-        const pageResponse = await context.next();
-        const contentType =
-          pageResponse.headers.get('content-type') || '';
+      // STATIC PROFILE GRAPH CARDS V2
+      const staticProfileMeta: Record<string, {
+        title: string;
+        description: string;
+        url: string;
+        image: string;
+        siteName: string;
+        imageType: string;
+        imageWidth: number;
+        imageHeight: number;
+        twitterCard: 'summary_large_image';
+      }> = {
+        novi: {
+          title: 'NoviHome -Noldys Vicente-',
+          description:
+            'Asesora inmobiliaria. Propiedades listas, orientación clara y acompañamiento confiable para comprar o invertir con seguridad.',
+          url: 'https://intaprd.com/novi',
+          image:
+            'https://intaprd.com/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3',
+          siteName: 'NoviHome',
+          imageType: 'image/jpeg',
+          imageWidth: 631,
+          imageHeight: 752,
+          twitterCard: 'summary_large_image',
+        },
 
-        if (!contentType.includes('text/html')) {
-          return withSecurityHeaders(pageResponse);
-        }
+        rentaord: {
+          title: 'Rentao RD Car Rental',
+          description:
+            'Renta vehículos modernos, seguros y listos para moverte sin complicaciones. Opciones para uso personal, familiar, ejecutivo y de trabajo.',
+          url: 'https://intaprd.com/rentaord',
+          image:
+            'https://intaprd.com/assets/rentaord/logo-rentao.png?v=rentaord-og-logo-v1',
+          siteName: 'Rentao RD',
+          imageType: 'image/png',
+          imageWidth: 1667,
+          imageHeight: 814,
+          twitterCard: 'summary_large_image',
+        },
 
-        const html = await pageResponse.text();
+        jason: {
+          title:
+            'Comercial Jason S.R.L. | Gomas y aros en Santo Domingo',
+          description:
+            'Venta de gomas nuevas y usadas, aros, reparación y mantenimiento de aros en Santo Domingo. Más de 25 años de experiencia.',
+          url: 'https://intaprd.com/jason',
+          image:
+            'https://intaprd.com/assets/landing/hero-jason-05.png?v=jason-og-v1',
+          siteName: 'Comercial Jason S.R.L.',
+          imageType: 'image/png',
+          imageWidth: 629,
+          imageHeight: 354,
+          twitterCard: 'summary_large_image',
+        },
 
-        const updatedHtml = injectHeadMetadata(html, {
+        '1aeventos': {
+          title: '1A Eventos | Gabriel Reyes Bello',
+          description:
+            'Perfil digital de Gabriel Reyes Bello, asesor comercial de 1A Eventos. Mobiliario premium, cristalería, mantelería, lounge y accesorios para eventos.',
+          url: 'https://intaprd.com/1aeventos',
+          image:
+            'https://intaprd.com/assets/1A%20eventos/perfil/perfil-gabriel-01.jpg?v=1aeventos-og-gabriel-v1',
+          siteName: '1A Eventos',
+          imageType: 'image/jpeg',
+          imageWidth: 886,
+          imageHeight: 1164,
+          twitterCard: 'summary_large_image',
+        },
+
+        biopestrd: {
           title: 'BioPests | Manejo Inteligente de Plagas',
           description:
             'Soluciones profesionales para prevenir, controlar y monitorear plagas en entornos más seguros y sostenibles.',
@@ -165,7 +222,25 @@ export async function onRequest(context: {
           imageWidth: 628,
           imageHeight: 628,
           twitterCard: 'summary_large_image',
-        });
+        },
+      };
+
+      const staticMetadata = staticProfileMeta[slug];
+
+      if (staticMetadata) {
+        const pageResponse = await context.next();
+        const contentType =
+          pageResponse.headers.get('content-type') || '';
+
+        if (!contentType.includes('text/html')) {
+          return withSecurityHeaders(pageResponse);
+        }
+
+        const html = await pageResponse.text();
+        const updatedHtml = injectHeadMetadata(
+          html,
+          staticMetadata
+        );
 
         const headers = new Headers(pageResponse.headers);
         headers.set(
