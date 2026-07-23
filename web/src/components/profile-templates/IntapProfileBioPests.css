@@ -4251,3 +4251,47 @@ a[href*="wa.me"]:focus-visible {
 }
 
 /* BIOPESTS COLOR OVERRIDE V10 END */
+
+/* BIOPESTS QUICK ACTIONS V11 START */
+
+/*
+  Los tres accesos principales mantienen el mismo diseño:
+  Llamar / Instagram / Ubicación.
+  Guardar contacto conserva su fila inferior.
+*/
+
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) {
+  border: 1px solid rgba(75, 153, 0, 0.24) !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: #0F6A2A !important;
+}
+
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) span,
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) strong,
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) svg {
+  color: #0F6A2A !important;
+  fill: currentColor;
+}
+
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child):hover,
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child):focus-visible {
+  border-color: rgba(75, 153, 0, 0.42) !important;
+  background: #F6FAF3 !important;
+  color: #0F6A2A !important;
+}
+
+/* BIOPESTS QUICK ACTIONS V11 END */

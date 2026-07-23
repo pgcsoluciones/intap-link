@@ -828,18 +828,16 @@ export default function IntapProfileBioPests() {
           />
 
           <QuickAction
-            icon={<FaWhatsapp />}
-            label="WhatsApp"
-            href={whatsappUrl(
-              'Hola, vi el perfil digital de BioPests y deseo información sobre sus servicios.',
-            )}
+            icon={<FaInstagram />}
+            label="Instagram"
+            href={BIOPESTS.instagramUrl}
             external
           />
 
           <QuickAction
-            icon={<FaInstagram />}
-            label="Instagram"
-            href={BIOPESTS.instagramUrl}
+            icon={<FaMapMarkerAlt />}
+            label="Ubicación"
+            href="https://www.google.com/maps/search/?api=1&query=BioPests%20Av.%20Gustavo%20Mej%C3%ADa%20Ricart%20%23226%2C%20Piso%204%2C%20Oficina%20405%2C%20Distrito%20Nacional%2C%20Rep%C3%BAblica%20Dominicana"
             external
           />
 
