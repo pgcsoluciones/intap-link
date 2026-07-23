@@ -37,12 +37,24 @@ export async function onRequest(context: {
     url: string;
     image: string;
     siteName: string;
+    imageType?: string;
+    imageWidth?: number;
+    imageHeight?: number;
+    twitterCard?: 'summary' | 'summary_large_image';
   }): string => {
     const title = escapeHtml(metadata.title);
     const description = escapeHtml(metadata.description);
     const pageUrl = escapeHtml(metadata.url);
     const imageUrl = escapeHtml(metadata.image);
     const siteName = escapeHtml(metadata.siteName);
+    const imageType = escapeHtml(
+      metadata.imageType || 'image/jpeg'
+    );
+    const imageWidth = String(metadata.imageWidth || 1200);
+    const imageHeight = String(metadata.imageHeight || 630);
+    const twitterCard = escapeHtml(
+      metadata.twitterCard || 'summary'
+    );
 
     const metaBlock = `
   <!-- INTAP LINK: Open Graph metadata -->
@@ -56,11 +68,11 @@ export async function onRequest(context: {
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:secure_url" content="${imageUrl}" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="${imageType}" />
+  <meta property="og:image:width" content="${imageWidth}" />
+  <meta property="og:image:height" content="${imageHeight}" />
   <meta property="og:image:alt" content="${title}" />
-  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:card" content="${twitterCard}" />
   <meta name="twitter:title" content="${title}" />
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${imageUrl}" />
@@ -129,6 +141,47 @@ export async function onRequest(context: {
     const slug = url.pathname.replace(/^\//, '').replace(/\/$/, '');
 
     if (slug) {
+      // BIOPESTS GRAPH CARD V1
+      if (slug === 'biopestrd') {
+        const pageResponse = await context.next();
+        const contentType =
+          pageResponse.headers.get('content-type') || '';
+
+        if (!contentType.includes('text/html')) {
+          return withSecurityHeaders(pageResponse);
+        }
+
+        const html = await pageResponse.text();
+
+        const updatedHtml = injectHeadMetadata(html, {
+          title: 'BioPests | Manejo Inteligente de Plagas',
+          description:
+            'Soluciones profesionales para prevenir, controlar y monitorear plagas en entornos más seguros y sostenibles.',
+          url: 'https://intaprd.com/biopestrd',
+          image:
+            'https://intaprd.com/assets/biopestrd/values/innovacion.png?v=biopestrd-og-innovacion-v1',
+          siteName: 'BioPests',
+          imageType: 'image/png',
+          imageWidth: 628,
+          imageHeight: 628,
+          twitterCard: 'summary_large_image',
+        });
+
+        const headers = new Headers(pageResponse.headers);
+        headers.set(
+          'content-type',
+          'text/html; charset=UTF-8'
+        );
+
+        return withSecurityHeaders(
+          new Response(updatedHtml, {
+            status: pageResponse.status,
+            statusText: pageResponse.statusText,
+            headers,
+          })
+        );
+      }
+
       try {
         const apiRes = await fetch(
           `https://intaprd.com/api/v1/public/profiles/${encodeURIComponent(slug)}`,
