@@ -574,7 +574,7 @@ const BIOPESTS_VALUES = [
       'Instalaciones que buscan continuidad preventiva.',
     ],
     image:
-      '/assets/biopestrd/values/garantia-total.svg',
+      '/assets/biopestrd/values/garantia-total.png',
     imageAlt:
       'Ilustración de seguimiento, verificación y garantía BioPests',
   },
@@ -598,7 +598,7 @@ const BIOPESTS_VALUES = [
       'Mejor percepción de control e inocuidad.',
     ],
     image:
-      '/assets/biopestrd/values/etica-ambiental.svg',
+      '/assets/biopestrd/values/etica-ambiental.png',
     imageAlt:
       'Ilustración de protección ambiental y aplicación responsable',
   },
@@ -622,7 +622,7 @@ const BIOPESTS_VALUES = [
       'Adaptación constante según cada reto.',
     ],
     image:
-      '/assets/biopestrd/values/innovacion.svg',
+      '/assets/biopestrd/values/innovacion.png',
     imageAlt:
       'Ilustración de análisis, tecnología e innovación BioPests',
   },
