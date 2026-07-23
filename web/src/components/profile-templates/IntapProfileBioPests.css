@@ -4295,3 +4295,360 @@ a[href*="wa.me"]:focus-visible {
 }
 
 /* BIOPESTS QUICK ACTIONS V11 END */
+
+/* BIOPESTS INTRO V3 START */
+
+/*
+  Intro BioPests V3
+  1) insecto negro cruza la pantalla
+  2) mira roja lo rastrea y se fija en él
+  3) escena se desvanece
+  4) logo aparece desde el centro
+  Duración total aproximada: 5.6 segundos
+*/
+
+.biopestsBootOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #ffffff;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: all;
+  animation: biopestsBootOverlayExit 0.42s ease 5.18s forwards;
+}
+
+.biopestsBootScene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  animation: biopestsBootSceneFade 0.5s ease 3.55s forwards;
+}
+
+.biopestsBootBug {
+  position: absolute;
+  top: 44%;
+  left: -180px;
+  width: 132px;
+  height: 86px;
+  opacity: 0;
+  transform-origin: center center;
+  animation: biopestsBootBugRun 1.85s cubic-bezier(.26,.72,.22,1) .28s forwards;
+}
+
+.biopestsBootBug__body {
+  position: absolute;
+  top: 22px;
+  left: 24px;
+  width: 68px;
+  height: 38px;
+  border-radius: 55% 48% 52% 50%;
+  background: #111111;
+}
+
+.biopestsBootBug__head {
+  position: absolute;
+  top: 25px;
+  left: 90px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111111;
+}
+
+.biopestsBootBug__leg,
+.biopestsBootBug__antenna {
+  position: absolute;
+  display: block;
+  background: #111111;
+  transform-origin: left center;
+}
+
+.biopestsBootBug__leg {
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.biopestsBootBug__leg--1 { top: 24px; left: 13px; transform: rotate(-34deg); }
+.biopestsBootBug__leg--2 { top: 39px; left: 8px; transform: rotate(-8deg); }
+.biopestsBootBug__leg--3 { top: 55px; left: 14px; transform: rotate(26deg); }
+.biopestsBootBug__leg--4 { top: 25px; left: 64px; transform: rotate(30deg); }
+.biopestsBootBug__leg--5 { top: 41px; left: 68px; transform: rotate(8deg); }
+.biopestsBootBug__leg--6 { top: 56px; left: 62px; transform: rotate(-24deg); }
+
+.biopestsBootBug__antenna {
+  width: 22px;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.biopestsBootBug__antenna--1 {
+  top: 24px;
+  left: 100px;
+  transform: rotate(-34deg);
+}
+
+.biopestsBootBug__antenna--2 {
+  top: 35px;
+  left: 101px;
+  transform: rotate(17deg);
+}
+
+.biopestsBootScope {
+  position: absolute;
+  top: 20%;
+  left: 12%;
+  width: 176px;
+  height: 176px;
+  opacity: 0;
+  transform: translate3d(0, 0, 0) scale(.6);
+  animation: biopestsBootScopeTrack 2.25s cubic-bezier(.24,.78,.22,1) 1.05s forwards;
+}
+
+.biopestsBootScope__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: biopestsBootScopePulse .8s ease-in-out 2.45s 2 alternate;
+}
+
+.biopestsBootScope__ring,
+.biopestsBootScope__cross,
+.biopestsBootScope__dot {
+  position: absolute;
+  display: block;
+}
+
+.biopestsBootScope__ring {
+  inset: 0;
+  border: 3px solid #d61b28;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px rgba(214, 27, 40, .08),
+    0 0 22px rgba(214, 27, 40, .18);
+}
+
+.biopestsBootScope__cross--v {
+  top: 14px;
+  bottom: 14px;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(214, 27, 40, .92);
+}
+
+.biopestsBootScope__cross--h {
+  left: 14px;
+  right: 14px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: rgba(214, 27, 40, .92);
+}
+
+.biopestsBootScope__dot {
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #d61b28;
+  box-shadow: 0 0 16px rgba(214, 27, 40, .28);
+}
+
+.biopestsBootLogoWrap {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(430px, 84vw);
+  height: min(430px, 84vw);
+  place-items: center;
+}
+
+.biopestsBootLogo {
+  display: block;
+  width: min(360px, 74vw);
+  height: auto;
+  max-height: 340px;
+  object-fit: contain;
+  opacity: 0;
+  filter: blur(10px);
+  transform: scale(.12);
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
+  animation: biopestsBootLogoGrow 1.35s cubic-bezier(.18,.82,.22,1) 3.95s forwards;
+}
+
+@keyframes biopestsBootBugRun {
+  0% {
+    left: -180px;
+    opacity: 0;
+    transform: translateY(0) scale(.95) rotate(0deg);
+  }
+
+  8% {
+    opacity: 1;
+  }
+
+  20% {
+    transform: translateY(-4px) scale(1) rotate(-2deg);
+  }
+
+  38% {
+    transform: translateY(3px) scale(1) rotate(2deg);
+  }
+
+  56% {
+    transform: translateY(-3px) scale(1) rotate(-1deg);
+  }
+
+  74% {
+    transform: translateY(2px) scale(1) rotate(1deg);
+  }
+
+  100% {
+    left: calc(50% - 64px);
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes biopestsBootScopeTrack {
+  0% {
+    top: 17%;
+    left: 10%;
+    opacity: 0;
+    transform: scale(.6);
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  45% {
+    top: 28%;
+    left: 36%;
+    opacity: 1;
+    transform: scale(.94);
+  }
+
+  70% {
+    top: 37%;
+    left: calc(50% - 88px);
+    opacity: 1;
+    transform: scale(1.02);
+  }
+
+  100% {
+    top: 37%;
+    left: calc(50% - 88px);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes biopestsBootScopePulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.06);
+    opacity: .92;
+  }
+}
+
+@keyframes biopestsBootSceneFade {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes biopestsBootLogoGrow {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: scale(.12);
+  }
+
+  24% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+@keyframes biopestsBootOverlayExit {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (max-width: 430px) {
+  .biopestsBootBug {
+    width: 118px;
+    height: 78px;
+  }
+
+  .biopestsBootScope {
+    width: 148px;
+    height: 148px;
+  }
+
+  .biopestsBootLogoWrap {
+    width: min(84vw, 360px);
+    height: min(84vw, 360px);
+  }
+
+  .biopestsBootLogo {
+    width: min(72vw, 300px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biopestsBootScene {
+    display: none;
+    animation: none;
+  }
+
+  .biopestsBootLogo {
+    opacity: 1;
+    filter: none;
+    transform: scale(1);
+    animation: none;
+  }
+
+  .biopestsBootOverlay {
+    animation: biopestsBootOverlayExit 0.01s linear 0.8s forwards;
+  }
+}
+
+/* BIOPESTS INTRO V3 END */

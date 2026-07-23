@@ -629,6 +629,7 @@ const BIOPESTS_VALUES = [
 ]
 
 export default function IntapProfileBioPests() {
+  const [showBioPestsIntro, setShowBioPestsIntro] = useState(true)
   const [activeHero, setActiveHero] = useState(0)
 
   // MODAL ADN CORPORATIVO V5
@@ -639,6 +640,15 @@ export default function IntapProfileBioPests() {
       ? BIOPESTS_VALUES[selectedValueIndex]
       : null
 
+
+  // BIOPESTS INTRO ANIMADA V3
+  useEffect(() => {
+    const introTimer = window.setTimeout(() => {
+      setShowBioPestsIntro(false)
+    }, 5600)
+
+    return () => window.clearTimeout(introTimer)
+  }, [])
 
   // SLIDER AUTOMATICO BIOPESTS
   useEffect(() => {
@@ -748,7 +758,48 @@ export default function IntapProfileBioPests() {
   }, [selectedValueIndex])
 
   return (
-    <main className="biopests-page">
+    <main className="biopests-page">      {/* BIOPESTS INTRO OVERLAY V3 */}
+      {showBioPestsIntro ? (
+        <div
+          className="biopestsBootOverlay"
+          role="status"
+          aria-label="Cargando perfil BioPests"
+        >
+          <div className="biopestsBootScene" aria-hidden="true">
+            <div className="biopestsBootBug">
+              <span className="biopestsBootBug__body" />
+              <span className="biopestsBootBug__head" />
+              <span className="biopestsBootBug__leg biopestsBootBug__leg--1" />
+              <span className="biopestsBootBug__leg biopestsBootBug__leg--2" />
+              <span className="biopestsBootBug__leg biopestsBootBug__leg--3" />
+              <span className="biopestsBootBug__leg biopestsBootBug__leg--4" />
+              <span className="biopestsBootBug__leg biopestsBootBug__leg--5" />
+              <span className="biopestsBootBug__leg biopestsBootBug__leg--6" />
+              <span className="biopestsBootBug__antenna biopestsBootBug__antenna--1" />
+              <span className="biopestsBootBug__antenna biopestsBootBug__antenna--2" />
+            </div>
+
+            <div className="biopestsBootScope">
+              <div className="biopestsBootScope__inner">
+                <span className="biopestsBootScope__ring" />
+                <span className="biopestsBootScope__cross biopestsBootScope__cross--v" />
+                <span className="biopestsBootScope__cross biopestsBootScope__cross--h" />
+                <span className="biopestsBootScope__dot" />
+              </div>
+            </div>
+          </div>
+
+          <div className="biopestsBootLogoWrap">
+            <img
+              className="biopestsBootLogo"
+              src={BIOPESTS.logo}
+              alt="BioPests"
+              loading="eager"
+              decoding="sync"
+            />
+          </div>
+        </div>
+      ) : null}
       <div className="biopests-shell">
         <section
           className="biopests-cover"
