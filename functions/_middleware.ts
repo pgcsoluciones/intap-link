@@ -1,3 +1,12 @@
+import {
+  buildDynamicProfileSemanticFallback,
+  buildDynamicProfileSeoHead,
+  buildProfileSemanticFallback,
+  buildProfileSeoHead,
+  getStaticProfileDiscovery,
+  handleStaticDiscoveryRequest,
+} from './profile-discovery';
+
 /**
  * Cloudflare Pages Functions middleware.
  * Runs at the edge for every request, before static assets are served.
@@ -41,6 +50,8 @@ export async function onRequest(context: {
     imageWidth?: number;
     imageHeight?: number;
     twitterCard?: 'summary' | 'summary_large_image';
+    seoHeadHtml?: string;
+    semanticFallbackHtml?: string;
   }): string => {
     const title = escapeHtml(metadata.title);
     const description = escapeHtml(metadata.description);
@@ -55,6 +66,9 @@ export async function onRequest(context: {
     const twitterCard = escapeHtml(
       metadata.twitterCard || 'summary'
     );
+    const seoHeadHtml = metadata.seoHeadHtml || '';
+    const semanticFallbackHtml =
+      metadata.semanticFallbackHtml || '';
 
     const metaBlock = `
   <!-- INTAP LINK: Open Graph metadata -->
@@ -76,15 +90,30 @@ export async function onRequest(context: {
   <meta name="twitter:title" content="${title}" />
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${imageUrl}" />
+${seoHeadHtml}
 `;
 
     let output = html.replace(/<title>[\s\S]*?<\/title>/i, '');
 
     if (output.includes('</head>')) {
-      return output.replace('</head>', `${metaBlock}\n</head>`);
+      output = output.replace(
+        '</head>',
+        `${metaBlock}\n</head>`
+      );
     }
 
-    return html;
+    if (semanticFallbackHtml) {
+      if (output.includes('</body>')) {
+        output = output.replace(
+          '</body>',
+          `${semanticFallbackHtml}\n</body>`
+        );
+      } else {
+        output += semanticFallbackHtml;
+      }
+    }
+
+    return output;
   };
 
   const DEFAULT_OG_IMAGE = 'https://intaprd.com/assets/landing/intap-og-default.png';
@@ -116,6 +145,13 @@ export async function onRequest(context: {
 
   const url = new URL(context.request.url);
 
+  const discoveryResponse =
+    handleStaticDiscoveryRequest(url.pathname);
+
+  if (discoveryResponse) {
+    return withSecurityHeaders(discoveryResponse);
+  }
+
   // Redirigir rutas /admin al panel admin en app.intaprd.com
   // Sólo desde el dominio público — evita loop si app.intaprd.com usa el mismo proyecto
   if (url.hostname !== 'app.intaprd.com' &&
@@ -141,93 +177,11 @@ export async function onRequest(context: {
     const slug = url.pathname.replace(/^\//, '').replace(/\/$/, '');
 
     if (slug) {
-      // STATIC PROFILE GRAPH CARDS V2
-      const staticProfileMeta: Record<string, {
-        title: string;
-        description: string;
-        url: string;
-        image: string;
-        siteName: string;
-        imageType: string;
-        imageWidth: number;
-        imageHeight: number;
-        twitterCard: 'summary_large_image';
-      }> = {
-        novi: {
-          title: 'NoviHome -Noldys Vicente-',
-          description:
-            'Asesora inmobiliaria. Propiedades listas, orientación clara y acompañamiento confiable para comprar o invertir con seguridad.',
-          url: 'https://intaprd.com/novi',
-          image:
-            'https://intaprd.com/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3',
-          siteName: 'NoviHome',
-          imageType: 'image/jpeg',
-          imageWidth: 631,
-          imageHeight: 752,
-          twitterCard: 'summary_large_image',
-        },
+      // INTAP DISCOVERY SEO V1
+      const staticProfile =
+        getStaticProfileDiscovery(slug);
 
-        rentaord: {
-          title: 'Rentao RD Car Rental',
-          description:
-            'Renta vehículos modernos, seguros y listos para moverte sin complicaciones. Opciones para uso personal, familiar, ejecutivo y de trabajo.',
-          url: 'https://intaprd.com/rentaord',
-          image:
-            'https://intaprd.com/assets/rentaord/logo-rentao.png?v=rentaord-og-logo-v1',
-          siteName: 'Rentao RD',
-          imageType: 'image/png',
-          imageWidth: 1667,
-          imageHeight: 814,
-          twitterCard: 'summary_large_image',
-        },
-
-        jason: {
-          title:
-            'Comercial Jason S.R.L. | Gomas y aros en Santo Domingo',
-          description:
-            'Venta de gomas nuevas y usadas, aros, reparación y mantenimiento de aros en Santo Domingo. Más de 25 años de experiencia.',
-          url: 'https://intaprd.com/jason',
-          image:
-            'https://intaprd.com/assets/landing/hero-jason-05.png?v=jason-og-v1',
-          siteName: 'Comercial Jason S.R.L.',
-          imageType: 'image/png',
-          imageWidth: 629,
-          imageHeight: 354,
-          twitterCard: 'summary_large_image',
-        },
-
-        '1aeventos': {
-          title: '1A Eventos | Gabriel Reyes Bello',
-          description:
-            'Perfil digital de Gabriel Reyes Bello, asesor comercial de 1A Eventos. Mobiliario premium, cristalería, mantelería, lounge y accesorios para eventos.',
-          url: 'https://intaprd.com/1aeventos',
-          image:
-            'https://intaprd.com/assets/1A%20eventos/perfil/perfil-gabriel-01.jpg?v=1aeventos-og-gabriel-v1',
-          siteName: '1A Eventos',
-          imageType: 'image/jpeg',
-          imageWidth: 886,
-          imageHeight: 1164,
-          twitterCard: 'summary_large_image',
-        },
-
-        biopestrd: {
-          title: 'BioPests | Manejo Inteligente de Plagas',
-          description:
-            'Soluciones profesionales para prevenir, controlar y monitorear plagas en entornos más seguros y sostenibles.',
-          url: 'https://intaprd.com/biopestrd',
-          image:
-            'https://intaprd.com/assets/biopestrd/values/innovacion.png?v=biopestrd-og-innovacion-v1',
-          siteName: 'BioPests',
-          imageType: 'image/png',
-          imageWidth: 628,
-          imageHeight: 628,
-          twitterCard: 'summary_large_image',
-        },
-      };
-
-      const staticMetadata = staticProfileMeta[slug];
-
-      if (staticMetadata) {
+      if (staticProfile) {
         const pageResponse = await context.next();
         const contentType =
           pageResponse.headers.get('content-type') || '';
@@ -237,15 +191,37 @@ export async function onRequest(context: {
         }
 
         const html = await pageResponse.text();
-        const updatedHtml = injectHeadMetadata(
-          html,
-          staticMetadata
+
+        const updatedHtml = injectHeadMetadata(html, {
+          title: staticProfile.title,
+          description: staticProfile.description,
+          url: staticProfile.url,
+          image: staticProfile.image,
+          siteName: staticProfile.siteName,
+          imageType: staticProfile.imageType,
+          imageWidth: staticProfile.imageWidth,
+          imageHeight: staticProfile.imageHeight,
+          twitterCard: 'summary_large_image',
+          seoHeadHtml:
+            buildProfileSeoHead(staticProfile),
+          semanticFallbackHtml:
+            buildProfileSemanticFallback(
+              staticProfile
+            ),
+        });
+
+        const headers = new Headers(
+          pageResponse.headers
         );
 
-        const headers = new Headers(pageResponse.headers);
         headers.set(
           'content-type',
           'text/html; charset=UTF-8'
+        );
+
+        headers.set(
+          'x-robots-tag',
+          'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
         );
 
         return withSecurityHeaders(
@@ -296,6 +272,19 @@ export async function onRequest(context: {
               url: canonicalUrl,
               image: avatarUrl,
               siteName: 'INTAP LINK',
+              seoHeadHtml:
+                buildDynamicProfileSeoHead({
+                  name,
+                  description: bio,
+                  url: canonicalUrl,
+                  image: avatarUrl,
+                }),
+              semanticFallbackHtml:
+                buildDynamicProfileSemanticFallback({
+                  name,
+                  description: bio,
+                  url: canonicalUrl,
+                }),
             });
 
             const headers = new Headers(pageResponse.headers);
