@@ -4,7 +4,7 @@ import {
   buildProfileSemanticFallback,
   buildProfileSeoHead,
   getStaticProfileDiscovery,
-  handleStaticDiscoveryRequest,
+  handleDiscoveryRequest,
 } from './profile-discovery';
 
 /**
@@ -146,7 +146,7 @@ ${seoHeadHtml}
   const url = new URL(context.request.url);
 
   const discoveryResponse =
-    handleStaticDiscoveryRequest(url.pathname);
+    await handleDiscoveryRequest(url.pathname);
 
   if (discoveryResponse) {
     return withSecurityHeaders(discoveryResponse);
@@ -289,6 +289,10 @@ ${seoHeadHtml}
 
             const headers = new Headers(pageResponse.headers);
             headers.set('content-type', 'text/html; charset=UTF-8');
+            headers.set(
+              'x-robots-tag',
+              'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+            );
 
             return withSecurityHeaders(new Response(updatedHtml, {
               status: pageResponse.status,

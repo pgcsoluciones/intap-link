@@ -48,6 +48,506 @@ export type ProfileDiscovery = {
 
 const BASE_URL = 'https://intaprd.com';
 
+const PUBLIC_API_BASE =
+  `${BASE_URL}/api/v1/public`;
+
+// INTAP DYNAMIC DISCOVERY V2
+type DynamicDiscoveryProfile = {
+  slug: string;
+  name: string;
+  bio: string;
+  avatarUrl?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+  updatedAt?: string | null;
+};
+
+type DynamicPublicProfile = {
+  slug?: string;
+  name?: string;
+  bio?: string;
+  avatarUrl?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+  updatedAt?: string | null;
+  whatsapp_number?: string | null;
+  contact?: {
+    whatsapp?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    hours?: string | null;
+    address?: string | null;
+    map_url?: string | null;
+  } | null;
+  social_links?: Array<{
+    type?: string;
+    url?: string;
+  }>;
+  links?: Array<{
+    label?: string;
+    url?: string;
+  }>;
+  faqs?: Array<{
+    question?: string;
+    answer?: string;
+  }>;
+  products?: Array<{
+    title?: string;
+    description?: string | null;
+  }>;
+};
+
+function compactText(
+  value: unknown,
+  fallback = ''
+): string {
+  if (typeof value !== 'string') return fallback;
+
+  const compact = value
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return compact || fallback;
+}
+
+function markdownEscape(value: string): string {
+  return value.replace(
+    /([\\`*_[\]<>])/g,
+    '\\$1'
+  );
+}
+
+function publicProfileUrl(slug: string): string {
+  return `${BASE_URL}/${encodeURIComponent(slug)}`;
+}
+
+function discoveryDate(value: unknown): string {
+  const raw = compactText(value);
+
+  if (!raw) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  const date = new Date(raw);
+
+  if (Number.isNaN(date.getTime())) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function collectHttpUrls(
+  values: unknown[]
+): string[] {
+  const urls = values
+    .map((value) => compactText(value))
+    .filter(Boolean)
+    .filter((value) => {
+      try {
+        const url = new URL(value);
+        return (
+          url.protocol === 'https:' ||
+          url.protocol === 'http:'
+        );
+      } catch {
+        return false;
+      }
+    });
+
+  return Array.from(new Set(urls));
+}
+
+async function fetchDynamicDiscoveryProfiles():
+Promise<DynamicDiscoveryProfile[]> {
+  try {
+    const response = await fetch(
+      `${PUBLIC_API_BASE}/discovery/profiles`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const payload = await response.json() as {
+      ok?: boolean;
+      data?: unknown;
+    };
+
+    if (
+      payload.ok !== true ||
+      !Array.isArray(payload.data)
+    ) {
+      return [];
+    }
+
+    return payload.data.flatMap(
+      (row): DynamicDiscoveryProfile[] => {
+        if (
+          !row ||
+          typeof row !== 'object'
+        ) {
+          return [];
+        }
+
+        const item =
+          row as Record<string, unknown>;
+
+        const slug = compactText(
+          item.slug
+        ).toLowerCase();
+
+        if (
+          !slug ||
+          slug.includes('/')
+        ) {
+          return [];
+        }
+
+        const name = compactText(
+          item.name,
+          slug
+        );
+
+        return [{
+          slug,
+          name,
+          bio: compactText(
+            item.bio,
+            `Perfil de ${name} en INTAP LINK`
+          ),
+          avatarUrl:
+            compactText(item.avatarUrl) || null,
+          category:
+            compactText(item.category) || null,
+          subcategory:
+            compactText(item.subcategory) || null,
+          updatedAt:
+            compactText(item.updatedAt) || null,
+        }];
+      }
+    );
+  } catch {
+    // Fallback seguro: los perfiles estáticos
+    // continúan disponibles.
+    return [];
+  }
+}
+
+async function fetchDynamicPublicProfile(
+  slug: string
+): Promise<DynamicPublicProfile | null> {
+  try {
+    const response = await fetch(
+      `${PUBLIC_API_BASE}/profiles/${encodeURIComponent(slug)}`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const payload = await response.json() as {
+      ok?: boolean;
+      data?: DynamicPublicProfile;
+    };
+
+    if (
+      payload.ok !== true ||
+      !payload.data
+    ) {
+      return null;
+    }
+
+    return payload.data;
+  } catch {
+    return null;
+  }
+}
+
+function buildDynamicAiMarkdown(
+  profile: DynamicPublicProfile,
+  requestedSlug: string
+): string {
+  const slug = compactText(
+    profile.slug,
+    requestedSlug
+  ).toLowerCase();
+
+  const name = compactText(
+    profile.name,
+    slug
+  );
+
+  const description = compactText(
+    profile.bio,
+    `Perfil de ${name} en INTAP LINK`
+  );
+
+  const canonical = publicProfileUrl(slug);
+
+  const category = [
+    compactText(profile.category),
+    compactText(profile.subcategory),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const phones = Array.from(
+    new Set([
+      compactText(profile.contact?.phone),
+      compactText(profile.contact?.whatsapp),
+      compactText(profile.whatsapp_number),
+    ].filter(Boolean))
+  );
+
+  const services = (
+    Array.isArray(profile.products)
+      ? profile.products
+      : []
+  )
+    .filter((item) =>
+      compactText(item?.title)
+    )
+    .map((item) => {
+      const title = markdownEscape(
+        compactText(item.title)
+      );
+
+      const serviceDescription =
+        markdownEscape(
+          compactText(item.description)
+        );
+
+      return serviceDescription
+        ? `- **${title}:** ${serviceDescription}`
+        : `- ${title}`;
+    });
+
+  const faqs = (
+    Array.isArray(profile.faqs)
+      ? profile.faqs
+      : []
+  )
+    .filter((faq) =>
+      compactText(faq?.question) &&
+      compactText(faq?.answer)
+    );
+
+  const officialUrls = collectHttpUrls([
+    ...(
+      Array.isArray(profile.social_links)
+        ? profile.social_links.map(
+            (item) => item?.url
+          )
+        : []
+    ),
+    ...(
+      Array.isArray(profile.links)
+        ? profile.links.map(
+            (item) => item?.url
+          )
+        : []
+    ),
+  ]);
+
+  const faqMarkdown = faqs.length
+    ? [
+        '',
+        '## Preguntas frecuentes',
+        '',
+        ...faqs.flatMap((faq) => [
+          `### ${markdownEscape(compactText(faq.question))}`,
+          markdownEscape(compactText(faq.answer)),
+          '',
+        ]),
+      ].join('\n')
+    : '';
+
+  return `# ${markdownEscape(name)}
+
+> ${markdownEscape(description)}
+
+- URL canónica: ${canonical}
+- Tipo de entidad: Organization
+- Categoría: ${markdownEscape(category || 'No especificada')}
+- Idioma: es-DO
+- Última actualización: ${
+    profile.updatedAt
+      ? discoveryDate(profile.updatedAt)
+      : 'No especificada'
+  }
+
+## Descripción
+
+${markdownEscape(description)}
+
+## Servicios o productos
+
+${services.length ? services.join('\n') : '- No especificados.'}
+
+## Contacto
+
+${phones.length
+  ? phones.map(
+      (phone) =>
+        `- Teléfono: ${markdownEscape(phone)}`
+    ).join('\n')
+  : '- Teléfono no especificado.'}
+${profile.contact?.email
+  ? `- Correo: ${markdownEscape(compactText(profile.contact.email))}`
+  : ''}
+${profile.contact?.address
+  ? `- Dirección: ${markdownEscape(compactText(profile.contact.address))}`
+  : ''}
+${profile.contact?.hours
+  ? `- Horario: ${markdownEscape(compactText(profile.contact.hours))}`
+  : ''}
+
+## Enlaces oficiales
+
+${officialUrls.length
+  ? officialUrls.map(
+      (url) => `- ${url}`
+    ).join('\n')
+  : `- ${canonical}`}
+
+## Datos estructurados
+
+- JSON verificable: ${canonical}/facts.json
+- Página oficial: ${canonical}
+${faqMarkdown}
+`;
+}
+
+function buildDynamicFactsJson(
+  profile: DynamicPublicProfile,
+  requestedSlug: string
+): string {
+  const slug = compactText(
+    profile.slug,
+    requestedSlug
+  ).toLowerCase();
+
+  const name = compactText(
+    profile.name,
+    slug
+  );
+
+  const description = compactText(
+    profile.bio,
+    `Perfil de ${name} en INTAP LINK`
+  );
+
+  const canonical = publicProfileUrl(slug);
+
+  const phones = Array.from(
+    new Set([
+      compactText(profile.contact?.phone),
+      compactText(profile.contact?.whatsapp),
+      compactText(profile.whatsapp_number),
+    ].filter(Boolean))
+  );
+
+  const services = (
+    Array.isArray(profile.products)
+      ? profile.products
+      : []
+  )
+    .filter((item) =>
+      compactText(item?.title)
+    )
+    .map((item) => ({
+      name: compactText(item.title),
+      description:
+        compactText(item.description) || null,
+    }));
+
+  const frequentlyAskedQuestions = (
+    Array.isArray(profile.faqs)
+      ? profile.faqs
+      : []
+  )
+    .filter((faq) =>
+      compactText(faq?.question) &&
+      compactText(faq?.answer)
+    )
+    .map((faq) => ({
+      question: compactText(faq.question),
+      answer: compactText(faq.answer),
+    }));
+
+  const officialLinks = collectHttpUrls([
+    canonical,
+    ...(
+      Array.isArray(profile.social_links)
+        ? profile.social_links.map(
+            (item) => item?.url
+          )
+        : []
+    ),
+    ...(
+      Array.isArray(profile.links)
+        ? profile.links.map(
+            (item) => item?.url
+          )
+        : []
+    ),
+  ]);
+
+  return JSON.stringify(
+    {
+      schemaVersion: '1.0',
+      language: 'es-DO',
+      canonicalUrl: canonical,
+      generatedAt: new Date().toISOString(),
+      lastUpdated:
+        profile.updatedAt
+          ? discoveryDate(profile.updatedAt)
+          : null,
+      entity: {
+        type: 'Organization',
+        name,
+        description,
+        category:
+          compactText(profile.category) || null,
+        subcategory:
+          compactText(profile.subcategory) || null,
+      },
+      contact: {
+        telephones: phones,
+        email:
+          compactText(profile.contact?.email) ||
+          null,
+        address:
+          compactText(profile.contact?.address) ||
+          null,
+        openingHours:
+          compactText(profile.contact?.hours) ||
+          null,
+        mapUrl:
+          compactText(profile.contact?.map_url) ||
+          null,
+      },
+      services,
+      frequentlyAskedQuestions,
+      officialLinks,
+      image: profile.avatarUrl
+        ? {
+            url: profile.avatarUrl,
+          }
+        : null,
+    },
+    null,
+    2
+  );
+}
+
 export const STATIC_PROFILE_DISCOVERY: Record<
   string,
   ProfileDiscovery
@@ -730,6 +1230,8 @@ export function buildDynamicProfileSeoHead(input: {
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <meta name="bingbot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <link rel="alternate" type="text/markdown" title="${escapeHtml(input.name)} para agentes IA" href="${escapeHtml(input.url)}/ai.md" />
+  <link rel="alternate" type="application/json" title="${escapeHtml(input.name)} datos verificables" href="${escapeHtml(input.url)}/facts.json" />
   <script type="application/ld+json">${jsonForScript(jsonLd)}</script>
 `;
 }
@@ -1010,18 +1512,57 @@ Sitemap: ${BASE_URL}/sitemap.xml
 `;
 }
 
-function buildSitemapXml(): string {
-  const urls = Object.values(
-    STATIC_PROFILE_DISCOVERY
-  )
-    .map(
-      (profile) => `  <url>
-    <loc>${escapeHtml(profile.url)}</loc>
-    <lastmod>${profile.lastUpdated}</lastmod>
+function buildSitemapXml(
+  dynamicProfiles: DynamicDiscoveryProfile[]
+): string {
+  const entries = new Map<
+    string,
+    {
+      slug: string;
+      url: string;
+      lastUpdated: string;
+    }
+  >();
+
+  for (
+    const profile of Object.values(
+      STATIC_PROFILE_DISCOVERY
+    )
+  ) {
+    entries.set(profile.slug, {
+      slug: profile.slug,
+      url: profile.url,
+      lastUpdated: profile.lastUpdated,
+    });
+  }
+
+  for (const profile of dynamicProfiles) {
+    if (entries.has(profile.slug)) continue;
+
+    entries.set(profile.slug, {
+      slug: profile.slug,
+      url: publicProfileUrl(profile.slug),
+      lastUpdated:
+        profile.updatedAt
+          ? discoveryDate(profile.updatedAt)
+          : '',
+    });
+  }
+
+  const urls = Array.from(entries.values())
+    .sort((a, b) =>
+      a.slug.localeCompare(b.slug)
+    )
+    .map((profile) => `  <url>
+    <loc>${escapeHtml(profile.url)}</loc>${
+      profile.lastUpdated
+        ? `
+    <lastmod>${escapeHtml(profile.lastUpdated)}</lastmod>`
+        : ''
+    }
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-  </url>`
-    )
+  </url>`)
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -1031,15 +1572,63 @@ ${urls}
 `;
 }
 
-function buildLlmsTxt(): string {
-  const profiles = Object.values(
-    STATIC_PROFILE_DISCOVERY
-  )
-    .map(
-      (profile) => `- [${profile.name}](${profile.url}): ${profile.description}
-  - [Resumen para agentes](${profile.url}/ai.md)
-  - [Datos verificables](${profile.url}/facts.json)`
+function buildLlmsTxt(
+  dynamicProfiles: DynamicDiscoveryProfile[]
+): string {
+  const entries = new Map<
+    string,
+    {
+      slug: string;
+      name: string;
+      description: string;
+      url: string;
+    }
+  >();
+
+  for (
+    const profile of Object.values(
+      STATIC_PROFILE_DISCOVERY
     )
+  ) {
+    entries.set(profile.slug, {
+      slug: profile.slug,
+      name: profile.name,
+      description: profile.description,
+      url: profile.url,
+    });
+  }
+
+  for (const profile of dynamicProfiles) {
+    if (entries.has(profile.slug)) continue;
+
+    entries.set(profile.slug, {
+      slug: profile.slug,
+      name: profile.name,
+      description: profile.bio,
+      url: publicProfileUrl(profile.slug),
+    });
+  }
+
+  const profiles = Array.from(entries.values())
+    .sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )
+    .map((profile) => {
+      const name = markdownEscape(
+        compactText(profile.name, profile.slug)
+      );
+
+      const description = markdownEscape(
+        compactText(
+          profile.description,
+          `Perfil de ${profile.name} en INTAP LINK`
+        )
+      );
+
+      return `- [${name}](${profile.url}): ${description}
+  - [Resumen para agentes](${profile.url}/ai.md)
+  - [Datos verificables](${profile.url}/facts.json)`;
+    })
     .join('\n');
 
   return `# INTAP LINK
@@ -1059,7 +1648,7 @@ Cada perfil incluye:
 - Resumen Markdown para agentes IA.
 - Archivo JSON con hechos verificables.
 - Open Graph y Twitter Card.
-- Información de contacto, servicios y enlaces oficiales.
+- Información pública de contacto, servicios y enlaces oficiales.
 
 ## Contacto del sitio
 
@@ -1078,7 +1667,7 @@ function machineResponse(
     'content-type': `${contentType}; charset=UTF-8`,
     'content-language': 'es-DO',
     'cache-control':
-      'public, max-age=300, s-maxage=3600',
+      'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
     'access-control-allow-origin': '*',
   });
 
@@ -1095,9 +1684,9 @@ function machineResponse(
   });
 }
 
-export function handleStaticDiscoveryRequest(
+export async function handleDiscoveryRequest(
   pathname: string
-): Response | null {
+): Promise<Response | null> {
   const normalized =
     pathname.replace(/\/+$/, '') || '/';
 
@@ -1109,15 +1698,21 @@ export function handleStaticDiscoveryRequest(
   }
 
   if (normalized === '/sitemap.xml') {
+    const dynamicProfiles =
+      await fetchDynamicDiscoveryProfiles();
+
     return machineResponse(
-      buildSitemapXml(),
+      buildSitemapXml(dynamicProfiles),
       'application/xml'
     );
   }
 
   if (normalized === '/llms.txt') {
+    const dynamicProfiles =
+      await fetchDynamicDiscoveryProfiles();
+
     return machineResponse(
-      buildLlmsTxt(),
+      buildLlmsTxt(dynamicProfiles),
       'text/plain'
     );
   }
@@ -1131,7 +1726,9 @@ export function handleStaticDiscoveryRequest(
   let slug = '';
 
   try {
-    slug = decodeURIComponent(match[1]).toLowerCase();
+    slug = decodeURIComponent(
+      match[1]
+    ).toLowerCase();
   } catch {
     return machineResponse(
       'Not Found\n',
@@ -1141,10 +1738,29 @@ export function handleStaticDiscoveryRequest(
     );
   }
 
-  const profile =
+  const staticProfile =
     getStaticProfileDiscovery(slug);
 
-  if (!profile) {
+  if (staticProfile) {
+    if (match[2] === 'ai.md') {
+      return machineResponse(
+        buildAiMarkdown(staticProfile),
+        'text/markdown',
+        staticProfile.url
+      );
+    }
+
+    return machineResponse(
+      buildFactsJson(staticProfile),
+      'application/json',
+      staticProfile.url
+    );
+  }
+
+  const dynamicProfile =
+    await fetchDynamicPublicProfile(slug);
+
+  if (!dynamicProfile) {
     return machineResponse(
       'Not Found\n',
       'text/plain',
@@ -1153,17 +1769,31 @@ export function handleStaticDiscoveryRequest(
     );
   }
 
+  const canonicalSlug = compactText(
+    dynamicProfile.slug,
+    slug
+  ).toLowerCase();
+
+  const canonical =
+    publicProfileUrl(canonicalSlug);
+
   if (match[2] === 'ai.md') {
     return machineResponse(
-      buildAiMarkdown(profile),
+      buildDynamicAiMarkdown(
+        dynamicProfile,
+        canonicalSlug
+      ),
       'text/markdown',
-      profile.url
+      canonical
     );
   }
 
   return machineResponse(
-    buildFactsJson(profile),
+    buildDynamicFactsJson(
+      dynamicProfile,
+      canonicalSlug
+    ),
     'application/json',
-    profile.url
+    canonical
   );
 }
