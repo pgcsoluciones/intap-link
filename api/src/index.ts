@@ -5,6 +5,7 @@ import { getEntitlements, getRetentionStatus, logPlanEvent } from './engine/enti
 import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
+import type { AdminRole } from './lib/admin-auth'
 
 type Bindings = {
   DB: D1Database
@@ -22,7 +23,11 @@ type Bindings = {
   ADMIN_API_KEY: string
 }
 
-type Variables = { userId: string }
+type Variables = {
+  userId: string
+  adminUserId: string
+  adminRole: AdminRole
+}
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -1950,17 +1955,101 @@ app.get('/api/v1/public/assets/*', async (c) => {
 
 // ─── Perfil Público ───────────────────────────────────────────────────────
 
+// INTAP PUBLIC DISCOVERY V1
+// Lista mínima y segura de perfiles visibles para sitemap, llms.txt
+// y otros sistemas automáticos de descubrimiento.
+//
+// Solo expone perfiles:
+//   - publicados por su propietario
+//   - activos administrativamente
+//
+// No incluye correos privados de usuarios, sesiones ni información interna.
+app.get('/api/v1/public/discovery/profiles', async (c) => {
+  const rows = await c.env.DB.prepare(`
+    SELECT
+      slug,
+      name,
+      bio,
+      avatar_url,
+      category,
+      subcategory,
+      updated_at,
+      created_at
+    FROM profiles
+    WHERE is_published = 1
+      AND is_active = 1
+    ORDER BY
+      COALESCE(updated_at, created_at) DESC,
+      slug ASC
+  `).all()
+
+  const origin = new URL(c.req.url).origin
+
+  const toAssetUrl = (
+    key: string | null | undefined
+  ): string | null => {
+    if (!key) return null
+    if (key.startsWith('http')) return key
+
+    const encodedKey = key
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/')
+
+    return `${origin}/api/v1/public/assets/${encodedKey}`
+  }
+
+  const profiles = (rows.results as any[]).map((row) => ({
+    slug: row.slug,
+    name: row.name || row.slug,
+    bio:
+      row.bio ||
+      `Perfil de ${row.name || row.slug} en INTAP LINK`,
+    avatarUrl: toAssetUrl(row.avatar_url),
+    category: row.category || null,
+    subcategory: row.subcategory || null,
+    updatedAt:
+      row.updated_at ||
+      row.created_at ||
+      null,
+    canonicalUrl:
+      `https://intaprd.com/${encodeURIComponent(row.slug)}`,
+  }))
+
+  c.header(
+    'Cache-Control',
+    'public, max-age=300, s-maxage=900'
+  )
+
+  return c.json({
+    ok: true,
+    data: profiles,
+    meta: {
+      total: profiles.length,
+      generatedAt: new Date().toISOString(),
+    },
+  })
+})
+
 app.get('/api/v1/public/profiles/:slug', async (c) => {
   const slug = c.req.param('slug')
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, is_published, is_active, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data, category, subcategory, updated_at FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
 
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  // Un perfil desactivado por administración nunca debe exponerse públicamente.
+  if (!(profile as any).is_active) {
+    return c.json(
+      { ok: false, error: 'Perfil no disponible' },
+      404
+    )
+  }
 
   // Allow owner to preview unpublished profiles
   if (!(profile as any).is_published) {
@@ -2072,6 +2161,9 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       name: (profile as any).name,
       bio: (profile as any).bio,
       avatarUrl: toAssetUrl((profile as any).avatar_url || ''),
+      category: (profile as any).category ?? null,
+      subcategory: (profile as any).subcategory ?? null,
+      updatedAt: (profile as any).updated_at ?? null,
       whatsapp_number: (profile as any).whatsapp_number ?? null,
       templateId: (profile as any).template_id ?? null,
       templateData: (() => { try { return JSON.parse((profile as any).template_data || '{}') } catch { return {} } })(),
