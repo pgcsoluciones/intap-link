@@ -999,10 +999,6 @@
   will-change: transform;
 }
 
-.il-free-portfolio__track--paused {
-  animation-play-state: paused;
-}
-
 .il-free-portfolio__track a {
   position: relative;
   width: 152px;
@@ -1217,12 +1213,10 @@
 
 /* INTAP LINK GRATIS V2 — FIN */
 
-/* INTAP LINK GRATIS V3 — INICIO */
+/* INTAP LINK GRATIS V8 — CONSOLIDATED START */
 
-/*
- * Guardar contacto queda antes del portafolio.
- * El carrusel cruza todo el ancho disponible.
- */
+/* Apariencia final aprobada: orden y tipografía */
+
 .il-free-vcard {
   margin-bottom: 24px;
 }
@@ -1230,129 +1224,6 @@
 .il-free-portfolio {
   margin-top: 0;
 }
-
-/*
- * El carrusel es completamente automático.
- * No se pausa al colocar el mouse ni al tocar una imagen.
- */
-.il-free-portfolio__track {
-  animation-play-state: running;
-}
-
-.il-free-portfolio__track:hover,
-.il-free-portfolio__track:focus-within {
-  animation-play-state: running;
-}
-
-/*
- * Ya no existe botón de pausa/play.
- */
-.il-free-portfolio__header {
-  justify-content: flex-start;
-}
-
-/*
- * Marca de agua comercial del plan Gratis.
- */
-.il-free-footer {
-  min-height: 68px;
-  padding: 14px 18px;
-}
-
-.il-free-footer a {
-  color: #8190a5;
-  text-decoration: none;
-  font-size: 11px;
-  font-weight: 650;
-  text-align: center;
-}
-
-.il-free-footer a strong {
-  margin-left: 3px;
-  color: var(--il-free-blue);
-  font-size: 13px;
-  letter-spacing: 0;
-}
-
-/* INTAP LINK GRATIS V3 — FIN */
-
-/* INTAP LINK GRATIS V4 — INICIO */
-
-/*
- * Tipografía más ligera y elegante.
- * Se aplica a las tres plantillas.
- */
-
-.il-free-gallery__header h1 {
-  font-weight: 700;
-}
-
-.il-free-preview-card__content h2 {
-  font-weight: 650;
-}
-
-.il-free-identity-copy h1,
-.il-free-personal-copy h1 {
-  font-weight: 700;
-}
-
-.il-free-identity-copy p,
-.il-free-personal-copy p {
-  font-weight: 500;
-}
-
-.il-free-whatsapp {
-  font-weight: 700;
-}
-
-.il-free-quick-actions strong {
-  font-weight: 600;
-}
-
-.il-free-vcard {
-  font-weight: 650;
-}
-
-.il-free-section-label {
-  font-weight: 700;
-}
-
-.il-free-section h2 {
-  font-weight: 600;
-}
-
-.il-free-services h3 {
-  font-weight: 600;
-}
-
-.il-free-portfolio__header strong {
-  font-weight: 650;
-}
-
-.il-free-custom-links__title strong {
-  font-weight: 650;
-}
-
-.il-free-link-pill {
-  font-weight: 600;
-}
-
-.il-free-share button {
-  font-weight: 600;
-}
-
-.il-free-footer a {
-  font-weight: 500;
-}
-
-.il-free-footer a strong {
-  font-weight: 650;
-}
-
-/*
- * Separación coherente entre Sobre mí,
- * Portafolio y Servicios.
- */
 
 .il-free-about + .il-free-portfolio {
   margin-top: 0;
@@ -1362,32 +1233,30 @@
   padding-top: 30px;
 }
 
-/* INTAP LINK GRATIS V4 — FIN */
+.il-free-portfolio__header {
+  justify-content: flex-start;
+}
 
-/* INTAP LINK GRATIS V5 — INICIO */
+/* Carrusel completamente automático */
 
-/*
- * Semibold real para los títulos.
- * !important evita que reglas anteriores o estilos globales
- * vuelvan a colocarlos en Bold o Black.
- */
+.il-free-portfolio__track,
+.il-free-portfolio__track:hover,
+.il-free-portfolio__track:focus-within {
+  animation-play-state: running;
+}
+
+/* Semibold uniforme */
 
 .il-free-gallery__header h1,
 .il-free-preview-card__content h2,
 .il-free-identity-copy h1,
 .il-free-personal-copy h1,
 .il-free-section h2,
-.il-free-services h3,
+.il-free-service-card h3,
 .il-free-portfolio__header strong,
-.il-free-custom-links__title strong {
-  font-weight: 600 !important;
-}
-
+.il-free-custom-links__title strong,
 .il-free-section-label,
-.il-free-preview-card__tag {
-  font-weight: 600 !important;
-}
-
+.il-free-preview-card__tag,
 .il-free-whatsapp,
 .il-free-vcard,
 .il-free-quick-actions strong,
@@ -1396,154 +1265,56 @@
   font-weight: 600 !important;
 }
 
-/*
- * Cards completas enlazadas a WhatsApp.
- */
+.il-free-identity-copy p,
+.il-free-personal-copy p {
+  font-weight: 500;
+}
 
-.il-free-service-card {
+/* Servicios: imagen o icono, contenido y CTA WhatsApp */
+
+.il-free-services {
+  align-items: stretch;
+}
+
+.il-free-services > a.il-free-service-card,
+.il-free-services > a.il-free-service-card:link,
+.il-free-services > a.il-free-service-card:visited,
+.il-free-services > a.il-free-service-card:hover,
+.il-free-services > a.il-free-service-card:active {
   position: relative;
-  min-height: 148px;
-  padding: 17px 17px 48px;
-  display: block;
-  box-sizing: border-box;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--il-free-line);
-  border-radius: 17px;
-  background: var(--il-free-surface, #ffffff);
-  color: var(--il-free-ink);
+  border-radius: 20px;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: var(--il-free-ink) !important;
   text-decoration: none;
-  box-shadow: 0 8px 22px rgba(15, 35, 75, .06);
+  box-shadow: 0 8px 24px rgba(15, 35, 75, .05);
   transition:
     transform .18s ease,
     border-color .18s ease,
     box-shadow .18s ease;
 }
 
-.il-free-service-card:hover {
+.il-free-services > a.il-free-service-card:hover {
   transform: translateY(-2px);
   border-color: color-mix(
     in srgb,
-    var(--il-free-green) 42%,
+    var(--il-free-green) 28%,
     var(--il-free-line)
   );
-  box-shadow: 0 13px 28px rgba(15, 35, 75, .10);
+  box-shadow: 0 14px 30px rgba(15, 35, 75, .10);
 }
 
-.il-free-service-card:active {
+.il-free-services > a.il-free-service-card:active {
   transform: scale(.985);
 }
 
-.il-free-service-card:focus-visible {
-  outline: 3px solid color-mix(
-    in srgb,
-    var(--il-free-green) 32%,
-    transparent
-  );
-  outline-offset: 3px;
-}
-
-.il-free-service-card__icon {
-  width: 39px;
-  height: 39px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: color-mix(
-    in srgb,
-    var(--il-free-green) 14%,
-    #ffffff
-  );
-  color: var(--il-free-green-dark);
-  font-size: 17px;
-}
-
-.il-free-service-card h3 {
-  margin: 14px 0 6px;
-  color: var(--il-free-ink);
-  font-size: 14px;
-  font-weight: 600 !important;
-}
-
-.il-free-service-card p {
-  margin: 0;
-  color: var(--il-free-muted);
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.5;
-}
-
-.il-free-service-card__whatsapp {
-  position: absolute;
-  right: 15px;
-  bottom: 14px;
-  width: 29px;
-  height: 29px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--il-free-green);
-  color: #ffffff;
-  font-size: 14px;
-  box-shadow: 0 6px 14px color-mix(
-    in srgb,
-    var(--il-free-green) 28%,
-    transparent
-  );
-}
-
-/*
- * Evitar que los estilos antiguos de article
- * interfieran con las nuevas cards enlazadas.
- */
-
-.il-free-services {
-  align-items: stretch;
-}
-
-/* INTAP LINK GRATIS V5 — FIN */
-
-/* INTAP LINK GRATIS V6 — SERVICES START */
-
-/*
-  Cards de servicios estilo limpio:
-  - sin bloque azul
-  - imagen o icono
-  - título + descripción
-  - CTA Contactar
-*/
-
-.il-free-services {
-  align-items: stretch;
-}
-
-.il-free-service-card {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid var(--il-free-line);
-  background: #ffffff !important;
-  color: var(--il-free-ink) !important;
-  text-decoration: none;
-  box-shadow: 0 8px 24px rgba(15, 35, 75, .05);
-  transition:
-    transform .18s ease,
-    box-shadow .18s ease,
-    border-color .18s ease;
-}
-
-.il-free-service-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(15, 35, 75, .10);
-  border-color: color-mix(
-    in srgb,
-    var(--il-free-green) 28%,
-    var(--il-free-line)
-  );
-}
-
-.il-free-service-card:focus-visible {
+.il-free-services > a.il-free-service-card:focus-visible {
   outline: 3px solid color-mix(
     in srgb,
     var(--il-free-green) 30%,
@@ -1555,15 +1326,16 @@
 .il-free-service-card__media {
   width: 100%;
   aspect-ratio: 16 / 10;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(248, 251, 249, 1) 0%,
-      rgba(239, 245, 241, 1) 100%
-    );
   display: grid;
   place-items: center;
   overflow: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      #f7fbf8 0%,
+      #eef5f1 100%
+    ) !important;
+  background-color: #f3f8f5 !important;
 }
 
 .il-free-service-card__media img {
@@ -1583,9 +1355,9 @@
 .il-free-service-card__icon {
   width: 58px;
   height: 58px;
-  border-radius: 16px;
   display: grid;
   place-items: center;
+  border-radius: 16px;
   background: color-mix(
     in srgb,
     var(--il-free-green) 14%,
@@ -1598,24 +1370,29 @@
 .il-free-service-card__body {
   padding: 16px 16px 18px;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 10px;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: var(--il-free-ink) !important;
 }
 
 .il-free-service-card h3 {
   margin: 0;
+  color: var(--il-free-ink) !important;
   font-size: 14px;
   line-height: 1.3;
-  font-weight: 600 !important;
-  color: var(--il-free-green-dark);
 }
 
 .il-free-service-card p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--il-free-muted);
   min-height: 54px;
+  margin: 0;
+  color: var(--il-free-muted) !important;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
 }
 
 .il-free-service-card__cta {
@@ -1626,128 +1403,45 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 999px;
+  box-sizing: border-box;
   border: 1px solid color-mix(
     in srgb,
     var(--il-free-green) 55%,
     transparent
-  );
-  background: #ffffff;
-  color: var(--il-free-green);
+  ) !important;
+  border-radius: 999px;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: var(--il-free-green-dark) !important;
   font-size: 13px;
   font-weight: 600;
-  box-sizing: border-box;
 }
 
 .il-free-service-card__cta svg {
   font-size: 15px;
 }
 
-/*
-  Refuerzo de títulos en semibold.
-*/
+/* Marca de agua final */
 
-.il-free-section h2,
-.il-free-service-card h3,
-.il-free-custom-links__title strong,
-.il-free-portfolio__header strong {
-  font-weight: 600 !important;
+.il-free-footer {
+  min-height: 68px;
+  padding: 14px 18px;
 }
 
-/* INTAP LINK GRATIS V6 — SERVICES END */
-
-/* INTAP LINK GRATIS V7 — WHITE SERVICES START */
-
-/*
- * Neutralización definitiva del fondo anterior.
- * Se aumenta la especificidad para superar las reglas heredadas.
- */
-
-.il-free-page
-.il-free-profile
-.il-free-content
-.il-free-services
-> a.il-free-service-card,
-.il-free-page
-.il-free-profile
-.il-free-content
-.il-free-services
-> a.il-free-service-card:link,
-.il-free-page
-.il-free-profile
-.il-free-content
-.il-free-services
-> a.il-free-service-card:visited,
-.il-free-page
-.il-free-profile
-.il-free-content
-.il-free-services
-> a.il-free-service-card:hover,
-.il-free-page
-.il-free-profile
-.il-free-content
-.il-free-services
-> a.il-free-service-card:active {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  background-image: none !important;
-  color: var(--il-free-ink) !important;
+.il-free-footer a {
+  color: #8190a5;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
 }
 
-/*
- * El cuerpo también se fuerza a blanco para evitar
- * que una regla previa coloree solamente la zona inferior.
- */
-
-.il-free-page
-.il-free-profile
-.il-free-content
-.il-free-service-card
-.il-free-service-card__body {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  background-image: none !important;
-  color: var(--il-free-ink) !important;
+.il-free-footer a strong {
+  margin-left: 3px;
+  color: var(--il-free-blue);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
-/*
- * Mantener la zona de imagen o icono con fondo suave.
- */
-
-.il-free-page
-.il-free-service-card
-.il-free-service-card__media {
-  background:
-    linear-gradient(
-      180deg,
-      #f7fbf8 0%,
-      #eef5f1 100%
-    ) !important;
-  background-color: #f3f8f5 !important;
-}
-
-/*
- * Colores legibles dentro del card blanco.
- */
-
-.il-free-page .il-free-service-card h3 {
-  color: var(--il-free-ink) !important;
-  font-weight: 600 !important;
-}
-
-.il-free-page .il-free-service-card p {
-  color: var(--il-free-muted) !important;
-}
-
-.il-free-page .il-free-service-card__cta {
-  background: #ffffff !important;
-  background-color: #ffffff !important;
-  color: var(--il-free-green-dark) !important;
-  border-color: color-mix(
-    in srgb,
-    var(--il-free-green) 55%,
-    transparent
-  ) !important;
-}
-
-/* INTAP LINK GRATIS V7 — WHITE SERVICES END */
+/* INTAP LINK GRATIS V8 — CONSOLIDATED END */
