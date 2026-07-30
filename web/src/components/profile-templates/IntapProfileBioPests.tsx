@@ -38,11 +38,11 @@ const BIOPESTS = {
   address:
     'Av. Gustavo Mejía Ricart #226, Piso 4, Oficina 405, Distrito Nacional, República Dominicana.',
   logoGreen:
-    '/assets/biopestrd/brand/biopests-logo-green.png',
+    '/assets/biopestrd/brand/biopests-logo-green-v2.png',
   logoWhite:
-    '/assets/biopestrd/brand/biopests-logo-white.png',
+    '/assets/biopestrd/brand/biopests-logo-white-v2.png',
   logoBlack:
-    '/assets/biopestrd/brand/biopests-logo-black.png',
+    '/assets/biopestrd/brand/biopests-logo-black-v2.png',
 }
 
 const HERO_IMAGES = [
