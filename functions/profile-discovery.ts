@@ -945,11 +945,11 @@ export const STATIC_PROFILE_DISCOVERY: Record<
   biopestrd: {
     slug: 'biopestrd',
     title:
-      'BioPests | Manejo Inteligente de Plagas',
+      'BioPests | Manejo Integral de Plagas',
     name: 'BioPests',
     alternateName: [
       'BioPests RD',
-      'BioPests Manejo Inteligente de Plagas',
+      'BioPests Manejo Integral de Plagas',
     ],
     description:
       'Soluciones profesionales para prevenir, controlar y monitorear plagas en entornos más seguros y sostenibles.',
@@ -1017,7 +1017,7 @@ export const STATIC_PROFILE_DISCOVERY: Record<
       'desinfección',
       'inocuidad',
       'BioPests',
-      'manejo inteligente de plagas',
+      'manejo integral de plagas',
     ],
     lastUpdated: '2026-07-24',
   },

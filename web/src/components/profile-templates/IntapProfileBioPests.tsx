@@ -23,7 +23,7 @@ import './IntapProfileBioPests.css'
 
 const BIOPESTS = {
   name: 'BioPests',
-  tagline: 'Manejo Inteligente de Plagas',
+  tagline: 'Manejo Integral de Plagas',
   headline:
     'Soluciones empresariales para prevenir, controlar y monitorear plagas.',
   description:
@@ -37,7 +37,12 @@ const BIOPESTS = {
   instagramUrl: 'https://www.instagram.com/biopestsrd/',
   address:
     'Av. Gustavo Mejía Ricart #226, Piso 4, Oficina 405, Distrito Nacional, República Dominicana.',
-  logo: '/assets/biopestrd/brand/biopests-logo-green.png',
+  logoGreen:
+    '/assets/biopestrd/brand/biopests-logo-green.png',
+  logoWhite:
+    '/assets/biopestrd/brand/biopests-logo-white.png',
+  logoBlack:
+    '/assets/biopestrd/brand/biopests-logo-black.png',
 }
 
 const HERO_IMAGES = [
@@ -792,7 +797,7 @@ export default function IntapProfileBioPests() {
           <div className="biopestsBootLogoWrap">
             <img
               className="biopestsBootLogo"
-              src={BIOPESTS.logo}
+              src={BIOPESTS.logoGreen}
               alt="BioPests"
               loading="eager"
               decoding="sync"
@@ -839,7 +844,7 @@ export default function IntapProfileBioPests() {
         </section>
 
         <div className="biopests-logo">
-          <img src={BIOPESTS.logo} alt="BioPests" />
+          <img src={BIOPESTS.logoGreen} alt="BioPests" />
         </div>
 
         <section className="biopests-identity">
@@ -1478,7 +1483,7 @@ export default function IntapProfileBioPests() {
         </section>
 
         <footer className="biopests-footer">
-          <img src={BIOPESTS.logo} alt="BioPests" />
+          <img src={BIOPESTS.logoGreen} alt="BioPests" />
           <strong>{BIOPESTS.tagline}</strong>
           <span>Santo Domingo, República Dominicana</span>
           <small>Perfil digital creado por INTAP LINK</small>
