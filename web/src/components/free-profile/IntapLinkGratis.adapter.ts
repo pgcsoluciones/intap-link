@@ -1,4 +1,5 @@
 import type {
+  FreeProfileAppearanceColors,
   FreeProfileData,
   FreeProfileLayoutId,
   FreeProfileService,
@@ -8,6 +9,7 @@ import type {
 export type FreeProfileAdapterResult = {
   profile: FreeProfileData
   layout: FreeProfileLayoutId
+  colors: FreeProfileAppearanceColors
 }
 
 type UnknownRecord = Record<string, unknown>
@@ -311,6 +313,188 @@ function resolveCustomLinks(
     .filter((link) => Boolean(link.url))
 }
 
+
+const DEFAULT_FREE_PROFILE_COLORS:
+  FreeProfileAppearanceColors = {
+    primary: '#071f5f',
+    secondary: '#0b61c9',
+    accent: '#07966a',
+    button: '#10b981',
+    background: '#eaf0f7',
+    surface: '#ffffff',
+    text: '#11213d',
+    heroGradient: '#071f5f',
+  }
+
+function normalizeHexColor(
+  value: string,
+): string {
+  const trimmed = value.trim()
+
+  if (/^#[0-9a-f]{6}$/i.test(trimmed)) {
+    return trimmed
+  }
+
+  if (/^#[0-9a-f]{3}$/i.test(trimmed)) {
+    return (
+      '#' +
+      trimmed
+        .slice(1)
+        .split('')
+        .map((character) => character.repeat(2))
+        .join('')
+    )
+  }
+
+  return ''
+}
+
+function pickColor(
+  fallback: string,
+  ...candidates: string[]
+): string {
+  for (const candidate of candidates) {
+    const color = normalizeHexColor(candidate)
+
+    if (color) {
+      return color
+    }
+  }
+
+  return fallback
+}
+
+function escapeSvgText(
+  value: string,
+): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function resolveInitials(
+  name: string,
+): string {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (parts.length === 0) {
+    return 'IL'
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('')
+}
+
+function buildAvatarPlaceholder(
+  name: string,
+  colors: FreeProfileAppearanceColors,
+): string {
+  const initials = escapeSvgText(
+    resolveInitials(name),
+  )
+
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" ` +
+    `width="600" height="600" viewBox="0 0 600 600">` +
+    `<rect width="600" height="600" fill="${colors.background}"/>` +
+    `<circle cx="300" cy="300" r="230" fill="${colors.primary}"/>` +
+    `<text x="300" y="335" text-anchor="middle" ` +
+    `font-family="Arial, sans-serif" font-size="170" ` +
+    `font-weight="700" fill="#ffffff">${initials}</text>` +
+    `</svg>`
+
+  return (
+    'data:image/svg+xml;charset=UTF-8,' +
+    encodeURIComponent(svg)
+  )
+}
+
+export function resolveFreeProfileAppearanceColors(
+  payload: unknown,
+): FreeProfileAppearanceColors {
+  const data = unwrapProfilePayload(payload)
+
+  const templateData = readObject(
+    data,
+    'templateData',
+  )
+
+  const appearance = readObject(
+    templateData,
+    'appearance',
+  )
+
+  const brandColor = pickColor(
+    DEFAULT_FREE_PROFILE_COLORS.primary,
+    readString(
+      data,
+      'accentColor',
+      'accent_color',
+    ),
+  )
+
+  return {
+    primary: pickColor(
+      brandColor,
+      readString(appearance, 'primary'),
+      readString(templateData, 'primary_color'),
+    ),
+
+    secondary: pickColor(
+      brandColor,
+      readString(appearance, 'secondary'),
+      readString(templateData, 'secondary_color'),
+    ),
+
+    accent: pickColor(
+      brandColor,
+      readString(appearance, 'accent'),
+      readString(templateData, 'accent_color'),
+    ),
+
+    button: pickColor(
+      brandColor,
+      readString(appearance, 'button'),
+      readString(templateData, 'button_color'),
+    ),
+
+    background: pickColor(
+      DEFAULT_FREE_PROFILE_COLORS.background,
+      readString(appearance, 'background'),
+      readString(templateData, 'background_color'),
+    ),
+
+    surface: pickColor(
+      DEFAULT_FREE_PROFILE_COLORS.surface,
+      readString(appearance, 'surface'),
+      readString(templateData, 'surface_color'),
+    ),
+
+    text: pickColor(
+      DEFAULT_FREE_PROFILE_COLORS.text,
+      readString(appearance, 'text'),
+      readString(templateData, 'text_color'),
+    ),
+
+    heroGradient: pickColor(
+      brandColor,
+      readString(appearance, 'heroGradient'),
+      readString(
+        templateData,
+        'hero_gradient',
+      ),
+    ),
+  }
+}
+
 function isFreeProfileLayoutId(
   value: string,
 ): value is FreeProfileLayoutId {
@@ -382,6 +566,9 @@ export function adaptPublicProfileApiResponse(
     readString(data, 'name') ||
     slug
 
+  const colors =
+    resolveFreeProfileAppearanceColors(data)
+
   const whatsappLink = findLinkUrl(
     links,
     isWhatsAppLink,
@@ -426,11 +613,16 @@ export function adaptPublicProfileApiResponse(
     name.split(/\s+/)[0] ||
     name
 
-  const portrait = readString(
-    data,
-    'avatarUrl',
-    'avatar_url',
-  )
+  const portrait =
+    readString(
+      data,
+      'avatarUrl',
+      'avatar_url',
+    ) ||
+    buildAvatarPlaceholder(
+      name,
+      colors,
+    )
 
   const hero =
     readString(
@@ -453,6 +645,8 @@ export function adaptPublicProfileApiResponse(
 
   return {
     layout: resolveFreeProfileLayout(data),
+
+    colors,
 
     profile: {
       id:

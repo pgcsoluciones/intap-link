@@ -40,6 +40,10 @@ function portfolioWhatsappUrl(
   profile: FreeProfileData,
   portfolioTitle?: string,
 ) {
+  if (!profile.phone) {
+    return ''
+  }
+
   const greeting =
     `Hola ${profile.whatsappGreetingName},`
 
@@ -57,6 +61,10 @@ function serviceWhatsappUrl(
   profile: FreeProfileData,
   serviceTitle: string,
 ) {
+  if (!profile.phone) {
+    return ''
+  }
+
   const greeting =
     `Hola ${profile.whatsappGreetingName},`
 
@@ -166,6 +174,15 @@ export default function IntapLinkGratisProfile({
     FREE_PROFILE_LIMITS.maxPortfolioImages,
   )
 
+  const hasPhone = Boolean(profile.phone)
+  const hasInstagram = Boolean(profile.instagram)
+  const hasLocation = Boolean(profile.location)
+
+  const hasQuickActions =
+    hasPhone ||
+    hasInstagram ||
+    hasLocation
+
   const cssVariables = {
     '--il-free-blue': colors.primary,
     '--il-free-blue-2': colors.secondary,
@@ -218,10 +235,14 @@ export default function IntapLinkGratisProfile({
       'VERSION:3.0',
       `FN:${profile.name}`,
       `TITLE:${profile.role}`,
-      `TEL:${profile.phone}`,
+      profile.phone
+        ? `TEL:${profile.phone}`
+        : '',
       `URL:${window.location.href}`,
       'END:VCARD',
-    ].join('\n')
+    ]
+      .filter(Boolean)
+      .join('\n')
 
     const blob = new Blob([content], {
       type: 'text/vcard;charset=utf-8',
@@ -257,49 +278,59 @@ export default function IntapLinkGratisProfile({
         />
 
         <div className="il-free-content">
-          <a
-            href={portfolioWhatsappUrl(profile)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="il-free-whatsapp"
-          >
-            <FaWhatsapp />
-            <span>{profile.whatsappCtaLabel}</span>
-          </a>
-
-          <section
-            className="il-free-quick-actions"
-            aria-label="Enlaces rápidos"
-          >
-            <a href={`tel:+${profile.phone}`}>
-              <span>
-                <FaPhoneAlt />
-              </span>
-              <strong>Llamar</strong>
-            </a>
-
+          {hasPhone && (
             <a
-              href={profile.instagram}
+              href={portfolioWhatsappUrl(profile)}
               target="_blank"
               rel="noopener noreferrer"
+              className="il-free-whatsapp"
             >
-              <span>
-                <FaInstagram />
-              </span>
-              <strong>Instagram</strong>
+              <FaWhatsapp />
+              <span>{profile.whatsappCtaLabel}</span>
             </a>
+          )}
 
-            <a
-              href={profile.location}
-              target="_blank"
-              rel="noopener noreferrer"
+          {hasQuickActions && (
+            <section
+              className="il-free-quick-actions"
+              aria-label="Enlaces rápidos"
             >
-              <span>
-                <FaMapMarkerAlt />
-              </span>
-              <strong>Ubicación</strong>
-            </a>
-          </section>
+              {hasPhone && (
+                <a href={`tel:+${profile.phone}`}>
+                  <span>
+                    <FaPhoneAlt />
+                  </span>
+                  <strong>Llamar</strong>
+                </a>
+              )}
+
+              {hasInstagram && (
+                <a
+                  href={profile.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>
+                    <FaInstagram />
+                  </span>
+                  <strong>Instagram</strong>
+                </a>
+              )}
+
+              {hasLocation && (
+                <a
+                  href={profile.location}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>
+                    <FaMapMarkerAlt />
+                  </span>
+                  <strong>Ubicación</strong>
+                </a>
+              )}
+            </section>
+          )}
 
           <button
             type="button"
@@ -343,12 +374,16 @@ export default function IntapLinkGratisProfile({
                   (item, index) => (
                     <a
                       key={`${item.id}-${index}`}
-                      href={portfolioWhatsappUrl(
-                        profile,
-                        item.title,
-                      )}
+                      href={
+                        portfolioWhatsappUrl(
+                          profile,
+                          item.title,
+                        ) ||
+                        undefined
+                      }
                       target="_blank"
                       rel="noopener noreferrer"
+                      aria-disabled={!hasPhone}
                     >
                       <img
                         src={item.image}
@@ -357,9 +392,11 @@ export default function IntapLinkGratisProfile({
 
                       <span>{item.title}</span>
 
-                      <i>
-                        <FaWhatsapp />
-                      </i>
+                      {hasPhone && (
+                        <i>
+                          <FaWhatsapp />
+                        </i>
+                      )}
                     </a>
                   ),
                 )}
@@ -378,16 +415,22 @@ export default function IntapLinkGratisProfile({
               {profile.services.map((service) => (
                 <a
                   key={service.id}
-                  href={serviceWhatsappUrl(
-                    profile,
-                    service.title,
-                  )}
+                  href={
+                    serviceWhatsappUrl(
+                      profile,
+                      service.title,
+                    ) ||
+                    undefined
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="il-free-service-card"
+                  aria-disabled={!hasPhone}
                   aria-label={
-                    `Contactar por WhatsApp sobre ` +
-                    service.title
+                    hasPhone
+                      ? `Contactar por WhatsApp sobre ` +
+                        service.title
+                      : service.title
                   }
                 >
                   <div className="il-free-service-card__media">
@@ -412,13 +455,15 @@ export default function IntapLinkGratisProfile({
                     <h3>{service.title}</h3>
                     <p>{service.description}</p>
 
-                    <span
-                      className="il-free-service-card__cta"
-                      aria-hidden="true"
-                    >
-                      <FaWhatsapp />
-                      Contactar
-                    </span>
+                    {hasPhone && (
+                      <span
+                        className="il-free-service-card__cta"
+                        aria-hidden="true"
+                      >
+                        <FaWhatsapp />
+                        Contactar
+                      </span>
+                    )}
                   </div>
                 </a>
               ))}

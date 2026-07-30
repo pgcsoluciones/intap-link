@@ -6,6 +6,10 @@ import IntapProfileJasonV3 from './profile-templates/IntapProfileJasonV3'
 import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
 import IntapProfile1AEventos from './profile-templates/IntapProfile1AEventos'
 import IntapProfileRentaoRd from './profile-templates/IntapProfileRentaoRd'
+import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
+import {
+  adaptPublicProfileApiResponse,
+} from './free-profile/IntapLinkGratis.adapter'
 
 declare global {
   interface Window {
@@ -73,6 +77,10 @@ interface PublicData {
   slug: string
   planId: string
   themeId: string
+  layout_id?:
+    | 'impacto'
+    | 'personal'
+    | 'esencial'
   accentColor?: string
   buttonStyle?: string
   blocksOrder?: string[]
@@ -2207,6 +2215,19 @@ export default function PublicProfile() {
 
   if (data.slug === 'rentaord') {
     return <IntapProfileRentaoRd profile={publicProfileV2} />
+  }
+
+  if (data.planId === 'free') {
+    const freeProfile =
+      adaptPublicProfileApiResponse(data)
+
+    return (
+      <IntapLinkGratisProfile
+        profile={freeProfile.profile}
+        layout={freeProfile.layout}
+        colors={freeProfile.colors}
+      />
+    )
   }
 
   return <IntapProfileV2 profile={publicProfileV2} />
