@@ -416,7 +416,7 @@ me.get('/', async (c) => {
   const row = await c.env.DB.prepare(
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
             p.avatar_url, p.category, p.subcategory, p.is_published, p.theme_id,
-            p.accent_color, p.button_style,
+            p.layout_id, p.accent_color, p.button_style,
             p.template_id, p.template_data, p.plan_id
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
@@ -549,8 +549,24 @@ me.post('/profile/claim', async (c) => {
   const profileId = crypto.randomUUID()
   try {
     await c.env.DB.prepare(
-      `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
-       VALUES (?, ?, ?, 'free', 'default', 0)`
+      `INSERT INTO profiles (
+         id,
+         user_id,
+         slug,
+         plan_id,
+         theme_id,
+         layout_id,
+         is_published
+       )
+       VALUES (
+         ?,
+         ?,
+         ?,
+         'free',
+         'default',
+         'esencial',
+         0
+       )`
     ).bind(profileId, userId, slug).run()
   } catch (e: any) {
     console.error('[POST /me/profile/claim] D1 error:', e)
@@ -578,6 +594,34 @@ me.put('/profile', async (c) => {
   const theme_id = body.theme_id !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
+
+  const VALID_FREE_LAYOUTS = [
+    'impacto',
+    'personal',
+    'esencial',
+  ]
+
+  const requested_layout_id =
+    body.layout_id !== undefined
+      ? String(body.layout_id)
+      : undefined
+
+  if (
+    requested_layout_id !== undefined &&
+    !VALID_FREE_LAYOUTS.includes(requested_layout_id)
+  ) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'layout_id inválido. Usa impacto, personal o esencial.',
+      },
+      400
+    )
+  }
+
+  const layout_id = requested_layout_id
+
   const VALID_TEMPLATES = ['restaurante', 'servicios', 'eventos', 'personal']
   const template_id = body.template_id !== undefined
     ? (VALID_TEMPLATES.includes(String(body.template_id)) ? String(body.template_id) : null)
@@ -598,12 +642,15 @@ me.put('/profile', async (c) => {
            is_published  = COALESCE(?7, is_published),
            template_id   = COALESCE(?9, template_id),
            template_data = COALESCE(?10, template_data),
+           layout_id     = COALESCE(?11, layout_id),
            updated_at    = datetime('now')
        WHERE id = ?8`
     ).bind(
       name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null,
       theme_id ?? null, is_published ?? null, (profile as any).id,
-      template_id ?? null, template_data ?? null,
+      template_id ?? null,
+      template_data ?? null,
+      layout_id ?? null,
     ).run()
   } catch (e: any) {
     console.error('[PUT /me/profile] D1 error:', e)
@@ -2036,7 +2083,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, is_published, is_active, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data, category, subcategory, updated_at FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, layout_id, is_published, is_active, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data, category, subcategory, updated_at FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -2155,6 +2202,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       slug: (profile as any).slug,
       planId: (profile as any).plan_id,
       themeId: (profile as any).theme_id,
+      layout_id: (profile as any).layout_id ?? 'esencial',
       accentColor: (profile as any).accent_color ?? '#3B82F6',
       buttonStyle: (profile as any).button_style ?? 'rounded',
       blocksOrder,
