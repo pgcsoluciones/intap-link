@@ -1,0 +1,45 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700"
+     xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#061E5A"/>
+      <stop offset="0.52" stop-color="#064DA3"/>
+      <stop offset="1" stop-color="#00A67A"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity=".05"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="700" fill="url(#bg)"/>
+  <circle cx="970" cy="115" r="260" fill="#4FE2B3" opacity=".16"/>
+  <circle cx="170" cy="620" r="330" fill="#0A2C79" opacity=".38"/>
+
+  <g opacity=".92">
+    <rect x="88" y="210" width="270" height="420" rx="34"
+          fill="url(#glass)" stroke="#FFFFFF" stroke-opacity=".25"/>
+    <rect x="390" y="110" width="330" height="520" rx="34"
+          fill="url(#glass)" stroke="#FFFFFF" stroke-opacity=".25"/>
+    <rect x="752" y="260" width="360" height="370" rx="34"
+          fill="url(#glass)" stroke="#FFFFFF" stroke-opacity=".25"/>
+  </g>
+
+  <g fill="#FFFFFF" opacity=".28">
+    <rect x="130" y="260" width="78" height="62" rx="10"/>
+    <rect x="236" y="260" width="78" height="62" rx="10"/>
+    <rect x="130" y="348" width="78" height="62" rx="10"/>
+    <rect x="236" y="348" width="78" height="62" rx="10"/>
+
+    <rect x="445" y="175" width="92" height="72" rx="12"/>
+    <rect x="570" y="175" width="92" height="72" rx="12"/>
+    <rect x="445" y="280" width="92" height="72" rx="12"/>
+    <rect x="570" y="280" width="92" height="72" rx="12"/>
+
+    <rect x="815" y="315" width="102" height="76" rx="12"/>
+    <rect x="952" y="315" width="102" height="76" rx="12"/>
+  </g>
+
+  <path d="M0 600 C260 520 440 690 720 590 C930 515 1060 560 1200 500 V700 H0Z"
+        fill="#071B43" opacity=".45"/>
+</svg>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import PublicProfile from './components/PublicProfile'
+import IntapLinkGratisDemo from './components/free-profile/IntapLinkGratisDemo'
 import MarketingLanding from './components/marketing/MarketingLanding'
 
 function RootRoute() {
@@ -14,6 +15,14 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<RootRoute />} />
+        <Route
+          path="/demo/intap-link-gratis"
+          element={<IntapLinkGratisDemo />}
+        />
+        <Route
+          path="/demo/intap-link-gratis/:layoutId"
+          element={<IntapLinkGratisDemo />}
+        />
         <Route path="/:slug" element={<PublicProfile />} />
       </Routes>
     </BrowserRouter>

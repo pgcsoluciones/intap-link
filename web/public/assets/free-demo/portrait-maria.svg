@@ -1,0 +1,59 @@
+<svg width="900" height="1100" viewBox="0 0 900 1100"
+     xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="portraitBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#DDF8EF"/>
+      <stop offset=".55" stop-color="#EAF1FF"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="jacket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#061E5A"/>
+      <stop offset="1" stop-color="#0D5AB8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="1100" fill="url(#portraitBg)"/>
+  <circle cx="675" cy="170" r="210" fill="#49D7A7" opacity=".18"/>
+  <circle cx="150" cy="920" r="310" fill="#2C67D7" opacity=".10"/>
+
+  <ellipse cx="450" cy="1020" rx="335" ry="85"
+           fill="#123A72" opacity=".12"/>
+
+  <path d="M215 1100 C225 760 305 655 450 655
+           C595 655 675 760 685 1100Z"
+        fill="url(#jacket)"/>
+
+  <path d="M365 690 L450 820 L535 690
+           C510 660 486 644 450 644
+           C414 644 390 660 365 690Z"
+        fill="#FFFFFF"/>
+
+  <rect x="400" y="555" width="100" height="150" rx="48"
+        fill="#C7835F"/>
+
+  <ellipse cx="450" cy="415" rx="185" ry="225"
+           fill="#D89470"/>
+
+  <path d="M270 405
+           C260 205 340 105 470 115
+           C615 126 666 255 620 440
+           C590 310 500 250 375 290
+           C335 305 302 345 270 405Z"
+        fill="#201813"/>
+
+  <path d="M285 400
+           C260 355 265 300 296 260
+           C286 360 315 440 350 500
+           C305 488 278 455 285 400Z"
+        fill="#201813"/>
+
+  <circle cx="385" cy="410" r="13" fill="#2C211C"/>
+  <circle cx="515" cy="410" r="13" fill="#2C211C"/>
+
+  <path d="M397 505 C430 535 470 535 505 505"
+        fill="none" stroke="#8A3E3E" stroke-width="14"
+        stroke-linecap="round"/>
+
+  <circle cx="610" cy="440" r="16" fill="#E5B86C"/>
+  <circle cx="290" cy="440" r="16" fill="#E5B86C"/>
+</svg>
