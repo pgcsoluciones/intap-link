@@ -19,31 +19,23 @@ import {
   FaWhatsapp,
 } from 'react-icons/fa'
 import './IntapLinkGratisDemo.css'
-
-type LayoutId = 'impacto' | 'personal' | 'esencial'
+import {
+  DEMO_APPEARANCE_COLORS,
+  DEMO_PROFILE,
+} from './IntapLinkGratis.demo-data'
+import {
+  FREE_PROFILE_LIMITS,
+  type FreeProfileAppearanceColors,
+  type FreeProfileLayoutId,
+  type FreeProfileServiceIconKey,
+} from './IntapLinkGratis.types'
 
 type LayoutDefinition = {
-  id: LayoutId
+  id: FreeProfileLayoutId
   name: string
   description: string
   recommendedFor: string
 }
-
-type AppearanceColors = {
-  primary: string
-  secondary: string
-  accent: string
-  button: string
-  background: string
-  surface: string
-  text: string
-  heroGradient: string
-}
-
-const FREE_PROFILE_DEFAULTS = {
-  maxCustomLinks: 3,
-  maxPortfolioImages: 5,
-} as const
 
 const LAYOUTS: LayoutDefinition[] = [
   {
@@ -66,24 +58,13 @@ const LAYOUTS: LayoutDefinition[] = [
   },
 ]
 
-const DEFAULT_COLORS: AppearanceColors = {
-  primary: '#071f5f',
-  secondary: '#0b61c9',
-  accent: '#07966a',
-  button: '#10b981',
-  background: '#eaf0f7',
-  surface: '#ffffff',
-  text: '#11213d',
-  heroGradient: '#071f5f',
-}
-
 const PALETTES: Array<{
   name: string
-  colors: AppearanceColors
+  colors: FreeProfileAppearanceColors
 }> = [
   {
     name: 'INTAP',
-    colors: DEFAULT_COLORS,
+    colors: DEMO_APPEARANCE_COLORS,
   },
   {
     name: 'Elegante',
@@ -127,7 +108,7 @@ const PALETTES: Array<{
 ]
 
 const COLOR_FIELDS: Array<{
-  key: keyof AppearanceColors
+  key: keyof FreeProfileAppearanceColors
   label: string
 }> = [
   { key: 'primary', label: 'Color principal' },
@@ -140,93 +121,44 @@ const COLOR_FIELDS: Array<{
   { key: 'heroGradient', label: 'Degradado de imagen' },
 ]
 
-const PROFILE = {
-  name: 'María Pérez',
-  role: 'Asesora Inmobiliaria',
-  bio:
-    'Ayudo a personas y familias a encontrar propiedades que se adapten a sus planes, necesidades y presupuesto.',
-  phone: '18095550199',
-  instagram: 'https://instagram.com/',
-  location: 'https://maps.google.com/',
-  portrait: '/assets/free-demo/portrait-maria.svg',
-  hero: '/assets/free-demo/hero-impacto.svg',
-  services: [
-    {
-      title: 'Compra y venta',
-        image: '',
-      description: 'Orientación para comprar o vender propiedades.',
-      icon: <FaHome />,
-    },
-    {
-      title: 'Alquileres',
-        image: '',
-      description: 'Opciones residenciales y comerciales.',
-      icon: <FaKey />,
-    },
-    {
-      title: 'Inversión',
-        image: '',
-      description: 'Alternativas con potencial de crecimiento.',
-      icon: <FaChartLine />,
-    },
-    {
-      title: 'Asesoría',
-        image: '',
-      description: 'Acompañamiento durante todo el proceso.',
-      icon: <FaHandshake />,
-    },
-  ],
-  portfolio: Array.from(
-    { length: FREE_PROFILE_DEFAULTS.maxPortfolioImages },
-    (_, index) => ({
-      id: `portfolio-${index + 1}`,
-      title: [
-        'Residencial moderno',
-        'Apartamento urbano',
-        'Proyecto familiar',
-        'Inversión premium',
-        'Vivienda contemporánea',
-      ][index],
-      image: `/assets/free-demo/portfolio/portfolio-${String(index + 1).padStart(2, '0')}.svg`,
-    }),
-  ),
-  customLinks: [
-    {
-      id: 'catalogo',
-      label: 'Ver catálogo de propiedades',
-      url: 'https://example.com/catalogo',
-    },
-    {
-      id: 'agenda',
-      label: 'Agenda una consulta',
-      url: 'https://example.com/agenda',
-    },
-    {
-      id: 'proyectos',
-      label: 'Proyectos disponibles',
-      url: 'https://example.com/proyectos',
-    },
-  ],
-}
-
-function isLayoutId(value?: string): value is LayoutId {
+function isLayoutId(value?: string): value is FreeProfileLayoutId {
   return value === 'impacto' || value === 'personal' || value === 'esencial'
 }
 
 function whatsappUrl(portfolioTitle?: string) {
-  const message = portfolioTitle
-    ? `Hola María, vi "${portfolioTitle}" en tu portafolio de INTAP LINK y me gustaría recibir más información.`
-    : 'Hola María, vi tu perfil en INTAP LINK y me gustaría recibir más información.'
+  const greeting = `Hola ${DEMO_PROFILE.whatsappGreetingName},`
 
-  return `https://wa.me/${PROFILE.phone}?text=${encodeURIComponent(message)}`
+  const message = portfolioTitle
+    ? `${greeting} vi "${portfolioTitle}" en tu portafolio de INTAP LINK y me gustaría recibir más información.`
+    : `${greeting} vi tu perfil en INTAP LINK y me gustaría recibir más información.`
+
+  return `https://wa.me/${DEMO_PROFILE.phone}?text=${encodeURIComponent(message)}`
 }
 
-
 function serviceWhatsappUrl(serviceTitle: string) {
+  const greeting = `Hola ${DEMO_PROFILE.whatsappGreetingName},`
   const message =
-    `Hola María, vi el servicio "${serviceTitle}" en tu perfil de INTAP LINK y me gustaría recibir más información.`
+    `${greeting} vi el servicio "${serviceTitle}" en tu perfil de INTAP LINK y me gustaría recibir más información.`
 
-  return `https://wa.me/${PROFILE.phone}?text=${encodeURIComponent(message)}`
+  return `https://wa.me/${DEMO_PROFILE.phone}?text=${encodeURIComponent(message)}`
+}
+
+function renderServiceIcon(
+  iconKey: FreeProfileServiceIconKey,
+) {
+  switch (iconKey) {
+    case 'home':
+      return <FaHome />
+
+    case 'key':
+      return <FaKey />
+
+    case 'chart-line':
+      return <FaChartLine />
+
+    case 'handshake':
+      return <FaHandshake />
+  }
 }
 
 function DemoGallery() {
@@ -306,21 +238,21 @@ function DemoGallery() {
   )
 }
 
-function ProfileIdentity({ layout }: { layout: LayoutId }) {
+function ProfileIdentity({ layout }: { layout: FreeProfileLayoutId }) {
   if (layout === 'impacto') {
     return (
       <section className="il-free-identity il-free-identity--impacto">
         <div className="il-free-impact-hero">
-          <img src={PROFILE.hero} alt="" />
+          <img src={DEMO_PROFILE.hero} alt="" />
         </div>
 
         <div className="il-free-impact-avatar">
-          <img src={PROFILE.portrait} alt={PROFILE.name} />
+          <img src={DEMO_PROFILE.portrait} alt={DEMO_PROFILE.name} />
         </div>
 
         <div className="il-free-identity-copy">
-          <h1>{PROFILE.name}</h1>
-          <p>{PROFILE.role}</p>
+          <h1>{DEMO_PROFILE.name}</h1>
+          <p>{DEMO_PROFILE.role}</p>
         </div>
       </section>
     )
@@ -330,14 +262,14 @@ function ProfileIdentity({ layout }: { layout: LayoutId }) {
     return (
       <section className="il-free-identity il-free-identity--personal">
         <div className="il-free-personal-portrait">
-          <img src={PROFILE.portrait} alt={PROFILE.name} />
+          <img src={DEMO_PROFILE.portrait} alt={DEMO_PROFILE.name} />
           <div className="il-free-personal-gradient" />
         </div>
 
         <div className="il-free-personal-copy">
-          <span>Marca personal</span>
-          <h1>{PROFILE.name}</h1>
-          <p>{PROFILE.role}</p>
+          <span>{DEMO_PROFILE.personalBadge}</span>
+          <h1>{DEMO_PROFILE.name}</h1>
+          <p>{DEMO_PROFILE.role}</p>
         </div>
       </section>
     )
@@ -346,12 +278,12 @@ function ProfileIdentity({ layout }: { layout: LayoutId }) {
   return (
     <section className="il-free-identity il-free-identity--esencial">
       <div className="il-free-essential-avatar">
-        <img src={PROFILE.portrait} alt={PROFILE.name} />
+        <img src={DEMO_PROFILE.portrait} alt={DEMO_PROFILE.name} />
       </div>
 
       <div className="il-free-identity-copy">
-        <h1>{PROFILE.name}</h1>
-        <p>{PROFILE.role}</p>
+        <h1>{DEMO_PROFILE.name}</h1>
+        <p>{DEMO_PROFILE.role}</p>
       </div>
     </section>
   )
@@ -363,15 +295,15 @@ export default function IntapLinkGratisDemo() {
   const [copied, setCopied] = useState(false)
   const [linksOpen, setLinksOpen] = useState(false)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
-  const [colors, setColors] = useState<AppearanceColors>(DEFAULT_COLORS)
+  const [colors, setColors] = useState<FreeProfileAppearanceColors>(DEMO_APPEARANCE_COLORS)
 
   if (!isLayoutId(layoutId)) {
     return <DemoGallery />
   }
 
-  const customLinks = PROFILE.customLinks.slice(
+  const customLinks = DEMO_PROFILE.customLinks.slice(
     0,
-    FREE_PROFILE_DEFAULTS.maxCustomLinks,
+    FREE_PROFILE_LIMITS.maxCustomLinks,
   )
 
   const cssVariables = {
@@ -397,8 +329,8 @@ export default function IntapLinkGratisDemo() {
 
   async function shareProfile() {
     const shareData = {
-      title: `${PROFILE.name} | INTAP LINK`,
-      text: `Conoce el perfil de ${PROFILE.name}`,
+      title: `${DEMO_PROFILE.name} | INTAP LINK`,
+      text: `Conoce el perfil de ${DEMO_PROFILE.name}`,
       url: window.location.href,
     }
 
@@ -417,9 +349,9 @@ export default function IntapLinkGratisDemo() {
     const content = [
       'BEGIN:VCARD',
       'VERSION:3.0',
-      `FN:${PROFILE.name}`,
-      `TITLE:${PROFILE.role}`,
-      `TEL:${PROFILE.phone}`,
+      `FN:${DEMO_PROFILE.name}`,
+      `TITLE:${DEMO_PROFILE.role}`,
+      `TEL:${DEMO_PROFILE.phone}`,
       `URL:${window.location.href}`,
       'END:VCARD',
     ].join('\n')
@@ -432,7 +364,7 @@ export default function IntapLinkGratisDemo() {
     const anchor = document.createElement('a')
 
     anchor.href = url
-    anchor.download = 'maria-perez.vcf'
+    anchor.download = DEMO_PROFILE.vcardFileName
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
@@ -541,20 +473,20 @@ export default function IntapLinkGratisDemo() {
             className="il-free-whatsapp"
           >
             <FaWhatsapp />
-            <span>Escríbeme por WhatsApp</span>
+            <span>{DEMO_PROFILE.whatsappCtaLabel}</span>
           </a>
 
           <section
             className="il-free-quick-actions"
             aria-label="Enlaces rápidos"
           >
-            <a href={`tel:+${PROFILE.phone}`}>
+            <a href={`tel:+${DEMO_PROFILE.phone}`}>
               <span><FaPhoneAlt /></span>
               <strong>Llamar</strong>
             </a>
 
             <a
-              href={PROFILE.instagram}
+              href={DEMO_PROFILE.instagram}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -563,7 +495,7 @@ export default function IntapLinkGratisDemo() {
             </a>
 
             <a
-              href={PROFILE.location}
+              href={DEMO_PROFILE.location}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -585,8 +517,8 @@ export default function IntapLinkGratisDemo() {
 
           <section className="il-free-section il-free-about">
             <p className="il-free-section-label">Sobre mí</p>
-            <h2>Hagamos que tu próximo paso sea más sencillo.</h2>
-            <p>{PROFILE.bio}</p>
+            <h2>{DEMO_PROFILE.aboutTitle}</h2>
+            <p>{DEMO_PROFILE.bio}</p>
           </section>
 
           <section className="il-free-portfolio">
@@ -596,7 +528,7 @@ export default function IntapLinkGratisDemo() {
                 <div>
                   <strong>Mi portafolio</strong>
                   <small>
-                    Hasta {FREE_PROFILE_DEFAULTS.maxPortfolioImages} imágenes
+                    Hasta {FREE_PROFILE_LIMITS.maxPortfolioImages} imágenes
                   </small>
                 </div>
               </div>
@@ -605,7 +537,7 @@ export default function IntapLinkGratisDemo() {
 
             <div className="il-free-portfolio__viewport">
               <div className="il-free-portfolio__track">
-                {[...PROFILE.portfolio, ...PROFILE.portfolio].map(
+                {[...DEMO_PROFILE.portfolio, ...DEMO_PROFILE.portfolio].map(
                   (item, index) => (
                     <a
                       key={`${item.id}-${index}`}
@@ -628,9 +560,9 @@ export default function IntapLinkGratisDemo() {
             <h2>¿Cómo puedo ayudarte?</h2>
 
             <div className="il-free-services">
-              {PROFILE.services.map((service) => (
+              {DEMO_PROFILE.services.map((service) => (
                 <a
-                  key={service.title}
+                  key={service.id}
                   href={serviceWhatsappUrl(service.title)}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -647,7 +579,7 @@ export default function IntapLinkGratisDemo() {
                     ) : (
                       <div className="il-free-service-card__iconWrap">
                         <span className="il-free-service-card__icon">
-                          {service.icon}
+                          {renderServiceIcon(service.iconKey)}
                         </span>
                       </div>
                     )}
@@ -685,7 +617,7 @@ export default function IntapLinkGratisDemo() {
                 <strong>Mis enlaces</strong>
                 <small>
                   {customLinks.length} de{' '}
-                  {FREE_PROFILE_DEFAULTS.maxCustomLinks} disponibles
+                  {FREE_PROFILE_LIMITS.maxCustomLinks} disponibles
                 </small>
               </span>
 
