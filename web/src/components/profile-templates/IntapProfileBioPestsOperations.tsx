@@ -6,6 +6,7 @@ const OPERATIONS = {
   name: 'Yudeimy Timaure',
   role: 'Gerente de Operaciones',
   phoneRaw: '18297500908',
+  alternatePhoneRaw: '18292469777',
   vcardUrl:
     '/assets/biopestrd/contacts/yudeimy-timaure-biopests.vcf?v=20260731-1',
   vcardFilename: 'Yudeimy-Timaure-BioPests.vcf',
@@ -42,6 +43,7 @@ function handleLinkClick(event: MouseEvent<HTMLDivElement>) {
 
   const label = (anchor.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase()
   const href = anchor.getAttribute('href') || ''
+  const contactType = anchor.querySelector('small')?.textContent?.trim().toLowerCase() || ''
 
   if (label.includes('guardar contacto')) {
     event.preventDefault()
@@ -53,6 +55,8 @@ function handleLinkClick(event: MouseEvent<HTMLDivElement>) {
   let destination: string | null = null
   if (/https:\/\/wa\.me\/\d+/i.test(href)) {
     destination = href.replace(/https:\/\/wa\.me\/\d+/i, `https://wa.me/${OPERATIONS.phoneRaw}`)
+  } else if (contactType.includes('alternativo')) {
+    destination = `tel:+${OPERATIONS.alternatePhoneRaw}`
   } else if (href.startsWith('tel:') || label.includes('llamar')) {
     destination = `tel:+${OPERATIONS.phoneRaw}`
   }
