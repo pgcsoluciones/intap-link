@@ -2,14 +2,14 @@ import { useEffect, type MouseEvent } from 'react'
 import IntapProfileBioPests from './IntapProfileBioPests'
 import './IntapProfileBioPestsVariant.css'
 
-const MANAGER = {
-  name: 'Rene Prieto',
-  role: 'CEO',
-  phoneRaw: '18292469777',
+const OPERATIONS = {
+  name: 'Yudeimy Timaure',
+  role: 'Gerente de Operaciones',
+  phoneRaw: '18297500908',
   vcardUrl:
-    '/assets/biopestrd/contacts/rene-prieto-biopests-final.vcf?v=20260731-3',
-  vcardFilename: 'Rene-Prieto-BioPests.vcf',
-  canonicalUrl: 'https://intaprd.com/biopestsgrd',
+    '/assets/biopestrd/contacts/yudeimy-timaure-biopests.vcf?v=20260731-1',
+  vcardFilename: 'Yudeimy-Timaure-BioPests.vcf',
+  canonicalUrl: 'https://intaprd.com/biopestsvrd',
   previewImage:
     'https://intaprd.com/assets/biopestrd/values/innovacion.png?v=biopests-shared-og-v1',
 }
@@ -26,8 +26,8 @@ function upsertMeta(selector: string, attribute: 'name' | 'property', key: strin
 
 function downloadVcard() {
   const anchor = document.createElement('a')
-  anchor.href = MANAGER.vcardUrl
-  anchor.download = MANAGER.vcardFilename
+  anchor.href = OPERATIONS.vcardUrl
+  anchor.download = OPERATIONS.vcardFilename
   anchor.style.display = 'none'
   document.body.appendChild(anchor)
   anchor.click()
@@ -52,9 +52,9 @@ function handleLinkClick(event: MouseEvent<HTMLDivElement>) {
 
   let destination: string | null = null
   if (/https:\/\/wa\.me\/\d+/i.test(href)) {
-    destination = href.replace(/https:\/\/wa\.me\/\d+/i, `https://wa.me/${MANAGER.phoneRaw}`)
+    destination = href.replace(/https:\/\/wa\.me\/\d+/i, `https://wa.me/${OPERATIONS.phoneRaw}`)
   } else if (href.startsWith('tel:') || label.includes('llamar')) {
-    destination = `tel:+${MANAGER.phoneRaw}`
+    destination = `tel:+${OPERATIONS.phoneRaw}`
   }
 
   if (!destination) return
@@ -68,20 +68,20 @@ function handleLinkClick(event: MouseEvent<HTMLDivElement>) {
   }
 }
 
-export default function IntapProfileBioPestsManager() {
+export default function IntapProfileBioPestsOperations() {
   useEffect(() => {
-    const title = `${MANAGER.name} | ${MANAGER.role} de BioPests`
-    const description = `${MANAGER.name}, ${MANAGER.role} de BioPests. Manejo integral de plagas para empresas.`
+    const title = `${OPERATIONS.name} | ${OPERATIONS.role} de BioPests`
+    const description = `${OPERATIONS.name}, ${OPERATIONS.role} de BioPests. Manejo integral de plagas para empresas.`
     document.title = title
     upsertMeta('meta[name="description"]', 'name', 'description', description)
     upsertMeta('meta[property="og:title"]', 'property', 'og:title', title)
     upsertMeta('meta[property="og:description"]', 'property', 'og:description', description)
-    upsertMeta('meta[property="og:url"]', 'property', 'og:url', MANAGER.canonicalUrl)
-    upsertMeta('meta[property="og:image"]', 'property', 'og:image', MANAGER.previewImage)
+    upsertMeta('meta[property="og:url"]', 'property', 'og:url', OPERATIONS.canonicalUrl)
+    upsertMeta('meta[property="og:image"]', 'property', 'og:image', OPERATIONS.previewImage)
     upsertMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image')
     upsertMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title)
     upsertMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description)
-    upsertMeta('meta[name="twitter:image"]', 'name', 'twitter:image', MANAGER.previewImage)
+    upsertMeta('meta[name="twitter:image"]', 'name', 'twitter:image', OPERATIONS.previewImage)
 
     let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
     if (!canonical) {
@@ -89,11 +89,11 @@ export default function IntapProfileBioPestsManager() {
       canonical.rel = 'canonical'
       document.head.appendChild(canonical)
     }
-    canonical.href = MANAGER.canonicalUrl
+    canonical.href = OPERATIONS.canonicalUrl
   }, [])
 
   return (
-    <div className="biopests-person-profile" data-biopests-profile="manager" onClickCapture={handleLinkClick}>
+    <div className="biopests-person-profile" data-biopests-profile="operations" onClickCapture={handleLinkClick}>
       <IntapProfileBioPests />
     </div>
   )

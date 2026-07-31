@@ -2,10 +2,10 @@ type PagesContext = {
   next: () => Promise<Response>
 }
 
-const TITLE = 'Rene Prieto | CEO de BioPests'
+const TITLE = 'Yudeimy Timaure | Gerente de Operaciones de BioPests'
 const DESCRIPTION =
-  'Rene Prieto, CEO de BioPests. Soluciones empresariales para prevenir, controlar y monitorear plagas mediante evaluación técnica, prevención y tecnología.'
-const CANONICAL = 'https://intaprd.com/biopestsgrd'
+  'Yudeimy Timaure, Gerente de Operaciones de BioPests. Soluciones empresariales para prevenir, controlar y monitorear plagas mediante evaluación técnica, prevención y tecnología.'
+const CANONICAL = 'https://intaprd.com/biopestsvrd'
 const IMAGE =
   'https://intaprd.com/assets/biopestrd/values/innovacion.png?v=biopests-shared-og-v1'
 
@@ -35,10 +35,10 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   <script type="application/ld+json">${JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'Person',
-    name: 'Rene Prieto',
-    jobTitle: 'CEO',
+    name: 'Yudeimy Timaure',
+    jobTitle: 'Gerente de Operaciones',
     url: CANONICAL,
-    telephone: '+18292469777',
+    telephone: '+18297500908',
     worksFor: {
       '@type': 'Organization',
       name: 'BioPests',

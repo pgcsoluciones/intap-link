@@ -1,31 +1,35 @@
-.biopests-manager-profile {
+.biopests-person-profile {
   display: contents;
 }
 
-.biopests-manager-profile
+.biopests-person-profile
 .biopests-contact-list a:first-child strong,
-.biopests-manager-profile
+.biopests-person-profile
 .biopests-contact-list a:nth-child(2) strong {
   font-size: 0;
   line-height: 0;
 }
 
-.biopests-manager-profile
+.biopests-person-profile
 .biopests-contact-list a:first-child strong::after,
-.biopests-manager-profile
+.biopests-person-profile
 .biopests-contact-list a:nth-child(2) strong::after {
   font-size: 0.95rem;
   line-height: 1.25;
 }
 
-.biopests-manager-profile
-.biopests-contact-list a:first-child strong::after {
-  content: "(829) 750-0908";
-}
-
-.biopests-manager-profile
+.biopests-person-profile[data-biopests-profile="manager"]
+.biopests-contact-list a:first-child strong::after,
+.biopests-person-profile[data-biopests-profile="manager"]
 .biopests-contact-list a:nth-child(2) strong::after {
   content: "(829) 246-9777";
+}
+
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-contact-list a:first-child strong::after,
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-contact-list a:nth-child(2) strong::after {
+  content: "(829) 750-0908";
 }
 
 @media (max-width: 640px) {
