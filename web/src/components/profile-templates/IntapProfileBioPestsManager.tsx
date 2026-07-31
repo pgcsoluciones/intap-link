@@ -12,8 +12,9 @@ const MANAGER = {
   alternatePhoneRaw: '18292469777',
   email: 'grupomatyse@gmail.com',
   instagram: 'https://www.instagram.com/biopestsrd/',
-  vcardUrl: '/assets/biopestrd/contacts/rene-prieto-biopests.vcf',
-  vcardFilename: 'Rene-Prieto-BioPests.vcf',
+  vcardUrl:
+    '/assets/biopestrd/contacts/rene-prieto-biopests-v2.vcf?v=20260731-2',
+  vcardFilename: 'Rene-Prieto-BioPests-actualizado.vcf',
   canonicalUrl: 'https://intaprd.com/biopestsgrd',
   previewImage:
     'https://intaprd.com/assets/biopestrd/values/innovacion.png?v=biopests-shared-og-v1',
