@@ -1,0 +1,99 @@
+.biopests-holder-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 14px;
+  align-items: center;
+  margin: 18px 0 0;
+  padding: 15px 17px;
+  border: 1px solid rgba(75, 153, 0, 0.2);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(147, 216, 36, 0.12), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 12px 28px rgba(15, 106, 42, 0.08);
+}
+
+.biopests-holder-card span {
+  grid-column: 1 / -1;
+  color: var(--green);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.biopests-holder-card strong {
+  min-width: 0;
+  color: var(--green-dark);
+  font-size: 1.05rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.biopests-holder-card small {
+  justify-self: end;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 640px) {
+  .biopests-page .biopests-values-featured-v7 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3) {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    grid-column: auto !important;
+    grid-template-columns: none !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__media {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    aspect-ratio: 1.3 / 1 !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body {
+    display: flex !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding: 18px !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body p,
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body strong {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body strong {
+    width: 100% !important;
+    min-height: 48px !important;
+    margin-top: 15px !important;
+  }
+}
