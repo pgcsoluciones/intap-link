@@ -26,6 +26,27 @@ interface MeData {
   trial_expires_at?: string | null
   paused_features_count?: number
   recoverable_items_count?: number
+  publicationReadiness?: PublicationReadiness | null
+}
+
+interface PublicationRequirementItem {
+  key:
+    | 'identity'
+    | 'contact'
+    | 'quick_actions'
+    | 'portfolio'
+    | 'services'
+  label: string
+  complete: boolean
+  current: number
+  required: number
+  route: string
+}
+
+interface PublicationReadiness {
+  ready: boolean
+  items: PublicationRequirementItem[]
+  missing: PublicationRequirementItem[]
 }
 
 interface Stats {
@@ -40,6 +61,7 @@ export default function AdminDashboard() {
   const [stats, setStats]         = useState<Stats | null>(null)
   const [loading, setLoading]     = useState(true)
   const [publishing, setPublishing] = useState(false)
+  const [publishError, setPublishError] = useState('')
   const [slugEditing, setSlugEditing] = useState(false)
   const [newSlug, setNewSlug]       = useState('')
   const [slugSaving, setSlugSaving] = useState(false)
@@ -70,11 +92,46 @@ export default function AdminDashboard() {
 
   const togglePublished = async () => {
     if (!me) return
+
     setPublishing(true)
+    setPublishError('')
+
     const next = me.is_published ? 0 : 1
-    const res: any = await apiPut('/me/profile', { is_published: next === 1 })
-    if (res.ok) setMe({ ...me, is_published: next })
-    setPublishing(false)
+
+    try {
+      const res: any = await apiPut(
+        '/me/profile',
+        { is_published: next === 1 },
+      )
+
+      if (res.ok) {
+        setMe({
+          ...me,
+          is_published: next,
+        })
+        return
+      }
+
+      if (res.publicationReadiness) {
+        setMe({
+          ...me,
+          publicationReadiness:
+            res.publicationReadiness,
+        })
+      }
+
+      setPublishError(
+        res.message ||
+        res.error ||
+        'No se pudo cambiar el estado del perfil.',
+      )
+    } catch {
+      setPublishError(
+        'Error de conexión al publicar.',
+      )
+    } finally {
+      setPublishing(false)
+    }
   }
 
   const startSlugEdit = () => {
@@ -125,6 +182,24 @@ export default function AdminDashboard() {
   const WEB_URL    = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   const profileUrl = me?.slug ? `${WEB_URL}/${me.slug}` : null
   const previewUrl = me?.slug ? `${WEB_URL}/${me.slug}?preview=1` : null
+
+  const isFreePlan =
+    (me?.plan_code || me?.plan_id || 'free') === 'free'
+
+  const publicationReadiness =
+    me?.publicationReadiness ?? null
+
+  const canPublish =
+    !isFreePlan ||
+    publicationReadiness?.ready === true
+
+  const completedRequirements =
+    publicationReadiness?.items.filter(
+      (item) => item.complete,
+    ).length ?? 0
+
+  const totalRequirements =
+    publicationReadiness?.items.length ?? 5
 
   const navItems = [
     { emoji: '✏️', label: 'Editar perfil',           sub: 'Nombre, bio y foto',               to: '/admin/onboarding/identity' },
@@ -232,6 +307,78 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {me?.slug &&
+          isFreePlan &&
+          !publicationReadiness?.ready && (
+          <div className="bg-white rounded-2xl border border-orange-200 overflow-hidden">
+            <div className="p-4 bg-orange-50 border-b border-orange-100">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-orange-700">
+                    Completa tu perfil para publicarlo
+                  </p>
+
+                  <p className="text-xs text-orange-600 mt-1">
+                    {completedRequirements} de {totalRequirements}
+                    {' '}requisitos completados
+                  </p>
+                </div>
+
+                <span className="text-xs font-black text-orange-700 bg-white border border-orange-200 px-3 py-1.5 rounded-full">
+                  {completedRequirements}/{totalRequirements}
+                </span>
+              </div>
+            </div>
+
+            {publicationReadiness ? (
+              <div className="p-3 flex flex-col gap-2">
+                {publicationReadiness.items.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => navigate(item.route)}
+                    className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border text-left transition-colors ${
+                      item.complete
+                        ? 'bg-green-50 border-green-100'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-xs font-black ${
+                          item.complete
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-white text-slate-500 border border-slate-200'
+                        }`}
+                      >
+                        {item.complete ? '✓' : '○'}
+                      </span>
+
+                      <span className="text-xs font-bold text-slate-700">
+                        {item.label}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`text-xs font-black shrink-0 ${
+                        item.complete
+                          ? 'text-green-600'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      {item.current}/{item.required}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-xs text-slate-500">
+                Verificando el contenido de tu perfil…
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Estado del perfil ── */}
         {me?.slug && (
           <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between">
@@ -246,8 +393,16 @@ export default function AdminDashboard() {
             </div>
             <button
               onClick={togglePublished}
-              disabled={publishing}
-              className={`px-4 py-2 rounded-full text-xs font-bold border transition-colors disabled:opacity-50 ${
+              disabled={
+                publishing ||
+                (!me.is_published && !canPublish)
+              }
+              title={
+                !me.is_published && !canPublish
+                  ? 'Completa los requisitos mínimos para publicar'
+                  : undefined
+              }
+              className={`px-4 py-2 rounded-full text-xs font-bold border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 me.is_published
                   ? 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200'
                   : 'bg-intap-mint/10 text-intap-mint border-intap-mint/30 hover:bg-intap-mint/20'
@@ -255,6 +410,12 @@ export default function AdminDashboard() {
             >
               {publishing ? '…' : me.is_published ? 'Despublicar' : 'Publicar'}
             </button>
+          </div>
+        )}
+
+        {publishError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-600">
+            {publishError}
           </div>
         )}
 

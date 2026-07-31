@@ -6,6 +6,10 @@ import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
+import {
+  getFreeProfilePublicationReadiness,
+  type FreeProfilePublicationReadiness,
+} from './lib/free-profile-publication'
 
 type Bindings = {
   DB: D1Database
@@ -427,6 +431,8 @@ me.get('/', async (c) => {
   const r = row as any
   let hasContact = false
   let hasLinks = false
+  let publicationReadiness:
+    FreeProfilePublicationReadiness | null = null
   // Plan / trial / retention summary (nullable if no profile yet)
   let planSummary: {
     plan_code: string
@@ -491,6 +497,14 @@ me.get('/', async (c) => {
       paused_features_count:   pausedFeatures,
       recoverable_items_count: recoverable,
     }
+
+    if (r.plan_id === 'free') {
+      publicationReadiness =
+        await getFreeProfilePublicationReadiness(
+          c,
+          r.profile_id,
+        )
+    }
   }
 
   const onboardingStatus = {
@@ -508,6 +522,7 @@ me.get('/', async (c) => {
       ...r,
       profileId: r.profile_id,
       onboardingStatus,
+      publicationReadiness,
       templateData,
       // Plan / retention summary — null if user has no profile yet
       ...(planSummary ?? {}),
@@ -581,7 +596,10 @@ me.put('/profile', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id
+     FROM profiles
+     WHERE user_id = ?
+     LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
@@ -629,6 +647,30 @@ me.put('/profile', async (c) => {
   const template_data = body.template_data !== undefined
     ? JSON.stringify(typeof body.template_data === 'object' ? body.template_data : {})
     : undefined
+
+  if (
+    is_published === 1 &&
+    (profile as any).plan_id === 'free'
+  ) {
+    const publicationReadiness =
+      await getFreeProfilePublicationReadiness(
+        c,
+        (profile as any).id,
+      )
+
+    if (!publicationReadiness.ready) {
+      return c.json(
+        {
+          ok: false,
+          error: 'profile_incomplete',
+          message:
+            'Completa los requisitos mínimos antes de publicar.',
+          publicationReadiness,
+        },
+        422,
+      )
+    }
+  }
 
   try {
     await c.env.DB.prepare(
