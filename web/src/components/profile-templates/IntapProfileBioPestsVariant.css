@@ -2,6 +2,20 @@
   display: contents;
 }
 
+/* La card rápida de Santo Domingo conserva siempre el número de Rene. */
+.biopests-person-profile
+.biopests-proof article:nth-child(3) span {
+  font-size: 0;
+  line-height: 0;
+}
+
+.biopests-person-profile
+.biopests-proof article:nth-child(3) span::after {
+  content: "(829) 246-9777";
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
 .biopests-person-profile
 .biopests-contact-list a:first-child strong,
 .biopests-person-profile
@@ -19,17 +33,23 @@
 }
 
 .biopests-person-profile[data-biopests-profile="manager"]
-.biopests-contact-list a:first-child strong::after,
-.biopests-person-profile[data-biopests-profile="manager"]
-.biopests-contact-list a:nth-child(2) strong::after {
+.biopests-contact-list a:first-child strong::after {
   content: "(829) 246-9777";
 }
 
-.biopests-person-profile[data-biopests-profile="operations"]
-.biopests-contact-list a:first-child strong::after,
-.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-person-profile[data-biopests-profile="manager"]
 .biopests-contact-list a:nth-child(2) strong::after {
   content: "(829) 750-0908";
+}
+
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-contact-list a:first-child strong::after {
+  content: "(829) 750-0908";
+}
+
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-contact-list a:nth-child(2) strong::after {
+  content: "(829) 246-9777";
 }
 
 @media (max-width: 640px) {
