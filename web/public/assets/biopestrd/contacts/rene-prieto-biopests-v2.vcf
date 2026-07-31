@@ -1,0 +1,17 @@
+BEGIN:VCARD
+VERSION:3.0
+PRODID:-//INTAP LINK//BioPests Manager vCard//ES
+UID:biopestsgrd-rene-prieto-v2@intaprd.com
+REV:20260731T145500Z
+N:Prieto;Rene;;;
+FN:Rene Prieto
+ORG:BioPests
+TITLE:CEO
+TEL;TYPE=CELL,VOICE,PREF:+18297500908
+TEL;TYPE=WORK,VOICE:+18292469777
+EMAIL;TYPE=WORK:grupomatyse@gmail.com
+URL:https://intaprd.com/biopestsgrd
+X-SOCIALPROFILE;TYPE=instagram:https://www.instagram.com/biopestsrd/
+ADR;TYPE=WORK:;;Av. Gustavo Mejía Ricart #226, Piso 4, Oficina 405;Santo Domingo;Distrito Nacional;;República Dominicana
+NOTE:CEO de BioPests. Manejo Integral de Plagas.
+END:VCARD
