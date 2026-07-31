@@ -1,0 +1,120 @@
+.biopests-person-profile {
+  display: contents;
+}
+
+/* La card rápida de Santo Domingo muestra el número principal del perfil activo. */
+.biopests-person-profile
+.biopests-proof article:nth-child(3) span {
+  font-size: 0;
+  line-height: 0;
+}
+
+.biopests-person-profile
+.biopests-proof article:nth-child(3) span::after {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.biopests-person-profile[data-biopests-profile="manager"]
+.biopests-proof article:nth-child(3) span::after {
+  content: "(829) 246-9777";
+}
+
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-proof article:nth-child(3) span::after {
+  content: "(829) 750-0908";
+}
+
+.biopests-person-profile
+.biopests-contact-list a:first-child strong,
+.biopests-person-profile
+.biopests-contact-list a:nth-child(2) strong {
+  font-size: 0;
+  line-height: 0;
+}
+
+.biopests-person-profile
+.biopests-contact-list a:first-child strong::after,
+.biopests-person-profile
+.biopests-contact-list a:nth-child(2) strong::after {
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.biopests-person-profile[data-biopests-profile="manager"]
+.biopests-contact-list a:first-child strong::after {
+  content: "(829) 246-9777";
+}
+
+.biopests-person-profile[data-biopests-profile="manager"]
+.biopests-contact-list a:nth-child(2) strong::after {
+  content: "(829) 750-0908";
+}
+
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-contact-list a:first-child strong::after {
+  content: "(829) 750-0908";
+}
+
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-contact-list a:nth-child(2) strong::after {
+  content: "(829) 246-9777";
+}
+
+@media (max-width: 640px) {
+  .biopests-page .biopests-values-featured-v7 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3) {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    grid-column: auto !important;
+    grid-template-columns: none !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__media {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    aspect-ratio: 1.3 / 1 !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body {
+    display: flex !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding: 18px !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body p,
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body strong {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .biopests-page .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__body strong {
+    width: 100% !important;
+    min-height: 48px !important;
+    margin-top: 15px !important;
+  }
+}
