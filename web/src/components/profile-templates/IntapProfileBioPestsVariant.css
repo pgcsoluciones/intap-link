@@ -2,7 +2,7 @@
   display: contents;
 }
 
-/* La card rápida de Santo Domingo conserva siempre el número de Rene. */
+/* La card rápida de Santo Domingo muestra el número principal del perfil activo. */
 .biopests-person-profile
 .biopests-proof article:nth-child(3) span {
   font-size: 0;
@@ -11,9 +11,18 @@
 
 .biopests-person-profile
 .biopests-proof article:nth-child(3) span::after {
-  content: "(829) 246-9777";
   font-size: 0.95rem;
   line-height: 1.4;
+}
+
+.biopests-person-profile[data-biopests-profile="manager"]
+.biopests-proof article:nth-child(3) span::after {
+  content: "(829) 246-9777";
+}
+
+.biopests-person-profile[data-biopests-profile="operations"]
+.biopests-proof article:nth-child(3) span::after {
+  content: "(829) 750-0908";
 }
 
 .biopests-person-profile
