@@ -12,14 +12,11 @@ const IMAGE =
 export async function onRequest(context: PagesContext): Promise<Response> {
   const response = await context.next()
   const contentType = response.headers.get('content-type') || ''
-
   if (!contentType.includes('text/html')) return response
 
   const html = await response.text()
   const cleanHtml = html.replace(/<title>[\s\S]*?<\/title>/i, '')
-
   const metadata = `
-  <!-- BioPests manager: individual Open Graph / Twitter card -->
   <title>${TITLE}</title>
   <link rel="canonical" href="${CANONICAL}" />
   <meta name="description" content="${DESCRIPTION}" />
@@ -31,10 +28,6 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   <meta property="og:image" content="${IMAGE}" />
   <meta property="og:image:secure_url" content="${IMAGE}" />
   <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="628" />
-  <meta property="og:image:height" content="628" />
-  <meta property="profile:first_name" content="Rene" />
-  <meta property="profile:last_name" content="Prieto" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${TITLE}" />
   <meta name="twitter:description" content="${DESCRIPTION}" />
@@ -45,11 +38,11 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     name: 'Rene Prieto',
     jobTitle: 'CEO',
     url: CANONICAL,
-    telephone: '+18297500908',
+    telephone: '+18292469777',
     worksFor: {
       '@type': 'Organization',
       name: 'BioPests',
-      url: 'https://intaprd.com/biopestsgrd',
+      url: CANONICAL,
       sameAs: ['https://www.instagram.com/biopestsrd/'],
     },
   })}</script>
@@ -58,13 +51,9 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   const updatedHtml = cleanHtml.includes('</head>')
     ? cleanHtml.replace('</head>', `${metadata}\n</head>`)
     : `${metadata}\n${cleanHtml}`
-
   const headers = new Headers(response.headers)
   headers.set('content-type', 'text/html; charset=UTF-8')
-  headers.set(
-    'x-robots-tag',
-    'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
-  )
+  headers.set('x-robots-tag', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1')
 
   return new Response(updatedHtml, {
     status: response.status,
