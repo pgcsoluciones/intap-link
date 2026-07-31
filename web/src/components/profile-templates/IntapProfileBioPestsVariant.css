@@ -1,43 +1,52 @@
-.biopests-holder-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 14px;
-  align-items: center;
-  margin: 18px 0 0;
+.biopests-manager-profile {
+  display: contents;
+}
+
+.biopests-manager-profile .biopests-identity::before {
+  display: block;
+  margin: 0 0 18px;
   padding: 15px 17px;
   border: 1px solid rgba(75, 153, 0, 0.2);
   border-radius: 18px;
   background:
-    linear-gradient(135deg, rgba(147, 216, 36, 0.12), rgba(255, 255, 255, 0.96));
+    linear-gradient(
+      135deg,
+      rgba(147, 216, 36, 0.12),
+      rgba(255, 255, 255, 0.96)
+    );
   box-shadow: 0 12px 28px rgba(15, 106, 42, 0.08);
-}
-
-.biopests-holder-card span {
-  grid-column: 1 / -1;
-  color: var(--green);
-  font-size: 0.66rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.biopests-holder-card strong {
-  min-width: 0;
   color: var(--green-dark);
+  content: "BIOPESTS\A Rene Prieto\A CEO";
   font-size: 1.05rem;
   font-weight: 850;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
+.biopests-manager-profile
+.biopests-contact-list a:first-child strong,
+.biopests-manager-profile
+.biopests-contact-list a:nth-child(2) strong {
+  font-size: 0;
+  line-height: 0;
+}
+
+.biopests-manager-profile
+.biopests-contact-list a:first-child strong::after,
+.biopests-manager-profile
+.biopests-contact-list a:nth-child(2) strong::after {
+  font-size: 0.95rem;
   line-height: 1.25;
 }
 
-.biopests-holder-card small {
-  justify-self: end;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--green);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 850;
-  letter-spacing: 0.04em;
+.biopests-manager-profile
+.biopests-contact-list a:first-child strong::after {
+  content: "(829) 246-9777";
+}
+
+.biopests-manager-profile
+.biopests-contact-list a:nth-child(2) strong::after {
+  content: "(829) 750-0908";
 }
 
 @media (max-width: 640px) {
