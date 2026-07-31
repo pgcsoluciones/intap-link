@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AdminGuard from './components/admin/AdminGuard'
 import AdminLogin from './components/admin/AdminLogin'
@@ -18,6 +19,14 @@ import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
 import OnboardingContact from './components/admin/onboarding/OnboardingContact'
+import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
+import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
+import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
+import FreeOnboardingContact from './components/admin/free/onboarding/FreeOnboardingContact'
+import FreeLinks from './components/admin/free/FreeLinks'
+import FreePortfolio from './components/admin/free/FreePortfolio'
+import FreeServices from './components/admin/free/FreeServices'
+const FreeLocation = lazy(() => import('./components/admin/free/FreeLocation'))
 
 function UnknownAppRouteRedirect() {
   const location = useLocation()
@@ -46,6 +55,80 @@ function App() {
         <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false}><OnboardingCategory /></AdminGuard>} />
         <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false}><OnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
+
+        {/* Onboarding exclusivo INTAP LINK Gratis */}
+        <Route
+          path="/admin/free/onboarding/slug"
+          element={
+            <AdminGuard requireProfile={false}>
+              <FreeOnboardingSlug />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/free/onboarding/category"
+          element={
+            <AdminGuard requireProfile={false}>
+              <FreeOnboardingCategory />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/free/onboarding/identity"
+          element={
+            <AdminGuard requireProfile={false}>
+              <FreeOnboardingIdentity />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/free/onboarding/contact"
+          element={
+            <AdminGuard requireProfile={false}>
+              <FreeOnboardingContact />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/free/location"
+          element={
+            <AdminGuard>
+              <Suspense
+                fallback={
+                  <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                    <div className="loading-spinner" />
+                  </div>
+                }
+              >
+                <FreeLocation />
+              </Suspense>
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/free/links"
+          element={
+            <AdminGuard>
+              <FreeLinks />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/free/portfolio"
+          element={
+            <AdminGuard>
+              <FreePortfolio />
+            </AdminGuard>
+          }
+        />
+        <Route
+          path="/admin/free/services"
+          element={
+            <AdminGuard>
+              <FreeServices />
+            </AdminGuard>
+          }
+        />
 
         {/* Super Admin interno */}
         <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />

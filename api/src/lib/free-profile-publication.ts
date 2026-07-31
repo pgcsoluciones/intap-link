@@ -159,7 +159,8 @@ export async function getFreeProfilePublicationReadiness(
        FROM profile_products
        WHERE profile_id = ?
          AND TRIM(COALESCE(title, '')) <> ''
-         AND TRIM(COALESCE(description, '')) <> ''`
+         AND TRIM(COALESCE(description, '')) <> ''
+         AND TRIM(COALESCE(image_url, '')) <> ''`
     ).bind(profileId).first(),
   ])
 
@@ -238,7 +239,7 @@ export async function getFreeProfilePublicationReadiness(
       complete: actions.size >= 2,
       current: actions.size,
       required: 2,
-      route: '/admin/links',
+      route: '/admin/free/links',
     },
     {
       key: 'portfolio',
@@ -246,7 +247,7 @@ export async function getFreeProfilePublicationReadiness(
       complete: portfolioCount >= 3,
       current: portfolioCount,
       required: 3,
-      route: '/admin/gallery',
+      route: '/admin/free/portfolio',
     },
     {
       key: 'services',
@@ -254,7 +255,7 @@ export async function getFreeProfilePublicationReadiness(
       complete: servicesCount >= 2,
       current: servicesCount,
       required: 2,
-      route: '/admin/products',
+      route: '/admin/free/services',
     },
   ]
 
