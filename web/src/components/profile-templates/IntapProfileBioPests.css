@@ -1,0 +1,4654 @@
+.biopests-page {
+  --green-dark: #0F6A2A;
+  --green: #4B9900;
+  --lime: #93D824;
+  --ink: #111827;
+  --muted: #5f6d64;
+  --line: #dde7df;
+  --soft: #F6FAF3;
+  min-height: 100vh;
+  padding-bottom: 72px;
+  margin: 0;
+  background: #f4f8f4;
+  color: var(--ink);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.biopests-page,
+.biopests-page * {
+  box-sizing: border-box;
+}
+
+.biopests-shell {
+  width: min(100%, 570px);
+  min-height: 100vh;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* IMAGEN PRINCIPAL */
+
+.biopests-cover {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #dce8dd;
+}
+
+.biopests-cover__media,
+.biopests-cover__media img {
+  position: absolute;
+  inset: 0;
+}
+
+.biopests-cover__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity .4s ease, transform .7s ease;
+  transform: scale(1.025);
+}
+
+.biopests-cover__media img.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.biopests-cover::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 35%;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(transparent, rgba(10, 61, 32, .28));
+}
+
+.biopests-cover__dots {
+  position: absolute;
+  z-index: 2;
+  right: 18px;
+  bottom: 14px;
+  display: flex;
+  gap: 6px;
+}
+
+.biopests-cover__dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.7);
+  cursor: pointer;
+}
+
+.biopests-cover__dots button.is-active {
+  width: 25px;
+  background: var(--lime);
+}
+
+/* LOGO */
+
+.biopests-logo {
+  display: flex;
+  min-height: 150px;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 24px 18px;
+}
+
+.biopests-logo img {
+  display: block;
+  width: min(250px, 66vw);
+  height: auto;
+  object-fit: contain;
+}
+
+/* IDENTIDAD */
+
+.biopests-identity {
+  padding: 10px 30px 0;
+}
+
+.biopests-identity h1 {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  color: var(--green-dark);
+  font-size: clamp(1.9rem, 7vw, 2.45rem);
+  font-weight: 850;
+  letter-spacing: -.045em;
+  line-height: 1.05;
+}
+
+.biopests-identity h1 span {
+  color: var(--lime);
+}
+
+.biopests-identity h2 {
+  margin: 13px 0 0;
+  color: var(--green-dark);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.biopests-identity__headline {
+  margin: 15px 0 0;
+  color: #26352b;
+  font-size: 1.02rem;
+  font-weight: 720;
+  line-height: 1.48;
+}
+
+.biopests-identity__description {
+  margin: 17px 0 0;
+  color: var(--muted);
+  font-size: .96rem;
+  line-height: 1.7;
+}
+
+/* BOTONES */
+
+.biopests-actions {
+  display: grid;
+  gap: 13px;
+  margin-top: 30px;
+}
+
+.biopests-btn {
+  display: inline-flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 19px;
+  border-radius: 999px;
+  font-size: .88rem;
+  font-weight: 820;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+}
+
+.biopests-btn--primary {
+  border: 2px solid var(--green);
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(37, 140, 61, .19);
+}
+
+.biopests-btn--secondary {
+  border: 2px solid var(--green);
+  background: #fff;
+  color: var(--green-dark);
+}
+
+/* ACCESOS RÁPIDOS */
+
+.biopests-quick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin: 35px 18px 0;
+}
+
+.biopests-quick__item {
+  display: flex;
+  min-width: 0;
+  min-height: 78px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 4px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #fff;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.biopests-quick__item:first-child {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.biopests-quick__item span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  font-size: 1rem;
+}
+
+.biopests-quick__item strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: .65rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* BLOQUE INTRODUCTORIO */
+
+.biopests-intro {
+  margin: 35px 30px 0;
+  padding: 42px 0 36px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 20px;
+}
+
+.biopests-section-label {
+  display: block;
+  color: var(--green);
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .17em;
+  text-align: center;
+}
+
+.biopests-intro h3 {
+  max-width: 470px;
+  margin: 13px auto 0;
+  color: var(--green-dark);
+  font-size: clamp(1.7rem, 6.5vw, 2.2rem);
+  font-weight: 850;
+  letter-spacing: -.045em;
+  line-height: 1.12;
+  text-align: center;
+}
+
+.biopests-intro > p {
+  max-width: 470px;
+  margin: 18px auto 0;
+  color: var(--muted);
+  font-size: .94rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.biopests-proof {
+  display: grid;
+  margin-top: 28px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--soft);
+}
+
+.biopests-proof article {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 17px;
+}
+
+.biopests-proof article + article {
+  border-top: 1px solid var(--line);
+}
+
+.biopests-proof strong {
+  color: var(--green-dark);
+  font-size: .79rem;
+}
+
+.biopests-proof span {
+  color: var(--muted);
+  font-size: .71rem;
+  line-height: 1.45;
+}
+
+.biopests-page a:focus-visible,
+.biopests-page button:focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+}
+
+@media (min-width: 571px) {
+  .biopests-page {
+    padding-top: 26px;
+  }
+
+  .biopests-shell {
+    border-radius: 28px;
+    box-shadow: 0 24px 72px rgba(15, 87, 43, .14);
+  }
+
+  .biopests-cover {
+    border-radius: 28px 28px 0 0;
+  }
+
+  .biopests-proof {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .biopests-proof article + article {
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 390px) {
+  .biopests-identity {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .biopests-quick {
+    gap: 6px;
+    margin-right: 10px;
+    margin-left: 10px;
+  }
+
+  .biopests-quick__item strong {
+    font-size: .58rem;
+  }
+
+  .biopests-intro {
+    margin-right: 22px;
+    margin-left: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biopests-page * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+/* SECCIONES CORPORATIVAS BIOPESTS */
+
+/* SECCIONES CORPORATIVAS BIOPESTS */
+
+.biopests-section {
+  padding: 58px 30px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.biopests-section--soft {
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(130, 213, 31, 0.12),
+      transparent 30%
+    ),
+    var(--soft);
+}
+
+.biopests-section-head {
+  margin-bottom: 30px;
+}
+
+.biopests-section-head > span {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--green);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+}
+
+.biopests-section-head h2 {
+  max-width: 480px;
+  margin: 0;
+  color: var(--green-dark);
+  font-size: clamp(1.75rem, 6.8vw, 2.35rem);
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+.biopests-section-head p {
+  max-width: 480px;
+  margin: 15px 0 0;
+  color: var(--muted);
+  font-size: 0.93rem;
+  line-height: 1.65;
+}
+
+.biopests-section-head--center {
+  text-align: center;
+}
+
+.biopests-section-head--center h2,
+.biopests-section-head--center p {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* ADN CORPORATIVO */
+
+.biopests-values-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.biopests-value-card {
+  padding: 24px 21px;
+  border: 1px solid rgba(37, 140, 61, 0.18);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 28px rgba(18, 90, 45, 0.07);
+}
+
+.biopests-value-card > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  background: rgba(130, 213, 31, 0.16);
+  color: var(--green);
+  font-size: 1.25rem;
+}
+
+.biopests-value-card h3 {
+  margin: 17px 0 0;
+  color: var(--green-dark);
+  font-size: 1.05rem;
+}
+
+.biopests-value-card p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.58;
+}
+
+/* SERVICIOS */
+
+.biopests-services {
+  background: #ffffff;
+}
+
+.biopests-services-grid {
+  display: grid;
+  gap: 17px;
+}
+
+.biopests-service-card {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #f7faf7
+    );
+  box-shadow: 0 13px 32px rgba(18, 90, 45, 0.07);
+}
+
+.biopests-service-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.biopests-service-card__icon {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 1.2rem;
+}
+
+.biopests-service-card__top small {
+  color: rgba(18, 90, 45, 0.25);
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.biopests-service-card h3 {
+  margin: 20px 0 0;
+  color: var(--green-dark);
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.biopests-service-card > p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.58;
+}
+
+.biopests-service-card__detail {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+  color: #536159;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.biopests-service-card > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+/* METODOLOGÍA */
+
+.biopests-method {
+  padding: 62px 30px;
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(130, 213, 31, 0.2),
+      transparent 36%
+    ),
+    #0c4d28;
+  color: #ffffff;
+}
+
+.biopests-method .biopests-section-head > span {
+  color: var(--lime);
+}
+
+.biopests-method .biopests-section-head h2 {
+  color: #ffffff;
+}
+
+.biopests-method .biopests-section-head p {
+  color: rgba(255, 255, 255, 0.73);
+}
+
+.biopests-method-grid {
+  display: grid;
+  gap: 13px;
+}
+
+.biopests-method-grid article {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 15px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.biopests-method-grid article > span {
+  color: var(--lime);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.biopests-method-grid h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.biopests-method-grid p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  line-height: 1.58;
+}
+
+/* TECNOLOGÍA */
+
+.biopests-technology {
+  background: #f7faf7;
+}
+
+.biopests-technology-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.biopests-technology-card {
+  position: relative;
+  overflow: hidden;
+  padding: 25px 22px;
+  border: 1px solid rgba(37, 140, 61, 0.16);
+  border-radius: 22px;
+  background: #ffffff;
+}
+
+.biopests-technology-card::after {
+  position: absolute;
+  top: -35px;
+  right: -35px;
+  width: 105px;
+  height: 105px;
+  border-radius: 50%;
+  background: rgba(130, 213, 31, 0.1);
+  content: "";
+}
+
+.biopests-technology-card__icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 17px;
+  background: rgba(37, 140, 61, 0.11);
+  color: var(--green);
+  font-size: 1.3rem;
+}
+
+.biopests-technology-card small {
+  display: block;
+  margin-top: 20px;
+  color: var(--green);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
+
+.biopests-technology-card h3 {
+  margin: 8px 0 0;
+  color: var(--green-dark);
+  font-size: 1.15rem;
+}
+
+.biopests-technology-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.58;
+}
+
+/* CERTIFICACIONES Y PERMISOS */
+
+.biopests-trust {
+  padding: 61px 30px;
+  background: #102c1d;
+}
+
+.biopests-trust .biopests-section-head > span {
+  color: var(--lime);
+}
+
+.biopests-trust .biopests-section-head h2 {
+  color: #ffffff;
+}
+
+.biopests-trust .biopests-section-head p {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.biopests-certifications {
+  display: grid;
+  gap: 13px;
+}
+
+.biopests-certifications article {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  gap: 15px;
+  padding: 17px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.biopests-certifications svg {
+  flex: 0 0 auto;
+  color: var(--lime);
+  font-size: 1.35rem;
+}
+
+.biopests-certifications strong {
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.biopests-permits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.biopests-permits span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(130, 213, 31, 0.12);
+  color: #ffffff;
+  font-size: 0.67rem;
+  font-weight: 750;
+}
+
+.biopests-permits svg {
+  color: var(--lime);
+}
+
+/* CLIENTES */
+
+.biopests-clients {
+  background: #ffffff;
+}
+
+.biopests-client-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.biopests-client-grid span {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fafcf9;
+  color: #526057;
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-align: center;
+  filter: grayscale(1);
+}
+
+/* FAQ */
+
+.biopests-faq {
+  background: var(--soft);
+}
+
+.biopests-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.biopests-faq-list article {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.biopests-faq-list button {
+  display: flex;
+  width: 100%;
+  min-height: 66px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 17px;
+  border: 0;
+  background: transparent;
+  color: var(--green-dark);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 820;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biopests-faq-list button svg {
+  flex: 0 0 auto;
+  transition: transform 0.2s ease;
+}
+
+.biopests-faq-list article.is-open button svg {
+  transform: rotate(180deg);
+}
+
+.biopests-faq-list article > p {
+  margin: 0;
+  padding: 0 17px 18px;
+  color: var(--muted);
+  font-size: 0.79rem;
+  line-height: 1.62;
+}
+
+/* CONTACTO */
+
+.biopests-contact {
+  padding: 60px 30px;
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(130, 213, 31, 0.22),
+      transparent 35%
+    ),
+    var(--green-dark);
+  color: #ffffff;
+}
+
+.biopests-contact > span {
+  display: block;
+  color: var(--lime);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.biopests-contact > h2 {
+  margin: 13px 0 0;
+  color: #ffffff;
+  font-size: clamp(1.8rem, 7vw, 2.35rem);
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+.biopests-contact > p {
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.biopests-contact__cta {
+  display: inline-flex;
+  width: 100%;
+  min-height: 55px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 26px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: #153a1f;
+  font-size: 0.83rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.biopests-contact-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 28px;
+}
+
+.biopests-contact-list a {
+  display: grid;
+  grid-template-columns: 39px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.biopests-contact-list > a > svg {
+  color: var(--lime);
+}
+
+.biopests-contact-list span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.biopests-contact-list small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.62rem;
+}
+
+.biopests-contact-list strong {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+/* FOOTER */
+
+.biopests-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 42px 25px;
+  background: #ffffff;
+  color: var(--muted);
+  text-align: center;
+}
+
+.biopests-footer img {
+  width: min(175px, 54vw);
+  height: auto;
+}
+
+.biopests-footer strong {
+  margin-top: 16px;
+  color: var(--green-dark);
+  font-size: 0.78rem;
+}
+
+.biopests-footer span {
+  margin-top: 6px;
+  font-size: 0.69rem;
+}
+
+.biopests-footer small {
+  margin-top: 22px;
+  color: #8b968e;
+  font-size: 0.62rem;
+}
+
+/* WHATSAPP FLOTANTE */
+
+.biopests-floating-whatsapp {
+  position: fixed;
+  z-index: 40;
+  right: max(18px, calc((100vw - 570px) / 2 + 18px));
+  bottom: 19px;
+  display: grid;
+  width: 55px;
+  height: 55px;
+  place-items: center;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  background: #25d366;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  color: #ffffff;
+  font-size: 1.35rem;
+  text-decoration: none;
+}
+
+.biopests-floating-whatsapp span {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #e52525;
+  color: #ffffff;
+  font-size: 0.61rem;
+  font-weight: 900;
+}
+
+@media (min-width: 500px) {
+  .biopests-values-grid,
+  .biopests-technology-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .biopests-services-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .biopests-certifications {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .biopests-client-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .biopests-section,
+  .biopests-method,
+  .biopests-trust,
+  .biopests-contact {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+}
+/* SECCIONES GRAFICAS BIOPESTS */
+
+/* SECCIONES GRAFICAS BIOPESTS */
+
+.biopests-section {
+  padding: 60px 30px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.biopests-section--soft {
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(130, 213, 31, .13),
+      transparent 32%
+    ),
+    var(--soft);
+}
+
+.biopests-section-head {
+  margin-bottom: 30px;
+}
+
+.biopests-section-head > span {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--green);
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .17em;
+}
+
+.biopests-section-head h2 {
+  max-width: 480px;
+  margin: 0;
+  color: var(--green-dark);
+  font-size: clamp(1.75rem, 6.8vw, 2.35rem);
+  font-weight: 850;
+  letter-spacing: -.045em;
+  line-height: 1.1;
+}
+
+.biopests-section-head p {
+  max-width: 480px;
+  margin: 15px 0 0;
+  color: var(--muted);
+  font-size: .93rem;
+  line-height: 1.65;
+}
+
+.biopests-section-head--center {
+  text-align: center;
+}
+
+.biopests-section-head--center h2,
+.biopests-section-head--center p {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* VALORES */
+
+.biopests-values-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.biopests-value-card {
+  padding: 24px 21px;
+  border: 1px solid rgba(37, 140, 61, .18);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 12px 28px rgba(18, 90, 45, .07);
+}
+
+.biopests-value-card > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  background: rgba(130, 213, 31, .16);
+  color: var(--green);
+  font-size: 1.25rem;
+}
+
+.biopests-value-card h3 {
+  margin: 17px 0 0;
+  color: var(--green-dark);
+  font-size: 1.05rem;
+}
+
+.biopests-value-card p {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: .85rem;
+  line-height: 1.58;
+}
+
+/* SERVICIOS */
+
+.biopests-services-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.biopests-service-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 23px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(18, 90, 45, .09);
+}
+
+.biopests-service-card__media {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  background: #dce8dd;
+}
+
+.biopests-service-card__media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.biopests-service-card__media::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      transparent 42%,
+      rgba(8, 51, 25, .58)
+    );
+  content: "";
+}
+
+.biopests-service-card__media > span {
+  position: absolute;
+  z-index: 2;
+  bottom: 15px;
+  left: 16px;
+  display: grid;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--lime);
+  color: #153a1f;
+  font-size: 1.05rem;
+}
+
+.biopests-service-card__media > small {
+  position: absolute;
+  z-index: 2;
+  right: 16px;
+  bottom: 17px;
+  color: rgba(255, 255, 255, .82);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.biopests-service-card__body {
+  padding: 22px;
+}
+
+.biopests-service-card h3 {
+  margin: 0;
+  color: var(--green-dark);
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.biopests-service-card__body > p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: .85rem;
+  line-height: 1.58;
+}
+
+.biopests-service-card__detail {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+  color: #536159;
+  font-size: .78rem;
+  line-height: 1.58;
+}
+
+.biopests-service-card__body > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 18px;
+  color: var(--green);
+  font-size: .78rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+/* METODOLOGÍA */
+
+.biopests-method {
+  padding: 62px 30px;
+  background:
+    radial-gradient(
+      circle at 100% 0,
+      rgba(130, 213, 31, .2),
+      transparent 36%
+    ),
+    #0c4d28;
+  color: #ffffff;
+}
+
+.biopests-method .biopests-section-head > span {
+  color: var(--lime);
+}
+
+.biopests-method .biopests-section-head h2 {
+  color: #ffffff;
+}
+
+.biopests-method .biopests-section-head p {
+  color: rgba(255, 255, 255, .73);
+}
+
+.biopests-method-visuals {
+  display: grid;
+  gap: 13px;
+  margin-bottom: 30px;
+}
+
+.biopests-method-visuals figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, .08);
+}
+
+.biopests-method-visuals img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.biopests-method-grid {
+  display: grid;
+}
+
+.biopests-method-grid article {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 15px;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, .15);
+}
+
+.biopests-method-grid article > span {
+  color: var(--lime);
+  font-size: .82rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.biopests-method-grid h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.biopests-method-grid p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, .72);
+  font-size: .82rem;
+  line-height: 1.58;
+}
+
+/* TECNOLOGÍA */
+
+.biopests-technology {
+  background: #f7faf7;
+}
+
+.biopests-technology-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.biopests-technology-card {
+  overflow: hidden;
+  border: 1px solid rgba(37, 140, 61, .16);
+  border-radius: 23px;
+  background: #ffffff;
+  box-shadow: 0 13px 32px rgba(18, 90, 45, .07);
+}
+
+.biopests-technology-card__media {
+  display: flex;
+  min-height: 210px;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(130, 213, 31, .13),
+      transparent 64%
+    ),
+    #f2f7f1;
+}
+
+.biopests-technology-card__media img {
+  display: block;
+  width: 100%;
+  max-height: 230px;
+  object-fit: contain;
+}
+
+.biopests-technology-card__body {
+  padding: 22px;
+}
+
+.biopests-technology-card small {
+  display: block;
+  color: var(--green);
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .15em;
+}
+
+.biopests-technology-card h3 {
+  margin: 8px 0 0;
+  color: var(--green-dark);
+  font-size: 1.17rem;
+}
+
+.biopests-technology-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.58;
+}
+
+/* CERTIFICACIONES */
+
+.biopests-trust {
+  padding: 61px 30px;
+  background: #102c1d;
+}
+
+.biopests-trust .biopests-section-head > span {
+  color: var(--lime);
+}
+
+.biopests-trust .biopests-section-head h2 {
+  color: #ffffff;
+}
+
+.biopests-trust .biopests-section-head p {
+  color: rgba(255, 255, 255, .7);
+}
+
+.biopests-certifications {
+  display: grid;
+  gap: 13px;
+}
+
+.biopests-certifications article {
+  display: flex;
+  min-height: 120px;
+  align-items: center;
+  gap: 17px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 19px;
+  background: rgba(255, 255, 255, .07);
+  color: #ffffff;
+}
+
+.biopests-certifications img {
+  width: 78px;
+  height: 78px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.biopests-certifications strong {
+  font-size: .84rem;
+  line-height: 1.45;
+}
+
+.biopests-permits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 21px;
+}
+
+.biopests-permits span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(130, 213, 31, .12);
+  color: #ffffff;
+  font-size: .67rem;
+  font-weight: 750;
+}
+
+.biopests-permits svg {
+  color: var(--lime);
+}
+
+/* CLIENTES */
+
+.biopests-client-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.biopests-client-grid article {
+  display: flex;
+  min-height: 100px;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.biopests-client-grid img {
+  display: block;
+  width: 100%;
+  max-width: 125px;
+  max-height: 66px;
+  object-fit: contain;
+}
+
+/* FAQ */
+
+.biopests-faq {
+  background: var(--soft);
+}
+
+.biopests-faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.biopests-faq-list article {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #ffffff;
+}
+
+.biopests-faq-list button {
+  display: flex;
+  width: 100%;
+  min-height: 66px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 17px;
+  border: 0;
+  background: transparent;
+  color: var(--green-dark);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 820;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biopests-faq-list button svg {
+  flex: 0 0 auto;
+  transition: transform .2s ease;
+}
+
+.biopests-faq-list article.is-open button svg {
+  transform: rotate(180deg);
+}
+
+.biopests-faq-list article > p {
+  margin: 0;
+  padding: 0 17px 18px;
+  color: var(--muted);
+  font-size: .79rem;
+  line-height: 1.62;
+}
+
+/* CONTACTO */
+
+.biopests-contact {
+  padding: 60px 30px;
+  background:
+    radial-gradient(
+      circle at 90% 0,
+      rgba(130, 213, 31, .22),
+      transparent 35%
+    ),
+    var(--green-dark);
+  color: #ffffff;
+}
+
+.biopests-contact > span {
+  display: block;
+  color: var(--lime);
+  font-size: .65rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.biopests-contact > h2 {
+  margin: 13px 0 0;
+  color: #ffffff;
+  font-size: clamp(1.8rem, 7vw, 2.35rem);
+  font-weight: 850;
+  letter-spacing: -.045em;
+  line-height: 1.1;
+}
+
+.biopests-contact > p {
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, .74);
+  font-size: .88rem;
+  line-height: 1.65;
+}
+
+.biopests-contact__cta {
+  display: inline-flex;
+  width: 100%;
+  min-height: 55px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 26px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: #153a1f;
+  font-size: .83rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.biopests-contact-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 28px;
+}
+
+.biopests-contact-list a {
+  display: grid;
+  grid-template-columns: 39px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .06);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.biopests-contact-list > a > svg {
+  color: var(--lime);
+}
+
+.biopests-contact-list span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.biopests-contact-list small {
+  color: rgba(255, 255, 255, .58);
+  font-size: .62rem;
+}
+
+.biopests-contact-list strong {
+  overflow-wrap: anywhere;
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+/* FOOTER */
+
+.biopests-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 42px 25px;
+  background: #ffffff;
+  color: var(--muted);
+  text-align: center;
+}
+
+.biopests-footer img {
+  width: min(175px, 54vw);
+  height: auto;
+}
+
+.biopests-footer strong {
+  margin-top: 16px;
+  color: var(--green-dark);
+  font-size: .78rem;
+}
+
+.biopests-footer span {
+  margin-top: 6px;
+  font-size: .69rem;
+}
+
+.biopests-footer small {
+  margin-top: 22px;
+  color: #8b968e;
+  font-size: .62rem;
+}
+
+/* WHATSAPP FLOTANTE */
+
+.biopests-floating-whatsapp {
+  position: fixed;
+  z-index: 40;
+  right: max(18px, calc((100vw - 570px) / 2 + 18px));
+  bottom: 19px;
+  display: grid;
+  width: 55px;
+  height: 55px;
+  place-items: center;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  background: #25d366;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+  color: #ffffff;
+  font-size: 1.35rem;
+  text-decoration: none;
+}
+
+.biopests-floating-whatsapp span {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #e52525;
+  color: #ffffff;
+  font-size: .61rem;
+  font-weight: 900;
+}
+
+@media (min-width: 500px) {
+  .biopests-values-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .biopests-services-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .biopests-technology-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .biopests-technology-card__media {
+    min-height: 175px;
+  }
+
+  .biopests-certifications {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .biopests-client-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .biopests-section,
+  .biopests-method,
+  .biopests-trust,
+  .biopests-contact {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+}
+/* CONTACTOS RAPIDOS BIOPESTS V2 */
+
+/* CONTACTOS RAPIDOS BIOPESTS V2 */
+
+.biopests-actions {
+  display: grid;
+  gap: 0;
+  margin-top: 28px;
+}
+
+.biopests-actions .biopests-btn {
+  width: 100%;
+  min-height: 57px;
+  border-radius: 999px;
+  font-size: 0.94rem;
+  font-weight: 850;
+}
+
+.biopests-actions .biopests-btn--primary {
+  border: 2px solid var(--green);
+  background: var(--green);
+  box-shadow: none;
+  color: #ffffff;
+}
+
+.biopests-quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 17px 30px 0;
+}
+
+.biopests-quick__item,
+.biopests-quick__item:first-child {
+  display: flex;
+  min-width: 0;
+  min-height: 82px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 6px;
+  border: 1px solid rgba(37, 140, 61, 0.25);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: none;
+  color: var(--green-dark);
+  text-decoration: none;
+}
+
+.biopests-quick__item:hover,
+.biopests-quick__item:first-child:hover {
+  border-color: var(--green);
+  background: rgba(130, 213, 31, 0.07);
+  color: var(--green-dark);
+}
+
+.biopests-quick__item span {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  color: var(--green);
+  font-size: 1.06rem;
+}
+
+.biopests-quick__item strong {
+  max-width: 100%;
+  overflow: visible;
+  color: inherit;
+  font-size: 0.7rem;
+  font-weight: 820;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: initial;
+  white-space: normal;
+}
+
+.biopests-quick__item:last-child {
+  grid-column: 1 / -1;
+  min-height: 53px;
+  flex-direction: row;
+  gap: 9px;
+  background: rgba(130, 213, 31, 0.07);
+}
+
+.biopests-quick__item:last-child span {
+  width: 24px;
+  height: 24px;
+}
+
+.biopests-quick__item:last-child strong {
+  font-size: 0.78rem;
+}
+
+@media (max-width: 390px) {
+  .biopests-quick {
+    gap: 8px;
+    margin-right: 22px;
+    margin-left: 22px;
+  }
+
+  .biopests-quick__item,
+  .biopests-quick__item:first-child {
+    min-height: 78px;
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .biopests-quick__item strong {
+    font-size: 0.64rem;
+  }
+
+  .biopests-quick__item:last-child {
+    min-height: 52px;
+  }
+
+  .biopests-quick__item:last-child strong {
+    font-size: 0.75rem;
+  }
+}
+/* SERVICIOS MODAL BIOPESTS V1 */
+
+/* SERVICIOS MODAL BIOPESTS V1 */
+
+.biopests-services-featured {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.biopests-service-feature-card {
+  overflow: hidden;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(37, 140, 61, 0.2);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(18, 90, 45, 0.08);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biopests-service-feature-card__media {
+  overflow: hidden;
+  aspect-ratio: 1.18 / 1;
+  background: #edf4ed;
+}
+
+.biopests-service-feature-card__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.biopests-service-feature-card:hover
+.biopests-service-feature-card__media img {
+  transform: scale(1.035);
+}
+
+.biopests-service-feature-card__body {
+  padding: 16px 15px 17px;
+}
+
+.biopests-service-feature-card__body small {
+  display: block;
+  color: var(--green);
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+.biopests-service-feature-card__body h3 {
+  margin: 8px 0 0;
+  color: var(--green-dark);
+  font-size: 0.95rem;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+}
+
+.biopests-service-feature-card__body p {
+  display: -webkit-box;
+  margin: 9px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.48;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.biopests-service-feature-card__body strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--green-dark);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.biopests-services-all-button {
+  display: flex;
+  width: min(360px, 100%);
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  margin: 22px auto 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 12px 24px rgba(22, 116, 50, 0.18);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* MODAL GENERAL */
+
+.biopests-services-modal-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  overflow-y: auto;
+  padding: 18px;
+  background: rgba(12, 20, 15, 0.7);
+  backdrop-filter: blur(3px);
+}
+
+.biopests-services-modal {
+  position: relative;
+  width: min(100%, 620px);
+  min-height: 240px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+}
+
+.biopests-services-modal__close {
+  position: absolute;
+  z-index: 8;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 9px 25px rgba(0, 0, 0, 0.17);
+  color: #17251b;
+  font: inherit;
+  font-size: 1.9rem;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* GALERÍA DE SERVICIOS */
+
+.biopests-services-gallery {
+  padding: 34px 18px 24px;
+}
+
+.biopests-services-gallery > header {
+  padding: 0 50px 4px 0;
+}
+
+.biopests-services-gallery > header span {
+  display: block;
+  color: var(--green);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.biopests-services-gallery > header h2 {
+  margin: 9px 0 0;
+  color: var(--green-dark);
+  font-size: clamp(1.55rem, 6vw, 2rem);
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.biopests-services-gallery > header p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.58;
+}
+
+.biopests-services-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  margin-top: 23px;
+}
+
+.biopests-services-gallery-card {
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid rgba(37, 140, 61, 0.2);
+  border-radius: 21px;
+  background: #ffffff;
+}
+
+.biopests-services-gallery-card__media {
+  overflow: hidden;
+  height: 135px;
+  background: #edf4ed;
+}
+
+.biopests-services-gallery-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.biopests-services-gallery-card__body {
+  padding: 14px;
+}
+
+.biopests-services-gallery-card__body small {
+  display: block;
+  color: var(--green);
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.biopests-services-gallery-card__body h3 {
+  margin: 7px 0 0;
+  color: var(--green-dark);
+  font-size: 0.88rem;
+  letter-spacing: -0.025em;
+  line-height: 1.23;
+}
+
+.biopests-services-gallery-card__body p {
+  display: -webkit-box;
+  min-height: 49px;
+  margin: 8px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.67rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.biopests-services-gallery-card__body button {
+  width: 100%;
+  min-height: 43px;
+  margin-top: 13px;
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--green);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* DETALLE DEL SERVICIO */
+
+.biopests-service-detail__media {
+  overflow: hidden;
+  height: min(285px, 43vh);
+  background: #e9f1e9;
+}
+
+.biopests-service-detail__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.biopests-service-detail__content {
+  padding: 26px 20px 30px;
+}
+
+.biopests-service-detail__content > span {
+  display: block;
+  color: var(--green);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
+
+.biopests-service-detail__content > h2 {
+  margin: 10px 0 0;
+  color: var(--green-dark);
+  font-size: clamp(1.7rem, 7vw, 2.3rem);
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.biopests-service-detail__lead {
+  margin: 15px 0 0;
+  color: #31473a;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.biopests-service-detail__description {
+  margin: 13px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+.biopests-service-detail__panel {
+  margin-top: 18px;
+  padding: 18px 16px;
+  border: 1px solid rgba(37, 140, 61, 0.17);
+  border-radius: 19px;
+  background: #fbfdfb;
+}
+
+.biopests-service-detail__panel h3 {
+  margin: 0;
+  color: var(--green);
+  font-size: 0.92rem;
+}
+
+.biopests-service-detail__panel ul {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.biopests-service-detail__panel li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
+  color: #45564a;
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.biopests-service-detail__panel li svg {
+  margin-top: 2px;
+  color: var(--green);
+}
+
+.biopests-service-detail__whatsapp {
+  display: flex;
+  width: min(360px, 100%);
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 24px auto 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.biopests-service-detail__back {
+  display: block;
+  margin: 18px auto 0;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+@media (max-width: 390px) {
+  .biopests-services-featured {
+    gap: 9px;
+  }
+
+  .biopests-service-feature-card__body {
+    padding: 13px 11px 15px;
+  }
+
+  .biopests-service-feature-card__body h3 {
+    font-size: 0.82rem;
+  }
+
+  .biopests-service-feature-card__body p {
+    font-size: 0.63rem;
+  }
+
+  .biopests-services-modal-overlay {
+    padding: 9px;
+  }
+
+  .biopests-services-modal {
+    border-radius: 23px;
+  }
+
+  .biopests-services-gallery {
+    padding: 30px 13px 20px;
+  }
+
+  .biopests-services-gallery__grid {
+    gap: 9px;
+  }
+
+  .biopests-services-gallery-card__media {
+    height: 112px;
+  }
+
+  .biopests-services-gallery-card__body {
+    padding: 11px;
+  }
+
+  .biopests-services-gallery-card__body h3 {
+    font-size: 0.77rem;
+  }
+
+  .biopests-services-gallery-card__body p {
+    font-size: 0.61rem;
+  }
+
+  .biopests-service-detail__content {
+    padding: 23px 16px 27px;
+  }
+}
+/* TECNOLOGIA CARDS BIOPESTS V2 */
+
+/* TECNOLOGIA CARDS BIOPESTS V2 */
+
+.biopests-technology-showcase {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.biopests-technology-showcase-card {
+  overflow: hidden;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(37, 140, 61, 0.18);
+  border-radius: 21px;
+  background: #ffffff;
+  box-shadow: 0 11px 27px rgba(18, 90, 45, 0.08);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biopests-technology-showcase-card--wide {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 44% minmax(0, 1fr);
+}
+
+.biopests-technology-showcase-card__media {
+  display: flex;
+  min-height: 150px;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 90% 5%,
+      rgba(130, 213, 31, 0.18),
+      transparent 38%
+    ),
+    #f2f7f1;
+}
+
+.biopests-technology-showcase-card__media img {
+  display: block;
+  width: 100%;
+  height: 125px;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.biopests-technology-showcase-card:hover
+.biopests-technology-showcase-card__media img {
+  transform: scale(1.04);
+}
+
+.biopests-technology-showcase-card__body {
+  padding: 15px 14px 17px;
+}
+
+.biopests-technology-showcase-card__body small {
+  display: block;
+  color: var(--green);
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.biopests-technology-showcase-card__body h3 {
+  margin: 7px 0 0;
+  color: var(--green-dark);
+  font-size: 0.98rem;
+  letter-spacing: -0.025em;
+  line-height: 1.18;
+}
+
+.biopests-technology-showcase-card__body p {
+  display: -webkit-box;
+  margin: 9px 0 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.69rem;
+  line-height: 1.48;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.biopests-technology-showcase-card__body strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--green-dark);
+  font-size: 0.61rem;
+  line-height: 1.35;
+}
+
+/* MODAL */
+
+.biopests-technology-modal-overlay {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  overflow-y: auto;
+  padding: 18px;
+  background: rgba(11, 20, 14, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.biopests-technology-modal {
+  position: relative;
+  width: min(100%, 620px);
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+}
+
+.biopests-technology-modal__close {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 45px;
+  height: 45px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 9px 25px rgba(0, 0, 0, 0.17);
+  color: #17251b;
+  font: inherit;
+  font-size: 1.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.biopests-technology-detail__media {
+  display: flex;
+  min-height: 285px;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background:
+    radial-gradient(
+      circle at 85% 10%,
+      rgba(130, 213, 31, 0.2),
+      transparent 35%
+    ),
+    #f3f8f2;
+}
+
+.biopests-technology-detail__media img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+}
+
+.biopests-technology-detail__content {
+  padding: 25px 20px 30px;
+}
+
+.biopests-technology-detail__content > span {
+  display: block;
+  color: var(--green);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.biopests-technology-detail__content > h2 {
+  margin: 9px 0 0;
+  color: var(--green-dark);
+  font-size: clamp(1.8rem, 7vw, 2.35rem);
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.biopests-technology-detail__lead {
+  margin: 15px 0 0;
+  color: #3f5045;
+  font-size: 0.88rem;
+  line-height: 1.62;
+}
+
+.biopests-technology-detail__panel {
+  margin-top: 18px;
+  padding: 18px 16px;
+  border: 1px solid rgba(37, 140, 61, 0.17);
+  border-radius: 19px;
+  background: #fbfdfb;
+}
+
+.biopests-technology-detail__panel h3 {
+  margin: 0;
+  color: var(--green);
+  font-size: 0.92rem;
+}
+
+.biopests-technology-detail__panel ul {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.biopests-technology-detail__panel li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
+  color: #45564a;
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.biopests-technology-detail__panel li svg {
+  margin-top: 2px;
+  color: var(--green);
+}
+
+.biopests-technology-detail__whatsapp {
+  display: flex;
+  width: min(360px, 100%);
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 24px auto 0;
+  border-radius: 999px;
+  background: var(--green);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+@media (max-width: 390px) {
+  .biopests-technology-showcase {
+    gap: 9px;
+  }
+
+  .biopests-technology-showcase-card__media {
+    min-height: 128px;
+    padding: 9px;
+  }
+
+  .biopests-technology-showcase-card__media img {
+    height: 105px;
+  }
+
+  .biopests-technology-showcase-card__body {
+    padding: 13px 11px 15px;
+  }
+
+  .biopests-technology-showcase-card__body h3 {
+    font-size: 0.84rem;
+  }
+
+  .biopests-technology-showcase-card__body p {
+    font-size: 0.62rem;
+  }
+
+  .biopests-technology-showcase-card--wide {
+    grid-template-columns: 42% minmax(0, 1fr);
+  }
+
+  .biopests-technology-modal-overlay {
+    padding: 9px;
+  }
+
+  .biopests-technology-modal {
+    border-radius: 23px;
+  }
+
+  .biopests-technology-detail__media {
+    min-height: 240px;
+    padding: 25px;
+  }
+
+  .biopests-technology-detail__content {
+    padding: 23px 16px 27px;
+  }
+}
+/* RESPALDO INSTITUCIONAL BIOPESTS V2 */
+
+/* RESPALDO INSTITUCIONAL BIOPESTS V2 */
+
+.biopests-trust {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 68px 30px 64px;
+  background:
+    linear-gradient(
+      145deg,
+      #071f13 0%,
+      #0c3821 52%,
+      #0e4827 100%
+    );
+  color: #ffffff;
+}
+
+.biopests-trust::before {
+  position: absolute;
+  z-index: -2;
+  top: -130px;
+  right: -110px;
+  width: 330px;
+  height: 330px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgba(132, 224, 44, 0.25),
+      transparent 67%
+    );
+  content: "";
+}
+
+.biopests-trust::after {
+  position: absolute;
+  z-index: -2;
+  bottom: -160px;
+  left: -140px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgba(42, 157, 74, 0.18),
+      transparent 68%
+    );
+  content: "";
+}
+
+.biopests-trust__glow {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.07) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.07) 1px,
+      transparent 1px
+    );
+  background-size: 34px 34px;
+  mask-image:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.65),
+      transparent 75%
+    );
+}
+
+.biopests-trust__intro {
+  position: relative;
+}
+
+.biopests-trust__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(146, 235, 63, 0.35);
+  border-radius: 999px;
+  background: rgba(146, 235, 63, 0.1);
+  color: #9bef45;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.biopests-trust__eyebrow::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9bef45;
+  box-shadow: 0 0 12px rgba(155, 239, 69, 0.8);
+  content: "";
+}
+
+.biopests-trust__intro h2 {
+  max-width: 500px;
+  margin: 19px 0 0;
+  color: #ffffff;
+  font-size: clamp(2rem, 7.5vw, 2.75rem);
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 1.03;
+}
+
+.biopests-trust__intro > p {
+  max-width: 470px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.biopests-trust__seal {
+  display: grid;
+  grid-template-columns: 49px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-top: 25px;
+  padding: 15px 17px;
+  border: 1px solid rgba(155, 239, 69, 0.25);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(8px);
+}
+
+.biopests-trust__seal > span {
+  display: grid;
+  width: 49px;
+  height: 49px;
+  place-items: center;
+  border-radius: 15px;
+  background:
+    linear-gradient(
+      145deg,
+      #9bef45,
+      #65bf22
+    );
+  box-shadow: 0 10px 24px rgba(105, 194, 34, 0.25);
+  color: #10371d;
+  font-size: 1.2rem;
+}
+
+.biopests-trust__seal div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.biopests-trust__seal strong {
+  color: #ffffff;
+  font-size: 0.84rem;
+}
+
+.biopests-trust__seal small {
+  color: rgba(255, 255, 255, 0.63);
+  font-size: 0.69rem;
+  line-height: 1.4;
+}
+
+/* CERTIFICACIONES DESTACADAS */
+
+.biopests-trust .biopests-certifications {
+  display: grid;
+  gap: 14px;
+  margin-top: 34px;
+}
+
+.biopests-trust .biopests-certifications article {
+  display: grid;
+  grid-template-columns: 105px minmax(0, 1fr);
+  min-height: 145px;
+  gap: 17px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid rgba(155, 239, 69, 0.24);
+  border-radius: 22px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.055)
+    );
+  box-shadow:
+    0 20px 42px rgba(0, 0, 0, 0.17),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  backdrop-filter: blur(10px);
+}
+
+.biopests-certifications__logo {
+  display: grid;
+  width: 105px;
+  height: 105px;
+  place-items: center;
+  padding: 10px;
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #eef6ed
+    );
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+}
+
+.biopests-trust
+.biopests-certifications__logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.biopests-certifications__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.biopests-certifications__copy > small {
+  color: #9bef45;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.biopests-certifications__copy > strong {
+  margin-top: 8px;
+  color: #ffffff;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.biopests-certifications__copy > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 13px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.biopests-certifications__copy > span svg {
+  color: #9bef45;
+}
+
+/* PERMISOS */
+
+.biopests-permits-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 38px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.biopests-permits-heading span {
+  color: #9bef45;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.biopests-permits-heading h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.biopests-trust .biopests-permits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+  margin-top: 17px;
+}
+
+.biopests-trust .biopests-permits > article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+  padding: 14px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.065);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.biopests-trust .biopests-permits > article:hover {
+  transform: translateY(-2px);
+  border-color: rgba(155, 239, 69, 0.42);
+  background: rgba(155, 239, 69, 0.09);
+}
+
+.biopests-trust
+.biopests-permits > article > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border-radius: 13px;
+  background: rgba(155, 239, 69, 0.15);
+  color: #9bef45;
+  font-size: 1rem;
+}
+
+.biopests-trust .biopests-permits article div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.biopests-trust
+.biopests-permits article strong {
+  color: #ffffff;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.biopests-trust
+.biopests-permits article small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
+@media (min-width: 500px) {
+  .biopests-trust .biopests-certifications {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .biopests-trust .biopests-certifications article {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .biopests-certifications__logo {
+    width: 88px;
+    height: 88px;
+  }
+}
+
+@media (max-width: 390px) {
+  .biopests-trust {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .biopests-trust .biopests-certifications article {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .biopests-certifications__logo {
+    width: 88px;
+    height: 88px;
+  }
+
+  .biopests-trust .biopests-permits {
+    gap: 8px;
+  }
+
+  .biopests-trust .biopests-permits > article {
+    grid-template-columns: 35px minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px 9px;
+  }
+
+  .biopests-trust
+  .biopests-permits > article > span {
+    width: 35px;
+    height: 35px;
+    border-radius: 11px;
+    font-size: 0.85rem;
+  }
+
+  .biopests-trust
+  .biopests-permits article strong {
+    font-size: 0.61rem;
+  }
+
+  .biopests-trust
+  .biopests-permits article small {
+    font-size: 0.53rem;
+  }
+}
+/* CERTIFICACIONES VERTICALES BIOPESTS V3 */
+
+/* CERTIFICACIONES VERTICALES BIOPESTS V3 */
+
+.biopests-trust .biopests-certifications {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.biopests-trust .biopests-certifications article {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 315px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 17px 17px 22px;
+  overflow: hidden;
+  border: 1px solid rgba(155, 239, 69, 0.34);
+  border-radius: 24px;
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.15),
+      rgba(255, 255, 255, 0.055)
+    );
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, 0.2),
+    inset 0 1px rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.biopests-trust .biopests-certifications article::before {
+  position: absolute;
+  top: 0;
+  right: 22%;
+  left: 22%;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #9bef45,
+      transparent
+    );
+  content: "";
+}
+
+.biopests-certifications__logo {
+  display: flex;
+  width: 100%;
+  height: 160px;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  border-radius: 19px;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #eef6ed
+    );
+  box-shadow:
+    0 13px 27px rgba(0, 0, 0, 0.21),
+    inset 0 0 0 1px rgba(18, 76, 39, 0.06);
+}
+
+.biopests-trust
+.biopests-certifications__logo img {
+  display: block;
+  width: auto;
+  max-width: 145px;
+  height: auto;
+  max-height: 122px;
+  object-fit: contain;
+}
+
+.biopests-certifications__copy {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 18px 5px 0;
+  text-align: center;
+}
+
+.biopests-certifications__copy > small {
+  display: block;
+  color: #9bef45;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.biopests-certifications__copy > strong {
+  display: block;
+  width: 100%;
+  margin-top: 9px;
+  color: #ffffff;
+  font-size: 0.94rem;
+  font-weight: 900;
+  line-height: 1.32;
+  text-align: center;
+}
+
+.biopests-certifications__copy > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 15px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.65rem;
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.biopests-certifications__copy > span svg {
+  flex: 0 0 auto;
+  color: #9bef45;
+  font-size: 1rem;
+}
+
+/* En teléfonos estrechos, cada certificado ocupa una fila completa. */
+
+@media (max-width: 430px) {
+  .biopests-trust .biopests-certifications {
+    grid-template-columns: 1fr;
+  }
+
+  .biopests-trust .biopests-certifications article {
+    min-height: auto;
+    padding: 18px 18px 24px;
+  }
+
+  .biopests-certifications__logo {
+    height: 185px;
+  }
+
+  .biopests-trust
+  .biopests-certifications__logo img {
+    max-width: 165px;
+    max-height: 145px;
+  }
+
+  .biopests-certifications__copy > strong {
+    max-width: 280px;
+    font-size: 1rem;
+  }
+}
+/* TIPOGRAFIA SEMIBOLD GLOBAL BIOPESTS V1 */
+
+/* TIPOGRAFIA SEMIBOLD GLOBAL BIOPESTS V1 */
+
+/*
+  Sistema tipográfico general:
+  - títulos principales con peso semibold;
+  - menos compresión visual;
+  - mayor elegancia y legibilidad;
+  - no altera botones, etiquetas pequeñas ni textos normales.
+*/
+
+.biopests-page h1,
+.biopests-page h2,
+.biopests-page h3,
+.biopests-page h4,
+.biopests-page h5,
+.biopests-page h6 {
+  font-weight: 600 !important;
+  letter-spacing: -0.022em !important;
+  text-wrap: balance;
+}
+
+.biopests-page h1,
+.biopests-page h2 {
+  line-height: 1.12 !important;
+}
+
+.biopests-page h3,
+.biopests-page h4,
+.biopests-page h5,
+.biopests-page h6 {
+  line-height: 1.25 !important;
+}
+
+/* Títulos principales de secciones */
+
+.biopests-section-head h2,
+.biopests-trust__intro h2,
+.biopests-contact h2,
+.biopests-services-gallery > header h2,
+.biopests-service-detail__content > h2,
+.biopests-technology-detail__content > h2 {
+  font-weight: 600 !important;
+  letter-spacing: -0.028em !important;
+}
+
+/* Títulos de cards */
+
+.biopests-service-feature-card__body h3,
+.biopests-services-gallery-card__body h3,
+.biopests-technology-showcase-card__body h3,
+.biopests-certifications__copy > strong,
+.biopests-permits-heading h3 {
+  font-weight: 600 !important;
+  letter-spacing: -0.015em !important;
+}
+
+/* El título institucional grande conserva presencia,
+   pero sin el peso visual agresivo anterior. */
+
+.biopests-trust__intro h2 {
+  max-width: 490px;
+  font-size: clamp(1.85rem, 6.7vw, 2.4rem) !important;
+  line-height: 1.1 !important;
+}
+
+/* Detalles y modales */
+
+.biopests-service-detail__content > h2,
+.biopests-technology-detail__content > h2,
+.biopests-services-gallery > header h2 {
+  font-size: clamp(1.65rem, 6vw, 2.15rem) !important;
+}
+
+
+/* CARRUSEL CLIENTES BIOPESTS V1 */
+
+.biopests-page {
+  overflow-x: clip;
+}
+
+.biopests-clients {
+  overflow: visible;
+  padding-right: 0;
+  padding-left: 0;
+  background: #ffffff;
+}
+
+.biopests-clients__header {
+  padding-right: 30px;
+  padding-left: 30px;
+}
+
+.biopests-clients-marquee {
+  position: relative;
+  width: 100vw;
+  margin-top: 26px;
+  margin-right: calc(50% - 50vw);
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  padding: 22px 0;
+  border-top: 1px solid rgba(18, 70, 36, 0.1);
+  border-bottom: 1px solid rgba(18, 70, 36, 0.1);
+  background:
+    linear-gradient(
+      180deg,
+      #f8faf8 0%,
+      #ffffff 100%
+    );
+  mask-image:
+    linear-gradient(
+      90deg,
+      transparent 0,
+      #000 5%,
+      #000 95%,
+      transparent 100%
+    );
+}
+
+.biopests-clients-marquee__track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation:
+    biopests-clients-scroll 32s linear infinite;
+}
+
+.biopests-clients-marquee__group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 18px;
+  padding-right: 18px;
+}
+
+.biopests-client-logo {
+  display: flex;
+  width: 168px;
+  height: 104px;
+  flex: 0 0 168px;
+  align-items: center;
+  justify-content: center;
+  padding: 17px;
+  border: 1px solid rgba(20, 75, 39, 0.09);
+  border-radius: 20px;
+  outline: none;
+  background: #ffffff;
+  box-shadow:
+    0 10px 26px rgba(20, 75, 39, 0.06);
+  cursor: default;
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+.biopests-client-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) saturate(0);
+  opacity: 0.64;
+  transition:
+    filter 0.3s ease,
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+.biopests-client-logo:hover,
+.biopests-client-logo:focus,
+.biopests-client-logo:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgba(83, 176, 47, 0.34);
+  background: #ffffff;
+  box-shadow:
+    0 16px 34px rgba(20, 75, 39, 0.13);
+}
+
+.biopests-client-logo:hover img,
+.biopests-client-logo:focus img,
+.biopests-client-logo:focus-visible img {
+  filter: grayscale(0) saturate(1);
+  opacity: 1;
+  transform: scale(1.04);
+}
+
+.biopests-clients-marquee:hover
+.biopests-clients-marquee__track,
+.biopests-clients-marquee:focus-within
+.biopests-clients-marquee__track {
+  animation-play-state: paused;
+}
+
+@keyframes biopests-clients-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (max-width: 600px) {
+  .biopests-clients__header {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .biopests-clients-marquee {
+    padding: 18px 0;
+    mask-image:
+      linear-gradient(
+        90deg,
+        transparent 0,
+        #000 3%,
+        #000 97%,
+        transparent 100%
+      );
+  }
+
+  .biopests-clients-marquee__track {
+    animation-duration: 25s;
+  }
+
+  .biopests-clients-marquee__group {
+    gap: 12px;
+    padding-right: 12px;
+  }
+
+  .biopests-client-logo {
+    width: 132px;
+    height: 84px;
+    flex-basis: 132px;
+    padding: 13px;
+    border-radius: 17px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .biopests-client-logo:active img,
+  .biopests-client-logo:focus img {
+    filter: grayscale(0) saturate(1);
+    opacity: 1;
+  }
+
+  .biopests-clients-marquee:focus-within
+  .biopests-clients-marquee__track {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biopests-clients-marquee__track {
+    animation: none;
+  }
+
+  .biopests-clients-marquee {
+    overflow-x: auto;
+    mask-image: none;
+    scrollbar-width: thin;
+  }
+}
+
+/* METODOLOGIA SIMPLIFICADA BIOPESTS V2 */
+
+.biopests-methodology {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 92% 10%,
+      rgba(145, 224, 54, 0.12),
+      transparent 35%
+    ),
+    linear-gradient(
+      145deg,
+      #0b3c20,
+      #17632d
+    );
+  color: #ffffff;
+}
+
+.biopests-methodology .biopests-section-head span {
+  color: #a0ed43;
+}
+
+.biopests-methodology .biopests-section-head h2 {
+  color: #ffffff;
+}
+
+.biopests-methodology .biopests-section-head p {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.biopests-methodology-stage {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.biopests-methodology-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(159, 235, 73, 0.22);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.07),
+    0 18px 40px rgba(0, 0, 0, 0.14);
+}
+
+.biopests-methodology-card--analysis {
+  display: flex;
+  min-height: 230px;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 18px;
+}
+
+.biopests-methodology-card--pests {
+  min-height: 225px;
+  padding: 12px;
+}
+
+.biopests-methodology-card__image {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* La parte de análisis vuelve a ser completamente estática. */
+
+.biopests-methodology-card__image--analysis {
+  max-width: 100%;
+  transform: none;
+  animation: none;
+}
+
+/* Solo la parte inferior conserva animación. */
+
+.biopests-methodology-card__image--pests {
+  border-radius: 18px;
+  transform-origin: center;
+  animation:
+    biopests-methodology-pests-subtle
+    10s ease-in-out infinite;
+}
+
+.biopests-methodology-card__scanner {
+  position: absolute;
+  z-index: 4;
+  inset: 10px;
+  overflow: hidden;
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.biopests-methodology-card__scanner::before {
+  position: absolute;
+  top: -35%;
+  right: 0;
+  left: 0;
+  height: 34%;
+  background:
+    linear-gradient(
+      180deg,
+      transparent,
+      rgba(157, 237, 69, 0.22),
+      transparent
+    );
+  content: "";
+  animation:
+    biopests-methodology-scan-subtle
+    5s linear infinite;
+}
+
+.biopests-methodology-card__pulse {
+  position: absolute;
+  z-index: 3;
+  right: 18%;
+  bottom: 8%;
+  left: 18%;
+  height: 22%;
+  border-radius: 999px;
+  background:
+    radial-gradient(
+      circle,
+      rgba(151, 230, 56, 0.22),
+      transparent 70%
+    );
+  filter: blur(14px);
+  pointer-events: none;
+  animation:
+    biopests-methodology-pulse-subtle
+    3.8s ease-in-out infinite;
+}
+
+@keyframes biopests-methodology-pests-subtle {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.025);
+  }
+}
+
+@keyframes biopests-methodology-scan-subtle {
+  from {
+    transform: translateY(-115%);
+  }
+
+  to {
+    transform: translateY(400%);
+  }
+}
+
+@keyframes biopests-methodology-pulse-subtle {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 0.65;
+    transform: scale(1.03);
+  }
+}
+
+@media (max-width: 640px) {
+  .biopests-methodology-card--analysis {
+    min-height: 205px;
+    padding: 17px 13px;
+  }
+
+  .biopests-methodology-card--pests {
+    min-height: 205px;
+    padding: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biopests-methodology-card__image--pests,
+  .biopests-methodology-card__scanner::before,
+  .biopests-methodology-card__pulse {
+    animation: none !important;
+  }
+}
+
+/* CINTILLO PLAGAS BIOPESTS V3 */
+
+.biopests-methodology-pest-strip {
+  position: relative;
+  width: 100vw;
+  margin-top: 18px;
+  margin-right: calc(50% - 50vw);
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  padding: 12px 0;
+  border-top: 1px solid rgba(158, 235, 73, 0.2);
+  border-bottom: 1px solid rgba(158, 235, 73, 0.2);
+  outline: none;
+  background:
+    linear-gradient(
+      90deg,
+      #082e19,
+      #125827,
+      #082e19
+    );
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 -1px rgba(255, 255, 255, 0.03);
+  mask-image:
+    linear-gradient(
+      90deg,
+      transparent 0,
+      #000 4%,
+      #000 96%,
+      transparent 100%
+    );
+}
+
+.biopests-methodology-pest-strip__track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation:
+    biopests-pest-strip-scroll
+    24s linear infinite;
+}
+
+.biopests-methodology-pest-strip__group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 13px;
+  padding-right: 13px;
+}
+
+.biopests-methodology-pest-strip__item {
+  display: inline-flex;
+  min-height: 39px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 17px;
+  border: 1px solid rgba(158, 235, 73, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  color: #f2faed;
+  font-size: 0.71rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.biopests-methodology-pest-strip__dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #9fec45;
+  box-shadow:
+    0 0 10px rgba(159, 236, 69, 0.72);
+}
+
+.biopests-methodology-pest-strip:hover
+.biopests-methodology-pest-strip__track,
+.biopests-methodology-pest-strip:focus
+.biopests-methodology-pest-strip__track,
+.biopests-methodology-pest-strip:focus-within
+.biopests-methodology-pest-strip__track {
+  animation-play-state: paused;
+}
+
+.biopests-methodology-pest-strip:focus-visible {
+  box-shadow:
+    inset 0 0 0 2px rgba(159, 236, 69, 0.45);
+}
+
+@keyframes biopests-pest-strip-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (max-width: 640px) {
+  .biopests-methodology-pest-strip {
+    margin-top: 14px;
+    padding: 10px 0;
+    mask-image:
+      linear-gradient(
+        90deg,
+        transparent 0,
+        #000 2%,
+        #000 98%,
+        transparent 100%
+      );
+  }
+
+  .biopests-methodology-pest-strip__track {
+    animation-duration: 18s;
+  }
+
+  .biopests-methodology-pest-strip__group {
+    gap: 9px;
+    padding-right: 9px;
+  }
+
+  .biopests-methodology-pest-strip__item {
+    min-height: 35px;
+    gap: 7px;
+    padding: 0 13px;
+    font-size: 0.64rem;
+  }
+
+  .biopests-methodology-pest-strip__dot {
+    width: 7px;
+    height: 7px;
+    flex-basis: 7px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .biopests-methodology-pest-strip:active
+  .biopests-methodology-pest-strip__track {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biopests-methodology-pest-strip__track {
+    animation: none;
+  }
+
+  .biopests-methodology-pest-strip {
+    overflow-x: auto;
+    mask-image: none;
+    scrollbar-width: thin;
+  }
+}
+
+/* ADN REPLICA EXACTA SERVICIOS V7 */
+
+.biopests-values-section-v7 {
+  background:
+    radial-gradient(
+      circle at 92% 4%,
+      rgba(139, 213, 43, 0.14),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #f8fbf7 0%,
+      #eef6ec 100%
+    );
+}
+
+.biopests-values-featured-v7 {
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  margin-top: 28px;
+}
+
+.biopests-values-section-v7
+.biopests-service-feature-card__media img {
+  object-position: center;
+}
+
+.biopests-values-section-v7
+.biopests-service-feature-card__body strong {
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .biopests-values-featured-v7 {
+    grid-template-columns: 1fr;
+  }
+
+  .biopests-values-section-v7
+  .biopests-service-feature-card__media {
+    aspect-ratio: 1.3 / 1;
+  }
+}
+
+/* ADN LAYOUT DOS COLUMNAS V8 START */
+
+/*
+  Organización replicada de la sección Tecnología:
+  - máximo 2 cards por fila;
+  - tercera card a todo el ancho;
+  - CTA Ver detalles más grande;
+  - una columna en móviles.
+*/
+
+.biopests-values-featured-v7 {
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  margin-top: 28px;
+}
+
+.biopests-values-featured-v7
+.biopests-service-feature-card {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  text-align: left;
+}
+
+.biopests-values-featured-v7
+.biopests-service-feature-card__media {
+  flex: 0 0 auto;
+  aspect-ratio: 1.18 / 1;
+}
+
+.biopests-values-featured-v7
+.biopests-service-feature-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+/* CTA más visible y grande */
+
+.biopests-values-featured-v7
+.biopests-service-feature-card__body strong {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto;
+  padding: 0 16px;
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--green);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  transition:
+    background 0.22s ease,
+    color 0.22s ease,
+    transform 0.22s ease;
+}
+
+.biopests-values-featured-v7
+.biopests-service-feature-card:hover
+.biopests-service-feature-card__body strong,
+.biopests-values-featured-v7
+.biopests-service-feature-card:focus-visible
+.biopests-service-feature-card__body strong {
+  background: var(--green);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* La tercera card ocupa la fila completa */
+
+.biopests-values-featured-v7
+.biopests-service-feature-card:nth-child(3) {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns:
+    minmax(0, 0.92fr)
+    minmax(0, 1.08fr);
+  align-items: stretch;
+}
+
+.biopests-values-featured-v7
+.biopests-service-feature-card:nth-child(3)
+.biopests-service-feature-card__media {
+  height: 100%;
+  min-height: 190px;
+  aspect-ratio: auto;
+}
+
+.biopests-values-featured-v7
+.biopests-service-feature-card:nth-child(3)
+.biopests-service-feature-card__body {
+  justify-content: center;
+  padding: 19px 18px;
+}
+
+.biopests-values-featured-v7
+.biopests-service-feature-card:nth-child(3)
+.biopests-service-feature-card__body strong {
+  margin-top: 15px;
+}
+
+/* Móvil: una card por fila */
+
+@media (max-width: 640px) {
+  .biopests-values-featured-v7 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3) {
+    display: flex;
+    grid-column: auto;
+    flex-direction: column;
+  }
+
+  .biopests-values-featured-v7
+  .biopests-service-feature-card:nth-child(3)
+  .biopests-service-feature-card__media {
+    min-height: auto;
+    aspect-ratio: 1.3 / 1;
+  }
+
+  .biopests-values-featured-v7
+  .biopests-service-feature-card__body strong {
+    min-height: 48px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ADN LAYOUT DOS COLUMNAS V8 END */
+
+/* BIOPESTS BRAND COLOR GUARD V9 START */
+
+/*
+  Evita que clases genéricas de index.css, como .primary-btn
+  y .eyebrow, introduzcan el azul global dentro de BioPests.
+  Todas las reglas están limitadas a este perfil.
+*/
+
+/* Paleta oficial dentro del perfil */
+
+.biopests-page {
+  --green-dark: #0F6A2A;
+  --green: #4B9900;
+  --lime: #93D824;
+  --ink: #111827;
+  --soft: #F6FAF3;
+}
+
+/* Identidad principal */
+
+.biopests-page .biopests-identity .eyebrow,
+.biopests-page .biopests-identity__eyebrow,
+.biopests-page .biopests-identity__role,
+.biopests-page .biopests-identity__subtitle,
+.biopests-page .biopests-identity__headline {
+  color: var(--green-dark) !important;
+}
+
+/* Neutraliza el .eyebrow azul global */
+
+.biopests-page .eyebrow,
+.biopests-page [class$="__eyebrow"] {
+  color: var(--green) !important;
+}
+
+/* En secciones oscuras, el eyebrow conserva el lima original */
+
+.biopests-page .biopests-contact .eyebrow,
+.biopests-page .biopests-contact [class$="__eyebrow"],
+.biopests-page .biopests-contact__eyebrow {
+  color: var(--lime) !important;
+}
+
+/* Neutraliza el botón azul global */
+
+.biopests-page .primary-btn,
+.biopests-page a.primary-btn,
+.biopests-page button.primary-btn,
+.biopests-page .btn-primary,
+.biopests-page .button-primary {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  box-shadow:
+    0 12px 26px rgba(75, 153, 0, 0.22) !important;
+  color: #ffffff !important;
+}
+
+.biopests-page .primary-btn:hover,
+.biopests-page .primary-btn:focus-visible,
+.biopests-page .btn-primary:hover,
+.biopests-page .button-primary:hover {
+  border-color: var(--green-dark) !important;
+  background: var(--green-dark) !important;
+  color: #ffffff !important;
+}
+
+/* CTA principal del encabezado */
+
+.biopests-page .biopests-identity__cta,
+.biopests-page .biopests-hero__cta,
+.biopests-page .biopests-whatsapp-cta {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  color: #ffffff !important;
+}
+
+.biopests-page .biopests-identity__cta svg,
+.biopests-page .biopests-hero__cta svg,
+.biopests-page .biopests-whatsapp-cta svg {
+  color: currentColor !important;
+}
+
+/* Acceso rápido central de WhatsApp */
+
+.biopests-page
+.biopests-quick__item:nth-child(2) {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  color: #ffffff !important;
+}
+
+.biopests-page
+.biopests-quick__item:nth-child(2) span,
+.biopests-page
+.biopests-quick__item:nth-child(2) strong,
+.biopests-page
+.biopests-quick__item:nth-child(2) svg {
+  color: #ffffff !important;
+}
+
+.biopests-page
+.biopests-quick__item:nth-child(2):hover {
+  border-color: var(--green-dark) !important;
+  background: var(--green-dark) !important;
+  color: #ffffff !important;
+}
+
+/* Bloque final oscuro */
+
+.biopests-page .biopests-contact h2,
+.biopests-page .biopests-contact__title,
+.biopests-page .biopests-contact__headline {
+  color: #ffffff !important;
+}
+
+.biopests-page .biopests-contact > p,
+.biopests-page .biopests-contact__description {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* El CTA final conserva el diseño lima original */
+
+.biopests-page .biopests-contact__cta {
+  border-color: var(--lime) !important;
+  background: var(--lime) !important;
+  box-shadow: none !important;
+  color: #153A1F !important;
+}
+
+.biopests-page .biopests-contact__cta:hover,
+.biopests-page .biopests-contact__cta:focus-visible {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: var(--green-dark) !important;
+}
+
+/* Burbuja flotante completamente corporativa */
+
+.biopests-floating-whatsapp {
+  border-color: #ffffff !important;
+  background: #4B9900 !important;
+  color: #ffffff !important;
+}
+
+.biopests-floating-whatsapp:hover,
+.biopests-floating-whatsapp:focus-visible {
+  background: #0F6A2A !important;
+  color: #ffffff !important;
+}
+
+/* Evita azul en estados visitados */
+
+.biopests-page .primary-btn:visited,
+.biopests-page .biopests-identity__cta:visited,
+.biopests-page .biopests-hero__cta:visited,
+.biopests-page
+.biopests-quick__item:nth-child(2):visited {
+  color: #ffffff !important;
+}
+
+.biopests-page .biopests-contact__cta:visited {
+  color: #153A1F !important;
+}
+
+.biopests-floating-whatsapp:visited {
+  color: #ffffff !important;
+}
+
+/* Foco y selección táctil dentro de BioPests */
+
+.biopests-page a,
+.biopests-page button {
+  -webkit-tap-highlight-color:
+    rgba(147, 216, 36, 0.2);
+}
+
+.biopests-page a:focus-visible,
+.biopests-page button:focus-visible,
+.biopests-floating-whatsapp:focus-visible {
+  outline: 3px solid #93D824 !important;
+  outline-offset: 3px;
+}
+
+/* BIOPESTS BRAND COLOR GUARD V9 END */
+
+/* BIOPESTS COLOR OVERRIDE V10 START */
+
+/*
+  Cobertura cromática completa de BioPests.
+  Neutraliza colores azules heredados sin modificar index.css
+  ni afectar otros perfiles.
+*/
+
+/* Encabezados sobre fondos claros */
+
+.biopests-page :is(
+  h1,
+  h2,
+  h3,
+  [class*="heading"],
+  [class*="headline"],
+  [class*="section-title"]
+) {
+  color: var(--green-dark) !important;
+}
+
+/* Subtítulos, roles y textos superiores */
+
+.biopests-page :is(
+  [class*="identity__role"],
+  [class*="identity__subtitle"],
+  [class*="identity__tagline"],
+  [class*="tagline"],
+  [class*="role"]
+) {
+  color: var(--green-dark) !important;
+}
+
+/* Etiquetas pequeñas de sección */
+
+.biopests-page :is(
+  [class*="eyebrow"],
+  [class*="kicker"],
+  [class*="overline"]
+) {
+  color: var(--green) !important;
+}
+
+/* Encabezados sobre secciones oscuras */
+
+.biopests-page :is(
+  [class*="methodology"],
+  [class*="trust"],
+  [class*="certification"],
+  [class*="contact"]
+) :is(
+  h1,
+  h2,
+  h3,
+  [class*="heading"],
+  [class*="headline"],
+  [class*="section-title"]
+) {
+  color: #ffffff !important;
+}
+
+/* Etiquetas sobre fondos oscuros */
+
+.biopests-page :is(
+  [class*="methodology"],
+  [class*="trust"],
+  [class*="certification"],
+  [class*="contact"]
+) :is(
+  [class*="eyebrow"],
+  [class*="kicker"],
+  [class*="overline"]
+) {
+  color: var(--lime) !important;
+}
+
+/* Todos los CTA de WhatsApp del perfil */
+
+body:has(.biopests-page) a[href*="wa.me"],
+body:has(.biopests-page) a[href*="api.whatsapp.com"],
+body:has(.biopests-page) a[href*="whatsapp.com/send"],
+body:has(.biopests-page) button[class*="whatsapp"] {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  background-image: none !important;
+  box-shadow:
+    0 10px 24px rgba(75, 153, 0, 0.22) !important;
+  color: #ffffff !important;
+}
+
+body:has(.biopests-page) a[href*="wa.me"] *,
+body:has(.biopests-page) a[href*="api.whatsapp.com"] *,
+body:has(.biopests-page) a[href*="whatsapp.com/send"] * {
+  color: currentColor !important;
+  fill: currentColor !important;
+}
+
+/* Hover de WhatsApp */
+
+body:has(.biopests-page) a[href*="wa.me"]:hover,
+body:has(.biopests-page) a[href*="api.whatsapp.com"]:hover,
+body:has(.biopests-page) a[href*="whatsapp.com/send"]:hover {
+  border-color: var(--green-dark) !important;
+  background: var(--green-dark) !important;
+  color: #ffffff !important;
+}
+
+/* CTA final sobre fondo verde oscuro: conserva lima */
+
+.biopests-page [class*="contact"]
+a[href*="wa.me"],
+.biopests-page [class*="contact"]
+a[href*="api.whatsapp.com"],
+.biopests-page [class*="contact"]
+a[href*="whatsapp.com/send"] {
+  border-color: var(--lime) !important;
+  background: var(--lime) !important;
+  box-shadow: none !important;
+  color: #153a1f !important;
+}
+
+/* Burbuja flotante, incluso si está fuera del wrapper */
+
+body:has(.biopests-page)
+a[href*="wa.me"][class*="floating"],
+body:has(.biopests-page)
+a[href*="wa.me"][class*="whatsapp"],
+body:has(.biopests-page)
+a[href*="api.whatsapp.com"][class*="floating"],
+body:has(.biopests-page)
+a[href*="api.whatsapp.com"][class*="whatsapp"] {
+  border-color: #ffffff !important;
+  background: var(--green) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+/* Elimina azul de botones genéricos dentro del perfil */
+
+.biopests-page :is(
+  .primary-btn,
+  .btn-primary,
+  .button-primary,
+  [class*="primary-button"],
+  [class*="primary-cta"]
+) {
+  border-color: var(--green) !important;
+  background: var(--green) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+/* Foco corporativo */
+
+.biopests-page a:focus-visible,
+.biopests-page button:focus-visible,
+body:has(.biopests-page)
+a[href*="wa.me"]:focus-visible {
+  outline: 3px solid var(--lime) !important;
+  outline-offset: 3px;
+}
+
+/* BIOPESTS COLOR OVERRIDE V10 END */
+
+/* BIOPESTS QUICK ACTIONS V11 START */
+
+/*
+  Los tres accesos principales mantienen el mismo diseño:
+  Llamar / Instagram / Ubicación.
+  Guardar contacto conserva su fila inferior.
+*/
+
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) {
+  border: 1px solid rgba(75, 153, 0, 0.24) !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: #0F6A2A !important;
+}
+
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) span,
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) strong,
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child) svg {
+  color: #0F6A2A !important;
+  fill: currentColor;
+}
+
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child):hover,
+.biopests-page
+.biopests-quick
+.biopests-quick__item:not(:last-child):focus-visible {
+  border-color: rgba(75, 153, 0, 0.42) !important;
+  background: #F6FAF3 !important;
+  color: #0F6A2A !important;
+}
+
+/* BIOPESTS QUICK ACTIONS V11 END */
+
+/* BIOPESTS INTRO V3 START */
+
+/*
+  Intro BioPests V3
+  1) insecto negro cruza la pantalla
+  2) mira roja lo rastrea y se fija en él
+  3) escena se desvanece
+  4) logo aparece desde el centro
+  Duración total aproximada: 5.6 segundos
+*/
+
+.biopestsBootOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #ffffff;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: all;
+  animation: biopestsBootOverlayExit 0.42s ease 5.18s forwards;
+}
+
+.biopestsBootScene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  animation: biopestsBootSceneFade 0.5s ease 3.55s forwards;
+}
+
+.biopestsBootBug {
+  position: absolute;
+  top: 44%;
+  left: -180px;
+  width: 132px;
+  height: 86px;
+  opacity: 0;
+  transform-origin: center center;
+  animation: biopestsBootBugRun 1.85s cubic-bezier(.26,.72,.22,1) .28s forwards;
+}
+
+.biopestsBootBug__body {
+  position: absolute;
+  top: 22px;
+  left: 24px;
+  width: 68px;
+  height: 38px;
+  border-radius: 55% 48% 52% 50%;
+  background: #111111;
+}
+
+.biopestsBootBug__head {
+  position: absolute;
+  top: 25px;
+  left: 90px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111111;
+}
+
+.biopestsBootBug__leg,
+.biopestsBootBug__antenna {
+  position: absolute;
+  display: block;
+  background: #111111;
+  transform-origin: left center;
+}
+
+.biopestsBootBug__leg {
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.biopestsBootBug__leg--1 { top: 24px; left: 13px; transform: rotate(-34deg); }
+.biopestsBootBug__leg--2 { top: 39px; left: 8px; transform: rotate(-8deg); }
+.biopestsBootBug__leg--3 { top: 55px; left: 14px; transform: rotate(26deg); }
+.biopestsBootBug__leg--4 { top: 25px; left: 64px; transform: rotate(30deg); }
+.biopestsBootBug__leg--5 { top: 41px; left: 68px; transform: rotate(8deg); }
+.biopestsBootBug__leg--6 { top: 56px; left: 62px; transform: rotate(-24deg); }
+
+.biopestsBootBug__antenna {
+  width: 22px;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.biopestsBootBug__antenna--1 {
+  top: 24px;
+  left: 100px;
+  transform: rotate(-34deg);
+}
+
+.biopestsBootBug__antenna--2 {
+  top: 35px;
+  left: 101px;
+  transform: rotate(17deg);
+}
+
+.biopestsBootScope {
+  position: absolute;
+  top: 20%;
+  left: 12%;
+  width: 176px;
+  height: 176px;
+  opacity: 0;
+  transform: translate3d(0, 0, 0) scale(.6);
+  animation: biopestsBootScopeTrack 2.25s cubic-bezier(.24,.78,.22,1) 1.05s forwards;
+}
+
+.biopestsBootScope__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: biopestsBootScopePulse .8s ease-in-out 2.45s 2 alternate;
+}
+
+.biopestsBootScope__ring,
+.biopestsBootScope__cross,
+.biopestsBootScope__dot {
+  position: absolute;
+  display: block;
+}
+
+.biopestsBootScope__ring {
+  inset: 0;
+  border: 3px solid #d61b28;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px rgba(214, 27, 40, .08),
+    0 0 22px rgba(214, 27, 40, .18);
+}
+
+.biopestsBootScope__cross--v {
+  top: 14px;
+  bottom: 14px;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(214, 27, 40, .92);
+}
+
+.biopestsBootScope__cross--h {
+  left: 14px;
+  right: 14px;
+  top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: rgba(214, 27, 40, .92);
+}
+
+.biopestsBootScope__dot {
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #d61b28;
+  box-shadow: 0 0 16px rgba(214, 27, 40, .28);
+}
+
+.biopestsBootLogoWrap {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(430px, 84vw);
+  height: min(430px, 84vw);
+  place-items: center;
+}
+
+.biopestsBootLogo {
+  display: block;
+  width: min(360px, 74vw);
+  height: auto;
+  max-height: 340px;
+  object-fit: contain;
+  opacity: 0;
+  filter: blur(10px);
+  transform: scale(.12);
+  transform-origin: center center;
+  will-change: transform, opacity, filter;
+  animation: biopestsBootLogoGrow 1.35s cubic-bezier(.18,.82,.22,1) 3.95s forwards;
+}
+
+@keyframes biopestsBootBugRun {
+  0% {
+    left: -180px;
+    opacity: 0;
+    transform: translateY(0) scale(.95) rotate(0deg);
+  }
+
+  8% {
+    opacity: 1;
+  }
+
+  20% {
+    transform: translateY(-4px) scale(1) rotate(-2deg);
+  }
+
+  38% {
+    transform: translateY(3px) scale(1) rotate(2deg);
+  }
+
+  56% {
+    transform: translateY(-3px) scale(1) rotate(-1deg);
+  }
+
+  74% {
+    transform: translateY(2px) scale(1) rotate(1deg);
+  }
+
+  100% {
+    left: calc(50% - 64px);
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes biopestsBootScopeTrack {
+  0% {
+    top: 17%;
+    left: 10%;
+    opacity: 0;
+    transform: scale(.6);
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  45% {
+    top: 28%;
+    left: 36%;
+    opacity: 1;
+    transform: scale(.94);
+  }
+
+  70% {
+    top: 37%;
+    left: calc(50% - 88px);
+    opacity: 1;
+    transform: scale(1.02);
+  }
+
+  100% {
+    top: 37%;
+    left: calc(50% - 88px);
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes biopestsBootScopePulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.06);
+    opacity: .92;
+  }
+}
+
+@keyframes biopestsBootSceneFade {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes biopestsBootLogoGrow {
+  0% {
+    opacity: 0;
+    filter: blur(10px);
+    transform: scale(.12);
+  }
+
+  24% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+@keyframes biopestsBootOverlayExit {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (max-width: 430px) {
+  .biopestsBootBug {
+    width: 118px;
+    height: 78px;
+  }
+
+  .biopestsBootScope {
+    width: 148px;
+    height: 148px;
+  }
+
+  .biopestsBootLogoWrap {
+    width: min(84vw, 360px);
+    height: min(84vw, 360px);
+  }
+
+  .biopestsBootLogo {
+    width: min(72vw, 300px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .biopestsBootScene {
+    display: none;
+    animation: none;
+  }
+
+  .biopestsBootLogo {
+    opacity: 1;
+    filter: none;
+    transform: scale(1);
+    animation: none;
+  }
+
+  .biopestsBootOverlay {
+    animation: biopestsBootOverlayExit 0.01s linear 0.8s forwards;
+  }
+}
+
+/* BIOPESTS INTRO V3 END */
