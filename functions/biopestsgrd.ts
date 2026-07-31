@@ -45,7 +45,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     name: 'Rene Prieto',
     jobTitle: 'CEO',
     url: CANONICAL,
-    telephone: '+18292469777',
+    telephone: '+18297500908',
     worksFor: {
       '@type': 'Organization',
       name: 'BioPests',
