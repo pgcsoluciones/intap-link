@@ -7,6 +7,7 @@ import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
 import {
+  enforceFreeProfilePublicationState,
   getFreeProfilePublicationReadiness,
   type FreeProfilePublicationReadiness,
 } from './lib/free-profile-publication'
@@ -499,11 +500,19 @@ me.get('/', async (c) => {
     }
 
     if (r.plan_id === 'free') {
-      publicationReadiness =
-        await getFreeProfilePublicationReadiness(
+      const enforcement =
+        await enforceFreeProfilePublicationState(
           c,
           r.profile_id,
+          r.is_published,
         )
+
+      publicationReadiness =
+        enforcement.readiness
+
+      if (enforcement.unpublished) {
+        r.is_published = 0
+      }
     }
   }
 
@@ -2056,7 +2065,10 @@ app.get('/api/v1/public/assets/*', async (c) => {
 app.get('/api/v1/public/discovery/profiles', async (c) => {
   const rows = await c.env.DB.prepare(`
     SELECT
+      id,
       slug,
+      plan_id,
+      is_published,
       name,
       bio,
       avatar_url,
@@ -2088,7 +2100,28 @@ app.get('/api/v1/public/discovery/profiles', async (c) => {
     return `${origin}/api/v1/public/assets/${encodedKey}`
   }
 
-  const profiles = (rows.results as any[]).map((row) => ({
+  const visibleRows = (
+    await Promise.all(
+      (rows.results as any[]).map(async (row) => {
+        if (row.plan_id !== 'free') {
+          return row
+        }
+
+        const enforcement =
+          await enforceFreeProfilePublicationState(
+            c,
+            row.id,
+            row.is_published,
+          )
+
+        return enforcement.readiness.ready
+          ? row
+          : null
+      })
+    )
+  ).filter(Boolean) as any[]
+
+  const profiles = visibleRows.map((row) => ({
     slug: row.slug,
     name: row.name || row.slug,
     bio:
@@ -2140,8 +2173,29 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     )
   }
 
-  // Allow owner to preview unpublished profiles
-  if (!(profile as any).is_published) {
+  let effectiveIsPublished =
+    Boolean((profile as any).is_published)
+
+  if ((profile as any).plan_id === 'free') {
+    const enforcement =
+      await enforceFreeProfilePublicationState(
+        c,
+        (profile as any).id,
+        (profile as any).is_published,
+      )
+
+    if (!enforcement.readiness.ready) {
+      effectiveIsPublished = false
+    }
+
+    if (enforcement.unpublished) {
+      ;(profile as any).is_published = 0
+    }
+  }
+
+  // El propietario puede previsualizar perfiles no publicados
+  // o perfiles Gratis que todavía estén incompletos.
+  if (!effectiveIsPublished) {
     let isOwner = false
     if (isPreview) {
       try {

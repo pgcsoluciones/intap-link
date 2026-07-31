@@ -264,3 +264,50 @@ export async function getFreeProfilePublicationReadiness(
     missing: items.filter((item) => !item.complete),
   }
 }
+
+export type FreeProfilePublicationEnforcement = {
+  readiness: FreeProfilePublicationReadiness
+  unpublished: boolean
+}
+
+/**
+ * Garantiza que un perfil Gratis incompleto no permanezca publicado.
+ *
+ * Se utiliza en las lecturas autenticadas y públicas para cubrir:
+ * - perfiles publicados antes de existir la regla;
+ * - perfiles que pierden contenido mínimo después de publicarse.
+ */
+export async function enforceFreeProfilePublicationState(
+  c: any,
+  profileId: string,
+  isPublished: boolean | number,
+): Promise<FreeProfilePublicationEnforcement> {
+  const readiness =
+    await getFreeProfilePublicationReadiness(
+      c,
+      profileId,
+    )
+
+  let unpublished = false
+
+  if (Boolean(isPublished) && !readiness.ready) {
+    const result = await c.env.DB.prepare(
+      `UPDATE profiles
+       SET is_published = 0,
+           updated_at = datetime('now')
+       WHERE id = ?
+         AND plan_id = 'free'
+         AND is_published = 1`
+    )
+      .bind(profileId)
+      .run()
+
+    unpublished =
+      Number(result?.meta?.changes ?? 0) > 0
+  }
+
+  return {
+    readiness,
+    unpublished,
+  }
+}
