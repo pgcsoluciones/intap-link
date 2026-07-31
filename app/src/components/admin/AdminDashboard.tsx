@@ -201,7 +201,7 @@ export default function AdminDashboard() {
   const totalRequirements =
     publicationReadiness?.items.length ?? 5
 
-  const navItems = [
+  const paidNavItems = [
     { emoji: '✏️', label: 'Editar perfil',           sub: 'Nombre, bio y foto',               to: '/admin/onboarding/identity' },
     { emoji: '📞', label: 'Datos de contacto',        sub: 'WhatsApp, email, horario…',        to: '/admin/onboarding/contact' },
     { emoji: '🛍️', label: 'Productos / Servicios',   sub: 'Catálogo con precios',              to: '/admin/products' },
@@ -213,6 +213,50 @@ export default function AdminDashboard() {
     { emoji: '⬛', label: 'Orden de secciones',       sub: 'Arrastra para reordenar',           to: '/admin/blocks' },
     { emoji: '🏷️', label: 'Plantilla vertical',      sub: 'Restaurante · Servicios · Eventos', to: '/admin/template' },
   ]
+
+  const freeNavItems = [
+    {
+      emoji: '✏️',
+      label: 'Editar identidad',
+      sub: 'Nombre, cargo, bio y foto',
+      to: '/admin/free/onboarding/identity',
+    },
+    {
+      emoji: '📞',
+      label: 'Datos de contacto',
+      sub: 'WhatsApp, teléfono, email y horario',
+      to: '/admin/free/onboarding/contact',
+    },
+    {
+      emoji: '📍',
+      label: 'Ubicación',
+      sub: 'Busca, confirma y muestra tu ubicación',
+      to: '/admin/free/location',
+    },
+    {
+      emoji: '🔗',
+      label: 'Acciones rápidas',
+      sub: 'Hasta 3 enlaces o acciones',
+      to: '/admin/free/links',
+    },
+    {
+      emoji: '📸',
+      label: 'Portafolio',
+      sub: 'Entre 3 y 5 imágenes',
+      to: '/admin/free/portfolio',
+    },
+    {
+      emoji: '🧩',
+      label: 'Servicios',
+      sub: 'Entre 2 y 3 servicios completos',
+      to: '/admin/free/services',
+    },
+  ]
+
+  const navItems =
+    isFreePlan
+      ? freeNavItems
+      : paidNavItems
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-['Inter']">
@@ -238,7 +282,11 @@ export default function AdminDashboard() {
             <p className="text-sm font-bold text-yellow-700 mb-1">Completa tu perfil</p>
             <p className="text-xs text-yellow-600 mb-3">Elige tu URL para que tu perfil sea accesible.</p>
             <button
-              onClick={() => navigate('/admin/onboarding/slug')}
+              onClick={() => navigate(
+                isFreePlan
+                  ? '/admin/free/onboarding/slug'
+                  : '/admin/onboarding/slug',
+              )}
               className="w-full py-2 rounded-xl bg-yellow-100 text-yellow-700 text-xs font-bold border border-yellow-200 hover:bg-yellow-200 transition-colors"
             >
               Elegir mi URL →

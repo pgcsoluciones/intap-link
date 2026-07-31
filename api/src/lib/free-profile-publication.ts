@@ -223,7 +223,7 @@ export async function getFreeProfilePublicationReadiness(
       complete: identityCount === 2,
       current: identityCount,
       required: 2,
-      route: '/admin/onboarding/identity',
+      route: '/admin/free/onboarding/identity',
     },
     {
       key: 'contact',
@@ -231,7 +231,7 @@ export async function getFreeProfilePublicationReadiness(
       complete: hasContact,
       current: hasContact ? 1 : 0,
       required: 1,
-      route: '/admin/onboarding/contact',
+      route: '/admin/free/onboarding/contact',
     },
     {
       key: 'quick_actions',

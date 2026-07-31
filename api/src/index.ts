@@ -629,6 +629,7 @@ me.put('/profile', async (c) => {
   ]
 
   const requested_layout_id =
+    (profile as any).plan_id === 'free' &&
     body.layout_id !== undefined
       ? String(body.layout_id)
       : undefined

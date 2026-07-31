@@ -60,7 +60,7 @@ function App() {
         <Route
           path="/admin/free/onboarding/slug"
           element={
-            <AdminGuard requireProfile={false}>
+            <AdminGuard requireProfile={false} planScope="free">
               <FreeOnboardingSlug />
             </AdminGuard>
           }
@@ -68,7 +68,7 @@ function App() {
         <Route
           path="/admin/free/onboarding/category"
           element={
-            <AdminGuard requireProfile={false}>
+            <AdminGuard requireProfile={false} planScope="free">
               <FreeOnboardingCategory />
             </AdminGuard>
           }
@@ -76,7 +76,7 @@ function App() {
         <Route
           path="/admin/free/onboarding/identity"
           element={
-            <AdminGuard requireProfile={false}>
+            <AdminGuard requireProfile={false} planScope="free">
               <FreeOnboardingIdentity />
             </AdminGuard>
           }
@@ -84,7 +84,7 @@ function App() {
         <Route
           path="/admin/free/onboarding/contact"
           element={
-            <AdminGuard requireProfile={false}>
+            <AdminGuard requireProfile={false} planScope="free">
               <FreeOnboardingContact />
             </AdminGuard>
           }
@@ -92,7 +92,7 @@ function App() {
         <Route
           path="/admin/free/location"
           element={
-            <AdminGuard>
+            <AdminGuard planScope="free">
               <Suspense
                 fallback={
                   <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -108,7 +108,7 @@ function App() {
         <Route
           path="/admin/free/links"
           element={
-            <AdminGuard>
+            <AdminGuard planScope="free">
               <FreeLinks />
             </AdminGuard>
           }
@@ -116,7 +116,7 @@ function App() {
         <Route
           path="/admin/free/portfolio"
           element={
-            <AdminGuard>
+            <AdminGuard planScope="free">
               <FreePortfolio />
             </AdminGuard>
           }
@@ -124,7 +124,7 @@ function App() {
         <Route
           path="/admin/free/services"
           element={
-            <AdminGuard>
+            <AdminGuard planScope="free">
               <FreeServices />
             </AdminGuard>
           }
@@ -134,14 +134,14 @@ function App() {
         <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />
 
         {/* Panel principal (requiere sesión + perfil) */}
-        <Route path="/admin/links"    element={<AdminGuard><AdminLinks /></AdminGuard>} />
-        <Route path="/admin/faqs"     element={<AdminGuard><AdminFAQs /></AdminGuard>} />
-        <Route path="/admin/products" element={<AdminGuard><AdminProducts /></AdminGuard>} />
-        <Route path="/admin/videos"   element={<AdminGuard><AdminVideos /></AdminGuard>} />
-        <Route path="/admin/blocks"   element={<AdminGuard><AdminBlocks /></AdminGuard>} />
-        <Route path="/admin/visual"    element={<AdminGuard><AdminVisual /></AdminGuard>} />
-        <Route path="/admin/template"   element={<AdminGuard><AdminTemplate /></AdminGuard>} />
-        <Route path="/admin/gallery"    element={<AdminGuard><AdminGallery /></AdminGuard>} />
+        <Route path="/admin/links"    element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
+        <Route path="/admin/faqs"     element={<AdminGuard planScope="paid"><AdminFAQs /></AdminGuard>} />
+        <Route path="/admin/products" element={<AdminGuard planScope="paid"><AdminProducts /></AdminGuard>} />
+        <Route path="/admin/videos"   element={<AdminGuard planScope="paid"><AdminVideos /></AdminGuard>} />
+        <Route path="/admin/blocks"   element={<AdminGuard planScope="paid"><AdminBlocks /></AdminGuard>} />
+        <Route path="/admin/visual"    element={<AdminGuard planScope="paid"><AdminVisual /></AdminGuard>} />
+        <Route path="/admin/template"   element={<AdminGuard planScope="paid"><AdminTemplate /></AdminGuard>} />
+        <Route path="/admin/gallery"    element={<AdminGuard planScope="paid"><AdminGallery /></AdminGuard>} />
         <Route path="/admin/retention"  element={<AdminGuard><AdminRetention /></AdminGuard>} />
         <Route path="/admin"            element={<AdminGuard><AdminDashboard /></AdminGuard>} />
 
