@@ -28,7 +28,6 @@ ADMIN_EMAILS = "fliaprince@gmail.com"
 binding = "DB"
 database_name = "intap_db"
 database_id = "3a2d724d-5938-4777-a63e-423bb41862c0"
-preview_database_id = "e9f46214-623f-48da-af13-74198e12b222"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
@@ -40,3 +39,10 @@ binding = "AGENTS_DB"
 database_name = "intap_agents_db"
 database_id = "93c7f5d9-7c44-454b-9e62-073322127c46"
 
+# Entorno de datos aislado para comprobaciones y migraciones de Preview.
+# No define rutas productivas ni reemplaza el binding DB de Producción.
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "intap_db_preview"
+database_id = "e9f46214-623f-48da-af13-74198e12b222"
+migrations_dir = "migrations-preview"
