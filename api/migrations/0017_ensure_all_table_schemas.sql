@@ -17,7 +17,7 @@
 -- Esos campos quedan NULL/DEFAULT, que es el valor correcto para datos
 -- que no pudieron setearse antes.
 
-PRAGMA foreign_keys = OFF;
+PRAGMA defer_foreign_keys = true;
 -- NOTE: BEGIN/COMMIT removidos — D1 envuelve cada migración en su propia transacción.
 
 -- ── 1. Limpiar tablas huérfanas de migraciones anteriores fallidas ─────────────
@@ -124,4 +124,3 @@ INSERT OR IGNORE INTO plans (id, name) VALUES ('free', 'Free');
 INSERT OR IGNORE INTO plan_limits (plan_id, max_links, max_photos, max_faqs)
 VALUES ('free', 5, 3, 3);
 
-PRAGMA foreign_keys = ON;
