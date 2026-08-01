@@ -59,7 +59,6 @@ CREATE TABLE IF NOT EXISTS profiles (
   theme_id     TEXT NOT NULL DEFAULT 'default',
   name         TEXT,
   bio          TEXT,
-  whatsapp_number TEXT,
   is_published BOOLEAN NOT NULL DEFAULT 0,
   created_at   DATETIME NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id),
