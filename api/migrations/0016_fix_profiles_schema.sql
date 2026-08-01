@@ -14,7 +14,7 @@
 --      garantizadas (0001 + 0010) para el INSERT — evita "no such column".
 --   3. Garantiza plan 'free' en plans + plan_limits para evitar entitlements vacíos.
 
-PRAGMA foreign_keys = OFF;
+PRAGMA defer_foreign_keys = true;
 -- NOTE: BEGIN/COMMIT removidos — D1 envuelve cada migración en su propia transacción.
 
 -- ── 1. Limpiar tabla huérfana ─────────────────────────────────────────────────
@@ -75,4 +75,3 @@ INSERT OR IGNORE INTO plans (id, name) VALUES ('free', 'Free');
 INSERT OR IGNORE INTO plan_limits (plan_id, max_links, max_photos, max_faqs, can_use_vcard)
 VALUES ('free', 5, 3, 3, 0);
 
-PRAGMA foreign_keys = ON;
