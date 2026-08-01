@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS profile_plan_overrides (
 -- incluirlas en el SELECT causaría "no such column" en SQLite/D1.
 -- En re-run manual: datos de esas columnas se perderían — por eso es one-time.
 
-PRAGMA defer_foreign_keys = true;
+PRAGMA foreign_keys = OFF;
 
 DROP TABLE IF EXISTS profiles_v23;
 
@@ -182,6 +182,7 @@ FROM profile_modules;
 DROP TABLE profile_modules;
 ALTER TABLE profile_modules_v23 RENAME TO profile_modules;
 
+PRAGMA foreign_keys = ON;
 
 -- ── 6. Seed: primer superadmin ───────────────────────────────────────────────
 -- El user_id se resuelve por email en runtime; este seed es de respaldo manual.
