@@ -65,4 +65,4 @@ migrations_dir = "migrations-preview"
 binding = "BUCKET"
 bucket_name = "intap-r2-preview"
 
-# AGENTS_DB no se declara en Preview: el módulo permanece deshabilitado.
+# Preview declara únicamente los recursos propios de INTAP LINK.
