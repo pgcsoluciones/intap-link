@@ -10,9 +10,6 @@
 -- Si 0010 ya corrió y hay datos en esas columnas, se perderían —
 -- pero dado que auth estaba roto, esos campos siguen vacíos en prod.
 
--- Diferir validación de FKs hasta que terminen los rename-table.
-PRAGMA defer_foreign_keys = true;
-
 -- ── profiles ─────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS profiles_new (
