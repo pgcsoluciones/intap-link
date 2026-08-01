@@ -2,7 +2,7 @@
 -- Objetivo:
 -- 1) Asegurar tablas mínimas que YA usa el Worker
 -- 2) Asegurar catálogos (plans, plan_limits, modules)
--- 3) Insertar un perfil demo estable (juan / profile_debug) y contenido base
+-- 3) Alinear el contenido demo con el perfil estable creado en 0005
 -- 4) Evitar futuros "no such table/column" por falta de preset
 
 PRAGMA foreign_keys=ON;
@@ -179,7 +179,7 @@ INSERT OR IGNORE INTO modules (code, name, effects_json) VALUES
   ('form_contact',  'Formulario',    '{"enable_features":["form_contact"]}');
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 5) Seed perfil DEMO: profile_debug / slug: juan
+-- 5) Seed perfil DEMO: profile-juan-demo / slug: juan
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Insertar perfil demo SOLO si no existe.
@@ -189,7 +189,7 @@ INSERT OR IGNORE INTO modules (code, name, effects_json) VALUES
 -- El perfil 'juan' ya existe desde 0005 (slug UNIQUE → INSERT OR IGNORE lo ignora).
 INSERT OR IGNORE INTO profiles (id, user_id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, category, subcategory)
 VALUES (
-  'profile_debug',
+  'profile-juan-demo',
   NULL,
   'juan',
   'basic',
@@ -205,42 +205,42 @@ VALUES (
 
 -- Activar módulos demo (para que entitlements suban)
 INSERT OR IGNORE INTO profile_modules (profile_id, module_code, expires_at) VALUES
-  ('profile_debug', 'links_plus',    datetime('now', '+365 days')),
-  ('profile_debug', 'vcard',         datetime('now', '+365 days')),
-  ('profile_debug', 'form_contact',  datetime('now', '+365 days'));
+  ('profile-juan-demo', 'links_plus',    datetime('now', '+365 days')),
+  ('profile-juan-demo', 'vcard',         datetime('now', '+365 days')),
+  ('profile-juan-demo', 'form_contact',  datetime('now', '+365 days'));
 
 -- Contacto demo
 INSERT OR IGNORE INTO profile_contact (profile_id, whatsapp, email, phone, hours, address, map_url)
 VALUES
-  ('profile_debug', '+1809XXXXXXX', 'correo@ejemplo.com', '+1809XXXXXXX', 'Lun–Vie 9:00am–6:00pm', 'Santo Domingo, RD', 'https://www.google.com/maps?q=Santo+Domingo');
+  ('profile-juan-demo', '+1809XXXXXXX', 'correo@ejemplo.com', '+1809XXXXXXX', 'Lun–Vie 9:00am–6:00pm', 'Santo Domingo, RD', 'https://www.google.com/maps?q=Santo+Domingo');
 
 -- Social links demo
 INSERT OR IGNORE INTO profile_social_links (id, profile_id, type, url, sort_order, enabled) VALUES
-  ('sl-juan-ig',   'profile_debug', 'instagram', 'https://instagram.com/juandemo', 0, 1),
-  ('sl-juan-tt',   'profile_debug', 'tiktok',    'https://tiktok.com/@juandemo',   1, 1),
-  ('sl-juan-email','profile_debug', 'email',     'mailto:juan@demo.intap.link',     2, 1);
+  ('sl-juan-ig',   'profile-juan-demo', 'instagram', 'https://instagram.com/juandemo', 0, 1),
+  ('sl-juan-tt',   'profile-juan-demo', 'tiktok',    'https://tiktok.com/@juandemo',   1, 1),
+  ('sl-juan-email','profile-juan-demo', 'email',     'mailto:juan@demo.intap.link',     2, 1);
 
 -- Links demo (tu tabla profile_links ya existe)
 -- Insertamos sin romper si ya estaban.
 INSERT OR IGNORE INTO profile_links (id, profile_id, label, url, sort_order, is_active) VALUES
-  ('link-1', 'profile_debug', 'Mi Instagram', 'https://instagram.com/juan', 1, 1),
-  ('l1',     'profile_debug', 'LinkedIn Profesional', 'https://linkedin.com/in/juanluis', 2, 1),
-  ('link-2', 'profile_debug', 'LinkedIn Profesional', 'https://linkedin.com/in/juan', 3, 1),
-  ('l2',     'profile_debug', 'Instagram Personal', 'https://instagram.com/juanluis', 4, 1),
-  ('link_map_juan', 'profile_debug', 'Cómo llegar', 'https://www.google.com/maps?q=Santo+Domingo', 5, 1),
-  ('link-3', 'profile_debug', 'Mi Portafolio', 'https://juan.dev', 6, 1),
-  ('l3',     'profile_debug', 'WhatsApp Directo', 'https://wa.me/123456789', 7, 1);
+  ('link-1', 'profile-juan-demo', 'Mi Instagram', 'https://instagram.com/juan', 1, 1),
+  ('l1',     'profile-juan-demo', 'LinkedIn Profesional', 'https://linkedin.com/in/juanluis', 2, 1),
+  ('link-2', 'profile-juan-demo', 'LinkedIn Profesional', 'https://linkedin.com/in/juan', 3, 1),
+  ('l2',     'profile-juan-demo', 'Instagram Personal', 'https://instagram.com/juanluis', 4, 1),
+  ('link_map_juan', 'profile-juan-demo', 'Cómo llegar', 'https://www.google.com/maps?q=Santo+Domingo', 5, 1),
+  ('link-3', 'profile-juan-demo', 'Mi Portafolio', 'https://juan.dev', 6, 1),
+  ('l3',     'profile-juan-demo', 'WhatsApp Directo', 'https://wa.me/123456789', 7, 1);
 
 -- FAQs demo
 INSERT OR IGNORE INTO profile_faqs (id, profile_id, question, answer, sort_order) VALUES
-  ('faq-demo-1', 'profile_debug', '¿Cómo hago un pedido?', 'Escríbeme por WhatsApp y te guío paso a paso.', 1),
-  ('faq-demo-2', 'profile_debug', '¿En cuánto tiempo entregan?', 'Depende del servicio, normalmente entre 24 y 72 horas.', 2),
-  ('faq-demo-3', 'profile_debug', '¿Qué métodos de pago aceptan?', 'Transferencia, efectivo o tarjeta (según el caso).', 3);
+  ('faq-demo-1', 'profile-juan-demo', '¿Cómo hago un pedido?', 'Escríbeme por WhatsApp y te guío paso a paso.', 1),
+  ('faq-demo-2', 'profile-juan-demo', '¿En cuánto tiempo entregan?', 'Depende del servicio, normalmente entre 24 y 72 horas.', 2),
+  ('faq-demo-3', 'profile-juan-demo', '¿Qué métodos de pago aceptan?', 'Transferencia, efectivo o tarjeta (según el caso).', 3);
 
 -- Productos demo
 INSERT OR IGNORE INTO profile_products (id, profile_id, title, description, price, image_url, whatsapp_text, is_featured, sort_order) VALUES
-  ('prod-demo-1', 'profile_debug', 'Servicio Premium', 'Diseño + optimización de tu perfil para convertir más.', 'RD$ 5,900', NULL, 'Hola, me interesa el Servicio Premium. ¿Cómo inicio?', 1, 1),
-  ('prod-demo-2', 'profile_debug', 'Asesoría Express', 'Diagnóstico rápido + recomendaciones accionables.', 'RD$ 1,990', NULL, 'Hola, quiero la Asesoría Express. ¿Disponibilidad?', 0, 2);
+  ('prod-demo-1', 'profile-juan-demo', 'Servicio Premium', 'Diseño + optimización de tu perfil para convertir más.', 'RD$ 5,900', NULL, 'Hola, me interesa el Servicio Premium. ¿Cómo inicio?', 1, 1),
+  ('prod-demo-2', 'profile-juan-demo', 'Asesoría Express', 'Diagnóstico rápido + recomendaciones accionables.', 'RD$ 1,990', NULL, 'Hola, quiero la Asesoría Express. ¿Disponibilidad?', 0, 2);
 
 -- Índices de performance básicos
 CREATE INDEX IF NOT EXISTS idx_profile_links_profile_sort ON profile_links(profile_id, sort_order);
