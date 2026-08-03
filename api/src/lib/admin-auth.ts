@@ -15,6 +15,8 @@
  * away from the env-var approach.
  */
 
+import { getSessionCookieName, parseCookie } from './session-cookie'
+
 export type AdminRole = 'viewer' | 'support' | 'super_admin'
 
 const ROLE_RANK: Record<AdminRole, number> = {
@@ -31,13 +33,6 @@ async function sha256Hex(input: string): Promise<string> {
   return Array.from(new Uint8Array(hash))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
-}
-
-function parseCookie(header: string, name: string): string | null {
-  const match = header.match(new RegExp(`(?:^|;\\s*)${encodeURIComponent(name)}=([^;]*)`))
-  if (match) return decodeURIComponent(match[1])
-  const match2 = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
-  return match2 ? decodeURIComponent(match2[1]) : null
 }
 
 // ─── requireSuperAdmin middleware factory ────────────────────────────────────
@@ -57,7 +52,10 @@ export function requireSuperAdmin(minRole: AdminRole = 'viewer') {
   return async (c: any, next: any) => {
     // 1. Session validation
     const cookieHeader = c.req.header('Cookie') || ''
-    const rawSession   = parseCookie(cookieHeader, 'session_id')
+    const rawSession = parseCookie(
+      cookieHeader,
+      getSessionCookieName(c.env),
+    )
     if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
     const sessionHash = await sha256Hex(rawSession)

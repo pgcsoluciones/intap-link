@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { API_ORIGIN } from './lib/runtime-env'
 
 interface Entitlements {
     maxLinks: number
@@ -49,7 +50,7 @@ export default function Dashboard() {
     const [uploadingAvatar, setUploadingAvatar] = useState(false)
     const [isMenuOpen, setIsMenuOpen] = useState(false)
 
-    const apiUrl = import.meta.env.VITE_API_URL || ''
+    const apiUrl = API_ORIGIN
 
     const [showLoginModal, setShowLoginModal] = useState(false)
     const [loginEmail, setLoginEmail] = useState('fliaprince@gmail.com')
@@ -435,7 +436,7 @@ function LinkManager({ profileId, initialLinks }: { profileId: string, initialLi
     const [newLabel, setNewLabel] = useState('')
     const [newUrl, setNewUrl] = useState('')
     const [adding, setAdding] = useState(false)
-    const apiUrl = import.meta.env.VITE_API_URL || ''
+    const apiUrl = API_ORIGIN
 
     useEffect(() => { setLinks(initialLinks || []) }, [initialLinks])
 
@@ -524,7 +525,7 @@ function LinkManager({ profileId, initialLinks }: { profileId: string, initialLi
 function GalleryManager({ profileId, initialPhotos }: { profileId: string, initialPhotos: any[] }) {
     const [photos, setPhotos] = useState(initialPhotos || [])
     const [uploading, setUploading] = useState(false)
-    const apiUrl = import.meta.env.VITE_API_URL || ''
+    const apiUrl = API_ORIGIN
     const r2PublicUrl = 'https://pub-2e9e6b5e0c6e4e8e8e8e8e8e8e8e8e8e.r2.dev'
 
     useEffect(() => { setPhotos(initialPhotos || []) }, [initialPhotos])
@@ -590,7 +591,7 @@ function LeadsManager({ profileId }: { profileId: string }) {
     const [filterFrom, setFilterFrom] = useState('')
     const [filterTo, setFilterTo] = useState('')
     const [tagInputs, setTagInputs] = useState<Record<string, string>>({})
-    const apiUrl = import.meta.env.VITE_API_URL || ''
+    const apiUrl = API_ORIGIN
 
     useEffect(() => { fetchLeads() }, [profileId])
 

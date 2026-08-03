@@ -15,6 +15,7 @@ zone_name = "intaprd.com"
 
 [vars]
 ENVIRONMENT = "production"
+WORKER_NAME = "intap-api"
 APP_URL = "https://app.intaprd.com"
 API_URL = "https://intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
@@ -49,6 +50,7 @@ routes = [
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
+WORKER_NAME = "intap-api-preview"
 APP_URL = "https://app.preview.intaprd.com"
 API_URL = "https://preview.intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"

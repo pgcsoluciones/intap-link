@@ -1,3 +1,5 @@
+import { normalizeQuickActionUrl } from './quick-action-url'
+
 export type PublicationRequirement = {
   key:
     | 'identity'
@@ -52,59 +54,6 @@ function parseTemplateData(
   return {}
 }
 
-function classifyLink(
-  actions: Set<string>,
-  row: any,
-): void {
-  const id = text(row.id)
-  const label = text(row.label).toLowerCase()
-  const url = text(row.url).toLowerCase()
-
-  if (!url) return
-
-  const combined = `${label} ${url}`
-
-  if (
-    combined.includes('whatsapp') ||
-    url.includes('wa.me/')
-  ) {
-    actions.add('whatsapp')
-    return
-  }
-
-  if (
-    combined.includes('ubicacion') ||
-    combined.includes('ubicación') ||
-    combined.includes('mapa') ||
-    url.includes('google.com/maps') ||
-    url.includes('maps.app.goo.gl')
-  ) {
-    actions.add('location')
-    return
-  }
-
-  const socialHosts = [
-    'instagram.com',
-    'facebook.com',
-    'tiktok.com',
-    'linkedin.com',
-    'youtube.com',
-    'twitter.com',
-    'x.com/',
-  ]
-
-  const socialHost = socialHosts.find(
-    (host) => url.includes(host),
-  )
-
-  if (socialHost) {
-    actions.add(`social:${socialHost}`)
-    return
-  }
-
-  actions.add(`link:${id}`)
-}
-
 export async function getFreeProfilePublicationReadiness(
   c: any,
   profileId: string,
@@ -113,7 +62,6 @@ export async function getFreeProfilePublicationReadiness(
     profile,
     contact,
     links,
-    socials,
     gallery,
     services,
   ] = await Promise.all([
@@ -128,24 +76,17 @@ export async function getFreeProfilePublicationReadiness(
     ).bind(profileId).first(),
 
     c.env.DB.prepare(
-      `SELECT whatsapp, phone, email, map_url
+      `SELECT whatsapp, phone
        FROM profile_contact
        WHERE profile_id = ?
        LIMIT 1`
     ).bind(profileId).first(),
 
     c.env.DB.prepare(
-      `SELECT id, label, url
+      `SELECT url
        FROM profile_links
        WHERE profile_id = ?
          AND COALESCE(is_active, 1) = 1`
-    ).bind(profileId).all(),
-
-    c.env.DB.prepare(
-      `SELECT id, type, url
-       FROM profile_social_links
-       WHERE profile_id = ?
-         AND COALESCE(enabled, 1) = 1`
     ).bind(profileId).all(),
 
     c.env.DB.prepare(
@@ -182,26 +123,14 @@ export async function getFreeProfilePublicationReadiness(
     text(p.whatsapp_number)
 
   const phone = text(contactData.phone)
-  const email = text(contactData.email)
-  const mapUrl = text(contactData.map_url)
 
   const actions = new Set<string>()
 
-  if (whatsapp) actions.add('whatsapp')
-  if (phone) actions.add('phone')
-  if (email) actions.add('email')
-  if (mapUrl) actions.add('location')
-
-  for (const social of socials.results ?? []) {
-    const type = text((social as any).type)
-
-    if (type && text((social as any).url)) {
-      actions.add(`social:${type}`)
-    }
-  }
-
   for (const link of links.results ?? []) {
-    classifyLink(actions, link)
+    const normalized = normalizeQuickActionUrl(
+      text((link as any).url),
+    )
+    if (normalized) actions.add(normalized)
   }
 
   const portfolioCount =

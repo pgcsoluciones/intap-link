@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { API_ORIGIN } from '../lib/runtime-env'
 
 const SECTORS = [
   'Salud y Bienestar',
@@ -66,7 +67,7 @@ function WaitlistModal({ onClose }: { onClose: () => void }) {
 
     setLoading(true)
     try {
-      const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+      const apiUrl = API_ORIGIN
       const res = await fetch(`${apiUrl}/api/v1/public/waitlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

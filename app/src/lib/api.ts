@@ -1,5 +1,5 @@
-const envOrigin = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL ?? ''
-const API_ORIGIN = (envOrigin || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '')
+import { API_ORIGIN } from './runtime-env'
+
 const API_BASE = `${API_ORIGIN}/api/v1`
 
 function buildApiUrl(path: string): string {

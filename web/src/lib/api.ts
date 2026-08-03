@@ -1,5 +1,6 @@
-const _origin = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL ?? ''
-const API_BASE = `${_origin}/api/v1`
+import { API_ORIGIN } from './runtime-env'
+
+const API_BASE = `${API_ORIGIN}/api/v1`
 
 export async function apiGet<T = any>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

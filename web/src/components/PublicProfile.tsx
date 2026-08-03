@@ -7,6 +7,7 @@ import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
 import IntapProfile1AEventos from './profile-templates/IntapProfile1AEventos'
 import IntapProfileRentaoRd from './profile-templates/IntapProfileRentaoRd'
 import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
+import { API_ORIGIN } from '../lib/runtime-env'
 import {
   adaptPublicProfileApiResponse,
 } from './free-profile/IntapLinkGratis.adapter'
@@ -1267,7 +1268,7 @@ function ClassicLayout({
         {data.entitlements?.canUseVCard && (
           <div style={{ marginTop: 8 }}>
             <a
-              href={`${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/public/vcard/${data.profileId}`}
+              href={`${API_ORIGIN}/api/v1/public/vcard/${data.profileId}`}
               download
               className="classic-pill"
               style={{ borderColor: '#94a3b8', color: '#475569' }}
@@ -1859,7 +1860,7 @@ export default function PublicProfile() {
 
   // ── Track ───────────────────────────────────────────────────────────────────
   const trackEvent = (profileId: string, eventType: string, targetId?: string) => {
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    const apiUrl = API_ORIGIN
     fetch(`${apiUrl}/api/v1/public/track`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1869,7 +1870,7 @@ export default function PublicProfile() {
 
   // ── Fetch profile ───────────────────────────────────────────────────────────
   useEffect(() => {
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    const apiUrl = API_ORIGIN
 
     if (!slug) {
       setLoading(false)
@@ -1970,7 +1971,7 @@ export default function PublicProfile() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadEmail.trim())) { setLeadStatus('Por favor escribe un correo válido.'); return }
     if (!leadMessage.trim() || leadMessage.trim().length < 10) { setLeadStatus('Cuéntame un poco más (mín. 10 caracteres).'); return }
 
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    const apiUrl = API_ORIGIN
     setLeadSending(true)
 
     const tokenToSend = (tokenOverride ?? turnstileToken) || undefined

@@ -26,17 +26,16 @@ import FreeOnboardingContact from './components/admin/free/onboarding/FreeOnboar
 import FreeLinks from './components/admin/free/FreeLinks'
 import FreePortfolio from './components/admin/free/FreePortfolio'
 import FreeServices from './components/admin/free/FreeServices'
+import { WEB_ORIGIN } from './lib/runtime-env'
 const FreeLocation = lazy(() => import('./components/admin/free/FreeLocation'))
 
 function UnknownAppRouteRedirect() {
   const location = useLocation()
-  const WEB_URL = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
-
   if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')) {
     return <Navigate to="/admin" replace />
   }
 
-  window.location.replace(`${WEB_URL}${location.pathname}${location.search}${location.hash}`)
+  window.location.replace(`${WEB_ORIGIN}${location.pathname}${location.search}${location.hash}`)
   return null
 }
 

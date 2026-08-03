@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut } from '../../lib/api'
+import { WEB_ORIGIN } from '../../lib/runtime-env'
 import RetentionPanel from './RetentionPanel'
 
 const SLUG_RE  = /^[a-z0-9_-]{2,32}$/
@@ -179,9 +180,8 @@ export default function AdminDashboard() {
     </div>
   )
 
-  const WEB_URL    = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
-  const profileUrl = me?.slug ? `${WEB_URL}/${me.slug}` : null
-  const previewUrl = me?.slug ? `${WEB_URL}/${me.slug}?preview=1` : null
+  const profileUrl = me?.slug ? `${WEB_ORIGIN}/${me.slug}` : null
+  const previewUrl = me?.slug ? `${WEB_ORIGIN}/${me.slug}?preview=1` : null
 
   const isFreePlan =
     (me?.plan_code || me?.plan_id || 'free') === 'free'
