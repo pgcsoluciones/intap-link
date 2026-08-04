@@ -37,6 +37,9 @@ export async function onRequest(context: {
     url: string;
     image: string;
     siteName: string;
+    imageType: string;
+    imageWidth: number;
+    imageHeight: number;
   }): string => {
     const title = escapeHtml(metadata.title);
     const description = escapeHtml(metadata.description);
@@ -56,9 +59,9 @@ export async function onRequest(context: {
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:secure_url" content="${imageUrl}" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="${metadata.imageType}" />
+  <meta property="og:image:width" content="${metadata.imageWidth}" />
+  <meta property="og:image:height" content="${metadata.imageHeight}" />
   <meta property="og:image:alt" content="${title}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${title}" />
@@ -96,11 +99,72 @@ export async function onRequest(context: {
     }
   }
 
-  // Metadata social para perfil NOVI HOME.
-  // Se calcula con el origin actual para soportar:
-  // - https://intaprd.com/novi
-  // - https://link.avanxy.com/novi
-  if (url.pathname === '/novi' || url.pathname === '/novi/') {
+  // STATIC PROFILE GRAPH CARDS V2
+  const staticProfileMeta: Record<string, {
+    title: string;
+    description: string;
+    url: string;
+    image: string;
+    siteName: string;
+    imageType: string;
+    imageWidth: number;
+    imageHeight: number;
+  }> = {
+    novi: {
+      title: 'NoviHome -Noldys Vicente-',
+      description:
+        'Asesora inmobiliaria. Propiedades listas, orientación clara y acompañamiento confiable para comprar o invertir con seguridad.',
+      url: 'https://intaprd.com/novi',
+      image:
+        'https://intaprd.com/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3',
+      siteName: 'NoviHome',
+      imageType: 'image/jpeg',
+      imageWidth: 631,
+      imageHeight: 752,
+    },
+    rentaord: {
+      title: 'Rentao RD Car Rental',
+      description:
+        'Renta vehículos modernos, seguros y listos para moverte sin complicaciones. Opciones para uso personal, familiar, ejecutivo y de trabajo.',
+      url: 'https://intaprd.com/rentaord',
+      image:
+        'https://intaprd.com/assets/rentaord/logo-rentao.png?v=rentaord-og-logo-v1',
+      siteName: 'Rentao RD',
+      imageType: 'image/png',
+      imageWidth: 1667,
+      imageHeight: 814,
+    },
+    jason: {
+      title:
+        'Comercial Jason S.R.L. | Gomas y aros en Santo Domingo',
+      description:
+        'Venta de gomas nuevas y usadas, aros, reparación y mantenimiento de aros en Santo Domingo. Más de 25 años de experiencia.',
+      url: 'https://intaprd.com/jason',
+      image:
+        'https://intaprd.com/assets/landing/hero-jason-05.png?v=jason-og-v1',
+      siteName: 'Comercial Jason S.R.L.',
+      imageType: 'image/png',
+      imageWidth: 629,
+      imageHeight: 354,
+    },
+    '1aeventos': {
+      title: '1A Eventos | Gabriel Reyes Bello',
+      description:
+        'Perfil digital de Gabriel Reyes Bello, asesor comercial de 1A Eventos. Mobiliario premium, cristalería, mantelería, lounge y accesorios para eventos.',
+      url: 'https://intaprd.com/1aeventos',
+      image:
+        'https://intaprd.com/assets/1A%20eventos/perfil/perfil-gabriel-01.jpg?v=1aeventos-og-gabriel-v1',
+      siteName: '1A Eventos',
+      imageType: 'image/jpeg',
+      imageWidth: 886,
+      imageHeight: 1164,
+    },
+  };
+
+  const slug = url.pathname.replace(/^\/+|\/+$/g, '');
+  const staticMeta = staticProfileMeta[slug];
+
+  if (staticMeta) {
     const response = await context.next();
     const contentType = response.headers.get('content-type') || '';
 
@@ -109,19 +173,14 @@ export async function onRequest(context: {
     }
 
     const html = await response.text();
-    const canonicalUrl = `${url.origin}/novi`;
-    const imageUrl = `${url.origin}/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3`;
-
-    const updatedHtml = injectHeadMetadata(html, {
-      title: 'NoviHome -Noldys Vicente-',
-      description: 'Asesora inmobiliaria. Propiedades listas, orientación clara y acompañamiento confiable para comprar o invertir con seguridad.',
-      url: canonicalUrl,
-      image: imageUrl,
-      siteName: 'INTAP LINK',
-    });
-
+    const updatedHtml = injectHeadMetadata(html, staticMeta);
     const headers = new Headers(response.headers);
+
     headers.set('content-type', 'text/html; charset=UTF-8');
+    headers.set(
+      'x-robots-tag',
+      'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+    );
 
     return withSecurityHeaders(new Response(updatedHtml, {
       status: response.status,
