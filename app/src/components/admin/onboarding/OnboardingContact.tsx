@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut, apiPatch } from '../../../lib/api'
+import { WEB_ORIGIN } from '../../../lib/runtime-env'
 
 function normalizeWhatsApp(input: string): string | null {
   if (!input) return null
@@ -94,7 +95,7 @@ export default function OnboardingContact() {
     }
   }
 
-  const profileUrl = profileSlug ? `https://intaprd.com/${profileSlug}` : null
+  const profileUrl = profileSlug ? `${WEB_ORIGIN}/${profileSlug}` : null
 
   const handleCopy = () => {
     if (!profileUrl) return

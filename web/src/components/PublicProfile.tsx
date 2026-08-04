@@ -7,7 +7,7 @@ import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
 import IntapProfile1AEventos from './profile-templates/IntapProfile1AEventos'
 import IntapProfileRentaoRd from './profile-templates/IntapProfileRentaoRd'
 import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
-import { API_ORIGIN } from '../lib/runtime-env'
+import { API_ORIGIN, WEB_ORIGIN } from '../lib/runtime-env'
 import {
   adaptPublicProfileApiResponse,
 } from './free-profile/IntapLinkGratis.adapter'
@@ -2266,7 +2266,7 @@ function NotFound() {
           Puede que la URL sea incorrecta o el perfil aún no esté publicado.
         </p>
         <a
-          href="https://intaprd.com"
+          href={WEB_ORIGIN}
           className="inline-block px-6 py-3 rounded-2xl bg-[#0df2c9] text-black font-bold text-sm hover:brightness-110 transition-all active:scale-95"
         >
           Volver al inicio

@@ -8,8 +8,29 @@ const ADMIN_APP_URLS = {
     preview: 'https://app.preview.intaprd.com',
 } as const
 
+function isCloudflarePagesBuild(): boolean {
+    return Boolean(
+        process.env.CF_PAGES ||
+        process.env.CF_PAGES_BRANCH ||
+        process.env.CF_PAGES_COMMIT_SHA ||
+        process.env.CF_PAGES_URL
+    )
+}
+
+function resolveBuildEnvironment(
+    mode: string
+): keyof typeof ADMIN_APP_URLS {
+    if (isCloudflarePagesBuild()) {
+        return process.env.CF_PAGES_BRANCH === 'main'
+            ? 'production'
+            : 'preview'
+    }
+
+    return mode === 'preview' ? 'preview' : 'production'
+}
+
 function cloudflareRedirects(mode: string) {
-    const environment = mode === 'preview' ? 'preview' : 'production'
+    const environment = resolveBuildEnvironment(mode)
     const adminAppUrl = ADMIN_APP_URLS[environment]
     let outputDirectory = ''
 
@@ -27,7 +48,11 @@ function cloudflareRedirects(mode: string) {
                 '',
             ].join('\n')
 
-            writeFileSync(resolve(outputDirectory, '_redirects'), redirects, 'utf8')
+            writeFileSync(
+                resolve(outputDirectory, '_redirects'),
+                redirects,
+                'utf8'
+            )
         },
     }
 }

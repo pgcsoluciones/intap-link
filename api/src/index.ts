@@ -29,6 +29,7 @@ type Bindings = {
   GOOGLE_CLIENT_SECRET: string
   TURNSTILE_SECRET: string
   API_URL: string
+  WEB_URL: string
   APP_URL: string
   ENVIRONMENT: string
   WORKER_NAME: string
@@ -3019,7 +3020,7 @@ app.get('/api/v1/public/discovery/profiles', async (c) => {
       row.created_at ||
       null,
     canonicalUrl:
-      `https://intaprd.com/${encodeURIComponent(row.slug)}`,
+      `${c.env.WEB_URL || 'https://intaprd.com'}/${encodeURIComponent(row.slug)}`,
   }))
 
   c.header(
@@ -3240,7 +3241,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   const telNumber = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn = profile.name || profile.slug
-  const profileUrl = `${(c.env as any).API_URL || 'https://intaprd.com'}/${profile.slug}`
+  const profileUrl = `${c.env.WEB_URL || 'https://intaprd.com'}/${profile.slug}`
 
   const lines: string[] = [
     'BEGIN:VCARD',
