@@ -699,7 +699,18 @@ export default function IntapProfileRentaoRd({ profile }: { profile?: any }) {
                 rel="noopener noreferrer"
               >
                 Consultar disponibilidad
-              </a>            </div>
+              </a>
+
+              <a
+                className="rentaord-btn rentaord-btn--secondary"
+                href={MARBELLA.pdf}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                Descargar catálogo
+              </a>
+            </div>
           </div>
         </div>
       ) : null}
