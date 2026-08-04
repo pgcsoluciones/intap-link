@@ -5,6 +5,7 @@ import { getEntitlements, getRetentionStatus, logPlanEvent } from './engine/enti
 import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
+import type { AdminRole } from './lib/admin-auth'
 
 type Bindings = {
   DB: D1Database
@@ -22,7 +23,11 @@ type Bindings = {
   ADMIN_API_KEY: string
 }
 
-type Variables = { userId: string }
+type Variables = {
+  userId: string
+  adminUserId: string
+  adminRole: AdminRole
+}
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -33,6 +38,7 @@ function isAllowedOrigin(origin: string): boolean {
   const exact = [
     'https://intaprd.com',
     'https://www.intaprd.com',
+    'https://fix-special-profiles-templat.intap-link.pages.dev',
     'http://localhost:5173',
     'http://localhost:4173',
   ]
@@ -41,7 +47,12 @@ function isAllowedOrigin(origin: string): boolean {
     const u = new URL(origin)
     return (
       u.protocol === 'https:' &&
-      (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com'))
+      (
+        u.hostname === 'intaprd.com' ||
+        u.hostname.endsWith('.intaprd.com') ||
+        u.hostname === 'intap-link.pages.dev' ||
+        u.hostname.endsWith('.intap-link.pages.dev')
+      )
     )
   } catch { return false }
 }
@@ -573,7 +584,15 @@ me.put('/profile', async (c) => {
   const theme_id = body.theme_id !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
-  const VALID_TEMPLATES = ['restaurante', 'servicios', 'eventos']
+  const VALID_TEMPLATES = [
+    'restaurante',
+    'servicios',
+    'eventos',
+    'real_estate_novi_v4',
+    'automotive_jason_v3',
+    'events_1a_v1',
+    'car_rental_rentao_v1',
+  ]
   const template_id = body.template_id !== undefined
     ? (VALID_TEMPLATES.includes(String(body.template_id)) ? String(body.template_id) : null)
     : undefined
