@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiGet, apiPatch, apiPost } from '../../lib/api'
 import SuperAdminLayout, { type SuperAdminSection } from './SuperAdminLayout'
+import { WEB_ORIGIN } from '../../lib/runtime-env'
 
 interface MetricsOverview {
   ok: boolean
@@ -285,7 +286,7 @@ export default function SuperAdminDashboard() {
   function buildPublicPaymentLink(path?: string | null) {
     if (!path) return ''
     if (path.startsWith('http://') || path.startsWith('https://')) return path
-    return `https://intaprd.com${path.startsWith('/') ? path : `/${path}`}`
+    return `${WEB_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
   }
 
   async function copyPaymentLink(item: PaymentLinkItem) {

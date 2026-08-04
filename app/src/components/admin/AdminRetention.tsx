@@ -20,6 +20,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, API_BASE } from '../../lib/api'
 import { StatusBadge } from './RetentionPanel'
+import { WEB_ORIGIN } from '../../lib/runtime-env'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -672,7 +673,7 @@ export default function AdminRetention() {
             Al actualizar tu plan, todos los ítems en pausa vuelven a estar activos automáticamente.
           </p>
           <a
-            href="https://intaprd.com"
+            href={WEB_ORIGIN}
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full py-3 rounded-xl bg-gradient-to-r from-intap-blue to-purple-600 text-white text-sm font-bold hover:opacity-90 transition-opacity text-center"

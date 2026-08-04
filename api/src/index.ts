@@ -1,11 +1,18 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { getCookie } from 'hono/cookie'
 import { getEntitlements, getRetentionStatus, logPlanEvent } from './engine/entitlements'
 import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
+import {
+  buildExpiredSessionCookie,
+  buildSessionCookie,
+  getSessionCookieName,
+  parseCookie,
+} from './lib/session-cookie'
+import { normalizeQuickActionUrl } from './lib/quick-action-url'
+import { extractOwnedAssetKey, inspectImageFile } from './lib/image-upload'
 import {
   enforceFreeProfilePublicationState,
   getFreeProfilePublicationReadiness,
@@ -22,8 +29,10 @@ type Bindings = {
   GOOGLE_CLIENT_SECRET: string
   TURNSTILE_SECRET: string
   API_URL: string
+  WEB_URL: string
   APP_URL: string
   ENVIRONMENT: string
+  WORKER_NAME: string
   ADMIN_EMAILS: string
   ADMIN_API_KEY: string
 }
@@ -35,6 +44,46 @@ type Variables = {
 }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+function rejectPaidFeatureForFreePlan(
+  c: any,
+  planId: string,
+  feature: string,
+): Response | null {
+  if (planId !== 'free') return null
+
+  return c.json({
+    ok: false,
+    code: 'FEATURE_NOT_AVAILABLE',
+    feature,
+    plan: planId,
+    error: `La función ${feature} no está disponible en el plan Gratis.`,
+  }, 403)
+}
+
+async function findEquivalentQuickAction(
+  db: D1Database,
+  profileId: string,
+  url: string,
+  excludedLinkId?: string,
+): Promise<{ id: string } | null> {
+  const normalizedCandidate = normalizeQuickActionUrl(url)
+  if (!normalizedCandidate) return null
+
+  const rows = await db.prepare(
+    `SELECT id, url
+     FROM profile_links
+     WHERE profile_id = ?`
+  ).bind(profileId).all()
+
+  const match = (rows.results as Array<{ id: string; url: string }>).find(
+    (row) =>
+      row.id !== excludedLinkId &&
+      normalizeQuickActionUrl(row.url) === normalizedCandidate,
+  )
+
+  return match ? { id: match.id } : null
+}
 
 // ─── CORS — credentials-aware ─────────────────────────────────────────────
 
@@ -95,31 +144,12 @@ function generateToken(bytes = 32): string {
   return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
-function parseCookie(header: string, name: string): string | null {
-  const match = header.match(new RegExp(`(?:^|;\\s*)${encodeURIComponent(name)}=([^;]*)`))
-  if (match) return decodeURIComponent(match[1])
-  // Also try unencoded name
-  const match2 = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`))
-  return match2 ? decodeURIComponent(match2[1]) : null
-}
-
-function buildSessionCookie(value: string, appUrl: string, maxAge: number): string {
-  let cookie = `session_id=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
-  try {
-    const u = new URL(appUrl)
-    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com')) {
-      cookie += '; Domain=.intaprd.com'
-    }
-  } catch { /* appUrl inválida — no agregar Domain */ }
-  return cookie
-}
-
 // ─── Middlewares ──────────────────────────────────────────────────────────
 
 const requireAdmin = async (c: any, next: any) => {
   // 1) Validar que hay sesión activa
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, getSessionCookieName(c.env))
   if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
   const sessionHash = await sha256Hex(rawSession)
@@ -152,7 +182,7 @@ const requireAdmin = async (c: any, next: any) => {
 
 const requireAuth = async (c: any, next: any) => {
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, getSessionCookieName(c.env))
   if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
   const sessionHash = await sha256Hex(rawSession)
@@ -176,7 +206,12 @@ const requireAuth = async (c: any, next: any) => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────
 
-app.get('/api/health', (c) => c.json({ ok: true, status: 'healthy' }))
+app.get('/api/health', (c) => c.json({
+  ok: true,
+  status: 'healthy',
+  environment: c.env.ENVIRONMENT || 'unknown',
+  worker: c.env.WORKER_NAME || 'unknown',
+}))
 
 // ─── Magic Link ───────────────────────────────────────────────────────────
 
@@ -265,8 +300,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), (user as any).id, sessionHash, reqIp, reqUa).run()
 
-  const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
-  const cookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
+  const cookie = buildSessionCookie(sessionRaw, c.env, 30 * 24 * 60 * 60)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
 })
@@ -377,7 +411,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), userId, sessionHash, reqIp, reqUa).run()
 
-  const sessionCookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
+  const sessionCookie = buildSessionCookie(sessionRaw, c.env, 30 * 24 * 60 * 60)
   const clearState = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
 
   const headers = new Headers()
@@ -391,7 +425,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
 app.post('/api/v1/auth/logout', async (c) => {
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, getSessionCookieName(c.env))
 
   if (rawSession) {
     const sessionHash = await sha256Hex(rawSession)
@@ -400,13 +434,7 @@ app.post('/api/v1/auth/logout', async (c) => {
     ).bind(sessionHash).run()
   }
 
-  const appUrlLogout = (c.env as any).APP_URL || 'https://app.intaprd.com'
-  let clearCookie = `session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
-  try {
-    const u = new URL(appUrlLogout)
-    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com'))
-      clearCookie += '; Domain=.intaprd.com'
-  } catch { /* no agregar Domain */ }
+  const clearCookie = buildExpiredSessionCookie(c.env)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': clearCookie })
 })
@@ -629,6 +657,7 @@ me.put('/profile', async (c) => {
   ]
 
   const requested_layout_id =
+    (profile as any).plan_id === 'free' &&
     body.layout_id !== undefined
       ? String(body.layout_id)
       : undefined
@@ -656,6 +685,22 @@ me.put('/profile', async (c) => {
   const template_data = body.template_data !== undefined
     ? JSON.stringify(typeof body.template_data === 'object' ? body.template_data : {})
     : undefined
+
+  if (
+    (profile as any).plan_id === 'free' &&
+    (
+      body.theme_id !== undefined ||
+      body.template_id !== undefined ||
+      body.template_data !== undefined
+    )
+  ) {
+    const featureError = rejectPaidFeatureForFreePlan(
+      c,
+      (profile as any).plan_id,
+      'premium-profile-design',
+    )
+    if (featureError) return featureError
+  }
 
   if (
     is_published === 1 &&
@@ -714,7 +759,7 @@ me.post('/profile/avatar', async (c) => {
   const userId = c.get('userId') as string
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, avatar_url FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
@@ -725,25 +770,41 @@ me.post('/profile/avatar', async (c) => {
     return c.json({ ok: false, error: 'Archivo requerido' }, 400)
   }
 
-  const file = fileVal as any as File
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-  const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
-  if (!ALLOWED_EXTS.includes(ext)) return c.json({ ok: false, error: 'Formato no permitido' }, 400)
+  const file = fileVal as File
+  if (file.size > 5 * 1024 * 1024) {
+    return c.json({ ok: false, error: 'La imagen no puede superar 5 MB.' }, 413)
+  }
+
+  const image = await inspectImageFile(file, { allowGif: true })
+  if (!image) return c.json({ ok: false, error: 'El archivo no contiene una imagen válida.' }, 400)
 
   const profileId = (profile as any).id
-  const key = `avatars/${profileId}/${crypto.randomUUID()}.${ext}`
+  const key = `avatars/${profileId}/${crypto.randomUUID()}.${image.extension}`
 
-  await c.env.BUCKET.put(key, file.stream(), {
-    httpMetadata: { contentType: file.type || 'image/jpeg' },
+  await c.env.BUCKET.put(key, image.bytes, {
+    httpMetadata: { contentType: image.contentType },
   })
 
   const origin = new URL(c.req.url).origin
   const encodedKey = key.split('/').map(encodeURIComponent).join('/')
   const avatarUrl = `${origin}/api/v1/public/assets/${encodedKey}`
 
-  await c.env.DB.prepare(
-    `UPDATE profiles SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`
-  ).bind(avatarUrl, profileId).run()
+  try {
+    await c.env.DB.prepare(
+      `UPDATE profiles SET avatar_url = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(avatarUrl, profileId).run()
+  } catch (error) {
+    await c.env.BUCKET.delete(key).catch(() => {})
+    throw error
+  }
+
+  const previousKey = extractOwnedAssetKey(
+    (profile as any).avatar_url,
+    `avatars/${profileId}/`,
+  )
+  if (previousKey && previousKey !== key) {
+    await c.env.BUCKET.delete(previousKey).catch(() => {})
+  }
 
   return c.json({ ok: true, avatar_url: avatarUrl })
 })
@@ -788,57 +849,490 @@ me.put('/profile/slug', async (c) => {
 
 me.get('/contact', async (c) => {
   const userId = c.get('userId') as string
+
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id
+     FROM profiles
+     WHERE user_id = ?
+     LIMIT 1`
   ).bind(userId).first()
-  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  if (!profile) {
+    return c.json(
+      {
+        ok: false,
+        error: 'Perfil no encontrado',
+      },
+      404,
+    )
+  }
 
   const contact = await c.env.DB.prepare(
-    `SELECT whatsapp, email, phone, hours, address, map_url FROM profile_contact WHERE profile_id = ? LIMIT 1`
-  ).bind((profile as any).id).first()
-  return c.json({ ok: true, data: contact || null })
+    `SELECT
+       whatsapp,
+       email,
+       phone,
+       hours,
+       address,
+       map_url,
+       place_name,
+       latitude,
+       longitude
+     FROM profile_contact
+     WHERE profile_id = ?
+     LIMIT 1`
+  )
+    .bind((profile as any).id)
+    .first()
+
+  return c.json({
+    ok: true,
+    data: contact || null,
+  })
 })
 
 me.put('/contact', async (c) => {
   const userId = c.get('userId') as string
+
   let body: any = {}
-  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json(
+      {
+        ok: false,
+        error: 'Invalid JSON',
+      },
+      400,
+    )
+  }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id
+     FROM profiles
+     WHERE user_id = ?
+     LIMIT 1`
   ).bind(userId).first()
-  if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
-  const waRaw = body.whatsapp_number !== undefined ? body.whatsapp_number : body.whatsapp
-  const whatsapp = waRaw !== undefined ? normalizeWhatsApp(String(waRaw || '')) : undefined
-  const email = body.email !== undefined ? String(body.email || '').trim() : undefined
-  const phone = body.phone !== undefined ? String(body.phone || '').trim() : undefined
-  const hours = body.hours !== undefined ? String(body.hours || '').trim() : undefined
-  const address = body.address !== undefined ? String(body.address || '').trim() : undefined
-  const map_url = body.map_url !== undefined ? String(body.map_url || '').trim() : undefined
+  if (!profile) {
+    return c.json(
+      {
+        ok: false,
+        error: 'Perfil no encontrado',
+      },
+      404,
+    )
+  }
+
+  const profileId =
+    (profile as any).id
+
+  if (body.clear_location === true) {
+    await c.env.DB.prepare(
+      `UPDATE profile_contact
+       SET
+         place_name = NULL,
+         address = NULL,
+         map_url = NULL,
+         latitude = NULL,
+         longitude = NULL,
+         updated_at = datetime('now')
+       WHERE profile_id = ?`
+    )
+      .bind(profileId)
+      .run()
+
+    return c.json({
+      ok: true,
+    })
+  }
+
+  const waRaw =
+    body.whatsapp_number !== undefined
+      ? body.whatsapp_number
+      : body.whatsapp
+
+  const whatsapp =
+    waRaw !== undefined
+      ? normalizeWhatsApp(
+          String(waRaw || ''),
+        )
+      : undefined
+
+  const email =
+    body.email !== undefined
+      ? String(body.email || '').trim()
+      : undefined
+
+  const phone =
+    body.phone !== undefined
+      ? String(body.phone || '').trim()
+      : undefined
+
+  const hours =
+    body.hours !== undefined
+      ? String(body.hours || '').trim()
+      : undefined
+
+  const address =
+    body.address !== undefined
+      ? String(body.address || '').trim()
+      : undefined
+
+  const placeName =
+    body.place_name !== undefined
+      ? String(body.place_name || '').trim()
+      : undefined
+
+  const hasLatitude =
+    body.latitude !== undefined &&
+    body.latitude !== null &&
+    String(body.latitude).trim() !== ''
+
+  const hasLongitude =
+    body.longitude !== undefined &&
+    body.longitude !== null &&
+    String(body.longitude).trim() !== ''
+
+  if (hasLatitude !== hasLongitude) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'Latitud y longitud deben enviarse juntas.',
+      },
+      400,
+    )
+  }
+
+  const latitude =
+    hasLatitude
+      ? Number(body.latitude)
+      : undefined
+
+  const longitude =
+    hasLongitude
+      ? Number(body.longitude)
+      : undefined
+
+  if (
+    latitude !== undefined &&
+    (
+      !Number.isFinite(latitude) ||
+      latitude < -90 ||
+      latitude > 90
+    )
+  ) {
+    return c.json(
+      {
+        ok: false,
+        error: 'Latitud inválida.',
+      },
+      400,
+    )
+  }
+
+  if (
+    longitude !== undefined &&
+    (
+      !Number.isFinite(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    )
+  ) {
+    return c.json(
+      {
+        ok: false,
+        error: 'Longitud inválida.',
+      },
+      400,
+    )
+  }
+
+  const suppliedMapUrl =
+    body.map_url !== undefined
+      ? String(body.map_url || '').trim()
+      : undefined
+
+  const generatedMapUrl =
+    latitude !== undefined &&
+    longitude !== undefined
+      ? (
+          'https://www.google.com/maps/' +
+          'search/?api=1&query=' +
+          encodeURIComponent(
+            `${latitude},${longitude}`,
+          )
+        )
+      : suppliedMapUrl
 
   try {
     await c.env.DB.prepare(
-      `INSERT INTO profile_contact (profile_id, whatsapp, email, phone, hours, address, map_url, updated_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))
-       ON CONFLICT(profile_id) DO UPDATE SET
-         whatsapp   = COALESCE(?2, whatsapp),
-         email      = COALESCE(?3, email),
-         phone      = COALESCE(?4, phone),
-         hours      = COALESCE(?5, hours),
-         address    = COALESCE(?6, address),
-         map_url    = COALESCE(?7, map_url),
+      `INSERT INTO profile_contact (
+         profile_id,
+         whatsapp,
+         email,
+         phone,
+         hours,
+         address,
+         map_url,
+         place_name,
+         latitude,
+         longitude,
+         updated_at
+       )
+       VALUES (
+         ?1,
+         ?2,
+         ?3,
+         ?4,
+         ?5,
+         ?6,
+         ?7,
+         ?8,
+         ?9,
+         ?10,
+         datetime('now')
+       )
+       ON CONFLICT(profile_id)
+       DO UPDATE SET
+         whatsapp = COALESCE(?2, whatsapp),
+         email = COALESCE(?3, email),
+         phone = COALESCE(?4, phone),
+         hours = COALESCE(?5, hours),
+         address = COALESCE(?6, address),
+         map_url = COALESCE(?7, map_url),
+         place_name = COALESCE(?8, place_name),
+         latitude = COALESCE(?9, latitude),
+         longitude = COALESCE(?10, longitude),
          updated_at = datetime('now')`
-    ).bind(
-      (profile as any).id,
-      whatsapp ?? null, email ?? null, phone ?? null,
-      hours ?? null, address ?? null, map_url ?? null,
-    ).run()
-  } catch (e: any) {
-    console.error('[PUT /me/contact] D1 error:', e)
-    return c.json({ ok: false, error: e?.message || 'Error al guardar contacto' }, 500)
+    )
+      .bind(
+        profileId,
+        whatsapp ?? null,
+        email ?? null,
+        phone ?? null,
+        hours ?? null,
+        address ?? null,
+        generatedMapUrl ?? null,
+        placeName ?? null,
+        latitude ?? null,
+        longitude ?? null,
+      )
+      .run()
+  } catch (error: any) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          error?.message ||
+          'Error al guardar contacto',
+      },
+      500,
+    )
   }
-  return c.json({ ok: true })
+
+  return c.json({
+    ok: true,
+  })
+})
+
+// Búsqueda explícita, sin autocompletado.
+me.get('/location/search', async (c) => {
+  const userId = c.get('userId') as string
+
+  const query =
+    String(
+      c.req.query('q') || '',
+    ).trim()
+
+  if (
+    query.length < 3 ||
+    query.length > 160
+  ) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'La búsqueda debe tener entre 3 y 160 caracteres.',
+      },
+      400,
+    )
+  }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id
+     FROM profiles
+     WHERE user_id = ?
+     LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) {
+    return c.json(
+      {
+        ok: false,
+        error: 'Perfil no encontrado',
+      },
+      404,
+    )
+  }
+
+  if ((profile as any).plan_id !== 'free') {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'Este buscador pertenece al flujo Gratis.',
+      },
+      403,
+    )
+  }
+
+  // El servicio público de geocodificación
+  // exige un límite global, no por usuario.
+  const rateLimitKey =
+    'global'
+
+  const now =
+    Date.now()
+
+  const rateLimit =
+    await c.env.DB.prepare(
+      `SELECT last_request_at
+       FROM location_search_rate_limits
+       WHERE profile_id = ?
+       LIMIT 1`
+    )
+      .bind(rateLimitKey)
+      .first()
+
+  const lastRequestAt =
+    Number(
+      (rateLimit as any)
+        ?.last_request_at || 0,
+    )
+
+  if (
+    lastRequestAt > 0 &&
+    now - lastRequestAt < 2000
+  ) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'Espera dos segundos antes de buscar nuevamente.',
+      },
+      429,
+    )
+  }
+
+  await c.env.DB.prepare(
+    `INSERT INTO location_search_rate_limits (
+       profile_id,
+       last_request_at,
+       updated_at
+     )
+     VALUES (
+       ?,
+       ?,
+       datetime('now')
+     )
+     ON CONFLICT(profile_id)
+     DO UPDATE SET
+       last_request_at =
+         excluded.last_request_at,
+       updated_at = datetime('now')`
+  )
+    .bind(
+      rateLimitKey,
+      now,
+    )
+    .run()
+
+  const params =
+    new URLSearchParams({
+      q: query,
+      format: 'jsonv2',
+      limit: '5',
+      addressdetails: '1',
+      dedupe: '1',
+      'accept-language': 'es',
+    })
+
+  const providerResponse =
+    await fetch(
+      `https://nominatim.openstreetmap.org/search?${params}`,
+      {
+        headers: {
+          Accept: 'application/json',
+          Referer:
+            'https://app.intaprd.com',
+          'User-Agent':
+            'INTAP-LINK/1.0 (+https://intaprd.com)',
+        },
+      },
+    )
+
+  if (!providerResponse.ok) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'El buscador de ubicación no está disponible en este momento.',
+      },
+      502,
+    )
+  }
+
+  const providerData: any =
+    await providerResponse.json()
+
+  const results =
+    Array.isArray(providerData)
+      ? providerData
+          .map((item: any) => {
+            const latitude =
+              Number(item.lat)
+
+            const longitude =
+              Number(item.lon)
+
+            const address =
+              String(
+                item.display_name || '',
+              ).trim()
+
+            const placeName =
+              String(
+                item.name ||
+                address.split(',')[0] ||
+                query,
+              ).trim()
+
+            return {
+              place_name: placeName,
+              address,
+              latitude,
+              longitude,
+            }
+          })
+          .filter((item: any) => (
+            Number.isFinite(
+              item.latitude,
+            ) &&
+            Number.isFinite(
+              item.longitude,
+            ) &&
+            item.address
+          ))
+          .slice(0, 5)
+      : []
+
+  return c.json({
+    ok: true,
+    data: results,
+  })
 })
 
 me.get('/links', async (c) => {
@@ -870,6 +1364,20 @@ me.post('/links', async (c) => {
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const profileId = (profile as any).id
+
+  const duplicate = await findEquivalentQuickAction(
+    c.env.DB,
+    profileId,
+    url,
+  )
+  if (duplicate) {
+    return c.json({
+      ok: false,
+      code: 'DUPLICATE_LINK',
+      existing_id: duplicate.id,
+      error: 'Esta acción rápida ya existe.',
+    }, 409)
+  }
 
   const limitError = await checkPlanLimit(c as any, profileId, 'links')
   if (limitError) return limitError
@@ -940,6 +1448,27 @@ me.put('/links/:id', async (c) => {
   const label = body.label !== undefined ? String(body.label || '').trim() : undefined
   const url = body.url !== undefined ? String(body.url || '').trim() : undefined
   const is_active = body.is_active !== undefined ? (body.is_active ? 1 : 0) : undefined
+
+  if (url !== undefined && !normalizeQuickActionUrl(url)) {
+    return c.json({ ok: false, error: 'valid url required' }, 400)
+  }
+
+  if (url !== undefined) {
+    const duplicate = await findEquivalentQuickAction(
+      c.env.DB,
+      (profile as any).id,
+      url,
+      linkId,
+    )
+    if (duplicate) {
+      return c.json({
+        ok: false,
+        code: 'DUPLICATE_LINK',
+        existing_id: duplicate.id,
+        error: 'Esta acción rápida ya existe.',
+      }, 409)
+    }
+  }
 
   await c.env.DB.prepare(
     `UPDATE profile_links
@@ -1022,9 +1551,16 @@ me.post('/faqs', async (c) => {
   if (!answer) return c.json({ ok: false, error: 'answer required' }, 400)
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const featureError = rejectPaidFeatureForFreePlan(
+    c,
+    (profile as any).plan_id,
+    'faqs',
+  )
+  if (featureError) return featureError
 
   const profileId = (profile as any).id
 
@@ -1058,9 +1594,12 @@ me.put('/faqs/reorder', async (c) => {
   if (!orderedIds.length) return c.json({ ok: false, error: 'orderedIds array required' }, 400)
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const featureError = rejectPaidFeatureForFreePlan(c, (profile as any).plan_id, 'faqs')
+  if (featureError) return featureError
 
   await Promise.all(orderedIds.map((id, index) =>
     c.env.DB.prepare(
@@ -1077,9 +1616,12 @@ me.put('/faqs/:id', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const featureError = rejectPaidFeatureForFreePlan(c, (profile as any).plan_id, 'faqs')
+  if (featureError) return featureError
 
   const question = body.question !== undefined ? String(body.question || '').trim() : undefined
   const answer = body.answer !== undefined ? String(body.answer || '').trim() : undefined
@@ -1110,6 +1652,45 @@ me.delete('/faqs/:id', async (c) => {
 
 // ─── Productos / Servicios ─────────────────────────────────────────────────
 
+const FREE_SERVICE_ICON_KEYS =
+  new Set([
+    'home',
+    'key',
+    'chart-line',
+    'handshake',
+  ])
+
+function isFreeServiceVisual(
+  value: string,
+): boolean {
+  const visual = value.trim()
+
+  if (visual.startsWith('icon:')) {
+    return FREE_SERVICE_ICON_KEYS.has(
+      visual.slice('icon:'.length),
+    )
+  }
+
+  if (
+    visual.startsWith(
+      '/api/v1/public/assets/',
+    )
+  ) {
+    return true
+  }
+
+  try {
+    const url = new URL(visual)
+
+    return (
+      url.protocol === 'http:' ||
+      url.protocol === 'https:'
+    )
+  } catch {
+    return false
+  }
+}
+
 me.get('/products', async (c) => {
   const userId = c.get('userId') as string
   const profile = await c.env.DB.prepare(
@@ -1131,19 +1712,49 @@ me.post('/products', async (c) => {
 
   const title = String(body.title || '').trim()
   const description = String(body.description || '').trim()
-  const price = String(body.price || '').trim()
+  let price = String(body.price || '').trim()
   const whatsapp_text = String(body.whatsapp_text || '').trim()
   const image_url = String(body.image_url || '').trim()
-  const is_featured = body.is_featured ? 1 : 0
+  let is_featured = body.is_featured ? 1 : 0
 
   if (!title) return c.json({ ok: false, error: 'title required' }, 400)
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id
+     FROM profiles
+     WHERE user_id = ?
+     LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const profileId = (profile as any).id
+
+  if ((profile as any).plan_id === 'free') {
+    if (!description) {
+      return c.json(
+        {
+          ok: false,
+          error:
+            'description required for free services',
+        },
+        400,
+      )
+    }
+
+    if (!isFreeServiceVisual(image_url)) {
+      return c.json(
+        {
+          ok: false,
+          error:
+            'image or system icon required',
+        },
+        400,
+      )
+    }
+
+    price = ''
+    is_featured = 0
+  }
 
   const limitError = await checkPlanLimit(c as any, profileId, 'products')
   if (limitError) return limitError
@@ -1195,16 +1806,116 @@ me.put('/products/:id', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id
+     FROM profiles
+     WHERE user_id = ?
+     LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
   const title = body.title !== undefined ? String(body.title || '').trim() : undefined
   const description = body.description !== undefined ? String(body.description || '').trim() : undefined
-  const price = body.price !== undefined ? String(body.price || '').trim() : undefined
+  let price = body.price !== undefined ? String(body.price || '').trim() : undefined
   const image_url = body.image_url !== undefined ? String(body.image_url || '').trim() : undefined
   const whatsapp_text = body.whatsapp_text !== undefined ? String(body.whatsapp_text || '').trim() : undefined
-  const is_featured = body.is_featured !== undefined ? (body.is_featured ? 1 : 0) : undefined
+  let is_featured = body.is_featured !== undefined ? (body.is_featured ? 1 : 0) : undefined
+  let replacedServiceImageKey: string | null = null
+
+  if ((profile as any).plan_id === 'free') {
+    const existing =
+      await c.env.DB.prepare(
+        `SELECT title, description, image_url
+         FROM profile_products
+         WHERE id = ?
+           AND profile_id = ?
+         LIMIT 1`
+      )
+        .bind(
+          productId,
+          (profile as any).id,
+        )
+        .first()
+
+    if (!existing) {
+      return c.json(
+        {
+          ok: false,
+          error: 'Servicio no encontrado',
+        },
+        404,
+      )
+    }
+
+    const nextTitle =
+      title !== undefined
+        ? title
+        : String(
+            (existing as any).title || '',
+          ).trim()
+
+    const nextDescription =
+      description !== undefined
+        ? description
+        : String(
+            (existing as any).description ||
+            '',
+          ).trim()
+
+    const nextImage =
+      image_url !== undefined
+        ? image_url
+        : String(
+            (existing as any).image_url ||
+            '',
+          ).trim()
+
+    if (!nextTitle) {
+      return c.json(
+        {
+          ok: false,
+          error: 'title required',
+        },
+        400,
+      )
+    }
+
+    if (!nextDescription) {
+      return c.json(
+        {
+          ok: false,
+          error:
+            'description required for free services',
+        },
+        400,
+      )
+    }
+
+    if (!isFreeServiceVisual(nextImage)) {
+      return c.json(
+        {
+          ok: false,
+          error:
+            'image or system icon required',
+        },
+        400,
+      )
+    }
+
+    const previousImageKey = extractOwnedAssetKey(
+      String((existing as any).image_url || ''),
+      `profiles/${(profile as any).id}/services/`,
+    )
+    const nextImageKey = extractOwnedAssetKey(
+      nextImage,
+      `profiles/${(profile as any).id}/services/`,
+    )
+    if (previousImageKey && previousImageKey !== nextImageKey) {
+      replacedServiceImageKey = previousImageKey
+    }
+
+    price = undefined
+    is_featured = undefined
+  }
 
   await c.env.DB.prepare(
     `UPDATE profile_products SET
@@ -1220,6 +1931,10 @@ me.put('/products/:id', async (c) => {
     image_url ?? null, whatsapp_text ?? null, is_featured ?? null,
     productId, (profile as any).id,
   ).run()
+
+  if (replacedServiceImageKey) {
+    await c.env.BUCKET.delete(replacedServiceImageKey).catch(() => {})
+  }
   return c.json({ ok: true })
 })
 
@@ -1228,13 +1943,32 @@ me.delete('/products/:id', async (c) => {
   const productId = c.req.param('id')
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const product = await c.env.DB.prepare(
+    `SELECT image_url
+     FROM profile_products
+     WHERE id = ? AND profile_id = ?
+     LIMIT 1`
+  ).bind(productId, (profile as any).id).first()
+
+  if (!product) return c.json({ ok: false, error: 'Servicio no encontrado' }, 404)
 
   await c.env.DB.prepare(
     `DELETE FROM profile_products WHERE id = ? AND profile_id = ?`
   ).bind(productId, (profile as any).id).run()
+
+  if ((profile as any).plan_id === 'free') {
+    const serviceImageKey = extractOwnedAssetKey(
+      (product as any).image_url,
+      `profiles/${(profile as any).id}/services/`,
+    )
+    if (serviceImageKey) {
+      await c.env.BUCKET.delete(serviceImageKey).catch(() => {})
+    }
+  }
   return c.json({ ok: true })
 })
 
@@ -1264,9 +1998,12 @@ me.post('/videos', async (c) => {
   if (!url || !url.startsWith('http')) return c.json({ ok: false, error: 'valid url required' }, 400)
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const featureError = rejectPaidFeatureForFreePlan(c, (profile as any).plan_id, 'videos')
+  if (featureError) return featureError
 
   const profileId = (profile as any).id
 
@@ -1299,9 +2036,12 @@ me.put('/videos/:id', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const featureError = rejectPaidFeatureForFreePlan(c, (profile as any).plan_id, 'videos')
+  if (featureError) return featureError
 
   const title = body.title !== undefined ? String(body.title || '').trim() : undefined
   const url = body.url !== undefined ? String(body.url || '').trim() : undefined
@@ -1346,9 +2086,12 @@ me.patch('/profile/blocks-order', async (c) => {
   if (!blocks.length) return c.json({ ok: false, error: 'blocks_order array required' }, 400)
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const featureError = rejectPaidFeatureForFreePlan(c, (profile as any).plan_id, 'blocks-order')
+  if (featureError) return featureError
 
   await c.env.DB.prepare(
     `UPDATE profiles SET blocks_order = ?, updated_at = datetime('now') WHERE id = ?`
@@ -1374,9 +2117,12 @@ me.patch('/profile/visual', async (c) => {
     return c.json({ ok: false, error: 'accent_color debe ser un hex válido (#RGB o #RRGGBB)' }, 400)
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  const featureError = rejectPaidFeatureForFreePlan(c, (profile as any).plan_id, 'visual')
+  if (featureError) return featureError
 
   await c.env.DB.prepare(
     `UPDATE profiles SET
@@ -1591,6 +2337,123 @@ me.post('/retention/selection', async (c) => {
       total:         allIds.length,
     },
   })
+})
+
+// Imagen independiente para servicios Gratis.
+// No crea registros en profile_gallery y no consume
+// espacios del portafolio.
+me.post('/service-image/upload', async (c) => {
+  const userId = c.get('userId') as string
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id
+     FROM profiles
+     WHERE user_id = ?
+     LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) {
+    return c.json(
+      {
+        ok: false,
+        error: 'Perfil no encontrado',
+      },
+      404,
+    )
+  }
+
+  if ((profile as any).plan_id !== 'free') {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'Esta carga pertenece al editor Gratis.',
+      },
+      403,
+    )
+  }
+
+  const formData =
+    await c.req.formData()
+
+  const fileValue =
+    formData.get('file')
+
+  if (
+    !fileValue ||
+    typeof fileValue !== 'object' ||
+    !('name' in (fileValue as any)) ||
+    !('stream' in (fileValue as any))
+  ) {
+    return c.json(
+      {
+        ok: false,
+        error: 'No se recibió una imagen.',
+      },
+      400,
+    )
+  }
+
+  const file =
+    fileValue as File
+
+  if (file.size > 5 * 1024 * 1024) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'La imagen no puede superar 5 MB.',
+      },
+      413,
+    )
+  }
+
+  const image = await inspectImageFile(file)
+
+  if (!image) {
+    return c.json(
+      {
+        ok: false,
+        error:
+          'El archivo no contiene una imagen JPG, PNG o WEBP válida.',
+      },
+      400,
+    )
+  }
+
+  const profileId =
+    (profile as any).id
+
+  const key =
+    `profiles/${profileId}/services/` +
+    `${crypto.randomUUID()}.` +
+    image.extension
+
+  await c.env.BUCKET.put(
+    key,
+    image.bytes,
+    {
+      httpMetadata: {
+        contentType: image.contentType,
+      },
+    },
+  )
+
+  const encodedKey =
+    key
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/')
+
+  return c.json(
+    {
+      ok: true,
+      key,
+      url:
+        `/api/v1/public/assets/${encodedKey}`,
+    },
+    201,
+  )
 })
 
 // Mount the authenticated sub-app
@@ -1958,20 +2821,28 @@ app.post('/api/v1/profile/gallery/upload', requireAuth, async (c) => {
     return c.json({ ok: false, error: 'No file' }, 400)
   }
 
-  const file = fileVal as any as File
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-  const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
-  if (!ALLOWED_EXTS.includes(ext)) return c.json({ ok: false, error: 'Formato no permitido' }, 400)
+  const file = fileVal as File
+  if (file.size > 5 * 1024 * 1024) {
+    return c.json({ ok: false, error: 'La imagen no puede superar 5 MB.' }, 413)
+  }
 
-  const key = `profiles/${profileId}/${crypto.randomUUID()}-${file.name}`
-  await c.env.BUCKET.put(key, file.stream(), {
-    httpMetadata: { contentType: file.type || 'image/jpeg' },
+  const image = await inspectImageFile(file, { allowGif: true })
+  if (!image) return c.json({ ok: false, error: 'El archivo no contiene una imagen válida.' }, 400)
+
+  const key = `profiles/${profileId}/${crypto.randomUUID()}.${image.extension}`
+  await c.env.BUCKET.put(key, image.bytes, {
+    httpMetadata: { contentType: image.contentType },
   })
 
   const id = crypto.randomUUID()
-  await c.env.DB.prepare(
-    `INSERT INTO profile_gallery (id, profile_id, image_key, sort_order) VALUES (?, ?, ?, 0)`
-  ).bind(id, profileId, key).run()
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO profile_gallery (id, profile_id, image_key, sort_order) VALUES (?, ?, ?, 0)`
+    ).bind(id, profileId, key).run()
+  } catch (error) {
+    await c.env.BUCKET.delete(key).catch(() => {})
+    throw error
+  }
 
   console.log(JSON.stringify({
     level: 'info', event: 'gallery_upload_success',
@@ -2042,12 +2913,26 @@ app.get('/api/v1/public/assets/*', async (c) => {
   const object = await c.env.BUCKET.get(key)
   if (!object) return c.json({ error: 'Archivo no encontrado' }, 404)
 
-  const contentType = object.httpMetadata?.contentType || 'application/octet-stream'
+  const allowedContentTypes = new Set([
+    'image/gif',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ])
+  const storedContentType = object.httpMetadata?.contentType || ''
+  const contentType = allowedContentTypes.has(storedContentType)
+    ? storedContentType
+    : 'application/octet-stream'
+  const headers: Record<string, string> = {
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=86400',
+    'X-Content-Type-Options': 'nosniff',
+  }
+  if (contentType === 'application/octet-stream') {
+    headers['Content-Disposition'] = 'attachment'
+  }
   return new Response(object.body as ReadableStream, {
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=86400',
-    },
+    headers,
   })
 })
 
@@ -2135,7 +3020,7 @@ app.get('/api/v1/public/discovery/profiles', async (c) => {
       row.created_at ||
       null,
     canonicalUrl:
-      `https://intaprd.com/${encodeURIComponent(row.slug)}`,
+      `${c.env.WEB_URL || 'https://intaprd.com'}/${encodeURIComponent(row.slug)}`,
   }))
 
   c.header(
@@ -2199,7 +3084,10 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     let isOwner = false
     if (isPreview) {
       try {
-        const rawSession = parseCookie(c.req.header('Cookie') || '', 'session_id')
+        const rawSession = parseCookie(
+          c.req.header('Cookie') || '',
+          getSessionCookieName(c.env),
+        )
         if (rawSession) {
           const sessionHash = await sha256Hex(rawSession)
           const session = await c.env.DB.prepare(
@@ -2353,7 +3241,7 @@ app.get('/api/v1/public/vcard/:profileId', async (c) => {
 
   const telNumber = profile.whatsapp_number || contactRow?.whatsapp || contactRow?.phone || null
   const fn = profile.name || profile.slug
-  const profileUrl = `${(c.env as any).API_URL || 'https://intaprd.com'}/${profile.slug}`
+  const profileUrl = `${c.env.WEB_URL || 'https://intaprd.com'}/${profile.slug}`
 
   const lines: string[] = [
     'BEGIN:VCARD',

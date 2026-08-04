@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { API_BASE, apiGet, apiPut, apiUpload } from '../../../lib/api'
-import ImageCropModal from '../ImageCropModal'
+import { apiGet, apiPut, apiUpload } from '../../../../lib/api'
+import ImageCropModal from '../../ImageCropModal'
 
-export default function OnboardingIdentity() {
+export default function FreeOnboardingIdentity() {
   const navigate   = useNavigate()
   const fileRef    = useRef<HTMLInputElement>(null)
   const [name, setName]           = useState('')
+  const [role, setRole]           = useState('')
   const [bio, setBio]             = useState('')
+  const [templateData, setTemplateData] =
+    useState<Record<string, unknown>>({})
   const [avatarUrl, setAvatarUrl] = useState('')
   const [profileId, setProfileId] = useState<string | null>(null)
   const [loading, setLoading]     = useState(true)
@@ -23,8 +26,21 @@ export default function OnboardingIdentity() {
     apiGet('/me').then((json: any) => {
       if (json.ok && json.data) {
         const d = json.data
-        setName(d.name       || '')
-        setBio(d.bio         || '')
+
+        const currentTemplateData =
+          d.templateData &&
+          typeof d.templateData === 'object'
+            ? d.templateData
+            : {}
+
+        setName(d.name || '')
+        setRole(
+          currentTemplateData.role ||
+          currentTemplateData.title ||
+          '',
+        )
+        setBio(d.bio || '')
+        setTemplateData(currentTemplateData)
         setAvatarUrl(d.avatar_url || '')
         setProfileId(d.profile_id || null)
       }
@@ -60,17 +76,34 @@ export default function OnboardingIdentity() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
     setError('')
+
+    if (!name.trim() || !role.trim()) {
+      setError(
+        'Completa tu nombre y tu cargo, profesión o función.',
+      )
+      return
+    }
+
+    setSaving(true)
+
     try {
-      const body: Record<string, string> = {}
-      if (name.trim())      body.name       = name.trim()
-      if (bio.trim())       body.bio        = bio.trim()
-      if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
+      const body: Record<string, unknown> = {
+        name: name.trim(),
+        bio: bio.trim(),
+        template_data: {
+          ...templateData,
+          role: role.trim(),
+        },
+      }
+
+      if (avatarUrl.trim()) {
+        body.avatar_url = avatarUrl.trim()
+      }
 
       const json: any = await apiPut('/me/profile', body)
       if (json.ok) {
-        navigate(isOnboarding ? '/admin/onboarding/contact' : '/admin')
+        navigate(isOnboarding ? '/admin/free/onboarding/contact' : '/admin')
       } else {
         setError(json.error || 'Error al guardar')
       }
@@ -164,6 +197,22 @@ export default function OnboardingIdentity() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Tu nombre o marca"
               maxLength={80}
+              required
+              className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              Cargo, profesión o función
+            </label>
+            <input
+              type="text"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder="Ej: Asesor inmobiliario"
+              maxLength={80}
+              required
               className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-intap-mint/50 transition-colors"
             />
           </div>
@@ -194,10 +243,10 @@ export default function OnboardingIdentity() {
           {isOnboarding && (
             <button
               type="button"
-              onClick={() => navigate('/admin/onboarding/contact')}
+              onClick={() => navigate('/admin/free/onboarding/contact')}
               className="text-xs text-slate-500 hover:text-slate-900 text-center transition-colors"
             >
-              Omitir por ahora
+              Completar después — el perfil quedará como borrador
             </button>
           )}
         </form>

@@ -1,11 +1,16 @@
 import { Resend } from 'resend'
 
 export async function sendLeadNotificationEmail(
-  env: { RESEND_API_KEY: string; RESEND_FROM?: string },
+  env: {
+    RESEND_API_KEY: string
+    RESEND_FROM?: string
+    APP_URL?: string
+  },
   to: string,
   lead: { name: string; email: string; phone?: string; message: string; origin?: string },
 ): Promise<void> {
   const resend = new Resend(env.RESEND_API_KEY)
+  const appUrl = env.APP_URL || 'https://app.intaprd.com'
   const from   = env.RESEND_FROM || 'onboarding@resend.dev'
 
   await resend.emails.send({
@@ -22,7 +27,7 @@ export async function sendLeadNotificationEmail(
           <tr><td style="padding:8px 0; color:#666; vertical-align:top;">Mensaje</td><td style="padding:8px 0;">${lead.message}</td></tr>
           ${lead.origin ? `<tr><td style="padding:8px 0; color:#666;">Origen</td><td style="padding:8px 0; font-size:12px; color:#888;">${lead.origin}</td></tr>` : ''}
         </table>
-        <p style="color:#aaa; font-size:11px; margin-top:24px;">Gestiona tus contactos en <a href="https://app.intaprd.com">app.intaprd.com</a></p>
+        <p style="color:#aaa; font-size:11px; margin-top:24px;">Gestiona tus contactos en <a href="${appUrl}">${appUrl.replace(/^https?:\/\//, '')}</a></p>
       </div>
     `,
   })

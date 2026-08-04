@@ -22,6 +22,15 @@ const SERVICE_ICON_SEQUENCE:
     'handshake',
   ]
 
+
+function isServiceIconKey(
+  value: string,
+): value is FreeProfileServiceIconKey {
+  return SERVICE_ICON_SEQUENCE.includes(
+    value as FreeProfileServiceIconKey,
+  )
+}
+
 function isRecord(
   value: unknown,
 ): value is UnknownRecord {
@@ -261,11 +270,32 @@ function resolveServices(
         return
       }
 
-      const image = readString(
+      const visual = readString(
         item,
         'image_url',
         'imageUrl',
       )
+
+      const usesIconToken =
+        visual.startsWith('icon:')
+
+      const iconToken =
+        usesIconToken
+          ? visual.slice('icon:'.length)
+          : ''
+
+      const iconKey =
+        isServiceIconKey(iconToken)
+          ? iconToken
+          : SERVICE_ICON_SEQUENCE[
+              index %
+                SERVICE_ICON_SEQUENCE.length
+            ]
+
+      const image =
+        usesIconToken
+          ? ''
+          : visual
 
       services.push({
         id:
@@ -280,11 +310,7 @@ function resolveServices(
 
         image: image || undefined,
 
-        iconKey:
-          SERVICE_ICON_SEQUENCE[
-            index %
-              SERVICE_ICON_SEQUENCE.length
-          ],
+        iconKey,
       })
     },
   )

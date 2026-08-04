@@ -15,8 +15,10 @@ zone_name = "intaprd.com"
 
 [vars]
 ENVIRONMENT = "production"
+WORKER_NAME = "intap-api"
 APP_URL = "https://app.intaprd.com"
 API_URL = "https://intaprd.com"
+WEB_URL = "https://intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
 # Remitente del magic link. Debe ser un dominio verificado en Resend.
 # Mientras no esté verificado, Resend solo entrega a la cuenta del owner (plan free).
@@ -39,3 +41,32 @@ binding = "AGENTS_DB"
 database_name = "intap_agents_db"
 database_id = "93c7f5d9-7c44-454b-9e62-073322127c46"
 
+# Preview permanece aislado de Producción. Las rutas solo interceptan /api/*
+# para permitir que Pages sirva el perfil público y el dashboard en los mismos hosts.
+[env.preview]
+routes = [
+  { pattern = "preview.intaprd.com/api/*", zone_name = "intaprd.com" },
+  { pattern = "app.preview.intaprd.com/api/*", zone_name = "intaprd.com" },
+]
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+WORKER_NAME = "intap-api-preview"
+APP_URL = "https://app.preview.intaprd.com"
+API_URL = "https://preview.intaprd.com"
+WEB_URL = "https://preview.intaprd.com"
+GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
+RESEND_FROM = "noreply@intaprd.com"
+ADMIN_EMAILS = "fliaprince@gmail.com"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "intap_db_preview"
+database_id = "e9f46214-623f-48da-af13-74198e12b222"
+migrations_dir = "migrations-preview"
+
+[[env.preview.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "intap-r2-preview"
+
+# Preview declara únicamente los recursos propios de INTAP LINK.
