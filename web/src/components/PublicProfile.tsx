@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import IntapProfileV2, { type IntapProfileV2Profile } from './profile-templates/IntapProfileV2'
-import IntapProfileJasonV3 from './profile-templates/IntapProfileJasonV3'
-import IntapProfileNoviV4 from './profile-templates/IntapProfileNoviV4'
+import { renderRegisteredProfileTemplate } from './profile-templates/registry'
 
 declare global {
   interface Window {
@@ -2004,16 +2003,8 @@ export default function PublicProfile() {
   if (loading) return <div className="loading-screen"><div className="loading-spinner"></div></div>
   if (errorStatus === 403) return <PrivateBlock slug={slug || ''} />
 
-  // Preview controlado: permite desarrollar la plantilla nueva /jason aunque el slug aún no exista en D1.
-  // Cuando el perfil jason esté sembrado en DB, seguirá usando el flujo normal con data real.
-  if ((errorStatus || !data) && slug === 'jason') {
-    return <IntapProfileJasonV3 profile={{ slug: 'jason' }} />
-  }
-
-  if ((errorStatus || !data) && slug === 'novi') {
-    return <IntapProfileNoviV4 profile={{ slug: 'novi' }} />
-  }
-
+  // Ninguna plantilla pública se rescata por slug.
+  // Todo perfil debe existir en API/D1 y declarar su templateId.
   if (errorStatus || !data) return <NotFound />
 
   // ── Derived data ────────────────────────────────────────────────────────────
@@ -2089,12 +2080,13 @@ export default function PublicProfile() {
     templateData: (data as any).templateData ?? {},
   }
 
-  if (data.slug === 'novi') {
-    return <IntapProfileNoviV4 profile={publicProfileV2} />
-  }
+  const registeredTemplate = renderRegisteredProfileTemplate(
+    data.templateId,
+    publicProfileV2,
+  )
 
-  if (data.slug === 'jason') {
-    return <IntapProfileJasonV3 profile={publicProfileV2} />
+  if (registeredTemplate) {
+    return registeredTemplate
   }
 
   return <IntapProfileV2 profile={publicProfileV2} />
