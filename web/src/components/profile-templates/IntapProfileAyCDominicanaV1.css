@@ -878,3 +878,193 @@ body,
     border-radius: 26px;
   }
 }
+
+
+/* HERO A&C V2 · REFERENCIA BIOPESTS */
+
+.ayc-mobile-cover {
+  position: relative;
+  width: 100%;
+  height: clamp(260px, 68vw, 330px);
+  overflow: hidden;
+  background: var(--ayc-navy-deep);
+}
+
+.ayc-mobile-cover-media {
+  position: absolute;
+  inset: 0;
+}
+
+.ayc-mobile-cover-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transform: scale(1.035);
+  transition:
+    opacity 800ms ease,
+    transform 4800ms ease;
+}
+
+.ayc-mobile-cover-media img.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.ayc-mobile-cover-dots {
+  position: absolute;
+  z-index: 3;
+  right: 17px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ayc-mobile-cover-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition:
+    width 220ms ease,
+    background 220ms ease;
+}
+
+.ayc-mobile-cover-dots button.is-active {
+  width: 25px;
+  background: var(--ayc-red);
+}
+
+.ayc-mobile-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 26px 20px;
+  background: white;
+}
+
+.ayc-mobile-brand-logo .ayc-mobile-logo {
+  width: min(310px, 84%);
+  height: auto;
+  max-height: 94px;
+  object-fit: contain;
+}
+
+.ayc-mobile-identity {
+  padding: 8px 30px 18px;
+  background: white;
+}
+
+.ayc-mobile-identity-kicker {
+  margin: 0 0 13px;
+  color: var(--ayc-navy);
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.ayc-mobile-identity h1 {
+  margin: 0;
+  color: var(--ayc-navy);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: -0.015em;
+  font-weight: 800;
+}
+
+.ayc-mobile-identity-description {
+  margin: 17px 0 23px;
+  color: var(--ayc-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.ayc-mobile-whatsapp {
+  width: 100%;
+  min-height: 56px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: white !important;
+  background: var(--ayc-red);
+  box-shadow: 0 12px 23px rgba(237, 50, 55, 0.2);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ayc-quick-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 24px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ayc-quick-actions a,
+.ayc-quick-actions a.is-featured {
+  min-height: 84px;
+  border: 1px solid #d6dfed;
+  border-radius: 16px;
+  gap: 8px;
+  color: var(--ayc-navy);
+  background: white;
+}
+
+.ayc-quick-icon,
+.ayc-quick-actions a.is-featured .ayc-quick-icon {
+  width: 31px;
+  height: 31px;
+  color: var(--ayc-navy);
+  background: transparent;
+  font-size: 18px;
+}
+
+.ayc-quick-actions strong {
+  color: var(--ayc-navy);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ayc-mobile-vcard {
+  padding: 10px 24px 30px;
+  background: white;
+}
+
+.ayc-mobile-vcard .ayc-primary-wide {
+  min-height: 54px;
+  margin: 0;
+  border: 1px solid #cbd8e9;
+  border-radius: 16px;
+  color: var(--ayc-navy);
+  background: #f6f8fc;
+  box-shadow: none;
+}
+
+@media (max-width: 370px) {
+  .ayc-mobile-identity {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .ayc-quick-actions {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+
+  .ayc-mobile-vcard {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}

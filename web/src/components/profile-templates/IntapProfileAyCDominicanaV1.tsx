@@ -1,13 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   FaAddressCard,
   FaArrowRight,
   FaCheckCircle,
   FaChevronDown,
-  FaClock,
   FaCogs,
   FaCut,
-  FaEnvelope,
   FaFacebookF,
   FaGlobe,
   FaIndustry,
@@ -42,6 +40,11 @@ type ProjectItem = {
 type FaqItem = {
   question: string
   answer: string
+}
+
+type HeroImage = {
+  src: string
+  alt: string
 }
 
 const FALLBACK_SERVICES: ServiceItem[] = [
@@ -181,6 +184,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const [activeService, setActiveService] = useState<ServiceItem | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [shareLabel, setShareLabel] = useState('Compartir')
+  const [activeHero, setActiveHero] = useState(0)
 
   const name = pick(profile.companyName, profile.company_name, profile.name, td.company_name, 'A&C Dominicana, S.R.L.')
   const tagline = pick(td.tagline, 'Metalmecánica · Automatización Industrial')
@@ -201,23 +205,53 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const email = pick(profile.email, td.email, 'ventas@aycdominicana.com')
   const website = pick(profile.website, td.website, 'https://aycdominicana.com')
   const address = pick(profile.address, td.address, 'Calle Juan José Duarte #73, Ensanche La Fe, Santo Domingo')
-  const hours = pick(td.hours, 'Lunes a viernes, 8:00 a. m. a 5:00 p. m. · Sábados, 8:00 a. m. a 12:00 p. m.')
   const mapUrl = pick(profile.mapUrl, profile.map_url, td.map_url, `https://maps.google.com/?q=${encodeURIComponent(address)}`)
   const mapEmbedUrl = pick(td.map_embed_url, `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`)
   const instagramUrl = pick(td.instagram_url, 'https://www.instagram.com/aycdominicana/')
   const facebookUrl = pick(td.facebook_url, 'https://www.facebook.com/aycdominicana/')
 
   const logo = pick(profile.companyLogo, profile.company_logo, td.logo_url, '/assets/aycdom/logo/logo-ayc-principal.png')
-  const heroImage = pick(td.hero_image, '/assets/aycdom/hero/hero-ayc-01.webp')
+  const heroImages = useMemo(
+    () =>
+      safeJsonArray<HeroImage>(
+        td.hero_images_json,
+        [
+          {
+            src: '/assets/aycdom/hero/hero-ayc-01.png',
+            alt: 'Solución industrial de A&C Dominicana',
+          },
+          {
+            src: '/assets/aycdom/hero/hero-ayc-02.png',
+            alt: 'Equipos y procesos industriales de A&C Dominicana',
+          },
+          {
+            src: '/assets/aycdom/hero/hero-ayc-03.png',
+            alt: 'Metalmecánica y automatización industrial A&C',
+          },
+        ],
+      ),
+    [td.hero_images_json],
+  )
 
   const services = useMemo(() => safeJsonArray<ServiceItem>(td.services_json, FALLBACK_SERVICES), [td.services_json])
   const projects = useMemo(() => safeJsonArray<ProjectItem>(td.projects_json, FALLBACK_PROJECTS), [td.projects_json])
   const faqs = useMemo(() => safeJsonArray<FaqItem>(td.faqs_json, FALLBACK_FAQS), [td.faqs_json])
 
+  useEffect(() => {
+    if (heroImages.length < 2) return undefined
+
+    const timer = window.setInterval(() => {
+      setActiveHero(
+        (current) => (current + 1) % heroImages.length,
+      )
+    }, 4500)
+
+    return () => window.clearInterval(timer)
+  }, [heroImages.length])
+
   const waMessage = pick(td.whatsapp_message, 'Hola, vi su perfil en INTAP LINK y quiero solicitar información sobre una solución industrial.')
   const waHref = `https://wa.me/${cleanPhone(whatsapp)}?text=${encodeURIComponent(waMessage)}`
   const websiteHref = normalizeHttp(website)
-  const websiteLabel = website.replace(/^https?:\/\//i, '').replace(/\/$/, '')
 
   const downloadVCard = () => {
     const card = [
@@ -265,96 +299,127 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   }
 
   const quickActions = [
-    { label: 'Llamar', href: `tel:${cleanPhone(phone)}`, icon: <FaPhoneAlt /> },
-    { label: 'WhatsApp', href: waHref, icon: <FaWhatsapp />, featured: true },
-    { label: 'Correo', href: `mailto:${email}`, icon: <FaEnvelope /> },
-    { label: 'Ubicación', href: mapUrl, icon: <FaMapMarkerAlt /> },
-  ]
-
-  const contactRows = [
-    { label: 'Teléfono', value: phone, href: `tel:${cleanPhone(phone)}`, icon: <FaPhoneAlt /> },
-    { label: 'WhatsApp', value: phone, href: waHref, icon: <FaWhatsapp /> },
-    { label: 'Correo electrónico', value: email, href: `mailto:${email}`, icon: <FaEnvelope /> },
-    { label: 'Sitio web', value: websiteLabel, href: websiteHref, icon: <FaGlobe /> },
-    { label: 'Dirección', value: address, href: mapUrl, icon: <FaMapMarkerAlt /> },
-    { label: 'Horario', value: hours, href: '', icon: <FaClock /> },
+    {
+      label: 'Llamar',
+      href: `tel:${cleanPhone(phone)}`,
+      icon: <FaPhoneAlt />,
+    },
+    {
+      label: 'Instagram',
+      href: instagramUrl,
+      icon: <FaInstagram />,
+    },
+    {
+      label: 'Ubicación',
+      href: mapUrl,
+      icon: <FaMapMarkerAlt />,
+    },
   ]
 
   return (
     <main className="ayc-mobile-page">
       <div className="ayc-mobile-shell">
-        <section className="ayc-mobile-hero">
-          <AssetImage src={heroImage} alt="Proceso industrial de A&C Dominicana" className="ayc-mobile-hero-image" />
-          <div className="ayc-mobile-hero-overlay" />
-          <div className="ayc-mobile-hero-top">
-            <div className="ayc-mobile-logo-card">
-              <AssetImage src={logo} alt={name} className="ayc-mobile-logo" />
-            </div>
-            <button type="button" className="ayc-share-button" onClick={shareProfile} aria-label="Compartir perfil">
-              <FaShareAlt />
-            </button>
+        <section
+          className="ayc-mobile-cover"
+          aria-label="Galería principal de A&C Dominicana"
+        >
+          <div className="ayc-mobile-cover-media">
+            {heroImages.map((image, index) => (
+              <img
+                key={image.src}
+                src={image.src}
+                alt={index === activeHero ? image.alt : ''}
+                aria-hidden={index !== activeHero}
+                className={index === activeHero ? 'is-active' : ''}
+                loading={index === 0 ? 'eager' : 'lazy'}
+              />
+            ))}
           </div>
-          <div className="ayc-mobile-hero-copy">
-            <span className="ayc-mobile-kicker">{tagline}</span>
-            <h1>{heroTitle}</h1>
-            <p>{heroCopy}</p>
-            <div className="ayc-mobile-badges">
-              <span><FaCheckCircle /> Más de 30 años de experiencia</span>
-              <span><FaIndustry /> De una pieza a una línea completa</span>
-            </div>
+
+          <div
+            className="ayc-mobile-cover-dots"
+            aria-label="Seleccionar imagen principal"
+          >
+            {heroImages.map((image, index) => (
+              <button
+                key={image.src}
+                type="button"
+                className={index === activeHero ? 'is-active' : ''}
+                onClick={() => setActiveHero(index)}
+                aria-label={`Ver imagen ${index + 1}`}
+                aria-pressed={index === activeHero}
+              />
+            ))}
           </div>
         </section>
 
-        <nav className="ayc-quick-actions" aria-label="Acciones rápidas">
+        <div className="ayc-mobile-brand-logo">
+          <AssetImage
+            src={logo}
+            alt={name}
+            className="ayc-mobile-logo"
+          />
+        </div>
+
+        <section className="ayc-mobile-identity">
+          <p className="ayc-mobile-identity-kicker">
+            {tagline}
+          </p>
+
+          <h1>{heroTitle}</h1>
+
+          <p className="ayc-mobile-identity-description">
+            {heroCopy}
+          </p>
+
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className="ayc-mobile-whatsapp"
+          >
+            <FaWhatsapp />
+            Hablar por WhatsApp
+          </a>
+        </section>
+
+        <nav
+          className="ayc-quick-actions"
+          aria-label="Accesos directos"
+        >
           {quickActions.map((action) => (
             <a
               key={action.label}
               href={action.href}
-              target={action.href.startsWith('http') ? '_blank' : undefined}
-              rel={action.href.startsWith('http') ? 'noreferrer' : undefined}
-              className={action.featured ? 'is-featured' : undefined}
+              target={
+                action.href.startsWith('http')
+                  ? '_blank'
+                  : undefined
+              }
+              rel={
+                action.href.startsWith('http')
+                  ? 'noreferrer'
+                  : undefined
+              }
             >
-              <span className="ayc-quick-icon">{action.icon}</span>
+              <span className="ayc-quick-icon">
+                {action.icon}
+              </span>
               <strong>{action.label}</strong>
             </a>
           ))}
         </nav>
 
-        <section className="ayc-mobile-section ayc-contact-section">
-          <div className="ayc-section-heading compact">
-            <span>Contacto directo</span>
-            <h2>Estamos a sus órdenes</h2>
-          </div>
-
-          <div className="ayc-contact-list">
-            {contactRows.map((item) => {
-              const content = (
-                <>
-                  <span className="ayc-contact-icon">{item.icon}</span>
-                  <span className="ayc-contact-copy">
-                    <small>{item.label}</small>
-                    <strong>{item.value}</strong>
-                  </span>
-                  {item.href ? <FaArrowRight className="ayc-contact-arrow" /> : null}
-                </>
-              )
-
-              return item.href ? (
-                <a key={item.label} href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
-                  {content}
-                </a>
-              ) : (
-                <div key={item.label}>{content}</div>
-              )
-            })}
-          </div>
-
-          <button type="button" className="ayc-primary-wide" onClick={downloadVCard}>
-            <FaAddressCard /> Guardar contacto
+        <section className="ayc-mobile-vcard">
+          <button
+            type="button"
+            className="ayc-primary-wide"
+            onClick={downloadVCard}
+          >
+            <FaAddressCard />
+            Guardar contacto
           </button>
         </section>
-
-        <div className="ayc-divider" />
 
         <section className="ayc-mobile-section ayc-about-section">
           <div className="ayc-section-heading">
