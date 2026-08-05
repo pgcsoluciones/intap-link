@@ -1273,3 +1273,176 @@ body,
     padding-left: 16px;
   }
 }
+
+
+/* A&C HERO TUNE V4 */
+
+:root {
+  --ayc-blue: #2864c7;
+  --ayc-blue-hover: #1b4e9d;
+  --ayc-blue-active: #12376f;
+  --ayc-navy: #173b7c;
+  --ayc-navy-deep: #102855;
+}
+
+/* Eliminar cualquier sombra heredada */
+.ayc-mobile-shell,
+.ayc-mobile-whatsapp,
+.ayc-quick-actions,
+.ayc-quick-actions a,
+.ayc-mobile-vcard .ayc-primary-wide {
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Logo más grande */
+.ayc-mobile-brand-logo {
+  padding: 30px 18px 18px;
+}
+
+.ayc-mobile-brand-logo .ayc-mobile-logo {
+  width: min(355px, 94%);
+  height: auto;
+  max-height: 112px;
+  object-fit: contain;
+}
+
+/* Identidad centralizada */
+.ayc-mobile-identity {
+  padding: 8px 28px 18px;
+  text-align: center;
+}
+
+.ayc-mobile-identity h1 {
+  margin: 0;
+  color: var(--ayc-blue);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ayc-mobile-identity-description {
+  margin: 16px 0 22px;
+  text-align: center;
+}
+
+/* WhatsApp cobalto sin resplandor */
+.ayc-mobile-whatsapp {
+  border: 0;
+  outline: none;
+  background: var(--ayc-blue);
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.ayc-mobile-whatsapp:hover,
+.ayc-mobile-whatsapp:focus-visible {
+  background: var(--ayc-blue-hover);
+  transform: translateY(-1px);
+}
+
+.ayc-mobile-whatsapp:active {
+  background: var(--ayc-blue-active);
+  transform: translateY(0) scale(0.985);
+}
+
+/* Accesos rápidos */
+.ayc-quick-actions a {
+  box-shadow: none !important;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.ayc-quick-actions a:hover,
+.ayc-quick-actions a:focus-visible {
+  color: white;
+  background: var(--ayc-blue-hover);
+  border-color: var(--ayc-blue-hover);
+  transform: translateY(-2px);
+}
+
+.ayc-quick-actions a:active {
+  color: white;
+  background: var(--ayc-blue-active);
+  border-color: var(--ayc-blue-active);
+  transform: translateY(0) scale(0.97);
+}
+
+.ayc-quick-actions a:hover .ayc-quick-icon,
+.ayc-quick-actions a:focus-visible .ayc-quick-icon,
+.ayc-quick-actions a:active .ayc-quick-icon {
+  color: white;
+}
+
+/* Guardar contacto */
+.ayc-mobile-vcard .ayc-primary-wide:hover,
+.ayc-mobile-vcard .ayc-primary-wide:focus-visible {
+  color: white;
+  background: var(--ayc-blue-hover);
+  border-color: var(--ayc-blue-hover);
+}
+
+.ayc-mobile-vcard .ayc-primary-wide:active {
+  color: white;
+  background: var(--ayc-blue-active);
+  border-color: var(--ayc-blue-active);
+  transform: scale(0.985);
+}
+
+/* Títulos menos pesados */
+.ayc-section-heading h2,
+.ayc-service-card h3,
+.ayc-process-grid h3,
+.ayc-project-card h3,
+.ayc-final-cta h2 {
+  font-weight: 700;
+}
+
+/* Sobre nosotros */
+.ayc-about-section {
+  padding-top: 30px;
+  text-align: center;
+}
+
+.ayc-about-heading {
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.ayc-about-heading h2 {
+  color: var(--ayc-blue);
+  font-size: 23px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.ayc-about-section > p {
+  margin: 0;
+  color: #4f5d70;
+  font-size: 14px;
+  line-height: 1.75;
+  text-align: center;
+}
+
+.ayc-about-section .ayc-inline-cta {
+  justify-content: center;
+  color: var(--ayc-blue) !important;
+}
+
+@media (max-width: 370px) {
+  .ayc-mobile-brand-logo .ayc-mobile-logo {
+    width: 96%;
+  }
+
+  .ayc-mobile-identity {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+}

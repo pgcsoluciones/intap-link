@@ -187,7 +187,6 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const [activeHero, setActiveHero] = useState(0)
 
   const name = pick(profile.companyName, profile.company_name, profile.name, td.company_name, 'A&C Dominicana, S.R.L.')
-  const tagline = pick(td.tagline, 'Metalmecánica · Automatización Industrial')
   const heroTitle = pick(td.mobile_headline, td.headline, 'Soluciones industriales llave en mano')
   const heroCopy = pick(
     td.mobile_hero_copy,
@@ -362,10 +361,6 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
         </div>
 
         <section className="ayc-mobile-identity">
-          <p className="ayc-mobile-identity-kicker">
-            {tagline}
-          </p>
-
           <h1>{heroTitle}</h1>
 
           <p className="ayc-mobile-identity-description">
@@ -422,13 +417,20 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
         </section>
 
         <section className="ayc-mobile-section ayc-about-section">
-          <div className="ayc-section-heading">
-            <span>Soluciones llave en mano</span>
-            <h2>Ingeniería, fabricación y automatización en un solo lugar</h2>
+          <div className="ayc-section-heading ayc-about-heading">
+            <h2>Sobre nosotros</h2>
           </div>
+
           <p>{about}</p>
-          <a href={waHref} target="_blank" rel="noreferrer" className="ayc-inline-cta">
-            Cuéntenos sobre su proyecto <FaArrowRight />
+
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className="ayc-inline-cta"
+          >
+            Cuéntenos sobre su proyecto
+            <FaArrowRight />
           </a>
         </section>
 
