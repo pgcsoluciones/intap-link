@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { IntapProfileV2Profile } from './IntapProfileV2'
 
 import IntapProfile1AEventos from './IntapProfile1AEventos'
+import IntapProfileAyCDominicanaV1 from './IntapProfileAyCDominicanaV1'
 import IntapProfileJasonV3 from './IntapProfileJasonV3'
 import IntapProfileNoviV4 from './IntapProfileNoviV4'
 import IntapProfileRentaoRd from './IntapProfileRentaoRd'
@@ -11,6 +12,7 @@ export const PROFILE_TEMPLATE_IDS = {
   jason: 'automotive_jason_v3',
   oneAEventos: 'events_1a_v1',
   rentaoRd: 'car_rental_rentao_v1',
+  aycDominicana: 'industrial_aycdom_v1',
 } as const
 
 export type RegisteredProfileTemplateId =
@@ -36,6 +38,10 @@ const PROFILE_TEMPLATE_REGISTRY: Record<
 
   [PROFILE_TEMPLATE_IDS.rentaoRd]: (profile) => (
     <IntapProfileRentaoRd profile={profile} />
+  ),
+
+  [PROFILE_TEMPLATE_IDS.aycDominicana]: (profile) => (
+    <IntapProfileAyCDominicanaV1 profile={profile} />
   ),
 }
 
