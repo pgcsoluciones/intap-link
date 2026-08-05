@@ -1446,3 +1446,214 @@ body,
     padding-left: 22px;
   }
 }
+
+
+/* A&C COLOR SWEEP V5 · SIN AZULES FIJOS */
+
+:root {
+  --ayc-navy: #252b35;
+  --ayc-navy-deep: #171b22;
+  --ayc-blue: #285fb8;
+  --ayc-blue-hover: #17488f;
+  --ayc-blue-active: #103467;
+  --ayc-fixed-ink: #252b35;
+  --ayc-fixed-muted: #667085;
+  --ayc-fixed-line: #d6dce6;
+  --ayc-fixed-soft: #f7f8fa;
+}
+
+/* Títulos y textos: oscuros, no azules */
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2,
+.ayc-service-card h3,
+.ayc-project-card h3,
+.ayc-process-grid h3,
+.ayc-faq-list button,
+.ayc-map-card strong,
+.ayc-service-modal h2,
+.ayc-mobile-footer > button {
+  color: var(--ayc-fixed-ink) !important;
+}
+
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2 {
+  font-weight: 650 !important;
+}
+
+/* Punto activo del slider: rojo corporativo, no azul */
+.ayc-mobile-cover-dots button.is-active {
+  background: var(--ayc-red) !important;
+}
+
+/* WhatsApp: estado normal blanco */
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:hover {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Botones rápidos: siempre neutros en reposo */
+.ayc-quick-actions a,
+.ayc-quick-actions a:hover,
+.ayc-quick-actions a.is-featured,
+.ayc-quick-actions a.is-featured:hover {
+  border-color: var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ayc-quick-icon,
+.ayc-quick-actions a:hover .ayc-quick-icon,
+.ayc-quick-actions a.is-featured .ayc-quick-icon {
+  color: var(--ayc-fixed-ink) !important;
+  background: transparent !important;
+  transform: none !important;
+}
+
+/* Guardar contacto: neutro en reposo */
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:hover {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: var(--ayc-fixed-soft) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Enlace bajo Sobre nosotros:
+   sin fondo azul, sin franja y sin tap highlight */
+.ayc-about-section .ayc-inline-cta,
+.ayc-about-section .ayc-inline-cta:hover,
+.ayc-about-section .ayc-inline-cta:focus {
+  width: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Evitar una selección azul accidental persistente */
+.ayc-mobile-page a::selection,
+.ayc-mobile-page button::selection,
+.ayc-mobile-page h1::selection,
+.ayc-mobile-page h2::selection,
+.ayc-mobile-page h3::selection,
+.ayc-mobile-page p::selection,
+.ayc-mobile-page span::selection,
+.ayc-mobile-page strong::selection {
+  color: inherit;
+  background: rgba(237, 50, 55, 0.16);
+}
+
+/* Números del proceso: sin fondo azul fijo */
+.ayc-process-grid article > span {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Iconos sociales del footer: carbón, no azul */
+.ayc-social-row a {
+  color: #ffffff !important;
+  background: #252b35 !important;
+  box-shadow: none !important;
+}
+
+/* CTA final: fondo claro en lugar de bloque azul */
+.ayc-final-cta {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: var(--ayc-fixed-soft) !important;
+  box-shadow: none !important;
+}
+
+.ayc-final-cta > span {
+  color: var(--ayc-red) !important;
+}
+
+.ayc-final-cta h2 {
+  color: var(--ayc-fixed-ink) !important;
+}
+
+.ayc-final-cta p {
+  color: var(--ayc-fixed-muted) !important;
+}
+
+.ayc-final-cta a,
+.ayc-final-cta a:hover {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Hover azul solamente en equipos con mouse real */
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-whatsapp:hover,
+  .ayc-quick-actions a:hover,
+  .ayc-quick-actions a.is-featured:hover,
+  .ayc-mobile-vcard .ayc-primary-wide:hover,
+  .ayc-final-cta a:hover {
+    border-color: var(--ayc-blue-hover) !important;
+    color: #ffffff !important;
+    background: var(--ayc-blue-hover) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .ayc-quick-actions a:hover .ayc-quick-icon {
+    color: #ffffff !important;
+    transform: scale(1.06) !important;
+  }
+
+  .ayc-about-section .ayc-inline-cta:hover {
+    color: var(--ayc-blue-hover) !important;
+  }
+}
+
+/* Estado presionado móvil: solo mientras se toca */
+.ayc-mobile-whatsapp:active,
+.ayc-quick-actions a:active,
+.ayc-quick-actions a.is-featured:active,
+.ayc-mobile-vcard .ayc-primary-wide:active,
+.ayc-final-cta a:active {
+  border-color: var(--ayc-blue-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-blue-active) !important;
+  transform: scale(0.975) !important;
+}
+
+.ayc-quick-actions a:active .ayc-quick-icon {
+  color: #ffffff !important;
+}
+
+/* Foco accesible sin llenar el elemento de azul */
+.ayc-mobile-whatsapp:focus-visible,
+.ayc-quick-actions a:focus-visible,
+.ayc-mobile-vcard .ayc-primary-wide:focus-visible,
+.ayc-about-section .ayc-inline-cta:focus-visible,
+.ayc-final-cta a:focus-visible {
+  outline: 2px solid rgba(40, 95, 184, 0.42) !important;
+  outline-offset: 3px !important;
+}
