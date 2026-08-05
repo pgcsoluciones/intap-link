@@ -1,14 +1,22 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
+  FaAddressCard,
   FaArrowRight,
+  FaCheckCircle,
+  FaChevronDown,
+  FaClock,
   FaCogs,
+  FaCut,
   FaEnvelope,
   FaFacebookF,
+  FaGlobe,
   FaIndustry,
   FaInstagram,
   FaMapMarkerAlt,
   FaPhoneAlt,
   FaProjectDiagram,
+  FaShareAlt,
+  FaTimes,
   FaTools,
   FaWhatsapp,
   FaWrench,
@@ -20,9 +28,8 @@ type ServiceItem = {
   id: string
   title: string
   description: string
-  bullets: string[]
+  bullets?: string[]
   image?: string
-  icon: JSX.Element
 }
 
 type ProjectItem = {
@@ -42,49 +49,43 @@ const FALLBACK_SERVICES: ServiceItem[] = [
     id: 'mecanizados',
     title: 'Metalmecánica y mecanizados',
     description: 'Fabricación y reparación de piezas industriales con procesos convencionales y CNC.',
-    bullets: ['Tornos CNC y convencionales', 'Fresadoras CNC', 'Rectificadoras', 'Moldes y troqueles'],
+    bullets: ['Tornos CNC y convencionales', 'Fresadoras CNC', 'Rectificado', 'Moldes y troqueles'],
     image: '/assets/aycdom/services/mecanizados-01.webp',
-    icon: <FaTools />,
   },
   {
     id: 'laser',
     title: 'Corte láser CNC',
-    description: 'Corte de precisión para piezas y componentes en diferentes materiales industriales.',
+    description: 'Corte de precisión para planchas, tubos, piezas y componentes industriales.',
     bullets: ['Acero inoxidable', 'Acero al carbono', 'Aluminio', 'Bronce y cobre'],
     image: '/assets/aycdom/services/corte-laser-01.webp',
-    icon: <FaWrench />,
   },
   {
     id: 'automatizacion',
     title: 'Automatización industrial',
-    description: 'Integración de controles, equipos y mejoras orientadas a elevar la eficiencia del proceso.',
+    description: 'Integración de controles y equipos para mejorar productividad, seguridad y continuidad operativa.',
     bullets: ['Control de procesos', 'Automatización de máquinas', 'Sistemas neumáticos', 'Controles de movimiento'],
     image: '/assets/aycdom/services/automatizacion-01.webp',
-    icon: <FaCogs />,
   },
   {
     id: 'conveyors',
-    title: 'Conveyors y manejo de materiales',
-    description: 'Diseño y fabricación de transportadores adaptados al espacio, producto y operación.',
+    title: 'Conveyors y transporte',
+    description: 'Sistemas de transporte diseñados para el espacio, producto y flujo de cada industria.',
     bullets: ['Bandas rectas', 'Conveyors curvos', 'Sistemas de rodillos', 'Bandas modulares'],
     image: '/assets/aycdom/services/conveyors-01.webp',
-    icon: <FaProjectDiagram />,
   },
   {
     id: 'equipos',
     title: 'Máquinas y equipos a medida',
-    description: 'Desarrollo de soluciones industriales cuando un equipo estándar no responde a la necesidad.',
+    description: 'Soluciones especiales cuando un equipo estándar no responde a la necesidad del proceso.',
     bullets: ['Máquinas especiales', 'Fixtures', 'Estructuras', 'Modificación de equipos'],
     image: '/assets/aycdom/services/equipos-01.webp',
-    icon: <FaIndustry />,
   },
   {
     id: 'soldadura',
     title: 'Soldaduras especializadas',
-    description: 'Trabajos de fabricación y reparación en distintos materiales y niveles de exigencia.',
-    bullets: ['Aluminio', 'Bronce', 'Argón', 'Soldaduras de alta resistencia'],
+    description: 'Fabricación y reparación en distintos materiales y niveles de exigencia industrial.',
+    bullets: ['Aluminio', 'Bronce', 'Argón', 'Alta resistencia'],
     image: '/assets/aycdom/services/soldadura-01.webp',
-    icon: <FaWrench />,
   },
 ]
 
@@ -92,19 +93,19 @@ const FALLBACK_PROJECTS: ProjectItem[] = [
   {
     title: 'Sistema de transporte industrial',
     category: 'Conveyors',
-    image: '/assets/aycdom/projects/proyecto-conveyor-01.webp',
+    image: '/assets/aycdom/services/conveyors-01.webp',
     description: 'Solución de transporte adaptada al flujo y distribución de planta.',
   },
   {
     title: 'Piezas mecanizadas de precisión',
     category: 'Mecanizados',
-    image: '/assets/aycdom/projects/proyecto-mecanizado-01.webp',
+    image: '/assets/aycdom/services/mecanizados-01.webp',
     description: 'Fabricación de componentes según muestra, plano o especificación técnica.',
   },
   {
     title: 'Integración de proceso',
     category: 'Automatización',
-    image: '/assets/aycdom/projects/proyecto-automatizacion-01.webp',
+    image: '/assets/aycdom/services/automatizacion-01.webp',
     description: 'Mejora e integración de equipos para reducir intervención manual.',
   },
 ]
@@ -116,7 +117,7 @@ const FALLBACK_FAQS: FaqItem[] = [
   },
   {
     question: '¿Pueden fabricar una pieza a partir de una muestra?',
-    answer: 'La posibilidad depende del estado de la muestra, las tolerancias requeridas y el material. El equipo técnico debe evaluarla antes de confirmar.',
+    answer: 'Depende del estado de la muestra, las tolerancias requeridas y el material. El equipo técnico debe evaluarla antes de confirmar.',
   },
   {
     question: '¿Trabajan solamente proyectos grandes?',
@@ -140,6 +141,11 @@ function cleanPhone(value: string) {
   return value.replace(/\D/g, '')
 }
 
+function normalizeHttp(value: string) {
+  if (!value) return '#'
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`
+}
+
 function safeJsonArray<T>(value: string | undefined, fallback: T[]): T[] {
   if (!value) return fallback
   try {
@@ -150,29 +156,44 @@ function safeJsonArray<T>(value: string | undefined, fallback: T[]): T[] {
   }
 }
 
+function serviceIcon(id: string): ReactNode {
+  const key = id.toLowerCase()
+  if (key.includes('laser')) return <FaCut />
+  if (key.includes('automat')) return <FaCogs />
+  if (key.includes('conveyor') || key.includes('transporte')) return <FaProjectDiagram />
+  if (key.includes('equipo') || key.includes('maquina')) return <FaIndustry />
+  if (key.includes('sold')) return <FaWrench />
+  return <FaTools />
+}
+
 function AssetImage({ src, alt, className }: { src?: string; alt: string; className: string }) {
   const [failed, setFailed] = useState(false)
-  if (!src || failed) return <div className={`${className} ayc-image-fallback`} aria-label={alt} />
+  if (!src || failed) return <div className={`${className} ayc-media-fallback`} role="img" aria-label={alt} />
   return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} loading="lazy" />
+}
+
+function escapeVCard(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
 }
 
 export default function IntapProfileAyCDominicanaV1({ profile }: { profile: IntapProfileV2Profile }) {
   const td = profile.templateData ?? {}
   const [activeService, setActiveService] = useState<ServiceItem | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const [shareLabel, setShareLabel] = useState('Compartir')
 
   const name = pick(profile.companyName, profile.company_name, profile.name, td.company_name, 'A&C Dominicana, S.R.L.')
   const tagline = pick(td.tagline, 'Metalmecánica · Automatización Industrial')
-  const headline = pick(td.headline, 'Soluciones industriales diseñadas con precisión')
+  const heroTitle = pick(td.mobile_headline, td.headline, 'Soluciones industriales llave en mano')
   const heroCopy = pick(
-    td.hero_copy,
-    'Diseñamos, fabricamos e integramos soluciones para optimizar procesos industriales, desde una pieza o máquina especializada hasta una línea de producción completa.',
+    td.mobile_hero_copy,
+    'Diseño, fabricación e integración para optimizar sus procesos industriales.',
   )
   const about = pick(
     profile.companyAbout,
     profile.company_about,
     td.about,
-    'Acompañamos a empresas que necesitan mejorar, reparar, fabricar o automatizar sus procesos. Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos e instalación dentro de una misma solución.',
+    'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución. Podemos atender desde una pieza puntual hasta una línea de proceso completa.',
   )
 
   const phone = pick(profile.phone, td.phone, '809-476-7325')
@@ -180,7 +201,9 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const email = pick(profile.email, td.email, 'ventas@aycdominicana.com')
   const website = pick(profile.website, td.website, 'https://aycdominicana.com')
   const address = pick(profile.address, td.address, 'Calle Juan José Duarte #73, Ensanche La Fe, Santo Domingo')
-  const mapUrl = pick(profile.mapUrl, profile.map_url, td.map_url, 'https://maps.google.com/?q=Calle+Juan+Jose+Duarte+73+Ensanche+La+Fe+Santo+Domingo')
+  const hours = pick(td.hours, 'Lunes a viernes, 8:00 a. m. a 5:00 p. m. · Sábados, 8:00 a. m. a 12:00 p. m.')
+  const mapUrl = pick(profile.mapUrl, profile.map_url, td.map_url, `https://maps.google.com/?q=${encodeURIComponent(address)}`)
+  const mapEmbedUrl = pick(td.map_embed_url, `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`)
   const instagramUrl = pick(td.instagram_url, 'https://www.instagram.com/aycdominicana/')
   const facebookUrl = pick(td.facebook_url, 'https://www.facebook.com/aycdominicana/')
 
@@ -191,189 +214,304 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const projects = useMemo(() => safeJsonArray<ProjectItem>(td.projects_json, FALLBACK_PROJECTS), [td.projects_json])
   const faqs = useMemo(() => safeJsonArray<FaqItem>(td.faqs_json, FALLBACK_FAQS), [td.faqs_json])
 
-  const waHref = `https://wa.me/${cleanPhone(whatsapp)}?text=${encodeURIComponent('Hola, vi su perfil en INTAP LINK y quiero solicitar información sobre una solución industrial.')}`
+  const waMessage = pick(td.whatsapp_message, 'Hola, vi su perfil en INTAP LINK y quiero solicitar información sobre una solución industrial.')
+  const waHref = `https://wa.me/${cleanPhone(whatsapp)}?text=${encodeURIComponent(waMessage)}`
+  const websiteHref = normalizeHttp(website)
+  const websiteLabel = website.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+
+  const downloadVCard = () => {
+    const card = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${escapeVCard(name)}`,
+      `ORG:${escapeVCard(name)}`,
+      `TEL;TYPE=WORK,VOICE:${cleanPhone(phone)}`,
+      `TEL;TYPE=CELL:${cleanPhone(whatsapp)}`,
+      `EMAIL;TYPE=WORK:${email}`,
+      `URL:${websiteHref}`,
+      `ADR;TYPE=WORK:;;${escapeVCard(address)};;;;`,
+      'END:VCARD',
+    ].join('\r\n')
+
+    const blob = new Blob([card], { type: 'text/vcard;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'ayc-dominicana.vcf'
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const shareProfile = async () => {
+    const shareData = {
+      title: name,
+      text: heroTitle,
+      url: window.location.href,
+    }
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        await navigator.clipboard.writeText(window.location.href)
+        setShareLabel('Enlace copiado')
+        window.setTimeout(() => setShareLabel('Compartir'), 1800)
+      }
+    } catch {
+      // El usuario puede cancelar el diálogo nativo de compartir.
+    }
+  }
 
   const quickActions = [
     { label: 'Llamar', href: `tel:${cleanPhone(phone)}`, icon: <FaPhoneAlt /> },
-    { label: 'WhatsApp', href: waHref, icon: <FaWhatsapp /> },
+    { label: 'WhatsApp', href: waHref, icon: <FaWhatsapp />, featured: true },
     { label: 'Correo', href: `mailto:${email}`, icon: <FaEnvelope /> },
     { label: 'Ubicación', href: mapUrl, icon: <FaMapMarkerAlt /> },
   ]
 
+  const contactRows = [
+    { label: 'Teléfono', value: phone, href: `tel:${cleanPhone(phone)}`, icon: <FaPhoneAlt /> },
+    { label: 'WhatsApp', value: phone, href: waHref, icon: <FaWhatsapp /> },
+    { label: 'Correo electrónico', value: email, href: `mailto:${email}`, icon: <FaEnvelope /> },
+    { label: 'Sitio web', value: websiteLabel, href: websiteHref, icon: <FaGlobe /> },
+    { label: 'Dirección', value: address, href: mapUrl, icon: <FaMapMarkerAlt /> },
+    { label: 'Horario', value: hours, href: '', icon: <FaClock /> },
+  ]
+
   return (
-    <div className="ayc-page">
-      <header className="ayc-hero">
-        <AssetImage src={heroImage} alt="Soluciones industriales A&C Dominicana" className="ayc-hero-image" />
-        <div className="ayc-hero-overlay" />
-        <div className="ayc-hero-content">
-          <div className="ayc-logo-shell">
-            <AssetImage src={logo} alt={name} className="ayc-logo" />
+    <main className="ayc-mobile-page">
+      <div className="ayc-mobile-shell">
+        <section className="ayc-mobile-hero">
+          <AssetImage src={heroImage} alt="Proceso industrial de A&C Dominicana" className="ayc-mobile-hero-image" />
+          <div className="ayc-mobile-hero-overlay" />
+          <div className="ayc-mobile-hero-top">
+            <div className="ayc-mobile-logo-card">
+              <AssetImage src={logo} alt={name} className="ayc-mobile-logo" />
+            </div>
+            <button type="button" className="ayc-share-button" onClick={shareProfile} aria-label="Compartir perfil">
+              <FaShareAlt />
+            </button>
           </div>
-          <p className="ayc-eyebrow">{tagline}</p>
-          <h1>{headline}</h1>
-          <p className="ayc-hero-copy">{heroCopy}</p>
-          <div className="ayc-hero-actions">
-            <a href={waHref} target="_blank" rel="noreferrer" className="ayc-btn ayc-btn-primary">
-              Solicitar cotización <FaArrowRight />
-            </a>
-            <a href="#soluciones" className="ayc-btn ayc-btn-secondary">Explorar soluciones</a>
-          </div>
-        </div>
-      </header>
-
-      <main>
-        <section className="ayc-quick-actions" aria-label="Acciones rápidas">
-          {quickActions.map((item) => (
-            <a key={item.label} href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
-              <span>{item.icon}</span>
-              <small>{item.label}</small>
-            </a>
-          ))}
-        </section>
-
-        <section className="ayc-section ayc-intro">
-          <div className="ayc-section-heading">
-            <p>Soluciones llave en mano</p>
-            <h2>Ingeniería, fabricación y automatización en un solo lugar</h2>
-          </div>
-          <div className="ayc-intro-grid">
-            <p>{about}</p>
-            <div className="ayc-highlight-card">
-              <strong>De una pieza a una línea completa</strong>
-              <span>Diseño, fabricación, integración, instalación y soporte según el alcance del proyecto.</span>
+          <div className="ayc-mobile-hero-copy">
+            <span className="ayc-mobile-kicker">{tagline}</span>
+            <h1>{heroTitle}</h1>
+            <p>{heroCopy}</p>
+            <div className="ayc-mobile-badges">
+              <span><FaCheckCircle /> Más de 30 años de experiencia</span>
+              <span><FaIndustry /> De una pieza a una línea completa</span>
             </div>
           </div>
         </section>
 
-        <section className="ayc-section ayc-solutions" id="soluciones">
-          <div className="ayc-section-heading ayc-section-heading-light">
-            <p>Nuestras capacidades</p>
-            <h2>Soluciones pensadas para necesidades industriales reales</h2>
+        <nav className="ayc-quick-actions" aria-label="Acciones rápidas">
+          {quickActions.map((action) => (
+            <a
+              key={action.label}
+              href={action.href}
+              target={action.href.startsWith('http') ? '_blank' : undefined}
+              rel={action.href.startsWith('http') ? 'noreferrer' : undefined}
+              className={action.featured ? 'is-featured' : undefined}
+            >
+              <span className="ayc-quick-icon">{action.icon}</span>
+              <strong>{action.label}</strong>
+            </a>
+          ))}
+        </nav>
+
+        <section className="ayc-mobile-section ayc-contact-section">
+          <div className="ayc-section-heading compact">
+            <span>Contacto directo</span>
+            <h2>Estamos a sus órdenes</h2>
           </div>
-          <div className="ayc-service-grid">
+
+          <div className="ayc-contact-list">
+            {contactRows.map((item) => {
+              const content = (
+                <>
+                  <span className="ayc-contact-icon">{item.icon}</span>
+                  <span className="ayc-contact-copy">
+                    <small>{item.label}</small>
+                    <strong>{item.value}</strong>
+                  </span>
+                  {item.href ? <FaArrowRight className="ayc-contact-arrow" /> : null}
+                </>
+              )
+
+              return item.href ? (
+                <a key={item.label} href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
+                  {content}
+                </a>
+              ) : (
+                <div key={item.label}>{content}</div>
+              )
+            })}
+          </div>
+
+          <button type="button" className="ayc-primary-wide" onClick={downloadVCard}>
+            <FaAddressCard /> Guardar contacto
+          </button>
+        </section>
+
+        <div className="ayc-divider" />
+
+        <section className="ayc-mobile-section ayc-about-section">
+          <div className="ayc-section-heading">
+            <span>Soluciones llave en mano</span>
+            <h2>Ingeniería, fabricación y automatización en un solo lugar</h2>
+          </div>
+          <p>{about}</p>
+          <a href={waHref} target="_blank" rel="noreferrer" className="ayc-inline-cta">
+            Cuéntenos sobre su proyecto <FaArrowRight />
+          </a>
+        </section>
+
+        <section className="ayc-mobile-section ayc-services-section" id="soluciones">
+          <div className="ayc-section-heading">
+            <span>Nuestras capacidades</span>
+            <h2>Soluciones industriales</h2>
+          </div>
+
+          <div className="ayc-service-scroller">
             {services.map((service) => (
-              <article key={service.id} className="ayc-service-card">
+              <button key={service.id} type="button" className="ayc-service-card" onClick={() => setActiveService(service)}>
                 <AssetImage src={service.image} alt={service.title} className="ayc-service-image" />
-                <div className="ayc-service-body">
-                  <span className="ayc-service-icon">{service.icon}</span>
+                <span className="ayc-service-icon">{serviceIcon(service.id)}</span>
+                <div>
                   <h3>{service.title}</h3>
                   <p>{service.description}</p>
-                  <button type="button" onClick={() => setActiveService(service)}>
-                    Ver detalles <FaArrowRight />
-                  </button>
+                  <strong>Ver detalles <FaArrowRight /></strong>
+                </div>
+              </button>
+            ))}
+          </div>
+          <p className="ayc-scroll-hint">Deslice para explorar las soluciones</p>
+        </section>
+
+        <section className="ayc-mobile-section ayc-process-section">
+          <div className="ayc-section-heading">
+            <span>Cómo trabajamos</span>
+            <h2>De la necesidad a la solución</h2>
+          </div>
+          <div className="ayc-process-grid">
+            {[
+              ['01', 'Evaluamos', 'Conocemos el proceso, la pieza o el equipo.'],
+              ['02', 'Diseñamos', 'Preparamos la propuesta técnica y el modelado.'],
+              ['03', 'Fabricamos', 'Producimos, integramos y realizamos los ajustes.'],
+              ['04', 'Probamos', 'Verificamos el funcionamiento antes de entregar.'],
+            ].map(([number, title, text]) => (
+              <article key={number}>
+                <span>{number}</span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
                 </div>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="ayc-section ayc-process">
+        <section className="ayc-mobile-section ayc-projects-section">
           <div className="ayc-section-heading">
-            <p>Nuestro proceso</p>
-            <h2>Convertimos una necesidad industrial en una solución funcional</h2>
+            <span>Experiencia aplicada</span>
+            <h2>Trabajos destacados</h2>
           </div>
-          <div className="ayc-process-grid">
-            {[
-              ['01', 'Evaluamos', 'Conocemos el proceso, el equipo o la pieza que requiere atención.'],
-              ['02', 'Diseñamos', 'Preparamos la solución técnica y validamos sus requerimientos.'],
-              ['03', 'Fabricamos', 'Producimos las piezas, estructuras o equipos definidos.'],
-              ['04', 'Integramos', 'Instalamos, ajustamos y conectamos la solución cuando aplica.'],
-            ].map(([number, title, text]) => (
-              <article key={number}>
-                <span>{number}</span>
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="ayc-section ayc-projects">
-          <div className="ayc-section-heading">
-            <p>Proyectos y trabajos</p>
-            <h2>Capacidad aplicada a diferentes procesos</h2>
-          </div>
-          <div className="ayc-project-grid">
+          <div className="ayc-project-scroller">
             {projects.map((project) => (
-              <article key={`${project.category}-${project.title}`}>
+              <article key={`${project.category}-${project.title}`} className="ayc-project-card">
                 <AssetImage src={project.image} alt={project.title} className="ayc-project-image" />
                 <div>
                   <span>{project.category}</span>
                   <h3>{project.title}</h3>
-                  {project.description && <p>{project.description}</p>}
+                  <p>{project.description}</p>
+                  <a href={waHref} target="_blank" rel="noreferrer">Solicitar algo similar <FaArrowRight /></a>
                 </div>
               </article>
             ))}
           </div>
         </section>
 
-        <section className="ayc-section ayc-faq">
+        <section className="ayc-mobile-section ayc-faq-section">
           <div className="ayc-section-heading">
-            <p>Preguntas frecuentes</p>
-            <h2>Antes de solicitar una cotización</h2>
+            <span>Información útil</span>
+            <h2>Preguntas frecuentes</h2>
           </div>
           <div className="ayc-faq-list">
             {faqs.map((faq, index) => {
-              const open = openFaq === index
+              const isOpen = openFaq === index
               return (
-                <article key={faq.question} className={open ? 'is-open' : ''}>
-                  <button type="button" onClick={() => setOpenFaq(open ? null : index)} aria-expanded={open}>
+                <article key={faq.question} className={isOpen ? 'is-open' : undefined}>
+                  <button type="button" onClick={() => setOpenFaq(isOpen ? null : index)} aria-expanded={isOpen}>
                     <span>{faq.question}</span>
-                    <b>{open ? '−' : '+'}</b>
+                    <FaChevronDown />
                   </button>
-                  {open && <p>{faq.answer}</p>}
+                  {isOpen ? <p>{faq.answer}</p> : null}
                 </article>
               )
             })}
           </div>
         </section>
 
-        <section className="ayc-contact">
-          <div>
-            <p>Hablemos de su proyecto</p>
-            <h2>¿Tiene una necesidad industrial que debemos evaluar?</h2>
-            <span>Comparta la pieza, equipo, proceso o mejora que necesita. Nuestro equipo revisará la información para orientarle sobre el próximo paso.</span>
+        <section className="ayc-mobile-section ayc-location-section">
+          <div className="ayc-section-heading">
+            <span>Visítenos</span>
+            <h2>Nuestra ubicación</h2>
           </div>
-          <div className="ayc-contact-card">
-            <h3>{name}</h3>
-            <a href={`tel:${cleanPhone(phone)}`}><FaPhoneAlt /> {phone}</a>
-            <a href={`mailto:${email}`}><FaEnvelope /> {email}</a>
-            <a href={mapUrl} target="_blank" rel="noreferrer"><FaMapMarkerAlt /> {address}</a>
-            <a href={waHref} target="_blank" rel="noreferrer" className="ayc-btn ayc-btn-primary">Solicitar cotización</a>
+          <div className="ayc-map-card">
+            <iframe
+              title="Ubicación de A&C Dominicana"
+              src={mapEmbedUrl}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+            <div>
+              <strong>{name}</strong>
+              <p>{address}</p>
+              <a href={mapUrl} target="_blank" rel="noreferrer">Cómo llegar</a>
+            </div>
           </div>
         </section>
-      </main>
 
-      <footer className="ayc-footer">
-        <div>
+        <section className="ayc-final-cta">
+          <span>Hablemos de su proyecto</span>
+          <h2>¿Tiene una necesidad industrial que debemos evaluar?</h2>
+          <p>Comparta la pieza, equipo, proceso o mejora que necesita.</p>
+          <a href={waHref} target="_blank" rel="noreferrer"><FaWhatsapp /> Solicitar cotización</a>
+        </section>
+
+        <footer className="ayc-mobile-footer">
           <AssetImage src={logo} alt={name} className="ayc-footer-logo" />
-          <span>Metalmecánica · Automatización Industrial</span>
-        </div>
-        <nav aria-label="Redes sociales">
-          <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram"><FaInstagram /></a>
-          <a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook"><FaFacebookF /></a>
-          <a href={website} target="_blank" rel="noreferrer" aria-label="Sitio web"><FaIndustry /></a>
-        </nav>
-        <small>Perfil creado con INTAP LINK</small>
-      </footer>
+          <div className="ayc-social-row">
+            <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram"><FaInstagram /></a>
+            <a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook"><FaFacebookF /></a>
+            <a href={websiteHref} target="_blank" rel="noreferrer" aria-label="Sitio web"><FaGlobe /></a>
+          </div>
+          <button type="button" onClick={shareProfile}><FaShareAlt /> {shareLabel}</button>
+          <small>Perfil empresarial creado con INTAP LINK</small>
+        </footer>
+      </div>
 
-      {activeService && (
-        <div className="ayc-modal-backdrop" role="presentation" onClick={() => setActiveService(null)}>
-          <section className="ayc-modal" role="dialog" aria-modal="true" aria-label={activeService.title} onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="ayc-modal-close" onClick={() => setActiveService(null)} aria-label="Cerrar">×</button>
+      {activeService ? (
+        <div className="ayc-service-modal" role="dialog" aria-modal="true" aria-labelledby="ayc-service-modal-title">
+          <button type="button" className="ayc-modal-backdrop" onClick={() => setActiveService(null)} aria-label="Cerrar" />
+          <article>
+            <button type="button" className="ayc-modal-close" onClick={() => setActiveService(null)} aria-label="Cerrar detalle">
+              <FaTimes />
+            </button>
             <AssetImage src={activeService.image} alt={activeService.title} className="ayc-modal-image" />
-            <div className="ayc-modal-body">
-              <span className="ayc-service-icon">{activeService.icon}</span>
-              <h2>{activeService.title}</h2>
-              <p>{activeService.description}</p>
-              <ul>{activeService.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
-              <a href={`${waHref}&text=${encodeURIComponent(`Hola, quiero información sobre ${activeService.title}.`)}`} target="_blank" rel="noreferrer" className="ayc-btn ayc-btn-primary">
-                Consultar por WhatsApp
-              </a>
-            </div>
-          </section>
+            <span className="ayc-modal-icon">{serviceIcon(activeService.id)}</span>
+            <h2 id="ayc-service-modal-title">{activeService.title}</h2>
+            <p>{activeService.description}</p>
+            {activeService.bullets?.length ? (
+              <ul>
+                {activeService.bullets.map((bullet) => <li key={bullet}><FaCheckCircle /> {bullet}</li>)}
+              </ul>
+            ) : null}
+            <a href={waHref} target="_blank" rel="noreferrer"><FaWhatsapp /> Solicitar información</a>
+          </article>
         </div>
-      )}
-    </div>
+      ) : null}
+    </main>
   )
 }
