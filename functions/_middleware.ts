@@ -1,3 +1,10 @@
+import {
+  buildProfileSemanticFallback,
+  buildProfileSeoHead,
+  getStaticProfileDiscovery,
+  handleDiscoveryRequest,
+} from './profile-discovery';
+
 /**
  * Cloudflare Pages Functions middleware.
  * Runs at the edge for every request, before static assets are served.
@@ -40,15 +47,23 @@ export async function onRequest(context: {
     imageType: string;
     imageWidth: number;
     imageHeight: number;
+    seoHeadHtml?: string;
+    semanticFallbackHtml?: string;
   }): string => {
     const title = escapeHtml(metadata.title);
     const description = escapeHtml(metadata.description);
     const pageUrl = escapeHtml(metadata.url);
     const imageUrl = escapeHtml(metadata.image);
     const siteName = escapeHtml(metadata.siteName);
+    const imageType = escapeHtml(metadata.imageType);
+    const imageWidth = String(metadata.imageWidth);
+    const imageHeight = String(metadata.imageHeight);
+    const seoHeadHtml = metadata.seoHeadHtml || '';
+    const semanticFallbackHtml =
+      metadata.semanticFallbackHtml || '';
 
     const metaBlock = `
-  <!-- INTAP LINK: Open Graph metadata for /novi -->
+  <!-- INTAP LINK: Open Graph + SEO + GEO metadata -->
   <title>${title}</title>
   <link rel="canonical" href="${pageUrl}" />
   <meta name="description" content="${description}" />
@@ -59,26 +74,48 @@ export async function onRequest(context: {
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:secure_url" content="${imageUrl}" />
-  <meta property="og:image:type" content="${metadata.imageType}" />
-  <meta property="og:image:width" content="${metadata.imageWidth}" />
-  <meta property="og:image:height" content="${metadata.imageHeight}" />
+  <meta property="og:image:type" content="${imageType}" />
+  <meta property="og:image:width" content="${imageWidth}" />
+  <meta property="og:image:height" content="${imageHeight}" />
   <meta property="og:image:alt" content="${title}" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${title}" />
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${imageUrl}" />
+${seoHeadHtml}
 `;
 
     let output = html.replace(/<title>[\s\S]*?<\/title>/i, '');
 
     if (output.includes('</head>')) {
-      return output.replace('</head>', `${metaBlock}\n</head>`);
+      output = output.replace(
+        '</head>',
+        `${metaBlock}\n</head>`
+      );
     }
 
-    return html;
+    if (semanticFallbackHtml) {
+      if (output.includes('</body>')) {
+        output = output.replace(
+          '</body>',
+          `${semanticFallbackHtml}\n</body>`
+        );
+      } else {
+        output += semanticFallbackHtml;
+      }
+    }
+
+    return output;
   };
 
   const url = new URL(context.request.url);
+
+  const discoveryResponse =
+    await handleDiscoveryRequest(url.pathname);
+
+  if (discoveryResponse) {
+    return withSecurityHeaders(discoveryResponse);
+  }
 
   // Redirigir rutas /admin al panel admin en app.intaprd.com
   // Sólo desde el dominio público — evita loop si app.intaprd.com usa el mismo proyecto
@@ -165,6 +202,15 @@ export async function onRequest(context: {
   const staticMeta = staticProfileMeta[slug];
 
   if (staticMeta) {
+    const discoveryProfile =
+      getStaticProfileDiscovery(slug);
+
+    if (!discoveryProfile) {
+      throw new Error(
+        `Missing discovery profile for ${slug}`
+      );
+    }
+
     const response = await context.next();
     const contentType = response.headers.get('content-type') || '';
 
@@ -173,7 +219,15 @@ export async function onRequest(context: {
     }
 
     const html = await response.text();
-    const updatedHtml = injectHeadMetadata(html, staticMeta);
+    const updatedHtml = injectHeadMetadata(html, {
+      ...staticMeta,
+      seoHeadHtml:
+        buildProfileSeoHead(discoveryProfile),
+      semanticFallbackHtml:
+        buildProfileSemanticFallback(
+          discoveryProfile
+        ),
+    });
     const headers = new Headers(response.headers);
 
     headers.set('content-type', 'text/html; charset=UTF-8');
