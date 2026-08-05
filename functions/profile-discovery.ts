@@ -942,29 +942,29 @@ export const STATIC_PROFILE_DISCOVERY: Record<
     lastUpdated: '2026-07-24',
   },
 
-  biopestrd: {
-    slug: 'biopestrd',
+  biopestsgrd: {
+    slug: 'biopestsgrd',
     title:
-      'BioPests | Manejo Integral de Plagas',
+      'Rene Prieto | CEO de BioPests',
     name: 'BioPests',
     alternateName: [
       'BioPests RD',
       'BioPests Manejo Integral de Plagas',
+      'Rene Prieto BioPests',
     ],
     description:
-      'Soluciones profesionales para prevenir, controlar y monitorear plagas en entornos más seguros y sostenibles.',
+      'Rene Prieto, CEO de BioPests. Soluciones empresariales para prevenir, controlar y monitorear plagas mediante evaluación técnica, prevención y tecnología.',
     longDescription:
-      'BioPests protege instalaciones, procesos y operaciones mediante evaluación técnica, prevención continua y tecnología aplicada al manejo integral de plagas.',
-    url: `${BASE_URL}/biopestrd`,
+      'Rene Prieto representa a BioPests, empresa especializada en proteger instalaciones, procesos y operaciones mediante evaluación técnica, prevención continua y tecnología aplicada al manejo integral de plagas.',
+    url: `${BASE_URL}/biopestsgrd`,
     image:
-      `${BASE_URL}/assets/biopestrd/values/innovacion.png?v=biopestrd-og-innovacion-v1`,
+      `${BASE_URL}/assets/biopestrd/values/innovacion.png?v=biopests-shared-og-v1`,
     imageType: 'image/png',
     imageWidth: 628,
     imageHeight: 628,
     siteName: 'BioPests',
     schemaType: 'ProfessionalService',
     telephones: [
-      '+18297500908',
       '+18292469777',
     ],
     email: 'grupomatyse@gmail.com',
@@ -1018,8 +1018,98 @@ export const STATIC_PROFILE_DISCOVERY: Record<
       'inocuidad',
       'BioPests',
       'manejo integral de plagas',
+      'Rene Prieto',
     ],
-    lastUpdated: '2026-07-24',
+    person: {
+      name: 'Rene Prieto',
+      jobTitle: 'CEO',
+    },
+    lastUpdated: '2026-08-04',
+  },
+
+  biopestsvrd: {
+    slug: 'biopestsvrd',
+    title:
+      'Yudeimy Timaure | Gerente de Operaciones de BioPests',
+    name: 'BioPests',
+    alternateName: [
+      'BioPests RD',
+      'BioPests Manejo Integral de Plagas',
+      'Yudeimy Timaure BioPests',
+    ],
+    description:
+      'Yudeimy Timaure, Gerente de Operaciones de BioPests. Soluciones empresariales para prevenir, controlar y monitorear plagas mediante evaluación técnica, prevención y tecnología.',
+    longDescription:
+      'Yudeimy Timaure representa las operaciones de BioPests, empresa especializada en proteger instalaciones, procesos y operaciones mediante evaluación técnica, prevención continua y tecnología aplicada al manejo integral de plagas.',
+    url: `${BASE_URL}/biopestsvrd`,
+    image:
+      `${BASE_URL}/assets/biopestrd/values/innovacion.png?v=biopests-shared-og-v1`,
+    imageType: 'image/png',
+    imageWidth: 628,
+    imageHeight: 628,
+    siteName: 'BioPests',
+    schemaType: 'ProfessionalService',
+    telephones: [
+      '+18297500908',
+    ],
+    email: 'grupomatyse@gmail.com',
+    address: {
+      streetAddress:
+        'Av. Gustavo Mejía Ricart #226, Piso 4, Oficina 405',
+      addressLocality: 'Santo Domingo',
+      addressRegion: 'Distrito Nacional',
+      addressCountry: 'DO',
+    },
+    sameAs: [
+      'https://www.instagram.com/biopestsrd/',
+    ],
+    services: [
+      {
+        name: 'Desinsectación de precisión',
+        description:
+          'Control dirigido de insectos en entornos empresariales.',
+      },
+      {
+        name: 'Control de aves',
+        description:
+          'Medidas profesionales de exclusión y reducción de riesgos sanitarios.',
+      },
+      {
+        name: 'Desinfección profesional',
+        description:
+          'Protocolos para reforzar la higiene de espacios, equipos y superficies.',
+      },
+      {
+        name: 'Inocuidad en el transporte',
+        description:
+          'Protección sanitaria para vehículos, flotillas y operaciones logísticas.',
+      },
+      {
+        name: 'Desratización inteligente',
+        description:
+          'Monitoreo, trazabilidad y control preventivo de roedores.',
+      },
+    ],
+    areaServed: [
+      'Santo Domingo',
+      'República Dominicana',
+    ],
+    keywords: [
+      'control de plagas',
+      'desinsectación',
+      'desratización',
+      'control de aves',
+      'desinfección',
+      'inocuidad',
+      'BioPests',
+      'manejo integral de plagas',
+      'Yudeimy Timaure',
+    ],
+    person: {
+      name: 'Yudeimy Timaure',
+      jobTitle: 'Gerente de Operaciones',
+    },
+    lastUpdated: '2026-08-04',
   },
 };
 
