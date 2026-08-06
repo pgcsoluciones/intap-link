@@ -2498,3 +2498,61 @@ body,
     height: 84px !important;
   }
 }
+
+
+/* A&C BRAND PRESS INTERACTION V13 */
+
+/* Recorrido completo en 18 segundos */
+.ayc-brand-belt-group {
+  animation-duration: 18s !important;
+}
+
+/* Pausa exacta mientras el usuario mantiene presionado */
+.ayc-brand-belt.is-paused .ayc-brand-belt-group {
+  animation-play-state: paused !important;
+}
+
+/* Preparación visual del logo */
+.ayc-brand-belt-item {
+  position: relative;
+  z-index: 1;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+  transform: translateZ(0);
+  transform-origin: center;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Zoom mientras se mantiene presionado */
+.ayc-brand-belt-item:active {
+  z-index: 4;
+  cursor: grabbing;
+  transform: scale(1.07) translateZ(0);
+  border-color: rgba(5, 25, 122, 0.28);
+  box-shadow:
+    0 9px 22px rgba(5, 25, 122, 0.14);
+}
+
+/* Evita selección o arrastre accidental de las imágenes */
+.ayc-brand-belt-logo {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+}
+
+@media (max-width: 420px) {
+  .ayc-brand-belt-group {
+    animation-duration: 18s !important;
+  }
+
+  .ayc-brand-belt-item:active {
+    transform: scale(1.065) translateZ(0);
+  }
+}

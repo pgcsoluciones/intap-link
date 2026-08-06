@@ -304,6 +304,8 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     }
   }
 
+  const [isBrandPaused, setIsBrandPaused] = useState(false)
+
   const brandLogos = [
     '/assets/aycdom/marcas/marcas-1.png',
     '/assets/aycdom/marcas/marcas-2.png',
@@ -454,7 +456,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
         </section>
         <section
-          className="ayc-brand-belt"
+          className={`ayc-brand-belt${isBrandPaused ? ' is-paused' : ''}`}
           aria-label="Marcas representadas por A&C Dominicana"
         >
           <div className="ayc-brand-belt-track">
@@ -463,6 +465,11 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 <div
                   key={`primary-${logoSrc}`}
                   className="ayc-brand-belt-item"
+                  onPointerDown={() => setIsBrandPaused(true)}
+                  onPointerUp={() => setIsBrandPaused(false)}
+                  onPointerCancel={() => setIsBrandPaused(false)}
+                  onPointerLeave={() => setIsBrandPaused(false)}
+                  onLostPointerCapture={() => setIsBrandPaused(false)}
                 >
                   <img
                     src={logoSrc}
@@ -484,6 +491,11 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 <div
                   key={`duplicate-${logoSrc}`}
                   className="ayc-brand-belt-item"
+                  onPointerDown={() => setIsBrandPaused(true)}
+                  onPointerUp={() => setIsBrandPaused(false)}
+                  onPointerCancel={() => setIsBrandPaused(false)}
+                  onPointerLeave={() => setIsBrandPaused(false)}
+                  onLostPointerCapture={() => setIsBrandPaused(false)}
                 >
                   <img
                     src={logoSrc}
