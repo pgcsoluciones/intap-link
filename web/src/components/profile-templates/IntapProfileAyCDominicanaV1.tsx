@@ -334,7 +334,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       title: 'Metalmecánica y mecanizado CNC',
       summary:
         'Fabricación y mecanizado de piezas industriales con precisión para aplicaciones técnicas y productivas.',
-      image: '/assets/aycdom/hero/hero-ayc-01.png',
+      image: '/assets/aycdom/services/metalmecanica.png',
       items: [
         'Fresado CNC',
         'Torneado CNC',
@@ -348,7 +348,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       title: 'Diseño y fabricación de equipos industriales',
       summary:
         'Desarrollo y construcción de soluciones industriales adaptadas al proceso de cada cliente.',
-      image: '/assets/aycdom/hero/hero-ayc-02.png',
+      image: '/assets/aycdom/services/equipos-industriales.png',
       items: [
         'Conveyors o cintas transportadoras',
         'Máquinas industriales',
@@ -360,7 +360,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       title: 'Automatización e instrumentación',
       summary:
         'Integración de control, monitoreo e instrumentación para optimizar procesos industriales.',
-      image: '/assets/aycdom/hero/hero-ayc-03.png',
+      image: '/assets/aycdom/services/automatizacion.png',
       items: [
         'Proyectos de control industrial',
         'Instrumentación industrial',
@@ -372,7 +372,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       title: 'Corte, conformado y soldadura',
       summary:
         'Transformación de materiales y fabricación metálica para estructuras, piezas y montajes industriales.',
-      image: '/assets/aycdom/hero/hero-ayc-01.png',
+      image: '/assets/aycdom/services/soldadura.png',
       items: [
         'Corte láser CNC',
         'Corte y doblez de planchas',
@@ -385,7 +385,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       title: 'Mantenimiento y reparación industrial',
       summary:
         'Servicios de soporte técnico para recuperar, conservar y mejorar el funcionamiento de equipos.',
-      image: '/assets/aycdom/hero/hero-ayc-02.png',
+      image: '/assets/aycdom/services/ayc-mantenimiento.png',
       items: [
         'Reparación de máquinas industriales',
         'Mantenimiento mecánico',
@@ -396,7 +396,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       title: 'Control de polvo y gases',
       summary:
         'Soluciones para control ambiental y manejo de partículas en operaciones industriales y de obra.',
-      image: '/assets/aycdom/hero/hero-ayc-03.png',
+      image: '/assets/aycdom/services/ayc-recolector-polvo.png',
       items: [
         'Colectores de polvo',
         'Cañones de niebla',
@@ -407,7 +407,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       title: 'Partes, equipos y piezas personalizadas',
       summary:
         'Suministro y fabricación de componentes industriales comerciales o hechos a la medida.',
-      image: '/assets/aycdom/hero/hero-ayc-01.png',
+      image: '/assets/aycdom/services/piezas.png',
       items: [
         'Venta de partes comerciales',
         'Venta de máquinas industriales',
@@ -636,7 +636,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             <span>Nuestros servicios</span>
 
             <h2>
-              Soluciones industriales por área
+              Soluciones industriales
             </h2>
 
             <p>

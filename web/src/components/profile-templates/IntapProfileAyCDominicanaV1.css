@@ -3019,3 +3019,208 @@ body,
     font-size: 10.5px;
   }
 }
+
+
+/* A&C SERVICES VISUAL REFINEMENT V17 */
+
+/* Encabezado */
+.ayc-organized-services-heading span {
+  display: block !important;
+  margin-bottom: 8px !important;
+  color: #ed3237 !important;
+  font-size: 21px !important;
+  line-height: 1.12 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.015em !important;
+  text-transform: none !important;
+}
+
+.ayc-organized-services-heading h2 {
+  margin: 0 !important;
+  color: #05197A !important;
+  font-size: 30px !important;
+  line-height: 1.08 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.ayc-organized-services-heading p {
+  margin-top: 12px !important;
+}
+
+/* Cards destacadas */
+.ayc-featured-service-card {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease !important;
+}
+
+.ayc-featured-service-media {
+  overflow: hidden !important;
+}
+
+.ayc-featured-service-image {
+  transition: transform 220ms ease !important;
+}
+
+.ayc-featured-service-body h3 {
+  margin-top: 10px !important;
+}
+
+.ayc-featured-service-body p {
+  margin-top: 11px !important;
+  min-height: 56px;
+}
+
+.ayc-featured-service-link {
+  width: 100% !important;
+  margin-top: 16px !important;
+  padding: 12px 14px !important;
+  border: 1px solid #05197A !important;
+  border-radius: 999px !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-featured-service-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(5, 25, 122, 0.30) !important;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.10) !important;
+  }
+
+  .ayc-featured-service-card:hover .ayc-featured-service-image {
+    transform: scale(1.04) !important;
+  }
+
+  .ayc-featured-service-card:hover .ayc-featured-service-link {
+    border-color: #05197A !important;
+    color: #ffffff !important;
+    background: #05197A !important;
+    transform: translateY(-1px) !important;
+  }
+}
+
+.ayc-featured-service-link:focus-visible,
+.ayc-featured-service-link:active {
+  border-color: #031052 !important;
+  color: #ffffff !important;
+  background: #031052 !important;
+  transform: scale(0.985) !important;
+}
+
+/* Modal: lista con separadores azules */
+.ayc-services-modal-grid {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+  margin-top: 22px !important;
+}
+
+.ayc-services-modal-card {
+  display: grid !important;
+  grid-template-columns: 210px 1fr !important;
+  gap: 16px !important;
+  align-items: start !important;
+  padding: 18px 0 20px !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(5, 25, 122, 0.22) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ayc-services-modal-card:last-child {
+  border-bottom: 1px solid rgba(5, 25, 122, 0.22) !important;
+}
+
+.ayc-services-modal-media {
+  height: 150px !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  background: #edf2f9 !important;
+}
+
+.ayc-services-modal-body {
+  padding: 2px 0 !important;
+}
+
+.ayc-services-modal-body h3 {
+  margin-top: 12px !important;
+  margin-bottom: 0 !important;
+}
+
+.ayc-services-modal-body p {
+  margin-top: 13px !important;
+  margin-bottom: 0 !important;
+}
+
+.ayc-services-modal-action {
+  width: fit-content !important;
+  min-width: 170px !important;
+  margin-top: 18px !important;
+  padding: 12px 18px !important;
+  align-self: start !important;
+  border: 1px solid #05197A !important;
+  border-radius: 999px !important;
+  color: #ffffff !important;
+  background: #05197A !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease !important;
+}
+
+.ayc-services-modal-action:hover,
+.ayc-services-modal-action:focus-visible {
+  border-color: #031052 !important;
+  background: #031052 !important;
+  transform: translateY(-1px) !important;
+}
+
+.ayc-services-modal-action:active {
+  border-color: #020A36 !important;
+  background: #020A36 !important;
+  transform: scale(0.985) !important;
+}
+
+/* Ajustes móvil */
+@media (max-width: 520px) {
+  .ayc-organized-services-heading span {
+    font-size: 18px !important;
+  }
+
+  .ayc-organized-services-heading h2 {
+    font-size: 26px !important;
+  }
+
+  .ayc-featured-service-body p {
+    min-height: 52px;
+  }
+
+  .ayc-services-modal-card {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    padding-top: 16px !important;
+    padding-bottom: 18px !important;
+  }
+
+  .ayc-services-modal-media {
+    height: 185px !important;
+  }
+
+  .ayc-services-modal-action {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
