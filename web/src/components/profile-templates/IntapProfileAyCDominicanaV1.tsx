@@ -1081,17 +1081,15 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             </a>
 
             <a
-              className="ayc-corporate-contact-item"
+              className="
+                ayc-corporate-contact-item
+                ayc-corporate-whatsapp-row
+              "
               href="https://wa.me/18098163911"
               target="_blank"
               rel="noreferrer"
             >
-              <span
-                className="
-                  ayc-corporate-contact-itemIcon
-                  is-whatsapp
-                "
-              >
+              <span className="ayc-corporate-contact-itemIcon">
                 <FaWhatsapp />
               </span>
               <span className="ayc-corporate-contact-itemText">
@@ -1213,18 +1211,40 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           <span>Hablemos de su proyecto</span>
           <h2>¿Tiene una necesidad industrial que debemos evaluar?</h2>
           <p>Comparta la pieza, equipo, proceso o mejora que necesita.</p>
-          <a href={waHref} target="_blank" rel="noreferrer" className="ayc-quote-button-v21"><FaWhatsapp /> Solicitar cotización</a>
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className="ayc-quote-button-v21"
+          >
+            <FaWhatsapp
+              className="ayc-quote-icon-v23"
+              color="#05197A"
+            />
+            Solicitar cotización
+          </a>
         </section>
 
-        <footer className="ayc-mobile-footer ayc-footer-v21">
-          <AssetImage src={logo} alt={name} className="ayc-footer-logo" />
-          <div className="ayc-social-row">
-            <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram"><FaInstagram /></a>
-            <a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook"><FaFacebookF /></a>
-            <a href={websiteHref} target="_blank" rel="noreferrer" aria-label="Sitio web"><FaGlobe /></a>
-          </div>
-          <button type="button" onClick={shareProfile}><FaShareAlt /> {shareLabel}</button>
-          <small>Santo Domingo, Rep. Dom.</small>
+        <footer
+          className="
+            ayc-mobile-footer
+            ayc-footer-v21
+            ayc-footer-v23
+          "
+        >
+          <AssetImage
+            src={logo}
+            alt={name}
+            className="ayc-footer-logo"
+          />
+
+          <p className="ayc-footer-location-v23">
+            Santo Domingo, Rep. Dom.
+          </p>
+
+          <small className="ayc-footer-watermark-v23">
+            Perfil empresarial creado con INTAP LINK
+          </small>
         </footer>
       </div>
 
