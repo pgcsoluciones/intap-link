@@ -317,6 +317,99 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     '/assets/aycdom/marcas/marcas-8.png',
   ]
 
+  const defaultServiceGroups = [
+    {
+      title: 'Metalmecánica y mecanizado CNC',
+      summary:
+        'Fabricación y mecanizado de piezas industriales con precisión para aplicaciones técnicas y productivas.',
+      image: '/assets/aycdom/hero/hero-ayc-01.png',
+      items: [
+        'Fresado CNC',
+        'Torneado CNC',
+        'Rectificado',
+        'Moldes y troqueles',
+        'Tratamientos térmicos',
+        'Diseño CAD en SolidWorks',
+      ],
+    },
+    {
+      title: 'Diseño y fabricación de equipos industriales',
+      summary:
+        'Desarrollo y construcción de soluciones industriales adaptadas al proceso de cada cliente.',
+      image: '/assets/aycdom/hero/hero-ayc-02.png',
+      items: [
+        'Conveyors o cintas transportadoras',
+        'Máquinas industriales',
+        'Fixtures',
+        'Soluciones industriales personalizadas',
+      ],
+    },
+    {
+      title: 'Automatización e instrumentación',
+      summary:
+        'Integración de control, monitoreo e instrumentación para optimizar procesos industriales.',
+      image: '/assets/aycdom/hero/hero-ayc-03.png',
+      items: [
+        'Proyectos de control industrial',
+        'Instrumentación industrial',
+        'Neumática industrial',
+        'Sistemas de pesaje',
+      ],
+    },
+    {
+      title: 'Corte, conformado y soldadura',
+      summary:
+        'Transformación de materiales y fabricación metálica para estructuras, piezas y montajes industriales.',
+      image: '/assets/aycdom/hero/hero-ayc-01.png',
+      items: [
+        'Corte láser CNC',
+        'Corte y doblez de planchas',
+        'Soldadura especializada',
+        'Fabricación de estructuras metálicas',
+        'Mobiliario industrial y montajes',
+      ],
+    },
+    {
+      title: 'Mantenimiento y reparación industrial',
+      summary:
+        'Servicios de soporte técnico para recuperar, conservar y mejorar el funcionamiento de equipos.',
+      image: '/assets/aycdom/hero/hero-ayc-02.png',
+      items: [
+        'Reparación de máquinas industriales',
+        'Mantenimiento mecánico',
+        'Mantenimiento eléctrico',
+      ],
+    },
+    {
+      title: 'Control de polvo y gases',
+      summary:
+        'Soluciones para control ambiental y manejo de partículas en operaciones industriales y de obra.',
+      image: '/assets/aycdom/hero/hero-ayc-03.png',
+      items: [
+        'Colectores de polvo',
+        'Cañones de niebla',
+        'Control de polvo en vías y suelos',
+      ],
+    },
+    {
+      title: 'Partes, equipos y piezas personalizadas',
+      summary:
+        'Suministro y fabricación de componentes industriales comerciales o hechos a la medida.',
+      image: '/assets/aycdom/hero/hero-ayc-01.png',
+      items: [
+        'Venta de partes comerciales',
+        'Venta de máquinas industriales',
+        'Piezas plásticas personalizadas',
+        'Piezas metálicas personalizadas',
+      ],
+    },
+  ]
+
+  const serviceGroups =
+    Array.isArray(td.service_groups) && td.service_groups.length
+      ? td.service_groups
+      : defaultServiceGroups
+
   const quickActions = [
     {
       label: 'Llamar',
@@ -510,6 +603,59 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             </div>
           </div>
         </section>
+
+        <section
+          id="soluciones"
+          className="ayc-organized-services-section"
+        >
+          <div className="ayc-section-heading ayc-organized-services-heading">
+            <span>Soluciones industriales</span>
+            <h2>Servicios organizados por área</h2>
+            <p>
+              Presentamos nuestras capacidades agrupadas por especialidad para
+              facilitar la consulta, evaluación y cotización de cada proyecto.
+            </p>
+          </div>
+
+          <div className="ayc-organized-services-grid">
+            {serviceGroups.map((group) => (
+              <article
+                key={group.title}
+                className="ayc-organized-service-card"
+              >
+                <div className="ayc-organized-service-media">
+                  <AssetImage
+                    src={group.image}
+                    alt={group.title}
+                    className="ayc-organized-service-image"
+                  />
+                </div>
+
+                <div className="ayc-organized-service-body">
+                  <h3>{group.title}</h3>
+                  <p>{group.summary}</p>
+
+                  <ul>
+                    {group.items.map((item: string) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ayc-organized-service-cta"
+                  >
+                    Consultar por WhatsApp
+                    <FaArrowRight />
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
 
 
         <section className="ayc-mobile-section ayc-services-section" id="soluciones">

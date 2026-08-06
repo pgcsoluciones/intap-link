@@ -2628,3 +2628,212 @@ body,
     font-size: 15.5px !important;
   }
 }
+
+
+/* A&C ORGANIZED SERVICES V15 */
+
+/* Ocultar bloque viejo de servicios */
+.ayc-mobile-section.ayc-services-section {
+  display: none !important;
+}
+
+/* Nueva sección organizada */
+.ayc-organized-services-section {
+  padding: 30px 18px 8px;
+}
+
+.ayc-organized-services-heading {
+  text-align: center;
+}
+
+.ayc-organized-services-heading span {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #ed3237;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ayc-organized-services-heading h2 {
+  margin: 0;
+  color: #05197A;
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ayc-organized-services-heading p {
+  margin: 14px auto 0;
+  max-width: 620px;
+  color: #566277;
+  font-size: 15px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.ayc-organized-services-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.ayc-organized-service-card {
+  overflow: hidden;
+  border: 1px solid #e3e8f1;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.06);
+}
+
+.ayc-organized-service-media {
+  position: relative;
+  height: 210px;
+  overflow: hidden;
+  background: #eef2f8;
+}
+
+.ayc-organized-service-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to top,
+      rgba(5, 25, 122, 0.14),
+      rgba(5, 25, 122, 0.04) 46%,
+      rgba(5, 25, 122, 0) 78%
+    );
+  pointer-events: none;
+}
+
+.ayc-organized-service-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ayc-organized-service-body {
+  padding: 18px 18px 20px;
+}
+
+.ayc-organized-service-body h3 {
+  margin: 0;
+  color: #05197A;
+  font-size: 22px;
+  line-height: 1.18;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.ayc-organized-service-body > p {
+  margin: 12px 0 0;
+  color: #58657a;
+  font-size: 14.5px;
+  line-height: 1.7;
+}
+
+.ayc-organized-service-body ul {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.ayc-organized-service-body li {
+  position: relative;
+  padding-left: 18px;
+  color: #263142;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ayc-organized-service-body li::before {
+  content: "";
+  position: absolute;
+  top: 0.52em;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ed3237;
+}
+
+.ayc-organized-service-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 12px 18px;
+  border: 1px solid #05197A;
+  border-radius: 999px;
+  color: #ffffff !important;
+  background: #05197A !important;
+  box-shadow: none !important;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.ayc-organized-service-cta:hover,
+.ayc-organized-service-cta:focus-visible {
+  border-color: #031052 !important;
+  background: #031052 !important;
+  transform: translateY(-1px);
+}
+
+.ayc-organized-service-cta:active {
+  border-color: #020A36 !important;
+  background: #020A36 !important;
+  transform: scale(0.985);
+}
+
+@media (max-width: 420px) {
+  .ayc-organized-services-section {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .ayc-organized-services-heading h2 {
+    font-size: 25px;
+  }
+
+  .ayc-organized-services-heading p {
+    font-size: 14px;
+  }
+
+  .ayc-organized-service-media {
+    height: 190px;
+  }
+
+  .ayc-organized-service-body {
+    padding: 16px 16px 18px;
+  }
+
+  .ayc-organized-service-body h3 {
+    font-size: 20px;
+  }
+
+  .ayc-organized-service-body > p {
+    font-size: 14px;
+  }
+
+  .ayc-organized-service-body li {
+    font-size: 13.5px;
+  }
+
+  .ayc-organized-service-cta {
+    width: 100%;
+    justify-content: center;
+    font-size: 14.5px;
+  }
+}
