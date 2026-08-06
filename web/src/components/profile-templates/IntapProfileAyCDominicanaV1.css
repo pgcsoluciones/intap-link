@@ -2629,211 +2629,393 @@ body,
   }
 }
 
+/* A&C SERVICES CARDS + MODALS V16 */
 
-/* A&C ORGANIZED SERVICES V15 */
-
-/* Ocultar bloque viejo de servicios */
 .ayc-mobile-section.ayc-services-section {
   display: none !important;
 }
 
-/* Nueva sección organizada */
 .ayc-organized-services-section {
-  padding: 30px 18px 8px;
+  padding: 30px 14px 10px;
 }
 
 .ayc-organized-services-heading {
-  text-align: center;
+  text-align: left;
 }
 
-.ayc-organized-services-heading span {
+.ayc-organized-services-heading span,
+.ayc-services-modal-heading span {
   display: inline-block;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
   color: #ed3237;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.2;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
 }
 
-.ayc-organized-services-heading h2 {
+.ayc-organized-services-heading h2,
+.ayc-services-modal-heading h2 {
   margin: 0;
   color: #05197A;
-  font-size: 28px;
-  line-height: 1.1;
+  font-size: 27px;
+  line-height: 1.12;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.ayc-organized-services-heading p {
-  margin: 14px auto 0;
-  max-width: 620px;
-  color: #566277;
-  font-size: 15px;
-  line-height: 1.7;
-  text-align: center;
+.ayc-organized-services-heading p,
+.ayc-services-modal-heading p {
+  margin: 13px 0 0;
+  color: #5c6879;
+  font-size: 14.5px;
+  line-height: 1.65;
 }
 
-.ayc-organized-services-grid {
+.ayc-featured-services-grid {
   display: grid;
-  gap: 18px;
-  margin-top: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 22px;
 }
 
-.ayc-organized-service-card {
+.ayc-featured-service-card,
+.ayc-services-modal-card {
+  display: flex;
   overflow: hidden;
-  border: 1px solid #e3e8f1;
-  border-radius: 22px;
+  flex-direction: column;
+  border: 1px solid #dbe4ef;
+  border-radius: 18px;
   background: #ffffff;
-  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.06);
+  box-shadow:
+    0 7px 18px rgba(15, 23, 42, 0.05);
 }
 
-.ayc-organized-service-media {
-  position: relative;
-  height: 210px;
+.ayc-featured-service-media {
+  height: 132px;
   overflow: hidden;
-  background: #eef2f8;
+  background: #edf2f9;
 }
 
-.ayc-organized-service-media::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(
-      to top,
-      rgba(5, 25, 122, 0.14),
-      rgba(5, 25, 122, 0.04) 46%,
-      rgba(5, 25, 122, 0) 78%
-    );
-  pointer-events: none;
+.ayc-services-modal-media {
+  height: 175px;
+  overflow: hidden;
+  background: #edf2f9;
 }
 
-.ayc-organized-service-image {
+.ayc-featured-service-image,
+.ayc-services-modal-image,
+.ayc-service-detail-image {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.ayc-organized-service-body {
-  padding: 18px 18px 20px;
+.ayc-featured-service-body,
+.ayc-services-modal-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 13px;
 }
 
-.ayc-organized-service-body h3 {
-  margin: 0;
+.ayc-featured-service-body span,
+.ayc-services-modal-body span,
+.ayc-service-detail-body > span {
+  color: #ed3237;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.ayc-featured-service-body h3,
+.ayc-services-modal-body h3,
+.ayc-service-detail-body h3 {
+  margin: 8px 0 0;
   color: #05197A;
-  font-size: 22px;
+  font-size: 17px;
   line-height: 1.18;
   font-weight: 700;
-  letter-spacing: -0.015em;
 }
 
-.ayc-organized-service-body > p {
-  margin: 12px 0 0;
-  color: #58657a;
-  font-size: 14.5px;
+.ayc-featured-service-body p,
+.ayc-services-modal-body p {
+  margin: 9px 0 0;
+  color: #5d6879;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.ayc-featured-service-link,
+.ayc-services-modal-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: auto;
+  padding: 13px 8px 0;
+  border: 0;
+  color: #05197A;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.ayc-featured-service-link:active,
+.ayc-services-modal-action:active {
+  transform: scale(0.97);
+}
+
+.ayc-services-catalog-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(420px, 100%);
+  margin: 22px auto 0;
+  padding: 16px 18px;
+  border: 1px solid #05197A;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #05197A;
+  box-shadow:
+    0 12px 24px rgba(5, 25, 122, 0.17);
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.ayc-services-modal-backdrop,
+.ayc-service-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14px 10px;
+  background: rgba(17, 24, 39, 0.66);
+  backdrop-filter: blur(4px);
+}
+
+.ayc-services-modal-sheet,
+.ayc-service-detail-sheet {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow:
+    0 22px 48px rgba(15, 23, 42, 0.22);
+}
+
+.ayc-services-modal-sheet {
+  padding: 22px 16px 18px;
+}
+
+.ayc-service-detail-sheet {
+  width: min(620px, 100%);
+  overflow: hidden auto;
+}
+
+.ayc-services-modal-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  z-index: 4;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  place-items: center;
+  color: #202938;
+  background: #ffffff;
+  box-shadow:
+    0 9px 22px rgba(15, 23, 42, 0.14);
+  font-size: 31px;
+  line-height: 1;
+}
+
+.ayc-services-modal-heading {
+  padding: 34px 4px 8px;
+}
+
+.ayc-services-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.ayc-services-modal-action {
+  margin-top: auto;
+  padding: 13px 14px;
+  border: 1px solid #05197A;
+  border-radius: 999px;
+}
+
+.ayc-service-detail-media {
+  height: 250px;
+  overflow: hidden;
+  background: #edf2f9;
+}
+
+.ayc-service-detail-body {
+  padding: 20px 18px 26px;
+}
+
+.ayc-service-detail-body h3 {
+  margin-top: 10px;
+  font-size: 27px;
+}
+
+.ayc-service-detail-summary {
+  margin: 14px 0 0;
+  color: #4d596a;
+  font-size: 15px;
   line-height: 1.7;
 }
 
-.ayc-organized-service-body ul {
-  margin: 16px 0 0;
+.ayc-service-detail-box {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #dbe4ef;
+  border-radius: 18px;
+  background: #fbfcfe;
+}
+
+.ayc-service-detail-box h4 {
+  margin: 0;
+  color: #05197A;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ayc-service-detail-box ul {
+  display: grid;
+  gap: 9px;
+  margin: 13px 0 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  gap: 10px;
 }
 
-.ayc-organized-service-body li {
+.ayc-service-detail-box li {
   position: relative;
   padding-left: 18px;
-  color: #263142;
+  color: #596577;
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
-.ayc-organized-service-body li::before {
+.ayc-service-detail-box li::before {
   content: "";
   position: absolute;
-  top: 0.52em;
+  top: 0.5em;
   left: 0;
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #ed3237;
+  background: #05197A;
 }
 
-.ayc-organized-service-cta {
-  display: inline-flex;
+.ayc-service-detail-cta {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 18px;
-  padding: 12px 18px;
-  border: 1px solid #05197A;
+  justify-content: center;
+  gap: 9px;
+  width: min(380px, 100%);
+  margin: 22px auto 0;
+  padding: 15px 18px;
   border-radius: 999px;
   color: #ffffff !important;
   background: #05197A !important;
-  box-shadow: none !important;
-  font-size: 15px;
-  line-height: 1.2;
+  box-shadow:
+    0 12px 24px rgba(5, 25, 122, 0.16);
+  font-size: 16px;
   font-weight: 800;
   text-decoration: none;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
 }
 
-.ayc-organized-service-cta:hover,
-.ayc-organized-service-cta:focus-visible {
-  border-color: #031052 !important;
-  background: #031052 !important;
-  transform: translateY(-1px);
+.ayc-service-detail-backlink {
+  display: flex;
+  margin: 18px auto 0;
+  padding: 4px;
+  border: 0;
+  color: #05197A;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 800;
 }
 
-.ayc-organized-service-cta:active {
-  border-color: #020A36 !important;
-  background: #020A36 !important;
-  transform: scale(0.985);
-}
-
-@media (max-width: 420px) {
-  .ayc-organized-services-section {
-    padding-right: 12px;
-    padding-left: 12px;
+@media (max-width: 520px) {
+  .ayc-organized-services-heading h2,
+  .ayc-services-modal-heading h2 {
+    font-size: 24px;
   }
 
-  .ayc-organized-services-heading h2 {
-    font-size: 25px;
+  .ayc-featured-service-media {
+    height: 118px;
   }
 
-  .ayc-organized-services-heading p {
+  .ayc-featured-service-body {
+    padding: 11px;
+  }
+
+  .ayc-featured-service-body h3 {
+    font-size: 15.5px;
+  }
+
+  .ayc-featured-service-body p {
+    font-size: 11.5px;
+  }
+
+  .ayc-featured-service-link {
+    font-size: 12.5px;
+  }
+
+  .ayc-services-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ayc-services-modal-media {
+    height: 185px;
+  }
+
+  .ayc-service-detail-media {
+    height: 225px;
+  }
+
+  .ayc-service-detail-body h3 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 350px) {
+  .ayc-featured-services-grid {
+    gap: 7px;
+  }
+
+  .ayc-featured-service-media {
+    height: 104px;
+  }
+
+  .ayc-featured-service-body {
+    padding: 9px;
+  }
+
+  .ayc-featured-service-body h3 {
     font-size: 14px;
   }
 
-  .ayc-organized-service-media {
-    height: 190px;
-  }
-
-  .ayc-organized-service-body {
-    padding: 16px 16px 18px;
-  }
-
-  .ayc-organized-service-body h3 {
-    font-size: 20px;
-  }
-
-  .ayc-organized-service-body > p {
-    font-size: 14px;
-  }
-
-  .ayc-organized-service-body li {
-    font-size: 13.5px;
-  }
-
-  .ayc-organized-service-cta {
-    width: 100%;
-    justify-content: center;
-    font-size: 14.5px;
+  .ayc-featured-service-body p {
+    font-size: 10.5px;
   }
 }

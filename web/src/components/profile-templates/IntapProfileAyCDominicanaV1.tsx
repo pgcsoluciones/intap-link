@@ -305,6 +305,10 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   }
 
   const [isBrandPaused, setIsBrandPaused] = useState(false)
+  const [isServicesCatalogOpen, setIsServicesCatalogOpen] =
+    useState(false)
+  const [activeServiceIndex, setActiveServiceIndex] =
+    useState<number | null>(null)
 
   const brandLogos = [
     '/assets/aycdom/marcas/marcas-1.png',
@@ -317,7 +321,15 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     '/assets/aycdom/marcas/marcas-8.png',
   ]
 
-  const defaultServiceGroups = [
+  type AycServiceGroup = {
+    title: string
+    summary: string
+    image: string
+    items: string[]
+  }
+
+  const defaultServiceGroups: AycServiceGroup[] = [
+
     {
       title: 'Metalmecánica y mecanizado CNC',
       summary:
@@ -405,10 +417,17 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     },
   ]
 
-  const serviceGroups =
-    Array.isArray(td.service_groups) && td.service_groups.length
-      ? td.service_groups
+  const serviceGroups: AycServiceGroup[] =
+    Array.isArray(td.service_groups) &&
+    td.service_groups.length > 0
+      ? (
+          td.service_groups as unknown as
+            AycServiceGroup[]
+        )
       : defaultServiceGroups
+
+  const featuredServices: AycServiceGroup[] =
+    serviceGroups.slice(0, 4)
 
   const quickActions = [
     {
@@ -604,61 +623,266 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           </div>
         </section>
 
-        <section
+                <section
           id="soluciones"
           className="ayc-organized-services-section"
         >
-          <div className="ayc-section-heading ayc-organized-services-heading">
-            <span>Soluciones industriales</span>
-            <h2>Servicios organizados por área</h2>
+          <div
+            className="
+              ayc-section-heading
+              ayc-organized-services-heading
+            "
+          >
+            <span>Nuestros servicios</span>
+
+            <h2>
+              Soluciones industriales por área
+            </h2>
+
             <p>
-              Presentamos nuestras capacidades agrupadas por especialidad para
-              facilitar la consulta, evaluación y cotización de cada proyecto.
+              Conoce cuatro de nuestras soluciones
+              principales o explora el portafolio completo.
             </p>
           </div>
 
-          <div className="ayc-organized-services-grid">
-            {serviceGroups.map((group) => (
+          <div className="ayc-featured-services-grid">
+            {featuredServices.map((group, index) => (
               <article
                 key={group.title}
-                className="ayc-organized-service-card"
+                className="ayc-featured-service-card"
               >
-                <div className="ayc-organized-service-media">
+                <div className="ayc-featured-service-media">
                   <AssetImage
                     src={group.image}
                     alt={group.title}
-                    className="ayc-organized-service-image"
+                    className="ayc-featured-service-image"
                   />
                 </div>
 
-                <div className="ayc-organized-service-body">
+                <div className="ayc-featured-service-body">
+                  <span>Servicio industrial</span>
+
                   <h3>{group.title}</h3>
+
                   <p>{group.summary}</p>
 
-                  <ul>
-                    {group.items.map((item: string) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-
-                  <a
-                    href={waHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ayc-organized-service-cta"
+                  <button
+                    type="button"
+                    className="ayc-featured-service-link"
+                    onClick={() => {
+                      setIsServicesCatalogOpen(false)
+                      setActiveServiceIndex(index)
+                    }}
                   >
-                    Consultar por WhatsApp
-                    <FaArrowRight />
-                  </a>
+                    Ver detalles
+                  </button>
                 </div>
               </article>
             ))}
           </div>
+
+          <button
+            type="button"
+            className="ayc-services-catalog-trigger"
+            onClick={() => {
+              setActiveServiceIndex(null)
+              setIsServicesCatalogOpen(true)
+            }}
+          >
+            Ver todos los servicios
+          </button>
         </section>
 
+        {isServicesCatalogOpen ? (
+          <div
+            className="ayc-services-modal-backdrop"
+            role="presentation"
+            onClick={() =>
+              setIsServicesCatalogOpen(false)
+            }
+          >
+            <section
+              className="ayc-services-modal-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Todos nuestros servicios"
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+              <button
+                type="button"
+                className="ayc-services-modal-close"
+                aria-label="Cerrar catálogo"
+                onClick={() =>
+                  setIsServicesCatalogOpen(false)
+                }
+              >
+                ×
+              </button>
 
+              <div className="ayc-services-modal-heading">
+                <span>Portafolio de soluciones</span>
 
-        <section className="ayc-mobile-section ayc-services-section" id="soluciones">
+                <h2>Todos nuestros servicios</h2>
+
+                <p>
+                  Selecciona una solución para conocer
+                  su alcance y los servicios incluidos.
+                </p>
+              </div>
+
+              <div className="ayc-services-modal-grid">
+                {serviceGroups.map((group, index) => (
+                  <article
+                    key={group.title}
+                    className="ayc-services-modal-card"
+                  >
+                    <div
+                      className="ayc-services-modal-media"
+                    >
+                      <AssetImage
+                        src={group.image}
+                        alt={group.title}
+                        className="
+                          ayc-services-modal-image
+                        "
+                      />
+                    </div>
+
+                    <div
+                      className="ayc-services-modal-body"
+                    >
+                      <span>Servicio industrial</span>
+
+                      <h3>{group.title}</h3>
+
+                      <p>{group.summary}</p>
+
+                      <button
+                        type="button"
+                        className="
+                          ayc-services-modal-action
+                        "
+                        onClick={() => {
+                          setIsServicesCatalogOpen(false)
+                          setActiveServiceIndex(index)
+                        }}
+                      >
+                        Ver detalles
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {activeServiceIndex !== null &&
+        serviceGroups[activeServiceIndex] ? (
+          <div
+            className="ayc-service-detail-backdrop"
+            role="presentation"
+            onClick={() =>
+              setActiveServiceIndex(null)
+            }
+          >
+            <section
+              className="ayc-service-detail-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label={
+                serviceGroups[activeServiceIndex].title
+              }
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+              <button
+                type="button"
+                className="ayc-services-modal-close"
+                aria-label="Cerrar detalle"
+                onClick={() =>
+                  setActiveServiceIndex(null)
+                }
+              >
+                ×
+              </button>
+
+              <div className="ayc-service-detail-media">
+                <AssetImage
+                  src={
+                    serviceGroups[activeServiceIndex]
+                      .image
+                  }
+                  alt={
+                    serviceGroups[activeServiceIndex]
+                      .title
+                  }
+                  className="ayc-service-detail-image"
+                />
+              </div>
+
+              <div className="ayc-service-detail-body">
+                <span>Servicio industrial</span>
+
+                <h3>
+                  {
+                    serviceGroups[activeServiceIndex]
+                      .title
+                  }
+                </h3>
+
+                <p className="ayc-service-detail-summary">
+                  {
+                    serviceGroups[activeServiceIndex]
+                      .summary
+                  }
+                </p>
+
+                <div className="ayc-service-detail-box">
+                  <h4>Servicios incluidos</h4>
+
+                  <ul>
+                    {
+                      serviceGroups[
+                        activeServiceIndex
+                      ].items.map((item: string) => (
+                        <li key={item}>{item}</li>
+                      ))
+                    }
+                  </ul>
+                </div>
+
+                <a
+                  href={waHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ayc-service-detail-cta"
+                >
+                  <FaWhatsapp />
+                  Consultar por WhatsApp
+                </a>
+
+                <button
+                  type="button"
+                  className="
+                    ayc-service-detail-backlink
+                  "
+                  onClick={() => {
+                    setActiveServiceIndex(null)
+                    setIsServicesCatalogOpen(true)
+                  }}
+                >
+                  Volver a todos los servicios
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+<section className="ayc-mobile-section ayc-services-section" aria-hidden="true">
           <div className="ayc-section-heading">
             <span>Nuestras capacidades</span>
             <h2>Soluciones industriales</h2>
