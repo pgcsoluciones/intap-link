@@ -2556,3 +2556,75 @@ body,
     transform: scale(1.065) translateZ(0);
   }
 }
+
+
+/* A&C HERO BUTTON TYPOGRAPHY V14 */
+
+/* Botón principal destacado */
+
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:link,
+.ayc-mobile-whatsapp:visited,
+.ayc-mobile-whatsapp:focus {
+  font-size: 17px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em;
+}
+
+.ayc-mobile-whatsapp svg {
+  width: 21px !important;
+  height: 21px !important;
+  flex: 0 0 auto;
+}
+
+/* Textos de los accesos rápidos */
+
+.ayc-quick-actions strong,
+.ayc-quick-actions a strong,
+.ayc-quick-actions a.is-featured strong {
+  font-size: 11.5px !important;
+  line-height: 1.18 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.005em;
+}
+
+/* Guardar contacto */
+
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:focus {
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+}
+
+.ayc-mobile-vcard .ayc-primary-wide svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 auto;
+}
+
+/*
+ * Mantener buena lectura en teléfonos angostos,
+ * sin volver al tamaño anterior de 8.5 px.
+ */
+
+@media (max-width: 390px) {
+  .ayc-mobile-whatsapp,
+  .ayc-mobile-whatsapp:link,
+  .ayc-mobile-whatsapp:visited,
+  .ayc-mobile-whatsapp:focus {
+    font-size: 16px !important;
+  }
+
+  .ayc-quick-actions strong,
+  .ayc-quick-actions a strong,
+  .ayc-quick-actions a.is-featured strong {
+    font-size: 10.5px !important;
+  }
+
+  .ayc-mobile-vcard .ayc-primary-wide,
+  .ayc-mobile-vcard .ayc-primary-wide:focus {
+    font-size: 15.5px !important;
+  }
+}
