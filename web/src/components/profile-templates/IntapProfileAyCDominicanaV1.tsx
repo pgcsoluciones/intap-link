@@ -1271,14 +1271,14 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           <div className="ayc-corporate-contact-list">
             <a
               className="ayc-corporate-contact-item"
-              href="tel:+18094767325"
+              href={`tel:${cleanPhone(phone)}`}
             >
               <span className="ayc-corporate-contact-itemIcon">
                 <FaPhoneAlt />
               </span>
               <span className="ayc-corporate-contact-itemText">
                 <strong>Teléfono</strong>
-                <span>(809) 476-7325</span>
+                <span>{phone}</span>
               </span>
             </a>
 
@@ -1287,7 +1287,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 ayc-corporate-contact-item
                 ayc-corporate-whatsapp-row
               "
-              href="https://wa.me/18098163911"
+              href={waHref}
               target="_blank"
               rel="noreferrer"
             >
@@ -1296,26 +1296,26 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               </span>
               <span className="ayc-corporate-contact-itemText">
                 <strong>WhatsApp</strong>
-                <span>(809) 816-3911</span>
+                <span>{mobilePhone}</span>
               </span>
             </a>
 
             <a
               className="ayc-corporate-contact-item"
-              href="mailto:mario.medina@aycdominicana.com"
+              href={`mailto:${email}`}
             >
               <span className="ayc-corporate-contact-itemIcon">
                 <FaEnvelope />
               </span>
               <span className="ayc-corporate-contact-itemText">
                 <strong>Correo corporativo</strong>
-                <span>mario.medina@aycdominicana.com</span>
+                <span>{email}</span>
               </span>
             </a>
 
             <a
               className="ayc-corporate-contact-item"
-              href="https://instagram.com/aycdominicana"
+              href={instagramUrl}
               target="_blank"
               rel="noreferrer"
             >
@@ -1330,7 +1330,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
             <a
               className="ayc-corporate-contact-item"
-              href="https://www.aycdominicana.com"
+              href={websiteHref}
               target="_blank"
               rel="noreferrer"
             >
