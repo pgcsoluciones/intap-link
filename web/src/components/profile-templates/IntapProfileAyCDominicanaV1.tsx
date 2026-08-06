@@ -156,6 +156,15 @@ function upsertAyCCanonical(value: string) {
   canonical.href = value
 }
 
+function filenameSlug(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 function cleanPhone(value: string) {
   return value.replace(/\D/g, '')
 }
@@ -229,6 +238,10 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const contactName = pick(td.contact_name, 'Mario Medina')
   const contactTitle = pick(td.contact_title, 'Sales Engineer')
   const mobilePhone = pick(td.mobile_phone, '809-816-3911')
+  const vcardFilename = pick(
+    td.vcard_filename,
+    `${filenameSlug(contactName)}-ayc-dominicana.vcf`,
+  )
 
   useEffect(() => {
     const socialTitle =
@@ -237,11 +250,22 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     const socialDescription =
       'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.'
 
-    const socialUrl =
-      'https://intaprd.com/aycdom'
+    const currentSlug =
+      window.location.pathname
+        .replace(/^\/+|\/+$/g, '')
+        .toLowerCase() || 'aycdom'
 
-    const socialImage =
-      'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1'
+    const socialUrl = pick(
+      td.canonical_url,
+      `https://intaprd.com/${currentSlug}`,
+    )
+
+    const socialImage = pick(
+      td.social_image_url,
+      currentSlug === 'aycdom'
+        ? 'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1'
+        : 'https://intaprd.com/assets/aycdom/logo/logo-ayc.png?v=aycdom-company-og-v1',
+    )
 
     document.title = socialTitle
 
@@ -365,7 +389,12 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     )
 
     upsertAyCCanonical(socialUrl)
-  }, [contactName, contactTitle])
+  }, [
+    contactName,
+    contactTitle,
+    td.canonical_url,
+    td.social_image_url,
+  ])
 
   const heroImages = useMemo(
     () =>
@@ -430,7 +459,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = 'mario-medina-ayc-dominicana.vcf'
+    anchor.download = vcardFilename
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()

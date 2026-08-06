@@ -195,6 +195,22 @@ ${seoHeadHtml}
       imageWidth: 629,
       imageHeight: 354,
     },
+    aycdom2: {
+      title:
+        'Freddy Fulgencio | Gerente de operaciones de A&C Dominicana',
+      description:
+        'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.',
+      url: 'https://intaprd.com/aycdom2',
+      image:
+        'https://intaprd.com/assets/aycdom/logo/logo-ayc.png?v=aycdom2-og-company-v1',
+      siteName: 'A&C Dominicana, S.R.L.',
+      imageType: 'image/png',
+      imageWidth: 1386,
+      imageHeight: 270,
+      ogType: 'profile',
+      twitterCard: 'summary',
+    },
+
     aycdom: {
       title:
         'Mario Medina | Sales Engineer de A&C Dominicana',
