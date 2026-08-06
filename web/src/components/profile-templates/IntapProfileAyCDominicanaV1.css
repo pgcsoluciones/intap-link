@@ -2151,3 +2151,198 @@ body,
     font-size: 8.5px !important;
   }
 }
+
+
+/* A&C CORPORATE BLUE V9 */
+
+:root {
+  --ayc-blue: #05197A;
+  --ayc-title-blue: #05197A;
+  --ayc-mario-blue: #05197A;
+  --ayc-action-blue: #05197A;
+  --ayc-action-line: #05197A;
+
+  --ayc-blue-hover: #031052;
+  --ayc-title-blue-dark: #031052;
+  --ayc-action-hover: #031052;
+
+  --ayc-blue-active: #020A36;
+  --ayc-action-active: #020A36;
+}
+
+/* Títulos y nombre de Mario */
+
+.ayc-mobile-contact-person strong,
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2,
+.ayc-service-card h3,
+.ayc-project-card h3,
+.ayc-process-grid h3,
+.ayc-faq-list button,
+.ayc-location-section h2,
+.ayc-map-card strong,
+.ayc-service-modal h2 {
+  color: #05197A !important;
+}
+
+/* Botón principal WhatsApp */
+
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:link,
+.ayc-mobile-whatsapp:visited,
+.ayc-mobile-whatsapp:focus {
+  border-color: #05197A !important;
+  color: #ffffff !important;
+  background: #05197A !important;
+  box-shadow: none !important;
+}
+
+.ayc-mobile-whatsapp:active {
+  border-color: #020A36 !important;
+  background: #020A36 !important;
+}
+
+/* Accesos rápidos */
+
+.ayc-quick-actions a,
+.ayc-quick-actions a:link,
+.ayc-quick-actions a:visited,
+.ayc-quick-actions a.is-featured {
+  border-color: #05197A !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+}
+
+.ayc-quick-actions a .ayc-quick-icon,
+.ayc-quick-actions a strong,
+.ayc-quick-actions a.is-featured .ayc-quick-icon,
+.ayc-quick-actions a.is-featured strong {
+  color: #05197A !important;
+}
+
+/* Iconos más visibles */
+
+.ayc-quick-icon {
+  width: 44px !important;
+  height: 44px !important;
+  font-size: 25px !important;
+}
+
+.ayc-quick-icon svg {
+  width: 25px !important;
+  height: 25px !important;
+}
+
+.ayc-quick-actions strong {
+  margin-top: 2px;
+  font-size: 9.5px !important;
+  line-height: 1.2 !important;
+}
+
+/* Guardar contacto */
+
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:focus {
+  border-color: #05197A !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+}
+
+/* Botones internos */
+
+.ayc-about-section .ayc-inline-cta,
+.ayc-project-card a,
+.ayc-map-card a,
+.ayc-final-cta a,
+.ayc-service-card strong,
+.ayc-service-modal > article > a {
+  border-color: #05197A !important;
+  color: #ffffff !important;
+  background: #05197A !important;
+}
+
+/* Numeración del proceso */
+
+.ayc-process-grid article > span {
+  border-color: #05197A !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+}
+
+/* Enlaces sociales del footer */
+
+.ayc-social-row a {
+  color: #ffffff !important;
+  background: #05197A !important;
+}
+
+/* Hover únicamente en dispositivos con mouse */
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-whatsapp:hover,
+  .ayc-quick-actions a:hover,
+  .ayc-quick-actions a:focus-visible,
+  .ayc-mobile-vcard .ayc-primary-wide:hover,
+  .ayc-mobile-vcard .ayc-primary-wide:focus-visible,
+  .ayc-about-section .ayc-inline-cta:hover,
+  .ayc-project-card a:hover,
+  .ayc-map-card a:hover,
+  .ayc-final-cta a:hover,
+  .ayc-service-card:hover strong,
+  .ayc-service-modal > article > a:hover {
+    border-color: #031052 !important;
+    color: #ffffff !important;
+    background: #031052 !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .ayc-quick-actions a:hover .ayc-quick-icon,
+  .ayc-quick-actions a:hover strong,
+  .ayc-quick-actions a:focus-visible .ayc-quick-icon,
+  .ayc-quick-actions a:focus-visible strong {
+    color: #ffffff !important;
+  }
+
+  .ayc-social-row a:hover {
+    background: #031052 !important;
+    transform: translateY(-2px);
+  }
+}
+
+/* Respuesta al tocar en móvil */
+
+.ayc-quick-actions a:active,
+.ayc-mobile-vcard .ayc-primary-wide:active,
+.ayc-about-section .ayc-inline-cta:active,
+.ayc-project-card a:active,
+.ayc-map-card a:active,
+.ayc-final-cta a:active,
+.ayc-service-modal > article > a:active {
+  border-color: #020A36 !important;
+  color: #ffffff !important;
+  background: #020A36 !important;
+  transform: scale(0.97) !important;
+}
+
+.ayc-quick-actions a:active .ayc-quick-icon,
+.ayc-quick-actions a:active strong {
+  color: #ffffff !important;
+}
+
+@media (max-width: 390px) {
+  .ayc-quick-icon {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 23px !important;
+  }
+
+  .ayc-quick-icon svg {
+    width: 23px !important;
+    height: 23px !important;
+  }
+
+  .ayc-quick-actions strong {
+    font-size: 8.5px !important;
+  }
+}
