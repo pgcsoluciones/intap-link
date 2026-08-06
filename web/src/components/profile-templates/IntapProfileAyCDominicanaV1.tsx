@@ -210,6 +210,9 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const facebookUrl = pick(td.facebook_url, 'https://www.facebook.com/aycdominicana/')
 
   const logo = pick(profile.companyLogo, profile.company_logo, td.logo_url, '/assets/aycdom/logo/logo-ayc-principal.png')
+  const contactName = pick(td.contact_name, 'Mario Medina')
+  const contactTitle = pick(td.contact_title, 'Sales Engineer')
+  const mobilePhone = pick(td.mobile_phone, '809-816-3911')
   const heroImages = useMemo(
     () =>
       safeJsonArray<HeroImage>(
@@ -256,10 +259,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     const card = [
       'BEGIN:VCARD',
       'VERSION:3.0',
-      `FN:${escapeVCard(name)}`,
+      `N:${escapeVCard(contactName)};;;;`,
+      `FN:${escapeVCard(contactName)}`,
       `ORG:${escapeVCard(name)}`,
+      `TITLE:${escapeVCard(contactTitle)}`,
       `TEL;TYPE=WORK,VOICE:${cleanPhone(phone)}`,
-      `TEL;TYPE=CELL:${cleanPhone(whatsapp)}`,
+      `TEL;TYPE=CELL:${cleanPhone(mobilePhone)}`,
+      `TEL;TYPE=CELL,WHATSAPP:${cleanPhone(whatsapp)}`,
       `EMAIL;TYPE=WORK:${email}`,
       `URL:${websiteHref}`,
       `ADR;TYPE=WORK:;;${escapeVCard(address)};;;;`,
@@ -270,7 +276,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = 'ayc-dominicana.vcf'
+    anchor.download = 'mario-medina-ayc-dominicana.vcf'
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
@@ -299,19 +305,32 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
   const quickActions = [
     {
+      label: 'WhatsApp',
+      href: waHref,
+      icon: <FaWhatsapp />,
+      featured: true,
+      external: true,
+    },
+    {
       label: 'Llamar',
       href: `tel:${cleanPhone(phone)}`,
       icon: <FaPhoneAlt />,
+      featured: false,
+      external: false,
     },
     {
       label: 'Instagram',
       href: instagramUrl,
       icon: <FaInstagram />,
+      featured: false,
+      external: true,
     },
     {
       label: 'Ubicación',
       href: mapUrl,
       icon: <FaMapMarkerAlt />,
+      featured: false,
+      external: true,
     },
   ]
 
@@ -360,6 +379,11 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           />
         </div>
 
+        <div className="ayc-mobile-contact-person">
+          <strong>{contactName}</strong>
+          <span>{contactTitle}</span>
+        </div>
+
         <section className="ayc-mobile-identity">
           <h1>{heroTitle}</h1>
 
@@ -386,16 +410,9 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             <a
               key={action.label}
               href={action.href}
-              target={
-                action.href.startsWith('http')
-                  ? '_blank'
-                  : undefined
-              }
-              rel={
-                action.href.startsWith('http')
-                  ? 'noreferrer'
-                  : undefined
-              }
+              className={action.featured ? 'is-featured' : undefined}
+              target={action.external ? '_blank' : undefined}
+              rel={action.external ? 'noreferrer' : undefined}
             >
               <span className="ayc-quick-icon">
                 {action.icon}
