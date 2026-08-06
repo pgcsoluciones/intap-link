@@ -3859,3 +3859,141 @@ body,
     font-size: 13.5px !important;
   }
 }
+
+
+/* A&C MICRO REFINEMENTS V22 */
+
+/* Logos de clientes: que al tocar se aprecien mucho más */
+.ayc-client-logo-card {
+  overflow: visible !important;
+}
+
+.ayc-client-logo-card.is-active,
+.ayc-client-logo-card:hover {
+  z-index: 6 !important;
+}
+
+.ayc-client-logo-card.is-active .ayc-client-logo-image,
+.ayc-client-logo-card.is-active img,
+.ayc-client-logo-card:hover .ayc-client-logo-image,
+.ayc-client-logo-card:hover img {
+  transform: scale(1.28) !important;
+  z-index: 7 !important;
+  filter: grayscale(0) !important;
+}
+
+/* Quitar la franja azul o resaltado de WhatsApp / datos corporativos */
+.ayc-corporate-contact-item,
+.ayc-corporate-contact-item:hover,
+.ayc-corporate-contact-item:focus,
+.ayc-corporate-contact-item:focus-visible,
+.ayc-corporate-contact-item:active,
+.ayc-corporate-contact-item.is-whatsapp,
+.ayc-corporate-contact-item.is-whatsapp:hover,
+.ayc-corporate-contact-item.is-whatsapp:focus,
+.ayc-corporate-contact-item.is-whatsapp:focus-visible,
+.ayc-corporate-contact-item.is-whatsapp:active {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ayc-corporate-contact-item a,
+.ayc-corporate-contact-item a:hover,
+.ayc-corporate-contact-item a:focus,
+.ayc-corporate-contact-item a:focus-visible,
+.ayc-corporate-contact-item a:active {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* FAQ: subir fuente de preguntas y respuestas */
+.ayc-faq-section button,
+.ayc-faq-section summary,
+.ayc-faq-section [role="button"],
+.ayc-faq-section [aria-expanded],
+[class*="faq"] button,
+[class*="faq"] summary,
+[class*="faq"] [role="button"],
+[class*="faq"] [aria-expanded] {
+  font-size: 21px !important;
+  line-height: 1.4 !important;
+  font-weight: 700 !important;
+}
+
+.ayc-faq-section p,
+.ayc-faq-section [class*="answer"],
+.ayc-faq-section [class*="content"],
+[class*="faq"] p,
+[class*="faq"] [class*="answer"],
+[class*="faq"] [class*="content"] {
+  font-size: 17px !important;
+  line-height: 1.75 !important;
+}
+
+/* Caja azul de cotización */
+.ayc-quote-section-v21,
+.ayc-quote-section-v21 h2,
+.ayc-quote-section-v21 h3,
+.ayc-quote-section-v21 p,
+.ayc-quote-section-v21 span,
+.ayc-quote-section-v21 strong,
+.ayc-quote-section-v21 small {
+  color: #ffffff !important;
+}
+
+.ayc-quote-button-v21 {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #05197A !important;
+}
+
+.ayc-quote-button-v21 svg,
+.ayc-quote-button-v21 span,
+.ayc-quote-button-v21 strong {
+  color: #05197A !important;
+}
+
+/* Footer final */
+.ayc-footer-v21 small,
+.ayc-footer-location-v21 {
+  display: block !important;
+  color: #8e96a8 !important;
+  font-size: 18px !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+}
+
+@media (max-width: 520px) {
+  .ayc-client-logo-card.is-active .ayc-client-logo-image,
+  .ayc-client-logo-card.is-active img,
+  .ayc-client-logo-card:hover .ayc-client-logo-image,
+  .ayc-client-logo-card:hover img {
+    transform: scale(1.24) !important;
+  }
+
+  .ayc-faq-section button,
+  .ayc-faq-section summary,
+  .ayc-faq-section [role="button"],
+  .ayc-faq-section [aria-expanded],
+  [class*="faq"] button,
+  [class*="faq"] summary,
+  [class*="faq"] [role="button"],
+  [class*="faq"] [aria-expanded] {
+    font-size: 19px !important;
+  }
+
+  .ayc-faq-section p,
+  .ayc-faq-section [class*="answer"],
+  .ayc-faq-section [class*="content"],
+  [class*="faq"] p,
+  [class*="faq"] [class*="answer"],
+  [class*="faq"] [class*="content"] {
+    font-size: 16px !important;
+  }
+
+  .ayc-footer-v21 small,
+  .ayc-footer-location-v21 {
+    font-size: 17px !important;
+  }
+}

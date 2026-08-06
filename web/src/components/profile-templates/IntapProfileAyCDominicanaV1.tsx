@@ -1224,7 +1224,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             <a href={websiteHref} target="_blank" rel="noreferrer" aria-label="Sitio web"><FaGlobe /></a>
           </div>
           <button type="button" onClick={shareProfile}><FaShareAlt /> {shareLabel}</button>
-          <small>Perfil empresarial creado con INTAP LINK</small>
+          <small>Santo Domingo, Rep. Dom.</small>
         </footer>
       </div>
 
