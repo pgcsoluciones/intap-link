@@ -1,25 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import {
-  FaAddressCard,
-  FaArrowRight,
-  FaCheckCircle,
-  FaChevronDown,
-  FaCogs,
-  FaCut,
-  FaFacebookF,
-  FaGlobe,
-  FaIndustry,
-  FaInstagram,
-  FaMapMarkerAlt,
-  FaPhoneAlt,
-  FaProjectDiagram,
-  FaShareAlt,
-  FaTimes,
-  FaTools,
-  FaWhatsapp,
-  FaWrench,
-  FaEnvelope,
-} from 'react-icons/fa'
+import { FaAddressCard, FaArrowRight, FaCheckCircle, FaChevronDown, FaCogs, FaCut, FaFacebookF, FaGlobe, FaIndustry, FaInstagram, FaMapMarkerAlt, FaPhoneAlt, FaProjectDiagram, FaShareAlt, FaTimes, FaTools, FaWhatsapp, FaWrench, FaEnvelope } from 'react-icons/fa'
 import type { IntapProfileV2Profile } from './IntapProfileV2'
 import './IntapProfileAyCDominicanaV1.css'
 
@@ -315,6 +295,8 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     useState<string | null>(null)
   const clientPauseTimeoutRef =
     useRef<number | null>(null)
+  const clientClickLockRef =
+    useRef<string | null>(null)
 
   const clearClientPauseTimeout = () => {
     if (clientPauseTimeoutRef.current !== null) {
@@ -324,15 +306,41 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   }
 
   const pauseClientCarousel = (logoKey: string) => {
+    if (clientClickLockRef.current !== null) {
+      return
+    }
+
     clearClientPauseTimeout()
     setActiveClientLogo(logoKey)
     setIsClientCarouselPaused(true)
   }
 
-  const resumeClientCarouselAfterDelay = () => {
+  const releaseClientHover = () => {
+    if (clientClickLockRef.current !== null) {
+      return
+    }
+
     clearClientPauseTimeout()
+    setActiveClientLogo(null)
+    setIsClientCarouselPaused(false)
+  }
+
+  const toggleClientPauseOnClick = (logoKey: string) => {
+    if (clientClickLockRef.current === logoKey) {
+      clearClientPauseTimeout()
+      clientClickLockRef.current = null
+      setActiveClientLogo(null)
+      setIsClientCarouselPaused(false)
+      return
+    }
+
+    clearClientPauseTimeout()
+    clientClickLockRef.current = logoKey
+    setActiveClientLogo(logoKey)
+    setIsClientCarouselPaused(true)
 
     clientPauseTimeoutRef.current = window.setTimeout(() => {
+      clientClickLockRef.current = null
       setActiveClientLogo(null)
       setIsClientCarouselPaused(false)
       clientPauseTimeoutRef.current = null
@@ -999,16 +1007,10 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                             pauseClientCarousel(clientKey)
                           }
                           onPointerLeave={() =>
-                            resumeClientCarouselAfterDelay()
+                            releaseClientHover()
                           }
-                          onPointerDown={() =>
-                            pauseClientCarousel(clientKey)
-                          }
-                          onPointerUp={() =>
-                            resumeClientCarouselAfterDelay()
-                          }
-                          onPointerCancel={() =>
-                            resumeClientCarouselAfterDelay()
+                          onClick={() =>
+                            toggleClientPauseOnClick(clientKey)
                           }
                         >
                           <AssetImage
@@ -1138,7 +1140,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                   is-web
                 "
               >
-                W
+                <FaGlobe />
               </span>
               <span className="ayc-corporate-contact-itemText">
                 <strong>Web</strong>
@@ -1187,10 +1189,10 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           </div>
         </section>
 
-        <section className="ayc-mobile-section ayc-location-section">
+        <section className="ayc-mobile-section ayc-location-section ayc-location-section-v21">
           <div className="ayc-section-heading">
             <span>Visítenos</span>
-            <h2>Nuestra ubicación</h2>
+            <h2 className="ayc-map-company-v21">Nuestra ubicación</h2>
           </div>
           <div className="ayc-map-card">
             <iframe
@@ -1202,19 +1204,19 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             <div>
               <strong>{name}</strong>
               <p>{address}</p>
-              <a href={mapUrl} target="_blank" rel="noreferrer">Cómo llegar</a>
+              <a href={mapUrl} target="_blank" rel="noreferrer" className="ayc-route-button-v21">Cómo llegar</a>
             </div>
           </div>
         </section>
 
-        <section className="ayc-final-cta">
+        <section className="ayc-final-cta ayc-quote-section-v21">
           <span>Hablemos de su proyecto</span>
           <h2>¿Tiene una necesidad industrial que debemos evaluar?</h2>
           <p>Comparta la pieza, equipo, proceso o mejora que necesita.</p>
-          <a href={waHref} target="_blank" rel="noreferrer"><FaWhatsapp /> Solicitar cotización</a>
+          <a href={waHref} target="_blank" rel="noreferrer" className="ayc-quote-button-v21"><FaWhatsapp /> Solicitar cotización</a>
         </section>
 
-        <footer className="ayc-mobile-footer">
+        <footer className="ayc-mobile-footer ayc-footer-v21">
           <AssetImage src={logo} alt={name} className="ayc-footer-logo" />
           <div className="ayc-social-row">
             <a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram"><FaInstagram /></a>

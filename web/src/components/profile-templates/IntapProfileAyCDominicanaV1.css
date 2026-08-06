@@ -3676,3 +3676,186 @@ body,
     font-size: 14.5px;
   }
 }
+
+
+/* A&C PRECISE REFINEMENTS V21 */
+
+/* Clientes: velocidad V20 y centrado del marco */
+.ayc-clients-track {
+  animation-duration: 48s !important;
+}
+
+.ayc-client-logo-card {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 14px !important;
+  cursor: pointer;
+  text-align: center !important;
+}
+
+.ayc-client-logo-image,
+.ayc-client-logo-card img {
+  position: absolute !important;
+  inset: 14px !important;
+  display: block !important;
+  width: calc(100% - 28px) !important;
+  height: calc(100% - 28px) !important;
+  max-width: calc(100% - 28px) !important;
+  max-height: calc(100% - 28px) !important;
+  margin: auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform-origin: center center !important;
+}
+
+/* Contacto corporativo */
+.ayc-corporate-contact-item {
+  grid-template-columns: 50px 1fr !important;
+  gap: 15px !important;
+}
+
+.ayc-corporate-contact-itemIcon {
+  width: 46px !important;
+  height: 46px !important;
+  color: #05197A !important;
+  background: #eef4ff !important;
+  font-size: 24px !important;
+}
+
+.ayc-corporate-contact-itemIcon.is-whatsapp,
+.ayc-corporate-contact-itemIcon.is-web {
+  color: #05197A !important;
+  background: #eef4ff !important;
+  font-size: 24px !important;
+  font-weight: 400 !important;
+}
+
+.ayc-corporate-contact-itemText strong {
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+}
+
+.ayc-corporate-contact-itemText span {
+  font-size: 17px !important;
+  line-height: 1.5 !important;
+}
+
+/* Ubicación */
+.ayc-location-section-v21 {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.ayc-location-section-v21::before,
+.ayc-location-section-v21::after,
+.ayc-location-section-v21 hr,
+.ayc-location-section-v21 [class*="divider"],
+.ayc-location-section-v21 [class*="accent"],
+.ayc-location-section-v21 [class*="highlight"] {
+  display: none !important;
+}
+
+.ayc-map-company-v21 {
+  font-size: 25px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+}
+
+.ayc-route-button-v21 {
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+}
+
+/* Cotización con azul corporativo */
+.ayc-quote-section-v21 {
+  color: #ffffff !important;
+  background: #05197A !important;
+}
+
+.ayc-quote-section-v21 h2,
+.ayc-quote-section-v21 h3,
+.ayc-quote-section-v21 p {
+  color: #ffffff !important;
+}
+
+.ayc-quote-button-v21 {
+  border-color: #ffffff !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+}
+
+/* Footer: logo, ubicación y marca de agua */
+.ayc-footer-v21 button,
+.ayc-footer-v21 nav,
+.ayc-footer-v21 [class*="actions"],
+.ayc-footer-v21 [class*="social"],
+.ayc-footer-v21 [aria-label="Compartir"],
+.ayc-footer-v21 [aria-label="Sitio web"] {
+  display: none !important;
+}
+
+.ayc-footer-v21 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 11px !important;
+  text-align: center !important;
+}
+
+.ayc-footer-location-v21 {
+  margin: 0 !important;
+  font-size: 19px !important;
+  line-height: 1.3 !important;
+  font-weight: 500 !important;
+}
+
+.ayc-footer-v21 small {
+  display: block !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+}
+
+@media (max-width: 520px) {
+  .ayc-corporate-contact-item {
+    grid-template-columns: 46px 1fr !important;
+  }
+
+  .ayc-corporate-contact-itemIcon {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 23px !important;
+  }
+
+  .ayc-corporate-contact-itemText strong {
+    font-size: 15.5px !important;
+  }
+
+  .ayc-corporate-contact-itemText span {
+    font-size: 16px !important;
+  }
+
+  .ayc-map-company-v21 {
+    font-size: 23px !important;
+  }
+
+  .ayc-route-button-v21,
+  .ayc-quote-button-v21 {
+    font-size: 17px !important;
+  }
+
+  .ayc-footer-location-v21 {
+    font-size: 18px !important;
+  }
+
+  .ayc-footer-v21 small {
+    font-size: 13.5px !important;
+  }
+}
