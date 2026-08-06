@@ -1657,3 +1657,106 @@ body,
   outline: 2px solid rgba(40, 95, 184, 0.42) !important;
   outline-offset: 3px !important;
 }
+
+
+/* A&C TYPOGRAPHY AND WHATSAPP V6 */
+
+:root {
+  --ayc-title-blue: #2864c7;
+  --ayc-title-blue-dark: #1d4f9b;
+  --ayc-body-dark: #465267;
+}
+
+/* WhatsApp completamente neutro en reposo.
+   Evita azul fijo después de tocar o enfocar. */
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:link,
+.ayc-mobile-whatsapp:visited,
+.ayc-mobile-whatsapp:hover,
+.ayc-mobile-whatsapp:focus,
+.ayc-mobile-whatsapp:focus-visible,
+.ayc-mobile-whatsapp:active {
+  border: 1px solid #cfd7e4 !important;
+  outline: none !important;
+  color: #252b35 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Retroalimentación ligera al tocar en móvil,
+   sin dejar el botón azul. */
+.ayc-mobile-whatsapp:active {
+  background: #f1f3f7 !important;
+  transform: scale(0.985) !important;
+}
+
+/* Hover azul solamente cuando existe mouse real. */
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-whatsapp:hover {
+    border-color: var(--ayc-title-blue-dark) !important;
+    color: #ffffff !important;
+    background: var(--ayc-title-blue-dark) !important;
+    transform: translateY(-1px) !important;
+  }
+}
+
+/* Títulos azules, pero sin bold fuerte. */
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2,
+.ayc-service-card h3,
+.ayc-project-card h3,
+.ayc-process-grid h3,
+.ayc-faq-list button,
+.ayc-location-section h2 {
+  color: var(--ayc-title-blue) !important;
+  font-weight: 600 !important;
+}
+
+/* Título Sobre nosotros */
+.ayc-about-heading h2 {
+  font-size: 24px !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.018em !important;
+}
+
+/* Texto Sobre nosotros un poco mayor y más oscuro. */
+.ayc-about-section > p {
+  color: var(--ayc-body-dark) !important;
+  font-size: 15.5px !important;
+  line-height: 1.72 !important;
+  font-weight: 400 !important;
+}
+
+/* Enlace debajo de Sobre nosotros */
+.ayc-about-section .ayc-inline-cta,
+.ayc-about-section .ayc-inline-cta:link,
+.ayc-about-section .ayc-inline-cta:visited,
+.ayc-about-section .ayc-inline-cta:focus {
+  color: var(--ayc-title-blue) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-about-section .ayc-inline-cta:hover {
+    color: var(--ayc-title-blue-dark) !important;
+  }
+}
+
+@media (max-width: 370px) {
+  .ayc-about-section > p {
+    font-size: 15px !important;
+  }
+
+  .ayc-about-heading h2 {
+    font-size: 23px !important;
+  }
+}
