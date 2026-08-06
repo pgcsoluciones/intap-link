@@ -3224,3 +3224,303 @@ body,
     min-width: 0 !important;
   }
 }
+
+
+/* A&C SERVICE COPY + CLIENTS V19 */
+
+/* Etiqueta roja Servicio industrial */
+.ayc-featured-service-body > span {
+  display: block !important;
+  color: #ed3237 !important;
+  font-size: 11.5px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+}
+
+.ayc-services-modal-body > span {
+  display: block !important;
+  color: #ed3237 !important;
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+}
+
+.ayc-service-detail-body > span {
+  display: block !important;
+  color: #ed3237 !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+}
+
+.ayc-featured-service-body > span + h3 {
+  margin-top: 11px !important;
+}
+
+.ayc-services-modal-body > span + h3 {
+  margin-top: 13px !important;
+}
+
+.ayc-service-detail-body > span + h3 {
+  margin-top: 12px !important;
+}
+
+/* Nuestros clientes */
+.ayc-clients-belt-section {
+  overflow: hidden;
+  padding: 36px 0 18px;
+}
+
+.ayc-clients-heading {
+  padding: 0 14px;
+}
+
+.ayc-clients-heading > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #ed3237;
+  font-size: 21px;
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.ayc-clients-heading h2 {
+  margin: 0;
+  color: #05197A;
+  font-size: 29px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ayc-clients-heading p {
+  margin: 13px 0 0;
+  color: #5c6879;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.ayc-clients-belt {
+  position: relative;
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px 0;
+  border-top:
+    1px solid rgba(5, 25, 122, 0.18);
+  border-bottom:
+    1px solid rgba(5, 25, 122, 0.18);
+  background: #ffffff;
+}
+
+.ayc-clients-belt::before,
+.ayc-clients-belt::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 46px;
+  pointer-events: none;
+}
+
+.ayc-clients-belt::before {
+  left: 0;
+  background:
+    linear-gradient(
+      to right,
+      #ffffff,
+      rgba(255, 255, 255, 0)
+    );
+}
+
+.ayc-clients-belt::after {
+  right: 0;
+  background:
+    linear-gradient(
+      to left,
+      #ffffff,
+      rgba(255, 255, 255, 0)
+    );
+}
+
+.ayc-clients-track {
+  display: flex;
+  width: max-content;
+  gap: 14px;
+  animation:
+    aycClientsInfiniteScroll
+    24s
+    linear
+    infinite;
+  will-change: transform;
+}
+
+.ayc-clients-belt.is-paused
+.ayc-clients-track {
+  animation-play-state: paused;
+}
+
+.ayc-clients-group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+}
+
+.ayc-client-logo-card {
+  display: grid;
+  flex: none;
+  width: 142px;
+  height: 92px;
+  padding: 12px;
+  overflow: hidden;
+  border:
+    1px solid rgba(5, 25, 122, 0.12);
+  border-radius: 16px;
+  place-items: center;
+  background: #ffffff;
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.ayc-client-logo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter:
+    grayscale(1)
+    saturate(0)
+    contrast(0.92)
+    opacity(0.78);
+  transform: scale(1);
+  transition:
+    filter 220ms ease,
+    transform 220ms ease,
+    opacity 220ms ease;
+}
+
+.ayc-client-logo-card.is-active {
+  z-index: 3;
+  border-color:
+    rgba(5, 25, 122, 0.38);
+  box-shadow:
+    0 12px 26px
+    rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+}
+
+.ayc-client-logo-card.is-active
+.ayc-client-logo-image {
+  filter:
+    grayscale(0)
+    saturate(1)
+    contrast(1)
+    opacity(1);
+  transform: scale(1.08);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-client-logo-card:hover {
+    z-index: 3;
+    border-color:
+      rgba(5, 25, 122, 0.38);
+    box-shadow:
+      0 12px 26px
+      rgba(15, 23, 42, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .ayc-client-logo-card:hover
+  .ayc-client-logo-image {
+    filter:
+      grayscale(0)
+      saturate(1)
+      contrast(1)
+      opacity(1);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes aycClientsInfiniteScroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform:
+      translateX(
+        calc(-50% - 7px)
+      );
+  }
+}
+
+@media (max-width: 520px) {
+  .ayc-featured-service-body > span {
+    font-size: 10.5px !important;
+  }
+
+  .ayc-services-modal-body > span {
+    font-size: 11.5px !important;
+  }
+
+  .ayc-service-detail-body > span {
+    font-size: 12px !important;
+  }
+
+  .ayc-clients-heading > span {
+    font-size: 18px;
+  }
+
+  .ayc-clients-heading h2 {
+    font-size: 25px;
+  }
+
+  .ayc-clients-heading p {
+    font-size: 14px;
+  }
+
+  .ayc-client-logo-card {
+    width: 126px;
+    height: 84px;
+    padding: 10px;
+  }
+
+  .ayc-clients-track,
+  .ayc-clients-group {
+    gap: 10px;
+  }
+
+  @keyframes aycClientsInfiniteScroll {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform:
+        translateX(
+          calc(-50% - 5px)
+        );
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ayc-clients-track {
+    animation-play-state: paused;
+  }
+
+  .ayc-client-logo-card,
+  .ayc-client-logo-image {
+    transition: none;
+  }
+}

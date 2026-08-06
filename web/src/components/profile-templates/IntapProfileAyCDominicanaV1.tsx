@@ -309,6 +309,10 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     useState(false)
   const [activeServiceIndex, setActiveServiceIndex] =
     useState<number | null>(null)
+  const [isClientCarouselPaused, setIsClientCarouselPaused] =
+    useState(false)
+  const [activeClientLogo, setActiveClientLogo] =
+    useState<string | null>(null)
 
   const brandLogos = [
     '/assets/aycdom/marcas/marcas-1.png',
@@ -428,6 +432,40 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
   const featuredServices: AycServiceGroup[] =
     serviceGroups.slice(0, 4)
+
+  const clientLogos = [
+    { src: "/assets/aycdom/clients/110-1101390_transparent-kappa-logo-png-smurfit-kappa-png-download.png", alt: "110 1101390 Transparent Kappa Logo Png Smurfit Kappa Png Download" },
+    { src: "/assets/aycdom/clients/1388167873-5218398797_09600a512b_z.jpeg", alt: "1388167873 5218398797 09600A512B Z" },
+    { src: "/assets/aycdom/clients/1630423547180.jpeg", alt: "1630423547180" },
+    { src: "/assets/aycdom/clients/2560px-Baxter.svg.png", alt: "2560Px Baxter.Svg" },
+    { src: "/assets/aycdom/clients/4-LOGO-CONVATEC-CLINICA.png", alt: "4 Logo Convatec Clinica" },
+    { src: "/assets/aycdom/clients/Barrick_logo_Gold_Corporation.png", alt: "Barrick Logo Gold Corporation" },
+    { src: "/assets/aycdom/clients/Cardinal_Health_Logo.png", alt: "Cardinal Health Logo" },
+    { src: "/assets/aycdom/clients/GERDAU-METALDOM_Logo.jpeg", alt: "Gerdau Metaldom Logo" },
+    { src: "/assets/aycdom/clients/Gildan_logo.png", alt: "Gildan Logo" },
+    { src: "/assets/aycdom/clients/Grupo Mercasid.jpeg", alt: "Grupo Mercasid" },
+    { src: "/assets/aycdom/clients/Grupo-Mallen-Logo.jpeg", alt: "Grupo Mallen Logo" },
+    { src: "/assets/aycdom/clients/Induban.jpeg", alt: "Induban" },
+    { src: "/assets/aycdom/clients/Induveca-Logo.jpeg", alt: "Induveca Logo" },
+    { src: "/assets/aycdom/clients/Johnson-Johnson-Logo.jpeg", alt: "Johnson Johnson Logo" },
+    { src: "/assets/aycdom/clients/Logo-Grupo-Bocel.jpeg", alt: "Logo Grupo Bocel" },
+    { src: "/assets/aycdom/clients/Logo_Actual_de_EGE_Haina.png", alt: "Logo Actual De Ege Haina" },
+    { src: "/assets/aycdom/clients/Punta-Catalina.png", alt: "Punta Catalina" },
+    { src: "/assets/aycdom/clients/Sued-1-400x400.jpeg", alt: "Sued 1 400X400" },
+    { src: "/assets/aycdom/clients/aes-dominicana.jpeg", alt: "Aes Dominicana" },
+    { src: "/assets/aycdom/clients/agrifeedrd-logo.jpeg", alt: "Agrifeedrd Logo" },
+    { src: "/assets/aycdom/clients/cff16bc10f37112b0769d2e8bf378283.jpeg", alt: "Cff16Bc10F37112B0769D2E8Bf378283" },
+    { src: "/assets/aycdom/clients/domicem.png", alt: "Domicem" },
+    { src: "/assets/aycdom/clients/general_cigars.jpeg", alt: "General Cigars" },
+    { src: "/assets/aycdom/clients/logo coral.jpeg", alt: "Logo Coral" },
+    { src: "/assets/aycdom/clients/logo-1.png", alt: "Logo 1" },
+    { src: "/assets/aycdom/clients/logo-crystal-300-x-300.png", alt: "Logo Crystal 300 X 300" },
+    { src: "/assets/aycdom/clients/logo.png", alt: "Logo" },
+    { src: "/assets/aycdom/clients/logoRetina.png", alt: "Logoretina" },
+    { src: "/assets/aycdom/clients/logo_ci.png", alt: "Logo Ci" },
+    { src: "/assets/aycdom/clients/maxresdefault.jpeg", alt: "Maxresdefault" },
+    { src: "/assets/aycdom/clients/quienes.png", alt: "Quienes" },
+  ]
 
   const quickActions = [
     {
@@ -640,8 +678,10 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             </h2>
 
             <p>
-              Conoce cuatro de nuestras soluciones
-              principales o explora el portafolio completo.
+              Descubre soluciones industriales diseñadas
+              para optimizar procesos, resolver necesidades
+              técnicas y llevar cada proyecto desde la idea
+              hasta una ejecución eficiente y precisa.
             </p>
           </div>
 
@@ -881,6 +921,90 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             </section>
           </div>
         ) : null}
+
+        <section
+          className="ayc-clients-belt-section"
+          aria-labelledby="ayc-clients-title"
+        >
+          <div className="ayc-clients-heading">
+            <span>Nuestros clientes</span>
+
+            <h2 id="ayc-clients-title">
+              Empresas que confían en nuestro trabajo
+            </h2>
+
+            <p>
+              Relaciones construidas con experiencia,
+              capacidad técnica y soluciones que responden
+              a las necesidades reales de cada operación.
+            </p>
+          </div>
+
+          <div
+            className={`ayc-clients-belt ${
+              isClientCarouselPaused
+                ? 'is-paused'
+                : ''
+            }`}
+          >
+            <div className="ayc-clients-track">
+              {[0, 1].map((groupIndex) => (
+                <div
+                  key={`clients-group-${groupIndex}`}
+                  className="ayc-clients-group"
+                  aria-hidden={groupIndex === 1}
+                >
+                  {clientLogos.map(
+                    (client, clientIndex) => {
+                      const clientKey =
+                        `${groupIndex}-${clientIndex}`
+
+                      const isActive =
+                        activeClientLogo === clientKey
+
+                      return (
+                        <div
+                          key={clientKey}
+                          className={`ayc-client-logo-card ${
+                            isActive
+                              ? 'is-active'
+                              : ''
+                          }`}
+                          onPointerEnter={() => {
+                            setActiveClientLogo(clientKey)
+                            setIsClientCarouselPaused(true)
+                          }}
+                          onPointerLeave={() => {
+                            setActiveClientLogo(null)
+                            setIsClientCarouselPaused(false)
+                          }}
+                          onPointerDown={() => {
+                            setActiveClientLogo(clientKey)
+                            setIsClientCarouselPaused(true)
+                          }}
+                          onPointerUp={() => {
+                            setActiveClientLogo(null)
+                            setIsClientCarouselPaused(false)
+                          }}
+                          onPointerCancel={() => {
+                            setActiveClientLogo(null)
+                            setIsClientCarouselPaused(false)
+                          }}
+                        >
+                          <AssetImage
+                            src={client.src}
+                            alt={client.alt}
+                            className="ayc-client-logo-image"
+                          />
+                        </div>
+                      )
+                    }
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
 <section className="ayc-mobile-section ayc-services-section" aria-hidden="true">
           <div className="ayc-section-heading">
