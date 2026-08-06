@@ -121,6 +121,41 @@ function pick(...values: Array<string | undefined | null>) {
   return ''
 }
 
+function upsertAyCMeta(
+  selector: string,
+  attribute: 'name' | 'property',
+  key: string,
+  value: string,
+) {
+  let element =
+    document.head.querySelector<HTMLMetaElement>(
+      selector,
+    )
+
+  if (!element) {
+    element = document.createElement('meta')
+    element.setAttribute(attribute, key)
+    document.head.appendChild(element)
+  }
+
+  element.content = value
+}
+
+function upsertAyCCanonical(value: string) {
+  let canonical =
+    document.head.querySelector<HTMLLinkElement>(
+      'link[rel="canonical"]',
+    )
+
+  if (!canonical) {
+    canonical = document.createElement('link')
+    canonical.rel = 'canonical'
+    document.head.appendChild(canonical)
+  }
+
+  canonical.href = value
+}
+
 function cleanPhone(value: string) {
   return value.replace(/\D/g, '')
 }
@@ -194,6 +229,144 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const contactName = pick(td.contact_name, 'Mario Medina')
   const contactTitle = pick(td.contact_title, 'Sales Engineer')
   const mobilePhone = pick(td.mobile_phone, '809-816-3911')
+
+  useEffect(() => {
+    const socialTitle =
+      `${contactName} | ${contactTitle} de A&C Dominicana`
+
+    const socialDescription =
+      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.'
+
+    const socialUrl =
+      'https://intaprd.com/aycdom'
+
+    const socialImage =
+      'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1'
+
+    document.title = socialTitle
+
+    upsertAyCMeta(
+      'meta[name="description"]',
+      'name',
+      'description',
+      socialDescription,
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:type"]',
+      'property',
+      'og:type',
+      'profile',
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:site_name"]',
+      'property',
+      'og:site_name',
+      'A&C Dominicana, S.R.L.',
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:title"]',
+      'property',
+      'og:title',
+      socialTitle,
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:description"]',
+      'property',
+      'og:description',
+      socialDescription,
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:url"]',
+      'property',
+      'og:url',
+      socialUrl,
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:image"]',
+      'property',
+      'og:image',
+      socialImage,
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:image:secure_url"]',
+      'property',
+      'og:image:secure_url',
+      socialImage,
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:image:type"]',
+      'property',
+      'og:image:type',
+      'image/png',
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:image:width"]',
+      'property',
+      'og:image:width',
+      '676',
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:image:height"]',
+      'property',
+      'og:image:height',
+      '675',
+    )
+
+    upsertAyCMeta(
+      'meta[property="og:image:alt"]',
+      'property',
+      'og:image:alt',
+      socialTitle,
+    )
+
+    upsertAyCMeta(
+      'meta[name="twitter:card"]',
+      'name',
+      'twitter:card',
+      'summary',
+    )
+
+    upsertAyCMeta(
+      'meta[name="twitter:title"]',
+      'name',
+      'twitter:title',
+      socialTitle,
+    )
+
+    upsertAyCMeta(
+      'meta[name="twitter:description"]',
+      'name',
+      'twitter:description',
+      socialDescription,
+    )
+
+    upsertAyCMeta(
+      'meta[name="twitter:image"]',
+      'name',
+      'twitter:image',
+      socialImage,
+    )
+
+    upsertAyCMeta(
+      'meta[name="twitter:image:alt"]',
+      'name',
+      'twitter:image:alt',
+      socialTitle,
+    )
+
+    upsertAyCCanonical(socialUrl)
+  }, [contactName, contactTitle])
+
   const heroImages = useMemo(
     () =>
       safeJsonArray<HeroImage>(

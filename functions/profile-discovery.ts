@@ -942,6 +942,100 @@ export const STATIC_PROFILE_DISCOVERY: Record<
     lastUpdated: '2026-07-24',
   },
 
+  aycdom: {
+    slug: 'aycdom',
+    title:
+      'Mario Medina | Sales Engineer de A&C Dominicana',
+    name: 'A&C Dominicana, S.R.L.',
+    alternateName: [
+      'A&C Dominicana',
+      'A y C Dominicana',
+      'Mario Medina A&C Dominicana',
+    ],
+    description:
+      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.',
+    longDescription:
+      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución. Podemos atender desde una pieza puntual hasta una línea de proceso completa.',
+    url: `${BASE_URL}/aycdom`,
+    image:
+      `${BASE_URL}/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1`,
+    imageType: 'image/png',
+    imageWidth: 676,
+    imageHeight: 675,
+    siteName: 'A&C Dominicana, S.R.L.',
+    schemaType: 'ProfessionalService',
+    telephones: [
+      '+18098163911',
+      '+18094767325',
+    ],
+    email: 'mario.medina@aycdominicana.com',
+    address: {
+      streetAddress:
+        'C/ Juan José Duarte #73, entre Mauricio Báez y Paraguay, Ensanche La Fe',
+      addressLocality: 'Santo Domingo',
+      addressRegion: 'Distrito Nacional',
+      addressCountry: 'DO',
+    },
+    sameAs: [
+      'https://www.instagram.com/aycdominicana/',
+      'https://www.facebook.com/aycdominicana/',
+    ],
+    services: [
+      {
+        name: 'Metalmecánica y mecanizados',
+        description:
+          'Fabricación y reparación de piezas industriales mediante procesos convencionales y CNC.',
+      },
+      {
+        name: 'Corte láser CNC',
+        description:
+          'Corte de precisión para planchas, tubos, piezas y componentes industriales.',
+      },
+      {
+        name: 'Automatización industrial',
+        description:
+          'Integración de controles y equipos para mejorar productividad, seguridad y continuidad operativa.',
+      },
+      {
+        name: 'Conveyors y transporte',
+        description:
+          'Sistemas de transporte adaptados al espacio, producto y flujo de cada industria.',
+      },
+      {
+        name: 'Máquinas y equipos a medida',
+        description:
+          'Soluciones especiales para procesos que requieren equipos personalizados.',
+      },
+      {
+        name: 'Soldaduras especializadas',
+        description:
+          'Fabricación y reparación en materiales y aplicaciones de exigencia industrial.',
+      },
+    ],
+    areaServed: [
+      'Santo Domingo',
+      'República Dominicana',
+    ],
+    keywords: [
+      'A&C Dominicana',
+      'Mario Medina',
+      'Sales Engineer',
+      'metalmecánica',
+      'mecanizados CNC',
+      'corte láser CNC',
+      'automatización industrial',
+      'conveyors',
+      'equipos industriales',
+      'soldadura especializada',
+      'soluciones industriales',
+    ],
+    person: {
+      name: 'Mario Medina',
+      jobTitle: 'Sales Engineer',
+    },
+    lastUpdated: '2026-08-06',
+  },
+
   biopestsgrd: {
     slug: 'biopestsgrd',
     title:

@@ -47,6 +47,8 @@ export async function onRequest(context: {
     imageType: string;
     imageWidth: number;
     imageHeight: number;
+    ogType?: string;
+    twitterCard?: string;
     seoHeadHtml?: string;
     semanticFallbackHtml?: string;
   }): string => {
@@ -58,6 +60,12 @@ export async function onRequest(context: {
     const imageType = escapeHtml(metadata.imageType);
     const imageWidth = String(metadata.imageWidth);
     const imageHeight = String(metadata.imageHeight);
+    const ogType = escapeHtml(
+      metadata.ogType || 'website'
+    );
+    const twitterCard = escapeHtml(
+      metadata.twitterCard || 'summary_large_image'
+    );
     const seoHeadHtml = metadata.seoHeadHtml || '';
     const semanticFallbackHtml =
       metadata.semanticFallbackHtml || '';
@@ -67,7 +75,7 @@ export async function onRequest(context: {
   <title>${title}</title>
   <link rel="canonical" href="${pageUrl}" />
   <meta name="description" content="${description}" />
-  <meta property="og:type" content="website" />
+  <meta property="og:type" content="${ogType}" />
   <meta property="og:site_name" content="${siteName}" />
   <meta property="og:title" content="${title}" />
   <meta property="og:description" content="${description}" />
@@ -78,10 +86,11 @@ export async function onRequest(context: {
   <meta property="og:image:width" content="${imageWidth}" />
   <meta property="og:image:height" content="${imageHeight}" />
   <meta property="og:image:alt" content="${title}" />
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:card" content="${twitterCard}" />
   <meta name="twitter:title" content="${title}" />
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${imageUrl}" />
+  <meta name="twitter:image:alt" content="${title}" />
 ${seoHeadHtml}
 `;
 
@@ -146,6 +155,8 @@ ${seoHeadHtml}
     imageType: string;
     imageWidth: number;
     imageHeight: number;
+    ogType?: string;
+    twitterCard?: string;
   }> = {
     novi: {
       title: 'NoviHome -Noldys Vicente-',
@@ -184,6 +195,22 @@ ${seoHeadHtml}
       imageWidth: 629,
       imageHeight: 354,
     },
+    aycdom: {
+      title:
+        'Mario Medina | Sales Engineer de A&C Dominicana',
+      description:
+        'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.',
+      url: 'https://intaprd.com/aycdom',
+      image:
+        'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1',
+      siteName: 'A&C Dominicana, S.R.L.',
+      imageType: 'image/png',
+      imageWidth: 676,
+      imageHeight: 675,
+      ogType: 'profile',
+      twitterCard: 'summary',
+    },
+
     '1aeventos': {
       title: '1A Eventos | Gabriel Reyes Bello',
       description:
