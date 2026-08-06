@@ -2419,8 +2419,7 @@ body,
   }
 }
 
-
-/* A&C INFINITE BRAND CAROUSEL V11 */
+/* A&C CONTINUOUS BRAND CAROUSEL V12 */
 
 .ayc-brand-belt {
   position: relative;
@@ -2428,62 +2427,74 @@ body,
   overflow: hidden !important;
 }
 
-/* La pista contiene dos grupos idénticos */
+/*
+ * La pista permanece fija.
+ * Los dos grupos idénticos se desplazan al mismo tiempo.
+ */
 .ayc-brand-belt-track {
   display: flex !important;
-  align-items: center;
+  align-items: center !important;
   gap: 0 !important;
   width: max-content !important;
   max-width: none !important;
   padding: 6px 0 !important;
   overflow: visible !important;
   scroll-snap-type: none !important;
-  animation: ayc-brand-infinite-loop 28s linear infinite;
+  animation: none !important;
+  transform: none !important;
+}
+
+/*
+ * Cada grupo ocupa exactamente su propio ancho.
+ * Cuando avanza -100%, el segundo queda en la posición
+ * exacta que ocupaba el primero.
+ */
+.ayc-brand-belt-group {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 8px 0 0 !important;
+  animation: ayc-brand-group-loop 12s linear infinite;
   will-change: transform;
   backface-visibility: hidden;
   transform: translate3d(0, 0, 0);
 }
 
-.ayc-brand-belt-group {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 12px;
-  padding-right: 6px;
-  padding-left: 6px;
-}
-
 .ayc-brand-belt-item {
-  flex-shrink: 0;
+  flex: 0 0 156px !important;
+  width: 156px !important;
+  height: 88px !important;
+  margin: 0 !important;
 }
 
-/* Recorre exactamente la longitud del primer grupo */
-@keyframes ayc-brand-infinite-loop {
+.ayc-brand-belt-logo {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+@keyframes ayc-brand-group-loop {
   from {
     transform: translate3d(0, 0, 0);
   }
 
   to {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(-100%, 0, 0);
   }
 }
 
-/* Movimiento un poco más dinámico en móvil */
 @media (max-width: 420px) {
-  .ayc-brand-belt-track {
-    animation-duration: 24s;
-  }
-
   .ayc-brand-belt-group {
-    gap: 10px;
-    padding-right: 5px;
-    padding-left: 5px;
+    gap: 7px !important;
+    padding-right: 7px !important;
+    animation-duration: 12s !important;
   }
-}
 
-/* Accesibilidad para personas que reducen animaciones */
-@media (prefers-reduced-motion: reduce) {
-  .ayc-brand-belt-track {
-    animation-duration: 70s;
+  .ayc-brand-belt-item {
+    flex-basis: 148px !important;
+    width: 148px !important;
+    height: 84px !important;
   }
 }

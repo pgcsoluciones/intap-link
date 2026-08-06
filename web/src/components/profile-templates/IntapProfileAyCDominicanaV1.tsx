@@ -464,11 +464,14 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                   key={`primary-${logoSrc}`}
                   className="ayc-brand-belt-item"
                 >
-                  <AssetImage
+                  <img
                     src={logoSrc}
                     alt={`Marca representada ${index + 1}`}
                     className="ayc-brand-belt-logo"
-                  />
+                  loading="eager"
+                  decoding="async"
+                  draggable={false}
+                />
                 </div>
               ))}
             </div>
@@ -482,11 +485,14 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                   key={`duplicate-${logoSrc}`}
                   className="ayc-brand-belt-item"
                 >
-                  <AssetImage
+                  <img
                     src={logoSrc}
                     alt=""
                     className="ayc-brand-belt-logo"
-                  />
+                  loading="eager"
+                  decoding="async"
+                  draggable={false}
+                />
                 </div>
               ))}
             </div>
