@@ -958,10 +958,10 @@ export const STATIC_PROFILE_DISCOVERY: Record<
       'A&C Dominicana integra diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución. Puede atender desde una pieza puntual hasta una línea de proceso completa.',
     url: `${BASE_URL}/aycdom2`,
     image:
-      `${BASE_URL}/assets/aycdom/logo/logo-ayc.png?v=aycdom2-og-company-v1`,
+      `${BASE_URL}/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1`,
     imageType: 'image/png',
-    imageWidth: 1386,
-    imageHeight: 270,
+    imageWidth: 676,
+    imageHeight: 675,
     siteName: 'A&C Dominicana, S.R.L.',
     schemaType: 'ProfessionalService',
     telephones: [

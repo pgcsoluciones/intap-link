@@ -264,7 +264,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       td.social_image_url,
       currentSlug === 'aycdom'
         ? 'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1'
-        : 'https://intaprd.com/assets/aycdom/logo/logo-ayc.png?v=aycdom-company-og-v1',
+        : 'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1',
     )
 
     document.title = socialTitle
