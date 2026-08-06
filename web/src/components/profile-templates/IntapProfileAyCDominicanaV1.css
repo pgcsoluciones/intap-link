@@ -1974,3 +1974,180 @@ body,
     font-size: 14px;
   }
 }
+
+
+/* A&C LOGO + MARIO + ABOUT V8 */
+
+:root {
+  --ayc-mario-blue: #285fbe;
+  --ayc-action-blue: #2864c7;
+  --ayc-action-hover: #184b96;
+  --ayc-action-active: #10366f;
+  --ayc-action-line: #3974d2;
+}
+
+/* Logo un poco más limpio con el nuevo archivo */
+.ayc-mobile-brand-logo {
+  padding: 26px 18px 10px;
+}
+
+.ayc-mobile-brand-logo .ayc-mobile-logo {
+  width: min(380px, 96%);
+  max-height: 120px;
+  object-fit: contain;
+}
+
+/* Mario Medina */
+.ayc-mobile-contact-person {
+  padding: 0 24px 8px;
+  text-align: center;
+}
+
+.ayc-mobile-contact-person strong {
+  display: block;
+  color: var(--ayc-mario-blue) !important;
+  font-size: 31px !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+}
+
+.ayc-mobile-contact-person span {
+  display: block;
+  margin-top: 6px;
+  color: #5f6b80;
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+/* Accesos rápidos: 4 acciones sin WhatsApp pequeño */
+.ayc-quick-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-right: 18px !important;
+  margin-left: 18px !important;
+}
+
+.ayc-quick-actions a,
+.ayc-quick-actions a:link,
+.ayc-quick-actions a:visited,
+.ayc-quick-actions a.is-featured {
+  min-height: 82px !important;
+  border: 1px solid var(--ayc-action-line) !important;
+  color: var(--ayc-action-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.ayc-quick-actions a .ayc-quick-icon,
+.ayc-quick-actions a strong,
+.ayc-quick-actions a.is-featured .ayc-quick-icon,
+.ayc-quick-actions a.is-featured strong {
+  color: inherit !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-quick-actions a:hover,
+  .ayc-quick-actions a:focus-visible {
+    border-color: var(--ayc-action-hover) !important;
+    color: #ffffff !important;
+    background: var(--ayc-action-hover) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .ayc-quick-actions a:hover .ayc-quick-icon,
+  .ayc-quick-actions a:hover strong,
+  .ayc-quick-actions a:focus-visible .ayc-quick-icon,
+  .ayc-quick-actions a:focus-visible strong {
+    color: #ffffff !important;
+  }
+}
+
+.ayc-quick-actions a:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.97) !important;
+}
+
+.ayc-quick-actions a:active .ayc-quick-icon,
+.ayc-quick-actions a:active strong {
+  color: #ffffff !important;
+}
+
+/* Guardar contacto delineado azul */
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:focus {
+  border: 1px solid var(--ayc-action-line) !important;
+  color: var(--ayc-action-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-vcard .ayc-primary-wide:hover,
+  .ayc-mobile-vcard .ayc-primary-wide:focus-visible {
+    border-color: var(--ayc-action-hover) !important;
+    color: #ffffff !important;
+    background: var(--ayc-action-hover) !important;
+  }
+}
+
+.ayc-mobile-vcard .ayc-primary-wide:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.985) !important;
+}
+
+/* Sobre nosotros: texto justificado */
+.ayc-about-section {
+  text-align: left !important;
+}
+
+.ayc-about-heading {
+  text-align: center !important;
+}
+
+.ayc-about-section > p {
+  text-align: justify !important;
+  text-justify: inter-word;
+  hyphens: auto;
+}
+
+/* Asegurar que no quede botón debajo */
+.ayc-about-section .ayc-inline-cta {
+  display: none !important;
+}
+
+/* Título principal debajo de Mario */
+.ayc-mobile-identity h1 {
+  margin-top: 6px;
+}
+
+@media (max-width: 420px) {
+  .ayc-mobile-contact-person strong {
+    font-size: 28px !important;
+  }
+
+  .ayc-mobile-contact-person span {
+    font-size: 15px;
+  }
+
+  .ayc-quick-actions {
+    margin-right: 12px !important;
+    margin-left: 12px !important;
+    gap: 6px !important;
+  }
+
+  .ayc-quick-actions a {
+    min-height: 76px !important;
+  }
+
+  .ayc-quick-actions strong {
+    font-size: 8.5px !important;
+  }
+}

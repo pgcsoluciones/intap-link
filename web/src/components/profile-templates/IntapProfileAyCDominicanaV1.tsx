@@ -18,6 +18,7 @@ import {
   FaTools,
   FaWhatsapp,
   FaWrench,
+  FaEnvelope,
 } from 'react-icons/fa'
 import type { IntapProfileV2Profile } from './IntapProfileV2'
 import './IntapProfileAyCDominicanaV1.css'
@@ -209,7 +210,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const instagramUrl = pick(td.instagram_url, 'https://www.instagram.com/aycdominicana/')
   const facebookUrl = pick(td.facebook_url, 'https://www.facebook.com/aycdominicana/')
 
-  const logo = pick(profile.companyLogo, profile.company_logo, td.logo_url, '/assets/aycdom/logo/logo-ayc-principal.png')
+  const logo = pick(profile.companyLogo, profile.company_logo, td.logo_url, '/assets/aycdom/logo/logo-ayc.png')
   const contactName = pick(td.contact_name, 'Mario Medina')
   const contactTitle = pick(td.contact_title, 'Sales Engineer')
   const mobilePhone = pick(td.mobile_phone, '809-816-3911')
@@ -305,13 +306,6 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
   const quickActions = [
     {
-      label: 'WhatsApp',
-      href: waHref,
-      icon: <FaWhatsapp />,
-      featured: true,
-      external: true,
-    },
-    {
       label: 'Llamar',
       href: `tel:${cleanPhone(phone)}`,
       icon: <FaPhoneAlt />,
@@ -324,6 +318,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       icon: <FaInstagram />,
       featured: false,
       external: true,
+    },
+    {
+      label: 'Correo',
+      href: `mailto:${email}`,
+      icon: <FaEnvelope />,
+      featured: false,
+      external: false,
     },
     {
       label: 'Ubicación',
@@ -440,15 +441,6 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
           <p>{about}</p>
 
-          <a
-            href={waHref}
-            target="_blank"
-            rel="noreferrer"
-            className="ayc-inline-cta"
-          >
-            Cuéntenos sobre su proyecto
-            <FaArrowRight />
-          </a>
         </section>
 
         <section className="ayc-mobile-section ayc-services-section" id="soluciones">
