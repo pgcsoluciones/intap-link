@@ -2346,3 +2346,75 @@ body,
     font-size: 8.5px !important;
   }
 }
+
+
+/* A&C BRAND BELT V10 FIXED */
+
+.ayc-brand-belt {
+  width: 100%;
+  margin: 26px 0 8px;
+  padding: 14px 0;
+  border-top: 2px solid #ed1c24;
+  border-bottom: 2px solid #ed1c24;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.ayc-brand-belt-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ayc-brand-belt-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ayc-brand-belt-item {
+  display: flex;
+  flex: 0 0 164px;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  padding: 11px 13px;
+  border: 1px solid #e2e5e9;
+  border-radius: 17px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.04);
+  scroll-snap-align: start;
+}
+
+.ayc-brand-belt-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 420px) {
+  .ayc-brand-belt {
+    margin-top: 23px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .ayc-brand-belt-track {
+    gap: 10px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .ayc-brand-belt-item {
+    flex-basis: 154px;
+    height: 86px;
+    padding: 10px 12px;
+    border-radius: 15px;
+  }
+}

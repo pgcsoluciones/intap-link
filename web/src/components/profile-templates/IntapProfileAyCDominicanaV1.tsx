@@ -304,6 +304,17 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     }
   }
 
+  const brandLogos = [
+    '/assets/aycdom/marcas/marcas-1.png',
+    '/assets/aycdom/marcas/marcas-2.png',
+    '/assets/aycdom/marcas/marcas-3.png',
+    '/assets/aycdom/marcas/marcas-4.png',
+    '/assets/aycdom/marcas/marcas-5.png',
+    '/assets/aycdom/marcas/marcas-6.png',
+    '/assets/aycdom/marcas/marcas-7.png',
+    '/assets/aycdom/marcas/marcas-8.png',
+  ]
+
   const quickActions = [
     {
       label: 'Llamar',
@@ -441,6 +452,26 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
           <p>{about}</p>
 
+        </section>
+
+        <section
+          className="ayc-brand-belt"
+          aria-label="Marcas representadas por A&C Dominicana"
+        >
+          <div className="ayc-brand-belt-track">
+            {brandLogos.map((logoSrc, index) => (
+              <div
+                key={logoSrc}
+                className="ayc-brand-belt-item"
+              >
+                <AssetImage
+                  src={logoSrc}
+                  alt={`Marca representada ${index + 1}`}
+                  className="ayc-brand-belt-logo"
+                />
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="ayc-mobile-section ayc-services-section" id="soluciones">
