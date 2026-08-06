@@ -453,26 +453,46 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           <p>{about}</p>
 
         </section>
-
         <section
           className="ayc-brand-belt"
           aria-label="Marcas representadas por A&C Dominicana"
         >
           <div className="ayc-brand-belt-track">
-            {brandLogos.map((logoSrc, index) => (
-              <div
-                key={logoSrc}
-                className="ayc-brand-belt-item"
-              >
-                <AssetImage
-                  src={logoSrc}
-                  alt={`Marca representada ${index + 1}`}
-                  className="ayc-brand-belt-logo"
-                />
-              </div>
-            ))}
+            <div className="ayc-brand-belt-group">
+              {brandLogos.map((logoSrc, index) => (
+                <div
+                  key={`primary-${logoSrc}`}
+                  className="ayc-brand-belt-item"
+                >
+                  <AssetImage
+                    src={logoSrc}
+                    alt={`Marca representada ${index + 1}`}
+                    className="ayc-brand-belt-logo"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="ayc-brand-belt-group"
+              aria-hidden="true"
+            >
+              {brandLogos.map((logoSrc) => (
+                <div
+                  key={`duplicate-${logoSrc}`}
+                  className="ayc-brand-belt-item"
+                >
+                  <AssetImage
+                    src={logoSrc}
+                    alt=""
+                    className="ayc-brand-belt-logo"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
+
 
         <section className="ayc-mobile-section ayc-services-section" id="soluciones">
           <div className="ayc-section-heading">

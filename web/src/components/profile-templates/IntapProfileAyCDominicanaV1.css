@@ -2418,3 +2418,72 @@ body,
     border-radius: 15px;
   }
 }
+
+
+/* A&C INFINITE BRAND CAROUSEL V11 */
+
+.ayc-brand-belt {
+  position: relative;
+  width: 100%;
+  overflow: hidden !important;
+}
+
+/* La pista contiene dos grupos idénticos */
+.ayc-brand-belt-track {
+  display: flex !important;
+  align-items: center;
+  gap: 0 !important;
+  width: max-content !important;
+  max-width: none !important;
+  padding: 6px 0 !important;
+  overflow: visible !important;
+  scroll-snap-type: none !important;
+  animation: ayc-brand-infinite-loop 28s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+.ayc-brand-belt-group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  padding-right: 6px;
+  padding-left: 6px;
+}
+
+.ayc-brand-belt-item {
+  flex-shrink: 0;
+}
+
+/* Recorre exactamente la longitud del primer grupo */
+@keyframes ayc-brand-infinite-loop {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Movimiento un poco más dinámico en móvil */
+@media (max-width: 420px) {
+  .ayc-brand-belt-track {
+    animation-duration: 24s;
+  }
+
+  .ayc-brand-belt-group {
+    gap: 10px;
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+}
+
+/* Accesibilidad para personas que reducen animaciones */
+@media (prefers-reduced-motion: reduce) {
+  .ayc-brand-belt-track {
+    animation-duration: 70s;
+  }
+}
