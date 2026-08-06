@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   FaAddressCard,
   FaArrowRight,
@@ -313,6 +313,31 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     useState(false)
   const [activeClientLogo, setActiveClientLogo] =
     useState<string | null>(null)
+  const clientPauseTimeoutRef =
+    useRef<number | null>(null)
+
+  const clearClientPauseTimeout = () => {
+    if (clientPauseTimeoutRef.current !== null) {
+      window.clearTimeout(clientPauseTimeoutRef.current)
+      clientPauseTimeoutRef.current = null
+    }
+  }
+
+  const pauseClientCarousel = (logoKey: string) => {
+    clearClientPauseTimeout()
+    setActiveClientLogo(logoKey)
+    setIsClientCarouselPaused(true)
+  }
+
+  const resumeClientCarouselAfterDelay = () => {
+    clearClientPauseTimeout()
+
+    clientPauseTimeoutRef.current = window.setTimeout(() => {
+      setActiveClientLogo(null)
+      setIsClientCarouselPaused(false)
+      clientPauseTimeoutRef.current = null
+    }, 10000)
+  }
 
   const brandLogos = [
     '/assets/aycdom/marcas/marcas-1.png',
@@ -970,26 +995,21 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                               ? 'is-active'
                               : ''
                           }`}
-                          onPointerEnter={() => {
-                            setActiveClientLogo(clientKey)
-                            setIsClientCarouselPaused(true)
-                          }}
-                          onPointerLeave={() => {
-                            setActiveClientLogo(null)
-                            setIsClientCarouselPaused(false)
-                          }}
-                          onPointerDown={() => {
-                            setActiveClientLogo(clientKey)
-                            setIsClientCarouselPaused(true)
-                          }}
-                          onPointerUp={() => {
-                            setActiveClientLogo(null)
-                            setIsClientCarouselPaused(false)
-                          }}
-                          onPointerCancel={() => {
-                            setActiveClientLogo(null)
-                            setIsClientCarouselPaused(false)
-                          }}
+                          onPointerEnter={() =>
+                            pauseClientCarousel(clientKey)
+                          }
+                          onPointerLeave={() =>
+                            resumeClientCarouselAfterDelay()
+                          }
+                          onPointerDown={() =>
+                            pauseClientCarousel(clientKey)
+                          }
+                          onPointerUp={() =>
+                            resumeClientCarouselAfterDelay()
+                          }
+                          onPointerCancel={() =>
+                            resumeClientCarouselAfterDelay()
+                          }
                         >
                           <AssetImage
                             src={client.src}
@@ -1028,50 +1048,125 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           <p className="ayc-scroll-hint">Deslice para explorar las soluciones</p>
         </section>
 
-        <section className="ayc-mobile-section ayc-process-section">
-          <div className="ayc-section-heading">
-            <span>Cómo trabajamos</span>
-            <h2>De la necesidad a la solución</h2>
+
+
+
+
+                <section
+          className="ayc-corporate-contact-section"
+          aria-labelledby="ayc-corporate-contact-title"
+        >
+          <div className="ayc-corporate-contact-banner">
+            ¡Conecta con A&C Dominicana!
           </div>
-          <div className="ayc-process-grid">
-            {[
-              ['01', 'Evaluamos', 'Conocemos el proceso, la pieza o el equipo.'],
-              ['02', 'Diseñamos', 'Preparamos la propuesta técnica y el modelado.'],
-              ['03', 'Fabricamos', 'Producimos, integramos y realizamos los ajustes.'],
-              ['04', 'Probamos', 'Verificamos el funcionamiento antes de entregar.'],
-            ].map(([number, title, text]) => (
-              <article key={number}>
-                <span>{number}</span>
-                <div>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </div>
-              </article>
-            ))}
+
+          <p className="ayc-corporate-contact-intro">
+            Llámanos, escríbenos o síguenos en nuestras redes:
+          </p>
+
+          <div className="ayc-corporate-contact-list">
+            <a
+              className="ayc-corporate-contact-item"
+              href="tel:+18094767325"
+            >
+              <span className="ayc-corporate-contact-itemIcon">
+                <FaPhoneAlt />
+              </span>
+              <span className="ayc-corporate-contact-itemText">
+                <strong>Teléfono</strong>
+                <span>(809) 476-7325</span>
+              </span>
+            </a>
+
+            <a
+              className="ayc-corporate-contact-item"
+              href="https://wa.me/18098163911"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span
+                className="
+                  ayc-corporate-contact-itemIcon
+                  is-whatsapp
+                "
+              >
+                <FaWhatsapp />
+              </span>
+              <span className="ayc-corporate-contact-itemText">
+                <strong>WhatsApp</strong>
+                <span>(809) 816-3911</span>
+              </span>
+            </a>
+
+            <a
+              className="ayc-corporate-contact-item"
+              href="mailto:mario.medina@aycdominicana.com"
+            >
+              <span className="ayc-corporate-contact-itemIcon">
+                <FaEnvelope />
+              </span>
+              <span className="ayc-corporate-contact-itemText">
+                <strong>Correo corporativo</strong>
+                <span>mario.medina@aycdominicana.com</span>
+              </span>
+            </a>
+
+            <a
+              className="ayc-corporate-contact-item"
+              href="https://instagram.com/aycdominicana"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span className="ayc-corporate-contact-itemIcon">
+                <FaInstagram />
+              </span>
+              <span className="ayc-corporate-contact-itemText">
+                <strong>Instagram</strong>
+                <span>@aycdominicana</span>
+              </span>
+            </a>
+
+            <a
+              className="ayc-corporate-contact-item"
+              href="https://www.aycdominicana.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span
+                className="
+                  ayc-corporate-contact-itemIcon
+                  is-web
+                "
+              >
+                W
+              </span>
+              <span className="ayc-corporate-contact-itemText">
+                <strong>Web</strong>
+                <span>www.aycdominicana.com</span>
+              </span>
+            </a>
+
+            <a
+              className="ayc-corporate-contact-item"
+              href="https://www.google.com/maps/search/?api=1&query=A%26C+Dominicana+C%2F+Juan+Jos%C3%A9+Duarte+73+Ensanche+La+Fe+Santo+Domingo"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span className="ayc-corporate-contact-itemIcon">
+                <FaMapMarkerAlt />
+              </span>
+              <span className="ayc-corporate-contact-itemText">
+                <strong>Ubicación</strong>
+                <span>
+                  C/ Juan José Duarte #73, entre Mauricio Báez y Paraguay,
+                  Ensanche La Fe, Santo Domingo, Rep. Dom.
+                </span>
+              </span>
+            </a>
           </div>
         </section>
 
-        <section className="ayc-mobile-section ayc-projects-section">
-          <div className="ayc-section-heading">
-            <span>Experiencia aplicada</span>
-            <h2>Trabajos destacados</h2>
-          </div>
-          <div className="ayc-project-scroller">
-            {projects.map((project) => (
-              <article key={`${project.category}-${project.title}`} className="ayc-project-card">
-                <AssetImage src={project.image} alt={project.title} className="ayc-project-image" />
-                <div>
-                  <span>{project.category}</span>
-                  <h3>{project.title}</h3>
-                  <p>{project.description}</p>
-                  <a href={waHref} target="_blank" rel="noreferrer">Solicitar algo similar <FaArrowRight /></a>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="ayc-mobile-section ayc-faq-section">
+<section className="ayc-mobile-section ayc-faq-section">
           <div className="ayc-section-heading">
             <span>Información útil</span>
             <h2>Preguntas frecuentes</h2>

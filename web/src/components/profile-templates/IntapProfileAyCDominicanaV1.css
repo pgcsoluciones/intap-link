@@ -3524,3 +3524,155 @@ body,
     transition: none;
   }
 }
+
+
+/* A&C CLIENTS + CORPORATE CONTACT V20 */
+
+/* Clientes */
+.ayc-clients-heading h2 {
+  font-weight: 500 !important;
+}
+
+.ayc-clients-heading p {
+  font-size: 15.5px !important;
+  line-height: 1.72 !important;
+}
+
+.ayc-clients-track {
+  animation-duration: 48s !important;
+}
+
+.ayc-client-logo-card {
+  align-items: center !important;
+  justify-items: center !important;
+  place-items: center !important;
+}
+
+.ayc-client-logo-image {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  margin: 0 auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+
+.ayc-client-logo-card.is-active .ayc-client-logo-image {
+  transform: scale(1.08) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-client-logo-card:hover .ayc-client-logo-image {
+    transform: scale(1.08) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .ayc-clients-heading p {
+    font-size: 15px !important;
+  }
+
+  .ayc-clients-track {
+    animation-duration: 48s !important;
+  }
+}
+
+/* Contacto corporativo */
+.ayc-corporate-contact-section {
+  padding: 34px 14px 16px;
+}
+
+.ayc-corporate-contact-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #ed3237;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ayc-corporate-contact-intro {
+  margin: 14px 0 0;
+  color: #2d3645;
+  font-size: 16px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.ayc-corporate-contact-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.ayc-corporate-contact-item {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+  align-items: center;
+  text-decoration: none;
+}
+
+.ayc-corporate-contact-itemIcon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  place-items: center;
+  color: #05197A;
+  background: #eef4ff;
+  font-size: 18px;
+}
+
+.ayc-corporate-contact-itemIcon.is-whatsapp {
+  color: #ffffff;
+  background: #25d366;
+}
+
+.ayc-corporate-contact-itemIcon.is-web {
+  color: #ffffff;
+  background: #05197A;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.ayc-corporate-contact-itemText {
+  display: grid;
+  gap: 2px;
+}
+
+.ayc-corporate-contact-itemText strong {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.ayc-corporate-contact-itemText span {
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .ayc-corporate-contact-banner {
+    font-size: 17px;
+  }
+
+  .ayc-corporate-contact-intro {
+    font-size: 15px;
+  }
+
+  .ayc-corporate-contact-itemText span {
+    font-size: 14.5px;
+  }
+}
