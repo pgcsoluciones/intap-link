@@ -11,7 +11,7 @@ class FakeStatement {
   bind(...params) { this.params = params; return this }
   first() { return Promise.resolve(this.db.first(this.sql, this.params)) }
   all() { return Promise.resolve({ results: [] }) }
-  run() { return Promise.resolve({ meta: { changes: 1 } }) }
+  run() { return Promise.resolve(this.db.run(this.sql, this.params)) }
 }
 
 class FakeDB {
@@ -59,14 +59,21 @@ class FakeDB {
   pending() {
     return this.intentStatus === 'active' && !this.intentExpired && !this.intentRevoked && this.codeStatus === 'active' && !this.codeExpired && this.artifactStatus === 'available' && this.ownerUserId == null
   }
-  batch() {
-    if (!this.pending()) return [{ meta: { changes: 0 } }, { meta: { changes: 0 } }, { meta: { changes: 0 } }]
-    this.artifactStatus = 'activated'
-    this.codeStatus = 'used'
-    this.intentStatus = 'consumed'
-    this.ownerUserId = this.sessionUserId
-    return [{ meta: { changes: 1 } }, { meta: { changes: 1 } }, { meta: { changes: 1 } }]
+  run(sql) {
+    if (sql.includes('INSERT INTO artifact_activation_intents')) {
+      return { meta: { changes: this.pending() ? 1 : 0 } }
+    }
+    if (sql.includes('INSERT INTO artifact_activation_claims')) {
+      if (!this.pending()) throw new Error('activation claim precondition failed')
+      this.artifactStatus = 'activated'
+      this.codeStatus = 'used'
+      this.intentStatus = 'consumed'
+      this.ownerUserId = this.sessionUserId
+      return { meta: { changes: 1 } }
+    }
+    return { meta: { changes: 1 } }
   }
+
 }
 
 const db = new FakeDB()
@@ -87,6 +94,7 @@ async function request(path, init = {}) {
 
 const repoRoot = new URL('../..', import.meta.url).pathname
 const apiSource = fs.readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8')
+const cookieSource = fs.readFileSync(new URL('../src/lib/cookies.ts', import.meta.url), 'utf8')
 const activationUi = fs.readFileSync(new URL('../../app/src/components/admin/ArtifactActivation.tsx', import.meta.url), 'utf8')
 const authCallbackUi = fs.readFileSync(new URL('../../app/src/components/admin/AuthCallback.tsx', import.meta.url), 'utf8')
 const adminLoginUi = fs.readFileSync(new URL('../../app/src/components/admin/AdminLogin.tsx', import.meta.url), 'utf8')
@@ -94,15 +102,18 @@ const adminLoginUi = fs.readFileSync(new URL('../../app/src/components/admin/Adm
 assert.match(apiSource, /artifact_activation_intents/)
 assert.match(apiSource, /const intentToken = generateToken\(32\)/)
 assert.match(apiSource, /const intentHash = await sha256Hex\(intentToken\)/)
-assert.match(apiSource, /HttpOnly; Secure; SameSite=Lax; Path=\//)
-assert.match(apiSource, /Domain=\.intaprd\.com/)
+assert.match(cookieSource, /HttpOnly; Secure; SameSite=Lax; Path=/)
+assert.match(apiSource, /artifact_activation_claims/)
+assert.match(apiSource, /const claimAt = new Date\(\)/)
+assert.doesNotMatch(apiSource.slice(apiSource.indexOf("me.post('/artifacts/activate'"), apiSource.indexOf("me.patch('/artifacts/:id/profile'")), /DB\.batch|meta\.changes/)
+assert.match(cookieSource, /intap_preview_activation_intent/)
+assert.match(cookieSource, /isPreviewEnvironment/)
 assert.match(apiSource, /const resumeActivation = await hasPendingActivationIntent\(c\)/)
 assert.match(apiSource, /headers\.set\('Location', `\$\{appUrl\}\$\{resumeActivation \? '\/admin\/artifacts\/activate' : '\/admin'\}`\)/)
 assert.match(apiSource, /i\.status = 'active'/)
 assert.match(apiSource, /i\.revoked_at IS NULL/)
 assert.match(apiSource, /i\.expires_at > datetime\('now'\)/)
 assert.match(apiSource, /a\.owner_user_id IS NULL/)
-assert.match(apiSource, /intentChanged !== 1/)
 assert.doesNotMatch(apiSource.slice(apiSource.indexOf("me.post('/artifacts/activate'"), apiSource.indexOf("me.patch('/artifacts/:id/profile'")), /activation_code\b|activationCode/)
 const googleStart = apiSource.slice(apiSource.indexOf("app.get('/api/v1/auth/google/start'"), apiSource.indexOf("app.get('/api/v1/auth/google/callback'"))
 const magicStart = apiSource.slice(apiSource.indexOf("app.post('/api/v1/auth/magic-link/start'"), apiSource.indexOf("app.get('/api/v1/auth/magic-link/verify'"))
@@ -119,11 +130,12 @@ let response = await request('/api/v1/public/artifacts/activation/inspect', {
 let json = await response.json()
 assert.equal(response.status, 200)
 assert.equal(json.data.public_code, publicCode)
-assert.match(response.headers.get('set-cookie') || '', /intap_activation_intent=.*HttpOnly.*Max-Age=900/)
+assert.match(response.headers.get('set-cookie') || '', /intap_preview_activation_intent=.*HttpOnly.*Max-Age=900/)
+assert.doesNotMatch(response.headers.get('set-cookie') || '', /Domain=\.intaprd\.com/)
 assert.doesNotMatch(JSON.stringify(json), /activation_code|activation_code_hash/)
 
 response = await request('/api/v1/me/artifacts/activation/intent', {
-  headers: { Cookie: `session_id=test-session; intap_activation_intent=${intentCookie}` },
+  headers: { Cookie: `intap_preview_session_id=test-session; intap_preview_activation_intent=${intentCookie}` },
 })
 assert.equal(response.status, 200)
 
@@ -131,7 +143,7 @@ assert.equal(response.status, 200)
 // conditional updates to return zero; no artifact/code/intent state changes.
 db.codeStatus = 'revoked'
 response = await request('/api/v1/me/artifacts/activate', {
-  method: 'POST', headers: { Cookie: `session_id=test-session; intap_activation_intent=${intentCookie}` }, body: '{}',
+  method: 'POST', headers: { Cookie: `intap_preview_session_id=test-session; intap_preview_activation_intent=${intentCookie}` }, body: '{}',
 })
 assert.equal(response.status, 409)
 assert.equal(db.artifactStatus, 'available')
@@ -140,7 +152,7 @@ assert.equal(db.intentStatus, 'active')
 db.reset()
 db.intentExpired = true
 response = await request('/api/v1/me/artifacts/activate', {
-  method: 'POST', headers: { Cookie: `session_id=test-session; intap_activation_intent=${intentCookie}` }, body: '{}',
+  method: 'POST', headers: { Cookie: `intap_preview_session_id=test-session; intap_preview_activation_intent=${intentCookie}` }, body: '{}',
 })
 assert.equal(response.status, 409)
 assert.equal(db.artifactStatus, 'available')
@@ -149,29 +161,15 @@ assert.equal(db.codeStatus, 'active')
 db.reset()
 db.codeExpired = true
 response = await request('/api/v1/me/artifacts/activate', {
-  method: 'POST', headers: { Cookie: `session_id=test-session; intap_activation_intent=${intentCookie}` }, body: '{}',
+  method: 'POST', headers: { Cookie: `intap_preview_session_id=test-session; intap_preview_activation_intent=${intentCookie}` }, body: '{}',
 })
 assert.equal(response.status, 409)
 assert.equal(db.artifactStatus, 'available')
 assert.equal(db.intentStatus, 'active')
 
-// A D1 batch that reports a partial result is a failed claim. D1's atomic
-// batch contract leaves the three rows unchanged in this simulation.
-db.reset()
-const originalBatch = db.batch.bind(db)
-db.batch = () => [{ meta: { changes: 1 } }, { meta: { changes: 0 } }, { meta: { changes: 0 } }]
-response = await request('/api/v1/me/artifacts/activate', {
-  method: 'POST', headers: { Cookie: `session_id=test-session; intap_activation_intent=${intentCookie}` }, body: '{}',
-})
-assert.equal(response.status, 409)
-assert.equal(db.artifactStatus, 'available')
-assert.equal(db.codeStatus, 'active')
-assert.equal(db.intentStatus, 'active')
-db.batch = originalBatch
-
 db.reset()
 response = await request('/api/v1/me/artifacts/activate', {
-  method: 'POST', headers: { Cookie: `session_id=test-session; intap_activation_intent=${intentCookie}` }, body: '{}',
+  method: 'POST', headers: { Cookie: `intap_preview_session_id=test-session; intap_preview_activation_intent=${intentCookie}` }, body: '{}',
 })
 json = await response.json()
 assert.equal(response.status, 201)
@@ -183,7 +181,7 @@ assert.equal(json.data.public_code, publicCode)
 // A consumed intent and a second claimant cannot be reused.
 db.sessionUserId = 'user-2'
 response = await request('/api/v1/me/artifacts/activate', {
-  method: 'POST', headers: { Cookie: `session_id=other-session; intap_activation_intent=${intentCookie}` }, body: '{}',
+  method: 'POST', headers: { Cookie: `intap_preview_session_id=other-session; intap_preview_activation_intent=${intentCookie}` }, body: '{}',
 })
 assert.equal(response.status, 409)
 assert.equal(db.ownerUserId, 'user-1')
@@ -191,7 +189,7 @@ assert.equal(db.artifactStatus, 'activated')
 
 db.profileId = 'profile-1'
 response = await request('/api/v1/me/artifacts/artifact-1/profile', {
-  method: 'PATCH', headers: { Cookie: 'session_id=test-session' }, body: JSON.stringify({ profile_id: 'profile-1' }),
+  method: 'PATCH', headers: { Cookie: 'intap_preview_session_id=test-session' }, body: JSON.stringify({ profile_id: 'profile-1' }),
 })
 assert.equal(response.status, 200)
 response = await request(`/api/v1/public/artifacts/${publicCode}/resolve`)

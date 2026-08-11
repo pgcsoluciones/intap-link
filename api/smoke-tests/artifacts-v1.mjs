@@ -22,7 +22,7 @@ class FakeStatement {
   bind(...params) { this.params = params; return this }
   first() { return Promise.resolve(this.db.first(this.sql, this.params)) }
   all() { return Promise.resolve(this.db.all(this.sql, this.params)) }
-  run() { return Promise.resolve({ meta: { changes: 1 } }) }
+  run() { return Promise.resolve(this.db.run(this.sql, this.params)) }
 }
 
 class FakeDB {
@@ -32,6 +32,7 @@ class FakeDB {
     this.intentStatus = 'active'
     this.intentExpired = false
     this.intentRevoked = false
+    this.ownerUserId = null
     this.profileId = null
     this.profileSlug = 'juanperez'
   }
@@ -71,13 +72,23 @@ class FakeDB {
     }
     return { results: [] }
   }
-  batch() {
-    if (this.artifactStatus !== 'available' || this.codeStatus !== 'active' || this.intentStatus !== 'active' || this.intentExpired || this.intentRevoked) return [{ meta: { changes: 0 } }, { meta: { changes: 0 } }, { meta: { changes: 0 } }]
-    this.artifactStatus = 'activated'
-    this.codeStatus = 'used'
-    this.intentStatus = 'consumed'
-    return [{ meta: { changes: 1 } }, { meta: { changes: 1 } }, { meta: { changes: 1 } }]
+  run(sql) {
+    if (sql.includes('INSERT INTO artifact_activation_intents')) {
+      return { meta: { changes: this.artifactStatus === 'available' && this.codeStatus === 'active' ? 1 : 0 } }
+    }
+    if (sql.includes('INSERT INTO artifact_activation_claims')) {
+      if (this.artifactStatus !== 'available' || this.codeStatus !== 'active' || this.intentStatus !== 'active' || this.intentExpired || this.intentRevoked) {
+        throw new Error('activation claim precondition failed')
+      }
+      this.artifactStatus = 'activated'
+      this.codeStatus = 'used'
+      this.intentStatus = 'consumed'
+      this.ownerUserId = 'user-1'
+      return { meta: { changes: 1 } }
+    }
+    return { meta: { changes: 1 } }
   }
+
 }
 
 const db = new FakeDB()
@@ -109,17 +120,17 @@ assert.equal(json.ok, true)
 assert.equal(json.data.public_code, publicCode)
 assert.equal(JSON.stringify(json).includes('activation_code_hash'), false)
 
-response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'session_id=test-session; intap_activation_intent=opaque-intent' }, body: JSON.stringify({}) })
+response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'intap_preview_session_id=test-session; intap_preview_activation_intent=opaque-intent' }, body: JSON.stringify({}) })
 json = await response.json()
 assert.equal(response.status, 201)
 assert.equal(json.data.status, 'activated')
 assert.equal(json.data.public_code, publicCode)
 
-response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'session_id=other-session; intap_activation_intent=opaque-intent' }, body: JSON.stringify({}) })
+response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'intap_preview_session_id=other-session; intap_preview_activation_intent=opaque-intent' }, body: JSON.stringify({}) })
 assert.equal(response.status, 409)
 
 db.profileId = 'profile-1'
-response = await request(`/api/v1/me/artifacts/artifact-1/profile`, { method: 'PATCH', headers: { Cookie: 'session_id=test-session' }, body: JSON.stringify({ profile_id: 'profile-1' }) })
+response = await request(`/api/v1/me/artifacts/artifact-1/profile`, { method: 'PATCH', headers: { Cookie: 'intap_preview_session_id=test-session' }, body: JSON.stringify({ profile_id: 'profile-1' }) })
 assert.equal(response.status, 200)
 
 response = await request(`/api/v1/public/artifacts/${publicCode}/resolve`)

@@ -3,13 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2024-02-08"
 workers_dev = true
 
-# Preview API aislado mediante workers.dev.
-# Custom Domain Preview se habilitará en una fase posterior.
+# El workers.dev queda como endpoint técnico/diagnóstico.
+# El navegador del panel Preview usará app.preview.intaprd.com/api/* cuando
+# exista el route/custom domain; no se cambia DNS en B2B.2.
 
 [vars]
 ENVIRONMENT = "preview"
 WORKER_NAME = "intap-api-preview"
-APP_URL = "https://preview.intaprd.com"
+APP_URL = "https://app.preview.intaprd.com"
 API_URL = "https://intap-api-preview.fliaprince.workers.dev"
 WEB_URL = "https://preview.intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"

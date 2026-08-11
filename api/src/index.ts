@@ -6,6 +6,7 @@ import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
+import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
 import {
   ARTIFACT_PRODUCT_TYPES,
   generateHumanCode,
@@ -114,15 +115,15 @@ function parseCookie(header: string, name: string): string | null {
   return match2 ? decodeURIComponent(match2[1]) : null
 }
 
-function buildSessionCookie(value: string, appUrl: string, maxAge: number): string {
-  let cookie = `session_id=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
-  try {
-    const u = new URL(appUrl)
-    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com')) {
-      cookie += '; Domain=.intaprd.com'
-    }
-  } catch { /* appUrl inválida — no agregar Domain */ }
-  return cookie
+function buildSessionCookie(value: string, c: any, maxAge: number): string {
+  return buildScopedCookie(c.env, configuredAppUrl(c), cookieNames(c.env).session, value, maxAge)
+}
+
+function configuredAppUrl(c: any): string {
+  const fallback = isPreviewEnvironment(c.env)
+    ? 'https://app.preview.intaprd.com'
+    : 'https://app.intaprd.com'
+  return String(c.env.APP_URL || fallback).replace(/\/$/, '')
 }
 
 // ─── Middlewares ──────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ function buildSessionCookie(value: string, appUrl: string, maxAge: number): stri
 const requireAdmin = async (c: any, next: any) => {
   // 1) Validar que hay sesión activa
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, cookieNames(c.env).session)
   if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
   const sessionHash = await sha256Hex(rawSession)
@@ -163,7 +164,7 @@ const requireAdmin = async (c: any, next: any) => {
 
 const requireAuth = async (c: any, next: any) => {
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, cookieNames(c.env).session)
   if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
   const sessionHash = await sha256Hex(rawSession)
@@ -185,30 +186,18 @@ const requireAuth = async (c: any, next: any) => {
     .catch(() => { })
 }
 
-const ACTIVATION_INTENT_COOKIE = 'intap_activation_intent'
 const ACTIVATION_INTENT_MAX_AGE = 15 * 60
 
-function buildActivationIntentCookie(value: string, appUrl: string, maxAge: number): string {
-  let cookie = `${ACTIVATION_INTENT_COOKIE}=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
-  try {
-    const u = new URL(appUrl)
-    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com')) {
-      cookie += '; Domain=.intaprd.com'
-    }
-  } catch { /* appUrl inválida — no agregar Domain */ }
-  return cookie
+function buildActivationIntentCookie(value: string, c: any, maxAge: number): string {
+  return buildScopedCookie(c.env, configuredAppUrl(c), cookieNames(c.env).activationIntent, value, maxAge)
 }
 
-function clearActivationIntentCookie(appUrl: string): string {
-  return buildActivationIntentCookie('', appUrl, 0)
-}
-
-function activationIntentAppUrl(c: any): string {
-  return String(c.env.APP_URL || 'https://app.intaprd.com')
+function clearActivationIntentCookie(c: any): string {
+  return buildActivationIntentCookie('', c, 0)
 }
 
 async function hasPendingActivationIntent(c: any): Promise<boolean> {
-  const rawIntent = parseCookie(c.req.header('Cookie') || '', ACTIVATION_INTENT_COOKIE)
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).activationIntent)
   if (!rawIntent) return false
   const intentHash = await sha256Hex(rawIntent)
   const row = await c.env.DB.prepare(
@@ -267,11 +256,9 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+10 minutes'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), email, tokenHash, ip, ua).run()
 
-  // El callback de autenticación SIEMPRE debe apuntar a app.intaprd.com.
-  // Usamos APP_URL solo si apunta al subdominio correcto; en caso contrario
-  // caemos al valor seguro para evitar que el token llegue al dominio principal.
-  const rawAppUrl = String((c.env as any).APP_URL || '')
-  const appUrl = rawAppUrl.startsWith('https://app.') ? rawAppUrl : 'https://app.intaprd.com'
+  // El callback se construye desde APP_URL server-side: producción usa
+  // app.intaprd.com y Preview usa app.preview.intaprd.com.
+  const appUrl = configuredAppUrl(c)
   const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
   const resendKey = (c.env as any).RESEND_API_KEY
   const resendFrom = (c.env as any).RESEND_FROM
@@ -326,8 +313,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), (user as any).id, sessionHash, reqIp, reqUa).run()
 
-  const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
-  const cookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
+  const cookie = buildSessionCookie(sessionRaw, c, 30 * 24 * 60 * 60)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
 })
@@ -356,7 +342,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
   headers.set('Location', `https://accounts.google.com/o/oauth2/v2/auth?${params}`)
   headers.set(
     'Set-Cookie',
-    `oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`,
+    buildScopedCookie(c.env, configuredAppUrl(c), cookieNames(c.env).oauthState, state, 600, '/api/v1/auth/google'),
   )
   return new Response(null, { status: 302, headers })
 })
@@ -366,14 +352,14 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const state = c.req.query('state') || ''
   const oauthError = c.req.query('error') || ''
 
-  const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
+  const appUrl = configuredAppUrl(c)
 
   if (oauthError || !code)
     return c.redirect(`${appUrl}/admin/login?error=oauth_denied`)
 
   // Validar state anti-CSRF
   const cookieHeader = c.req.header('Cookie') || ''
-  const savedState = parseCookie(cookieHeader, 'oauth_state')
+  const savedState = parseCookie(cookieHeader, cookieNames(c.env).oauthState)
   if (!savedState || savedState !== state)
     return c.redirect(`${appUrl}/admin/login?error=oauth_state`)
 
@@ -438,8 +424,8 @@ app.get('/api/v1/auth/google/callback', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), userId, sessionHash, reqIp, reqUa).run()
 
-  const sessionCookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
-  const clearState = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
+  const sessionCookie = buildSessionCookie(sessionRaw, c, 30 * 24 * 60 * 60)
+  const clearState = buildScopedCookie(c.env, appUrl, cookieNames(c.env).oauthState, '', 0, '/api/v1/auth/google')
 
   const headers = new Headers()
   const resumeActivation = await hasPendingActivationIntent(c)
@@ -453,7 +439,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
 app.post('/api/v1/auth/logout', async (c) => {
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, cookieNames(c.env).session)
 
   if (rawSession) {
     const sessionHash = await sha256Hex(rawSession)
@@ -462,13 +448,8 @@ app.post('/api/v1/auth/logout', async (c) => {
     ).bind(sessionHash).run()
   }
 
-  const appUrlLogout = (c.env as any).APP_URL || 'https://app.intaprd.com'
-  let clearCookie = `session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
-  try {
-    const u = new URL(appUrlLogout)
-    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com'))
-      clearCookie += '; Domain=.intaprd.com'
-  } catch { /* no agregar Domain */ }
+  const appUrlLogout = configuredAppUrl(c)
+  const clearCookie = buildScopedCookie(c.env, appUrlLogout, cookieNames(c.env).session, '', 0)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': clearCookie })
 })
@@ -568,7 +549,7 @@ app.post('/api/v1/public/artifacts/activation/inspect', async (c) => {
       status: 'available',
     },
   }, 200, {
-    'Set-Cookie': buildActivationIntentCookie(intentToken, activationIntentAppUrl(c), ACTIVATION_INTENT_MAX_AGE),
+    'Set-Cookie': buildActivationIntentCookie(intentToken, c, ACTIVATION_INTENT_MAX_AGE),
   })
 })
 
@@ -786,7 +767,7 @@ me.get('/artifacts', async (c) => {
 })
 
 me.get('/artifacts/activation/intent', async (c) => {
-  const rawIntent = parseCookie(c.req.header('Cookie') || '', ACTIVATION_INTENT_COOKIE)
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).activationIntent)
   if (!rawIntent) return c.json({ ok: false, error: 'No hay una activación pendiente.' }, 404)
 
   const intentHash = await sha256Hex(rawIntent)
@@ -808,7 +789,7 @@ me.get('/artifacts/activation/intent', async (c) => {
 
   if (!row) {
     return c.json({ ok: false, error: 'La activación ya no está disponible.' }, 409, {
-      'Set-Cookie': clearActivationIntentCookie(activationIntentAppUrl(c)),
+      'Set-Cookie': clearActivationIntentCookie(c),
     })
   }
 
@@ -820,7 +801,7 @@ me.post('/artifacts/activate', async (c) => {
   let body: any
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const rawIntent = parseCookie(c.req.header('Cookie') || '', ACTIVATION_INTENT_COOKIE)
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).activationIntent)
   if (!rawIntent) return c.json({ ok: false, error: 'No hay una activación pendiente.' }, 409)
   const intentHash = await sha256Hex(rawIntent)
 
@@ -834,79 +815,21 @@ me.post('/artifacts/activate', async (c) => {
     if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado.' }, 403)
   }
 
-  // All three state transitions run in one D1 batch. Each statement repeats
-  // the validity predicates so a stale preflight cannot authorize a claim.
-  // D1 rolls the batch back if any statement fails; changes===1 is required
-  // for the artifact, code, and intent, preventing either partial state.
-  const results = await c.env.DB.batch([
-    c.env.DB.prepare(
-      `UPDATE intap_artifacts
-          SET owner_user_id = ?, profile_id = ?, status = 'activated',
-              activated_at = COALESCE(activated_at, datetime('now')),
-              updated_at = datetime('now')
-        WHERE id = (
-          SELECT i.artifact_id
-            FROM artifact_activation_intents i
-            JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
-           WHERE i.intent_hash = ?
-             AND i.status = 'active'
-             AND i.revoked_at IS NULL
-             AND i.expires_at > datetime('now')
-             AND ac.status = 'active'
-             AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
-        )
-          AND owner_user_id IS NULL
-          AND status IN ('available', 'unassigned')`
-    ).bind(userId, requestedProfileId, intentHash),
-    c.env.DB.prepare(
-      `UPDATE artifact_activation_codes
-          SET status = 'used', used_at = datetime('now')
-        WHERE id = (
-          SELECT i.activation_code_id
-            FROM artifact_activation_intents i
-           WHERE i.intent_hash = ?
-             AND i.status = 'active'
-             AND i.revoked_at IS NULL
-             AND i.expires_at > datetime('now')
-        )
-          AND status = 'active'
-          AND (expires_at IS NULL OR expires_at > datetime('now'))
-          AND EXISTS (
-            SELECT 1 FROM artifact_activation_intents i
-            JOIN intap_artifacts a ON a.id = i.artifact_id
-             WHERE i.intent_hash = ?
-               AND i.status = 'active'
-               AND a.owner_user_id = ?
-               AND a.status = 'activated'
-          )`
-    ).bind(intentHash, intentHash, userId),
-    c.env.DB.prepare(
-      `UPDATE artifact_activation_intents
-          SET status = 'consumed', consumed_at = datetime('now')
-        WHERE intent_hash = ?
-          AND status = 'active'
-          AND revoked_at IS NULL
-          AND expires_at > datetime('now')
-          AND EXISTS (
-            SELECT 1 FROM artifact_activation_codes ac
-             WHERE ac.id = artifact_activation_intents.activation_code_id
-               AND ac.status = 'used'
-          )
-          AND EXISTS (
-            SELECT 1 FROM intap_artifacts a
-             WHERE a.id = artifact_activation_intents.artifact_id
-               AND a.owner_user_id = ?
-               AND a.status = 'activated'
-          )`
-    ).bind(intentHash, userId),
-  ])
-
-  const artifactChanged = Number((results[0] as any)?.meta?.changes || 0)
-  const codeChanged = Number((results[1] as any)?.meta?.changes || 0)
-  const intentChanged = Number((results[2] as any)?.meta?.changes || 0)
-  if (artifactChanged !== 1 || codeChanged !== 1 || intentChanged !== 1) {
+  // The claim is one SQLite INSERT. Its BEFORE/AFTER triggers validate the
+  // complete precondition, apply artifact → code → intent with one claimAt,
+  // raise SQL errors for broken invariants, and delete the marker on success.
+  // A trigger RAISE(ABORT) rolls back the whole statement; a post-batch
+  // changes check cannot provide that guarantee.
+  const claimAt = new Date().toISOString().replace('T', ' ').replace('Z', '')
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO artifact_activation_claims (id, intent_hash, user_id, profile_id, claim_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).bind(crypto.randomUUID(), intentHash, userId, requestedProfileId, claimAt).run()
+  } catch (error) {
+    console.error('[POST /me/artifacts/activate] atomic claim rejected:', error)
     return c.json({ ok: false, error: 'La activación ya no está disponible.' }, 409, {
-      'Set-Cookie': clearActivationIntentCookie(activationIntentAppUrl(c)),
+      'Set-Cookie': clearActivationIntentCookie(c),
     })
   }
 
@@ -922,7 +845,7 @@ me.post('/artifacts/activate', async (c) => {
   ).bind(intentHash, userId).first()
 
   return c.json({ ok: true, data: row ? artifactPublicResponse(c, row) : null }, 201, {
-    'Set-Cookie': clearActivationIntentCookie(activationIntentAppUrl(c)),
+    'Set-Cookie': clearActivationIntentCookie(c),
   })
 })
 
@@ -2575,7 +2498,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     let isOwner = false
     if (isPreview) {
       try {
-        const rawSession = parseCookie(c.req.header('Cookie') || '', 'session_id')
+        const rawSession = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).session)
         if (rawSession) {
           const sessionHash = await sha256Hex(rawSession)
           const session = await c.env.DB.prepare(
