@@ -1,7 +1,9 @@
 import {
   buildProfileSemanticFallback,
   buildProfileSeoHead,
+  createDiscoveryRuntime,
   getStaticProfileDiscovery,
+  getDynamicProfileSeoBundle,
   handleDiscoveryRequest,
 } from './profile-discovery';
 
@@ -45,10 +47,11 @@ export async function onRequest(context: {
     image: string;
     siteName: string;
     imageType: string;
-    imageWidth: number;
-    imageHeight: number;
+    imageWidth?: number;
+    imageHeight?: number;
     ogType?: string;
     twitterCard?: string;
+    language?: string;
     seoHeadHtml?: string;
     semanticFallbackHtml?: string;
   }): string => {
@@ -58,14 +61,26 @@ export async function onRequest(context: {
     const imageUrl = escapeHtml(metadata.image);
     const siteName = escapeHtml(metadata.siteName);
     const imageType = escapeHtml(metadata.imageType);
-    const imageWidth = String(metadata.imageWidth);
-    const imageHeight = String(metadata.imageHeight);
+    const imageWidthTag =
+      metadata.imageWidth
+        ? `<meta property="og:image:width" content="${String(metadata.imageWidth)}" />`
+        : '';
+    const imageHeightTag =
+      metadata.imageHeight
+        ? `<meta property="og:image:height" content="${String(metadata.imageHeight)}" />`
+        : '';
     const ogType = escapeHtml(
       metadata.ogType || 'website'
     );
     const twitterCard = escapeHtml(
       metadata.twitterCard || 'summary_large_image'
     );
+    const ogLocale = metadata.language === 'en-US'
+      ? 'en_US'
+      : 'es_DO';
+    const alternateOgLocale = metadata.language === 'en-US'
+      ? 'es_DO'
+      : 'en_US';
     const seoHeadHtml = metadata.seoHeadHtml || '';
     const semanticFallbackHtml =
       metadata.semanticFallbackHtml || '';
@@ -77,14 +92,16 @@ export async function onRequest(context: {
   <meta name="description" content="${description}" />
   <meta property="og:type" content="${ogType}" />
   <meta property="og:site_name" content="${siteName}" />
+  <meta property="og:locale" content="${ogLocale}" />
+  <meta property="og:locale:alternate" content="${alternateOgLocale}" />
   <meta property="og:title" content="${title}" />
   <meta property="og:description" content="${description}" />
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:secure_url" content="${imageUrl}" />
   <meta property="og:image:type" content="${imageType}" />
-  <meta property="og:image:width" content="${imageWidth}" />
-  <meta property="og:image:height" content="${imageHeight}" />
+${imageWidthTag}
+${imageHeightTag}
   <meta property="og:image:alt" content="${title}" />
   <meta name="twitter:card" content="${twitterCard}" />
   <meta name="twitter:title" content="${title}" />
@@ -95,6 +112,12 @@ ${seoHeadHtml}
 `;
 
     let output = html.replace(/<title>[\s\S]*?<\/title>/i, '');
+    const language = metadata.language || 'es-DO';
+    output = output.replace(
+      /<html\b([^>]*)>/i,
+      (_match, attributes: string) =>
+        `<html${attributes.replace(/\s+lang=(?:"[^"]*"|'[^']*'|[^\s>]+)/i, '')} lang="${language}">`,
+    );
 
     if (output.includes('</head>')) {
       output = output.replace(
@@ -119,8 +142,9 @@ ${seoHeadHtml}
 
   const url = new URL(context.request.url);
 
+  const discoveryRuntime = createDiscoveryRuntime(url);
   const discoveryResponse =
-    await handleDiscoveryRequest(url.pathname);
+    await handleDiscoveryRequest(url, discoveryRuntime);
 
   if (discoveryResponse) {
     return withSecurityHeaders(discoveryResponse);
@@ -145,114 +169,13 @@ ${seoHeadHtml}
     }
   }
 
-  // STATIC PROFILE GRAPH CARDS V2
-  const staticProfileMeta: Record<string, {
-    title: string;
-    description: string;
-    url: string;
-    image: string;
-    siteName: string;
-    imageType: string;
-    imageWidth: number;
-    imageHeight: number;
-    ogType?: string;
-    twitterCard?: string;
-  }> = {
-    novi: {
-      title: 'NoviHome -Noldys Vicente-',
-      description:
-        'Asesora inmobiliaria. Propiedades listas, orientación clara y acompañamiento confiable para comprar o invertir con seguridad.',
-      url: 'https://intaprd.com/novi',
-      image:
-        'https://intaprd.com/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3',
-      siteName: 'NoviHome',
-      imageType: 'image/jpeg',
-      imageWidth: 631,
-      imageHeight: 752,
-    },
-    rentaord: {
-      title: 'Rentao RD Car Rental',
-      description:
-        'Renta vehículos modernos, seguros y listos para moverte sin complicaciones. Opciones para uso personal, familiar, ejecutivo y de trabajo.',
-      url: 'https://intaprd.com/rentaord',
-      image:
-        'https://intaprd.com/assets/rentaord/logo-rentao.png?v=rentaord-og-logo-v1',
-      siteName: 'Rentao RD',
-      imageType: 'image/png',
-      imageWidth: 1667,
-      imageHeight: 814,
-    },
-    jason: {
-      title:
-        'Comercial Jason S.R.L. | Gomas y aros en Santo Domingo',
-      description:
-        'Venta de gomas nuevas y usadas, aros, reparación y mantenimiento de aros en Santo Domingo. Más de 25 años de experiencia.',
-      url: 'https://intaprd.com/jason',
-      image:
-        'https://intaprd.com/assets/landing/hero-jason-05.png?v=jason-og-v1',
-      siteName: 'Comercial Jason S.R.L.',
-      imageType: 'image/png',
-      imageWidth: 629,
-      imageHeight: 354,
-    },
-    aycdom2: {
-      title:
-        'Freddy Fulgencio | Gerente de operaciones de A&C Dominicana',
-      description:
-        'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.',
-      url: 'https://intaprd.com/aycdom2',
-      image:
-        'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1',
-      siteName: 'A&C Dominicana, S.R.L.',
-      imageType: 'image/png',
-      imageWidth: 676,
-      imageHeight: 675,
-      ogType: 'profile',
-      twitterCard: 'summary',
-    },
-
-    aycdom: {
-      title:
-        'Mario Medina | Sales Engineer de A&C Dominicana',
-      description:
-        'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.',
-      url: 'https://intaprd.com/aycdom',
-      image:
-        'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1',
-      siteName: 'A&C Dominicana, S.R.L.',
-      imageType: 'image/png',
-      imageWidth: 676,
-      imageHeight: 675,
-      ogType: 'profile',
-      twitterCard: 'summary',
-    },
-
-    '1aeventos': {
-      title: '1A Eventos | Gabriel Reyes Bello',
-      description:
-        'Perfil digital de Gabriel Reyes Bello, asesor comercial de 1A Eventos. Mobiliario premium, cristalería, mantelería, lounge y accesorios para eventos.',
-      url: 'https://intaprd.com/1aeventos',
-      image:
-        'https://intaprd.com/assets/1A%20eventos/perfil/perfil-gabriel-01.jpg?v=1aeventos-og-gabriel-v1',
-      siteName: '1A Eventos',
-      imageType: 'image/jpeg',
-      imageWidth: 886,
-      imageHeight: 1164,
-    },
-  };
-
   const slug = url.pathname.replace(/^\/+|\/+$/g, '');
-  const staticMeta = staticProfileMeta[slug];
+  const staticProfile = getStaticProfileDiscovery(
+    slug,
+    discoveryRuntime,
+  );
 
-  if (staticMeta) {
-    const discoveryProfile =
-      getStaticProfileDiscovery(slug);
-
-    if (!discoveryProfile) {
-      throw new Error(
-        `Missing discovery profile for ${slug}`
-      );
-    }
+  if (staticProfile) {
 
     const response = await context.next();
     const contentType = response.headers.get('content-type') || '';
@@ -263,20 +186,34 @@ ${seoHeadHtml}
 
     const html = await response.text();
     const updatedHtml = injectHeadMetadata(html, {
-      ...staticMeta,
+      title: staticProfile.title,
+      description: staticProfile.description,
+      url: staticProfile.url,
+      image: staticProfile.image,
+      siteName: staticProfile.siteName,
+      imageType: staticProfile.imageType,
+      imageWidth: staticProfile.imageWidth,
+      imageHeight: staticProfile.imageHeight,
+      ogType: staticProfile.schemaType === 'Person'
+        ? 'profile'
+        : 'profile',
+      twitterCard: 'summary',
       seoHeadHtml:
-        buildProfileSeoHead(discoveryProfile),
+        buildProfileSeoHead(staticProfile, discoveryRuntime),
       semanticFallbackHtml:
         buildProfileSemanticFallback(
-          discoveryProfile
+          staticProfile,
         ),
+      language: staticProfile.language,
     });
     const headers = new Headers(response.headers);
 
     headers.set('content-type', 'text/html; charset=UTF-8');
     headers.set(
       'x-robots-tag',
-      'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+      discoveryRuntime.isPreview
+        ? 'noindex, nofollow, noarchive'
+        : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     );
 
     return withSecurityHeaders(new Response(updatedHtml, {
@@ -284,6 +221,110 @@ ${seoHeadHtml}
       statusText: response.statusText,
       headers,
     }));
+  }
+
+
+  // Perfil dinámico: cualquier slug público válido que
+  // no tenga metadata estática obtiene SEO/GEO/IA
+  // desde el API central.
+  const dynamicSlugEligible =
+    /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(
+      slug
+    )
+
+  if (
+    !staticProfile &&
+    dynamicSlugEligible
+  ) {
+    const dynamicMeta =
+      await getDynamicProfileSeoBundle(
+        slug,
+        discoveryRuntime,
+      )
+
+    if (dynamicMeta) {
+      const response =
+        await context.next()
+
+      const contentType =
+        response.headers.get(
+          'content-type'
+        ) || ''
+
+      if (
+        !contentType.includes(
+          'text/html'
+        )
+      ) {
+        return withSecurityHeaders(
+          response
+        )
+      }
+
+      const html =
+        await response.text()
+
+      const updatedHtml =
+        injectHeadMetadata(
+          html,
+          {
+            title:
+              dynamicMeta.title,
+            description:
+              dynamicMeta.description,
+            url:
+              dynamicMeta.url,
+            image:
+              dynamicMeta.image,
+            imageType:
+              dynamicMeta.imageType,
+            siteName:
+              dynamicMeta.siteName,
+            ogType:
+              'profile',
+            twitterCard:
+              'summary',
+            language: discoveryRuntime.language === 'en'
+              ? 'en-US'
+              : 'es-DO',
+            seoHeadHtml:
+              dynamicMeta.seoHeadHtml,
+            semanticFallbackHtml:
+              dynamicMeta
+                .semanticFallbackHtml,
+          }
+        )
+
+      const headers =
+        new Headers(
+          response.headers
+        )
+
+      headers.set(
+        'content-type',
+        'text/html; charset=UTF-8'
+      )
+
+      headers.set(
+        'x-robots-tag',
+        discoveryRuntime.isPreview
+          ? 'noindex, nofollow, noarchive'
+          : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+      )
+
+      return withSecurityHeaders(
+        new Response(
+          updatedHtml,
+          {
+            status:
+              response.status,
+            statusText:
+              response.statusText,
+            headers,
+          }
+        )
+      )
+    }
   }
 
   return withSecurityHeaders(await context.next());

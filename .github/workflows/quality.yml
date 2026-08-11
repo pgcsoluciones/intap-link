@@ -1,0 +1,27 @@
+name: INTAP LINK quality
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w web
+      - run: npm run build:preview -w web
+      - run: npx tsc --noEmit -p api/tsconfig.json
+      - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM functions/_middleware.ts functions/profile-discovery.ts
+      - run: python3 scripts/production_approval_guard.py
+        env:
+          INTAP_ENFORCE_PRODUCTION_APPROVAL: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+          INTAP_PRODUCTION_APPROVAL: ${{ vars.INTAP_PRODUCTION_APPROVAL || 'NO' }}
+          INTAP_APPROVED_COMMIT: ${{ vars.INTAP_APPROVED_COMMIT || '' }}

@@ -10,9 +10,6 @@ const OPERATIONS = {
   vcardUrl:
     '/assets/biopestrd/contacts/yudeimy-timaure-biopests.vcf?v=20260731-1',
   vcardFilename: 'Yudeimy-Timaure-BioPests.vcf',
-  canonicalUrl: 'https://intaprd.com/biopestsvrd',
-  previewImage:
-    'https://intaprd.com/assets/biopestrd/values/innovacion.png?v=biopests-shared-og-v1',
 }
 
 function upsertMeta(selector: string, attribute: 'name' | 'property', key: string, value: string) {
@@ -74,18 +71,25 @@ function handleLinkClick(event: MouseEvent<HTMLDivElement>) {
 
 export default function IntapProfileBioPestsOperations() {
   useEffect(() => {
+    const runtimeOrigin = (
+      import.meta.env.VITE_ENVIRONMENT === 'preview'
+        ? (import.meta.env.VITE_PUBLIC_ORIGIN || window.location.origin)
+        : 'https://intaprd.com'
+    ).replace(/\/$/, '')
+    const canonicalUrl = `${runtimeOrigin}/biopestsvrd`
+    const previewImage = `${runtimeOrigin}/assets/biopestrd/values/innovacion.png?v=biopests-shared-og-v1`
     const title = `${OPERATIONS.name} | ${OPERATIONS.role} de BioPests`
     const description = `${OPERATIONS.name}, ${OPERATIONS.role} de BioPests. Manejo integral de plagas para empresas.`
     document.title = title
     upsertMeta('meta[name="description"]', 'name', 'description', description)
     upsertMeta('meta[property="og:title"]', 'property', 'og:title', title)
     upsertMeta('meta[property="og:description"]', 'property', 'og:description', description)
-    upsertMeta('meta[property="og:url"]', 'property', 'og:url', OPERATIONS.canonicalUrl)
-    upsertMeta('meta[property="og:image"]', 'property', 'og:image', OPERATIONS.previewImage)
+    upsertMeta('meta[property="og:url"]', 'property', 'og:url', canonicalUrl)
+    upsertMeta('meta[property="og:image"]', 'property', 'og:image', previewImage)
     upsertMeta('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image')
     upsertMeta('meta[name="twitter:title"]', 'name', 'twitter:title', title)
     upsertMeta('meta[name="twitter:description"]', 'name', 'twitter:description', description)
-    upsertMeta('meta[name="twitter:image"]', 'name', 'twitter:image', OPERATIONS.previewImage)
+    upsertMeta('meta[name="twitter:image"]', 'name', 'twitter:image', previewImage)
 
     let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
     if (!canonical) {
@@ -93,7 +97,7 @@ export default function IntapProfileBioPestsOperations() {
       canonical.rel = 'canonical'
       document.head.appendChild(canonical)
     }
-    canonical.href = OPERATIONS.canonicalUrl
+    canonical.href = canonicalUrl
   }, [])
 
   return (

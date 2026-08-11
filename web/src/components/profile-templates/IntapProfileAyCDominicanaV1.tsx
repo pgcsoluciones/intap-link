@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { FaAddressCard, FaArrowRight, FaCheckCircle, FaChevronDown, FaCogs, FaCut, FaFacebookF, FaGlobe, FaIndustry, FaInstagram, FaMapMarkerAlt, FaPhoneAlt, FaProjectDiagram, FaShareAlt, FaTimes, FaTools, FaWhatsapp, FaWrench, FaEnvelope } from 'react-icons/fa'
 import type { IntapProfileV2Profile } from './IntapProfileV2'
+import {
+  AYC_CONTENT_EN,
+  AYC_FAQS_EN,
+  AYC_SERVICE_GROUPS_EN,
+  AYC_UI,
+  type AycLanguage,
+} from './IntapProfileAyCDominicanaV1.i18n'
 import './IntapProfileAyCDominicanaV1.css'
 
 type ServiceItem = {
@@ -208,21 +215,40 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   const td = profile.templateData ?? {}
   const [activeService, setActiveService] = useState<ServiceItem | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
-  const [shareLabel, setShareLabel] = useState('Compartir')
+  const [language, setLanguage] = useState<AycLanguage>(() => {
+    if (typeof window === 'undefined') return 'es'
+    return new URLSearchParams(window.location.search).get('lang') === 'en'
+      ? 'en'
+      : 'es'
+  })
+  const ui = AYC_UI[language]
+  const [shareLabel, setShareLabel] = useState<string>(AYC_UI.es.share)
   const [activeHero, setActiveHero] = useState(0)
 
   const name = pick(profile.companyName, profile.company_name, profile.name, td.company_name, 'A&C Dominicana, S.R.L.')
-  const heroTitle = pick(td.mobile_headline, td.headline, 'Soluciones industriales llave en mano')
-  const heroCopy = pick(
-    td.mobile_hero_copy,
-    'Diseño, fabricación e integración para optimizar sus procesos industriales.',
-  )
-  const about = pick(
-    profile.companyAbout,
-    profile.company_about,
-    td.about,
-    'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución. Podemos atender desde una pieza puntual hasta una línea de proceso completa.',
-  )
+
+  const heroTitle =
+    language === 'en'
+      ? AYC_CONTENT_EN.heroTitle
+      : pick(td.mobile_headline, td.headline, 'Soluciones industriales llave en mano')
+
+  const heroCopy =
+    language === 'en'
+      ? AYC_CONTENT_EN.heroCopy
+      : pick(
+          td.mobile_hero_copy,
+          'Diseño, fabricación e integración para optimizar sus procesos industriales.',
+        )
+
+  const about =
+    language === 'en'
+      ? AYC_CONTENT_EN.about
+      : pick(
+          profile.companyAbout,
+          profile.company_about,
+          td.about,
+          'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución. Podemos atender desde una pieza puntual hasta una línea de proceso completa.',
+        )
 
   const phone = pick(profile.phone, td.phone, '809-476-7325')
   const whatsapp = pick(profile.whatsapp, profile.whatsappNumber, profile.whatsapp_number, td.whatsapp, '18094767325')
@@ -245,26 +271,39 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
   useEffect(() => {
     const socialTitle =
-      `${contactName} | ${contactTitle} de A&C Dominicana`
+      language === 'en'
+        ? `${contactName} | ${contactTitle} at A&C Dominicana`
+        : `${contactName} | ${contactTitle} de A&C Dominicana`
 
     const socialDescription =
-      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.'
+      language === 'en'
+        ? AYC_CONTENT_EN.socialDescription
+        : 'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.'
 
     const currentSlug =
       window.location.pathname
         .replace(/^\/+|\/+$/g, '')
         .toLowerCase() || 'aycdom'
 
-    const socialUrl = pick(
-      td.canonical_url,
-      `https://intaprd.com/${currentSlug}`,
+    const publicOrigin = (
+      import.meta.env.VITE_PUBLIC_ORIGIN ||
+      window.location.origin
+    ).replace(/\/$/, '')
+    const isPreview = import.meta.env.VITE_ENVIRONMENT === 'preview'
+
+    const canonicalBase = pick(
+      isPreview ? undefined : td.canonical_url,
+      `${publicOrigin}/${currentSlug}`,
     )
 
+    const socialUrl =
+      language === 'en'
+        ? `${canonicalBase}?lang=en`
+        : canonicalBase
+
     const socialImage = pick(
-      td.social_image_url,
-      currentSlug === 'aycdom'
-        ? 'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1'
-        : 'https://intaprd.com/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1',
+      isPreview ? undefined : td.social_image_url,
+      `${publicOrigin}/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1`,
     )
 
     document.title = socialTitle
@@ -392,6 +431,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   }, [
     contactName,
     contactTitle,
+    language,
     td.canonical_url,
     td.social_image_url,
   ])
@@ -420,7 +460,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
   const services = useMemo(() => safeJsonArray<ServiceItem>(td.services_json, FALLBACK_SERVICES), [td.services_json])
   const projects = useMemo(() => safeJsonArray<ProjectItem>(td.projects_json, FALLBACK_PROJECTS), [td.projects_json])
-  const faqs = useMemo(() => safeJsonArray<FaqItem>(td.faqs_json, FALLBACK_FAQS), [td.faqs_json])
+  const faqs = useMemo(
+    () =>
+      language === 'en'
+        ? AYC_FAQS_EN
+        : safeJsonArray<FaqItem>(td.faqs_json, FALLBACK_FAQS),
+    [language, td.faqs_json],
+  )
 
   useEffect(() => {
     if (heroImages.length < 2) return undefined
@@ -434,7 +480,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     return () => window.clearInterval(timer)
   }, [heroImages.length])
 
-  const waMessage = pick(td.whatsapp_message, 'Hola, vi su perfil en INTAP LINK y quiero solicitar información sobre una solución industrial.')
+  const waMessage =
+    language === 'en'
+      ? AYC_CONTENT_EN.whatsappMessage
+      : pick(
+          td.whatsapp_message,
+          'Hola, vi su perfil en INTAP LINK y quiero solicitar información sobre una solución industrial.',
+        )
   const waHref = `https://wa.me/${cleanPhone(whatsapp)}?text=${encodeURIComponent(waMessage)}`
   const websiteHref = normalizeHttp(website)
 
@@ -478,8 +530,8 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
         await navigator.share(shareData)
       } else {
         await navigator.clipboard.writeText(window.location.href)
-        setShareLabel('Enlace copiado')
-        window.setTimeout(() => setShareLabel('Compartir'), 1800)
+        setShareLabel(ui.copied)
+        window.setTimeout(() => setShareLabel(ui.share), 1800)
       }
     } catch {
       // El usuario puede cancelar el diálogo nativo de compartir.
@@ -657,13 +709,15 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   ]
 
   const serviceGroups: AycServiceGroup[] =
-    Array.isArray(td.service_groups) &&
-    td.service_groups.length > 0
-      ? (
-          td.service_groups as unknown as
-            AycServiceGroup[]
-        )
-      : defaultServiceGroups
+    language === 'en'
+      ? AYC_SERVICE_GROUPS_EN
+      : Array.isArray(td.service_groups) &&
+          td.service_groups.length > 0
+        ? (
+            td.service_groups as unknown as
+              AycServiceGroup[]
+          )
+        : defaultServiceGroups
 
   const featuredServices: AycServiceGroup[] =
     serviceGroups.slice(0, 4)
@@ -704,7 +758,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
   const quickActions = [
     {
-      label: 'Llamar',
+      label: ui.call,
       href: `tel:${cleanPhone(phone)}`,
       icon: <FaPhoneAlt />,
       featured: false,
@@ -718,14 +772,14 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       external: true,
     },
     {
-      label: 'Correo',
+      label: ui.email,
       href: `mailto:${email}`,
       icon: <FaEnvelope />,
       featured: false,
       external: false,
     },
     {
-      label: 'Ubicación',
+      label: ui.location,
       href: mapUrl,
       icon: <FaMapMarkerAlt />,
       featured: false,
@@ -733,13 +787,57 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
     },
   ]
 
+  useEffect(() => {
+    document.documentElement.lang = language
+    setShareLabel(ui.share)
+  }, [language, ui.share])
+
+  const toggleLanguage = () => {
+    const nextLanguage: AycLanguage =
+      language === 'es' ? 'en' : 'es'
+
+    const url = new URL(window.location.href)
+
+    if (nextLanguage === 'en') {
+      url.searchParams.set('lang', 'en')
+    } else {
+      url.searchParams.delete('lang')
+    }
+
+    window.history.replaceState(
+      {},
+      '',
+      `${url.pathname}${url.search}${url.hash}`,
+    )
+
+    setLanguage(nextLanguage)
+    setOpenFaq(0)
+    setActiveServiceIndex(null)
+    setIsServicesCatalogOpen(false)
+  }
+
   return (
-    <main className="ayc-mobile-page">
+    <main className="ayc-mobile-page" lang={language}>
       <div className="ayc-mobile-shell">
         <section
           className="ayc-mobile-cover"
-          aria-label="Galería principal de A&C Dominicana"
+          aria-label={ui.gallery}
         >
+          <div className="ayc-language-switch-wrap">
+            <button
+              type="button"
+              className="ayc-language-switch"
+              onClick={toggleLanguage}
+              aria-label={
+                language === 'es'
+                  ? 'View profile in English'
+                  : 'Ver perfil en español'
+              }
+            >
+              <FaGlobe />
+              {ui.languageButton}
+            </button>
+          </div>
           <div className="ayc-mobile-cover-media">
             {heroImages.map((image, index) => (
               <img
@@ -755,7 +853,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
           <div
             className="ayc-mobile-cover-dots"
-            aria-label="Seleccionar imagen principal"
+            aria-label={ui.selectImage}
           >
             {heroImages.map((image, index) => (
               <button
@@ -763,7 +861,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 type="button"
                 className={index === activeHero ? 'is-active' : ''}
                 onClick={() => setActiveHero(index)}
-                aria-label={`Ver imagen ${index + 1}`}
+                aria-label={`${ui.viewImage} ${index + 1}`}
                 aria-pressed={index === activeHero}
               />
             ))}
@@ -797,13 +895,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             className="ayc-mobile-whatsapp"
           >
             <FaWhatsapp />
-            Hablar por WhatsApp
+            {ui.whatsapp}
           </a>
         </section>
 
         <nav
           className="ayc-quick-actions"
-          aria-label="Accesos directos"
+          aria-label={ui.quickActions}
         >
           {quickActions.map((action) => (
             <a
@@ -828,13 +926,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             onClick={downloadVCard}
           >
             <FaAddressCard />
-            Guardar contacto
+            {ui.saveContact}
           </button>
         </section>
 
         <section className="ayc-mobile-section ayc-about-section">
           <div className="ayc-section-heading ayc-about-heading">
-            <h2>Sobre nosotros</h2>
+            <h2>{ui.aboutTitle}</h2>
           </div>
 
           <p>{about}</p>
@@ -842,7 +940,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
         </section>
         <section
           className={`ayc-brand-belt${isBrandPaused ? ' is-paused' : ''}`}
-          aria-label="Marcas representadas por A&C Dominicana"
+          aria-label={language === 'en' ? 'Brands represented by A&C Dominicana' : 'Marcas representadas por A&C Dominicana'}
         >
           <div className="ayc-brand-belt-track">
             <div className="ayc-brand-belt-group">
@@ -858,7 +956,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 >
                   <img
                     src={logoSrc}
-                    alt={`Marca representada ${index + 1}`}
+                    alt={`${ui.representedBrand} ${index + 1}`}
                     className="ayc-brand-belt-logo"
                   loading="eager"
                   decoding="async"
@@ -906,18 +1004,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               ayc-organized-services-heading
             "
           >
-            <span>Nuestros servicios</span>
+            <span>{ui.servicesEyebrow}</span>
 
             <h2>
-              Soluciones industriales
+              {ui.servicesTitle}
             </h2>
 
-            <p>
-              Descubre soluciones industriales diseñadas
-              para optimizar procesos, resolver necesidades
-              técnicas y llevar cada proyecto desde la idea
-              hasta una ejecución eficiente y precisa.
-            </p>
+            <p>{ui.servicesIntro}</p>
           </div>
 
           <div className="ayc-featured-services-grid">
@@ -935,7 +1028,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 </div>
 
                 <div className="ayc-featured-service-body">
-                  <span>Servicio industrial</span>
+                  <span>{ui.industrialService}</span>
 
                   <h3>{group.title}</h3>
 
@@ -949,7 +1042,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                       setActiveServiceIndex(index)
                     }}
                   >
-                    Ver detalles
+                    {ui.viewDetails}
                   </button>
                 </div>
               </article>
@@ -964,7 +1057,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               setIsServicesCatalogOpen(true)
             }}
           >
-            Ver todos los servicios
+            {ui.viewAllServices}
           </button>
         </section>
 
@@ -980,7 +1073,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               className="ayc-services-modal-sheet"
               role="dialog"
               aria-modal="true"
-              aria-label="Todos nuestros servicios"
+              aria-label={ui.allServicesTitle}
               onClick={(event) =>
                 event.stopPropagation()
               }
@@ -988,7 +1081,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               <button
                 type="button"
                 className="ayc-services-modal-close"
-                aria-label="Cerrar catálogo"
+                aria-label={ui.closeCatalog}
                 onClick={() =>
                   setIsServicesCatalogOpen(false)
                 }
@@ -997,14 +1090,11 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               </button>
 
               <div className="ayc-services-modal-heading">
-                <span>Portafolio de soluciones</span>
+                <span>{ui.portfolioEyebrow}</span>
 
-                <h2>Todos nuestros servicios</h2>
+                <h2>{ui.allServicesTitle}</h2>
 
-                <p>
-                  Selecciona una solución para conocer
-                  su alcance y los servicios incluidos.
-                </p>
+                <p>{ui.allServicesIntro}</p>
               </div>
 
               <div className="ayc-services-modal-grid">
@@ -1028,7 +1118,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                     <div
                       className="ayc-services-modal-body"
                     >
-                      <span>Servicio industrial</span>
+                      <span>{ui.industrialService}</span>
 
                       <h3>{group.title}</h3>
 
@@ -1044,7 +1134,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                           setActiveServiceIndex(index)
                         }}
                       >
-                        Ver detalles
+                        {ui.viewDetails}
                       </button>
                     </div>
                   </article>
@@ -1077,7 +1167,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               <button
                 type="button"
                 className="ayc-services-modal-close"
-                aria-label="Cerrar detalle"
+                aria-label={ui.closeDetail}
                 onClick={() =>
                   setActiveServiceIndex(null)
                 }
@@ -1100,7 +1190,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               </div>
 
               <div className="ayc-service-detail-body">
-                <span>Servicio industrial</span>
+                <span>{ui.industrialService}</span>
 
                 <h3>
                   {
@@ -1117,7 +1207,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 </p>
 
                 <div className="ayc-service-detail-box">
-                  <h4>Servicios incluidos</h4>
+                  <h4>{ui.includedServices}</h4>
 
                   <ul>
                     {
@@ -1137,7 +1227,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                   className="ayc-service-detail-cta"
                 >
                   <FaWhatsapp />
-                  Consultar por WhatsApp
+                  {ui.consultWhatsapp}
                 </a>
 
                 <button
@@ -1150,7 +1240,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                     setIsServicesCatalogOpen(true)
                   }}
                 >
-                  Volver a todos los servicios
+                  {ui.backToServices}
                 </button>
               </div>
             </section>
@@ -1162,17 +1252,13 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           aria-labelledby="ayc-clients-title"
         >
           <div className="ayc-clients-heading">
-            <span>Nuestros clientes</span>
+            <span>{ui.clientsEyebrow}</span>
 
             <h2 id="ayc-clients-title">
-              Empresas que confían en nuestro trabajo
+              {ui.clientsTitle}
             </h2>
 
-            <p>
-              Relaciones construidas con experiencia,
-              capacidad técnica y soluciones que responden
-              a las necesidades reales de cada operación.
-            </p>
+            <p>{ui.clientsIntro}</p>
           </div>
 
           <div
@@ -1232,8 +1318,8 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
 <section className="ayc-mobile-section ayc-services-section" aria-hidden="true">
           <div className="ayc-section-heading">
-            <span>Nuestras capacidades</span>
-            <h2>Soluciones industriales</h2>
+            <span>{ui.capabilities}</span>
+            <h2>{ui.servicesTitle}</h2>
           </div>
 
           <div className="ayc-service-scroller">
@@ -1244,12 +1330,12 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 <div>
                   <h3>{service.title}</h3>
                   <p>{service.description}</p>
-                  <strong>Ver detalles <FaArrowRight /></strong>
+                  <strong>{ui.viewDetails} <FaArrowRight /></strong>
                 </div>
               </button>
             ))}
           </div>
-          <p className="ayc-scroll-hint">Deslice para explorar las soluciones</p>
+          <p className="ayc-scroll-hint">{ui.slideHint}</p>
         </section>
 
 
@@ -1261,11 +1347,11 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           aria-labelledby="ayc-corporate-contact-title"
         >
           <div className="ayc-corporate-contact-banner">
-            ¡Conecta con A&C Dominicana!
+            {ui.connectBanner}
           </div>
 
           <p className="ayc-corporate-contact-intro">
-            Llámanos, escríbenos o síguenos en nuestras redes:
+            {ui.connectIntro}
           </p>
 
           <div className="ayc-corporate-contact-list">
@@ -1277,7 +1363,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 <FaPhoneAlt />
               </span>
               <span className="ayc-corporate-contact-itemText">
-                <strong>Teléfono</strong>
+                <strong>{ui.phone}</strong>
                 <span>{phone}</span>
               </span>
             </a>
@@ -1308,7 +1394,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 <FaEnvelope />
               </span>
               <span className="ayc-corporate-contact-itemText">
-                <strong>Correo corporativo</strong>
+                <strong>{ui.corporateEmail}</strong>
                 <span>{email}</span>
               </span>
             </a>
@@ -1343,7 +1429,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 <FaGlobe />
               </span>
               <span className="ayc-corporate-contact-itemText">
-                <strong>Web</strong>
+                <strong>{ui.website}</strong>
                 <span>www.aycdominicana.com</span>
               </span>
             </a>
@@ -1358,7 +1444,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 <FaMapMarkerAlt />
               </span>
               <span className="ayc-corporate-contact-itemText">
-                <strong>Ubicación</strong>
+                <strong>{ui.location}</strong>
                 <span>
                   C/ Juan José Duarte #73, entre Mauricio Báez y Paraguay,
                   Ensanche La Fe, Santo Domingo, Rep. Dom.
@@ -1370,8 +1456,8 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
 <section className="ayc-mobile-section ayc-faq-section">
           <div className="ayc-section-heading">
-            <span>Información útil</span>
-            <h2>Preguntas frecuentes</h2>
+            <span>{ui.usefulInfo}</span>
+            <h2>{ui.faqTitle}</h2>
           </div>
           <div className="ayc-faq-list">
             {faqs.map((faq, index) => {
@@ -1391,12 +1477,12 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
         <section className="ayc-mobile-section ayc-location-section ayc-location-section-v21">
           <div className="ayc-section-heading">
-            <span>Visítenos</span>
-            <h2 className="ayc-map-company-v21">Nuestra ubicación</h2>
+            <span>{ui.visitUs}</span>
+            <h2 className="ayc-map-company-v21">{ui.ourLocation}</h2>
           </div>
           <div className="ayc-map-card">
             <iframe
-              title="Ubicación de A&C Dominicana"
+              title={ui.mapTitle}
               src={mapEmbedUrl}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -1404,15 +1490,15 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
             <div>
               <strong>{name}</strong>
               <p>{address}</p>
-              <a href={mapUrl} target="_blank" rel="noreferrer" className="ayc-route-button-v21">Cómo llegar</a>
+              <a href={mapUrl} target="_blank" rel="noreferrer" className="ayc-route-button-v21">{ui.directions}</a>
             </div>
           </div>
         </section>
 
         <section className="ayc-final-cta ayc-quote-section-v21">
-          <span>Hablemos de su proyecto</span>
-          <h2>¿Tiene una necesidad industrial que debemos evaluar?</h2>
-          <p>Comparta la pieza, equipo, proceso o mejora que necesita.</p>
+          <span>{ui.projectEyebrow}</span>
+          <h2>{ui.projectTitle}</h2>
+          <p>{ui.projectIntro}</p>
           <a
             href={waHref}
             target="_blank"
@@ -1423,7 +1509,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
               className="ayc-quote-icon-v23"
               color="#05197A"
             />
-            Solicitar cotización
+            {ui.requestQuote}
           </a>
         </section>
 
@@ -1441,20 +1527,20 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           />
 
           <p className="ayc-footer-location-v23">
-            Santo Domingo, Rep. Dom.
+            {ui.footerLocation}
           </p>
 
           <small className="ayc-footer-watermark-v23">
-            Perfil empresarial creado con INTAP LINK
+            {ui.footerCreated}
           </small>
         </footer>
       </div>
 
       {activeService ? (
         <div className="ayc-service-modal" role="dialog" aria-modal="true" aria-labelledby="ayc-service-modal-title">
-          <button type="button" className="ayc-modal-backdrop" onClick={() => setActiveService(null)} aria-label="Cerrar" />
+          <button type="button" className="ayc-modal-backdrop" onClick={() => setActiveService(null)} aria-label={ui.close} />
           <article>
-            <button type="button" className="ayc-modal-close" onClick={() => setActiveService(null)} aria-label="Cerrar detalle">
+            <button type="button" className="ayc-modal-close" onClick={() => setActiveService(null)} aria-label={ui.closeDetail}>
               <FaTimes />
             </button>
             <AssetImage src={activeService.image} alt={activeService.title} className="ayc-modal-image" />
@@ -1466,7 +1552,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
                 {activeService.bullets.map((bullet) => <li key={bullet}><FaCheckCircle /> {bullet}</li>)}
               </ul>
             ) : null}
-            <a href={waHref} target="_blank" rel="noreferrer"><FaWhatsapp /> Solicitar información</a>
+            <a href={waHref} target="_blank" rel="noreferrer"><FaWhatsapp /> {ui.requestInformation}</a>
           </article>
         </div>
       ) : null}

@@ -177,7 +177,13 @@ const requireAuth = async (c: any, next: any) => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────
 
-app.get('/api/health', (c) => c.json({ ok: true, status: 'healthy' }))
+app.get('/api/health', (c) => c.json({
+  ok: true,
+  status: 'healthy',
+  environment: (c.env as any).ENVIRONMENT || 'unknown',
+  worker: (c.env as any).WORKER_NAME || 'intap-api',
+  apiUrl: (c.env as any).API_URL || null,
+}))
 
 // ─── Magic Link ───────────────────────────────────────────────────────────
 
@@ -1932,6 +1938,186 @@ app.get('/api/v1/public/assets/*', async (c) => {
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=86400',
     },
+  })
+})
+
+
+// ─── Discovery público de perfiles ───────────────────────────────────────
+// Fuente central para sitemap, llms.txt y metadata dinámica.
+// Solo expone perfiles activos y publicados.
+app.get('/api/v1/public/discovery/profiles', async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT
+       slug,
+       name,
+       bio,
+       avatar_url,
+       template_data,
+       updated_at
+     FROM profiles
+     WHERE is_active = 1
+       AND is_published = 1
+       AND slug IS NOT NULL
+       AND trim(slug) <> ''
+     ORDER BY lower(slug) ASC`
+  ).all()
+
+  const canonicalOrigin = (
+    (c.env as any).API_URL ||
+    'https://intaprd.com'
+  ).replace(/\/+$/, '')
+
+  const toAssetUrl = (
+    value: unknown
+  ): string | null => {
+    if (
+      typeof value !== 'string' ||
+      !value.trim()
+    ) {
+      return null
+    }
+
+    const raw = value.trim()
+
+    if (
+      raw.startsWith('https://') ||
+      raw.startsWith('http://')
+    ) {
+      return raw
+    }
+
+    const encodedKey = raw
+      .replace(/^\/+/, '')
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/')
+
+    return (
+      `${canonicalOrigin}` +
+      `/api/v1/public/assets/${encodedKey}`
+    )
+  }
+
+  const parseTemplateData = (
+    value: unknown
+  ): Record<string, unknown> => {
+    if (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value)
+    ) {
+      return value as Record<string, unknown>
+    }
+
+    if (typeof value !== 'string') {
+      return {}
+    }
+
+    try {
+      const parsed = JSON.parse(value)
+
+      return (
+        parsed &&
+        typeof parsed === 'object' &&
+        !Array.isArray(parsed)
+      )
+        ? parsed as Record<string, unknown>
+        : {}
+    } catch {
+      return {}
+    }
+  }
+
+  const templateText = (
+    data: Record<string, unknown>,
+    ...keys: string[]
+  ): string => {
+    for (const key of keys) {
+      const value = data[key]
+
+      if (
+        typeof value === 'string' &&
+        value.trim()
+      ) {
+        return value
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+    }
+
+    return ''
+  }
+
+  const data = (
+    rows.results as Record<string, unknown>[]
+  )
+    .map((row) => {
+      const slug =
+        typeof row.slug === 'string'
+          ? row.slug.trim().toLowerCase()
+          : ''
+
+      if (
+        !slug ||
+        slug.includes('/')
+      ) {
+        return null
+      }
+
+      const templateData =
+        parseTemplateData(
+          row.template_data
+        )
+
+      const name =
+        typeof row.name === 'string' &&
+        row.name.trim()
+          ? row.name.trim()
+          : slug
+
+      const bio =
+        (
+          typeof row.bio === 'string'
+            ? row.bio.trim()
+            : ''
+        ) ||
+        templateText(
+          templateData,
+          'shortDescription',
+          'companyHeadline',
+          'companyAbout'
+        ) ||
+        `Perfil de ${name} en INTAP LINK`
+
+      return {
+        slug,
+        name,
+        bio,
+        avatarUrl:
+          toAssetUrl(row.avatar_url),
+        category:
+          templateText(
+            templateData,
+            'category',
+            'businessCategory'
+          ) || null,
+        subcategory:
+          templateText(
+            templateData,
+            'subcategory',
+            'businessSubcategory'
+          ) || null,
+        updatedAt:
+          typeof row.updated_at === 'string'
+            ? row.updated_at
+            : null,
+      }
+    })
+    .filter(Boolean)
+
+  return c.json({
+    ok: true,
+    data,
   })
 })
 

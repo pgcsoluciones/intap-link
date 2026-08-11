@@ -4212,3 +4212,40 @@ body,
     font-size: 15px !important;
   }
 }
+
+/* A&C · selector de idioma */
+.ayc-language-switch-wrap {
+  position: absolute;
+  z-index: 20;
+  top: 12px;
+  right: 12px;
+}
+
+.ayc-language-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 7px 11px;
+  border: 1px solid rgba(5, 25, 122, 0.16);
+  border-radius: 999px;
+  color: #05197a;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 5px 16px rgba(5, 25, 122, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.ayc-language-switch svg {
+  font-size: 11px;
+}
+
+.ayc-language-switch:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.65);
+  outline-offset: 2px;
+}

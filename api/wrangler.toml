@@ -13,6 +13,13 @@ zone_name = "intaprd.com"
 pattern = "app.intaprd.com/api/*"
 zone_name = "intaprd.com"
 
+# Custom Domain interno/público del Worker API.
+# Permite llamadas Worker → Worker sin depender
+# de un Worker Route same-zone.
+[[routes]]
+pattern = "api.intaprd.com"
+custom_domain = true
+
 [vars]
 ENVIRONMENT = "production"
 APP_URL = "https://app.intaprd.com"
