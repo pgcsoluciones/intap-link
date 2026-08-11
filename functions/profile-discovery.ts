@@ -49,7 +49,7 @@ export type ProfileDiscovery = {
 
 const BASE_URL = 'https://intaprd.com';
 const PREVIEW_API_BASE =
-  'https://api-preview.intaprd.com/api/v1/public';
+  'https://intap-api-preview.fliaprince.workers.dev/api/v1/public';
 const PRODUCTION_API_BASE =
   'https://api.intaprd.com/api/v1/public';
 
