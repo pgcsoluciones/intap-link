@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { FaAddressCard, FaArrowRight, FaCheckCircle, FaChevronDown, FaCogs, FaCut, FaFacebookF, FaGlobe, FaIndustry, FaInstagram, FaMapMarkerAlt, FaPhoneAlt, FaProjectDiagram, FaShareAlt, FaTimes, FaTools, FaWhatsapp, FaWrench, FaEnvelope } from 'react-icons/fa'
 import type { IntapProfileV2Profile } from './IntapProfileV2'
 import {
+  resolveProfileLanguagePolicy,
+  resolveRequestedProfileLanguage,
+} from './profileLanguages'
+import {
   AYC_CONTENT_EN,
   AYC_FAQS_EN,
   AYC_SERVICE_GROUPS_EN,
@@ -213,13 +217,44 @@ function escapeVCard(value: string) {
 
 export default function IntapProfileAyCDominicanaV1({ profile }: { profile: IntapProfileV2Profile }) {
   const td = profile.templateData ?? {}
+
+  const currentSlug =
+    typeof window === 'undefined'
+      ? ''
+      : (
+          window.location.pathname
+            .split('/')
+            .filter(Boolean)[0] ?? ''
+        ).toLowerCase()
+
+  const languagePolicy =
+    resolveProfileLanguagePolicy(
+      td,
+      currentSlug === 'aycdom'
+        ? {
+            defaultLanguage: 'es',
+            enabled: ['es', 'en'],
+          }
+        : {
+            defaultLanguage: 'es',
+            enabled: ['es'],
+          },
+    )
+
+  const supportsEnglish =
+    languagePolicy.enabled.includes('en')
+
   const [activeService, setActiveService] = useState<ServiceItem | null>(null)
   const [openFaq, setOpenFaq] = useState<number | null>(0)
   const [language, setLanguage] = useState<AycLanguage>(() => {
-    if (typeof window === 'undefined') return 'es'
-    return new URLSearchParams(window.location.search).get('lang') === 'en'
-      ? 'en'
-      : 'es'
+    if (typeof window === 'undefined') {
+      return languagePolicy.defaultLanguage
+    }
+
+    return resolveRequestedProfileLanguage(
+      window.location.search,
+      languagePolicy,
+    )
   })
   const ui = AYC_UI[language]
   const [shareLabel, setShareLabel] = useState<string>(AYC_UI.es.share)
@@ -271,19 +306,10 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
 
   useEffect(() => {
     const socialTitle =
-      language === 'en'
-        ? `${contactName} | ${contactTitle} at A&C Dominicana`
-        : `${contactName} | ${contactTitle} de A&C Dominicana`
+      `${contactName} | ${contactTitle} de A&C Dominicana`
 
     const socialDescription =
-      language === 'en'
-        ? AYC_CONTENT_EN.socialDescription
-        : 'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.'
-
-    const currentSlug =
-      window.location.pathname
-        .replace(/^\/+|\/+$/g, '')
-        .toLowerCase() || 'aycdom'
+      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.'
 
     const publicOrigin = (
       import.meta.env.VITE_PUBLIC_ORIGIN ||
@@ -296,10 +322,7 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
       `${publicOrigin}/${currentSlug}`,
     )
 
-    const socialUrl =
-      language === 'en'
-        ? `${canonicalBase}?lang=en`
-        : canonicalBase
+    const socialUrl = canonicalBase
 
     const socialImage = pick(
       isPreview ? undefined : td.social_image_url,
@@ -788,11 +811,32 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
   ]
 
   useEffect(() => {
-    document.documentElement.lang = language
-    setShareLabel(ui.share)
-  }, [language, ui.share])
+    if (!supportsEnglish && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+
+      if (url.searchParams.has('lang')) {
+        url.searchParams.delete('lang')
+
+        window.history.replaceState(
+          {},
+          '',
+          `${url.pathname}${url.search}${url.hash}`,
+        )
+      }
+    }
+
+    document.documentElement.lang = 'es'
+
+    setShareLabel(
+      supportsEnglish
+        ? ui.share
+        : AYC_UI.es.share,
+    )
+  }, [language, supportsEnglish, ui.share])
 
   const toggleLanguage = () => {
+    if (!supportsEnglish) return
+
     const nextLanguage: AycLanguage =
       language === 'es' ? 'en' : 'es'
 
@@ -823,21 +867,23 @@ export default function IntapProfileAyCDominicanaV1({ profile }: { profile: Inta
           className="ayc-mobile-cover"
           aria-label={ui.gallery}
         >
-          <div className="ayc-language-switch-wrap">
-            <button
-              type="button"
-              className="ayc-language-switch"
-              onClick={toggleLanguage}
-              aria-label={
-                language === 'es'
-                  ? 'View profile in English'
-                  : 'Ver perfil en español'
-              }
-            >
-              <FaGlobe />
-              {ui.languageButton}
-            </button>
-          </div>
+          {supportsEnglish && (
+            <div className="ayc-language-switch-wrap">
+              <button
+                type="button"
+                className="ayc-language-switch"
+                onClick={toggleLanguage}
+                aria-label={
+                  language === 'es'
+                    ? 'View profile in English'
+                    : 'Ver perfil en español'
+                }
+              >
+                <FaGlobe />
+                {ui.languageButton}
+              </button>
+            </div>
+          )}
           <div className="ayc-mobile-cover-media">
             {heroImages.map((image, index) => (
               <img

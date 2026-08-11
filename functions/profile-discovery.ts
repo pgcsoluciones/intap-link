@@ -85,9 +85,11 @@ export function createDiscoveryRuntime(
       : new URL(BASE_URL);
   const production = isProductionHost(url.hostname);
   const isPreview = !production;
-  const language = url.searchParams.get('lang') === 'en'
-    ? 'en'
-    : 'es';
+  // Fase actual:
+  // SEO, GEO y AI Discovery permanecen en español.
+  // DiscoveryRuntime conserva el tipo ES/EN para que
+  // podamos habilitar SEO localizado en una fase futura.
+  const language: 'es' = 'es';
 
   return {
     baseUrl: production ? BASE_URL : normalizeOrigin(url.origin),
@@ -1948,12 +1950,8 @@ export function buildProfileSeoHead(
     : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
   const aiUrl = profileResourceUrl(profile.url, 'ai.md');
   const factsUrl = profileResourceUrl(profile.url, 'facts.json');
-  const hreflang = profile.slug === 'aycdom'
-    ? `
-  <link rel="alternate" hreflang="es" href="${escapeHtml(publicProfileUrl('aycdom', runtime, 'es'))}" />
-  <link rel="alternate" hreflang="en" href="${escapeHtml(publicProfileUrl('aycdom', runtime, 'en'))}" />
-  <link rel="alternate" hreflang="x-default" href="${escapeHtml(publicProfileUrl('aycdom', runtime, 'es'))}" />`
-    : '';
+  // SEO bilingüe se activará en una fase posterior.
+  const hreflang = '';
 
   return `
   <!-- INTAP LINK: SEO + GEO + AI DISCOVERY -->
