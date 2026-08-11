@@ -6,6 +6,8 @@ cd "$repo_root"
 
 test -f api/migrations/0027_intap_artifacts.sql
 test -f api/migrations-preview/0028_intap_artifacts.sql
+test -f api/migrations/0028_artifact_activation_intents.sql
+test -f api/migrations-preview/0029_artifact_activation_intents.sql
 test -f api/src/artifacts.ts
 test -f app/src/components/admin/ArtifactActivation.tsx
 
@@ -19,6 +21,9 @@ rg -Fq "me.patch('/artifacts/:id/profile'" api/src/index.ts
 rg -Fq 'const artifactMatch = url.pathname.match' functions/_middleware.ts
 rg -Fq 'status: 302' functions/_middleware.ts
 rg -Fq 'Cache-Control' functions/_middleware.ts
+rg -Fq 'artifact_activation_intents' api/src/index.ts
+rg -Fq 'intentChanged !== 1' api/src/index.ts
+! rg -q 'intap_activation_code' app/src/components/admin/ArtifactActivation.tsx app/src/components/admin/AuthCallback.tsx
 ! rg -q 'profile_products.*artifact|artifact.*profile_products' api/src/index.ts api/migrations/0027_intap_artifacts.sql
 
 echo 'B2 artifact contract checks: PASS'

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { API_BASE } from '../../lib/api'
+import { API_BASE, apiGet } from '../../lib/api'
 
 export default function AuthCallback() {
   const navigate = useNavigate()
@@ -20,7 +20,9 @@ export default function AuthCallback() {
       .then((res) => res.json())
       .then((json: any) => {
         if (json.ok) {
-          navigate(sessionStorage.getItem('intap_activation_code') ? '/admin/artifacts/activate' : '/admin', { replace: true })
+          apiGet('/me/artifacts/activation/intent')
+            .then((intent: any) => navigate(intent.ok ? '/admin/artifacts/activate' : '/admin', { replace: true }))
+            .catch(() => navigate('/admin', { replace: true }))
         } else {
           setError(json.error || 'Enlace inválido o expirado')
         }

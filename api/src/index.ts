@@ -185,6 +185,50 @@ const requireAuth = async (c: any, next: any) => {
     .catch(() => { })
 }
 
+const ACTIVATION_INTENT_COOKIE = 'intap_activation_intent'
+const ACTIVATION_INTENT_MAX_AGE = 15 * 60
+
+function buildActivationIntentCookie(value: string, appUrl: string, maxAge: number): string {
+  let cookie = `${ACTIVATION_INTENT_COOKIE}=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
+  try {
+    const u = new URL(appUrl)
+    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com')) {
+      cookie += '; Domain=.intaprd.com'
+    }
+  } catch { /* appUrl inválida — no agregar Domain */ }
+  return cookie
+}
+
+function clearActivationIntentCookie(appUrl: string): string {
+  return buildActivationIntentCookie('', appUrl, 0)
+}
+
+function activationIntentAppUrl(c: any): string {
+  return String(c.env.APP_URL || 'https://app.intaprd.com')
+}
+
+async function hasPendingActivationIntent(c: any): Promise<boolean> {
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', ACTIVATION_INTENT_COOKIE)
+  if (!rawIntent) return false
+  const intentHash = await sha256Hex(rawIntent)
+  const row = await c.env.DB.prepare(
+    `SELECT i.id
+       FROM artifact_activation_intents i
+       JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+       JOIN intap_artifacts a ON a.id = i.artifact_id
+      WHERE i.intent_hash = ?
+        AND i.status = 'active'
+        AND i.revoked_at IS NULL
+        AND i.expires_at > datetime('now')
+        AND ac.status = 'active'
+        AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+        AND a.owner_user_id IS NULL
+        AND a.status IN ('available', 'unassigned')
+      LIMIT 1`
+  ).bind(intentHash).first()
+  return !!row
+}
+
 // ─── Routes ───────────────────────────────────────────────────────────────
 
 app.get('/api/health', (c) => c.json({
@@ -398,7 +442,8 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const clearState = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
 
   const headers = new Headers()
-  headers.set('Location', `${appUrl}/admin`)
+  const resumeActivation = await hasPendingActivationIntent(c)
+  headers.set('Location', `${appUrl}${resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
   headers.append('Set-Cookie', sessionCookie)
   headers.append('Set-Cookie', clearState)
   return new Response(null, { status: 302, headers })
@@ -491,6 +536,30 @@ app.post('/api/v1/public/artifacts/activation/inspect', async (c) => {
     return c.json({ ok: false, error: 'Este producto ya no está disponible para activación.' }, 409)
   }
 
+  const intentToken = generateToken(32)
+  const intentHash = await sha256Hex(intentToken)
+  const intentId = crypto.randomUUID()
+  try {
+    const intentResult = await c.env.DB.prepare(
+      `INSERT INTO artifact_activation_intents
+        (id, intent_hash, artifact_id, activation_code_id, status, expires_at, created_at)
+       SELECT ?, ?, ac.artifact_id, ac.id, 'active', datetime('now', '+15 minutes'), datetime('now')
+         FROM artifact_activation_codes ac
+         JOIN intap_artifacts a ON a.id = ac.artifact_id
+        WHERE ac.activation_code_hash = ?
+          AND ac.status = 'active'
+          AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+          AND a.owner_user_id IS NULL
+          AND a.status IN ('available', 'unassigned')`
+    ).bind(intentId, intentHash, codeHash).run()
+    if (Number((intentResult as any)?.meta?.changes || 0) !== 1) {
+      return c.json({ ok: false, error: 'El código ya no está disponible.' }, 409)
+    }
+  } catch (error) {
+    console.error('[POST /public/artifacts/activation/inspect]', error)
+    return c.json({ ok: false, error: 'No se pudo preparar la activación.' }, 500)
+  }
+
   return c.json({
     ok: true,
     data: {
@@ -498,6 +567,8 @@ app.post('/api/v1/public/artifacts/activation/inspect', async (c) => {
       product_type: (row as any).product_type,
       status: 'available',
     },
+  }, 200, {
+    'Set-Cookie': buildActivationIntentCookie(intentToken, activationIntentAppUrl(c), ACTIVATION_INTENT_MAX_AGE),
   })
 })
 
@@ -714,34 +785,44 @@ me.get('/artifacts', async (c) => {
   })
 })
 
+me.get('/artifacts/activation/intent', async (c) => {
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', ACTIVATION_INTENT_COOKIE)
+  if (!rawIntent) return c.json({ ok: false, error: 'No hay una activación pendiente.' }, 404)
+
+  const intentHash = await sha256Hex(rawIntent)
+  const row = await c.env.DB.prepare(
+    `SELECT a.public_code, a.product_type
+       FROM artifact_activation_intents i
+       JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+       JOIN intap_artifacts a ON a.id = i.artifact_id
+      WHERE i.intent_hash = ?
+        AND i.status = 'active'
+        AND i.revoked_at IS NULL
+        AND i.expires_at > datetime('now')
+        AND ac.status = 'active'
+        AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+        AND a.owner_user_id IS NULL
+        AND a.status IN ('available', 'unassigned')
+      LIMIT 1`
+  ).bind(intentHash).first()
+
+  if (!row) {
+    return c.json({ ok: false, error: 'La activación ya no está disponible.' }, 409, {
+      'Set-Cookie': clearActivationIntentCookie(activationIntentAppUrl(c)),
+    })
+  }
+
+  return c.json({ ok: true, data: row })
+})
+
 me.post('/artifacts/activate', async (c) => {
   const userId = c.get('userId') as string
   let body: any
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
-  const activationCode = normalizeActivationCode(body?.activation_code)
-  if (!isActivationCodeShape(activationCode)) {
-    return c.json({ ok: false, error: 'Código de activación inválido.' }, 400)
-  }
-  const codeHash = await hashActivationCode(activationCode)
-
-  const codeRow = await c.env.DB.prepare(
-    `SELECT ac.id as activation_id, ac.artifact_id, ac.status as code_status, ac.expires_at,
-            a.public_code, a.product_type, a.status as artifact_status
-       FROM artifact_activation_codes ac
-       JOIN intap_artifacts a ON a.id = ac.artifact_id
-      WHERE ac.activation_code_hash = ? LIMIT 1`
-  ).bind(codeHash).first()
-
-  if (!codeRow) return c.json({ ok: false, error: 'Código de activación inválido.' }, 404)
-  const code = codeRow as any
-  const expired = !!code.expires_at && new Date(String(code.expires_at) + 'Z').getTime() <= Date.now()
-  if (code.code_status !== 'active' || expired) {
-    return c.json({ ok: false, error: activationErrorMessage(expired ? 'revoked' : code.code_status) }, 409)
-  }
-  if (!['available', 'unassigned'].includes(String(code.artifact_status))) {
-    return c.json({ ok: false, error: 'Este producto ya no está disponible para activación.' }, 409)
-  }
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', ACTIVATION_INTENT_COOKIE)
+  if (!rawIntent) return c.json({ ok: false, error: 'No hay una activación pendiente.' }, 409)
+  const intentHash = await sha256Hex(rawIntent)
 
   const requestedProfileId = body?.profile_id == null || body.profile_id === ''
     ? null
@@ -753,35 +834,80 @@ me.post('/artifacts/activate', async (c) => {
     if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado.' }, 403)
   }
 
-  // Both statements run in one D1 batch. The ownership predicate is the
-  // concurrency guard: a second claimant cannot update the same artifact.
+  // All three state transitions run in one D1 batch. Each statement repeats
+  // the validity predicates so a stale preflight cannot authorize a claim.
+  // D1 rolls the batch back if any statement fails; changes===1 is required
+  // for the artifact, code, and intent, preventing either partial state.
   const results = await c.env.DB.batch([
     c.env.DB.prepare(
       `UPDATE intap_artifacts
           SET owner_user_id = ?, profile_id = ?, status = 'activated',
               activated_at = COALESCE(activated_at, datetime('now')),
               updated_at = datetime('now')
-        WHERE id = ?
+        WHERE id = (
+          SELECT i.artifact_id
+            FROM artifact_activation_intents i
+            JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+           WHERE i.intent_hash = ?
+             AND i.status = 'active'
+             AND i.revoked_at IS NULL
+             AND i.expires_at > datetime('now')
+             AND ac.status = 'active'
+             AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+        )
           AND owner_user_id IS NULL
           AND status IN ('available', 'unassigned')`
-    ).bind(userId, requestedProfileId, code.artifact_id),
+    ).bind(userId, requestedProfileId, intentHash),
     c.env.DB.prepare(
       `UPDATE artifact_activation_codes
           SET status = 'used', used_at = datetime('now')
-        WHERE id = ?
+        WHERE id = (
+          SELECT i.activation_code_id
+            FROM artifact_activation_intents i
+           WHERE i.intent_hash = ?
+             AND i.status = 'active'
+             AND i.revoked_at IS NULL
+             AND i.expires_at > datetime('now')
+        )
           AND status = 'active'
           AND (expires_at IS NULL OR expires_at > datetime('now'))
           AND EXISTS (
-            SELECT 1 FROM intap_artifacts
-             WHERE id = ? AND owner_user_id = ? AND status = 'activated'
+            SELECT 1 FROM artifact_activation_intents i
+            JOIN intap_artifacts a ON a.id = i.artifact_id
+             WHERE i.intent_hash = ?
+               AND i.status = 'active'
+               AND a.owner_user_id = ?
+               AND a.status = 'activated'
           )`
-    ).bind(code.activation_id, code.artifact_id, userId),
+    ).bind(intentHash, intentHash, userId),
+    c.env.DB.prepare(
+      `UPDATE artifact_activation_intents
+          SET status = 'consumed', consumed_at = datetime('now')
+        WHERE intent_hash = ?
+          AND status = 'active'
+          AND revoked_at IS NULL
+          AND expires_at > datetime('now')
+          AND EXISTS (
+            SELECT 1 FROM artifact_activation_codes ac
+             WHERE ac.id = artifact_activation_intents.activation_code_id
+               AND ac.status = 'used'
+          )
+          AND EXISTS (
+            SELECT 1 FROM intap_artifacts a
+             WHERE a.id = artifact_activation_intents.artifact_id
+               AND a.owner_user_id = ?
+               AND a.status = 'activated'
+          )`
+    ).bind(intentHash, userId),
   ])
 
   const artifactChanged = Number((results[0] as any)?.meta?.changes || 0)
   const codeChanged = Number((results[1] as any)?.meta?.changes || 0)
-  if (artifactChanged !== 1 || codeChanged !== 1) {
-    return c.json({ ok: false, error: 'El código ya fue reclamado o no está disponible.' }, 409)
+  const intentChanged = Number((results[2] as any)?.meta?.changes || 0)
+  if (artifactChanged !== 1 || codeChanged !== 1 || intentChanged !== 1) {
+    return c.json({ ok: false, error: 'La activación ya no está disponible.' }, 409, {
+      'Set-Cookie': clearActivationIntentCookie(activationIntentAppUrl(c)),
+    })
   }
 
   const row = await c.env.DB.prepare(
@@ -790,10 +916,14 @@ me.post('/artifacts/activate', async (c) => {
             p.slug as profile_slug, p.name as profile_name
        FROM intap_artifacts a
        LEFT JOIN profiles p ON p.id = a.profile_id
-      WHERE a.id = ? AND a.owner_user_id = ? LIMIT 1`
-  ).bind(code.artifact_id, userId).first()
+       JOIN artifact_activation_intents i ON i.artifact_id = a.id
+      WHERE i.intent_hash = ? AND i.status = 'consumed'
+        AND a.owner_user_id = ? LIMIT 1`
+  ).bind(intentHash, userId).first()
 
-  return c.json({ ok: true, data: row ? artifactPublicResponse(c, row) : null }, 201)
+  return c.json({ ok: true, data: row ? artifactPublicResponse(c, row) : null }, 201, {
+    'Set-Cookie': clearActivationIntentCookie(activationIntentAppUrl(c)),
+  })
 })
 
 me.patch('/artifacts/:id/profile', async (c) => {

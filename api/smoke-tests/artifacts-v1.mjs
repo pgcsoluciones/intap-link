@@ -29,6 +29,9 @@ class FakeDB {
   constructor() {
     this.artifactStatus = 'available'
     this.codeStatus = 'active'
+    this.intentStatus = 'active'
+    this.intentExpired = false
+    this.intentRevoked = false
     this.profileId = null
     this.profileSlug = 'juanperez'
   }
@@ -42,6 +45,11 @@ class FakeDB {
     if (sql.includes('SELECT ac.id as activation_id')) {
       return { activation_id: 'activation-1', artifact_id: 'artifact-1', code_status: this.codeStatus, expires_at: null, public_code: publicCode, product_type: 'card', artifact_status: this.artifactStatus }
     }
+    if (sql.includes('SELECT i.id FROM artifact_activation_intents')) {
+      return this.intentStatus === 'active' && !this.intentExpired && !this.intentRevoked
+        ? { id: 'intent-1' }
+        : null
+    }
     if (sql.includes('SELECT id FROM profiles WHERE id = ? AND user_id = ? AND is_active = 1')) {
       return params[0] === 'profile-1' ? { id: 'profile-1' } : null
     }
@@ -51,7 +59,9 @@ class FakeDB {
         : { public_code: publicCode, status: this.artifactStatus, profile_id: this.profileId, slug: this.profileSlug, is_active: 1, is_published: 1 }
     }
     if (sql.includes('SELECT a.id, a.public_code, a.product_type')) {
-      return { id: 'artifact-1', public_code: publicCode, product_type: 'card', status: this.artifactStatus, profile_id: this.profileId, profile_slug: this.profileId ? this.profileSlug : null, profile_name: 'QA Profile', activated_at: '2026-08-11 00:00:00', created_at: '2026-08-11 00:00:00', updated_at: '2026-08-11 00:00:00' }
+      return this.intentStatus === 'consumed'
+        ? { id: 'artifact-1', public_code: publicCode, product_type: 'card', status: this.artifactStatus, profile_id: this.profileId, profile_slug: this.profileId ? this.profileSlug : null, profile_name: 'QA Profile', activated_at: '2026-08-11 00:00:00', created_at: '2026-08-11 00:00:00', updated_at: '2026-08-11 00:00:00' }
+        : null
     }
     return null
   }
@@ -62,10 +72,11 @@ class FakeDB {
     return { results: [] }
   }
   batch() {
-    if (this.artifactStatus !== 'available' || this.codeStatus !== 'active') return [{ meta: { changes: 0 } }, { meta: { changes: 0 } }]
+    if (this.artifactStatus !== 'available' || this.codeStatus !== 'active' || this.intentStatus !== 'active' || this.intentExpired || this.intentRevoked) return [{ meta: { changes: 0 } }, { meta: { changes: 0 } }, { meta: { changes: 0 } }]
     this.artifactStatus = 'activated'
     this.codeStatus = 'used'
-    return [{ meta: { changes: 1 } }, { meta: { changes: 1 } }]
+    this.intentStatus = 'consumed'
+    return [{ meta: { changes: 1 } }, { meta: { changes: 1 } }, { meta: { changes: 1 } }]
   }
 }
 
@@ -98,13 +109,13 @@ assert.equal(json.ok, true)
 assert.equal(json.data.public_code, publicCode)
 assert.equal(JSON.stringify(json).includes('activation_code_hash'), false)
 
-response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'session_id=test-session' }, body: JSON.stringify({ activation_code: activationCode }) })
+response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'session_id=test-session; intap_activation_intent=opaque-intent' }, body: JSON.stringify({}) })
 json = await response.json()
 assert.equal(response.status, 201)
 assert.equal(json.data.status, 'activated')
 assert.equal(json.data.public_code, publicCode)
 
-response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'session_id=other-session' }, body: JSON.stringify({ activation_code: activationCode }) })
+response = await request('/api/v1/me/artifacts/activate', { method: 'POST', headers: { Cookie: 'session_id=other-session; intap_activation_intent=opaque-intent' }, body: JSON.stringify({}) })
 assert.equal(response.status, 409)
 
 db.profileId = 'profile-1'

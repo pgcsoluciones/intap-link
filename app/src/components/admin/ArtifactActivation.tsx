@@ -13,8 +13,6 @@ type Artifact = {
   public_url: string
 }
 
-const CODE_KEY = 'intap_activation_code'
-
 function ProductLabel({ type }: { type: string }) {
   const labels: Record<string, string> = {
     card: 'Tarjeta NFC', ping: 'Ping NFC', bracelet: 'Brazalete NFC',
@@ -25,7 +23,7 @@ function ProductLabel({ type }: { type: string }) {
 
 export function ArtifactActivation() {
   const navigate = useNavigate()
-  const [code, setCode] = useState(() => sessionStorage.getItem(CODE_KEY) || '')
+  const [code, setCode] = useState('')
   const [preview, setPreview] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -42,7 +40,7 @@ export function ArtifactActivation() {
       setError(result.error || 'Código inválido.')
       return
     }
-    sessionStorage.setItem(CODE_KEY, code.trim().toUpperCase())
+    setCode('')
     setPreview(result.data)
   }
 
@@ -82,13 +80,12 @@ export function ArtifactActivationAuthenticated() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const storedCode = sessionStorage.getItem(CODE_KEY)
-    if (!storedCode) { navigate('/activate', { replace: true }); return }
-    Promise.all([apiGet('/me'), apiPost('/me/artifacts/activate', { activation_code: storedCode })])
-      .then(([me, result]: any[]) => {
+    Promise.all([apiGet('/me'), apiGet('/me/artifacts/activation/intent')])
+      .then(async ([me, pending]: any[]) => {
+        if (!pending.ok) { navigate('/activate', { replace: true }); return }
+        const result: any = await apiPost('/me/artifacts/activate', {})
         if (!result.ok) { setError(result.error || 'No se pudo activar el producto.'); return }
         setArtifact(result.data)
-        sessionStorage.removeItem(CODE_KEY)
         if (me.ok && me.data?.profile_id && result.data?.profile_id == null) {
           return apiPatch(`/me/artifacts/${result.data.id}/profile`, { profile_id: me.data.profile_id }).then((linked: any) => { if (linked.ok) setArtifact(linked.data) })
         }
