@@ -150,6 +150,74 @@ ${seoHeadHtml}
     return withSecurityHeaders(discoveryResponse);
   }
 
+  // Physical artifact URLs are operational redirects, not profile pages.
+  // Resolve them at the edge through the runtime-matched API so the NFC/QR
+  // destination can change without reprogramming the physical artifact.
+  const artifactMatch = url.pathname.match(/^\/l\/([^/]+)\/?$/i);
+  if (artifactMatch) {
+    const publicCode = decodeURIComponent(artifactMatch[1]).trim().toUpperCase();
+    if (!/^[A-Z2-9]{8,24}$/.test(publicCode)) {
+      return withSecurityHeaders(new Response('Artefacto no encontrado.', {
+        status: 404,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+      }));
+    }
+
+    let resolution: Response;
+    try {
+      resolution = await fetch(
+        `${discoveryRuntime.apiBase}/artifacts/${encodeURIComponent(publicCode)}/resolve`,
+        { headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } } as RequestInit,
+      );
+    } catch {
+      return withSecurityHeaders(new Response('Resolución temporalmente no disponible.', {
+        status: 503,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+      }));
+    }
+
+    if (!resolution.ok) {
+      const status = resolution.status === 410 || resolution.status === 409
+        ? resolution.status
+        : resolution.status >= 500 ? 503 : 404;
+      return withSecurityHeaders(new Response(
+        status === 409
+          ? 'Este producto todavía no está vinculado a un perfil público.'
+          : status === 410
+            ? 'Este producto no está disponible.'
+            : 'Artefacto no encontrado.',
+        {
+          status,
+          headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+        },
+      ));
+    }
+
+    try {
+      const payload = await resolution.json() as { ok?: boolean; data?: { redirect_path?: string } };
+      const redirectPath = payload.ok === true ? String(payload.data?.redirect_path || '') : '';
+      if (!redirectPath.startsWith('/') || redirectPath.startsWith('//') || redirectPath.includes('\\')) {
+        throw new Error('invalid redirect path');
+      }
+
+      const destination = new URL(redirectPath, url.origin);
+      // Preserve query parameters supplied to the physical URL for future
+      // campaign/analytics use, while never caching the redirect destination.
+      for (const [key, value] of url.searchParams) destination.searchParams.append(key, value);
+      const headers = new Headers({
+        Location: destination.toString(),
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        Pragma: 'no-cache',
+      });
+      return withSecurityHeaders(new Response(null, { status: 302, headers }));
+    } catch {
+      return withSecurityHeaders(new Response('Respuesta de artefacto inválida.', {
+        status: 502,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+      }));
+    }
+  }
+
   // Redirigir rutas /admin al panel admin en app.intaprd.com
   // Sólo desde el dominio público — evita loop si app.intaprd.com usa el mismo proyecto
   if (url.hostname !== 'app.intaprd.com' &&

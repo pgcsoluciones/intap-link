@@ -24,6 +24,7 @@ custom_domain = true
 ENVIRONMENT = "production"
 APP_URL = "https://app.intaprd.com"
 API_URL = "https://intaprd.com"
+WEB_URL = "https://intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
 # Remitente del magic link. Debe ser un dominio verificado en Resend.
 # Mientras no esté verificado, Resend solo entrega a la cuenta del owner (plan free).
@@ -45,4 +46,3 @@ bucket_name = "intap-r2"
 binding = "AGENTS_DB"
 database_name = "intap_agents_db"
 database_id = "93c7f5d9-7c44-454b-9e62-073322127c46"
-

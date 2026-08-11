@@ -6,6 +6,15 @@ import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
+import {
+  ARTIFACT_PRODUCT_TYPES,
+  generateHumanCode,
+  hashActivationCode,
+  isActivationCodeShape,
+  isPublicCodeShape,
+  normalizeActivationCode,
+  publicArtifactUrl,
+} from './artifacts'
 
 type Bindings = {
   DB: D1Database
@@ -17,6 +26,7 @@ type Bindings = {
   GOOGLE_CLIENT_SECRET: string
   TURNSTILE_SECRET: string
   API_URL: string
+  WEB_URL?: string
   APP_URL: string
   ENVIRONMENT: string
   ADMIN_EMAILS: string
@@ -418,6 +428,163 @@ app.post('/api/v1/auth/logout', async (c) => {
   return c.json({ ok: true }, 200, { 'Set-Cookie': clearCookie })
 })
 
+// ─── INTAP physical artifacts (B2) ───────────────────────────────────────
+
+function artifactWebOrigin(c: any): string {
+  const configured = String(c.env.WEB_URL || c.env.API_URL || '').trim()
+  try {
+    return new URL(configured || new URL(c.req.url).origin).origin
+  } catch {
+    return new URL(c.req.url).origin
+  }
+}
+
+function artifactPublicResponse(c: any, row: any) {
+  return {
+    id: row.id,
+    public_code: row.public_code,
+    product_type: row.product_type,
+    status: row.status,
+    profile_id: row.profile_id ?? null,
+    profile_slug: row.profile_slug ?? null,
+    profile_name: row.profile_name ?? null,
+    public_url: publicArtifactUrl(artifactWebOrigin(c), row.public_code),
+    activated_at: row.activated_at ?? null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }
+}
+
+function activationErrorMessage(status: string | null | undefined): string {
+  if (status === 'used') return 'Este código ya fue utilizado.'
+  if (status === 'revoked') return 'Este código ya no está disponible.'
+  return 'Código de activación inválido.'
+}
+
+// Public preflight. It reveals only product type and a stable public code;
+// it never returns ownership, profile, hashes, or the activation secret.
+app.post('/api/v1/public/artifacts/activation/inspect', async (c) => {
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const activationCode = normalizeActivationCode(body?.activation_code)
+  if (!isActivationCodeShape(activationCode)) {
+    return c.json({ ok: false, error: 'Código de activación inválido.' }, 400)
+  }
+
+  const codeHash = await hashActivationCode(activationCode)
+  const row = await c.env.DB.prepare(
+    `SELECT ac.status as code_status, ac.expires_at,
+            a.public_code, a.product_type, a.status as artifact_status
+       FROM artifact_activation_codes ac
+       JOIN intap_artifacts a ON a.id = ac.artifact_id
+      WHERE ac.activation_code_hash = ? LIMIT 1`
+  ).bind(codeHash).first()
+
+  if (!row) return c.json({ ok: false, error: 'Código de activación inválido.' }, 404)
+  const codeStatus = String((row as any).code_status || '')
+  const expired = !!(row as any).expires_at && new Date(String((row as any).expires_at) + 'Z').getTime() <= Date.now()
+  if (codeStatus !== 'active' || expired) {
+    return c.json({ ok: false, error: activationErrorMessage(expired ? 'revoked' : codeStatus) }, 409)
+  }
+  if (!['available', 'unassigned'].includes(String((row as any).artifact_status))) {
+    return c.json({ ok: false, error: 'Este producto ya no está disponible para activación.' }, 409)
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      public_code: (row as any).public_code,
+      product_type: (row as any).product_type,
+      status: 'available',
+    },
+  })
+})
+
+// Provisioning is deliberately admin-only. The plaintext activation code is
+// returned exactly once to the operator; only its SHA-256 hash is persisted.
+app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const productType = String(body?.product_type || 'other').trim().toLowerCase()
+  if (!(ARTIFACT_PRODUCT_TYPES as readonly string[]).includes(productType)) {
+    return c.json({ ok: false, error: 'Tipo de producto inválido.' }, 400)
+  }
+
+  const publicCode = generateHumanCode(10)
+  const activationCode = generateHumanCode(20)
+  const artifactId = crypto.randomUUID()
+  const activationId = crypto.randomUUID()
+  const activationHash = await hashActivationCode(activationCode)
+
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `INSERT INTO intap_artifacts
+          (id, public_code, product_type, status, created_at, updated_at)
+         VALUES (?, ?, ?, 'available', datetime('now'), datetime('now'))`
+      ).bind(artifactId, publicCode, productType),
+      c.env.DB.prepare(
+        `INSERT INTO artifact_activation_codes
+          (id, artifact_id, activation_code_hash, status, expires_at, created_at)
+         VALUES (?, ?, ?, 'active', ?, datetime('now'))`
+      ).bind(activationId, artifactId, activationHash, body?.expires_at || null),
+    ])
+  } catch (error) {
+    console.error('[POST /admin/artifacts]', error)
+    return c.json({ ok: false, error: 'No se pudo crear el artefacto.' }, 500)
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      id: artifactId,
+      public_code: publicCode,
+      activation_code: activationCode,
+      product_type: productType,
+      status: 'available',
+      public_url: publicArtifactUrl(artifactWebOrigin(c), publicCode),
+      warning: 'Guarda el código de activación. No se puede recuperar después.',
+    },
+  }, 201)
+})
+
+// Public resolver consumed by Pages Functions. It returns no profile content,
+// only a validated slug target; inactive/revoked artifacts never redirect.
+app.get('/api/v1/public/artifacts/:publicCode/resolve', async (c) => {
+  const publicCode = String(c.req.param('publicCode') || '').trim().toUpperCase()
+  if (!isPublicCodeShape(publicCode)) return c.json({ ok: false, error: 'Artefacto no encontrado.' }, 404)
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.public_code, a.status, a.profile_id,
+            p.slug, p.is_active, p.is_published
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+      WHERE a.public_code = ? LIMIT 1`
+  ).bind(publicCode).first()
+
+  if (!row) return c.json({ ok: false, error: 'Artefacto no encontrado.' }, 404)
+  const artifact = row as any
+  if (!['activated'].includes(String(artifact.status))) {
+    return c.json({ ok: false, error: 'Artefacto no disponible.' }, 410)
+  }
+  if (!artifact.profile_id || !artifact.slug || Number(artifact.is_active) !== 1 || Number(artifact.is_published) !== 1) {
+    return c.json({ ok: false, error: 'Artefacto aún no vinculado a un perfil público.' }, 409)
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      public_code: publicCode,
+      profile_id: artifact.profile_id,
+      redirect_path: `/${encodeURIComponent(String(artifact.slug))}`,
+    },
+  }, 200, {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  })
+})
+
 // ─── /me endpoints — sub-app aislado, requireAuth se aplica una sola vez ──
 
 const me = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -527,6 +694,144 @@ me.get('/', async (c) => {
   })
 })
 
+// ── Physical artifacts owned by the authenticated user ───────────────────
+
+me.get('/artifacts', async (c) => {
+  const userId = c.get('userId') as string
+  const rows = await c.env.DB.prepare(
+    `SELECT a.id, a.public_code, a.product_type, a.status, a.profile_id,
+            a.activated_at, a.created_at, a.updated_at,
+            p.slug as profile_slug, p.name as profile_name
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+      WHERE a.owner_user_id = ?
+      ORDER BY a.created_at DESC`
+  ).bind(userId).all()
+
+  return c.json({
+    ok: true,
+    data: (rows.results as any[]).map(row => artifactPublicResponse(c, row)),
+  })
+})
+
+me.post('/artifacts/activate', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const activationCode = normalizeActivationCode(body?.activation_code)
+  if (!isActivationCodeShape(activationCode)) {
+    return c.json({ ok: false, error: 'Código de activación inválido.' }, 400)
+  }
+  const codeHash = await hashActivationCode(activationCode)
+
+  const codeRow = await c.env.DB.prepare(
+    `SELECT ac.id as activation_id, ac.artifact_id, ac.status as code_status, ac.expires_at,
+            a.public_code, a.product_type, a.status as artifact_status
+       FROM artifact_activation_codes ac
+       JOIN intap_artifacts a ON a.id = ac.artifact_id
+      WHERE ac.activation_code_hash = ? LIMIT 1`
+  ).bind(codeHash).first()
+
+  if (!codeRow) return c.json({ ok: false, error: 'Código de activación inválido.' }, 404)
+  const code = codeRow as any
+  const expired = !!code.expires_at && new Date(String(code.expires_at) + 'Z').getTime() <= Date.now()
+  if (code.code_status !== 'active' || expired) {
+    return c.json({ ok: false, error: activationErrorMessage(expired ? 'revoked' : code.code_status) }, 409)
+  }
+  if (!['available', 'unassigned'].includes(String(code.artifact_status))) {
+    return c.json({ ok: false, error: 'Este producto ya no está disponible para activación.' }, 409)
+  }
+
+  const requestedProfileId = body?.profile_id == null || body.profile_id === ''
+    ? null
+    : String(body.profile_id).trim()
+  if (requestedProfileId) {
+    const profile = await c.env.DB.prepare(
+      `SELECT id FROM profiles WHERE id = ? AND user_id = ? AND is_active = 1 LIMIT 1`
+    ).bind(requestedProfileId, userId).first()
+    if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado.' }, 403)
+  }
+
+  // Both statements run in one D1 batch. The ownership predicate is the
+  // concurrency guard: a second claimant cannot update the same artifact.
+  const results = await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE intap_artifacts
+          SET owner_user_id = ?, profile_id = ?, status = 'activated',
+              activated_at = COALESCE(activated_at, datetime('now')),
+              updated_at = datetime('now')
+        WHERE id = ?
+          AND owner_user_id IS NULL
+          AND status IN ('available', 'unassigned')`
+    ).bind(userId, requestedProfileId, code.artifact_id),
+    c.env.DB.prepare(
+      `UPDATE artifact_activation_codes
+          SET status = 'used', used_at = datetime('now')
+        WHERE id = ?
+          AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > datetime('now'))
+          AND EXISTS (
+            SELECT 1 FROM intap_artifacts
+             WHERE id = ? AND owner_user_id = ? AND status = 'activated'
+          )`
+    ).bind(code.activation_id, code.artifact_id, userId),
+  ])
+
+  const artifactChanged = Number((results[0] as any)?.meta?.changes || 0)
+  const codeChanged = Number((results[1] as any)?.meta?.changes || 0)
+  if (artifactChanged !== 1 || codeChanged !== 1) {
+    return c.json({ ok: false, error: 'El código ya fue reclamado o no está disponible.' }, 409)
+  }
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.id, a.public_code, a.product_type, a.status, a.profile_id,
+            a.activated_at, a.created_at, a.updated_at,
+            p.slug as profile_slug, p.name as profile_name
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+      WHERE a.id = ? AND a.owner_user_id = ? LIMIT 1`
+  ).bind(code.artifact_id, userId).first()
+
+  return c.json({ ok: true, data: row ? artifactPublicResponse(c, row) : null }, 201)
+})
+
+me.patch('/artifacts/:id/profile', async (c) => {
+  const userId = c.get('userId') as string
+  const artifactId = c.req.param('id')
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profileId = body?.profile_id == null || body.profile_id === ''
+    ? null
+    : String(body.profile_id).trim()
+  if (profileId) {
+    const profile = await c.env.DB.prepare(
+      `SELECT id FROM profiles WHERE id = ? AND user_id = ? AND is_active = 1 LIMIT 1`
+    ).bind(profileId, userId).first()
+    if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado.' }, 403)
+  }
+
+  const result = await c.env.DB.prepare(
+    `UPDATE intap_artifacts
+        SET profile_id = ?, updated_at = datetime('now')
+      WHERE id = ? AND owner_user_id = ? AND status = 'activated'`
+  ).bind(profileId, artifactId, userId).run()
+  if (Number((result as any)?.meta?.changes || 0) !== 1) {
+    return c.json({ ok: false, error: 'Artefacto no encontrado o no pertenece a tu cuenta.' }, 404)
+  }
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.id, a.public_code, a.product_type, a.status, a.profile_id,
+            a.activated_at, a.created_at, a.updated_at,
+            p.slug as profile_slug, p.name as profile_name
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+      WHERE a.id = ? AND a.owner_user_id = ? LIMIT 1`
+  ).bind(artifactId, userId).first()
+  return c.json({ ok: true, data: row ? artifactPublicResponse(c, row) : null })
+})
+
 me.post('/profile/claim', async (c) => {
   const userId = c.get('userId') as string
   let body: any = {}
@@ -537,7 +842,7 @@ me.post('/profile/claim', async (c) => {
     'api', 'auth', 'me', 'assets', 'health', 'public',
     // rutas del panel admin (app.intaprd.com)
     'admin', 'login', 'logout', 'check-email', 'onboarding',
-    'dashboard', 'settings', 'account', 'profile', 'superadmin',
+    'dashboard', 'settings', 'account', 'profile', 'superadmin', 'activate', 'l', 'artifacts',
     // rutas de la landing (intaprd.com)
     'about', 'pricing', 'blog', 'help', 'terms', 'privacy', 'contact',
     // técnicos
