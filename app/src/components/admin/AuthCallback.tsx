@@ -20,7 +20,7 @@ export default function AuthCallback() {
       .then((res) => res.json())
       .then((json: any) => {
         if (json.ok) {
-          navigate('/admin', { replace: true })
+          navigate(sessionStorage.getItem('intap_activation_code') ? '/admin/artifacts/activate' : '/admin', { replace: true })
         } else {
           setError(json.error || 'Enlace inválido o expirado')
         }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { API_BASE, apiPost } from '../../lib/api'
 
 type Mode = 'login' | 'register'
@@ -51,6 +51,10 @@ export default function AdminLogin() {
       />
 
       <div className="w-full max-w-sm animate-fade-in relative z-10">
+
+        <div className="mb-5 text-center text-sm">
+          <Link to="/activate" className="text-intap-mint hover:underline font-semibold">¿Tienes un producto INTAP? Actívalo aquí →</Link>
+        </div>
 
         {/* Logo / Brand */}
         <div className="text-center mb-8">

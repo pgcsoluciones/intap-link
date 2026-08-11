@@ -17,6 +17,7 @@ import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
 import OnboardingContact from './components/admin/onboarding/OnboardingContact'
+import { ArtifactActivation, ArtifactActivationAuthenticated, ArtifactManager } from './components/admin/ArtifactActivation'
 
 function UnknownAppRouteRedirect() {
   const location = useLocation()
@@ -39,12 +40,15 @@ function App() {
         <Route path="/admin/login"       element={<AdminLogin />} />
         <Route path="/admin/check-email" element={<AdminVerify />} />
         <Route path="/auth/callback"     element={<AuthCallback />} />
+        <Route path="/activate" element={<ArtifactActivation />} />
 
         {/* Onboarding (requiere sesión, no requiere perfil) */}
         <Route path="/admin/onboarding/slug"     element={<AdminGuard requireProfile={false}><OnboardingSlug /></AdminGuard>} />
         <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false}><OnboardingCategory /></AdminGuard>} />
         <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false}><OnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
+        <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><ArtifactActivationAuthenticated /></AdminGuard>} />
+        <Route path="/admin/artifacts" element={<AdminGuard requireProfile={false}><ArtifactManager /></AdminGuard>} />
 
         {/* Super Admin interno */}
         <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />

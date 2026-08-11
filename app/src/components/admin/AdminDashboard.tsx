@@ -555,6 +555,17 @@ export default function AdminDashboard() {
             <span className="text-slate-400">›</span>
           </Link>
 
+          <Link to="/admin/artifacts" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">📲</span>
+              <div>
+                <p className="text-sm font-bold">Mis productos físicos</p>
+                <p className="text-xs text-slate-400">Activa y vincula tu NFC o QR</p>
+              </div>
+            </div>
+            <span className="text-slate-400">›</span>
+          </Link>
+
           <Link to="/admin/videos" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
             <div className="flex items-center gap-3">
               <span className="text-lg">▶️</span>
