@@ -1,6 +1,8 @@
 /*
- * B2B.2 integration test: executes the real Production and Preview artifact
- * migrations in SQLite, including the real claim triggers.
+ * B2B.3 integration test: executes the real Production and Preview claim
+ * migrations in SQLite and runs the same five-statement claim batch as API.
+ * The local batch harness uses a SQLite transaction only to model D1's
+ * documented DB.batch rollback boundary; production code uses DB.batch().
  * Run with: node api/smoke-tests/activation-atomic-sqlite.mjs
  */
 import assert from 'node:assert/strict'
@@ -12,6 +14,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 const root = new URL('..', import.meta.url)
 const read = (relative) => fs.readFileSync(new URL(relative, root), 'utf8')
+const CLAIM_AT = '2026-08-12 00:00:00.000'
 
 function makeDb(preview = false, filename = ':memory:') {
   const db = new DatabaseSync(filename)
@@ -40,7 +43,11 @@ function makeDb(preview = false, filename = ':memory:') {
   return db
 }
 
-function seed(db, { codeExpiresAt = '2099-01-01 00:00:00.000', intentExpiresAt = codeExpiresAt } = {}) {
+function seed(db, {
+  codeExpiresAt = '2099-01-01 00:00:00.000',
+  intentExpiresAt = codeExpiresAt,
+  secondIntent = false,
+} = {}) {
   db.prepare('INSERT INTO users (id, email) VALUES (?, ?)').run('user-1', 'one@example.test')
   db.prepare('INSERT INTO users (id, email) VALUES (?, ?)').run('user-2', 'two@example.test')
   db.prepare(
@@ -57,6 +64,13 @@ function seed(db, { codeExpiresAt = '2099-01-01 00:00:00.000', intentExpiresAt =
       (id, intent_hash, artifact_id, activation_code_id, status, expires_at)
      VALUES (?, ?, ?, ?, 'active', ?)`,
   ).run('intent-1', 'intent-hash-1', 'artifact-1', 'code-1', intentExpiresAt)
+  if (secondIntent) {
+    db.prepare(
+      `INSERT INTO artifact_activation_intents
+        (id, intent_hash, artifact_id, activation_code_id, status, expires_at)
+       VALUES (?, ?, ?, ?, 'active', ?)`,
+    ).run('intent-2', 'intent-hash-2', 'artifact-1', 'code-1', '2099-01-01 00:00:00.000')
+  }
 }
 
 function state(db) {
@@ -68,105 +82,208 @@ function state(db) {
     code: db.prepare(
       `SELECT status, used_at FROM artifact_activation_codes WHERE id = 'code-1'`,
     ).get(),
-    intent: db.prepare(
-      `SELECT status, consumed_at FROM artifact_activation_intents WHERE id = 'intent-1'`,
-    ).get(),
-    markerCount: db.prepare('SELECT COUNT(*) AS n FROM artifact_activation_claims').get().n,
+    intents: db.prepare(
+      `SELECT intent_hash, status, consumed_at, revoked_at
+         FROM artifact_activation_intents WHERE artifact_id = 'artifact-1'
+        ORDER BY intent_hash`,
+    ).all(),
+    assertionCount: db.prepare(
+      'SELECT COUNT(*) AS n FROM artifact_activation_claim_assertions',
+    ).get().n,
   }
 }
 
-function claim(db, intentHash = 'intent-hash-1', userId = 'user-1', claimAt = '2026-08-12 00:00:00.000') {
-  return db.prepare(
-    `INSERT INTO artifact_activation_claims (id, intent_hash, user_id, profile_id, claim_at)
-     VALUES (?, ?, ?, NULL, ?)`,
-  ).run(crypto.randomUUID(), intentHash, userId, claimAt)
+function statements({ intentHash, userId, profileId = null, claimAt = CLAIM_AT, codeIdOverride = null }) {
+  const codeId = codeIdOverride || 'code-1'
+  const claimId = `claim-${intentHash}-${userId}`
+  return [
+    {
+      sql: `UPDATE intap_artifacts
+               SET owner_user_id = ?, profile_id = ?, status = 'activated', activated_at = ?, updated_at = ?
+             WHERE id = (SELECT i.artifact_id FROM artifact_activation_intents i WHERE i.intent_hash = ?)
+               AND owner_user_id IS NULL
+               AND status IN ('available', 'unassigned')
+               AND EXISTS (
+                 SELECT 1 FROM artifact_activation_intents i
+                 JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+                 JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+                  WHERE i.intent_hash = ? AND i.status = 'active' AND i.revoked_at IS NULL
+                    AND i.expires_at > ? AND ac.status = 'active'
+                    AND (ac.expires_at IS NULL OR ac.expires_at > ?)
+               )
+               AND (? IS NULL OR EXISTS (
+                 SELECT 1 FROM profiles p WHERE p.id = ? AND p.user_id = ? AND p.is_active = 1
+               ))`,
+      params: [userId, profileId, claimAt, claimAt, intentHash, intentHash, claimAt, claimAt, profileId, profileId, userId],
+    },
+    {
+      sql: `UPDATE artifact_activation_codes
+               SET status = 'used', used_at = ?
+             WHERE id = ? AND status = 'active'
+               AND (expires_at IS NULL OR expires_at > ?)
+               AND EXISTS (
+                 SELECT 1 FROM artifact_activation_intents i
+                 JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+                 JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+                  WHERE i.intent_hash = ? AND i.status = 'active' AND i.revoked_at IS NULL
+                    AND i.expires_at > ? AND a.owner_user_id = ?
+                    AND a.status = 'activated' AND a.activated_at = ?
+               )`,
+      params: [claimAt, codeId, claimAt, intentHash, claimAt, userId, claimAt],
+    },
+    {
+      sql: `UPDATE artifact_activation_intents
+               SET status = 'consumed', consumed_at = ?
+             WHERE intent_hash = ? AND status = 'active' AND revoked_at IS NULL AND expires_at > ?
+               AND EXISTS (
+                 SELECT 1 FROM artifact_activation_codes ac
+                  WHERE ac.id = artifact_activation_intents.activation_code_id
+                    AND ac.artifact_id = artifact_activation_intents.artifact_id
+                    AND ac.status = 'used' AND ac.used_at = ?
+               )
+               AND EXISTS (
+                 SELECT 1 FROM intap_artifacts a
+                  WHERE a.id = artifact_activation_intents.artifact_id
+                    AND a.owner_user_id = ? AND a.status = 'activated' AND a.activated_at = ?
+               )`,
+      params: [claimAt, intentHash, claimAt, claimAt, userId, claimAt],
+    },
+    {
+      sql: `INSERT INTO artifact_activation_claim_assertions
+              (id, intent_hash, user_id, profile_id, claim_at, ok)
+            VALUES (?, ?, ?, ?, ?, CASE WHEN EXISTS (
+              SELECT 1
+                FROM artifact_activation_intents i
+                JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+                JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+               WHERE i.intent_hash = ? AND i.status = 'consumed' AND i.consumed_at = ?
+                 AND ac.status = 'used' AND ac.used_at = ?
+                 AND a.owner_user_id = ? AND a.status = 'activated' AND a.activated_at = ?
+                 AND ((? IS NULL AND a.profile_id IS NULL) OR (? IS NOT NULL AND a.profile_id = ?))
+                 AND (? IS NULL OR EXISTS (
+                   SELECT 1 FROM profiles p WHERE p.id = a.profile_id AND p.user_id = ? AND p.is_active = 1
+                 ))
+            ) THEN 1 ELSE 0 END)`,
+      params: [claimId, intentHash, userId, profileId, claimAt, intentHash, claimAt, claimAt, userId, claimAt, profileId, profileId, profileId, profileId, userId],
+    },
+    {
+      sql: 'DELETE FROM artifact_activation_claim_assertions WHERE id = ? AND ok = 1',
+      params: [claimId],
+    },
+  ]
 }
 
-// Both migration sequences compile and expose the same atomic trigger contract.
+// This is only a local SQLite model of D1's DB.batch([...]) rollback contract.
+function batch(db, args) {
+  db.exec('BEGIN')
+  try {
+    const results = statements(args).map(({ sql, params }) => db.prepare(sql).run(...params))
+    db.exec('COMMIT')
+    return results
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+}
+
 for (const preview of [false, true]) {
   const db = makeDb(preview)
-  assert.deepEqual(
-    db.prepare(`SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'trg_artifact_activation_claim_%' ORDER BY name`).all().map(row => row.name),
-    ['trg_artifact_activation_claim_after_insert', 'trg_artifact_activation_claim_before_insert'],
-  )
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'trigger' AND name LIKE '%activation_claim%'`).get().n, 0)
+  assert.equal(db.prepare(`SELECT sql FROM sqlite_master WHERE name = 'artifact_activation_claim_assertions'`).get().sql.includes('CHECK (ok = 1)'), true)
   db.close()
 }
 
-// CASE 1: artifact transition occurs, the next SQL condition raises, and the
-// complete statement rolls back physically. The test-only trigger injects a
-// deterministic SQL failure immediately after the artifact transition.
+// CASE 1: successful claim, one shared claimAt, and no assertion residue.
+for (const preview of [false, true]) {
+  const db = makeDb(preview)
+  seed(db)
+  batch(db, { intentHash: 'intent-hash-1', userId: 'user-1' })
+  const finalState = state(db)
+  assert.equal(finalState.artifact.status, 'activated')
+  assert.equal(finalState.artifact.owner_user_id, 'user-1')
+  assert.equal(finalState.artifact.activated_at, CLAIM_AT)
+  assert.equal(finalState.code.status, 'used')
+  assert.equal(finalState.code.used_at, CLAIM_AT)
+  assert.deepEqual(finalState.intents.map(row => ({ ...row })), [{ intent_hash: 'intent-hash-1', status: 'consumed', consumed_at: CLAIM_AT, revoked_at: null }])
+  assert.equal(finalState.assertionCount, 0)
+  assert.equal(finalState.artifact.public_code, 'PUBCODE1')
+  db.close()
+}
+
+// CASE 2: artifact update is valid but the code transition targets an invalid
+// code; CHECK(ok = 1) fails and SQLite restores every row physically.
 {
   const db = makeDb()
   seed(db)
-  db.exec(`
-    CREATE TRIGGER test_force_next_transition_error
-    AFTER UPDATE OF status ON intap_artifacts
-    WHEN NEW.status = 'activated'
-    BEGIN
-      SELECT RAISE(ABORT, 'forced next transition error');
-    END;
-  `)
   const before = state(db)
-  assert.throws(() => claim(db), /forced next transition error/)
+  assert.throws(() => batch(db, { intentHash: 'intent-hash-1', userId: 'user-1', codeIdOverride: 'missing-code' }), /CHECK constraint failed|constraint failed/)
   assert.deepEqual(state(db), before)
   db.close()
 }
 
-// CASE 2: expiration exactly at the preflight/claim boundary is invalid.
-{
-  const db = makeDb()
-  seed(db, { codeExpiresAt: '2099-01-01 00:00:00.000', intentExpiresAt: '2026-08-12 00:00:00.000' })
-  const before = state(db)
-  assert.throws(() => claim(db, 'intent-hash-1', 'user-1', '2026-08-12 00:00:00.000'), /precondition failed/)
-  assert.deepEqual(state(db), before)
-  db.close()
-}
-
-// CASE 3: revocation between preflight and claim persists no transition.
+// CASE 3: intent is invalid at claim time; no transition is effective.
 {
   const db = makeDb()
   seed(db)
-  db.prepare(`UPDATE artifact_activation_codes SET status = 'revoked' WHERE id = 'code-1'`).run()
+  db.prepare(`UPDATE artifact_activation_intents SET revoked_at = ?, status = 'revoked' WHERE id = 'intent-1'`).run('2026-08-11 23:59:00.000')
   const before = state(db)
-  assert.throws(() => claim(db), /precondition failed/)
+  assert.throws(() => batch(db, { intentHash: 'intent-hash-1', userId: 'user-1' }), /CHECK constraint failed|constraint failed/)
   assert.deepEqual(state(db), before)
   db.close()
 }
 
-// CASE 4: two real SQLite writers contend for the same public artifact. The
-// database serializes the writes; exactly one claim succeeds and the other
-// fails its trigger precondition without changing the first owner.
+// CASE 4/5/6: exact-boundary expiry, code expiry, and intent revocation.
+for (const setup of [
+  (db) => seed(db, { intentExpiresAt: CLAIM_AT }),
+  (db) => seed(db, { codeExpiresAt: CLAIM_AT }),
+  (db) => { seed(db); db.prepare(`UPDATE artifact_activation_intents SET revoked_at = ?, status = 'revoked' WHERE id = 'intent-1'`).run(CLAIM_AT) },
+]) {
+  const db = makeDb()
+  setup(db)
+  const before = state(db)
+  assert.throws(() => batch(db, { intentHash: 'intent-hash-1', userId: 'user-1' }), /CHECK constraint failed|constraint failed/)
+  assert.deepEqual(state(db), before)
+  db.close()
+}
+
+// CASE 7/8/9/10: two concurrent real SQLite writers, one-time retry, and the
+// invariant that all three timestamps are exactly the same claimAt.
 {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'intap-b2b2-'))
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'intap-b2b3-'))
   const filename = path.join(directory, 'atomic.sqlite')
   const db = makeDb(false, filename)
-  seed(db)
-  db.prepare(
-    `INSERT INTO artifact_activation_intents
-      (id, intent_hash, artifact_id, activation_code_id, status, expires_at)
-     VALUES (?, ?, ?, ?, 'active', ?)`,
-  ).run('intent-2', 'intent-hash-2', 'artifact-1', 'code-1', '2099-01-01 00:00:00.000')
-
+  seed(db, { secondIntent: true })
   db.close()
 
   const workerCode = `
     const { parentPort, workerData } = require('node:worker_threads')
     const { DatabaseSync } = require('node:sqlite')
-    try {
-      const db = new DatabaseSync(workerData.filename)
-      db.prepare(
-        'INSERT INTO artifact_activation_claims (id, intent_hash, user_id, profile_id, claim_at) VALUES (?, ?, ?, NULL, ?)'
-      ).run(workerData.id, workerData.intentHash, workerData.userId, workerData.claimAt)
-      db.close()
-      parentPort.postMessage({ ok: true, userId: workerData.userId })
-    } catch (error) {
-      parentPort.postMessage({ ok: false, userId: workerData.userId, error: String(error?.message || error) })
+    const claimAt = ${JSON.stringify(CLAIM_AT)}
+    function run(db) {
+      db.exec('BEGIN')
+      try {
+        const q = [
+          [\`UPDATE intap_artifacts SET owner_user_id = ?, profile_id = NULL, status = 'activated', activated_at = ?, updated_at = ? WHERE id = (SELECT artifact_id FROM artifact_activation_intents WHERE intent_hash = ?) AND owner_user_id IS NULL AND status IN ('available', 'unassigned') AND EXISTS (SELECT 1 FROM artifact_activation_intents i JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id WHERE i.intent_hash = ? AND i.status = 'active' AND i.revoked_at IS NULL AND i.expires_at > ? AND ac.status = 'active' AND (ac.expires_at IS NULL OR ac.expires_at > ?))\`, [workerData.userId, claimAt, claimAt, workerData.intentHash, workerData.intentHash, claimAt, claimAt]],
+          [\`UPDATE artifact_activation_codes SET status = 'used', used_at = ? WHERE id = (SELECT activation_code_id FROM artifact_activation_intents WHERE intent_hash = ?) AND status = 'active' AND (expires_at IS NULL OR expires_at > ?) AND EXISTS (SELECT 1 FROM artifact_activation_intents i JOIN intap_artifacts a ON a.id = i.artifact_id WHERE i.intent_hash = ? AND i.status = 'active' AND i.revoked_at IS NULL AND i.expires_at > ? AND a.owner_user_id = ? AND a.status = 'activated' AND a.activated_at = ?)\`, [claimAt, workerData.intentHash, claimAt, workerData.intentHash, claimAt, workerData.userId, claimAt]],
+          [\`UPDATE artifact_activation_intents SET status = 'consumed', consumed_at = ? WHERE intent_hash = ? AND status = 'active' AND revoked_at IS NULL AND expires_at > ? AND EXISTS (SELECT 1 FROM artifact_activation_codes ac WHERE ac.id = artifact_activation_intents.activation_code_id AND ac.status = 'used' AND ac.used_at = ?) AND EXISTS (SELECT 1 FROM intap_artifacts a WHERE a.id = artifact_activation_intents.artifact_id AND a.owner_user_id = ? AND a.status = 'activated' AND a.activated_at = ?)\`, [claimAt, workerData.intentHash, claimAt, claimAt, workerData.userId, claimAt]],
+          [\`INSERT INTO artifact_activation_claim_assertions (id, intent_hash, user_id, profile_id, claim_at, ok) VALUES (?, ?, ?, NULL, ?, CASE WHEN EXISTS (SELECT 1 FROM artifact_activation_intents i JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id JOIN intap_artifacts a ON a.id = i.artifact_id WHERE i.intent_hash = ? AND i.status = 'consumed' AND i.consumed_at = ? AND ac.status = 'used' AND ac.used_at = ? AND a.owner_user_id = ? AND a.status = 'activated' AND a.activated_at = ?) THEN 1 ELSE 0 END)\`, [workerData.id, workerData.intentHash, workerData.userId, claimAt, workerData.intentHash, claimAt, claimAt, workerData.userId, claimAt]],
+          [\`DELETE FROM artifact_activation_claim_assertions WHERE id = ? AND ok = 1\`, [workerData.id]],
+        ]
+        for (const [sql, params] of q) db.prepare(sql).run(...params)
+        db.exec('COMMIT')
+        return { ok: true, userId: workerData.userId }
+      } catch (error) {
+        db.exec('ROLLBACK')
+        return { ok: false, userId: workerData.userId, error: String(error?.message || error) }
+      }
     }
+    const db = new DatabaseSync(workerData.filename)
+    const result = run(db)
+    db.close()
+    parentPort.postMessage(result)
   `
   const runWorker = (id, intentHash, userId) => new Promise((resolve, reject) => {
-    const worker = new Worker(workerCode, { eval: true, workerData: {
-      filename, id, intentHash, userId, claimAt: '2026-08-12 00:00:00.000',
-    } })
+    const worker = new Worker(workerCode, { eval: true, workerData: { filename, id, intentHash, userId } })
     worker.once('message', resolve)
     worker.once('error', reject)
   })
@@ -178,27 +295,20 @@ for (const preview of [false, true]) {
   assert.equal(results.filter(result => !result.ok).length, 1)
 
   const finalDb = new DatabaseSync(filename)
-
   const finalState = state(finalDb)
-  assert.equal(finalState.artifact.owner_user_id, results.find(result => result.ok).userId)
+  const winner = results.find(result => result.ok).userId
+  assert.equal(finalState.artifact.owner_user_id, winner)
   assert.equal(finalState.artifact.status, 'activated')
-  assert.equal(finalState.artifact.public_code, 'PUBCODE1')
   assert.equal(finalState.code.status, 'used')
-  const intentStatuses = finalDb.prepare(
-    `SELECT intent_hash, status, consumed_at
-       FROM artifact_activation_intents
-      WHERE artifact_id = 'artifact-1'
-      ORDER BY intent_hash`,
-  ).all()
-  assert.equal(intentStatuses.filter(intent => intent.status === 'consumed').length, 1)
-  assert.equal(intentStatuses.filter(intent => intent.status === 'active').length, 1)
-  assert.equal(intentStatuses.find(intent => intent.status === 'consumed').consumed_at, '2026-08-12 00:00:00.000')
-  assert.equal(finalState.markerCount, 0)
-  assert.equal(finalState.artifact.activated_at, '2026-08-12 00:00:00.000')
-  assert.equal(finalState.code.used_at, '2026-08-12 00:00:00.000')
-  assert.throws(() => claim(finalDb, 'intent-hash-1', 'user-2', '2026-08-12 00:00:02.000'), /precondition failed/)
+  assert.equal(finalState.artifact.activated_at, CLAIM_AT)
+  assert.equal(finalState.code.used_at, CLAIM_AT)
+  assert.equal(finalState.intents.filter(intent => intent.status === 'consumed').length, 1)
+  assert.equal(finalState.intents.filter(intent => intent.status === 'active').length, 1)
+  assert.equal(finalState.assertionCount, 0)
+  assert.throws(() => batch(finalDb, { intentHash: 'intent-hash-1', userId: 'user-2', claimAt: '2026-08-12 00:00:02.000' }), /CHECK constraint failed|constraint failed/)
+  assert.equal(state(finalDb).assertionCount, 0)
   finalDb.close()
   fs.rmSync(directory, { recursive: true, force: true })
 }
 
-console.log('B2B.2 SQLite atomic rollback tests: PASS (Production/Preview migrations, rollback, stale expiry, revocation, one-time claim, double claimant)')
+console.log('B2B.3 SQLite atomic rollback tests: PASS (D1 batch assertion, real rollback, expiry, revocation, one-time claim, concurrency)')

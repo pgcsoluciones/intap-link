@@ -815,17 +815,138 @@ me.post('/artifacts/activate', async (c) => {
     if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado.' }, 403)
   }
 
-  // The claim is one SQLite INSERT. Its BEFORE/AFTER triggers validate the
-  // complete precondition, apply artifact → code → intent with one claimAt,
-  // raise SQL errors for broken invariants, and delete the marker on success.
-  // A trigger RAISE(ABORT) rolls back the whole statement; a post-batch
-  // changes check cannot provide that guarantee.
+  // D1 batch is the atomic boundary. Each transition is guarded server-side;
+  // the assertion INSERT computes ok from the final state and CHECK(ok = 1)
+  // turns any broken invariant into a SQL error inside the same batch. The
+  // assertion row is deleted by the fifth statement after a successful check.
+  // meta.changes is intentionally not used as the rollback mechanism.
   const claimAt = new Date().toISOString().replace('T', ' ').replace('Z', '')
+  const claimId = crypto.randomUUID()
   try {
-    await c.env.DB.prepare(
-      `INSERT INTO artifact_activation_claims (id, intent_hash, user_id, profile_id, claim_at)
-       VALUES (?, ?, ?, ?, ?)`
-    ).bind(crypto.randomUUID(), intentHash, userId, requestedProfileId, claimAt).run()
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `UPDATE intap_artifacts
+            SET owner_user_id = ?,
+                profile_id = ?,
+                status = 'activated',
+                activated_at = ?,
+                updated_at = ?
+          WHERE id = (
+                  SELECT i.artifact_id
+                    FROM artifact_activation_intents i
+                   WHERE i.intent_hash = ?
+                )
+            AND owner_user_id IS NULL
+            AND status IN ('available', 'unassigned')
+            AND EXISTS (
+                  SELECT 1
+                    FROM artifact_activation_intents i
+                    JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+                    JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+                   WHERE i.intent_hash = ?
+                     AND i.status = 'active'
+                     AND i.revoked_at IS NULL
+                     AND i.expires_at > ?
+                     AND ac.status = 'active'
+                     AND (ac.expires_at IS NULL OR ac.expires_at > ?)
+                )
+            AND (
+                  ? IS NULL
+                  OR EXISTS (
+                       SELECT 1 FROM profiles p
+                        WHERE p.id = ?
+                          AND p.user_id = ?
+                          AND p.is_active = 1
+                     )
+                )`
+      ).bind(
+        userId, requestedProfileId, claimAt, claimAt,
+        intentHash, intentHash, claimAt, claimAt,
+        requestedProfileId, requestedProfileId, userId,
+      ),
+      c.env.DB.prepare(
+        `UPDATE artifact_activation_codes
+            SET status = 'used', used_at = ?
+          WHERE id = (
+                  SELECT i.activation_code_id
+                    FROM artifact_activation_intents i
+                   WHERE i.intent_hash = ?
+                )
+            AND status = 'active'
+            AND (expires_at IS NULL OR expires_at > ?)
+            AND EXISTS (
+                  SELECT 1
+                    FROM artifact_activation_intents i
+                    JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+                    JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+                   WHERE i.intent_hash = ?
+                     AND i.status = 'active'
+                     AND i.revoked_at IS NULL
+                     AND i.expires_at > ?
+                     AND a.owner_user_id = ?
+                     AND a.status = 'activated'
+                     AND a.activated_at = ?
+                )`
+      ).bind(claimAt, intentHash, claimAt, intentHash, claimAt, userId, claimAt),
+      c.env.DB.prepare(
+        `UPDATE artifact_activation_intents
+            SET status = 'consumed', consumed_at = ?
+          WHERE intent_hash = ?
+            AND status = 'active'
+            AND revoked_at IS NULL
+            AND expires_at > ?
+            AND EXISTS (
+                  SELECT 1
+                    FROM artifact_activation_codes ac
+                   WHERE ac.id = artifact_activation_intents.activation_code_id
+                     AND ac.artifact_id = artifact_activation_intents.artifact_id
+                     AND ac.status = 'used'
+                     AND ac.used_at = ?
+                )
+            AND EXISTS (
+                  SELECT 1
+                    FROM intap_artifacts a
+                   WHERE a.id = artifact_activation_intents.artifact_id
+                     AND a.owner_user_id = ?
+                     AND a.status = 'activated'
+                     AND a.activated_at = ?
+                )`
+      ).bind(claimAt, intentHash, claimAt, claimAt, userId, claimAt),
+      c.env.DB.prepare(
+        `INSERT INTO artifact_activation_claim_assertions
+          (id, intent_hash, user_id, profile_id, claim_at, ok)
+         VALUES (?, ?, ?, ?, ?, CASE WHEN EXISTS (
+           SELECT 1
+             FROM artifact_activation_intents i
+             JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+             JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+            WHERE i.intent_hash = ?
+              AND i.status = 'consumed'
+              AND i.consumed_at = ?
+              AND ac.status = 'used'
+              AND ac.used_at = ?
+              AND a.owner_user_id = ?
+              AND a.status = 'activated'
+              AND a.activated_at = ?
+              AND ((? IS NULL AND a.profile_id IS NULL) OR (? IS NOT NULL AND a.profile_id = ?))
+              AND (? IS NULL OR EXISTS (
+                    SELECT 1 FROM profiles p
+                     WHERE p.id = a.profile_id
+                       AND p.user_id = ?
+                       AND p.is_active = 1
+                  ))
+         ) THEN 1 ELSE 0 END)`
+      ).bind(
+        claimId, intentHash, userId, requestedProfileId, claimAt,
+        intentHash, claimAt, claimAt, userId, claimAt,
+        requestedProfileId, requestedProfileId, requestedProfileId,
+        requestedProfileId, userId,
+      ),
+      c.env.DB.prepare(
+        `DELETE FROM artifact_activation_claim_assertions
+          WHERE id = ? AND ok = 1`
+      ).bind(claimId),
+    ])
   } catch (error) {
     console.error('[POST /me/artifacts/activate] atomic claim rejected:', error)
     return c.json({ ok: false, error: 'La activación ya no está disponible.' }, 409, {

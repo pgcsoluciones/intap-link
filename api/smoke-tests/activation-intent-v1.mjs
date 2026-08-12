@@ -29,6 +29,14 @@ class FakeDB {
     this.sessionUserId = 'user-1'
   }
   prepare(sql) { return new FakeStatement(this, sql) }
+  batch() {
+    if (!this.pending()) throw new Error('activation claim assertion failed')
+    this.artifactStatus = 'activated'
+    this.codeStatus = 'used'
+    this.intentStatus = 'consumed'
+    this.ownerUserId = this.sessionUserId
+    return []
+  }
   first(sql, params) {
     if (sql.includes('SELECT id, user_id FROM auth_sessions')) return { id: 'session-1', user_id: this.sessionUserId }
     if (sql.includes('SELECT id FROM users WHERE id = ?')) return { email: 'qa@example.test' }
@@ -63,14 +71,6 @@ class FakeDB {
     if (sql.includes('INSERT INTO artifact_activation_intents')) {
       return { meta: { changes: this.pending() ? 1 : 0 } }
     }
-    if (sql.includes('INSERT INTO artifact_activation_claims')) {
-      if (!this.pending()) throw new Error('activation claim precondition failed')
-      this.artifactStatus = 'activated'
-      this.codeStatus = 'used'
-      this.intentStatus = 'consumed'
-      this.ownerUserId = this.sessionUserId
-      return { meta: { changes: 1 } }
-    }
     return { meta: { changes: 1 } }
   }
 
@@ -103,9 +103,11 @@ assert.match(apiSource, /artifact_activation_intents/)
 assert.match(apiSource, /const intentToken = generateToken\(32\)/)
 assert.match(apiSource, /const intentHash = await sha256Hex\(intentToken\)/)
 assert.match(cookieSource, /HttpOnly; Secure; SameSite=Lax; Path=/)
-assert.match(apiSource, /artifact_activation_claims/)
+assert.match(apiSource, /artifact_activation_claim_assertions/)
 assert.match(apiSource, /const claimAt = new Date\(\)/)
-assert.doesNotMatch(apiSource.slice(apiSource.indexOf("me.post('/artifacts/activate'"), apiSource.indexOf("me.patch('/artifacts/:id/profile'")), /DB\.batch|meta\.changes/)
+assert.match(apiSource, /DB\.batch\(\[/)
+assert.match(apiSource, /artifact_activation_claim_assertions/)
+assert.doesNotMatch(apiSource.slice(apiSource.indexOf("me.post('/artifacts/activate'"), apiSource.indexOf("me.patch('/artifacts/:id/profile'")), /CREATE TRIGGER|RAISE\(/)
 assert.match(cookieSource, /intap_preview_activation_intent/)
 assert.match(cookieSource, /isPreviewEnvironment/)
 assert.match(apiSource, /const resumeActivation = await hasPendingActivationIntent\(c\)/)

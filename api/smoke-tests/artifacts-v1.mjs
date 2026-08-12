@@ -37,6 +37,16 @@ class FakeDB {
     this.profileSlug = 'juanperez'
   }
   prepare(sql) { return new FakeStatement(this, sql) }
+  batch() {
+    if (this.artifactStatus !== 'available' || this.codeStatus !== 'active' || this.intentStatus !== 'active' || this.intentExpired || this.intentRevoked) {
+      throw new Error('activation claim assertion failed')
+    }
+    this.artifactStatus = 'activated'
+    this.codeStatus = 'used'
+    this.intentStatus = 'consumed'
+    this.ownerUserId = 'user-1'
+    return []
+  }
   first(sql, params) {
     if (sql.includes('SELECT id, user_id FROM auth_sessions')) return { id: 'session-1', user_id: 'user-1' }
     if (sql.includes('SELECT id FROM users WHERE id = ?')) return { email: 'qa@example.test' }
@@ -75,16 +85,6 @@ class FakeDB {
   run(sql) {
     if (sql.includes('INSERT INTO artifact_activation_intents')) {
       return { meta: { changes: this.artifactStatus === 'available' && this.codeStatus === 'active' ? 1 : 0 } }
-    }
-    if (sql.includes('INSERT INTO artifact_activation_claims')) {
-      if (this.artifactStatus !== 'available' || this.codeStatus !== 'active' || this.intentStatus !== 'active' || this.intentExpired || this.intentRevoked) {
-        throw new Error('activation claim precondition failed')
-      }
-      this.artifactStatus = 'activated'
-      this.codeStatus = 'used'
-      this.intentStatus = 'consumed'
-      this.ownerUserId = 'user-1'
-      return { meta: { changes: 1 } }
     }
     return { meta: { changes: 1 } }
   }
