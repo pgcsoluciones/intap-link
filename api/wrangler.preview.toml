@@ -3,9 +3,11 @@ main = "src/index.ts"
 compatibility_date = "2024-02-08"
 workers_dev = true
 
-# El workers.dev queda como endpoint técnico/diagnóstico.
-# El navegador del panel Preview usará app.preview.intaprd.com/api/* cuando
-# exista el route/custom domain; no se cambia DNS en B2B.2.
+[[routes]]
+pattern = "app.preview.intaprd.com/api/*"
+zone_name = "intaprd.com"
+
+# El workers.dev queda disponible como endpoint técnico/diagnóstico.
 
 [vars]
 ENVIRONMENT = "preview"
