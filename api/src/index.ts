@@ -913,8 +913,12 @@ me.post('/artifacts/activate', async (c) => {
       ).bind(claimAt, intentHash, claimAt, claimAt, userId, claimAt),
       c.env.DB.prepare(
         `INSERT INTO artifact_activation_claims
-          (intent_hash, user_id, profile_id, claim_at, ok)
-         VALUES (?, ?, ?, ?, CASE WHEN EXISTS (
+          (intent_hash, artifact_id, activation_code_id, user_id, profile_id, claim_at, ok)
+         VALUES (
+           ?,
+           (SELECT i.artifact_id FROM artifact_activation_intents i WHERE i.intent_hash = ?),
+           (SELECT i.activation_code_id FROM artifact_activation_intents i WHERE i.intent_hash = ?),
+           ?, ?, ?, CASE WHEN EXISTS (
            SELECT 1
              FROM artifact_activation_intents i
              JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
@@ -924,6 +928,8 @@ me.post('/artifacts/activate', async (c) => {
               AND i.consumed_at = ?
               AND ac.status = 'used'
               AND ac.used_at = ?
+              AND a.id = (SELECT i2.artifact_id FROM artifact_activation_intents i2 WHERE i2.intent_hash = ?)
+              AND ac.id = (SELECT i3.activation_code_id FROM artifact_activation_intents i3 WHERE i3.intent_hash = ?)
               AND a.owner_user_id = ?
               AND a.status = 'activated'
               AND a.activated_at = ?
@@ -936,8 +942,8 @@ me.post('/artifacts/activate', async (c) => {
                   ))
          ) THEN 1 ELSE 0 END)`
       ).bind(
-        intentHash, userId, requestedProfileId, claimAt,
-        intentHash, claimAt, claimAt, userId, claimAt,
+        intentHash, intentHash, intentHash, userId, requestedProfileId, claimAt,
+        intentHash, claimAt, claimAt, intentHash, intentHash, userId, claimAt,
         requestedProfileId, requestedProfileId, requestedProfileId,
         requestedProfileId, userId,
       ),

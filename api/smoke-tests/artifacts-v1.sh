@@ -23,7 +23,9 @@ rg -Fq 'status: 302' functions/_middleware.ts
 rg -Fq 'Cache-Control' functions/_middleware.ts
 rg -Fq 'artifact_activation_intents' api/src/index.ts
 rg -Fq 'artifact_activation_claims' api/src/index.ts
-rg -Fq 'intent_hash TEXT PRIMARY KEY' api/migrations/0029_artifact_activation_claims.sql
+rg -q 'intent_hash\s+TEXT PRIMARY KEY' api/migrations/0029_artifact_activation_claims.sql
+rg -q 'artifact_id\s+TEXT NOT NULL UNIQUE' api/migrations/0029_artifact_activation_claims.sql
+rg -q 'activation_code_id\s+TEXT NOT NULL UNIQUE' api/migrations/0029_artifact_activation_claims.sql
 ! rg -q 'CREATE TRIGGER|RAISE\(|BEGIN TRANSACTION|COMMIT' api/migrations/0029_artifact_activation_claims.sql api/migrations-preview/0030_artifact_activation_claims.sql
 ! rg -q 'intap_activation_code' app/src/components/admin/ArtifactActivation.tsx app/src/components/admin/AuthCallback.tsx
 ! rg -q 'profile_products.*artifact|artifact.*profile_products' api/src/index.ts api/migrations/0027_intap_artifacts.sql
