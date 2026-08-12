@@ -816,12 +816,11 @@ me.post('/artifacts/activate', async (c) => {
   }
 
   // D1 batch is the atomic boundary. Each transition is guarded server-side;
-  // the assertion INSERT computes ok from the final state and CHECK(ok = 1)
-  // turns any broken invariant into a SQL error inside the same batch. The
-  // assertion row is deleted by the fifth statement after a successful check.
+  // the final receipt INSERT computes ok from the resulting state and
+  // CHECK(ok = 1) turns any broken invariant into a SQL error inside the same
+  // batch. Its intent_hash primary key is the permanent one-time guard.
   // meta.changes is intentionally not used as the rollback mechanism.
   const claimAt = new Date().toISOString().replace('T', ' ').replace('Z', '')
-  const claimId = crypto.randomUUID()
   try {
     await c.env.DB.batch([
       c.env.DB.prepare(
@@ -913,9 +912,9 @@ me.post('/artifacts/activate', async (c) => {
                 )`
       ).bind(claimAt, intentHash, claimAt, claimAt, userId, claimAt),
       c.env.DB.prepare(
-        `INSERT INTO artifact_activation_claim_assertions
-          (id, intent_hash, user_id, profile_id, claim_at, ok)
-         VALUES (?, ?, ?, ?, ?, CASE WHEN EXISTS (
+        `INSERT INTO artifact_activation_claims
+          (intent_hash, user_id, profile_id, claim_at, ok)
+         VALUES (?, ?, ?, ?, CASE WHEN EXISTS (
            SELECT 1
              FROM artifact_activation_intents i
              JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
@@ -937,15 +936,11 @@ me.post('/artifacts/activate', async (c) => {
                   ))
          ) THEN 1 ELSE 0 END)`
       ).bind(
-        claimId, intentHash, userId, requestedProfileId, claimAt,
+        intentHash, userId, requestedProfileId, claimAt,
         intentHash, claimAt, claimAt, userId, claimAt,
         requestedProfileId, requestedProfileId, requestedProfileId,
         requestedProfileId, userId,
       ),
-      c.env.DB.prepare(
-        `DELETE FROM artifact_activation_claim_assertions
-          WHERE id = ? AND ok = 1`
-      ).bind(claimId),
     ])
   } catch (error) {
     console.error('[POST /me/artifacts/activate] atomic claim rejected:', error)
