@@ -16,10 +16,13 @@ interface MeData {
 }
 
 const freeItems = [
-  { title: 'Tu actividad', text: 'Actualiza la categoría de tu perfil', to: '/admin/free/onboarding/category', icon: '◌' },
   { title: 'Editar identidad', text: 'Nombre, foto y descripción', to: '/admin/free/onboarding/identity', icon: '✎' },
   { title: 'Datos de contacto', text: 'WhatsApp, teléfono y correo', to: '/admin/free/onboarding/contact', icon: '☎' },
-  { title: 'Mis productos físicos', text: 'Activa y administra tus productos INTAP', to: '/admin/artifacts', icon: '◇' },
+  { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖' },
+  { title: 'Mis enlaces', text: 'Hasta 3 accesos importantes', to: '/admin/free/links', icon: '↗' },
+  { title: 'Portafolio', text: 'Hasta 5 imágenes de tu trabajo', to: '/admin/free/portfolio', icon: '▧' },
+  { title: 'Servicios', text: 'Hasta 3 servicios, sin complicaciones', to: '/admin/free/services', icon: '◇' },
+  { title: 'Mis productos físicos', text: 'Activa y administra tus productos INTAP', to: '/admin/artifacts', icon: '⌁' },
 ]
 
 export default function FreeDashboard() {

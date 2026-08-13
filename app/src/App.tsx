@@ -18,6 +18,10 @@ import OnboardingCategory from './components/admin/onboarding/OnboardingCategory
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
 import OnboardingContact from './components/admin/onboarding/OnboardingContact'
 import FreeDashboard from './components/admin/free/FreeDashboard'
+import FreeLinks from './components/admin/free/FreeLinks'
+import FreeLocation from './components/admin/free/FreeLocation'
+import FreePortfolio from './components/admin/free/FreePortfolio'
+import FreeServices from './components/admin/free/FreeServices'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
 import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
 import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
@@ -61,6 +65,10 @@ function App() {
         <Route path="/admin/free/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingContact /></AdminGuard>} />
         <Route path="/admin/free/onboarding/done" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingDone /></AdminGuard>} />
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
+        <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />
+        <Route path="/admin/free/location" element={<AdminGuard planScope="free"><FreeLocation /></AdminGuard>} />
+        <Route path="/admin/free/portfolio" element={<AdminGuard planScope="free"><FreePortfolio /></AdminGuard>} />
+        <Route path="/admin/free/services" element={<AdminGuard planScope="free"><FreeServices /></AdminGuard>} />
         <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><ArtifactActivationAuthenticated /></AdminGuard>} />
         <Route path="/admin/artifacts" element={<AdminGuard requireProfile={false}><ArtifactManager /></AdminGuard>} />
 
