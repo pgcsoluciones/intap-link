@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { API_BASE, apiGet, apiPost, apiPut, apiUpload } from '../../lib/api'
 import ImageCropModal from './ImageCropModal'
 import RetentionPanel from './RetentionPanel'
@@ -243,6 +243,9 @@ export default function AdminDashboard() {
   const savedTheme    = me?.theme_id || 'default'
   const displayTheme  = pendingTheme ?? savedTheme
   const maxTopLink = stats?.topLinks?.[0]?.clics || 1
+  const isFreePlan = (me?.plan_code || me?.plan_id || 'free') === 'free'
+
+  if (isFreePlan) return <Navigate to="/admin/free" replace />
 
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">

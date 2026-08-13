@@ -17,6 +17,12 @@ import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
 import OnboardingContact from './components/admin/onboarding/OnboardingContact'
+import FreeDashboard from './components/admin/free/FreeDashboard'
+import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
+import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
+import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
+import FreeOnboardingContact from './components/admin/free/onboarding/FreeOnboardingContact'
+import FreeOnboardingDone from './components/admin/free/onboarding/FreeOnboardingDone'
 import { ArtifactActivation, ArtifactActivationAuthenticated, ArtifactManager } from './components/admin/ArtifactActivation'
 
 function UnknownAppRouteRedirect() {
@@ -47,6 +53,14 @@ function App() {
         <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false}><OnboardingCategory /></AdminGuard>} />
         <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false}><OnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
+
+        {/* INTAP LINK Gratis · rutas propias */}
+        <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSlug /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/category" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingCategory /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingIdentity /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingContact /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/done" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingDone /></AdminGuard>} />
+        <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
         <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><ArtifactActivationAuthenticated /></AdminGuard>} />
         <Route path="/admin/artifacts" element={<AdminGuard requireProfile={false}><ArtifactManager /></AdminGuard>} />
 
@@ -54,13 +68,13 @@ function App() {
         <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />
 
         {/* Panel principal (requiere sesión + perfil) */}
-        <Route path="/admin/links"    element={<AdminGuard><AdminLinks /></AdminGuard>} />
-        <Route path="/admin/faqs"     element={<AdminGuard><AdminFAQs /></AdminGuard>} />
-        <Route path="/admin/products" element={<AdminGuard><AdminProducts /></AdminGuard>} />
-        <Route path="/admin/videos"   element={<AdminGuard><AdminVideos /></AdminGuard>} />
-        <Route path="/admin/blocks"   element={<AdminGuard><AdminBlocks /></AdminGuard>} />
-        <Route path="/admin/visual"    element={<AdminGuard><AdminVisual /></AdminGuard>} />
-        <Route path="/admin/template"   element={<AdminGuard><AdminTemplate /></AdminGuard>} />
+        <Route path="/admin/links"    element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
+        <Route path="/admin/faqs"     element={<AdminGuard planScope="paid"><AdminFAQs /></AdminGuard>} />
+        <Route path="/admin/products" element={<AdminGuard planScope="paid"><AdminProducts /></AdminGuard>} />
+        <Route path="/admin/videos"   element={<AdminGuard planScope="paid"><AdminVideos /></AdminGuard>} />
+        <Route path="/admin/blocks"   element={<AdminGuard planScope="paid"><AdminBlocks /></AdminGuard>} />
+        <Route path="/admin/visual"    element={<AdminGuard planScope="paid"><AdminVisual /></AdminGuard>} />
+        <Route path="/admin/template"   element={<AdminGuard planScope="paid"><AdminTemplate /></AdminGuard>} />
         <Route path="/admin/retention"  element={<AdminGuard><AdminRetention /></AdminGuard>} />
         <Route path="/admin"            element={<AdminGuard><AdminDashboard /></AdminGuard>} />
 

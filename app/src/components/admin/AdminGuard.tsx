@@ -4,11 +4,13 @@ import { apiGet } from '../../lib/api'
 
 interface Props {
   children: React.ReactNode
-  /** If true, redirect to /admin/onboarding/slug when user has no profile */
+  /** If true, redirect to the free onboarding when user has no profile. */
   requireProfile?: boolean
+  /** Keep Gratis and paid editors separated. */
+  planScope?: 'free' | 'paid'
 }
 
-export default function AdminGuard({ children, requireProfile = true }: Props) {
+export default function AdminGuard({ children, requireProfile = true, planScope }: Props) {
   const navigate = useNavigate()
   const [ready, setReady] = useState(false)
 
@@ -19,14 +21,21 @@ export default function AdminGuard({ children, requireProfile = true }: Props) {
         return
       }
       if (requireProfile && !json.data?.profile_id) {
-        navigate('/admin/onboarding/slug', { replace: true })
+        navigate('/admin/free/onboarding/slug', { replace: true })
         return
       }
+
+      const planId = json.data?.plan_id || json.data?.plan_code || 'free'
+      if (json.data?.profile_id && ((planScope === 'free' && planId !== 'free') || (planScope === 'paid' && planId === 'free'))) {
+        navigate('/admin', { replace: true })
+        return
+      }
+
       setReady(true)
     }).catch(() => {
       navigate('/admin/login', { replace: true })
     })
-  }, [navigate, requireProfile])
+  }, [navigate, planScope, requireProfile])
 
   if (!ready) {
     return (
