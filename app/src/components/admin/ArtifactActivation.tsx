@@ -51,25 +51,55 @@ export function ArtifactActivation() {
   }
 
   return (
-    <div className="min-h-screen bg-intap-dark text-white flex items-center justify-center px-4 font-['Inter']">
-      <div className="w-full max-w-md">
-        <Link to="/admin/login" className="text-xs text-slate-400 hover:text-white">← Ya tengo una cuenta</Link>
-        <div className="mt-5 mb-7">
-          <p className="text-xs uppercase tracking-[0.25em] text-intap-mint font-bold">INTAP LINK</p>
-          <h1 className="text-3xl font-black mt-2">Activa tu producto</h1>
-          <p className="text-slate-400 mt-2 text-sm leading-relaxed">Usa el código privado que recibiste con tu tarjeta, ping, brazalete o QR.</p>
-        </div>
-        <form onSubmit={inspect} className="glass-card p-5 space-y-4">
-          <label className="block text-sm font-semibold text-slate-300">
+    <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
+        <Link to="/admin/login" className="mb-7 text-xs font-bold text-slate-500">← Volver</Link>
+
+        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">INTAP LINK</p>
+        <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.04em]">Activa tu producto</h1>
+        <p className="mt-2 text-[15px] leading-6 text-slate-500">Escribe el código que recibiste con tu producto INTAP. Solo necesitas hacerlo una vez.</p>
+
+        <form onSubmit={inspect} className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+          <label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">
             Código de activación
-            <input value={code} onChange={event => setCode(event.target.value.toUpperCase())} autoComplete="off" spellCheck={false} placeholder="ABCD2345…" className="mt-2 w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white tracking-[0.16em] uppercase outline-none focus:border-intap-mint/60" />
+            <input
+              value={code}
+              onChange={event => setCode(event.target.value.toUpperCase())}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="ABCD2345…"
+              className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-black tracking-[0.14em] text-slate-900 uppercase outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+            />
           </label>
-          {error && <p className="rounded-lg bg-red-400/10 border border-red-400/20 px-3 py-2 text-sm text-red-300">{error}</p>}
-          {preview && <div className="rounded-xl bg-intap-mint/10 border border-intap-mint/20 p-4 text-sm"><p className="text-intap-mint font-bold">Código válido</p><p className="text-slate-200 mt-1"><ProductLabel type={preview.product_type} /></p><p className="text-xs text-slate-400 mt-1">Producto listo para asociarse a tu cuenta.</p></div>}
-          {!preview ? <button disabled={loading || !code.trim()} className="w-full rounded-xl bg-intap-blue py-3 font-bold disabled:opacity-50">{loading ? 'Validando…' : 'Validar código'}</button> : <button type="button" onClick={continueToAccount} className="w-full rounded-xl bg-intap-blue py-3 font-bold">Continuar con mi cuenta →</button>}
+
+          {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
+
+          {preview && (
+            <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 p-4 text-sm">
+              <p className="font-black text-cyan-700">Código válido</p>
+              <p className="mt-1 font-extrabold text-slate-900"><ProductLabel type={preview.product_type} /></p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Este producto está listo para vincularse con tu cuenta.</p>
+            </div>
+          )}
+
+          {!preview ? (
+            <button disabled={loading || !code.trim()} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-35">
+              {loading ? 'Validando…' : 'Validar código'}
+            </button>
+          ) : (
+            <button type="button" onClick={continueToAccount} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">
+              Continuar con mi cuenta
+            </button>
+          )}
         </form>
-      </div>
-    </div>
+
+        <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4 text-center">
+          <p className="text-sm font-extrabold text-slate-900">¿Todavía no tienes código?</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">No necesitas un producto físico para comenzar. Puedes crear tu perfil Gratis ahora y activar tu producto después.</p>
+          <Link to="/admin/login" className="mt-3 inline-flex text-xs font-black text-cyan-700">Crear o acceder a mi perfil →</Link>
+        </div>
+      </section>
+    </main>
   )
 }
 
@@ -95,9 +125,9 @@ export function ArtifactActivationAuthenticated() {
   }, [navigate])
 
   if (loading) return <CenteredMessage text="Activando tu producto…" />
-  if (error) return <CenteredMessage text={error} action={<Link to="/activate" className="text-intap-mint">Volver a intentar</Link>} />
+  if (error) return <CenteredMessage text={error} action={<Link to="/activate" className="font-black text-cyan-700">Volver a intentar</Link>} />
   if (!artifact) return null
-  return <CenteredMessage text={`Producto activado: ${artifact.public_code}`} action={artifact.profile_slug ? <a href={artifact.public_url} className="text-intap-mint">Abrir mi enlace público →</a> : <Link to="/admin/onboarding/slug" className="text-intap-mint">Crear mi perfil para vincularlo →</Link>} />
+  return <CenteredMessage text={`Producto activado: ${artifact.public_code}`} action={artifact.profile_slug ? <a href={artifact.public_url} className="font-black text-cyan-700">Abrir mi enlace público →</a> : <Link to="/admin/free/onboarding/slug" className="font-black text-cyan-700">Crear mi perfil para vincularlo →</Link>} />
 }
 
 export function ArtifactManager() {
@@ -114,10 +144,45 @@ export function ArtifactManager() {
     if (result.ok) refresh()
   }
   return (
-    <div className="min-h-screen bg-intap-dark text-white px-4 py-8 font-['Inter']"><div className="max-w-3xl mx-auto"><Link to="/admin" className="text-xs text-slate-400 hover:text-white">← Volver al dashboard</Link><div className="flex items-end justify-between gap-4 mt-5 mb-7"><div><p className="text-xs uppercase tracking-[0.25em] text-intap-mint font-bold">INTAP LINK</p><h1 className="text-3xl font-black mt-2">Mis productos físicos</h1></div><Link to="/activate" className="rounded-xl bg-intap-blue px-4 py-2 text-sm font-bold">Activar otro</Link></div>{message && <p className="mb-4 text-sm text-intap-mint">{message}</p>}{loading ? <p className="text-slate-400">Cargando…</p> : artifacts.length === 0 ? <div className="glass-card p-6 text-slate-400">Todavía no tienes productos activados.</div> : <div className="grid gap-4 sm:grid-cols-2">{artifacts.map(artifact => <div key={artifact.id} className="glass-card p-5"><p className="text-xs uppercase tracking-widest text-slate-500"><ProductLabel type={artifact.product_type} /></p><p className="font-mono text-lg mt-2">{artifact.public_code}</p><p className="text-sm text-slate-400 mt-2">{artifact.profile_slug ? `Vinculado a /${artifact.profile_slug}` : 'Sin perfil vinculado'}</p>{!artifact.profile_id && me?.profile_id && <button onClick={() => linkProfile(artifact)} className="mt-4 text-sm text-intap-mint font-bold">Vincular a mi perfil →</button>}{artifact.profile_slug && <a href={artifact.public_url} className="block mt-4 text-sm text-intap-mint font-bold">Abrir enlace público →</a>}</div>)}</div>}{!loading && !me?.profile_id && artifacts.length > 0 && <p className="mt-6 text-sm text-slate-400">Crea tu perfil para poder vincular tu producto: <Link to="/admin/onboarding/slug" className="text-intap-mint">comenzar onboarding</Link>.</p>}</div></div>
+    <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-3xl">
+        <Link to="/admin" className="text-xs font-bold text-slate-500">← Volver al panel</Link>
+        <div className="mt-5 mb-7 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">INTAP LINK</p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Mis productos físicos</h1>
+            <p className="mt-2 text-sm text-slate-500">Aquí aparecerán los productos INTAP que actives.</p>
+          </div>
+          <Link to="/activate" className="shrink-0 rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white">Activar producto</Link>
+        </div>
+        {message && <p className="mb-4 rounded-xl bg-cyan-50 px-3 py-2 text-sm font-bold text-cyan-700">{message}</p>}
+        {loading ? (
+          <p className="text-slate-400">Cargando…</p>
+        ) : artifacts.length === 0 ? (
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6 text-center shadow-[0_12px_35px_rgba(15,23,42,0.05)]">
+            <p className="text-base font-black text-slate-900">Todavía no tienes productos activados</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Cuando recibas un producto INTAP con su código, podrás activarlo aquí. Tu perfil Gratis funciona aunque todavía no tengas uno.</p>
+            <Link to="/admin/free" className="mt-4 inline-flex text-xs font-black text-cyan-700">Volver a mi perfil →</Link>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {artifacts.map(artifact => (
+              <div key={artifact.id} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(15,23,42,0.05)]">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400"><ProductLabel type={artifact.product_type} /></p>
+                <p className="mt-2 font-mono text-lg font-bold text-slate-900">{artifact.public_code}</p>
+                <p className="mt-2 text-sm text-slate-500">{artifact.profile_slug ? `Vinculado a /${artifact.profile_slug}` : 'Sin perfil vinculado'}</p>
+                {!artifact.profile_id && me?.profile_id && <button onClick={() => linkProfile(artifact)} className="mt-4 text-sm font-black text-cyan-700">Vincular a mi perfil →</button>}
+                {artifact.profile_slug && <a href={artifact.public_url} className="mt-4 block text-sm font-black text-cyan-700">Abrir enlace público →</a>}
+              </div>
+            ))}
+          </div>
+        )}
+        {!loading && !me?.profile_id && artifacts.length > 0 && <p className="mt-6 text-sm text-slate-500">Crea tu perfil para vincular tu producto: <Link to="/admin/free/onboarding/slug" className="font-black text-cyan-700">comenzar</Link>.</p>}
+      </section>
+    </main>
   )
 }
 
 function CenteredMessage({ text, action }: { text: string; action?: React.ReactNode }) {
-  return <div className="min-h-screen bg-intap-dark text-white flex flex-col items-center justify-center px-4 text-center font-['Inter']"><p className="text-lg font-bold">{text}</p>{action && <div className="mt-4 text-sm">{action}</div>}</div>
+  return <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950"><section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center"><div className="w-full rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]"><p className="text-lg font-black">{text}</p>{action && <div className="mt-4 text-sm">{action}</div>}</div></section></main>
 }

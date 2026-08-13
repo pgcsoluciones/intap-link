@@ -14,9 +14,7 @@ export default function AuthCallback() {
       return
     }
 
-    fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}`, {
-      credentials: 'include',
-    })
+    fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}`, { credentials: 'include' })
       .then((res) => res.json())
       .then((json: any) => {
         if (json.ok) {
@@ -30,27 +28,26 @@ export default function AuthCallback() {
       .catch(() => setError('Error de conexión. Inténtalo de nuevo.'))
   }, [navigate, searchParams])
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter']">
-        <div className="w-full max-w-sm text-center">
-          <div className="text-5xl mb-4">❌</div>
-          <h1 className="text-xl font-black mb-2">Enlace inválido</h1>
-          <p className="text-sm text-slate-400 mb-6">{error}</p>
-          <a
-            href="/admin/login"
-            className="inline-block bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-2.5 px-6 rounded-xl text-sm"
-          >
-            Solicitar nuevo enlace
-          </a>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
-      <div className="loading-spinner" />
-    </div>
+    <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
+        <div className="w-full rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+          {error ? (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-rose-500">INTAP LINK</p>
+              <h1 className="mt-3 text-xl font-black">No pudimos abrir este enlace</h1>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{error}</p>
+              <a href="/admin/login" className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">Solicitar nuevo acceso</a>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">INTAP LINK</p>
+              <h1 className="mt-3 text-xl font-black">Preparando tu perfil…</h1>
+              <p className="mt-2 text-sm text-slate-500">Un momento, estamos abriendo tu cuenta.</p>
+            </>
+          )}
+        </div>
+      </section>
+    </main>
   )
 }
