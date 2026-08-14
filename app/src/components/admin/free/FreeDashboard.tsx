@@ -16,6 +16,7 @@ interface MeData {
 }
 
 const freeItems = [
+  { title: 'Estilo de mi perfil', text: 'Impacto, Personal o Esencial', to: '/admin/free/style', icon: '◫' },
   { title: 'Editar identidad', text: 'Nombre, foto y descripción', to: '/admin/free/onboarding/identity', icon: '✎' },
   { title: 'Datos de contacto', text: 'WhatsApp, teléfono y correo', to: '/admin/free/onboarding/contact', icon: '☎' },
   { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖' },

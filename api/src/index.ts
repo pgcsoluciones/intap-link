@@ -647,7 +647,7 @@ me.get('/', async (c) => {
   const row = await c.env.DB.prepare(
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
             p.avatar_url, p.category, p.subcategory, p.is_published, p.theme_id,
-            p.accent_color, p.button_style,
+            p.accent_color, p.button_style, p.layout_id,
             p.template_id, p.template_data, p.plan_id
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
@@ -1041,8 +1041,10 @@ me.post('/profile/claim', async (c) => {
   const profileId = crypto.randomUUID()
   try {
     await c.env.DB.prepare(
-      `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
-       VALUES (?, ?, ?, 'free', 'default', 0)`
+      `INSERT INTO profiles (
+         id, user_id, slug, plan_id, theme_id, layout_id, is_published
+       )
+       VALUES (?, ?, ?, 'free', 'default', 'esencial', 0)`
     ).bind(profileId, userId, slug).run()
   } catch (e: any) {
     console.error('[POST /me/profile/claim] D1 error:', e)
@@ -1057,7 +1059,7 @@ me.put('/profile', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
@@ -1070,6 +1072,30 @@ me.put('/profile', async (c) => {
   const theme_id = body.theme_id !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
+
+  const VALID_FREE_LAYOUTS = ['impacto', 'personal', 'esencial']
+  const layout_id = body.layout_id !== undefined
+    ? (VALID_FREE_LAYOUTS.includes(String(body.layout_id))
+        ? String(body.layout_id)
+        : null)
+    : undefined
+
+  if (body.layout_id !== undefined && layout_id === null) {
+    return c.json({
+      ok: false,
+      error: 'Estilo de perfil no válido',
+    }, 400)
+  }
+
+  if (
+    body.layout_id !== undefined &&
+    String((profile as any).plan_id || 'free') !== 'free'
+  ) {
+    return c.json({
+      ok: false,
+      error: 'El estilo solicitado pertenece al perfil Gratis',
+    }, 403)
+  }
   const VALID_TEMPLATES = [
     'restaurante',
     'servicios',
@@ -1096,14 +1122,15 @@ me.put('/profile', async (c) => {
            subcategory   = COALESCE(?5, subcategory),
            theme_id      = COALESCE(?6, theme_id),
            is_published  = COALESCE(?7, is_published),
-           template_id   = COALESCE(?9, template_id),
-           template_data = COALESCE(?10, template_data),
+           layout_id     = COALESCE(?9, layout_id),
+           template_id   = COALESCE(?10, template_id),
+           template_data = COALESCE(?11, template_data),
            updated_at    = datetime('now')
        WHERE id = ?8`
     ).bind(
       name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null,
       theme_id ?? null, is_published ?? null, (profile as any).id,
-      template_id ?? null, template_data ?? null,
+      layout_id ?? null, template_id ?? null, template_data ?? null,
     ).run()
   } catch (e: any) {
     console.error('[PUT /me/profile] D1 error:', e)
@@ -2608,7 +2635,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, layout_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -2726,6 +2753,8 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       bio: (profile as any).bio,
       avatarUrl: toAssetUrl((profile as any).avatar_url || ''),
       whatsapp_number: (profile as any).whatsapp_number ?? null,
+      layout_id: (profile as any).layout_id ?? 'esencial',
+      layoutId: (profile as any).layout_id ?? 'esencial',
       templateId: (profile as any).template_id ?? null,
       templateData: (() => { try { return JSON.parse((profile as any).template_data || '{}') } catch { return {} } })(),
       social_links: rawSocialLinks.results,
