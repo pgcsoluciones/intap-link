@@ -52,11 +52,11 @@ function App() {
         <Route path="/auth/callback"     element={<AuthCallback />} />
         <Route path="/activate" element={<ArtifactActivation />} />
 
-        {/* Onboarding (requiere sesión, no requiere perfil) */}
-        <Route path="/admin/onboarding/slug"     element={<AdminGuard requireProfile={false}><OnboardingSlug /></AdminGuard>} />
-        <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false}><OnboardingCategory /></AdminGuard>} />
-        <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false}><OnboardingIdentity /></AdminGuard>} />
-        <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false}><OnboardingContact /></AdminGuard>} />
+        {/* Onboarding Premium/legacy (requiere sesión, no requiere perfil) */}
+        <Route path="/admin/onboarding/slug"     element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingSlug /></AdminGuard>} />
+        <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingCategory /></AdminGuard>} />
+        <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingIdentity /></AdminGuard>} />
+        <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingContact /></AdminGuard>} />
 
         {/* INTAP LINK Gratis · rutas propias */}
         <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSlug /></AdminGuard>} />
@@ -75,7 +75,7 @@ function App() {
         {/* Super Admin interno */}
         <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />
 
-        {/* Panel principal (requiere sesión + perfil) */}
+        {/* Panel Premium */}
         <Route path="/admin/links"    element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
         <Route path="/admin/faqs"     element={<AdminGuard planScope="paid"><AdminFAQs /></AdminGuard>} />
         <Route path="/admin/products" element={<AdminGuard planScope="paid"><AdminProducts /></AdminGuard>} />
@@ -84,10 +84,10 @@ function App() {
         <Route path="/admin/visual"    element={<AdminGuard planScope="paid"><AdminVisual /></AdminGuard>} />
         <Route path="/admin/template"   element={<AdminGuard planScope="paid"><AdminTemplate /></AdminGuard>} />
         <Route path="/admin/retention"  element={<AdminGuard><AdminRetention /></AdminGuard>} />
-        <Route path="/admin"            element={<AdminGuard><AdminDashboard /></AdminGuard>} />
 
-        {/* Entrada protegida */}
-        <Route path="/" element={<AdminGuard><AdminDashboard /></AdminGuard>} />
+        {/* Entradas generales: Gratis nunca debe renderizar AdminDashboard */}
+        <Route path="/admin" element={<AdminGuard planScope="paid"><AdminDashboard /></AdminGuard>} />
+        <Route path="/" element={<AdminGuard planScope="paid"><AdminDashboard /></AdminGuard>} />
 
         {/* Rutas desconocidas en app.intaprd.com:
             si parecen slug público, redirigir a intaprd.com/{slug} */}
