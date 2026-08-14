@@ -31,6 +31,7 @@ export type FreeProfileService = {
 export type FreeProfilePortfolioItem = {
   id: string
   title: string
+  description: string
   image: string
 }
 
@@ -55,6 +56,10 @@ export type FreeProfileData = {
   location: string
   portrait: string
   hero: string
+  heroPositionX: number
+  heroPositionY: number
+  heroZoom: number
+  category: string
   vcardFileName: string
   services: FreeProfileService[]
   portfolio: FreeProfilePortfolioItem[]

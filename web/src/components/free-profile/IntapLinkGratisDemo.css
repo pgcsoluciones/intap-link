@@ -1445,3 +1445,34 @@
 }
 
 /* INTAP LINK GRATIS V8 — CONSOLIDATED END */
+
+/* INTAP LINK Gratis · fallback hero por paleta */
+.il-free-impact-hero--fallback {
+  background:
+    linear-gradient(
+      135deg,
+      var(--il-free-hero-gradient),
+      var(--il-free-blue-2)
+    );
+}
+
+.il-free-impact-hero-placeholder {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.il-free-impact-hero img {
+  transform-origin: center center;
+  transition:
+    transform 220ms ease,
+    object-position 220ms ease;
+}

@@ -5,6 +5,10 @@ import type {
   FreeProfileService,
   FreeProfileServiceIconKey,
 } from './IntapLinkGratis.types'
+import {
+  resolvePalette,
+  resolveStarterPack,
+} from './IntapLinkGratis.experience'
 
 export type FreeProfileAdapterResult = {
   profile: FreeProfileData
@@ -246,6 +250,9 @@ function resolvePortfolio(
           readString(item, 'title', 'label') ||
           `Portafolio ${index + 1}`,
 
+        description:
+          readString(item, 'description'),
+
         image,
       })
     },
@@ -448,6 +455,27 @@ export function resolveFreeProfileAppearanceColors(
 ): FreeProfileAppearanceColors {
   const data = unwrapProfilePayload(payload)
 
+  const paletteId =
+    readString(
+      data,
+      'freePaletteId',
+      'free_palette_id',
+    ) || 'intap'
+
+  const freeBrandColor =
+    readString(
+      data,
+      'freeBrandColor',
+      'free_brand_color',
+    )
+
+  if (paletteId) {
+    return resolvePalette(
+      paletteId,
+      freeBrandColor || null,
+    )
+  }
+
   const templateData = readObject(
     data,
     'templateData',
@@ -618,6 +646,15 @@ export function adaptPublicProfileApiResponse(
     ) ||
     whatsappLink
 
+  const category =
+    readString(
+      data,
+      'category',
+    )
+
+  const starter =
+    resolveStarterPack(category)
+
   const role =
     readString(
       templateData,
@@ -629,7 +666,7 @@ export function adaptPublicProfileApiResponse(
       'subcategory',
       'category',
     ) ||
-    'Perfil profesional'
+    starter.role
 
   const greetingName =
     readString(
@@ -652,16 +689,35 @@ export function adaptPublicProfileApiResponse(
 
   const hero =
     readString(
-      templateData,
-      'hero_url',
-    ) ||
-    readString(
       data,
       'heroUrl',
       'hero_url',
     ) ||
-    gallery[0]?.image ||
-    portrait
+    readString(
+      templateData,
+      'hero_url',
+    )
+
+  const heroPositionX =
+    Number(
+      data.heroPositionX ??
+      data.hero_position_x ??
+      50
+    )
+
+  const heroPositionY =
+    Number(
+      data.heroPositionY ??
+      data.hero_position_y ??
+      50
+    )
+
+  const heroZoom =
+    Number(
+      data.heroZoom ??
+      data.hero_zoom ??
+      1
+    )
 
   const safeSlug = slug
     .toLowerCase()
@@ -706,7 +762,8 @@ export function adaptPublicProfileApiResponse(
         `Conoce más sobre ${name}.`,
 
       bio:
-        readString(data, 'bio'),
+        readString(data, 'bio') ||
+        starter.bio,
 
       phone:
         normalizePhone(phoneSource),
@@ -742,6 +799,24 @@ export function adaptPublicProfileApiResponse(
       portrait,
 
       hero,
+
+      heroPositionX:
+        Number.isFinite(heroPositionX)
+          ? heroPositionX
+          : 50,
+
+      heroPositionY:
+        Number.isFinite(heroPositionY)
+          ? heroPositionY
+          : 50,
+
+      heroZoom:
+        Number.isFinite(heroZoom)
+          ? heroZoom
+          : 1,
+
+      category:
+        category || starter.category,
 
       vcardFileName:
         `${safeSlug}.vcf`,

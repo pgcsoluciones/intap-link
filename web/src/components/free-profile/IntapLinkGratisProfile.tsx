@@ -108,8 +108,29 @@ function ProfileIdentity({
   if (layout === 'impacto') {
     return (
       <section className="il-free-identity il-free-identity--impacto">
-        <div className="il-free-impact-hero">
-          <img src={profile.hero} alt="" />
+        <div
+          className={`il-free-impact-hero ${
+            profile.hero
+              ? ''
+              : 'il-free-impact-hero--fallback'
+          }`}
+        >
+          {profile.hero ? (
+            <img
+              src={profile.hero}
+              alt=""
+              style={{
+                objectPosition:
+                  `${profile.heroPositionX}% ${profile.heroPositionY}%`,
+                transform:
+                  `scale(${profile.heroZoom})`,
+              }}
+            />
+          ) : (
+            <div className="il-free-impact-hero-placeholder">
+              <span>{profile.category}</span>
+            </div>
+          )}
         </div>
 
         <div className="il-free-impact-avatar">
