@@ -26,8 +26,12 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       }
 
       const planId = json.data?.plan_id || json.data?.plan_code || 'free'
-      if (json.data?.profile_id && ((planScope === 'free' && planId !== 'free') || (planScope === 'paid' && planId === 'free'))) {
+      if (json.data?.profile_id && planScope === 'free' && planId !== 'free') {
         navigate('/admin', { replace: true })
+        return
+      }
+      if (json.data?.profile_id && planScope === 'paid' && planId === 'free') {
+        navigate('/admin/free', { replace: true })
         return
       }
 
