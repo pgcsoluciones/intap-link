@@ -648,6 +648,8 @@ me.get('/', async (c) => {
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
             p.avatar_url, p.category, p.subcategory, p.is_published, p.theme_id,
             p.accent_color, p.button_style, p.layout_id,
+            p.free_palette_id, p.free_brand_color,
+            p.hero_url, p.hero_position_x, p.hero_position_y, p.hero_zoom,
             p.template_id, p.template_data, p.plan_id
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
@@ -1818,6 +1820,130 @@ me.patch('/profile/visual', async (c) => {
   return c.json({ ok: true })
 })
 
+
+// ─── PATCH /api/v1/me/profile/free-appearance ────────────────────────────────
+// Apariencia exclusiva del plan Gratis.
+// No modifica template_id ni templates especializados.
+me.patch('/profile/free-appearance', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON' }, 400)
+  }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  }
+
+  if (String((profile as any).plan_id) !== 'free') {
+    return c.json({
+      ok: false,
+      error: 'Esta apariencia pertenece al perfil Gratis',
+    }, 403)
+  }
+
+  const VALID_PALETTES = [
+    'intap',
+    'oceano',
+    'esmeralda',
+    'violeta',
+    'coral',
+    'grafito',
+    'arena',
+    'personalizada',
+  ]
+
+  const paletteId =
+    body.palette_id !== undefined
+      ? String(body.palette_id || '').trim()
+      : undefined
+
+  if (
+    paletteId !== undefined &&
+    !VALID_PALETTES.includes(paletteId)
+  ) {
+    return c.json({ ok: false, error: 'Paleta no válida' }, 400)
+  }
+
+  const brandColor =
+    body.brand_color !== undefined
+      ? String(body.brand_color || '').trim()
+      : undefined
+
+  if (
+    brandColor !== undefined &&
+    brandColor !== '' &&
+    !/^#[0-9A-Fa-f]{6}$/.test(brandColor)
+  ) {
+    return c.json({
+      ok: false,
+      error: 'El color principal debe usar formato #RRGGBB',
+    }, 400)
+  }
+
+  const heroUrl =
+    body.hero_url !== undefined
+      ? String(body.hero_url || '').trim()
+      : undefined
+
+  const numberOrUndefined = (value: any) => {
+    if (value === undefined) return undefined
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+  }
+
+  const x = numberOrUndefined(body.hero_position_x)
+  const y = numberOrUndefined(body.hero_position_y)
+  const zoom = numberOrUndefined(body.hero_zoom)
+
+  if (x === null || x! < 0 || x! > 100) {
+    return c.json({ ok: false, error: 'Posición horizontal no válida' }, 400)
+  }
+
+  if (y === null || y! < 0 || y! > 100) {
+    return c.json({ ok: false, error: 'Posición vertical no válida' }, 400)
+  }
+
+  if (zoom === null || zoom! < 1 || zoom! > 3) {
+    return c.json({ ok: false, error: 'Zoom no válido' }, 400)
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE profiles SET
+       free_palette_id = COALESCE(?1, free_palette_id),
+       free_brand_color = CASE
+         WHEN ?2 IS NULL THEN free_brand_color
+         ELSE ?2
+       END,
+       hero_url = CASE
+         WHEN ?3 IS NULL THEN hero_url
+         ELSE ?3
+       END,
+       hero_position_x = COALESCE(?4, hero_position_x),
+       hero_position_y = COALESCE(?5, hero_position_y),
+       hero_zoom = COALESCE(?6, hero_zoom),
+       updated_at = datetime('now')
+     WHERE id = ?7`
+  ).bind(
+    paletteId ?? null,
+    brandColor === undefined ? null : brandColor,
+    heroUrl === undefined ? null : heroUrl,
+    x ?? null,
+    y ?? null,
+    zoom ?? null,
+    (profile as any).id,
+  ).run()
+
+  return c.json({ ok: true })
+})
+
 // ─── GET /api/v1/me/plan-impact-preview?target=<plan_id> ─────────────────────
 // Simula el impacto de un downgrade al plan `target` sin aplicar ningún cambio.
 // Responde: qué recursos quedan activos, cuáles se pausan, si hace falta selección.
@@ -2048,6 +2174,49 @@ me.get('/gallery', async (c) => {
   return c.json({ ok: true, photos: photos.results })
 })
 
+
+
+// Editar metadatos de una imagen de portafolio.
+// La imagen permanece en R2; solo cambia su presentación.
+me.put('/gallery/:id', async (c) => {
+  const userId = c.get('userId') as string
+  const galleryId = c.req.param('id')
+
+  let body: any = {}
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON' }, 400)
+  }
+
+  const title = String(body.title || '').trim().slice(0, 80)
+  const description = String(body.description || '').trim().slice(0, 220)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  }
+
+  const result = await c.env.DB.prepare(
+    `UPDATE profile_gallery
+        SET title = ?, description = ?
+      WHERE id = ? AND profile_id = ?`
+  ).bind(
+    title || null,
+    description || null,
+    galleryId,
+    (profile as any).id,
+  ).run()
+
+  if (Number((result as any)?.meta?.changes || 0) !== 1) {
+    return c.json({ ok: false, error: 'Imagen no encontrada' }, 404)
+  }
+
+  return c.json({ ok: true })
+})
 
 app.route('/api/v1/me', me)
 
@@ -2635,7 +2804,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, layout_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, layout_id, free_palette_id, free_brand_color, hero_url, hero_position_x, hero_position_y, hero_zoom, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -2672,7 +2841,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .bind((profile as any).id)
       .all(),
     c.env.DB.prepare(
-      'SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC'
+      'SELECT id, image_key, alt_text, title, description, sort_order FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC'
     )
       .bind((profile as any).id)
       .all(),
@@ -2715,9 +2884,24 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isDemoKey = (key: string) =>
     key.startsWith('demo/') || key === 'profile_debug' || key.startsWith('profile_debug')
 
-  const gallery = (rawGallery.results as { image_key: string }[])
+  const gallery = (rawGallery.results as {
+    id: string
+    image_key: string
+    alt_text?: string | null
+    title?: string | null
+    description?: string | null
+    sort_order?: number
+  }[])
     .filter((g) => g.image_key && !isDemoKey(g.image_key))
-    .map((g) => ({ image_key: g.image_key, image_url: toAssetUrl(g.image_key) }))
+    .map((g) => ({
+      id: g.id,
+      image_key: g.image_key,
+      image_url: toAssetUrl(g.image_key),
+      alt_text: g.alt_text ?? null,
+      title: g.title ?? null,
+      description: g.description ?? null,
+      sort_order: Number(g.sort_order ?? 0),
+    }))
 
   const products = rawProducts.results as {
     id: string
@@ -2755,6 +2939,12 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       whatsapp_number: (profile as any).whatsapp_number ?? null,
       layout_id: (profile as any).layout_id ?? 'esencial',
       layoutId: (profile as any).layout_id ?? 'esencial',
+      freePaletteId: (profile as any).free_palette_id ?? 'intap',
+      freeBrandColor: (profile as any).free_brand_color ?? null,
+      heroUrl: toAssetUrl((profile as any).hero_url || ''),
+      heroPositionX: Number((profile as any).hero_position_x ?? 50),
+      heroPositionY: Number((profile as any).hero_position_y ?? 50),
+      heroZoom: Number((profile as any).hero_zoom ?? 1),
       templateId: (profile as any).template_id ?? null,
       templateData: (() => { try { return JSON.parse((profile as any).template_data || '{}') } catch { return {} } })(),
       social_links: rawSocialLinks.results,
