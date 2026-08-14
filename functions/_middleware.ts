@@ -218,12 +218,27 @@ ${seoHeadHtml}
     }
   }
 
-  // Redirigir rutas /admin al panel admin en app.intaprd.com
-  // Sólo desde el dominio público — evita loop si app.intaprd.com usa el mismo proyecto
-  if (url.hostname !== 'app.intaprd.com' &&
-      (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))) {
-    const target = 'https://app.intaprd.com' + url.pathname + url.search;
-    return withSecurityHeaders(Response.redirect(target, 302));
+  // Redirigir /admin solo cuando la solicitud viene del frontend público.
+  // Los hosts del panel y los deployments pages.dev deben servir la app directamente.
+  const isAdminPath =
+    url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+
+  if (isAdminPath) {
+    const productionPublicHosts = new Set([
+      'intaprd.com',
+      'www.intaprd.com',
+      'link.intaprd.com',
+    ]);
+
+    if (productionPublicHosts.has(url.hostname)) {
+      const target = 'https://app.intaprd.com' + url.pathname + url.search;
+      return withSecurityHeaders(Response.redirect(target, 302));
+    }
+
+    if (url.hostname === 'preview.intaprd.com') {
+      const target = 'https://app.preview.intaprd.com' + url.pathname + url.search;
+      return withSecurityHeaders(Response.redirect(target, 302));
+    }
   }
 
   // Redirigir /?slug=VALUE → /VALUE
