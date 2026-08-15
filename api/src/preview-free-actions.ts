@@ -3,6 +3,12 @@ import { cookieNames } from './lib/cookies'
 
 type QuickActionType = 'call' | 'instagram' | 'location' | 'email' | 'tiktok'
 
+type NormalizedQuickAction = {
+  type: QuickActionType
+  url: string
+  sort_order: number
+}
+
 const ALLOWED_TYPES = new Set<QuickActionType>([
   'call',
   'instagram',
@@ -153,7 +159,7 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
     return c.json({ ok: false, error: 'Debes elegir entre 1 y 3 accesos rápidos.' }, 400)
   }
 
-  const normalized = rawItems.map((item: any, index: number) => {
+  const normalized: Array<NormalizedQuickAction | null> = rawItems.map((item: any, index: number) => {
     const type = normalizeType(item?.type)
     if (!type) return null
 
@@ -163,15 +169,11 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
     return { type, url, sort_order: index }
   })
 
-  if (normalized.some((item) => !item)) {
+  if (normalized.some((item: NormalizedQuickAction | null) => !item)) {
     return c.json({ ok: false, error: 'Uno de los accesos rápidos no es válido.' }, 400)
   }
 
-  const items = normalized as Array<{
-    type: QuickActionType
-    url: string
-    sort_order: number
-  }>
+  const items = normalized as NormalizedQuickAction[]
 
   const uniqueTypes = new Set(items.map((item) => item.type))
   if (uniqueTypes.size !== items.length) {
