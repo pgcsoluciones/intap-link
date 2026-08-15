@@ -43,7 +43,7 @@ async function requirePreviewAuth(c: any, next: any) {
   await next()
 }
 
-function isUploadFile(value: FormDataEntryValue | null): value is File {
+function isUploadFile(value: unknown): value is File {
   return !!(
     value &&
     typeof value === 'object' &&
