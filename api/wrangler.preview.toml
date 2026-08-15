@@ -1,5 +1,5 @@
 name = "intap-api-preview"
-main = "src/preview-entry.ts"
+main = "src/preview-free-actions.ts"
 compatibility_date = "2024-02-08"
 workers_dev = true
 
