@@ -49,9 +49,6 @@ type DetailModal =
   | { kind: 'service'; item: FreeProfileService }
   | null
 
-const BASIC_PLAN_PHONE = '18097059802'
-const BASIC_PLAN_MESSAGE = 'Tengo un perfil Gratis y me gustaría pasarme al Plan Básico.'
-
 function normalizeHex(value: string, fallback: string) {
   const normalized = value.trim().toUpperCase()
   return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : fallback
@@ -67,36 +64,23 @@ function rgb(hex: string) {
 }
 
 function toHex(value: number) {
-  return Math.max(0, Math.min(255, Math.round(value)))
-    .toString(16)
-    .padStart(2, '0')
+  return Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0')
 }
 
 function mixHex(base: string, target: string, weight: number) {
   const a = rgb(base)
   const b = rgb(target)
   const mix = (x: number, y: number) => x * (1 - weight) + y * weight
-  return (
-    '#' +
-    toHex(mix(a.r, b.r)) +
-    toHex(mix(a.g, b.g)) +
-    toHex(mix(a.b, b.b))
-  ).toUpperCase()
+  return ('#' + toHex(mix(a.r, b.r)) + toHex(mix(a.g, b.g)) + toHex(mix(a.b, b.b))).toUpperCase()
 }
 
 function luminance(hex: string) {
   const color = rgb(hex)
   const channel = (value: number) => {
     const normalized = value / 255
-    return normalized <= 0.03928
-      ? normalized / 12.92
-      : Math.pow((normalized + 0.055) / 1.055, 2.4)
+    return normalized <= 0.03928 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4)
   }
-  return (
-    0.2126 * channel(color.r) +
-    0.7152 * channel(color.g) +
-    0.0722 * channel(color.b)
-  )
+  return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b)
 }
 
 function contrastRatio(foreground: string, background: string) {
@@ -108,27 +92,16 @@ function contrastRatio(foreground: string, background: string) {
 function readableText(background: string) {
   const white = '#FFFFFF'
   const dark = '#111827'
-  return contrastRatio(white, background) >= contrastRatio(dark, background)
-    ? white
-    : dark
+  return contrastRatio(white, background) >= contrastRatio(dark, background) ? white : dark
 }
 
-function ensureReadableColor(
-  foreground: string,
-  background: string,
-  minimum = 4.5,
-) {
+function ensureReadableColor(foreground: string, background: string, minimum = 4.5) {
   const original = normalizeHex(foreground, '#111827')
   const bg = normalizeHex(background, '#FFFFFF')
   if (contrastRatio(original, bg) >= minimum) return original
-
   const darkTarget = '#111827'
   const lightTarget = '#FFFFFF'
-  const target =
-    contrastRatio(darkTarget, bg) >= contrastRatio(lightTarget, bg)
-      ? darkTarget
-      : lightTarget
-
+  const target = contrastRatio(darkTarget, bg) >= contrastRatio(lightTarget, bg) ? darkTarget : lightTarget
   for (let weight = 0.08; weight <= 1; weight += 0.08) {
     const candidate = mixHex(original, target, weight)
     if (contrastRatio(candidate, bg) >= minimum) return candidate
@@ -142,10 +115,6 @@ function whatsappUrl(profile: FreeProfileData, subject?: string) {
     ? `Hola ${profile.whatsappGreetingName}, vi "${subject}" en tu perfil de INTAP LINK y me gustaría recibir más información.`
     : `Hola ${profile.whatsappGreetingName}, vi tu perfil en INTAP LINK y me gustaría recibir más información.`
   return `https://wa.me/${profile.phone}?text=${encodeURIComponent(message)}`
-}
-
-function basicPlanWhatsAppUrl() {
-  return `https://wa.me/${BASIC_PLAN_PHONE}?text=${encodeURIComponent(BASIC_PLAN_MESSAGE)}`
 }
 
 function loginUrl() {
@@ -183,26 +152,12 @@ function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeP
       <section className="ilx-identity ilx-impact">
         <div className="ilx-impact-cover">
           {profile.hero ? (
-            <img
-              src={profile.hero}
-              alt=""
-              style={{
-                objectPosition: `${profile.heroPositionX}% ${profile.heroPositionY}%`,
-                transform: `scale(${profile.heroZoom})`,
-              }}
-            />
-          ) : (
-            <div className="ilx-impact-fallback" aria-hidden="true" />
-          )}
+            <img src={profile.hero} alt="" style={{ objectPosition: `${profile.heroPositionX}% ${profile.heroPositionY}%`, transform: `scale(${profile.heroZoom})` }} />
+          ) : <div className="ilx-impact-fallback" aria-hidden="true" />}
         </div>
         <div className="ilx-impact-person">
-          <div className="ilx-impact-avatar">
-            <img src={profile.portrait} alt={profile.name} />
-          </div>
-          <div className="ilx-impact-name">
-            <h1>{profile.name}</h1>
-            <p>{profile.role}</p>
-          </div>
+          <div className="ilx-impact-avatar"><img src={profile.portrait} alt={profile.name} /></div>
+          <div className="ilx-impact-name"><h1>{profile.name}</h1><p>{profile.role}</p></div>
         </div>
       </section>
     )
@@ -214,10 +169,7 @@ function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeP
         <div className="ilx-personal-image">
           <img src={profile.portrait} alt={profile.name} />
           <div className="ilx-personal-fade" />
-          <div className="ilx-personal-text">
-            <h1>{profile.name}</h1>
-            <p>{profile.role}</p>
-          </div>
+          <div className="ilx-personal-text"><h1>{profile.name}</h1><p>{profile.role}</p></div>
         </div>
       </section>
     )
@@ -225,48 +177,29 @@ function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeP
 
   return (
     <section className="ilx-identity ilx-essential">
-      <div className="ilx-essential-image">
-        <img src={profile.portrait} alt={profile.name} />
-      </div>
-      <div className="ilx-essential-name">
-        <h1>{profile.name}</h1>
-        <p>{profile.role}</p>
-      </div>
+      <div className="ilx-essential-image"><img src={profile.portrait} alt={profile.name} /></div>
+      <div className="ilx-essential-name"><h1>{profile.name}</h1><p>{profile.role}</p></div>
     </section>
   )
 }
 
-export default function IntapLinkGratisProfile({
-  profile,
-  layout,
-  colors,
-  topContent,
-}: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [linksOpen, setLinksOpen] = useState(false)
   const [modal, setModal] = useState<DetailModal>(null)
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-  }, [])
-
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }) }, [])
   useEffect(() => {
     if (!modal && !qrOpen) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setModal(null)
-        setQrOpen(false)
-      }
+      if (event.key === 'Escape') { setModal(null); setQrOpen(false) }
     }
     window.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', onKeyDown)
-    }
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener('keydown', onKeyDown) }
   }, [modal, qrOpen])
 
   const portfolio = profile.portfolio.slice(0, FREE_PROFILE_LIMITS.maxPortfolioImages)
@@ -281,16 +214,11 @@ export default function IntapLinkGratisProfile({
   const accent = ensureReadableColor(colors.accent, surface, 3.4)
   const action = normalizeHex(colors.button, colors.primary)
   const onAction = readableText(action)
-  const actionHover = mixHex(
-    action,
-    luminance(action) > 0.52 ? '#111827' : '#FFFFFF',
-    0.13,
-  )
+  const actionHover = mixHex(action, luminance(action) > 0.52 ? '#111827' : '#FFFFFF', 0.13)
   const muted = ensureReadableColor(mixHex(text, surface, 0.38), surface, 4.5)
   const border = mixHex(accent, surface, 0.64)
   const softPrimary = mixHex(primary, surface, 0.91)
   const softAccent = mixHex(accent, surface, 0.91)
-
   const variables = {
     '--ilx-page-bg': pageBackground,
     '--ilx-surface': surface,
@@ -307,16 +235,7 @@ export default function IntapLinkGratisProfile({
   } as CSSProperties
 
   function downloadVCard() {
-    const content = [
-      'BEGIN:VCARD',
-      'VERSION:3.0',
-      `FN:${profile.name}`,
-      `TITLE:${profile.role}`,
-      profile.phone ? `TEL:${profile.phone}` : '',
-      `URL:${window.location.href}`,
-      'END:VCARD',
-    ].filter(Boolean).join('\n')
-
+    const content = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${profile.name}`, `TITLE:${profile.role}`, profile.phone ? `TEL:${profile.phone}` : '', `URL:${window.location.href}`, 'END:VCARD'].filter(Boolean).join('\n')
     const blob = new Blob([content], { type: 'text/vcard;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -333,25 +252,15 @@ export default function IntapLinkGratisProfile({
       await navigator.clipboard.writeText(window.location.href)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1800)
-    } catch {
-      setCopied(false)
-    }
+    } catch { setCopied(false) }
   }
 
   async function openQrModal() {
     try {
       const QRCode = await import('qrcode')
-      const generated = await QRCode.toDataURL(window.location.href, {
-        width: 1200,
-        margin: 3,
-        errorCorrectionLevel: 'H',
-        color: { dark: '#111111', light: '#FFFFFF' },
-      })
-      setQrDataUrl(generated)
+      setQrDataUrl(await QRCode.toDataURL(window.location.href, { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
       setQrOpen(true)
-    } catch (error) {
-      console.error('No se pudo generar el QR', error)
-    }
+    } catch (error) { console.error('No se pudo generar el QR', error) }
   }
 
   function downloadProfileQr() {
@@ -366,27 +275,14 @@ export default function IntapLinkGratisProfile({
 
   function shareProfileQrWhatsApp() {
     const message = `Conoce el perfil de ${profile.name} en INTAP LINK:\n${window.location.href}`
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(message)}`,
-      '_blank',
-      'noopener,noreferrer',
-    )
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
   async function shareProfile() {
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `${profile.name} | INTAP LINK`,
-          text: `Conoce el perfil de ${profile.name}`,
-          url: window.location.href,
-        })
-      } else {
-        await copyProfileLink()
-      }
-    } catch {
-      // Cancelar compartir no es error.
-    }
+      if (navigator.share) await navigator.share({ title: `${profile.name} | INTAP LINK`, text: `Conoce el perfil de ${profile.name}`, url: window.location.href })
+      else await copyProfileLink()
+    } catch { /* cancelar compartir no es error */ }
   }
 
   const hasPhone = Boolean(profile.phone)
@@ -396,106 +292,45 @@ export default function IntapLinkGratisProfile({
       {topContent}
       <div className="ilx-shell">
         <Identity profile={profile} layout={layout} />
-
         <div className="ilx-body">
-          {hasPhone && (
-            <a
-              className="ilx-main-cta"
-              href={whatsappUrl(profile)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <FaWhatsapp />
-              <span>Hablar por WhatsApp</span>
-            </a>
-          )}
+          {hasPhone && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
 
           {quickActions.length > 0 && (
             <nav className="ilx-quick" aria-label="Acciones rápidas">
               {quickActions.map((actionItem) => (
-                <a
-                  key={`${actionItem.type}-${actionItem.url}`}
-                  href={actionItem.url}
-                  target={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : '_blank'}
-                  rel={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : 'noopener noreferrer'}
-                >
-                  <span>{quickActionIcon(actionItem)}</span>
-                  <strong>{actionItem.label}</strong>
+                <a key={`${actionItem.type}-${actionItem.url}`} href={actionItem.url} target={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : '_blank'} rel={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : 'noopener noreferrer'}>
+                  <span>{quickActionIcon(actionItem)}</span><strong>{actionItem.label}</strong>
                 </a>
               ))}
             </nav>
           )}
 
-          <button type="button" className="ilx-save-contact" onClick={downloadVCard}>
-            <FaAddressCard />
-            <strong>Guardar contacto</strong>
-          </button>
+          <button type="button" className="ilx-save-contact" onClick={downloadVCard}><FaAddressCard /><strong>Guardar contacto</strong></button>
 
-          <section className="ilx-section ilx-about">
-            <h2>Sobre mí</h2>
-            <p className="ilx-copy">{profile.bio}</p>
-          </section>
+          <section className="ilx-section ilx-about"><h2>{profile.aboutTitle}</h2><p className="ilx-copy">{profile.bio}</p></section>
 
           {portfolio.length > 0 && (
             <section className="ilx-section ilx-portfolio">
-              <h2>Mi Portafolio</h2>
-              <div className="ilx-portfolio-marquee">
-                <div className="ilx-portfolio-track">
-                  {[
-                    ...portfolio.map((item) => ({ item, duplicate: false })),
-                    ...portfolio.map((item) => ({ item, duplicate: true })),
-                  ].map(({ item, duplicate }, index) => (
-                    <button
-                      key={`${duplicate ? 'copy' : 'original'}-${item.id}-${index}`}
-                      type="button"
-                      className="ilx-portfolio-item"
-                      tabIndex={duplicate ? -1 : 0}
-                      aria-hidden={duplicate ? true : undefined}
-                      onClick={() => setModal({ kind: 'portfolio', item })}
-                    >
-                      <img
-                        src={item.image}
-                        alt={duplicate ? '' : item.title}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <span className="ilx-portfolio-title">{item.title}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <h2>{profile.portfolioTitle}</h2>
+              <div className="ilx-portfolio-marquee"><div className="ilx-portfolio-track">
+                {[...portfolio.map((item) => ({ item, duplicate: false })), ...portfolio.map((item) => ({ item, duplicate: true }))].map(({ item, duplicate }, index) => (
+                  <button key={`${duplicate ? 'copy' : 'original'}-${item.id}-${index}`} type="button" className="ilx-portfolio-item" tabIndex={duplicate ? -1 : 0} aria-hidden={duplicate ? true : undefined} onClick={() => setModal({ kind: 'portfolio', item })}>
+                    <img src={item.image} alt={duplicate ? '' : item.title} loading="lazy" decoding="async" />
+                    <span className="ilx-portfolio-title">{item.title}</span>
+                  </button>
+                ))}
+              </div></div>
             </section>
           )}
 
           {services.length > 0 && (
             <section className="ilx-section">
-              <h2>Servicios</h2>
-              <div
-                className="ilx-services"
-                style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}
-              >
+              <h2>{profile.servicesTitle}</h2>
+              <div className="ilx-services" style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
                 {services.map((service) => (
-                  <button
-                    key={service.id}
-                    type="button"
-                    className="ilx-service"
-                    onClick={() => setModal({ kind: 'service', item: service })}
-                  >
-                    <div className="ilx-service-media">
-                      {service.image ? (
-                        <img
-                          src={service.image}
-                          alt={service.title}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <span>{serviceIcon(service.iconKey)}</span>
-                      )}
-                    </div>
-                    <div className="ilx-service-copy">
-                      <h3>{service.title}</h3>
-                    </div>
+                  <button key={service.id} type="button" className="ilx-service" onClick={() => setModal({ kind: 'service', item: service })}>
+                    <div className="ilx-service-media">{service.image ? <img src={service.image} alt={service.title} loading="lazy" decoding="async" /> : <span>{serviceIcon(service.iconKey)}</span>}</div>
+                    <div className="ilx-service-copy"><h3>{service.title}</h3></div>
                   </button>
                 ))}
               </div>
@@ -504,138 +339,39 @@ export default function IntapLinkGratisProfile({
 
           {customLinks.length > 0 && (
             <section className="ilx-section ilx-links">
-              <button
-                type="button"
-                className="ilx-links-toggle"
-                onClick={() => setLinksOpen((current) => !current)}
-                aria-expanded={linksOpen}
-              >
-                <strong>Mis enlaces</strong>
-                <FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} />
-              </button>
-
-              {linksOpen && (
-                <div className="ilx-links-list">
-                  {customLinks.map((link) => (
-                    <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer">
-                      <span>{link.label}</span>
-                      <FaExternalLinkAlt />
-                    </a>
-                  ))}
-                </div>
-              )}
+              <button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
+              {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
             </section>
           )}
 
           <section className="ilx-share">
-            <button type="button" onClick={shareProfile}>
-              <FaShareAlt />
-              <span>Compartir</span>
-            </button>
-            <button type="button" onClick={copyProfileLink}>
-              <FaLink />
-              <span>{copied ? 'Enlace copiado' : 'Copiar enlace'}</span>
-            </button>
-            <button type="button" onClick={openQrModal}>
-              <FaQrcode />
-              <span>Código QR</span>
-            </button>
+            <button type="button" onClick={shareProfile}><FaShareAlt /><span>Compartir</span></button>
+            <button type="button" onClick={copyProfileLink}><FaLink /><span>{copied ? 'Enlace copiado' : 'Copiar enlace'}</span></button>
+            <button type="button" onClick={openQrModal}><FaQrcode /><span>Código QR</span></button>
           </section>
 
-          <aside className="ilx-basic-upgrade">
-            <strong>Logra mayor impacto con más herramientas</strong>
-            <p>Amplía tu alcance y las posibilidades de tu perfil con un Plan Básico.</p>
-            <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer">
-              Pasarme al Plan Básico
-            </a>
-          </aside>
-
           <footer className="ilx-footer">
-            <a href="/">
-              Crea tu perfil gratis con <strong>INTAP Link</strong>
-            </a>
-            <a className="ilx-footer-login" href={loginUrl()}>
-              Iniciar sesión
-            </a>
+            <a href="/">Crea tu perfil gratis con <strong>INTAP Link</strong></a>
+            <a className="ilx-footer-login" href={loginUrl()}>Iniciar sesión</a>
           </footer>
         </div>
       </div>
 
       {qrOpen && (
-        <div
-          className="ilx-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setQrOpen(false)
-          }}
-        >
+        <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQrOpen(false) }}>
           <article className="ilx-qr-modal" role="dialog" aria-modal="true" aria-labelledby="ilx-qr-title">
-            <button type="button" className="ilx-modal-close" onClick={() => setQrOpen(false)} aria-label="Cerrar">
-              <FaTimes />
-            </button>
-            <div className="ilx-qr-modal-body">
-              <span className="ilx-qr-kicker">INTAP LINK</span>
-              <h2 id="ilx-qr-title">Código QR</h2>
-              <p>Escanea para abrir este perfil.</p>
-              {qrDataUrl && (
-                <div className="ilx-qr-image">
-                  <img src={qrDataUrl} alt={`Código QR de ${profile.name}`} />
-                </div>
-              )}
-              <strong className="ilx-qr-profile-name">{profile.name}</strong>
-              <div className="ilx-qr-actions">
-                <button type="button" onClick={downloadProfileQr}>
-                  <FaQrcode />
-                  <span>Descargar QR</span>
-                </button>
-                <button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}>
-                  <FaWhatsapp />
-                  <span>Compartir por WhatsApp</span>
-                </button>
-              </div>
-            </div>
+            <button type="button" className="ilx-modal-close" onClick={() => setQrOpen(false)} aria-label="Cerrar"><FaTimes /></button>
+            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">INTAP LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar QR</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
           </article>
         </div>
       )}
 
       {modal && (
-        <div
-          className="ilx-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setModal(null)
-          }}
-        >
+        <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(null) }}>
           <article className="ilx-modal" role="dialog" aria-modal="true" aria-label={modal.item.title}>
-            <button type="button" className="ilx-modal-close" onClick={() => setModal(null)} aria-label="Cerrar">
-              <FaTimes />
-            </button>
-
-            <div className="ilx-modal-media">
-              {modal.kind === 'portfolio' ? (
-                <img src={modal.item.image} alt={modal.item.title} />
-              ) : modal.item.image ? (
-                <img src={modal.item.image} alt={modal.item.title} />
-              ) : (
-                <span className="ilx-modal-service-icon">{serviceIcon(modal.item.iconKey)}</span>
-              )}
-            </div>
-
-            <div className="ilx-modal-body">
-              <h2>{modal.item.title}</h2>
-              <p>{modal.item.description}</p>
-              {hasPhone && (
-                <a
-                  className="ilx-modal-cta"
-                  href={whatsappUrl(profile, modal.item.title)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <FaWhatsapp />
-                  <span>Consultar por WhatsApp</span>
-                </a>
-              )}
-            </div>
+            <button type="button" className="ilx-modal-close" onClick={() => setModal(null)} aria-label="Cerrar"><FaTimes /></button>
+            <div className="ilx-modal-media">{modal.kind === 'portfolio' ? <img src={modal.item.image} alt={modal.item.title} /> : modal.item.image ? <img src={modal.item.image} alt={modal.item.title} /> : <span className="ilx-modal-service-icon">{serviceIcon(modal.item.iconKey)}</span>}</div>
+            <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasPhone && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
           </article>
         </div>
       )}
