@@ -1,7 +1,7 @@
 import type { MouseEventHandler } from 'react'
 
 const BASIC_PLAN_PHONE = '18097059802'
-const BASIC_PLAN_MESSAGE = 'Tengo un perfil Gratis y me gustaría pasarme al Plan Básico.'
+const BASIC_PLAN_MESSAGE = 'Tengo un perfil Digital Gratis y me gustaría pasarme al Plan Básico.'
 
 export function basicPlanWhatsAppUrl() {
   return `https://wa.me/${BASIC_PLAN_PHONE}?text=${encodeURIComponent(BASIC_PLAN_MESSAGE)}`
@@ -48,6 +48,27 @@ export function FreeUpgradeCard({
           </a>
         </div>
       </div>
+    </aside>
+  )
+}
+
+export function FreeLimitUpgradeCard({
+  text,
+}: {
+  text: string
+}) {
+  return (
+    <aside className="mt-4 rounded-[20px] border border-amber-200 bg-amber-50 p-4">
+      <p className="text-xs font-black text-amber-900">Límite del Plan Gratis alcanzado</p>
+      <p className="mt-1 text-xs leading-5 text-amber-800">{text}</p>
+      <a
+        href={basicPlanWhatsAppUrl()}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm"
+      >
+        Pasarme al Plan Básico
+      </a>
     </aside>
   )
 }
