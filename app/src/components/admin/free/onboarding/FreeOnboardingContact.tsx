@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../../../lib/api'
+import { FreeBackButton, FreeUpgradeCard } from '../FreePanelUi'
 
 function normalizeWhatsApp(input: string): string | null {
   if (!input) return null
@@ -32,7 +33,6 @@ export default function FreeOnboardingContact() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
-
     if (!whatsapp.trim() && !phone.trim()) {
       setError('Agrega al menos WhatsApp o un teléfono.')
       return
@@ -41,7 +41,6 @@ export default function FreeOnboardingContact() {
       setError('Revisa el número de WhatsApp.')
       return
     }
-
     setSaving(true)
     try {
       const body: Record<string, string> = {}
@@ -61,12 +60,10 @@ export default function FreeOnboardingContact() {
   if (loading) return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
 
   return (
-    <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
-      <section className="mx-auto w-full max-w-[430px] py-4">
-        <div className="mb-8 flex gap-2" aria-label="Paso 4 de 4">
-          {[1, 2, 3, 4].map((step) => <span key={step} className="h-1.5 flex-1 rounded-full bg-cyan-500" />)}
-        </div>
-
+    <main className="min-h-screen bg-[#f7f9fc] px-5 py-5 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-[430px] py-1">
+        <FreeBackButton onClick={() => navigate('/admin/free')} />
+        <div className="mb-8 flex gap-2" aria-label="Paso 4 de 4">{[1, 2, 3, 4].map((step) => <span key={step} className="h-1.5 flex-1 rounded-full bg-cyan-500" />)}</div>
         <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.18em] text-cyan-600">Paso 4 de 4</p>
         <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">Cómo pueden contactarte</h1>
         <p className="mt-2 text-[15px] leading-6 text-slate-500">Agrega tus datos principales. Podrás completar otros detalles más adelante.</p>
@@ -82,10 +79,10 @@ export default function FreeOnboardingContact() {
               <input type={type} value={value} onChange={(e) => setValue(e.target.value)} placeholder={placeholder} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
             </label>
           ))}
-
           {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
           <button type="submit" disabled={saving} className="mt-2 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : 'Finalizar'}</button>
         </form>
+        <div className="mt-5"><FreeUpgradeCard compact /></div>
       </section>
     </main>
   )
