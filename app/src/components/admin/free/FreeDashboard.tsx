@@ -20,6 +20,7 @@ const freeItems = [
   { title: 'Estilo de mi perfil', text: 'Impacto, Personal o Esencial', to: '/admin/free/style', icon: '◫' },
   { title: 'Editar identidad', text: 'Nombre, foto y descripción', to: '/admin/free/onboarding/identity', icon: '✎' },
   { title: 'Datos de contacto', text: 'WhatsApp, teléfono y correo', to: '/admin/free/onboarding/contact', icon: '☎' },
+  { title: 'Accesos rápidos', text: 'Elige hasta 3: Llamar, Instagram, Ubicación, Email o TikTok', to: '/admin/free/quick-actions', icon: '◉' },
   { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖' },
   { title: 'Mis enlaces', text: 'Hasta 3 accesos importantes', to: '/admin/free/links', icon: '↗' },
   { title: 'Portafolio', text: 'Hasta 5 imágenes de tu trabajo', to: '/admin/free/portfolio', icon: '▧' },
