@@ -61,6 +61,8 @@ export type FreeProfileData = {
   role: string
   personalBadge: string
   aboutTitle: string
+  portfolioTitle: string
+  servicesTitle: string
   bio: string
   phone: string
   whatsappGreetingName: string
