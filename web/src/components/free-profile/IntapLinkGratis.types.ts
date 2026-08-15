@@ -9,6 +9,19 @@ export type FreeProfileServiceIconKey =
   | 'chart-line'
   | 'handshake'
 
+export type FreeProfileQuickActionType =
+  | 'call'
+  | 'instagram'
+  | 'location'
+  | 'email'
+  | 'tiktok'
+
+export type FreeProfileQuickAction = {
+  type: FreeProfileQuickActionType
+  label: string
+  url: string
+}
+
 export type FreeProfileAppearanceColors = {
   primary: string
   secondary: string
@@ -61,12 +74,15 @@ export type FreeProfileData = {
   heroZoom: number
   category: string
   vcardFileName: string
+  quickActions: FreeProfileQuickAction[]
   services: FreeProfileService[]
   portfolio: FreeProfilePortfolioItem[]
   customLinks: FreeProfileCustomLink[]
 }
 
 export const FREE_PROFILE_LIMITS = {
+  maxQuickActions: 3,
   maxCustomLinks: 3,
   maxPortfolioImages: 5,
+  maxServices: 3,
 } as const
