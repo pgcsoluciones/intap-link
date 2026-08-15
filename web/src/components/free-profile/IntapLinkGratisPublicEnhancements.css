@@ -36,13 +36,21 @@
   background: var(--ilx-soft-accent);
 }
 
+/* Servicios públicos: cards de preview compactas. Incluso una sola card
+   mantiene tamaño discreto porque el detalle vive en el modal. */
 .ilx-services {
-  grid-template-columns: repeat(var(--ilx-service-count, 3), minmax(0, 1fr));
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  flex-wrap: nowrap;
   gap: 10px;
 }
 
 .ilx-service {
+  width: min(154px, calc((100% - ((var(--ilx-service-count, 1) - 1) * 10px)) / var(--ilx-service-count, 1)));
+  max-width: 154px;
   min-width: 0;
+  flex: 0 1 154px;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -63,8 +71,8 @@
 
 .ilx-service-copy {
   width: 100%;
-  min-height: 48px;
-  padding: 10px 7px 11px;
+  min-height: 44px;
+  padding: 9px 7px 10px;
   align-items: center;
   justify-content: center;
 }
@@ -82,42 +90,6 @@
 .ilx-service-copy p,
 .ilx-service-more {
   display: none;
-}
-
-.ilx-basic-upgrade {
-  margin-top: 22px;
-  padding: 18px;
-  border: 1px solid var(--ilx-border);
-  border-radius: 20px;
-  background: var(--ilx-soft-primary);
-  text-align: center;
-}
-
-.ilx-basic-upgrade strong {
-  display: block;
-  color: var(--ilx-text);
-  font-size: 14px;
-}
-
-.ilx-basic-upgrade p {
-  margin: 6px 0 12px;
-  color: var(--ilx-muted);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.ilx-basic-upgrade a {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: var(--ilx-action);
-  color: var(--ilx-on-action);
-  text-decoration: none;
-  font-size: 11px;
-  font-weight: 760;
 }
 
 .ilx-footer {
@@ -148,11 +120,14 @@
   }
 
   .ilx-service {
+    width: min(148px, calc((100% - ((var(--ilx-service-count, 1) - 1) * 7px)) / var(--ilx-service-count, 1)));
+    max-width: 148px;
+    flex-basis: 148px;
     border-radius: 14px;
   }
 
   .ilx-service-copy {
-    min-height: 44px;
+    min-height: 42px;
     padding: 8px 5px 9px;
   }
 
