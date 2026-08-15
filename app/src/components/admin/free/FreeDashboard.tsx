@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut } from '../../../lib/api'
+import { FreeUpgradeCard } from './FreePanelUi'
 
 interface MeData {
   email: string
@@ -94,6 +95,23 @@ export default function FreeDashboard() {
           <article className="rounded-[24px] border border-slate-200 bg-white p-5">
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
             <p className="mt-2 truncate text-sm font-black text-cyan-700">{publicUrl.replace(/^https?:\/\//, '')}</p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <a
+                href={`${publicUrl}?preview=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700"
+              >
+                Vista previa
+              </a>
+              <button
+                type="button"
+                onClick={() => void navigator.clipboard?.writeText(publicUrl)}
+                className="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600"
+              >
+                Copiar enlace
+              </button>
+            </div>
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
               <div>
                 <p className="text-sm font-black">{me?.is_published ? 'Publicado' : 'Borrador'}</p>
@@ -124,16 +142,7 @@ export default function FreeDashboard() {
           ))}
         </div>
 
-        <article className="mt-2 rounded-[24px] border border-violet-100 bg-violet-50/70 p-5">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-lg">✦</span>
-            <div className="flex-1">
-              <p className="text-sm font-black text-slate-900">Más herramientas cuando las necesites</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Premium vive aparte. Tu panel Gratis se mantiene simple y sin funciones mezcladas.</p>
-              <button type="button" className="mt-3 rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Premium</button>
-            </div>
-          </div>
-        </article>
+        <FreeUpgradeCard />
       </section>
     </main>
   )
