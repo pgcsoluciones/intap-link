@@ -21,6 +21,7 @@ import FreeDashboard from './components/admin/free/FreeDashboard'
 import FreeLinks from './components/admin/free/FreeLinks'
 import FreeLocation from './components/admin/free/FreeLocation'
 import FreePortfolio from './components/admin/free/FreePortfolio'
+import FreeQuickActions from './components/admin/free/FreeQuickActions'
 import FreeServices from './components/admin/free/FreeServices'
 import FreeStyle from './components/admin/free/FreeStyle'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
@@ -69,6 +70,7 @@ function App() {
         <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />
         <Route path="/admin/free/location" element={<AdminGuard planScope="free"><FreeLocation /></AdminGuard>} />
         <Route path="/admin/free/portfolio" element={<AdminGuard planScope="free"><FreePortfolio /></AdminGuard>} />
+        <Route path="/admin/free/quick-actions" element={<AdminGuard planScope="free"><FreeQuickActions /></AdminGuard>} />
         <Route path="/admin/free/services" element={<AdminGuard planScope="free"><FreeServices /></AdminGuard>} />
         <Route path="/admin/free/style" element={<AdminGuard planScope="free"><FreeStyle /></AdminGuard>} />
         <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><ArtifactActivationAuthenticated /></AdminGuard>} />
