@@ -107,6 +107,8 @@ type DynamicDiscoveryProfile = {
   name: string;
   bio: string;
   avatarUrl?: string | null;
+  heroUrl?: string | null;
+  hero_url?: string | null;
   category?: string | null;
   subcategory?: string | null;
   updatedAt?: string | null;
@@ -144,6 +146,12 @@ type DynamicPublicProfile = {
   }>;
   products?: Array<{
     title?: string;
+    description?: string | null;
+  }>;
+  gallery?: Array<{
+    image_url?: string | null;
+    imageUrl?: string | null;
+    title?: string | null;
     description?: string | null;
   }>;
 };
@@ -478,6 +486,7 @@ export async function getDynamicProfileSeoBundle(
   image: string;
   imageType: string;
   siteName: string;
+  twitterCard: 'summary' | 'summary_large_image';
   seoHeadHtml: string;
   semanticFallbackHtml: string;
 } | null> {
@@ -552,11 +561,54 @@ export async function getDynamicProfileSeoBundle(
   const url =
     publicProfileUrl(slug, runtime)
 
-  const image =
+  const heroImage =
+    compactText(
+      profile.heroUrl
+    ) ||
+    compactText(
+      profile.hero_url
+    ) ||
+    dynamicTemplateText(
+      profile,
+      'heroUrl',
+      'hero_url'
+    )
+
+  const galleryImage =
+    Array.isArray(profile.gallery)
+      ? (
+          profile.gallery
+            .map((item) =>
+              compactText(
+                item?.image_url
+              ) ||
+              compactText(
+                item?.imageUrl
+              )
+            )
+            .find(Boolean) || ''
+        )
+      : ''
+
+  const avatarImage =
     compactText(
       profile.avatarUrl
-    ) ||
+    )
+
+  const image =
+    heroImage ||
+    galleryImage ||
+    avatarImage ||
     `${runtime.baseUrl}/favicon.ico`
+
+  const twitterCard:
+    'summary' | 'summary_large_image' =
+      (
+        heroImage ||
+        galleryImage
+      )
+        ? 'summary_large_image'
+        : 'summary'
 
   const telephones =
     Array.from(
@@ -627,6 +679,7 @@ export async function getDynamicProfileSeoBundle(
       inferDynamicImageType(image),
     siteName:
       company || name,
+    twitterCard,
     seoHeadHtml:
       buildDynamicProfileSeoHead(
         seoInput,

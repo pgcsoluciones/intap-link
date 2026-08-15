@@ -1,6 +1,28 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import IntapProfileV2, { type IntapProfileV2Profile } from './profile-templates/IntapProfileV2'
+import React, {
+  lazy,
+  Suspense,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react'
+
+import {
+  useParams,
+  Link,
+} from 'react-router-dom'
+
+import type {
+  IntapProfileV2Profile,
+} from './profile-templates/IntapProfileV2'
+
+const IntapProfileV2 = lazy(
+  () =>
+    import(
+      './profile-templates/IntapProfileV2'
+    ),
+)
 import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
 import { adaptPublicProfileApiResponse } from './free-profile/IntapLinkGratis.adapter'
 import { renderRegisteredProfileTemplate } from './profile-templates/registry'
@@ -2104,7 +2126,22 @@ export default function PublicProfile() {
     )
   }
 
-  return <IntapProfileV2 profile={publicProfileV2} />
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: '100vh',
+            background: '#ffffff',
+          }}
+        />
+      }
+    >
+      <IntapProfileV2
+        profile={publicProfileV2}
+      />
+    </Suspense>
+  )
 
 
 }

@@ -1,32 +1,129 @@
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import PublicProfile from './components/PublicProfile'
-import IntapProfileBioPestsManager from './components/profile-templates/IntapProfileBioPestsManager'
-import IntapProfileBioPestsOperations from './components/profile-templates/IntapProfileBioPestsOperations'
-import MarketingLanding from './components/marketing/MarketingLanding'
+import {
+  lazy,
+  Suspense,
+} from 'react'
+
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom'
+
+/*
+ * IMPORTANTE
+ * ----------
+ * Las vistas públicas se cargan por ruta.
+ *
+ * Esto evita que el CSS de MarketingLanding,
+ * BioPests u otras experiencias especiales
+ * entre automáticamente en todos los perfiles.
+ */
+
+const PublicProfile = lazy(
+  () => import('./components/PublicProfile'),
+)
+
+const MarketingLanding = lazy(
+  () => import('./components/marketing/MarketingLanding'),
+)
+
+const IntapProfileBioPestsManager = lazy(
+  () =>
+    import(
+      './components/profile-templates/IntapProfileBioPestsManager'
+    ),
+)
+
+const IntapProfileBioPestsOperations = lazy(
+  () =>
+    import(
+      './components/profile-templates/IntapProfileBioPestsOperations'
+    ),
+)
+
+function RouteLoader() {
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#ffffff',
+      }}
+    />
+  )
+}
 
 function RootRoute() {
   const location = useLocation()
-  const slug = new URLSearchParams(location.search).get('slug')
-  if (slug) return <Navigate to={`/${slug}`} replace />
+
+  const slug =
+    new URLSearchParams(
+      location.search,
+    ).get('slug')
+
+  if (slug) {
+    return (
+      <Navigate
+        to={`/${slug}`}
+        replace
+      />
+    )
+  }
+
   return <MarketingLanding />
 }
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<RootRoute />} />
+      <Suspense fallback={<RouteLoader />}>
+        <Routes>
+          <Route
+            path="/"
+            element={<RootRoute />}
+          />
 
-        {/* BioPests: identidad y contacto individual por slug; contenido corporativo compartido. */}
-        <Route path="/biopestsgrd" element={<IntapProfileBioPestsManager />} />
-        <Route path="/biopestsvrd" element={<IntapProfileBioPestsOperations />} />
+          <Route
+            path="/biopestsgrd"
+            element={
+              <IntapProfileBioPestsManager />
+            }
+          />
 
-        {/* Alias anteriores: se corrige el typo sin mantener un tercer perfil. */}
-        <Route path="/biopestrd" element={<Navigate to="/biopestsgrd" replace />} />
-        <Route path="/biopestsrd" element={<Navigate to="/biopestsgrd" replace />} />
+          <Route
+            path="/biopestsvrd"
+            element={
+              <IntapProfileBioPestsOperations />
+            }
+          />
 
-        <Route path="/:slug" element={<PublicProfile />} />
-      </Routes>
+          <Route
+            path="/biopestrd"
+            element={
+              <Navigate
+                to="/biopestsgrd"
+                replace
+              />
+            }
+          />
+
+          <Route
+            path="/biopestsrd"
+            element={
+              <Navigate
+                to="/biopestsgrd"
+                replace
+              />
+            }
+          />
+
+          <Route
+            path="/:slug"
+            element={<PublicProfile />}
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

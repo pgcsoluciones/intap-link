@@ -1,11 +1,14 @@
-import type { ReactNode } from 'react'
-import type { IntapProfileV2Profile } from './IntapProfileV2'
+import {
+  lazy,
+  Suspense,
+  type ComponentType,
+  type ReactNode,
+} from 'react'
 
-import IntapProfile1AEventos from './IntapProfile1AEventos'
-import IntapProfileAyCDominicanaV1 from './IntapProfileAyCDominicanaV1'
-import IntapProfileJasonV3 from './IntapProfileJasonV3'
-import IntapProfileNoviV4 from './IntapProfileNoviV4'
-import IntapProfileRentaoRd from './IntapProfileRentaoRd'
+import type {
+  IntapProfileV2Profile,
+} from './IntapProfileV2'
+
 
 export const PROFILE_TEMPLATE_IDS = {
   novi: 'real_estate_novi_v4',
@@ -15,58 +18,151 @@ export const PROFILE_TEMPLATE_IDS = {
   aycDominicana: 'industrial_aycdom_v1',
 } as const
 
+
 export type RegisteredProfileTemplateId =
-  (typeof PROFILE_TEMPLATE_IDS)[keyof typeof PROFILE_TEMPLATE_IDS]
+  (typeof PROFILE_TEMPLATE_IDS)[
+    keyof typeof PROFILE_TEMPLATE_IDS
+  ]
 
-type TemplateRenderer = (profile: IntapProfileV2Profile) => ReactNode
 
-const PROFILE_TEMPLATE_REGISTRY: Record<
-  RegisteredProfileTemplateId,
-  TemplateRenderer
-> = {
-  [PROFILE_TEMPLATE_IDS.novi]: (profile) => (
-    <IntapProfileNoviV4 profile={profile} />
-  ),
+type ProfileTemplateComponent =
+  ComponentType<{
+    profile: IntapProfileV2Profile
+  }>
 
-  [PROFILE_TEMPLATE_IDS.jason]: (profile) => (
-    <IntapProfileJasonV3 profile={profile} />
-  ),
 
-  [PROFILE_TEMPLATE_IDS.oneAEventos]: () => (
-    <IntapProfile1AEventos />
-  ),
+const NoviTemplate = lazy(
+  () =>
+    import('./IntapProfileNoviV4')
+      .then((module) => ({
+        default:
+          module.default as ProfileTemplateComponent,
+      })),
+)
 
-  [PROFILE_TEMPLATE_IDS.rentaoRd]: (profile) => (
-    <IntapProfileRentaoRd profile={profile} />
-  ),
 
-  [PROFILE_TEMPLATE_IDS.aycDominicana]: (profile) => (
-    <IntapProfileAyCDominicanaV1 profile={profile} />
-  ),
+const JasonTemplate = lazy(
+  () =>
+    import('./IntapProfileJasonV3')
+      .then((module) => ({
+        default:
+          module.default as ProfileTemplateComponent,
+      })),
+)
+
+
+const RentaoTemplate = lazy(
+  () =>
+    import('./IntapProfileRentaoRd')
+      .then((module) => ({
+        default:
+          module.default as ProfileTemplateComponent,
+      })),
+)
+
+
+const AyCTemplate = lazy(
+  () =>
+    import('./IntapProfileAyCDominicanaV1')
+      .then((module) => ({
+        default:
+          module.default as ProfileTemplateComponent,
+      })),
+)
+
+
+const OneAEventosTemplate = lazy(
+  () =>
+    import('./IntapProfile1AEventos'),
+)
+
+
+function LoadingTemplate() {
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#ffffff',
+      }}
+    />
+  )
 }
+
 
 export function renderRegisteredProfileTemplate(
   templateId: string | null | undefined,
   profile: IntapProfileV2Profile,
 ): ReactNode | null {
-  if (!templateId) return null
+  if (!templateId) {
+    return null
+  }
 
-  const renderer =
-    PROFILE_TEMPLATE_REGISTRY[
-      templateId as RegisteredProfileTemplateId
-    ]
+  let content: ReactNode = null
 
-  return renderer ? renderer(profile) : null
+  switch (
+    templateId as RegisteredProfileTemplateId
+  ) {
+    case PROFILE_TEMPLATE_IDS.novi:
+      content = (
+        <NoviTemplate
+          profile={profile}
+        />
+      )
+      break
+
+    case PROFILE_TEMPLATE_IDS.jason:
+      content = (
+        <JasonTemplate
+          profile={profile}
+        />
+      )
+      break
+
+    case PROFILE_TEMPLATE_IDS.oneAEventos:
+      content = (
+        <OneAEventosTemplate />
+      )
+      break
+
+    case PROFILE_TEMPLATE_IDS.rentaoRd:
+      content = (
+        <RentaoTemplate
+          profile={profile}
+        />
+      )
+      break
+
+    case PROFILE_TEMPLATE_IDS.aycDominicana:
+      content = (
+        <AyCTemplate
+          profile={profile}
+        />
+      )
+      break
+
+    default:
+      return null
+  }
+
+  return (
+    <Suspense
+      fallback={<LoadingTemplate />}
+    >
+      {content}
+    </Suspense>
+  )
 }
+
 
 export function isRegisteredProfileTemplate(
   templateId: string | null | undefined,
 ): templateId is RegisteredProfileTemplateId {
   return Boolean(
     templateId &&
-      Object.prototype.hasOwnProperty.call(
-        PROFILE_TEMPLATE_REGISTRY,
-        templateId,
+      Object.values(
+        PROFILE_TEMPLATE_IDS,
+      ).includes(
+        templateId as RegisteredProfileTemplateId,
       ),
   )
 }

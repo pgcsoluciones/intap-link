@@ -1,8 +1,8 @@
 :root {
-  --il-free-blue: #071f5f;
-  --il-free-blue-2: #0b4da5;
-  --il-free-green: #10b981;
-  --il-free-green-dark: #07966a;
+  --il-free-primary: #071f5f;
+  --il-free-secondary: #0b4da5;
+  --il-free-action: #10b981;
+  --il-free-accent: #07966a;
   --il-free-ink: #11213d;
   --il-free-muted: #64748b;
   --il-free-line: #e4eaf2;
@@ -38,7 +38,7 @@
 }
 
 .il-free-eyebrow {
-  color: var(--il-free-green-dark);
+  color: var(--il-free-accent);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: .18em;
@@ -101,7 +101,7 @@
   height: 34px;
   display: grid;
   place-items: center;
-  background: var(--il-free-blue);
+  background: var(--il-free-primary);
   color: #fff;
   font-size: 8px;
   font-weight: 900;
@@ -178,7 +178,7 @@
   width: 78%;
   margin: 0 auto;
   border-radius: 10px;
-  background: var(--il-free-green);
+  background: var(--il-free-action);
 }
 
 .il-free-preview-card__actions {
@@ -201,7 +201,7 @@
 }
 
 .il-free-preview-card__tag {
-  color: var(--il-free-green-dark);
+  color: var(--il-free-accent);
   font-size: 10px;
   font-weight: 900;
   letter-spacing: .08em;
@@ -223,7 +223,7 @@
 }
 
 .il-free-preview-card__content strong {
-  color: var(--il-free-blue-2);
+  color: var(--il-free-secondary);
   font-size: 13px;
 }
 
@@ -291,7 +291,7 @@
 
 .il-free-demo-nav > div a[aria-current="page"] {
   background: #fff;
-  color: var(--il-free-blue);
+  color: var(--il-free-primary);
 }
 
 .il-free-profile {
@@ -309,7 +309,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--il-free-blue);
+  background: var(--il-free-primary);
   color: #fff;
 }
 
@@ -460,25 +460,21 @@
   padding: 0 20px 24px;
 }
 
-.il-free-whatsapp {
-  min-height: 54px;
-  padding: 0 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 11px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #12b981, #08a86f);
-  color: #fff;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 850;
-  box-shadow: 0 12px 24px rgba(16, 185, 129, .22);
-}
+
+
+
+
+
+
+
 
 .il-free-whatsapp svg {
+  color: currentColor;
+  fill: currentColor;
   font-size: 23px;
 }
+
+
 
 .il-free-quick-actions {
   margin: 24px 0 20px;
@@ -502,8 +498,9 @@
   border: 1px solid var(--il-free-line);
   border-radius: 50%;
   background: var(--il-free-soft);
-  color: var(--il-free-blue-2);
+  color: var(--il-free-secondary);
   font-size: 17px;
+  transition: transform 170ms ease, background-color 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
 }
 
 .il-free-quick-actions strong {
@@ -521,11 +518,12 @@
   border: 1px solid #cad5e3;
   border-radius: 13px;
   background: #fff;
-  color: var(--il-free-blue);
+  color: var(--il-free-primary);
   font: inherit;
   font-size: 13px;
   font-weight: 850;
   cursor: pointer;
+  transition: transform 170ms ease, background-color 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
 }
 
 .il-free-section {
@@ -539,19 +537,14 @@
 
 .il-free-section-label {
   margin: 0 0 8px;
-  color: var(--il-free-green-dark);
+  color: var(--il-free-accent);
   font-size: 10px;
   font-weight: 950;
   letter-spacing: .13em;
   text-transform: uppercase;
 }
 
-.il-free-section h2 {
-  margin: 0;
-  font-size: 22px;
-  line-height: 1.14;
-  letter-spacing: -.035em;
-}
+
 
 .il-free-about > p:last-child {
   margin: 14px 0 0;
@@ -583,7 +576,7 @@
   place-items: center;
   border-radius: 12px;
   background: #e6faf3;
-  color: var(--il-free-green-dark);
+  color: var(--il-free-accent);
   font-size: 17px;
 }
 
@@ -616,11 +609,12 @@
   border: 1px solid var(--il-free-line);
   border-radius: 13px;
   background: var(--il-free-soft);
-  color: var(--il-free-blue);
+  color: var(--il-free-primary);
   font: inherit;
   font-size: 11px;
   font-weight: 850;
   cursor: pointer;
+  transition: transform 170ms ease, background-color 170ms ease, border-color 170ms ease;
 }
 
 .il-free-footer {
@@ -635,7 +629,7 @@
 }
 
 .il-free-footer strong {
-  color: var(--il-free-blue);
+  color: var(--il-free-primary);
   font-size: 15px;
   letter-spacing: .08em;
 }
@@ -690,13 +684,199 @@
   }
 }
 
+
+
+/* INTAP LINK GRATIS · INTERACCIONES CANÓNICAS */
+
+.il-free-quick-actions a:hover span {
+  transform: translateY(-3px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 12%,
+      var(--il-free-surface)
+    );
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 32%,
+      var(--il-free-line)
+    );
+
+  box-shadow:
+    0 8px 18px
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 12%,
+      transparent
+    );
+}
+
+.il-free-quick-actions a:active span {
+  transform: scale(.95);
+}
+
+.il-free-vcard:hover {
+  transform: translateY(-2px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 7%,
+      var(--il-free-surface)
+    );
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 35%,
+      var(--il-free-line)
+    );
+}
+
+.il-free-vcard:active {
+  transform: scale(.985);
+}
+
+.il-free-vcard:focus-visible,
+.il-free-link-pill:focus-visible,
+.il-free-share button:focus-visible,
+.il-free-quick-actions a:focus-visible {
+  outline:
+    3px solid
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 26%,
+      transparent
+    );
+
+  outline-offset: 3px;
+}
+
+.il-free-link-pill:hover {
+  transform: translateX(3px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 10%,
+      var(--il-free-surface)
+    );
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 34%,
+      transparent
+    );
+}
+
+.il-free-share button:hover {
+  transform: translateY(-2px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 8%,
+      var(--il-free-surface)
+    );
+}
+
+.il-free-share button:active {
+  transform: scale(.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .il-free-whatsapp,
+  .il-free-vcard,
+  .il-free-quick-actions span,
+  .il-free-link-pill,
+  .il-free-share button,
+  .il-free-service-card {
+    transition: none !important;
+  }
+}
+
+
+
+/* INTAP LINK GRATIS · COLOR CANÓNICO */
+
+.il-free-section h2 {
+  margin: 0;
+  color: var(--il-free-primary);
+  font-size: 22px;
+  line-height: 1.14;
+  letter-spacing: -.035em;
+}
+
+.il-free-whatsapp {
+  min-height: 54px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border: 0;
+  border-radius: 14px;
+
+  background-color: var(--il-free-button);
+  background-image: none;
+
+  color: var(--il-free-on-button);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+
+  box-shadow:
+    0 12px 26px
+    color-mix(
+      in srgb,
+      var(--il-free-button) 24%,
+      transparent
+    );
+
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.il-free-whatsapp:hover {
+  background-color: var(--il-free-button-hover);
+  background-image: none;
+  transform: translateY(-2px);
+}
+
+.il-free-whatsapp:active {
+  transform: scale(.985);
+}
+
+.il-free-whatsapp:focus-visible {
+  outline:
+    3px solid
+    color-mix(
+      in srgb,
+      var(--il-free-button) 35%,
+      transparent
+    );
+  outline-offset: 3px;
+}
+
+.il-free-whatsapp svg {
+  color: currentColor;
+  fill: currentColor;
+}
+
+
 /* INTAP LINK GRATIS V2 — INICIO */
 
 .il-free-page {
   background:
     radial-gradient(
       circle at 30% 0%,
-      color-mix(in srgb, var(--il-free-green) 14%, transparent),
+      color-mix(in srgb, var(--il-free-action) 14%, transparent),
       transparent 32%
     ),
     var(--il-free-page-background, #eaf0f7);
@@ -760,7 +940,7 @@
 .il-free-personal-copy span {
   color: color-mix(
     in srgb,
-    var(--il-free-green) 68%,
+    var(--il-free-action) 68%,
     #ffffff
   );
 }
@@ -952,10 +1132,10 @@
   border-radius: 12px;
   background: color-mix(
     in srgb,
-    var(--il-free-green) 15%,
+    var(--il-free-action) 15%,
     #ffffff
   );
-  color: var(--il-free-green-dark);
+  color: var(--il-free-accent);
 }
 
 .il-free-portfolio__header div div {
@@ -981,7 +1161,7 @@
   border: 1px solid var(--il-free-line);
   border-radius: 50%;
   background: var(--il-free-surface, #ffffff);
-  color: var(--il-free-blue);
+  color: var(--il-free-primary);
   cursor: pointer;
 }
 
@@ -1047,7 +1227,7 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--il-free-green);
+  background: var(--il-free-action);
   color: #ffffff;
   font-size: 13px;
 }
@@ -1097,10 +1277,10 @@
   border-radius: 14px;
   background: color-mix(
     in srgb,
-    var(--il-free-green) 14%,
+    var(--il-free-action) 14%,
     #ffffff
   );
-  color: var(--il-free-green-dark);
+  color: var(--il-free-accent);
 }
 
 .il-free-custom-links__title {
@@ -1119,7 +1299,7 @@
 }
 
 .il-free-custom-links__toggle > svg {
-  color: var(--il-free-blue-2);
+  color: var(--il-free-secondary);
   transition: transform .2s ease;
 }
 
@@ -1156,19 +1336,20 @@
   gap: 12px;
   border: 1px solid color-mix(
     in srgb,
-    var(--il-free-blue-2) 22%,
+    var(--il-free-secondary) 22%,
     transparent
   );
   border-radius: 999px;
   background: color-mix(
     in srgb,
-    var(--il-free-blue-2) 7%,
+    var(--il-free-secondary) 7%,
     var(--il-free-surface, #ffffff)
   );
-  color: var(--il-free-blue);
+  color: var(--il-free-primary);
   text-decoration: none;
   font-size: 11px;
   font-weight: 800;
+  transition: transform 170ms ease, background-color 170ms ease, border-color 170ms ease;
 }
 
 .il-free-link-pill svg {
@@ -1304,7 +1485,7 @@
   transform: translateY(-2px);
   border-color: color-mix(
     in srgb,
-    var(--il-free-green) 28%,
+    var(--il-free-action) 28%,
     var(--il-free-line)
   );
   box-shadow: 0 14px 30px rgba(15, 35, 75, .10);
@@ -1317,7 +1498,7 @@
 .il-free-services > a.il-free-service-card:focus-visible {
   outline: 3px solid color-mix(
     in srgb,
-    var(--il-free-green) 30%,
+    var(--il-free-action) 30%,
     transparent
   );
   outline-offset: 3px;
@@ -1360,10 +1541,10 @@
   border-radius: 16px;
   background: color-mix(
     in srgb,
-    var(--il-free-green) 14%,
+    var(--il-free-action) 14%,
     #ffffff
   );
-  color: var(--il-free-green-dark);
+  color: var(--il-free-accent);
   font-size: 24px;
 }
 
@@ -1406,13 +1587,13 @@
   box-sizing: border-box;
   border: 1px solid color-mix(
     in srgb,
-    var(--il-free-green) 55%,
+    var(--il-free-action) 55%,
     transparent
   ) !important;
   border-radius: 999px;
   background: #ffffff !important;
   background-color: #ffffff !important;
-  color: var(--il-free-green-dark) !important;
+  color: var(--il-free-accent) !important;
   font-size: 13px;
   font-weight: 600;
 }
@@ -1438,7 +1619,7 @@
 
 .il-free-footer a strong {
   margin-left: 3px;
-  color: var(--il-free-blue);
+  color: var(--il-free-primary);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
@@ -1452,7 +1633,7 @@
     linear-gradient(
       135deg,
       var(--il-free-hero-gradient),
-      var(--il-free-blue-2)
+      var(--il-free-secondary)
     );
 }
 

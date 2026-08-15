@@ -9,6 +9,108 @@ function photoUrl(key: string) {
   return `${API_BASE}/public/assets/${key.split('/').map(encodeURIComponent).join('/')}`
 }
 
+async function optimizeImageForUpload(
+  file: File,
+  maxDimension = 1600,
+  quality = 0.82,
+): Promise<File> {
+  const bitmap = await createImageBitmap(file)
+
+  try {
+    const originalWidth = bitmap.width
+    const originalHeight = bitmap.height
+
+    const scale = Math.min(
+      1,
+      maxDimension /
+        Math.max(
+          originalWidth,
+          originalHeight,
+        ),
+    )
+
+    const width = Math.max(
+      1,
+      Math.round(
+        originalWidth * scale,
+      ),
+    )
+
+    const height = Math.max(
+      1,
+      Math.round(
+        originalHeight * scale,
+      ),
+    )
+
+    const canvas =
+      document.createElement('canvas')
+
+    canvas.width = width
+    canvas.height = height
+
+    const context =
+      canvas.getContext('2d')
+
+    if (!context) {
+      throw new Error(
+        'No se pudo preparar la imagen.',
+      )
+    }
+
+    context.drawImage(
+      bitmap,
+      0,
+      0,
+      width,
+      height,
+    )
+
+    const blob =
+      await new Promise<Blob>(
+        (resolve, reject) => {
+          canvas.toBlob(
+            (result) => {
+              if (!result) {
+                reject(
+                  new Error(
+                    'No se pudo optimizar la imagen.',
+                  ),
+                )
+                return
+              }
+
+              resolve(result)
+            },
+            'image/webp',
+            quality,
+          )
+        },
+      )
+
+    const baseName =
+      file.name
+        .replace(/\.[^.]+$/, '')
+        .replace(
+          /[^a-zA-Z0-9-_]+/g,
+          '-',
+        )
+        .replace(/^-+|-+$/g, '') ||
+      'portfolio'
+
+    return new File(
+      [blob],
+      `${baseName}.webp`,
+      {
+        type: 'image/webp',
+        lastModified: Date.now(),
+      },
+    )
+  } finally {
+    bitmap.close()
+  }
+}
+
 export default function FreePortfolio() {
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -32,9 +134,23 @@ export default function FreePortfolio() {
     setUploading(true)
     setError('')
     try {
+      const optimized =
+        await optimizeImageForUpload(
+          file,
+        )
+
       const fd = new FormData()
-      fd.append('file', file)
-      const json: any = await apiUpload('/profile/gallery/upload', fd)
+      fd.append(
+        'file',
+        optimized,
+        optimized.name,
+      )
+
+      const json: any =
+        await apiUpload(
+          '/profile/gallery/upload',
+          fd,
+        )
       if (!json.ok) {
         setError(json.error || 'No se pudo subir la imagen.')
         return
@@ -63,7 +179,13 @@ export default function FreePortfolio() {
         <section className="mt-5 grid grid-cols-2 gap-3">
           {loading ? <div className="col-span-2 rounded-3xl bg-white p-5 text-sm text-slate-400">Cargando…</div> : photos.map((photo) => (
             <div key={photo.id} className="aspect-square overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
-              <img src={photoUrl(photo.image_key)} alt="Portafolio" className="h-full w-full object-cover" />
+              <img
+                src={photoUrl(photo.image_key)}
+                alt="Portafolio"
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
             </div>
           ))}
           {!loading && photos.length === 0 && <div className="col-span-2 rounded-[26px] border border-dashed border-slate-300 bg-white p-8 text-center"><div className="text-3xl">▧</div><p className="mt-3 text-sm font-black">Aún no tienes imágenes</p><p className="mt-1 text-xs leading-5 text-slate-400">Empieza agregando una imagen de tu trabajo o negocio.</p></div>}

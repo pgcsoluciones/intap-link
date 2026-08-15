@@ -22,10 +22,25 @@ export async function onRequest(context: {
 }): Promise<Response> {
   const withSecurityHeaders = (response: Response): Response => {
     const headers = new Headers(response.headers);
+    const requestUrl = new URL(context.request.url);
+    const isPreviewHost =
+      requestUrl.hostname === 'preview.intaprd.com';
+
     headers.set('X-Content-Type-Options', 'nosniff');
-    headers.set('X-Frame-Options', 'DENY');
+
+    if (isPreviewHost) {
+      headers.delete('X-Frame-Options');
+      headers.set(
+        'Content-Security-Policy',
+        'frame-ancestors https://app.preview.intaprd.com'
+      );
+    } else {
+      headers.set('X-Frame-Options', 'DENY');
+    }
+
     headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -366,7 +381,7 @@ ${seoHeadHtml}
             ogType:
               'profile',
             twitterCard:
-              'summary',
+              dynamicMeta.twitterCard,
             language: discoveryRuntime.language === 'en'
               ? 'en-US'
               : 'es-DO',

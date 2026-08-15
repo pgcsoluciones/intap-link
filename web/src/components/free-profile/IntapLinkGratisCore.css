@@ -1,0 +1,1475 @@
+/* =========================================================
+   INTAP LINK GRATIS · CORE VISUAL
+   Mobile first · sin dependencia de V2/V8
+   ========================================================= */
+
+.il-free-page,
+.il-free-page * {
+  box-sizing: border-box;
+}
+
+.il-free-page {
+  --il-free-primary: #071f5f;
+  --il-free-secondary: #0b61c9;
+  --il-free-accent: #07966a;
+  --il-free-action: #10b981;
+  --il-free-button: #10b981;
+  --il-free-button-hover: #0e9f70;
+  --il-free-on-button: #ffffff;
+  --il-free-ink: #11213d;
+  --il-free-muted: #64748b;
+  --il-free-line: #e2e8f0;
+  --il-free-page-background: #f8fafc;
+  --il-free-surface: #ffffff;
+  --il-free-hero-gradient: #071f5f;
+
+  min-height: 100vh;
+  width: 100%;
+
+  margin: 0;
+  padding: 0;
+
+  background:
+    var(--il-free-page-background);
+
+  color:
+    var(--il-free-ink);
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+}
+
+
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+   No card externo.
+   ========================================================= */
+
+.il-free-profile {
+  width: 100%;
+  max-width: 520px;
+  min-height: 100vh;
+
+  margin: 0 auto;
+
+  background:
+    var(--il-free-surface);
+
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+
+  overflow: visible;
+}
+
+.il-free-content {
+  padding:
+    24px 20px 30px;
+}
+
+
+/* =========================================================
+   IDENTIDAD BASE
+   ========================================================= */
+
+.il-free-identity {
+  width: 100%;
+  position: relative;
+}
+
+.il-free-identity-copy h1,
+.il-free-personal-copy h1 {
+  margin: 0;
+}
+
+.il-free-identity-copy p,
+.il-free-personal-copy p {
+  margin:
+    8px 0 0;
+}
+
+
+/* =========================================================
+   IMPACTO
+   ========================================================= */
+
+.il-free-identity--impacto {
+  position: relative;
+
+  padding-bottom:
+    92px;
+}
+
+.il-free-impact-hero {
+  position: relative;
+
+  width: 100%;
+  height: 280px;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--il-free-primary),
+      var(--il-free-secondary)
+    );
+}
+
+.il-free-impact-hero img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+.il-free-impact-hero--fallback {
+  background:
+    linear-gradient(
+      145deg,
+      var(--il-free-primary),
+      var(--il-free-secondary)
+    );
+}
+
+.il-free-impact-hero-placeholder {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  place-items: center;
+
+  padding: 30px;
+
+  color:
+    var(--il-free-on-button);
+
+  text-align: center;
+}
+
+.il-free-impact-avatar {
+  position: absolute;
+
+  left: 20px;
+  bottom: 38px;
+
+  width: 94px;
+  height: 94px;
+
+  overflow: hidden;
+
+  border:
+    4px solid
+    var(--il-free-surface);
+
+  border-radius: 50%;
+
+  background:
+    var(--il-free-surface);
+
+  box-shadow:
+    0 12px 30px
+    rgba(15, 23, 42, .16);
+}
+
+.il-free-impact-avatar img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.il-free-identity--impacto
+.il-free-identity-copy {
+  position: absolute;
+
+  left: 128px;
+  right: 20px;
+  bottom: 28px;
+}
+
+.il-free-identity--impacto
+.il-free-identity-copy h1 {
+  color:
+    var(--il-free-primary);
+
+  font-size:
+    clamp(28px, 7vw, 38px);
+
+  line-height: 1;
+}
+
+.il-free-identity--impacto
+.il-free-identity-copy p {
+  color:
+    var(--il-free-muted);
+
+  font-size: 15px;
+}
+
+
+/* =========================================================
+   PERSONAL
+   Editorial integrado.
+   No cuadro interior.
+   ========================================================= */
+
+.il-free-page--personal {
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-page-background) 88%,
+      var(--il-free-primary) 12%
+    );
+}
+
+.il-free-page--personal
+.il-free-profile {
+  background:
+    transparent;
+}
+
+.il-free-identity--personal {
+  position: relative;
+
+  padding:
+    26px 20px 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(
+        in srgb,
+        var(--il-free-primary) 8%,
+        var(--il-free-page-background)
+      ) 0%,
+      color-mix(
+        in srgb,
+        var(--il-free-primary) 4%,
+        var(--il-free-surface)
+      ) 68%,
+      var(--il-free-surface) 100%
+    );
+}
+
+.il-free-personal-portrait {
+  position: relative;
+
+  width: 100%;
+  min-height: 390px;
+  max-height: 520px;
+
+  aspect-ratio:
+    4 / 5;
+
+  overflow: hidden;
+
+  border-radius:
+    32px 32px 18px 18px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 10%,
+      var(--il-free-surface)
+    );
+}
+
+.il-free-personal-portrait img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+  object-position: center 22%;
+}
+
+.il-free-personal-gradient {
+  position: absolute;
+
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      180deg,
+      transparent 38%,
+      color-mix(
+        in srgb,
+        var(--il-free-primary) 12%,
+        transparent
+      ) 56%,
+      color-mix(
+        in srgb,
+        var(--il-free-primary) 58%,
+        transparent
+      ) 80%,
+      color-mix(
+        in srgb,
+        var(--il-free-primary) 88%,
+        #000000
+      ) 100%
+    );
+}
+
+.il-free-personal-copy {
+  position: absolute;
+
+  left: 44px;
+  right: 44px;
+  bottom: 34px;
+
+  z-index: 2;
+}
+
+.il-free-personal-copy span {
+  color:
+    color-mix(
+      in srgb,
+      var(--il-free-accent) 48%,
+      #ffffff
+    );
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: .14em;
+
+  text-transform: uppercase;
+}
+
+.il-free-personal-copy h1 {
+  margin-top: 9px;
+
+  color: #ffffff;
+
+  font-size:
+    clamp(30px, 8vw, 40px);
+
+  line-height: 1;
+
+  text-shadow:
+    0 3px 16px
+    rgba(0, 0, 0, .28);
+}
+
+.il-free-personal-copy p {
+  color:
+    rgba(255, 255, 255, .92);
+
+  font-size: 15px;
+
+  text-shadow:
+    0 2px 12px
+    rgba(0, 0, 0, .28);
+}
+
+.il-free-page--personal
+.il-free-content {
+  background:
+    var(--il-free-surface);
+
+  padding-top:
+    24px;
+}
+
+
+/* =========================================================
+   ESENCIAL
+   Retrato protagonista.
+   ========================================================= */
+
+.il-free-identity--esencial {
+  padding:
+    38px 20px 12px;
+
+  text-align: center;
+
+  background:
+    var(--il-free-surface);
+}
+
+.il-free-essential-avatar {
+  width:
+    min(248px, 72vw);
+
+  margin:
+    0 auto;
+
+  aspect-ratio:
+    4 / 5;
+
+  overflow: hidden;
+
+  border:
+    2px solid
+    color-mix(
+      in srgb,
+      var(--il-free-accent) 48%,
+      var(--il-free-line)
+    );
+
+  border-radius:
+    46% / 31%;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 6%,
+      var(--il-free-surface)
+    );
+
+  box-shadow:
+    0 18px 40px
+    rgba(15, 23, 42, .10);
+}
+
+.il-free-essential-avatar img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+  object-position: center 20%;
+}
+
+.il-free-identity--esencial
+.il-free-identity-copy {
+  padding:
+    26px 8px 8px;
+}
+
+.il-free-identity--esencial
+.il-free-identity-copy h1 {
+  color:
+    var(--il-free-primary);
+
+  font-size:
+    clamp(29px, 8vw, 38px);
+
+  line-height: 1;
+}
+
+.il-free-identity--esencial
+.il-free-identity-copy p {
+  color:
+    var(--il-free-muted);
+
+  font-size: 15px;
+}
+
+
+/* =========================================================
+   CTA WHATSAPP
+   Una sola fuente de verdad.
+   ========================================================= */
+
+.il-free-whatsapp {
+  width: 100%;
+  min-height: 56px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  padding:
+    0 18px;
+
+  border: 0;
+  border-radius: 16px;
+
+  background-color:
+    var(--il-free-button);
+
+  background-image:
+    none;
+
+  color:
+    var(--il-free-on-button);
+
+  text-decoration: none;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  box-shadow:
+    0 12px 26px
+    color-mix(
+      in srgb,
+      var(--il-free-button) 22%,
+      transparent
+    );
+
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.il-free-whatsapp svg {
+  color: currentColor;
+  fill: currentColor;
+
+  font-size: 22px;
+}
+
+.il-free-whatsapp:hover {
+  background-color:
+    var(--il-free-button-hover);
+
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 16px 32px
+    color-mix(
+      in srgb,
+      var(--il-free-button) 30%,
+      transparent
+    );
+}
+
+.il-free-whatsapp:active {
+  transform:
+    scale(.985);
+}
+
+.il-free-whatsapp:focus-visible {
+  outline:
+    3px solid
+    color-mix(
+      in srgb,
+      var(--il-free-button) 34%,
+      transparent
+    );
+
+  outline-offset: 3px;
+}
+
+
+/* =========================================================
+   ACCIONES RÁPIDAS
+   ========================================================= */
+
+.il-free-quick-actions {
+  margin:
+    24px 0 18px;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 12px;
+}
+
+.il-free-quick-actions a {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  color:
+    var(--il-free-ink);
+
+  text-decoration: none;
+  text-align: center;
+
+  font-size: 11px;
+
+  transition:
+    color 160ms ease;
+}
+
+.il-free-quick-actions span {
+  width: 48px;
+  height: 48px;
+
+  margin-bottom: 8px;
+
+  display: grid;
+  place-items: center;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 20%,
+      var(--il-free-line)
+    );
+
+  border-radius: 50%;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 7%,
+      var(--il-free-surface)
+    );
+
+  color:
+    var(--il-free-secondary);
+
+  transition:
+    transform 170ms ease,
+    background-color 170ms ease,
+    border-color 170ms ease,
+    box-shadow 170ms ease;
+}
+
+.il-free-quick-actions a:hover span {
+  transform:
+    translateY(-3px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 13%,
+      var(--il-free-surface)
+    );
+
+  border-color:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 42%,
+      var(--il-free-line)
+    );
+
+  box-shadow:
+    0 8px 18px
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 13%,
+      transparent
+    );
+}
+
+.il-free-quick-actions a:active span {
+  transform:
+    scale(.94);
+}
+
+
+/* =========================================================
+   VCARD
+   ========================================================= */
+
+.il-free-vcard {
+  width: 100%;
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 9px;
+
+  padding:
+    0 16px;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 30%,
+      var(--il-free-line)
+    );
+
+  border-radius: 14px;
+
+  background:
+    transparent;
+
+  color:
+    var(--il-free-primary);
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  transition:
+    transform 170ms ease,
+    background-color 170ms ease,
+    border-color 170ms ease;
+}
+
+.il-free-vcard:hover {
+  transform:
+    translateY(-2px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 7%,
+      var(--il-free-surface)
+    );
+
+  border-color:
+    var(--il-free-primary);
+}
+
+.il-free-vcard:active {
+  transform:
+    scale(.985);
+}
+
+
+/* =========================================================
+   SECCIONES
+   ========================================================= */
+
+.il-free-section {
+  padding:
+    34px 0;
+
+  border-top:
+    1px solid
+    var(--il-free-line);
+}
+
+.il-free-section-label {
+  margin:
+    0 0 8px;
+
+  color:
+    var(--il-free-accent);
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: .13em;
+
+  text-transform: uppercase;
+}
+
+.il-free-section h2 {
+  margin: 0;
+
+  color:
+    var(--il-free-primary);
+
+  font-size:
+    clamp(21px, 5.5vw, 25px);
+
+  line-height: 1.12;
+
+  letter-spacing: -.035em;
+}
+
+.il-free-about > p:last-child {
+  margin:
+    14px 0 0;
+
+  color:
+    var(--il-free-muted);
+
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+
+/* =========================================================
+   PORTAFOLIO
+   ========================================================= */
+
+.il-free-portfolio {
+  margin:
+    0 -20px;
+
+  padding:
+    20px 0 30px;
+
+  border-top:
+    1px solid
+    var(--il-free-line);
+}
+
+.il-free-portfolio__header {
+  padding:
+    0 20px 14px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+}
+
+.il-free-portfolio__header > span {
+  width: 40px;
+  height: 40px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 12px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-accent) 12%,
+      var(--il-free-surface)
+    );
+
+  color:
+    var(--il-free-accent);
+}
+
+.il-free-portfolio__header strong {
+  display: block;
+
+  color:
+    var(--il-free-ink);
+
+  font-size: 14px;
+}
+
+.il-free-portfolio__header small {
+  display: block;
+
+  margin-top: 2px;
+
+  color:
+    var(--il-free-muted);
+
+  font-size: 10px;
+}
+
+.il-free-portfolio__viewport {
+  overflow-x: auto;
+
+  scrollbar-width: none;
+
+  scroll-snap-type:
+    x proximity;
+}
+
+.il-free-portfolio__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.il-free-portfolio__track {
+  display: flex;
+
+  gap: 10px;
+
+  padding:
+    0 20px 4px;
+}
+
+.il-free-portfolio__track > * {
+  flex:
+    0 0 142px;
+
+  scroll-snap-align:
+    start;
+}
+
+.il-free-portfolio__track a {
+  position: relative;
+
+  display: block;
+
+  overflow: hidden;
+
+  border-radius: 16px;
+
+  background:
+    var(--il-free-surface);
+
+  text-decoration: none;
+
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.il-free-portfolio__track a:hover {
+  transform:
+    translateY(-3px);
+
+  box-shadow:
+    0 14px 28px
+    rgba(15, 23, 42, .14);
+}
+
+.il-free-portfolio__track img {
+  width: 100%;
+
+  aspect-ratio:
+    4 / 5;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+
+/* =========================================================
+   SERVICIOS
+   Sin azul heredado.
+   ========================================================= */
+
+.il-free-services {
+  margin-top: 18px;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.il-free-services:has(
+  > .il-free-service-card:only-child
+) {
+  grid-template-columns:
+    1fr;
+}
+
+.il-free-services:has(
+  > .il-free-service-card:nth-child(2):last-child
+) {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+}
+
+.il-free-service-card {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--il-free-accent) 34%,
+      var(--il-free-line)
+    );
+
+  border-radius: 18px;
+
+  background:
+    var(--il-free-surface);
+
+  color:
+    var(--il-free-ink);
+
+  text-decoration: none;
+
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.il-free-service-card:hover {
+  transform:
+    translateY(-3px);
+
+  border-color:
+    var(--il-free-accent);
+
+  box-shadow:
+    0 13px 26px
+    color-mix(
+      in srgb,
+      var(--il-free-accent) 12%,
+      transparent
+    );
+}
+
+.il-free-service-card__media {
+  min-height: 118px;
+
+  display: grid;
+  place-items: center;
+
+  overflow: hidden;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-accent) 7%,
+      var(--il-free-surface)
+    );
+}
+
+.il-free-service-card__media img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+.il-free-service-card__iconWrap {
+  display: grid;
+  place-items: center;
+}
+
+.il-free-service-card__icon {
+  width: 54px;
+  height: 54px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 16px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-accent) 13%,
+      var(--il-free-surface)
+    );
+
+  color:
+    var(--il-free-accent);
+
+  font-size: 24px;
+}
+
+.il-free-service-card__body {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 14px;
+}
+
+.il-free-service-card h3 {
+  margin: 0;
+
+  color:
+    var(--il-free-ink);
+
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.il-free-service-card p {
+  margin:
+    9px 0 14px;
+
+  color:
+    var(--il-free-muted);
+
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.il-free-service-card__cta {
+  min-height: 38px;
+
+  margin-top: auto;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border:
+    1px solid
+    var(--il-free-accent);
+
+  border-radius: 999px;
+
+  background:
+    transparent;
+
+  color:
+    var(--il-free-accent);
+
+  font-size: 11px;
+  font-weight: 650;
+
+  transition:
+    background-color 170ms ease,
+    color 170ms ease;
+}
+
+.il-free-service-card:hover
+.il-free-service-card__cta {
+  background:
+    var(--il-free-button);
+
+  border-color:
+    var(--il-free-button);
+
+  color:
+    var(--il-free-on-button);
+}
+
+
+/* =========================================================
+   ENLACES PERSONALIZADOS
+   ========================================================= */
+
+.il-free-custom-links {
+  padding:
+    26px 0;
+
+  border-top:
+    1px solid
+    var(--il-free-line);
+}
+
+.il-free-custom-links__toggle {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  padding: 0;
+
+  border: 0;
+
+  background:
+    transparent;
+
+  color:
+    var(--il-free-ink);
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.il-free-custom-links__icon {
+  width: 40px;
+  height: 40px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 12px;
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 9%,
+      var(--il-free-surface)
+    );
+
+  color:
+    var(--il-free-secondary);
+}
+
+.il-free-custom-links__title {
+  flex: 1;
+}
+
+.il-free-custom-links__title strong {
+  display: block;
+
+  color:
+    var(--il-free-ink);
+
+  font-size: 14px;
+}
+
+.il-free-custom-links__title small {
+  display: block;
+
+  margin-top: 2px;
+
+  color:
+    var(--il-free-muted);
+
+  font-size: 10px;
+}
+
+.il-free-custom-links__content {
+  max-height: 0;
+
+  overflow: hidden;
+
+  opacity: 0;
+
+  transition:
+    max-height 240ms ease,
+    opacity 200ms ease,
+    padding-top 200ms ease;
+}
+
+.il-free-custom-links__content--open {
+  max-height: 800px;
+
+  padding-top: 16px;
+
+  opacity: 1;
+}
+
+.il-free-link-pill {
+  width: 100%;
+  min-height: 46px;
+
+  margin-top: 9px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+
+  padding:
+    0 14px;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 24%,
+      var(--il-free-line)
+    );
+
+  border-radius: 14px;
+
+  background:
+    var(--il-free-surface);
+
+  color:
+    var(--il-free-primary);
+
+  text-decoration: none;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  transition:
+    transform 170ms ease,
+    background-color 170ms ease,
+    border-color 170ms ease;
+}
+
+.il-free-link-pill:hover {
+  transform:
+    translateX(3px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-secondary) 8%,
+      var(--il-free-surface)
+    );
+
+  border-color:
+    var(--il-free-secondary);
+}
+
+
+/* =========================================================
+   COMPARTIR
+   ========================================================= */
+
+.il-free-share {
+  padding:
+    24px 0 8px;
+
+  display: flex;
+
+  gap: 10px;
+
+  border-top:
+    1px solid
+    var(--il-free-line);
+}
+
+.il-free-share button {
+  flex: 1;
+
+  min-height: 44px;
+
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 22%,
+      var(--il-free-line)
+    );
+
+  border-radius: 13px;
+
+  background:
+    var(--il-free-surface);
+
+  color:
+    var(--il-free-primary);
+
+  cursor: pointer;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  transition:
+    transform 170ms ease,
+    background-color 170ms ease,
+    border-color 170ms ease;
+}
+
+.il-free-share button:hover {
+  transform:
+    translateY(-2px);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 7%,
+      var(--il-free-surface)
+    );
+
+  border-color:
+    var(--il-free-primary);
+}
+
+.il-free-share button:active {
+  transform:
+    scale(.985);
+}
+
+
+/* =========================================================
+   FOCUS
+   ========================================================= */
+
+.il-free-vcard:focus-visible,
+.il-free-link-pill:focus-visible,
+.il-free-share button:focus-visible,
+.il-free-quick-actions a:focus-visible,
+.il-free-custom-links__toggle:focus-visible {
+  outline:
+    3px solid
+    color-mix(
+      in srgb,
+      var(--il-free-primary) 28%,
+      transparent
+    );
+
+  outline-offset: 3px;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.il-free-footer {
+  width: 100%;
+  max-width: 520px;
+
+  margin: 0 auto;
+
+  padding:
+    24px 20px 36px;
+
+  background:
+    var(--il-free-surface);
+
+  color:
+    var(--il-free-muted);
+
+  text-align: center;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 560px) {
+  .il-free-profile {
+    max-width: none;
+  }
+
+  .il-free-content {
+    padding-inline: 20px;
+  }
+
+  .il-free-identity--personal {
+    padding:
+      20px 16px 0;
+  }
+
+  .il-free-personal-copy {
+    left: 36px;
+    right: 36px;
+    bottom: 30px;
+  }
+
+  .il-free-personal-portrait {
+    min-height: 380px;
+  }
+
+  .il-free-services {
+    gap: 8px;
+  }
+
+  .il-free-service-card__body {
+    padding: 12px 10px;
+  }
+}
+
+
+/* =========================================================
+   DESKTOP / TABLET
+   Sigue siendo perfil móvil centrado, sin card.
+   ========================================================= */
+
+@media (min-width: 561px) {
+  .il-free-page {
+    padding-inline: 24px;
+  }
+
+  .il-free-profile {
+    min-height: 100vh;
+  }
+}
+
+
+/* =========================================================
+   MOVIMIENTO REDUCIDO
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .il-free-whatsapp,
+  .il-free-vcard,
+  .il-free-quick-actions span,
+  .il-free-service-card,
+  .il-free-service-card__cta,
+  .il-free-link-pill,
+  .il-free-share button,
+  .il-free-portfolio__track a,
+  .il-free-custom-links__content {
+    transition: none;
+  }
+}

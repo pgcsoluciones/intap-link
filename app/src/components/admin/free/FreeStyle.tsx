@@ -1,12 +1,42 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPut } from '../../../lib/api'
+import {
+  apiGet,
+  apiPatch,
+  apiPut,
+} from '../../../lib/api'
 
-type LayoutId = 'impacto' | 'personal' | 'esencial'
+type LayoutId =
+  | 'impacto'
+  | 'personal'
+  | 'esencial'
+
+type PaletteId =
+  | 'intap'
+  | 'oceano'
+  | 'esmeralda'
+  | 'violeta'
+  | 'coral'
+  | 'grafito'
+  | 'arena'
+  | 'personalizada'
 
 type MeData = {
   layout_id?: LayoutId | null
   slug?: string | null
+  free_palette_id?: PaletteId | null
+  free_brand_color?: string | null
+  category?: string | null
+}
+
+type Palette = {
+  id: Exclude<PaletteId, 'personalizada'>
+  name: string
+  colors: string[]
 }
 
 const layouts: Array<{
@@ -18,172 +48,611 @@ const layouts: Array<{
   {
     id: 'impacto',
     name: 'Impacto',
-    description: 'Portada visual con imagen protagonista y foto de perfil.',
-    recommended: 'Empresas, negocios y marcas',
+    description:
+      'Portada visual con imagen protagonista y foto de perfil.',
+    recommended:
+      'Empresas, negocios y marcas',
   },
   {
     id: 'personal',
     name: 'Personal',
-    description: 'Tu fotografía y tu identidad tienen mayor protagonismo.',
-    recommended: 'Asesores, vendedores y marca personal',
+    description:
+      'Tu fotografía y tu identidad tienen mayor protagonismo.',
+    recommended:
+      'Asesores, vendedores y marca personal',
   },
   {
     id: 'esencial',
     name: 'Esencial',
-    description: 'Diseño limpio, directo y sin fotografía de portada.',
-    recommended: 'Perfiles rápidos y profesionales',
+    description:
+      'Diseño limpio, directo y sin fotografía de portada.',
+    recommended:
+      'Perfiles rápidos y profesionales',
   },
 ]
 
+const palettes: Palette[] = [
+  {
+    id: 'intap',
+    name: 'INTAP',
+    colors: [
+      '#071F5F',
+      '#0B61C9',
+      '#10B981',
+      '#EAF0F7',
+    ],
+  },
+  {
+    id: 'oceano',
+    name: 'Océano',
+    colors: [
+      '#0C4A6E',
+      '#0284C7',
+      '#0891B2',
+      '#F0F9FF',
+    ],
+  },
+  {
+    id: 'esmeralda',
+    name: 'Esmeralda',
+    colors: [
+      '#064E3B',
+      '#047857',
+      '#10B981',
+      '#ECFDF5',
+    ],
+  },
+  {
+    id: 'violeta',
+    name: 'Violeta',
+    colors: [
+      '#4C1D95',
+      '#7C3AED',
+      '#A855F7',
+      '#FAF5FF',
+    ],
+  },
+  {
+    id: 'coral',
+    name: 'Coral',
+    colors: [
+      '#9F1239',
+      '#E11D48',
+      '#FB7185',
+      '#FFF1F2',
+    ],
+  },
+  {
+    id: 'grafito',
+    name: 'Grafito',
+    colors: [
+      '#111827',
+      '#374151',
+      '#64748B',
+      '#F3F4F6',
+    ],
+  },
+  {
+    id: 'arena',
+    name: 'Arena',
+    colors: [
+      '#5C4033',
+      '#8B6F47',
+      '#B08968',
+      '#FAF7F2',
+    ],
+  },
+]
+
+function normalizeHex(value: string) {
+  let raw = value
+    .trim()
+    .replace(/[^0-9a-fA-F#]/g, '')
+
+  if (!raw.startsWith('#')) {
+    raw = `#${raw}`
+  }
+
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) {
+    return raw.toUpperCase()
+  }
+
+  return null
+}
+
 export default function FreeStyle() {
   const navigate = useNavigate()
-  const [selected, setSelected] = useState<LayoutId>('esencial')
-  const [slug, setSlug] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
+
+  const [selected, setSelected] =
+    useState<LayoutId>('esencial')
+
+  const [palette, setPalette] =
+    useState<PaletteId>('intap')
+
+  const [brandColor, setBrandColor] =
+    useState('#071F5F')
+
+  const [slug, setSlug] =
+    useState<string | null>(null)
+
+  const [category, setCategory] =
+    useState('')
+
+  const [saving, setSaving] =
+    useState(false)
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [message, setMessage] =
+    useState('')
+
+  const [previewVersion, setPreviewVersion] =
+    useState(1)
+
+  const webUrl = (
+    import.meta.env.VITE_WEB_URL ??
+    'https://intaprd.com'
+  ).replace(/\/$/, '')
+
+  const previewUrl = useMemo(() => {
+    if (!slug) return ''
+
+    return (
+      `${webUrl}/${encodeURIComponent(slug)}` +
+      `?preview=1&v=${previewVersion}`
+    )
+  }, [
+    webUrl,
+    slug,
+    previewVersion,
+  ])
+
+  function refreshPreview() {
+    setPreviewVersion(
+      (current) => current + 1,
+    )
+  }
 
   useEffect(() => {
-    apiGet('/me').then((json: any) => {
-      if (!json?.ok) return
-      const current = json.data?.layout_id
-      if (current === 'impacto' || current === 'personal' || current === 'esencial') {
-        setSelected(current)
-      }
-      setSlug(json.data?.slug || null)
-    })
+    apiGet('/me')
+      .then((json: any) => {
+        if (!json?.ok) return
+
+        const data =
+          (json.data || {}) as MeData
+
+        const current =
+          data.layout_id
+
+        if (
+          current === 'impacto' ||
+          current === 'personal' ||
+          current === 'esencial'
+        ) {
+          setSelected(current)
+        }
+
+        const currentPalette =
+          data.free_palette_id
+
+        if (
+          currentPalette === 'intap' ||
+          currentPalette === 'oceano' ||
+          currentPalette === 'esmeralda' ||
+          currentPalette === 'violeta' ||
+          currentPalette === 'coral' ||
+          currentPalette === 'grafito' ||
+          currentPalette === 'arena' ||
+          currentPalette === 'personalizada'
+        ) {
+          setPalette(currentPalette)
+        }
+
+        if (
+          data.free_brand_color &&
+          /^#[0-9a-fA-F]{6}$/.test(
+            data.free_brand_color,
+          )
+        ) {
+          setBrandColor(
+            data.free_brand_color.toUpperCase(),
+          )
+        }
+
+        setCategory(
+          data.category || '',
+        )
+
+        setSlug(
+          data.slug || null,
+        )
+      })
+      .finally(
+        () => setLoading(false),
+      )
   }, [])
 
-  async function choose(layout: LayoutId) {
+  async function chooseLayout(
+    layout: LayoutId,
+  ) {
     if (saving) return
+
     setSaving(true)
     setMessage('')
 
     try {
-      const json: any = await apiPut('/me/profile', {
-        layout_id: layout,
-      })
+      const json: any =
+        await apiPut('/me/profile', {
+          layout_id: layout,
+        })
 
       if (!json?.ok) {
-        setMessage(json?.error || 'No se pudo guardar el estilo.')
+        setMessage(
+          json?.error ||
+          'No se pudo guardar el estilo.',
+        )
         return
       }
 
       setSelected(layout)
       setMessage('Estilo actualizado.')
+      refreshPreview()
     } catch {
-      setMessage('No se pudo guardar el estilo.')
+      setMessage(
+        'No se pudo guardar el estilo.',
+      )
     } finally {
       setSaving(false)
     }
   }
 
-  const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
+  async function choosePalette(
+    paletteId: PaletteId,
+    color?: string,
+  ) {
+    if (saving) return
+
+    const customColor =
+      paletteId === 'personalizada'
+        ? normalizeHex(
+            color || brandColor,
+          )
+        : null
+
+    if (
+      paletteId === 'personalizada' &&
+      !customColor
+    ) {
+      setMessage(
+        'Selecciona un color válido.',
+      )
+      return
+    }
+
+    setSaving(true)
+    setMessage('')
+
+    try {
+      const json: any =
+        await apiPatch(
+          '/me/profile/free-appearance',
+          {
+            palette_id: paletteId,
+            brand_color:
+              paletteId === 'personalizada'
+                ? customColor
+                : undefined,
+          },
+        )
+
+      if (!json?.ok) {
+        setMessage(
+          json?.error ||
+          'No se pudo guardar la paleta.',
+        )
+        return
+      }
+
+      setPalette(paletteId)
+
+      if (customColor) {
+        setBrandColor(customColor)
+      }
+
+      setMessage('Colores actualizados.')
+      refreshPreview()
+    } catch {
+      setMessage(
+        'No se pudo guardar la paleta.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f7f9fc] font-['Inter']">
+        <div className="flex min-h-screen items-center justify-center text-sm font-bold text-slate-400">
+          Cargando…
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
-      <section className="mx-auto w-full max-w-[430px]">
+      <section className="mx-auto w-full max-w-[1040px]">
         <button
-          onClick={() => navigate('/admin/free')}
+          onClick={() =>
+            navigate('/admin/free')
+          }
           className="mb-6 text-sm font-bold text-slate-500"
         >
           ← Mi panel
         </button>
 
-        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">
-          INTAP LINK
-        </p>
+        <div className="grid gap-8 lg:grid-cols-[430px_minmax(0,1fr)] lg:items-start">
 
-        <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">
-          Estilo de mi perfil
-        </h1>
+          <div className="contents lg:block">
+            <div className="order-1 lg:order-none">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">
+              INTAP LINK
+            </p>
 
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          Tus datos son los mismos. Solo cambia la forma de presentarlos.
-        </p>
+            <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">
+              Estilo de mi perfil
+            </h1>
 
-        <div className="mt-7 space-y-4">
-          {layouts.map((layout) => {
-            const active = selected === layout.id
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Tus datos son los mismos. Elige cómo quieres presentarlos.
+            </p>
 
-            return (
-              <button
-                key={layout.id}
-                type="button"
-                disabled={saving}
-                onClick={() => choose(layout.id)}
-                className={`w-full rounded-[24px] border bg-white p-5 text-left transition ${
-                  active
+            {category && (
+              <p className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-500 shadow-sm">
+                {category}
+              </p>
+            )}
+
+            <section className="mt-7">
+              <h2 className="text-sm font-black">
+                Diseño
+              </h2>
+
+              <div className="mt-3 space-y-3">
+                {layouts.map((layout) => {
+                  const active =
+                    selected === layout.id
+
+                  return (
+                    <button
+                      key={layout.id}
+                      type="button"
+                      disabled={saving}
+                      onClick={() =>
+                        void chooseLayout(
+                          layout.id,
+                        )
+                      }
+                      className={`w-full rounded-[22px] border bg-white p-4 text-left transition ${
+                        active
+                          ? 'border-cyan-500 ring-4 ring-cyan-100'
+                          : 'border-slate-200 hover:border-slate-300'
+                      } disabled:opacity-60`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="text-base font-black">
+                            {layout.name}
+                          </h3>
+
+                          <p className="mt-1 text-[11px] font-bold text-cyan-600">
+                            {layout.recommended}
+                          </p>
+                        </div>
+
+                        {active && (
+                          <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase text-cyan-700">
+                            Activo
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                        {layout.description}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            </div>
+
+            <section className="order-3 mt-7 lg:order-none">
+              <div>
+                <h2 className="text-sm font-black">
+                  Colores de mi marca
+                </h2>
+
+                <p className="mt-1 text-xs leading-5 text-slate-400">
+                  Elige una combinación completa. No necesitas configurar cada sección.
+                </p>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {palettes.map(
+                  (item) => {
+                    const active =
+                      palette === item.id
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        disabled={saving}
+                        onClick={() =>
+                          void choosePalette(
+                            item.id,
+                          )
+                        }
+                        className={`rounded-[20px] border bg-white p-3 text-left transition ${
+                          active
+                            ? 'border-cyan-500 ring-4 ring-cyan-100'
+                            : 'border-slate-200 hover:border-slate-300'
+                        } disabled:opacity-60`}
+                      >
+                        <div className="flex gap-1.5">
+                          {item.colors.map(
+                            (color) => (
+                              <span
+                                key={color}
+                                className="h-8 flex-1 rounded-lg border border-black/5"
+                                style={{
+                                  backgroundColor:
+                                    color,
+                                }}
+                              />
+                            ),
+                          )}
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-xs font-black">
+                            {item.name}
+                          </span>
+
+                          {active && (
+                            <span className="text-[10px] font-black text-cyan-600">
+                              Activa
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  },
+                )}
+              </div>
+
+              <div
+                className={`mt-3 rounded-[22px] border bg-white p-4 ${
+                  palette === 'personalizada'
                     ? 'border-cyan-500 ring-4 ring-cyan-100'
                     : 'border-slate-200'
-                } disabled:opacity-60`}
+                }`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-black">{layout.name}</h2>
-                    <p className="mt-1 text-xs font-bold text-cyan-600">
-                      {layout.recommended}
+                    <h3 className="text-sm font-black">
+                      Personalizar
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-400">
+                      Elige tu color principal y el sistema crea el resto.
                     </p>
                   </div>
 
-                  {active && (
-                    <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase text-cyan-700">
-                      Activo
-                    </span>
-                  )}
+                  <input
+                    type="color"
+                    value={brandColor}
+                    onChange={(event) =>
+                      setBrandColor(
+                        event.target.value.toUpperCase(),
+                      )
+                    }
+                    className="h-11 w-14 cursor-pointer rounded-xl border border-slate-200 bg-white p-1"
+                    aria-label="Color principal"
+                  />
                 </div>
 
-                <p className="mt-3 text-sm leading-6 text-slate-500">
-                  {layout.description}
-                </p>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={brandColor}
+                    onChange={(event) =>
+                      setBrandColor(
+                        event.target.value.toUpperCase(),
+                      )
+                    }
+                    maxLength={7}
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold uppercase outline-none focus:border-cyan-400"
+                  />
 
-                <div
-                  className={`mt-4 h-28 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 p-3 ${
-                    layout.id === 'impacto'
-                      ? 'bg-[linear-gradient(145deg,#dbeafe_0%,#f8fafc_55%)]'
-                      : layout.id === 'personal'
-                        ? 'bg-[linear-gradient(180deg,#cbd5e1_0%,#1e3a8a_100%)]'
-                        : 'bg-white'
-                  }`}
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() =>
+                      void choosePalette(
+                        'personalizada',
+                        brandColor,
+                      )
+                    }
+                    className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {message && (
+              <p className="mt-5 text-center text-xs font-bold text-slate-500">
+                {message}
+              </p>
+            )}
+          </div>
+
+          <aside className="order-2 lg:sticky lg:top-6">
+            <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    Vista previa
+                  </p>
+
+                  <p className="mt-1 text-xs font-bold text-slate-600">
+                    Así se ve tu perfil
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={refreshPreview}
+                  className="rounded-xl bg-slate-100 px-3 py-2 text-[11px] font-black text-slate-600"
                 >
-                  <div className="mx-auto h-full max-w-[150px] rounded-xl border border-slate-200 bg-white/90 p-2">
-                    {layout.id === 'impacto' && (
-                      <div className="h-9 rounded-md bg-slate-300" />
-                    )}
-                    <div
-                      className={`mx-auto rounded-full bg-slate-400 ${
-                        layout.id === 'impacto'
-                          ? '-mt-3 h-8 w-8 border-2 border-white'
-                          : layout.id === 'personal'
-                            ? 'mt-1 h-12 w-12'
-                            : 'mt-2 h-9 w-9'
-                      }`}
-                    />
-                    <div className="mx-auto mt-2 h-2 w-16 rounded bg-slate-800" />
-                    <div className="mx-auto mt-1 h-1.5 w-12 rounded bg-slate-300" />
-                    <div className="mt-3 h-5 rounded-md bg-cyan-600" />
-                  </div>
+                  Actualizar
+                </button>
+              </div>
+
+              {slug ? (
+                <div className="mx-auto overflow-hidden rounded-[24px] border border-slate-200 bg-[#eef3f8]">
+                  <iframe
+                    key={previewVersion}
+                    src={previewUrl}
+                    title="Vista previa de mi perfil"
+                    className="h-[720px] w-full bg-white"
+                  />
                 </div>
-              </button>
-            )
-          })}
+              ) : (
+                <div className="flex h-[520px] items-center justify-center rounded-[24px] bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">
+                  Completa tu perfil para ver la vista previa.
+                </div>
+              )}
+
+              {slug && (
+                <a
+                  href={`${webUrl}/${slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white"
+                >
+                  Abrir perfil completo
+                </a>
+              )}
+            </div>
+          </aside>
+
         </div>
-
-        {message && (
-          <p className="mt-4 text-center text-xs font-bold text-slate-500">
-            {message}
-          </p>
-        )}
-
-        {slug && (
-          <a
-            href={`${webUrl}/${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white"
-          >
-            Ver mi perfil
-          </a>
-        )}
       </section>
     </main>
   )
