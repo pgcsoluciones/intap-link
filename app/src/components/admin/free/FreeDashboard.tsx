@@ -33,10 +33,15 @@ export default function FreeDashboard() {
   const [me, setMe] = useState<MeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
+  const [hasSuperAdminAccess, setHasSuperAdminAccess] = useState(false)
 
   useEffect(() => {
-    apiGet('/me').then((json: any) => {
-      if (json.ok) setMe(json.data)
+    Promise.all([
+      apiGet('/me'),
+      apiGet('/superadmin/metrics/overview').catch(() => ({ ok: false })),
+    ]).then(([meJson, superAdminJson]: any[]) => {
+      if (meJson?.ok) setMe(meJson.data)
+      setHasSuperAdminAccess(Boolean(superAdminJson?.ok))
     }).finally(() => setLoading(false))
   }, [])
 
@@ -65,12 +70,23 @@ export default function FreeDashboard() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[430px] items-center justify-between">
+        <div className="mx-auto flex w-full max-w-[430px] items-center justify-between gap-3">
           <div>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">INTAP LINK</p>
             <h1 className="mt-0.5 text-xl font-black tracking-[-0.03em]">Mi panel</h1>
           </div>
-          <button onClick={handleLogout} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">Salir</button>
+          <div className="flex items-center gap-2">
+            {hasSuperAdminAccess && (
+              <button
+                type="button"
+                onClick={() => navigate('/superadmin')}
+                className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white"
+              >
+                Super Admin
+              </button>
+            )}
+            <button onClick={handleLogout} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">Salir</button>
+          </div>
         </div>
       </header>
 
@@ -91,6 +107,21 @@ export default function FreeDashboard() {
             <button onClick={() => navigate('/admin/free/onboarding/identity')} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Editar</button>
           </div>
         </article>
+
+        {hasSuperAdminAccess && (
+          <button
+            type="button"
+            onClick={() => navigate('/superadmin')}
+            className="flex w-full items-center justify-between rounded-[22px] border border-slate-800 bg-slate-950 p-4 text-left text-white shadow-sm"
+          >
+            <span>
+              <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300">Acceso interno</span>
+              <span className="mt-1 block text-sm font-black">Abrir Super Admin</span>
+              <span className="mt-1 block text-xs text-slate-300">Productos, códigos, pagos, suscriptores y operación SaaS.</span>
+            </span>
+            <span className="text-xl text-slate-400">›</span>
+          </button>
+        )}
 
         {publicUrl && (
           <article className="rounded-[24px] border border-slate-200 bg-white p-5">
