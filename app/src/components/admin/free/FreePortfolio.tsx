@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPut, apiUpload, API_BASE } from '../../../lib/api'
+import ImageCropModal from '../ImageCropModal'
 import { FreeBackButton, FreeLimitUpgradeCard, FreeUpgradeCard } from './FreePanelUi'
 
 type Photo = {
@@ -89,6 +90,8 @@ export default function FreePortfolio() {
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropMode, setCropMode] = useState<'new' | 'replace' | null>(null)
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({})
   const [sectionTitle, setSectionTitle] = useState<(typeof PORTFOLIO_TITLES)[number]>('Portafolio')
 
@@ -121,18 +124,50 @@ export default function FreePortfolio() {
     return apiUpload(path, fd) as Promise<any>
   }
 
-  const upload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const chooseNewImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file || photos.length >= MAX_PHOTOS) return
     if (inputRef.current) inputRef.current.value = ''
+    if (!file || photos.length >= MAX_PHOTOS) return
+    setCropMode('new')
+    setCropFile(file)
+    setError('')
+  }
+
+  const chooseReplacementImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (replaceInputRef.current) replaceInputRef.current.value = ''
+    if (!file || !replaceTargetId) return
+    setCropMode('replace')
+    setCropFile(file)
+    setError('')
+  }
+
+  const cancelCrop = () => {
+    setCropFile(null)
+    setCropMode(null)
+    setReplaceTargetId(null)
+  }
+
+  const saveCroppedImage = async (blob: Blob) => {
+    if (!cropFile || !cropMode) return
+    const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'portfolio'
+    const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
+    const path = cropMode === 'replace' && replaceTargetId
+      ? `/me/gallery/${replaceTargetId}/replace`
+      : '/profile/gallery/upload'
+
     setUploading(true)
     setError('')
     try {
-      const json = await sendOptimizedImage(file, '/profile/gallery/upload')
-      if (!json.ok) return setError(json.error || 'No se pudo subir la imagen.')
+      const json = await sendOptimizedImage(croppedFile, path)
+      if (!json.ok) {
+        setError(json.error || (cropMode === 'replace' ? 'No se pudo reemplazar la imagen.' : 'No se pudo subir la imagen.'))
+        return
+      }
       await load()
+      cancelCrop()
     } catch {
-      setError('No pudimos subir la imagen.')
+      setError(cropMode === 'replace' ? 'No pudimos reemplazar la imagen.' : 'No pudimos subir la imagen.')
     } finally {
       setUploading(false)
     }
@@ -157,24 +192,6 @@ export default function FreePortfolio() {
       setEditingId(null)
       await load()
     } finally {
-      setUploading(false)
-    }
-  }
-
-  const replaceImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (replaceInputRef.current) replaceInputRef.current.value = ''
-    if (!file || !replaceTargetId) return
-    setUploading(true)
-    setError('')
-    try {
-      const json = await sendOptimizedImage(file, `/me/gallery/${replaceTargetId}/replace`)
-      if (!json.ok) return setError(json.error || 'No se pudo reemplazar la imagen.')
-      await load()
-    } catch {
-      setError('No pudimos reemplazar la imagen.')
-    } finally {
-      setReplaceTargetId(null)
       setUploading(false)
     }
   }
@@ -237,13 +254,23 @@ export default function FreePortfolio() {
           ))}
         </section>
 
-        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} className="hidden" />
-        <input ref={replaceInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={replaceImage} className="hidden" />
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseNewImage} className="hidden" />
+        <input ref={replaceInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseReplacementImage} className="hidden" />
         <button onClick={() => inputRef.current?.click()} disabled={uploading || photos.length >= MAX_PHOTOS} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{uploading ? 'Procesando…' : photos.length >= MAX_PHOTOS ? 'Límite completado' : 'Agregar imagen'}</button>
         {error && <p className="mt-3 text-xs font-semibold text-red-500">{error}</p>}
         {photos.length >= MAX_PHOTOS && <FreeLimitUpgradeCard text="Ya utilizas las 5 imágenes disponibles. Puedes seguir gestionándolas o pasar al Plan Básico para ampliar tu alcance." />}
         <div className="mt-5"><FreeUpgradeCard compact /></div>
       </div>
+
+      {cropFile && cropMode && (
+        <ImageCropModal
+          file={cropFile}
+          aspectRatio={4 / 3}
+          outputWidth={1200}
+          onSave={(blob) => { void saveCroppedImage(blob) }}
+          onCancel={cancelCrop}
+        />
+      )}
     </main>
   )
 }
