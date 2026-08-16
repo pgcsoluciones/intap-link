@@ -45,6 +45,15 @@ async function optimizeServiceImage(file: File): Promise<File> {
   }
 }
 
+async function imageUrlToFile(url: string, name: string): Promise<File> {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error('No se pudo cargar la imagen actual.')
+  const blob = await response.blob()
+  const type = blob.type || 'image/jpeg'
+  const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg'
+  return new File([blob], `${name}.${ext}`, { type, lastModified: Date.now() })
+}
+
 export default function FreeServices() {
   const navigate = useNavigate()
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -148,6 +157,21 @@ export default function FreeServices() {
     setImageTargetId(null)
   }
 
+  const startAdjust = async (item: Service) => {
+    if (!item.image_url || saving) return
+    setSaving(true)
+    setError('')
+    try {
+      const file = await imageUrlToFile(item.image_url, `service-${item.id}`)
+      setImageTargetId(item.id)
+      setCropFile(file)
+    } catch {
+      setError('No pudimos abrir la imagen actual para ajustar su encuadre.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const saveCroppedServiceImage = async (blob: Blob) => {
     if (!cropFile || !imageTargetId) return
     const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'servicio'
@@ -225,12 +249,13 @@ export default function FreeServices() {
         <section className="mt-5 space-y-3">
           {loading ? <div className="rounded-3xl bg-white p-5 text-sm text-slate-400">Cargando…</div> : items.map((item) => (
             <article key={item.id} className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
-              {item.image_url ? <div className="aspect-[16/9] overflow-hidden bg-slate-100"><img src={item.image_url} alt={item.title} loading="lazy" decoding="async" className="h-full w-full object-cover" /></div> : <div className="flex aspect-[16/9] items-center justify-center bg-cyan-50 text-4xl text-cyan-700">◇</div>}
+              {item.image_url ? <div className="aspect-square overflow-hidden bg-slate-100"><img src={item.image_url} alt={item.title} loading="lazy" decoding="async" className="h-full w-full object-cover" /></div> : <div className="flex aspect-square items-center justify-center bg-cyan-50 text-4xl text-cyan-700">◇</div>}
               {editingId === item.id ? (
                 <div className="p-4">
                   <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} maxLength={80} placeholder="Nombre del servicio" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
                   <textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value.slice(0, DESCRIPTION_LIMIT))} maxLength={DESCRIPTION_LIMIT} rows={2} placeholder="Descripción breve, máximo 2 líneas" className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
                   <Counter value={editDescription} />
+                  {item.image_url && <button type="button" disabled={saving} onClick={() => void startAdjust(item)} className="mt-3 w-full rounded-xl bg-violet-50 px-3 py-2.5 text-xs font-black text-violet-700 disabled:opacity-40">Ajustar encuadre de imagen</button>}
                   <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setEditingId(null)} className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-black text-slate-600">Cancelar</button><button type="button" disabled={saving || !editTitle.trim()} onClick={() => void saveEdit(item)} className="rounded-xl bg-cyan-600 px-3 py-2.5 text-xs font-black text-white disabled:opacity-40">Guardar</button></div>
                 </div>
               ) : (
@@ -263,7 +288,7 @@ export default function FreeServices() {
       {cropFile && imageTargetId && (
         <ImageCropModal
           file={cropFile}
-          aspectRatio={16 / 9}
+          aspectRatio={1}
           outputWidth={1200}
           onSave={(blob) => { void saveCroppedServiceImage(blob) }}
           onCancel={cancelCrop}
