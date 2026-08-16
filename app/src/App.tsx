@@ -13,6 +13,7 @@ import AdminVisual from './components/admin/AdminVisual'
 import AdminTemplate from './components/admin/AdminTemplate'
 import AdminRetention from './components/admin/AdminRetention'
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard'
+import SuperAdminArtifacts from './components/admin/SuperAdminArtifacts'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
@@ -78,6 +79,7 @@ function App() {
 
         {/* Super Admin interno */}
         <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />
+        <Route path="/superadmin/products" element={<AdminGuard><SuperAdminArtifacts /></AdminGuard>} />
 
         {/* Panel Premium */}
         <Route path="/admin/links"    element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
