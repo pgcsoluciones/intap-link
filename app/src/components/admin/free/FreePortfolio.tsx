@@ -78,6 +78,15 @@ async function optimizeImageForUpload(file: File, maxDimension = 1600, quality =
   }
 }
 
+async function imageUrlToFile(url: string, name: string): Promise<File> {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error('No se pudo cargar la imagen actual.')
+  const blob = await response.blob()
+  const type = blob.type || 'image/jpeg'
+  const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg'
+  return new File([blob], `${name}.${ext}`, { type, lastModified: Date.now() })
+}
+
 export default function FreePortfolio() {
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,7 +100,7 @@ export default function FreePortfolio() {
   const [editDescription, setEditDescription] = useState('')
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null)
   const [cropFile, setCropFile] = useState<File | null>(null)
-  const [cropMode, setCropMode] = useState<'new' | 'replace' | null>(null)
+  const [cropMode, setCropMode] = useState<'new' | 'replace' | 'adjust' | null>(null)
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({})
   const [sectionTitle, setSectionTitle] = useState<(typeof PORTFOLIO_TITLES)[number]>('Portafolio')
 
@@ -148,11 +157,27 @@ export default function FreePortfolio() {
     setReplaceTargetId(null)
   }
 
+  const startAdjust = async (photo: Photo) => {
+    if (uploading) return
+    setUploading(true)
+    setError('')
+    try {
+      const file = await imageUrlToFile(photoUrl(photo.image_key), `portfolio-${photo.id}`)
+      setReplaceTargetId(photo.id)
+      setCropMode('adjust')
+      setCropFile(file)
+    } catch {
+      setError('No pudimos abrir la imagen actual para ajustar su encuadre.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const saveCroppedImage = async (blob: Blob) => {
     if (!cropFile || !cropMode) return
     const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'portfolio'
     const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
-    const path = cropMode === 'replace' && replaceTargetId
+    const path = cropMode !== 'new' && replaceTargetId
       ? `/me/gallery/${replaceTargetId}/replace`
       : '/profile/gallery/upload'
 
@@ -161,13 +186,13 @@ export default function FreePortfolio() {
     try {
       const json = await sendOptimizedImage(croppedFile, path)
       if (!json.ok) {
-        setError(json.error || (cropMode === 'replace' ? 'No se pudo reemplazar la imagen.' : 'No se pudo subir la imagen.'))
+        setError(json.error || (cropMode === 'new' ? 'No se pudo subir la imagen.' : 'No se pudo actualizar la imagen.'))
         return
       }
       await load()
       cancelCrop()
     } catch {
-      setError(cropMode === 'replace' ? 'No pudimos reemplazar la imagen.' : 'No pudimos subir la imagen.')
+      setError(cropMode === 'new' ? 'No pudimos subir la imagen.' : 'No pudimos actualizar la imagen.')
     } finally {
       setUploading(false)
     }
@@ -235,12 +260,13 @@ export default function FreePortfolio() {
         <section className="mt-5 space-y-3">
           {loading ? <div className="rounded-3xl bg-white p-5 text-sm text-slate-400">Cargando…</div> : photos.map((photo) => (
             <article key={photo.id} className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
-              <div className="aspect-[4/3] overflow-hidden bg-slate-100"><img src={photoUrl(photo.image_key)} alt={photo.title || 'Portafolio'} loading="lazy" decoding="async" className="h-full w-full object-cover" /></div>
+              <div className="aspect-square overflow-hidden bg-slate-100"><img src={photoUrl(photo.image_key)} alt={photo.title || 'Portafolio'} loading="lazy" decoding="async" className="h-full w-full object-cover" /></div>
               {editingId === photo.id ? (
                 <div className="p-4">
                   <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} maxLength={80} placeholder="Título de la imagen" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
                   <textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value.slice(0, DESCRIPTION_LIMIT))} maxLength={DESCRIPTION_LIMIT} rows={2} placeholder="Descripción breve, máximo 2 líneas" className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
                   <div className="mt-1 flex items-center justify-between text-[11px]"><span className={editDescription.length >= DESCRIPTION_LIMIT ? 'font-bold text-amber-600' : 'text-slate-400'}>{editDescription.length >= DESCRIPTION_LIMIT ? 'Límite de caracteres alcanzado' : 'Máximo 2 líneas'}</span><span className="font-bold text-slate-500">{editDescription.length}/{DESCRIPTION_LIMIT}</span></div>
+                  <button type="button" disabled={uploading} onClick={() => void startAdjust(photo)} className="mt-3 w-full rounded-xl bg-violet-50 px-3 py-2.5 text-xs font-black text-violet-700 disabled:opacity-40">Ajustar encuadre de imagen</button>
                   <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setEditingId(null)} className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-black text-slate-600">Cancelar</button><button type="button" disabled={uploading} onClick={() => void saveMetadata(photo)} className="rounded-xl bg-cyan-600 px-3 py-2.5 text-xs font-black text-white disabled:opacity-40">Guardar</button></div>
                 </div>
               ) : (
@@ -265,7 +291,7 @@ export default function FreePortfolio() {
       {cropFile && cropMode && (
         <ImageCropModal
           file={cropFile}
-          aspectRatio={4 / 3}
+          aspectRatio={1}
           outputWidth={1200}
           onSave={(blob) => { void saveCroppedImage(blob) }}
           onCancel={cancelCrop}
