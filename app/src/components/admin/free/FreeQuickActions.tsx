@@ -24,7 +24,7 @@ const OPTIONS: Array<{
 }> = [
   { type: 'call', label: 'Llamar', helper: 'Acceso directo a tu teléfono.', recommended: true, placeholder: '809 000 0000' },
   { type: 'instagram', label: 'Instagram', helper: 'Lleva visitantes a tu cuenta de Instagram.', recommended: true, placeholder: 'https://instagram.com/tuusuario' },
-  { type: 'location', label: 'Ubicación', helper: 'Abre tu ubicación guardada en el mapa.', recommended: true, placeholder: 'https://maps.google.com/...' },
+  { type: 'location', label: 'Ubicación', helper: 'Abre la ubicación que configures en la sección Mapa.', recommended: true, placeholder: '' },
   { type: 'email', label: 'Email', helper: 'Permite escribirte por correo con un toque.', placeholder: 'correo@empresa.com' },
   { type: 'tiktok', label: 'TikTok', helper: 'Acceso directo a tu cuenta de TikTok.', placeholder: 'https://tiktok.com/@tuusuario' },
 ]
@@ -113,6 +113,10 @@ export default function FreeQuickActions() {
 
     const invalid = selected.find((type) => !normalizeActionUrl(type, values[type] || ''))
     if (invalid) {
+      if (invalid === 'location') {
+        setError('Configura tu mapa antes de guardar Ubicación como acceso rápido.')
+        return
+      }
       const label = OPTIONS.find((option) => option.type === invalid)?.label || 'seleccionado'
       setError(`Completa el dato de ${label} antes de guardar.`)
       return
@@ -164,6 +168,9 @@ export default function FreeQuickActions() {
           <section className="mt-5 space-y-3">
             {OPTIONS.map((option) => {
               const active = selected.includes(option.type)
+              const isLocation = option.type === 'location'
+              const locationConfigured = Boolean(values.location?.trim())
+
               return (
                 <article key={option.type} className={`rounded-[22px] border bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,.04)] ${active ? 'border-cyan-300 ring-2 ring-cyan-100' : 'border-slate-200'}`}>
                   <div className="flex items-start gap-3">
@@ -176,7 +183,36 @@ export default function FreeQuickActions() {
                         {option.recommended && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-700">Recomendado</span>}
                       </div>
                       <p className="mt-1 text-xs leading-5 text-slate-400">{option.helper}</p>
-                      <input value={values[option.type] || ''} onChange={(event) => setValues((current) => ({ ...current, [option.type]: event.target.value }))} placeholder={option.placeholder} inputMode={option.type === 'email' ? 'email' : option.type === 'call' ? 'tel' : 'url'} className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
+
+                      {isLocation ? (
+                        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className={`text-xs font-black ${locationConfigured ? 'text-emerald-700' : 'text-slate-500'}`}>
+                                {locationConfigured ? 'Mapa configurado' : 'Mapa pendiente de configurar'}
+                              </p>
+                              {locationConfigured && (
+                                <p className="mt-1 truncate text-[10px] text-slate-400">{values.location}</p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => navigate('/admin/free/location')}
+                              className="shrink-0 rounded-xl bg-white px-3 py-2 text-[11px] font-black text-cyan-700 shadow-sm ring-1 ring-slate-200"
+                            >
+                              Configurar mapa
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <input
+                          value={values[option.type] || ''}
+                          onChange={(event) => setValues((current) => ({ ...current, [option.type]: event.target.value }))}
+                          placeholder={option.placeholder}
+                          inputMode={option.type === 'email' ? 'email' : option.type === 'call' ? 'tel' : 'url'}
+                          className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400"
+                        />
+                      )}
                     </div>
                   </div>
                 </article>
