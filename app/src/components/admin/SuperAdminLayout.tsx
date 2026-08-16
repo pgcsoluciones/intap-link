@@ -5,6 +5,7 @@ export type SuperAdminSection =
   | 'subscribers'
   | 'billing'
   | 'paymentLinks'
+  | 'products'
   | 'landing'
   | 'plans'
   | 'gateways'
@@ -12,11 +13,12 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-const sidebarItems: Array<{ key: SuperAdminSection; label: string }> = [
+const sidebarItems: Array<{ key: SuperAdminSection; label: string; href?: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
   { key: 'billing', label: 'Billing / Pagos' },
   { key: 'paymentLinks', label: 'Enlaces de pago' },
+  { key: 'products', label: 'Productos / códigos', href: '/superadmin/products' },
   { key: 'landing', label: 'Landing marketing' },
   { key: 'plans', label: 'Planes y módulos' },
   { key: 'gateways', label: 'Pasarelas' },
@@ -85,7 +87,13 @@ export default function SuperAdminLayout({
               <button
                 key={item.key}
                 type="button"
-                onClick={() => onNavigate?.(item.key)}
+                onClick={() => {
+                  if (item.href) {
+                    window.location.href = item.href
+                    return
+                  }
+                  onNavigate?.(item.key)
+                }}
                 style={{
                   textAlign: 'left',
                   border: 'none',
