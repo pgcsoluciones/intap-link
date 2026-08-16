@@ -183,7 +183,6 @@ export default function SuperAdminArtifacts() {
   async function openDetail(item: ArtifactItem) {
     setError('')
     setMessage('')
-    setRotatedCode('')
     try {
       const json: any = await apiGet(`/superadmin/artifacts/${item.id}`)
       if (!json?.ok || !json?.data) throw new Error(json?.error || 'No se pudo abrir el producto.')
@@ -351,7 +350,7 @@ export default function SuperAdminArtifacts() {
                     <td className="p-3"><div className="font-semibold">{item.owner_email || '—'}</div></td>
                     <td className="p-3"><div className="font-semibold">{item.profile_slug ? `/${item.profile_slug}` : 'Sin perfil'}</div></td>
                     <td className="p-3 text-xs text-slate-500">{formatDate(item.created_at)}</td>
-                    <td className="p-3"><button onClick={() => void openDetail(item)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">Gestionar</button></td>
+                    <td className="p-3"><button onClick={() => { setRotatedCode(''); void openDetail(item) }} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">Gestionar</button></td>
                   </tr>
                 ))}
                 {!loadingInventory && artifacts.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-400">No hay productos con estos filtros.</td></tr>}
