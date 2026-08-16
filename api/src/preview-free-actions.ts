@@ -174,7 +174,6 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
   }
 
   const items = normalized as NormalizedQuickAction[]
-
   const uniqueTypes = new Set(items.map((item) => item.type))
   if (uniqueTypes.size !== items.length) {
     return c.json({ ok: false, error: 'No puedes repetir un acceso rápido.' }, 400)
@@ -200,8 +199,8 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
     ...items.map((item, index) =>
       c.env.DB.prepare(
         `INSERT INTO profile_social_links
-          (id, profile_id, type, url, sort_order, enabled, created_at)
-         VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`,
+          (id, profile_id, type, url, sort_order, enabled)
+         VALUES (?, ?, ?, ?, ?, 1)`,
       ).bind(
         ids[index],
         profileId,
