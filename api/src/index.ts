@@ -668,8 +668,14 @@ app.get('/api/v1/public/artifacts/:publicCode/resolve', async (c) => {
   if (!['activated'].includes(String(artifact.status))) {
     return c.json({ ok: false, error: 'Artefacto no disponible.' }, 410)
   }
-  if (!artifact.profile_id || !artifact.slug || Number(artifact.is_active) !== 1 || Number(artifact.is_published) !== 1) {
-    return c.json({ ok: false, error: 'Artefacto aún no vinculado a un perfil público.' }, 409)
+  if (!artifact.profile_id || !artifact.slug) {
+    return c.json({ ok: false, error: 'Este producto todavía no tiene un perfil vinculado.', reason: 'PROFILE_NOT_LINKED' }, 409)
+  }
+  if (Number(artifact.is_active) !== 1) {
+    return c.json({ ok: false, error: 'El perfil vinculado no está activo.', reason: 'PROFILE_INACTIVE' }, 409)
+  }
+  if (Number(artifact.is_published) !== 1) {
+    return c.json({ ok: false, error: 'El perfil vinculado todavía no está publicado.', reason: 'PROFILE_UNPUBLISHED' }, 409)
   }
 
   return c.json({

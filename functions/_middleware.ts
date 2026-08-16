@@ -195,9 +195,18 @@ ${seoHeadHtml}
       const status = resolution.status === 410 || resolution.status === 409
         ? resolution.status
         : resolution.status >= 500 ? 503 : 404;
+      let resolverMessage = '';
+      if (status === 409) {
+        try {
+          const payload = await resolution.clone().json() as { error?: string; reason?: string };
+          resolverMessage = String(payload.error || '');
+        } catch {
+          resolverMessage = '';
+        }
+      }
       return withSecurityHeaders(new Response(
         status === 409
-          ? 'Este producto todavía no está vinculado a un perfil público.'
+          ? (resolverMessage || 'Este producto todavía no está vinculado a un perfil público.')
           : status === 410
             ? 'Este producto no está disponible.'
             : 'Artefacto no encontrado.',
