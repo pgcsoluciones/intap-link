@@ -2,21 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface Props {
   file: File
-  aspectRatio?: number   // width/height — default 1 (square)
-  outputWidth?: number   // canvas output px — default 400
-  /** Maximum dimension (px) of the internal working image. Larger photos are
-   *  pre-downscaled to save memory and speed up the drag interaction.
-   *  Default: 2000 */
+  aspectRatio?: number
+  outputWidth?: number
   maxInputDimension?: number
   onSave: (blob: Blob) => void
   onCancel: () => void
 }
 
-const PREVIEW_W  = 272
-const JPEG_Q     = 0.82   // output quality — good balance size vs sharpness
+const PREVIEW_W = 272
+const JPEG_Q = 0.82
 
-/** Downscale a loaded HTMLImageElement to a canvas if either dimension exceeds
- *  `maxDim`. Returns a data-URL (or the original object-URL unchanged). */
 function preshrink(img: HTMLImageElement, maxDim: number): { src: string; w: number; h: number } {
   const { naturalWidth: nw, naturalHeight: nh } = img
   if (nw <= maxDim && nh <= maxDim) return { src: img.src, w: nw, h: nh }
@@ -24,7 +19,8 @@ function preshrink(img: HTMLImageElement, maxDim: number): { src: string; w: num
   const tw = Math.round(nw * scale)
   const th = Math.round(nh * scale)
   const c = document.createElement('canvas')
-  c.width = tw; c.height = th
+  c.width = tw
+  c.height = th
   c.getContext('2d')!.drawImage(img, 0, 0, tw, th)
   return { src: c.toDataURL('image/jpeg', 0.95), w: tw, h: th }
 }
@@ -48,32 +44,39 @@ export default function ImageCropModal({
   const [dragging, setDragging] = useState(false)
 
   const imgRef = useRef<HTMLImageElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
   const lastPointerRef = useRef({ x: 0, y: 0 })
 
-  // Load the file → pre-shrink if oversized → use as working image
   useEffect(() => {
     const objUrl = URL.createObjectURL(file)
     const tmp = new Image()
+    let workingObjectUrl = objUrl
+
     tmp.onload = () => {
       const { src, w, h } = preshrink(tmp, maxInputDimension)
-      // If preshrink returned a data-URL we no longer need the object URL
-      if (src !== objUrl) URL.revokeObjectURL(objUrl)
+      if (src !== objUrl) {
+        URL.revokeObjectURL(objUrl)
+        workingObjectUrl = ''
+      }
       setImgSrc(src)
       setNaturalW(w)
       setNaturalH(h)
+      setZoom(1)
+      setOffset({ x: 0, y: 0 })
     }
     tmp.src = objUrl
-    // Cleanup: only revoke the object URL if preshrink didn't already
-    return () => { if (imgSrc !== objUrl) URL.revokeObjectURL(objUrl) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file])
 
-  // Displayed image dimensions inside the preview box
-  const displayW = PREVIEW_W * zoom
-  const displayH = (naturalH / naturalW) * PREVIEW_W * zoom
+    return () => {
+      if (workingObjectUrl) URL.revokeObjectURL(workingObjectUrl)
+    }
+  }, [file, maxInputDimension])
 
-  // Clamp offset so the image always covers the preview area
+  const coverScale = Math.max(
+    PREVIEW_W / naturalW,
+    PREVIEW_H / naturalH,
+  )
+  const displayW = naturalW * coverScale * zoom
+  const displayH = naturalH * coverScale * zoom
+
   const clamp = useCallback(
     (off: { x: number; y: number }) => {
       const minX = PREVIEW_W - displayW
@@ -83,32 +86,42 @@ export default function ImageCropModal({
         y: Math.min(0, Math.max(minY, off.y)),
       }
     },
-    [displayW, displayH, PREVIEW_W, PREVIEW_H],
+    [displayW, displayH, PREVIEW_H],
   )
 
-  // Center image when it first renders (natural dims already set by preshrink)
+  const centerCurrentImage = useCallback(() => {
+    setOffset({
+      x: (PREVIEW_W - displayW) / 2,
+      y: (PREVIEW_H - displayH) / 2,
+    })
+  }, [displayW, displayH, PREVIEW_H])
+
   const handleImageLoad = () => {
-    const img = imgRef.current
-    if (!img) return
-    const nw = img.naturalWidth  || naturalW
-    const nh = img.naturalHeight || naturalH
-
-    // Pick a default zoom so the image fills the preview frame
-    const fitZoom = Math.max(PREVIEW_W / nw, PREVIEW_H / nh)
-    const initZoom = Math.max(1, fitZoom)
-    setZoom(initZoom)
-
-    const dw = PREVIEW_W * initZoom
-    const dh = (nh / nw) * PREVIEW_W * initZoom
-    setOffset({ x: (PREVIEW_W - dw) / 2, y: (PREVIEW_H - dh) / 2 })
+    centerCurrentImage()
   }
 
-  // Re-clamp when zoom changes
+  const previousZoomRef = useRef(1)
   useEffect(() => {
-    setOffset((prev) => clamp(prev))
-  }, [zoom, clamp])
+    const previousZoom = previousZoomRef.current
+    if (previousZoom === zoom) {
+      setOffset((prev) => clamp(prev))
+      return
+    }
 
-  // Pointer drag handlers
+    setOffset((prev) => {
+      const oldDisplayW = displayW / zoom * previousZoom
+      const oldDisplayH = displayH / zoom * previousZoom
+      const centerX = (-prev.x + PREVIEW_W / 2) / Math.max(oldDisplayW, 1)
+      const centerY = (-prev.y + PREVIEW_H / 2) / Math.max(oldDisplayH, 1)
+      const next = {
+        x: PREVIEW_W / 2 - centerX * displayW,
+        y: PREVIEW_H / 2 - centerY * displayH,
+      }
+      return clamp(next)
+    })
+    previousZoomRef.current = zoom
+  }, [zoom, displayW, displayH, clamp, PREVIEW_H])
+
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId)
     lastPointerRef.current = { x: e.clientX, y: e.clientY }
@@ -125,7 +138,6 @@ export default function ImageCropModal({
 
   const onPointerUp = () => setDragging(false)
 
-  // Export cropped image via Canvas
   const handleConfirm = () => {
     const img = imgRef.current
     if (!img) return
@@ -136,14 +148,11 @@ export default function ImageCropModal({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Map preview-box coordinates back to natural image coordinates
-    const scaleX = naturalW / displayW
-    const scaleY = naturalH / displayH
-
-    const srcX = -offset.x * scaleX
-    const srcY = -offset.y * scaleY
-    const srcW = PREVIEW_W * scaleX
-    const srcH = PREVIEW_H * scaleY
+    const renderedScale = coverScale * zoom
+    const srcX = -offset.x / renderedScale
+    const srcY = -offset.y / renderedScale
+    const srcW = PREVIEW_W / renderedScale
+    const srcH = PREVIEW_H / renderedScale
 
     ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outputWidth, outputHeight)
     canvas.toBlob(
@@ -161,9 +170,7 @@ export default function ImageCropModal({
           <button onClick={onCancel} className="text-slate-400 hover:text-white text-lg leading-none">✕</button>
         </div>
 
-        {/* Preview / drag area */}
         <div
-          ref={containerRef}
           className="relative overflow-hidden rounded-xl mx-auto select-none"
           style={{ width: PREVIEW_W, height: PREVIEW_H, cursor: dragging ? 'grabbing' : 'grab', background: '#000' }}
           onPointerDown={onPointerDown}
@@ -190,20 +197,11 @@ export default function ImageCropModal({
             />
           )}
 
-          {/* Rule-of-thirds overlay */}
-          <svg
-            className="absolute inset-0 pointer-events-none"
-            width={PREVIEW_W}
-            height={PREVIEW_H}
-            style={{ opacity: 0.25 }}
-          >
-            {/* Vertical thirds */}
+          <svg className="absolute inset-0 pointer-events-none" width={PREVIEW_W} height={PREVIEW_H} style={{ opacity: 0.25 }}>
             <line x1={PREVIEW_W / 3} y1={0} x2={PREVIEW_W / 3} y2={PREVIEW_H} stroke="white" strokeWidth="1" />
             <line x1={(PREVIEW_W * 2) / 3} y1={0} x2={(PREVIEW_W * 2) / 3} y2={PREVIEW_H} stroke="white" strokeWidth="1" />
-            {/* Horizontal thirds */}
             <line x1={0} y1={PREVIEW_H / 3} x2={PREVIEW_W} y2={PREVIEW_H / 3} stroke="white" strokeWidth="1" />
             <line x1={0} y1={(PREVIEW_H * 2) / 3} x2={PREVIEW_W} y2={(PREVIEW_H * 2) / 3} stroke="white" strokeWidth="1" />
-            {/* Border */}
             <rect x={1} y={1} width={PREVIEW_W - 2} height={PREVIEW_H - 2} fill="none" stroke="white" strokeWidth="1.5" />
           </svg>
         </div>
@@ -212,7 +210,6 @@ export default function ImageCropModal({
           Arrastra para encuadrar • Desliza para hacer zoom
         </p>
 
-        {/* Zoom slider */}
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400 w-5 text-center">🔍</span>
           <input
@@ -227,18 +224,11 @@ export default function ImageCropModal({
           <span className="text-xs text-slate-400 w-8 text-right">{zoom.toFixed(1)}×</span>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-slate-300 hover:bg-white/5 transition-colors"
-          >
+          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-slate-300 hover:bg-white/5 transition-colors">
             Cancelar
           </button>
-          <button
-            onClick={handleConfirm}
-            className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#3b82f6] to-purple-600 text-white text-sm font-bold transition-opacity hover:opacity-90"
-          >
+          <button onClick={handleConfirm} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#3b82f6] to-purple-600 text-white text-sm font-bold transition-opacity hover:opacity-90">
             Usar imagen
           </button>
         </div>
