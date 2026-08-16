@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AdminGuard from './components/admin/AdminGuard'
+import SuperAdminGuard from './components/admin/SuperAdminGuard'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminVerify from './components/admin/AdminVerify'
 import AuthCallback from './components/admin/AuthCallback'
@@ -44,7 +45,6 @@ function UnknownAppRouteRedirect() {
   return null
 }
 
-
 function App() {
   return (
     <BrowserRouter>
@@ -77,9 +77,9 @@ function App() {
         <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><ArtifactActivationAuthenticated /></AdminGuard>} />
         <Route path="/admin/artifacts" element={<AdminGuard requireProfile={false}><ArtifactManager /></AdminGuard>} />
 
-        {/* Super Admin interno */}
-        <Route path="/superadmin" element={<AdminGuard><SuperAdminDashboard /></AdminGuard>} />
-        <Route path="/superadmin/products" element={<AdminGuard><SuperAdminArtifacts /></AdminGuard>} />
+        {/* Super Admin interno: autorización independiente del plan/perfil */}
+        <Route path="/superadmin" element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} />
+        <Route path="/superadmin/products" element={<SuperAdminGuard><SuperAdminArtifacts /></SuperAdminGuard>} />
 
         {/* Panel Premium */}
         <Route path="/admin/links"    element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
