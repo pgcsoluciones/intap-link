@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiGet, apiPatch, apiPost } from '../../lib/api'
 import SuperAdminLayout from './SuperAdminLayout'
+import * as XLSX from 'xlsx'
 
 type ProductType = 'card' | 'ping' | 'bracelet' | 'keychain' | 'stand' | 'qr' | 'other'
 type ArtifactStatus = 'unassigned' | 'available' | 'activated' | 'suspended' | 'revoked'
@@ -202,41 +203,36 @@ export default function SuperAdminArtifacts() {
         generated.push(json.data as CreatedArtifact)
         setBatchResults([...generated])
       }
-      setMessage(`Lote completado: ${generated.length} productos generados. Descarga el CSV antes de salir de la pantalla.`)
+      setMessage(`Lote completado: ${generated.length} productos generados. Descarga el archivo Excel antes de salir de la pantalla.`)
       await loadInventory()
     } catch (err) {
       setBatchResults([...generated])
-      setError(`${err instanceof Error ? err.message : 'No se pudo completar el lote.'}${generated.length ? ` Se conservaron ${generated.length} productos ya generados; descarga sus códigos ahora.` : ''}`)
+      setError(`${err instanceof Error ? err.message : 'No se pudo completar el lote.'}${generated.length ? ` Se conservaron ${generated.length} productos ya generados; descarga sus códigos en Excel ahora.` : ''}`)
       await loadInventory()
     } finally {
       setBatchRunning(false)
     }
   }
 
-  function downloadBatchCsv() {
+  function downloadBatchExcel() {
     if (!batchResults.length) return
-    const escapeCsv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`
-    const rows = [
-      ['tipo_producto', 'codigo_publico', 'codigo_activacion', 'url_publica', 'estado', 'vencimiento'],
-      ...batchResults.map(item => [
-        productLabel(item.product_type),
-        item.public_code,
-        item.activation_code,
-        item.public_url,
-        STATUS_LABELS[item.status],
-        expiresAt || '',
-      ]),
+    const rows = batchResults.map(item => ({
+      'Tipo de producto': productLabel(item.product_type),
+      'Código público': item.public_code,
+      'Código secreto': item.activation_code,
+      'URL física permanente': item.public_url,
+      'Estado': STATUS_LABELS[item.status],
+      'Vencimiento': expiresAt || '',
+      'Fecha de generación': new Date().toLocaleString('es-DO'),
+    }))
+    const workbook = XLSX.utils.book_new()
+    const worksheet = XLSX.utils.json_to_sheet(rows)
+    worksheet['!cols'] = [
+      { wch: 22 }, { wch: 18 }, { wch: 28 }, { wch: 48 },
+      { wch: 16 }, { wch: 22 }, { wch: 24 },
     ]
-    const csv = '\ufeff' + rows.map(row => row.map(escapeCsv).join(',')).join('\r\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `intap-codigos-${productType}-${new Date().toISOString().slice(0, 10)}.csv`
-    document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-    URL.revokeObjectURL(url)
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Códigos INTAP')
+    XLSX.writeFile(workbook, `intap-codigos-${productType}-${new Date().toISOString().slice(0, 10)}.xlsx`)
   }
 
   async function copyValue(label: string, value: string) {
@@ -430,7 +426,7 @@ export default function SuperAdminArtifacts() {
                 <h2 className="mt-1 text-2xl font-black">{batchResults.length} códigos listos</h2>
                 <p className="mt-1 text-xs text-violet-900/70">Los códigos secretos de este lote no podrán recuperarse después. Descarga el archivo ahora.</p>
               </div>
-              <button type="button" onClick={downloadBatchCsv} className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-black text-white">Descargar CSV</button>
+              <button type="button" onClick={downloadBatchExcel} className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-black text-white">Descargar Excel (.xlsx)</button>
             </div>
             <div className="mt-5 max-h-[360px] overflow-auto rounded-2xl bg-white">
               <table className="w-full min-w-[760px] text-left text-xs">

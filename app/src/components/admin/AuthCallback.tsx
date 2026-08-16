@@ -18,6 +18,11 @@ export default function AuthCallback() {
       .then((res) => res.json())
       .then((json: any) => {
         if (json.ok) {
+          const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
+          if (pendingPublicCode) {
+            navigate('/admin/artifacts/activate', { replace: true })
+            return
+          }
           apiGet('/me/artifacts/activation/intent')
             .then((intent: any) => navigate(intent.ok ? '/admin/artifacts/activate' : '/admin', { replace: true }))
             .catch(() => navigate('/admin', { replace: true }))

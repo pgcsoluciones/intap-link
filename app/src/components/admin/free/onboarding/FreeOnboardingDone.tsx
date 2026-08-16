@@ -11,7 +11,7 @@ export default function FreeOnboardingDone() {
           <h1 className="mt-6 text-[30px] font-black tracking-[-0.03em]">¡Listo!</h1>
           <p className="mx-auto mt-2 max-w-xs text-[15px] leading-6 text-slate-500">Tu perfil ya tiene lo esencial. Ahora puedes completarlo o conectar tu producto INTAP.</p>
 
-          <button onClick={() => navigate('/admin/free')} className="mt-7 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white hover:bg-slate-800">Ir a mi panel</button>
+          <button onClick={() => navigate(sessionStorage.getItem('intap_activation_public_code') ? '/admin/artifacts/activate' : '/admin/free')} className="mt-7 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white hover:bg-slate-800">{sessionStorage.getItem('intap_activation_public_code') ? 'Continuar activación' : 'Ir a mi panel'}</button>
           <button onClick={() => navigate('/activate')} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-extrabold text-slate-700 hover:bg-slate-50">Activar mi producto</button>
         </div>
       </section>

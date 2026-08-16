@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../lib/api'
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 
 export default function AdminGuard({ children, requireProfile = true, planScope }: Props) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -22,6 +23,12 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       }
       if (requireProfile && !json.data?.profile_id) {
         navigate('/admin/free/onboarding/slug', { replace: true })
+        return
+      }
+
+      const pendingActivation = sessionStorage.getItem('intap_activation_public_code')
+      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate') {
+        navigate('/admin/artifacts/activate', { replace: true })
         return
       }
 
@@ -39,7 +46,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
     }).catch(() => {
       navigate('/admin/login', { replace: true })
     })
-  }, [navigate, planScope, requireProfile])
+  }, [location.pathname, navigate, planScope, requireProfile])
 
   if (!ready) {
     return (
