@@ -5,7 +5,6 @@ export type SuperAdminSection =
   | 'subscribers'
   | 'billing'
   | 'paymentLinks'
-  | 'products'
   | 'landing'
   | 'plans'
   | 'gateways'
@@ -13,12 +12,14 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-const sidebarItems: Array<{ key: SuperAdminSection; label: string; href?: string }> = [
+type SuperAdminNavSection = SuperAdminSection | 'products'
+
+const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
   { key: 'billing', label: 'Billing / Pagos' },
   { key: 'paymentLinks', label: 'Enlaces de pago' },
-  { key: 'products', label: 'Productos / códigos', href: '/superadmin/products' },
+  { key: 'products', label: 'Productos / códigos' },
   { key: 'landing', label: 'Landing marketing' },
   { key: 'plans', label: 'Planes y módulos' },
   { key: 'gateways', label: 'Pasarelas' },
@@ -28,7 +29,7 @@ const sidebarItems: Array<{ key: SuperAdminSection; label: string; href?: string
 ]
 
 type SuperAdminLayoutProps = {
-  currentSection?: SuperAdminSection
+  currentSection?: SuperAdminNavSection
   onNavigate?: (section: SuperAdminSection) => void
   onLogout?: () => void
   children: ReactNode
@@ -40,6 +41,16 @@ export default function SuperAdminLayout({
   onLogout,
   children,
 }: SuperAdminLayoutProps) {
+  function navigate(section: SuperAdminNavSection) {
+    if (section === 'products') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/products') {
+        window.location.href = '/superadmin/products'
+      }
+      return
+    }
+    onNavigate?.(section)
+  }
+
   return (
     <div
       style={{
@@ -87,13 +98,7 @@ export default function SuperAdminLayout({
               <button
                 key={item.key}
                 type="button"
-                onClick={() => {
-                  if (item.href) {
-                    window.location.href = item.href
-                    return
-                  }
-                  onNavigate?.(item.key)
-                }}
+                onClick={() => navigate(item.key)}
                 style={{
                   textAlign: 'left',
                   border: 'none',
