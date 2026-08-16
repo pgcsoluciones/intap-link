@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 interface Props {
   file: File
@@ -12,17 +12,69 @@ interface Props {
 const PREVIEW_W = 272
 const JPEG_Q = 0.82
 
-function preshrink(img: HTMLImageElement, maxDim: number): { src: string; w: number; h: number } {
-  const { naturalWidth: nw, naturalHeight: nh } = img
-  if (nw <= maxDim && nh <= maxDim) return { src: img.src, w: nw, h: nh }
-  const scale = maxDim / Math.max(nw, nh)
-  const tw = Math.round(nw * scale)
-  const th = Math.round(nh * scale)
-  const c = document.createElement('canvas')
-  c.width = tw
-  c.height = th
-  c.getContext('2d')!.drawImage(img, 0, 0, tw, th)
-  return { src: c.toDataURL('image/jpeg', 0.95), w: tw, h: th }
+type WorkingImage = {
+  src: string
+  width: number
+  height: number
+}
+
+type Frame = {
+  zoom: number
+  fx: number
+  fy: number
+}
+
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value))
+}
+
+function computeCover(
+  imageWidth: number,
+  imageHeight: number,
+  frame: Frame,
+  targetWidth: number,
+  targetHeight: number,
+) {
+  const zoom = Math.max(1, frame.zoom)
+  const fx = clamp01(frame.fx)
+  const fy = clamp01(frame.fy)
+  const targetAspect = targetWidth / targetHeight
+
+  let baseWidth: number
+  let baseHeight: number
+
+  if (imageWidth / imageHeight > targetAspect) {
+    baseHeight = imageHeight
+    baseWidth = imageHeight * targetAspect
+  } else {
+    baseWidth = imageWidth
+    baseHeight = imageWidth / targetAspect
+  }
+
+  const cropWidth = baseWidth / zoom
+  const cropHeight = baseHeight / zoom
+  const cropX = (imageWidth - cropWidth) * fx
+  const cropY = (imageHeight - cropHeight) * fy
+
+  return { cropX, cropY, cropWidth, cropHeight }
+}
+
+function prepareWorkingImage(img: HTMLImageElement, maxDimension: number): WorkingImage {
+  const { naturalWidth, naturalHeight } = img
+  if (naturalWidth <= maxDimension && naturalHeight <= maxDimension) {
+    return { src: img.src, width: naturalWidth, height: naturalHeight }
+  }
+
+  const scale = maxDimension / Math.max(naturalWidth, naturalHeight)
+  const width = Math.max(1, Math.round(naturalWidth * scale))
+  const height = Math.max(1, Math.round(naturalHeight * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')
+  if (!context) return { src: img.src, width: naturalWidth, height: naturalHeight }
+  context.drawImage(img, 0, 0, width, height)
+  return { src: canvas.toDataURL('image/jpeg', 0.95), width, height }
 }
 
 export default function ImageCropModal({
@@ -33,202 +85,192 @@ export default function ImageCropModal({
   onSave,
   onCancel,
 }: Props) {
-  const PREVIEW_H = Math.round(PREVIEW_W / aspectRatio)
+  const previewHeight = Math.round(PREVIEW_W / aspectRatio)
   const outputHeight = Math.round(outputWidth / aspectRatio)
 
-  const [imgSrc, setImgSrc] = useState('')
-  const [naturalW, setNaturalW] = useState(1)
-  const [naturalH, setNaturalH] = useState(1)
-  const [zoom, setZoom] = useState(1)
-  const [offset, setOffset] = useState({ x: 0, y: 0 })
+  const imageRef = useRef<HTMLImageElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const pointerRef = useRef<{ x: number; y: number } | null>(null)
+
+  const [working, setWorking] = useState<WorkingImage | null>(null)
+  const [frame, setFrame] = useState<Frame>({ zoom: 1, fx: 0.5, fy: 0.5 })
   const [dragging, setDragging] = useState(false)
 
-  const imgRef = useRef<HTMLImageElement>(null)
-  const lastPointerRef = useRef({ x: 0, y: 0 })
+  const crop = useMemo(() => {
+    if (!working) return null
+    return computeCover(working.width, working.height, frame, PREVIEW_W, previewHeight)
+  }, [working, frame, previewHeight])
 
   useEffect(() => {
-    const objUrl = URL.createObjectURL(file)
-    const tmp = new Image()
-    let workingObjectUrl = objUrl
+    const objectUrl = URL.createObjectURL(file)
+    const source = new Image()
+    let objectUrlRevoked = false
 
-    tmp.onload = () => {
-      const { src, w, h } = preshrink(tmp, maxInputDimension)
-      if (src !== objUrl) {
-        URL.revokeObjectURL(objUrl)
-        workingObjectUrl = ''
+    source.onload = () => {
+      const prepared = prepareWorkingImage(source, maxInputDimension)
+      if (prepared.src !== objectUrl) {
+        URL.revokeObjectURL(objectUrl)
+        objectUrlRevoked = true
       }
-      setImgSrc(src)
-      setNaturalW(w)
-      setNaturalH(h)
-      setZoom(1)
-      setOffset({ x: 0, y: 0 })
+
+      const workingImage = new Image()
+      workingImage.onload = () => {
+        imageRef.current = workingImage
+        setWorking(prepared)
+        setFrame({ zoom: 1, fx: 0.5, fy: 0.5 })
+      }
+      workingImage.src = prepared.src
     }
-    tmp.src = objUrl
+    source.src = objectUrl
 
     return () => {
-      if (workingObjectUrl) URL.revokeObjectURL(workingObjectUrl)
+      imageRef.current = null
+      if (!objectUrlRevoked) URL.revokeObjectURL(objectUrl)
     }
   }, [file, maxInputDimension])
 
-  const coverScale = Math.max(
-    PREVIEW_W / naturalW,
-    PREVIEW_H / naturalH,
-  )
-  const displayW = naturalW * coverScale * zoom
-  const displayH = naturalH * coverScale * zoom
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const image = imageRef.current
+    if (!canvas || !image || !crop) return
 
-  const clamp = useCallback(
-    (off: { x: number; y: number }) => {
-      const minX = PREVIEW_W - displayW
-      const minY = PREVIEW_H - displayH
-      return {
-        x: Math.min(0, Math.max(minX, off.x)),
-        y: Math.min(0, Math.max(minY, off.y)),
-      }
-    },
-    [displayW, displayH, PREVIEW_H],
-  )
+    const pixelRatio = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+    canvas.width = Math.round(PREVIEW_W * pixelRatio)
+    canvas.height = Math.round(previewHeight * pixelRatio)
+    canvas.style.width = `${PREVIEW_W}px`
+    canvas.style.height = `${previewHeight}px`
 
-  const centerCurrentImage = useCallback(() => {
-    setOffset({
-      x: (PREVIEW_W - displayW) / 2,
-      y: (PREVIEW_H - displayH) / 2,
-    })
-  }, [displayW, displayH, PREVIEW_H])
+    const context = canvas.getContext('2d')
+    if (!context) return
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+    context.clearRect(0, 0, PREVIEW_W, previewHeight)
+    context.drawImage(
+      image,
+      crop.cropX,
+      crop.cropY,
+      crop.cropWidth,
+      crop.cropHeight,
+      0,
+      0,
+      PREVIEW_W,
+      previewHeight,
+    )
+  }, [crop, previewHeight])
 
-  const handleImageLoad = () => {
-    centerCurrentImage()
+  function changeZoom(nextZoom: number) {
+    setFrame((current) => ({ ...current, zoom: nextZoom }))
   }
 
-  const previousZoomRef = useRef(1)
-  useEffect(() => {
-    const previousZoom = previousZoomRef.current
-    if (previousZoom === zoom) {
-      setOffset((prev) => clamp(prev))
-      return
-    }
-
-    setOffset((prev) => {
-      const oldDisplayW = displayW / zoom * previousZoom
-      const oldDisplayH = displayH / zoom * previousZoom
-      const centerX = (-prev.x + PREVIEW_W / 2) / Math.max(oldDisplayW, 1)
-      const centerY = (-prev.y + PREVIEW_H / 2) / Math.max(oldDisplayH, 1)
-      const next = {
-        x: PREVIEW_W / 2 - centerX * displayW,
-        y: PREVIEW_H / 2 - centerY * displayH,
-      }
-      return clamp(next)
-    })
-    previousZoomRef.current = zoom
-  }, [zoom, displayW, displayH, clamp, PREVIEW_H])
-
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId)
-    lastPointerRef.current = { x: e.clientX, y: e.clientY }
+  function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    pointerRef.current = { x: event.clientX, y: event.clientY }
     setDragging(true)
   }
 
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragging) return
-    const dx = e.clientX - lastPointerRef.current.x
-    const dy = e.clientY - lastPointerRef.current.y
-    lastPointerRef.current = { x: e.clientX, y: e.clientY }
-    setOffset((prev) => clamp({ x: prev.x + dx, y: prev.y + dy }))
+  function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (!dragging || !pointerRef.current || !working || !crop) return
+
+    const dx = event.clientX - pointerRef.current.x
+    const dy = event.clientY - pointerRef.current.y
+    pointerRef.current = { x: event.clientX, y: event.clientY }
+
+    const availableX = Math.max(0, working.width - crop.cropWidth)
+    const availableY = Math.max(0, working.height - crop.cropHeight)
+    const sourceDx = -(dx / PREVIEW_W) * crop.cropWidth
+    const sourceDy = -(dy / previewHeight) * crop.cropHeight
+
+    setFrame((current) => ({
+      ...current,
+      fx: availableX > 0 ? clamp01(current.fx + sourceDx / availableX) : 0.5,
+      fy: availableY > 0 ? clamp01(current.fy + sourceDy / availableY) : 0.5,
+    }))
   }
 
-  const onPointerUp = () => setDragging(false)
+  function onPointerUp(event?: React.PointerEvent<HTMLDivElement>) {
+    if (event?.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    pointerRef.current = null
+    setDragging(false)
+  }
 
-  const handleConfirm = () => {
-    const img = imgRef.current
-    if (!img) return
+  function handleConfirm() {
+    const image = imageRef.current
+    if (!image || !crop) return
 
     const canvas = document.createElement('canvas')
     canvas.width = outputWidth
     canvas.height = outputHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const context = canvas.getContext('2d')
+    if (!context) return
 
-    const renderedScale = coverScale * zoom
-    const srcX = -offset.x / renderedScale
-    const srcY = -offset.y / renderedScale
-    const srcW = PREVIEW_W / renderedScale
-    const srcH = PREVIEW_H / renderedScale
-
-    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outputWidth, outputHeight)
-    canvas.toBlob(
-      (blob) => { if (blob) onSave(blob) },
-      'image/jpeg',
-      JPEG_Q,
+    context.drawImage(
+      image,
+      crop.cropX,
+      crop.cropY,
+      crop.cropWidth,
+      crop.cropHeight,
+      0,
+      0,
+      outputWidth,
+      outputHeight,
     )
+
+    canvas.toBlob((blob) => {
+      if (blob) onSave(blob)
+    }, 'image/jpeg', JPEG_Q)
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="bg-[#111827] rounded-2xl w-full max-w-sm flex flex-col gap-5 p-5 shadow-2xl">
+      <div className="flex w-full max-w-sm flex-col gap-5 rounded-2xl bg-[#111827] p-5 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-white">Encuadrar imagen</h2>
-          <button onClick={onCancel} className="text-slate-400 hover:text-white text-lg leading-none">✕</button>
+          <button type="button" onClick={onCancel} className="text-lg leading-none text-slate-400 hover:text-white">✕</button>
         </div>
 
         <div
-          className="relative overflow-hidden rounded-xl mx-auto select-none"
-          style={{ width: PREVIEW_W, height: PREVIEW_H, cursor: dragging ? 'grabbing' : 'grab', background: '#000' }}
+          className="relative mx-auto overflow-hidden rounded-xl bg-black select-none"
+          style={{ width: PREVIEW_W, height: previewHeight, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          {imgSrc && (
-            <img
-              ref={imgRef}
-              src={imgSrc}
-              alt=""
-              draggable={false}
-              onLoad={handleImageLoad}
-              style={{
-                position: 'absolute',
-                left: offset.x,
-                top: offset.y,
-                width: displayW,
-                height: displayH,
-                userSelect: 'none',
-                pointerEvents: 'none',
-              }}
-            />
-          )}
+          <canvas ref={canvasRef} className="block" />
 
-          <svg className="absolute inset-0 pointer-events-none" width={PREVIEW_W} height={PREVIEW_H} style={{ opacity: 0.25 }}>
-            <line x1={PREVIEW_W / 3} y1={0} x2={PREVIEW_W / 3} y2={PREVIEW_H} stroke="white" strokeWidth="1" />
-            <line x1={(PREVIEW_W * 2) / 3} y1={0} x2={(PREVIEW_W * 2) / 3} y2={PREVIEW_H} stroke="white" strokeWidth="1" />
-            <line x1={0} y1={PREVIEW_H / 3} x2={PREVIEW_W} y2={PREVIEW_H / 3} stroke="white" strokeWidth="1" />
-            <line x1={0} y1={(PREVIEW_H * 2) / 3} x2={PREVIEW_W} y2={(PREVIEW_H * 2) / 3} stroke="white" strokeWidth="1" />
-            <rect x={1} y={1} width={PREVIEW_W - 2} height={PREVIEW_H - 2} fill="none" stroke="white" strokeWidth="1.5" />
+          <svg className="pointer-events-none absolute inset-0" width={PREVIEW_W} height={previewHeight} style={{ opacity: 0.25 }}>
+            <line x1={PREVIEW_W / 3} y1={0} x2={PREVIEW_W / 3} y2={previewHeight} stroke="white" strokeWidth="1" />
+            <line x1={(PREVIEW_W * 2) / 3} y1={0} x2={(PREVIEW_W * 2) / 3} y2={previewHeight} stroke="white" strokeWidth="1" />
+            <line x1={0} y1={previewHeight / 3} x2={PREVIEW_W} y2={previewHeight / 3} stroke="white" strokeWidth="1" />
+            <line x1={0} y1={(previewHeight * 2) / 3} x2={PREVIEW_W} y2={(previewHeight * 2) / 3} stroke="white" strokeWidth="1" />
+            <rect x={1} y={1} width={PREVIEW_W - 2} height={previewHeight - 2} fill="none" stroke="white" strokeWidth="1.5" />
           </svg>
         </div>
 
-        <p className="text-[11px] text-slate-400 text-center -mt-2">
+        <p className="-mt-2 text-center text-[11px] text-slate-400">
           Arrastra para encuadrar • Desliza para hacer zoom
         </p>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400 w-5 text-center">🔍</span>
+          <span className="w-5 text-center text-xs text-slate-400">🔍</span>
           <input
             type="range"
             min={1}
             max={3}
             step={0.01}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
+            value={frame.zoom}
+            onChange={(event) => changeZoom(Number(event.target.value))}
             className="flex-1 accent-[#3b82f6]"
           />
-          <span className="text-xs text-slate-400 w-8 text-right">{zoom.toFixed(1)}×</span>
+          <span className="w-8 text-right text-xs text-slate-400">{frame.zoom.toFixed(1)}×</span>
         </div>
 
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-white/10 text-sm text-slate-300 hover:bg-white/5 transition-colors">
+          <button type="button" onClick={onCancel} className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5">
             Cancelar
           </button>
-          <button onClick={handleConfirm} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#3b82f6] to-purple-600 text-white text-sm font-bold transition-opacity hover:opacity-90">
+          <button type="button" onClick={handleConfirm} disabled={!working} className="flex-1 rounded-xl bg-gradient-to-r from-[#3b82f6] to-purple-600 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40">
             Usar imagen
           </button>
         </div>
