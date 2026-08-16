@@ -113,12 +113,15 @@ export function ArtifactActivationAuthenticated() {
     Promise.all([apiGet('/me'), apiGet('/me/artifacts/activation/intent')])
       .then(async ([me, pending]: any[]) => {
         if (!pending.ok) { navigate('/activate', { replace: true }); return }
-        const result: any = await apiPost('/me/artifacts/activate', {})
+        if (!me.ok) { setError('No se pudo identificar tu cuenta.'); return }
+
+        // El perfil se envía dentro del claim atómico. Antes se reclamaba con
+        // profile_id=null y luego se hacía un PATCH separado; si ese PATCH
+        // fallaba, el código quedaba usado y el producto activado pero sin destino.
+        const profileId = me.data?.profile_id || null
+        const result: any = await apiPost('/me/artifacts/activate', { profile_id: profileId })
         if (!result.ok) { setError(result.error || 'No se pudo activar el producto.'); return }
         setArtifact(result.data)
-        if (me.ok && me.data?.profile_id && result.data?.profile_id == null) {
-          return apiPatch(`/me/artifacts/${result.data.id}/profile`, { profile_id: me.data.profile_id }).then((linked: any) => { if (linked.ok) setArtifact(linked.data) })
-        }
       })
       .catch(() => setError('No se pudo completar la activación.'))
       .finally(() => setLoading(false))
