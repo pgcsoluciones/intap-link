@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
+import ImageCropModal from '../ImageCropModal'
 import { FreeBackButton, FreeLimitUpgradeCard, FreeUpgradeCard } from './FreePanelUi'
 
 type Service = {
@@ -57,6 +58,7 @@ export default function FreeServices() {
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [imageTargetId, setImageTargetId] = useState<string | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({})
   const [sectionTitle, setSectionTitle] = useState<(typeof SERVICE_TITLES)[number]>('Servicios')
 
@@ -133,23 +135,40 @@ export default function FreeServices() {
     }
   }
 
-  const uploadImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const chooseServiceImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (imageInputRef.current) imageInputRef.current.value = ''
     if (!file || !imageTargetId) return
+    setCropFile(file)
+    setError('')
+  }
+
+  const cancelCrop = () => {
+    setCropFile(null)
+    setImageTargetId(null)
+  }
+
+  const saveCroppedServiceImage = async (blob: Blob) => {
+    if (!cropFile || !imageTargetId) return
+    const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'servicio'
+    const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
+
     setSaving(true)
     setError('')
     try {
-      const optimized = await optimizeServiceImage(file)
+      const optimized = await optimizeServiceImage(croppedFile)
       const fd = new FormData()
       fd.append('file', optimized, optimized.name)
       const json: any = await apiUpload(`/me/products/${imageTargetId}/image`, fd)
-      if (!json.ok) return setError(json.error || 'No se pudo cargar la imagen del servicio.')
+      if (!json.ok) {
+        setError(json.error || 'No se pudo cargar la imagen del servicio.')
+        return
+      }
       await load()
+      cancelCrop()
     } catch {
       setError('No pudimos procesar la imagen del servicio.')
     } finally {
-      setImageTargetId(null)
       setSaving(false)
     }
   }
@@ -226,7 +245,7 @@ export default function FreeServices() {
           ))}
         </section>
 
-        <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={uploadImage} className="hidden" />
+        <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseServiceImage} className="hidden" />
 
         <form onSubmit={add} className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-black">Agregar servicio</h2>
@@ -240,6 +259,16 @@ export default function FreeServices() {
         {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Básico para ampliar tu perfil." />}
         <div className="mt-5"><FreeUpgradeCard compact /></div>
       </div>
+
+      {cropFile && imageTargetId && (
+        <ImageCropModal
+          file={cropFile}
+          aspectRatio={16 / 9}
+          outputWidth={1200}
+          onSave={(blob) => { void saveCroppedServiceImage(blob) }}
+          onCancel={cancelCrop}
+        />
+      )}
     </main>
   )
 }
