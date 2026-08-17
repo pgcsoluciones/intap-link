@@ -13,14 +13,14 @@ const BUILDER_IMAGES = [
 const STATUS_MESSAGES = [
   'Nuestro equipo está trabajando para entregarte algo chulo.',
   'Estamos preparando una base pensada para tu actividad comercial.',
-  'Organizando textos, imágenes y secciones para que tengas un buen punto de partida.',
-  'Las cosas buenas se hacen con cuidado…',
+  'Estamos colocando textos, imágenes y secciones de ejemplo para que no empieces desde cero.',
+  'Recuerda: estos son datos base. Luego debes cambiarlos por tus textos, fotos y datos reales.',
   'Ya casi, casi… estamos dando los últimos toques.',
-  'Un momento más. Queremos que cuando lo veas ya se sienta como tu perfil.',
+  'Tu base estará lista en un momento. Después podrás revisar todo antes de continuar.',
 ]
 
-const FIRST_BUILD_MS = 42000
-const SECOND_BUILD_MS = 26000
+const FIRST_BUILD_MS = 30000
+const SECOND_BUILD_MS = 20000
 
 export default function FreeOnboardingBuilder() {
   const navigate = useNavigate()
@@ -40,13 +40,13 @@ export default function FreeOnboardingBuilder() {
     if (done || error) return
     const imageTimer = window.setInterval(() => {
       setImageIndex((value) => (value + 1) % BUILDER_IMAGES.length)
-    }, 6200)
+    }, 5000)
     const messageTimer = window.setInterval(() => {
       setStatusIndex((value) => Math.min(value + 1, STATUS_MESSAGES.length - 1))
     }, Math.floor(buildDuration / STATUS_MESSAGES.length))
     const progressTimer = window.setInterval(() => {
       setProgress((value) => Math.min(96, value + 2))
-    }, Math.max(500, Math.floor(buildDuration / 46)))
+    }, Math.max(400, Math.floor(buildDuration / 46)))
     return () => {
       window.clearInterval(imageTimer)
       window.clearInterval(messageTimer)
@@ -131,7 +131,7 @@ export default function FreeOnboardingBuilder() {
             <p className="mt-5 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
             <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.04em]">¡Tu perfil base está listo!</h1>
             <p className="mt-3 text-[15px] leading-6 text-slate-500">Ya preparamos {variant === 2 ? 'una nueva propuesta' : 'una configuración inicial'} según tu actividad comercial. Ahora queremos que la veas antes de seguir.</p>
-            <div className="mt-4 rounded-2xl bg-cyan-50 p-4 text-sm leading-6 text-slate-600">Todavía es una vista previa y no está lista para publicarse. Después te guiaremos para reemplazar o confirmar tus datos reales.</div>
+            <div className="mt-4 rounded-2xl bg-cyan-50 p-4 text-sm leading-6 text-slate-600">Esta propuesta usa contenido e imágenes de ejemplo. Antes de publicar te guiaremos para sustituirlos por la información real de tu negocio.</div>
             <button type="button" onClick={() => navigate('/admin/free/onboarding/review')} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">Ver mi perfil base</button>
           </div>
         </section>
@@ -153,7 +153,7 @@ export default function FreeOnboardingBuilder() {
             src={`${builderMediaBase}${BUILDER_IMAGES[imageIndex]}`}
             alt="Asistentes preparando tu perfil"
             className="absolute inset-0 h-full w-full object-contain p-2"
-            style={{ animation: 'kawvoWorkerCross 6.2s ease-in-out both' }}
+            style={{ animation: 'kawvoWorkerCross 5s ease-in-out both' }}
           />
         </div>
 
