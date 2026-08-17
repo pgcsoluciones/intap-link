@@ -130,7 +130,7 @@ export default function FreeDashboard() {
 
           {watermarkUpsellOpen && (
             <div className="border-t border-violet-100 bg-violet-50/70 p-4">
-              <p className="text-sm font-black text-slate-900">Haz tu perfil más tuyo</p>
+              <p className="text-sm font-black text-slate-900">Personaliza aún más tu perfil</p>
               <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Básico.</p>
               <a
                 href={basicPlanWhatsAppUrl()}
