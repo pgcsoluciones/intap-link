@@ -79,13 +79,7 @@ export default function FreeDashboard() {
           </div>
           <div className="flex items-center gap-2">
             {hasSuperAdminAccess && (
-              <button
-                type="button"
-                onClick={() => navigate('/superadmin')}
-                className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white"
-              >
-                Super Admin
-              </button>
+              <button type="button" onClick={() => navigate('/superadmin')} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white">Super Admin</button>
             )}
             <button onClick={handleLogout} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">Salir</button>
           </div>
@@ -111,20 +105,12 @@ export default function FreeDashboard() {
         </article>
 
         <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
-          <button
-            type="button"
-            onClick={() => setWatermarkUpsellOpen((current) => !current)}
-            className="flex w-full items-center justify-between gap-4 p-4 text-left"
-            aria-expanded={watermarkUpsellOpen}
-          >
+          <button type="button" onClick={() => setWatermarkUpsellOpen((current) => !current)} className="flex w-full items-center justify-between gap-4 p-4 text-left" aria-expanded={watermarkUpsellOpen}>
             <span className="min-w-0">
               <span className="block text-sm font-black text-slate-900">Quitar marca de agua</span>
               <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Básico</span>
             </span>
-            <span
-              aria-hidden="true"
-              className={`relative h-7 w-12 shrink-0 rounded-full transition ${watermarkUpsellOpen ? 'bg-violet-600' : 'bg-slate-200'}`}
-            >
+            <span aria-hidden="true" className={`relative h-7 w-12 shrink-0 rounded-full transition ${watermarkUpsellOpen ? 'bg-violet-600' : 'bg-slate-200'}`}>
               <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${watermarkUpsellOpen ? 'left-6' : 'left-1'}`} />
             </span>
           </button>
@@ -133,24 +119,13 @@ export default function FreeDashboard() {
             <div className="border-t border-violet-100 bg-violet-50/70 p-4">
               <p className="text-sm font-black text-slate-900">Personaliza aún más tu perfil</p>
               <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Básico.</p>
-              <a
-                href={basicPlanWhatsAppUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm"
-              >
-                Conocer Plan Básico
-              </a>
+              <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Plan Básico</a>
             </div>
           )}
         </section>
 
         {hasSuperAdminAccess && (
-          <button
-            type="button"
-            onClick={() => navigate('/superadmin')}
-            className="flex w-full items-center justify-between rounded-[22px] border border-slate-800 bg-slate-950 p-4 text-left text-white shadow-sm"
-          >
+          <button type="button" onClick={() => navigate('/superadmin')} className="flex w-full items-center justify-between rounded-[22px] border border-slate-800 bg-slate-950 p-4 text-left text-white shadow-sm">
             <span>
               <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-emerald-300">Acceso interno</span>
               <span className="mt-1 block text-sm font-black">Abrir Super Admin</span>
@@ -165,21 +140,8 @@ export default function FreeDashboard() {
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
             <p className="mt-2 truncate text-sm font-black text-cyan-700">{publicUrl.replace(/^https?:\/\//, '')}</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <a
-                href={`${publicUrl}?preview=1`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700"
-              >
-                Vista previa
-              </a>
-              <button
-                type="button"
-                onClick={() => void navigator.clipboard?.writeText(publicUrl)}
-                className="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600"
-              >
-                Copiar enlace
-              </button>
+              <a href={`${publicUrl}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Vista previa</a>
+              <button type="button" onClick={() => void navigator.clipboard?.writeText(publicUrl)} className="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">Copiar enlace</button>
             </div>
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
               <div>
@@ -213,7 +175,7 @@ export default function FreeDashboard() {
 
         <FreeUpgradeCard />
 
-        {me?.slug && me?.email && <FreeProfileDangerZone slug={me.slug} email={me.email} />}
+        {me?.slug && <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />}
       </section>
     </main>
   )
