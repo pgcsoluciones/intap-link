@@ -32,7 +32,7 @@ const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
 
 type SuperAdminLayoutProps = {
   currentSection?: SuperAdminNavSection
-  onNavigate?: (section: SuperAdminNavSection) => void
+  onNavigate?: (section: any) => void
   onLogout?: () => void
   children: ReactNode
 }
