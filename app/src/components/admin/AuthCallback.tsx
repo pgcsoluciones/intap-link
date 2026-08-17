@@ -24,8 +24,8 @@ export default function AuthCallback() {
             return
           }
           apiGet('/me/artifacts/activation/intent')
-            .then((intent: any) => navigate(intent.ok ? '/admin/artifacts/activate' : '/admin', { replace: true }))
-            .catch(() => navigate('/admin', { replace: true }))
+            .then((intent: any) => navigate(intent.ok ? '/admin/artifacts/activate' : '/admin/free/onboarding/welcome', { replace: true }))
+            .catch(() => navigate('/admin/free/onboarding/welcome', { replace: true }))
         } else {
           setError(json.error || 'Enlace inválido o expirado')
         }
@@ -39,15 +39,15 @@ export default function AuthCallback() {
         <div className="w-full rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
           {error ? (
             <>
-              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-rose-500">INTAP LINK</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-rose-500">KAWVO LINK</p>
               <h1 className="mt-3 text-xl font-black">No pudimos abrir este enlace</h1>
               <p className="mt-2 text-sm leading-6 text-slate-500">{error}</p>
               <a href="/admin/login" className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">Solicitar nuevo acceso</a>
             </>
           ) : (
             <>
-              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">INTAP LINK</p>
-              <h1 className="mt-3 text-xl font-black">Preparando tu perfil…</h1>
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
+              <h1 className="mt-3 text-xl font-black">Validando tu acceso…</h1>
               <p className="mt-2 text-sm text-slate-500">Un momento, estamos abriendo tu cuenta.</p>
             </>
           )}
