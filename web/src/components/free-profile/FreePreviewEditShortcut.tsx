@@ -2,6 +2,7 @@ export default function FreePreviewEditShortcut() {
   if (typeof window === 'undefined') return null
   const params = new URLSearchParams(window.location.search)
   if (params.get('preview') !== '1') return null
+  if (params.get('embedded') === '1') return null
 
   const appUrl = (import.meta.env.VITE_APP_URL || 'https://app.intaprd.com').replace(/\/$/, '')
 
