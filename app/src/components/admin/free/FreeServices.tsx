@@ -13,7 +13,9 @@ type Service = {
 
 const MAX_SERVICES = 3
 const DESCRIPTION_LIMIT = 90
-const SERVICE_TITLES = ['Servicios', 'Qué hacemos', 'Lo que ofrezco'] as const
+const SERVICE_TITLE_LIMIT = 60
+const SECTION_DESCRIPTION_LIMIT = 240
+const SERVICE_TITLE_SUGGESTIONS = ['Servicios', 'Qué hacemos', 'Lo que ofrezco'] as const
 
 async function optimizeServiceImage(file: File): Promise<File> {
   const maxDimension = 1200
@@ -69,7 +71,9 @@ export default function FreeServices() {
   const [imageTargetId, setImageTargetId] = useState<string | null>(null)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({})
-  const [sectionTitle, setSectionTitle] = useState<(typeof SERVICE_TITLES)[number]>('Servicios')
+  const [sectionTitle, setSectionTitle] = useState('Servicios')
+  const [sectionDescription, setSectionDescription] = useState('')
+  const [savingSection, setSavingSection] = useState(false)
 
   const canAdd = useMemo(() => items.length < MAX_SERVICES, [items.length])
 
@@ -79,21 +83,37 @@ export default function FreeServices() {
     if (meJson.ok && meJson.data) {
       const td = meJson.data.templateData && typeof meJson.data.templateData === 'object' ? meJson.data.templateData : {}
       setTemplateData(td)
-      const saved = String(td.services_section_title || 'Servicios') as (typeof SERVICE_TITLES)[number]
-      setSectionTitle(SERVICE_TITLES.includes(saved) ? saved : 'Servicios')
+      const saved = String(td.services_section_title || 'Servicios').trim().slice(0, SERVICE_TITLE_LIMIT)
+      setSectionTitle(saved || 'Servicios')
+      setSectionDescription(String(td.services_section_description || '').trim().slice(0, SECTION_DESCRIPTION_LIMIT))
     }
     setLoading(false)
   }
 
   useEffect(() => { void load() }, [])
 
-  const saveSectionTitle = async (next: (typeof SERVICE_TITLES)[number]) => {
-    setSectionTitle(next)
-    const nextTemplate = { ...templateData, services_section_title: next }
+  const saveSectionContent = async (nextTitle = sectionTitle, nextDescription = sectionDescription) => {
+    if (savingSection) return
+    const cleanTitle = nextTitle.trim().slice(0, SERVICE_TITLE_LIMIT) || 'Servicios'
+    const cleanDescription = nextDescription.trim().slice(0, SECTION_DESCRIPTION_LIMIT)
+    setSectionTitle(cleanTitle)
+    setSectionDescription(cleanDescription)
+    setSavingSection(true)
+    setError('')
+    const nextTemplate = {
+      ...templateData,
+      services_section_title: cleanTitle,
+      services_section_description: cleanDescription,
+    }
     setTemplateData(nextTemplate)
-    const json: any = await apiPut('/me/profile', { template_data: nextTemplate })
-    if (!json.ok) setError(json.error || 'No se pudo guardar el título de la sección.')
+    try {
+      const json: any = await apiPut('/me/profile', { template_data: nextTemplate })
+      if (!json.ok) setError(json.error || 'No se pudo guardar la presentación de Servicios.')
+    } finally {
+      setSavingSection(false)
+    }
   }
+
 
   const add = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -238,12 +258,39 @@ export default function FreeServices() {
         <p className="mt-2 text-sm leading-6 text-slate-500">Agrega hasta 3 servicios. El detalle se amplía al tocar la card en tu perfil.</p>
 
         <section className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
-          <p className="text-xs font-black text-slate-700">Título visible de la sección</p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {SERVICE_TITLES.map((option) => (
-              <button key={option} type="button" onClick={() => void saveSectionTitle(option)} className={`rounded-xl px-2 py-2.5 text-[11px] font-black ${sectionTitle === option ? 'bg-cyan-600 text-white' : 'bg-slate-50 text-slate-600'}`}>{option}</button>
+          <p className="text-xs font-black text-slate-700">Presentación de la sección</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">En el perfil se mostrará “Nuestros servicios”, seguido de este título y una descripción general de hasta 4 líneas.</p>
+
+          <label className="mt-4 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">Título principal</label>
+          <input
+            value={sectionTitle}
+            onChange={(event) => setSectionTitle(event.target.value.slice(0, SERVICE_TITLE_LIMIT))}
+            onBlur={() => void saveSectionContent()}
+            maxLength={SERVICE_TITLE_LIMIT}
+            placeholder="Ej. Soluciones industriales"
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-cyan-400"
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SERVICE_TITLE_SUGGESTIONS.map((option) => (
+              <button key={option} type="button" onClick={() => { setSectionTitle(option); void saveSectionContent(option, sectionDescription) }} className="rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-black text-slate-500">{option}</button>
             ))}
           </div>
+
+          <label className="mt-4 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">Descripción general</label>
+          <textarea
+            value={sectionDescription}
+            onChange={(event) => setSectionDescription(event.target.value.slice(0, SECTION_DESCRIPTION_LIMIT))}
+            onBlur={() => void saveSectionContent()}
+            maxLength={SECTION_DESCRIPTION_LIMIT}
+            rows={4}
+            placeholder="Describe de forma general qué tipo de soluciones o servicios ofreces."
+            className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-5 outline-none focus:border-cyan-400"
+          />
+          <div className="mt-1 flex items-center justify-between text-[11px]">
+            <span className="text-slate-400">Hasta 4 líneas visibles en el perfil</span>
+            <span className="font-bold text-slate-500">{sectionDescription.length}/{SECTION_DESCRIPTION_LIMIT}</span>
+          </div>
+          <button type="button" disabled={savingSection} onClick={() => void saveSectionContent()} className="mt-3 w-full rounded-xl bg-cyan-600 px-3 py-2.5 text-xs font-black text-white disabled:opacity-40">{savingSection ? 'Guardando…' : 'Guardar presentación'}</button>
         </section>
 
         <section className="mt-5 space-y-3">

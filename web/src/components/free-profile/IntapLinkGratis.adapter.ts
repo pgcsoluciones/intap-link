@@ -24,7 +24,6 @@ const QUICK_ACTION_LABELS: Record<FreeProfileQuickActionType, string> = {
 const QUICK_ACTION_TYPES = new Set<FreeProfileQuickActionType>(['call', 'instagram', 'location', 'email', 'tiktok'])
 const ABOUT_TITLES = new Set(['Sobre mí', 'Quién soy', 'Conóceme'])
 const PORTFOLIO_TITLES = new Set(['Portafolio', 'Mis trabajos', 'Proyectos'])
-const SERVICES_TITLES = new Set(['Servicios', 'Qué hacemos', 'Lo que ofrezco'])
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -229,7 +228,8 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       personalBadge: readString(templateData, 'personal_badge') || 'Marca personal',
       aboutTitle: allowedTitle(readString(templateData, 'about_section_title'), ABOUT_TITLES, 'Sobre mí'),
       portfolioTitle: allowedTitle(readString(templateData, 'portfolio_section_title'), PORTFOLIO_TITLES, 'Portafolio'),
-      servicesTitle: allowedTitle(readString(templateData, 'services_section_title'), SERVICES_TITLES, 'Servicios'),
+      servicesTitle: readString(templateData, 'services_section_title').slice(0, 60) || 'Servicios',
+      servicesDescription: readString(templateData, 'services_section_description').slice(0, 240),
       bio: readString(data, 'bio') || starter.bio,
       phone,
       whatsappGreetingName: greetingName,

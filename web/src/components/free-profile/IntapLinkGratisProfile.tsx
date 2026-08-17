@@ -324,13 +324,21 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           )}
 
           {services.length > 0 && (
-            <section className="ilx-section">
-              <h2>{profile.servicesTitle}</h2>
+            <section className="ilx-section ilx-services-section">
+              <div className="ilx-services-heading">
+                <span className="ilx-services-kicker">Nuestros servicios</span>
+                <h2>{profile.servicesTitle}</h2>
+                {profile.servicesDescription && <p>{profile.servicesDescription}</p>}
+              </div>
               <div className="ilx-services" style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
                 {services.map((service) => (
                   <button key={service.id} type="button" className="ilx-service" onClick={() => setModal({ kind: 'service', item: service })}>
                     <div className="ilx-service-media">{service.image ? <img src={service.image} alt={service.title} loading="lazy" decoding="async" /> : <span>{serviceIcon(service.iconKey)}</span>}</div>
-                    <div className="ilx-service-copy"><h3>{service.title}</h3></div>
+                    <div className="ilx-service-copy">
+                      <h3>{service.title}</h3>
+                      <p>{service.description}</p>
+                      <span className="ilx-service-more">Ver detalles</span>
+                    </div>
                   </button>
                 ))}
               </div>

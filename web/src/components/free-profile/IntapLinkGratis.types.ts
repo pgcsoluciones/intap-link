@@ -63,6 +63,7 @@ export type FreeProfileData = {
   aboutTitle: string
   portfolioTitle: string
   servicesTitle: string
+  servicesDescription: string
   bio: string
   phone: string
   whatsappGreetingName: string
