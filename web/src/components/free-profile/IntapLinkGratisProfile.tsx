@@ -351,7 +351,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           </section>
 
           <footer className="ilx-footer">
-            <a href="/">Crea tu perfil gratis con <strong>INTAP Link</strong></a>
+            <a href="/">Creado con <strong>INTAP Link</strong> · Crea el tuyo gratis</a>
             <a className="ilx-footer-login" href={loginUrl()}>Iniciar sesión</a>
           </footer>
         </div>

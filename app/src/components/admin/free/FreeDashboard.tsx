@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut } from '../../../lib/api'
-import { FreeUpgradeCard } from './FreePanelUi'
+import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
 
 interface MeData {
   email: string
@@ -34,6 +34,7 @@ export default function FreeDashboard() {
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
   const [hasSuperAdminAccess, setHasSuperAdminAccess] = useState(false)
+  const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -107,6 +108,41 @@ export default function FreeDashboard() {
             <button onClick={() => navigate('/admin/free/onboarding/identity')} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Editar</button>
           </div>
         </article>
+
+        <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setWatermarkUpsellOpen((current) => !current)}
+            className="flex w-full items-center justify-between gap-4 p-4 text-left"
+            aria-expanded={watermarkUpsellOpen}
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-black text-slate-900">Quitar marca de agua</span>
+              <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Básico</span>
+            </span>
+            <span
+              aria-hidden="true"
+              className={`relative h-7 w-12 shrink-0 rounded-full transition ${watermarkUpsellOpen ? 'bg-violet-600' : 'bg-slate-200'}`}
+            >
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${watermarkUpsellOpen ? 'left-6' : 'left-1'}`} />
+            </span>
+          </button>
+
+          {watermarkUpsellOpen && (
+            <div className="border-t border-violet-100 bg-violet-50/70 p-4">
+              <p className="text-sm font-black text-slate-900">Haz tu perfil más tuyo</p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Básico.</p>
+              <a
+                href={basicPlanWhatsAppUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm"
+              >
+                Conocer Plan Básico
+              </a>
+            </div>
+          )}
+        </section>
 
         {hasSuperAdminAccess && (
           <button

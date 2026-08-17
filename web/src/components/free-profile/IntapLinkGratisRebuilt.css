@@ -873,14 +873,24 @@
 /* FOOTER */
 
 .ilx-footer {
-  padding: 22px 0 8px;
+  padding: 24px 0 8px;
 
   text-align: center;
 
   color:
     var(--ilx-muted);
 
-  font-size: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ilx-footer > a:first-child {
+  font-weight: 650;
+}
+
+.ilx-footer > a:first-child strong {
+  color: var(--ilx-primary);
+  font-weight: 850;
 }
 
 .ilx-footer a {
