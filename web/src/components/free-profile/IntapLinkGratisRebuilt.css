@@ -303,7 +303,7 @@
 
 .ilx-main-cta {
   width: 100%;
-  min-height: 52px;
+  min-height: 58px;
 
   display: flex;
   align-items: center;
@@ -322,13 +322,12 @@
   background:
     var(--ilx-action);
 
-  color:
-    var(--ilx-on-action);
+  color: #fff;
 
   text-decoration: none;
 
-  font-size: 13px;
-  font-weight: 750;
+  font-size: 16px;
+  font-weight: 800;
 
   transition:
     transform 170ms ease,
@@ -337,13 +336,14 @@
 }
 
 .ilx-main-cta svg {
-  width: 17px;
-  height: 17px;
+  width: 20px;
+  height: 20px;
 
   flex: 0 0 auto;
 }
 
 .ilx-main-cta:hover {
+  color: #fff;
   transform: translateY(-2px);
 
   background:
@@ -381,7 +381,7 @@
 .ilx-quick a,
 .ilx-quick button {
   min-width: 0;
-  min-height: 72px;
+  min-height: 76px;
 
   padding: 9px 5px;
 
@@ -434,8 +434,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .ilx-quick a:hover,
@@ -737,8 +737,8 @@
   color:
     var(--ilx-accent);
 
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 750;
 }
 
 .ilx-service:hover {
@@ -779,7 +779,7 @@
 }
 
 .ilx-links-toggle strong {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -820,8 +820,8 @@
 
   text-decoration: none;
 
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 
@@ -865,8 +865,8 @@
 
   cursor: pointer;
 
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 750;
 }
 
 
@@ -1043,7 +1043,7 @@
 
 .ilx-modal-cta {
   width: 100%;
-  min-height: 50px;
+  min-height: 56px;
 
   display: flex;
   align-items: center;
@@ -1056,13 +1056,12 @@
   background:
     var(--ilx-action);
 
-  color:
-    var(--ilx-on-action);
+  color: #fff;
 
   text-decoration: none;
 
-  font-size: 13px;
-  font-weight: 750;
+  font-size: 16px;
+  font-weight: 800;
 
   transition:
     transform 170ms ease,
@@ -1070,6 +1069,7 @@
 }
 
 .ilx-modal-cta:hover {
+  color: #fff;
   transform: translateY(-2px);
 
   background:
@@ -1131,7 +1131,7 @@
 
   .ilx-quick a,
   .ilx-quick button {
-    min-height: 68px;
+    min-height: 76px;
 
     border-radius: 16px;
   }
