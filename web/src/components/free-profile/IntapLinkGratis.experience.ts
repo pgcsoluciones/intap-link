@@ -1,6 +1,7 @@
 import type {
   FreeProfileAppearanceColors,
 } from './IntapLinkGratis.types'
+import { FREE_PROFILE_STARTER_CONTENT, resolveFreeStarterContent, type FreeStarterContentPack } from '../../../../shared/free-profile-starter-content'
 
 export type FreePaletteId =
   | 'intap'
@@ -209,239 +210,24 @@ export function resolvePalette(
   )
 }
 
-export const FREE_STARTER_PACKS: Record<
-  string,
-  FreeProfileStarterPack
-> = {
-  'Moda y accesorios': {
-    category: 'Moda y accesorios',
-    role: 'Moda y accesorios',
-    bio: 'Encuentra propuestas, piezas y detalles pensados para complementar tu estilo.',
-    heroLabel: 'Moda, estilo y accesorios',
-    recommendedPalette: 'coral',
-    services: [
-      { title: 'Colecciones', description: 'Conoce nuestras propuestas y novedades.' },
-      { title: 'Pedidos', description: 'Consulta disponibilidad y opciones por WhatsApp.' },
-      { title: 'Atención personalizada', description: 'Te ayudamos a elegir la opción ideal.' },
-    ],
-    portfolio: [
-      { title: 'Productos destacados', description: 'Una muestra de nuestras piezas y colecciones.' },
-      { title: 'Novedades', description: 'Conoce algunas de nuestras opciones más recientes.' },
-    ],
-  },
-
-  'Salud y bienestar': {
-    category: 'Salud y bienestar',
-    role: 'Salud y bienestar',
-    bio: 'Servicios orientados al cuidado, bienestar y atención de cada persona.',
-    heroLabel: 'Bienestar y cuidado',
-    recommendedPalette: 'esmeralda',
-    services: [
-      { title: 'Atención', description: 'Conoce nuestros principales servicios.' },
-      { title: 'Orientación', description: 'Recibe información antes de tu visita.' },
-      { title: 'Citas', description: 'Consulta disponibilidad por WhatsApp.' },
-    ],
+function toFreeProfileStarterPack(pack: FreeStarterContentPack): FreeProfileStarterPack {
+  return {
+    category: pack.category,
+    role: pack.role,
+    bio: pack.bio,
+    heroLabel: pack.heroLabel,
+    recommendedPalette: pack.recommendedPalette,
+    services: pack.services.map(({ title, description }) => ({ title, description })),
     portfolio: [],
-  },
-
-  'Belleza y estética': {
-    category: 'Belleza y estética',
-    role: 'Belleza y estética',
-    bio: 'Servicios de belleza y cuidado personal pensados para resaltar tu mejor versión.',
-    heroLabel: 'Belleza y cuidado personal',
-    recommendedPalette: 'violeta',
-    services: [
-      { title: 'Tratamientos', description: 'Conoce nuestros servicios de cuidado y estética.' },
-      { title: 'Belleza', description: 'Opciones adaptadas a tus necesidades.' },
-      { title: 'Reservas', description: 'Agenda o solicita información por WhatsApp.' },
-    ],
-    portfolio: [
-      { title: 'Nuestros trabajos', description: 'Una muestra de resultados y servicios realizados.' },
-    ],
-  },
-
-  'Gastronomía': {
-    category: 'Gastronomía',
-    role: 'Gastronomía',
-    bio: 'Sabores, propuestas y experiencias preparadas para disfrutar y compartir.',
-    heroLabel: 'Sabores que conectan',
-    recommendedPalette: 'coral',
-    services: [
-      { title: 'Menú', description: 'Conoce algunas de nuestras opciones.' },
-      { title: 'Pedidos', description: 'Consulta disponibilidad y realiza tu pedido.' },
-      { title: 'Eventos', description: 'Opciones para actividades y ocasiones especiales.' },
-    ],
-    portfolio: [
-      { title: 'Especialidades', description: 'Descubre algunas de nuestras propuestas.' },
-    ],
-  },
-
-  'Tecnología': {
-    category: 'Tecnología',
-    role: 'Tecnología',
-    bio: 'Soluciones tecnológicas para conectar, optimizar y hacer avanzar tus proyectos.',
-    heroLabel: 'Tecnología para avanzar',
-    recommendedPalette: 'oceano',
-    services: [
-      { title: 'Soluciones', description: 'Tecnología adaptada a tus necesidades.' },
-      { title: 'Implementación', description: 'Apoyo en configuración y puesta en marcha.' },
-      { title: 'Soporte', description: 'Acompañamiento cuando lo necesites.' },
-    ],
-    portfolio: [],
-  },
-
-  'Educación': {
-    category: 'Educación',
-    role: 'Educación',
-    bio: 'Aprendizaje, formación y acompañamiento para desarrollar nuevas capacidades.',
-    heroLabel: 'Aprender para avanzar',
-    recommendedPalette: 'oceano',
-    services: [
-      { title: 'Formación', description: 'Conoce nuestros programas y opciones educativas.' },
-      { title: 'Orientación', description: 'Información para elegir la mejor alternativa.' },
-      { title: 'Inscripción', description: 'Consulta disponibilidad y próximos grupos.' },
-    ],
-    portfolio: [],
-  },
-
-  'Arte y diseño': {
-    category: 'Arte y diseño',
-    role: 'Arte y diseño',
-    bio: 'Ideas, creatividad y soluciones visuales desarrolladas para comunicar y destacar.',
-    heroLabel: 'Creatividad que comunica',
-    recommendedPalette: 'violeta',
-    services: [
-      { title: 'Diseño', description: 'Soluciones visuales para proyectos y marcas.' },
-      { title: 'Creatividad', description: 'Propuestas adaptadas a cada necesidad.' },
-      { title: 'Proyectos', description: 'Consulta tu idea y recibe más información.' },
-    ],
-    portfolio: [
-      { title: 'Proyectos realizados', description: 'Una selección de trabajos y propuestas.' },
-    ],
-  },
-
-  'Deportes y fitness': {
-    category: 'Deportes y fitness',
-    role: 'Deportes y fitness',
-    bio: 'Entrenamiento, movimiento y bienestar para avanzar hacia tus objetivos.',
-    heroLabel: 'Movimiento y resultados',
-    recommendedPalette: 'esmeralda',
-    services: [
-      { title: 'Entrenamiento', description: 'Opciones adaptadas a tus objetivos.' },
-      { title: 'Programas', description: 'Conoce nuestras modalidades disponibles.' },
-      { title: 'Información', description: 'Consulta horarios y disponibilidad.' },
-    ],
-    portfolio: [],
-  },
-
-  'Turismo y viajes': {
-    category: 'Turismo y viajes',
-    role: 'Turismo y viajes',
-    bio: 'Experiencias y servicios pensados para descubrir, disfrutar y viajar mejor.',
-    heroLabel: 'Descubre tu próxima experiencia',
-    recommendedPalette: 'oceano',
-    services: [
-      { title: 'Experiencias', description: 'Conoce opciones y destinos disponibles.' },
-      { title: 'Reservas', description: 'Consulta fechas y disponibilidad.' },
-      { title: 'Asistencia', description: 'Recibe orientación antes de tu viaje.' },
-    ],
-    portfolio: [],
-  },
-
-  'Servicios profesionales': {
-    category: 'Servicios profesionales',
-    role: 'Servicios profesionales',
-    bio: 'Experiencia y soluciones profesionales enfocadas en tus necesidades y objetivos.',
-    heroLabel: 'Experiencia a tu servicio',
-    recommendedPalette: 'grafito',
-    services: [
-      { title: 'Asesoría', description: 'Orientación especializada según tu necesidad.' },
-      { title: 'Servicios', description: 'Conoce cómo podemos ayudarte.' },
-      { title: 'Consulta', description: 'Conversemos sobre tu caso o proyecto.' },
-    ],
-    portfolio: [],
-  },
-
-  'Construcción y hogar': {
-    category: 'Construcción y hogar',
-    role: 'Construcción y hogar',
-    bio: 'Productos y servicios para construir, renovar y mejorar tus espacios.',
-    heroLabel: 'Soluciones para tus proyectos',
-    recommendedPalette: 'arena',
-    services: [
-      { title: 'Productos', description: 'Encuentra soluciones para tus proyectos.' },
-      { title: 'Servicios', description: 'Conoce las opciones disponibles.' },
-      { title: 'Cotizaciones', description: 'Solicita información y disponibilidad.' },
-    ],
-    portfolio: [
-      { title: 'Proyectos y productos', description: 'Una muestra de soluciones para construcción y hogar.' },
-    ],
-  },
-
-  'Automotriz': {
-    category: 'Automotriz',
-    role: 'Automotriz',
-    bio: 'Servicios y soluciones para el cuidado, mantenimiento y desempeño de tu vehículo.',
-    heroLabel: 'Soluciones para tu vehículo',
-    recommendedPalette: 'grafito',
-    services: [
-      { title: 'Servicios', description: 'Conoce nuestras principales soluciones automotrices.' },
-      { title: 'Mantenimiento', description: 'Opciones para cuidar tu vehículo.' },
-      { title: 'Consulta', description: 'Solicita información o disponibilidad.' },
-    ],
-    portfolio: [],
-  },
-
-  'Agropecuario': {
-    category: 'Agropecuario',
-    role: 'Agropecuario',
-    bio: 'Productos y soluciones para apoyar el trabajo y desarrollo del sector agropecuario.',
-    heroLabel: 'Soluciones para el campo',
-    recommendedPalette: 'esmeralda',
-    services: [
-      { title: 'Productos', description: 'Conoce nuestras soluciones disponibles.' },
-      { title: 'Asesoría', description: 'Orientación para elegir la opción adecuada.' },
-      { title: 'Cotización', description: 'Consulta disponibilidad por WhatsApp.' },
-    ],
-    portfolio: [],
-  },
-
-  'Retail': {
-    category: 'Retail',
-    role: 'Tienda y comercio',
-    bio: 'Productos, novedades y atención directa para encontrar lo que necesitas.',
-    heroLabel: 'Productos y novedades',
-    recommendedPalette: 'intap',
-    services: [
-      { title: 'Productos', description: 'Descubre nuestras opciones disponibles.' },
-      { title: 'Pedidos', description: 'Consulta precio y disponibilidad.' },
-      { title: 'Atención', description: 'Escríbenos para recibir más información.' },
-    ],
-    portfolio: [
-      { title: 'Productos destacados', description: 'Una selección de nuestros productos.' },
-    ],
-  },
-
-  'Otros': {
-    category: 'Otros',
-    role: 'Negocio y servicios',
-    bio: 'Conoce nuestros productos, servicios y formas de contacto.',
-    heroLabel: 'Conoce lo que hacemos',
-    recommendedPalette: 'intap',
-    services: [
-      { title: 'Servicios', description: 'Conoce nuestras principales opciones.' },
-      { title: 'Información', description: 'Encuentra lo que necesitas saber.' },
-      { title: 'Contacto', description: 'Escríbenos para recibir más información.' },
-    ],
-    portfolio: [],
-  },
+  }
 }
+
+export const FREE_STARTER_PACKS: Record<string, FreeProfileStarterPack> = Object.fromEntries(
+  Object.entries(FREE_PROFILE_STARTER_CONTENT).map(([category, pack]) => [category, toFreeProfileStarterPack(pack)]),
+)
 
 export function resolveStarterPack(
   category?: string | null,
 ): FreeProfileStarterPack {
-  return (
-    FREE_STARTER_PACKS[category || ''] ||
-    FREE_STARTER_PACKS.Otros
-  )
+  return toFreeProfileStarterPack(resolveFreeStarterContent(category))
 }
