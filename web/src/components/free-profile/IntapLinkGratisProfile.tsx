@@ -330,7 +330,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
                 <h2>{profile.servicesTitle}</h2>
                 {profile.servicesDescription && <p>{profile.servicesDescription}</p>}
               </div>
-              <div className="ilx-services" style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
+              <div className="ilx-services" data-service-count={Math.max(1, services.length)} style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
                 {services.map((service) => (
                   <button key={service.id} type="button" className="ilx-service" onClick={() => setModal({ kind: 'service', item: service })}>
                     <div className="ilx-service-media">{service.image ? <img src={service.image} alt={service.title} loading="lazy" decoding="async" /> : <span>{serviceIcon(service.iconKey)}</span>}</div>
