@@ -28,6 +28,7 @@ import FreePortfolio from './components/admin/free/FreePortfolio'
 import FreeQuickActions from './components/admin/free/FreeQuickActions'
 import FreeServices from './components/admin/free/FreeServices'
 import FreeStyle from './components/admin/free/FreeStyle'
+import FreeContextHelp from './components/admin/free/FreeContextHelp'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
 import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
 import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
@@ -59,19 +60,16 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth */}
-        <Route path="/admin/login"       element={<AdminLogin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/check-email" element={<AdminVerify />} />
-        <Route path="/auth/callback"     element={<AuthCallback />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/activate" element={<ArtifactActivation />} />
 
-        {/* Onboarding Premium/legacy (requiere sesión, no requiere perfil) */}
-        <Route path="/admin/onboarding/slug"     element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingSlug /></AdminGuard>} />
+        <Route path="/admin/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingSlug /></AdminGuard>} />
         <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingCategory /></AdminGuard>} />
         <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingIdentity /></AdminGuard>} />
-        <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingContact /></AdminGuard>} />
+        <Route path="/admin/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingContact /></AdminGuard>} />
 
-        {/* KAWVO LINK Gratis · onboarding guiado */}
         <Route path="/admin/free/onboarding/welcome" element={<AdminGuard requireProfile={false}><FreeOnboardingWelcome /></AdminGuard>} />
         <Route path="/admin/free/onboarding/product" element={<AdminGuard requireProfile={false}><FreeOnboardingProduct /></AdminGuard>} />
         <Route path="/admin/free/onboarding/bootstrap" element={<AdminGuard requireProfile={false}><FreeOnboardingBootstrap /></AdminGuard>} />
@@ -81,7 +79,6 @@ function App() {
         <Route path="/admin/free/onboarding/builder" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingBuilder /></AdminGuard>} />
         <Route path="/admin/free/onboarding/review" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingReview /></AdminGuard>} />
 
-        {/* Rutas anteriores conservadas por compatibilidad mientras cerramos la migración */}
         <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSlug /></AdminGuard>} />
         <Route path="/admin/free/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/free/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingContact /></AdminGuard>} />
@@ -98,29 +95,24 @@ function App() {
         <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><FreeArtifactActivation /></AdminGuard>} />
         <Route path="/admin/artifacts" element={<AdminGuard requireProfile={false}><ArtifactManager /></AdminGuard>} />
 
-        {/* Super Admin interno: autorización independiente del plan/perfil */}
         <Route path="/superadmin" element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} />
         <Route path="/superadmin/products" element={<SuperAdminGuard><SuperAdminArtifacts /></SuperAdminGuard>} />
         <Route path="/superadmin/support" element={<SuperAdminGuard><SuperAdminSupport /></SuperAdminGuard>} />
 
-        {/* Panel Premium */}
-        <Route path="/admin/links"    element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
-        <Route path="/admin/faqs"     element={<AdminGuard planScope="paid"><AdminFAQs /></AdminGuard>} />
+        <Route path="/admin/links" element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
+        <Route path="/admin/faqs" element={<AdminGuard planScope="paid"><AdminFAQs /></AdminGuard>} />
         <Route path="/admin/products" element={<AdminGuard planScope="paid"><AdminProducts /></AdminGuard>} />
-        <Route path="/admin/videos"   element={<AdminGuard planScope="paid"><AdminVideos /></AdminGuard>} />
-        <Route path="/admin/blocks"   element={<AdminGuard planScope="paid"><AdminBlocks /></AdminGuard>} />
-        <Route path="/admin/visual"    element={<AdminGuard planScope="paid"><AdminVisual /></AdminGuard>} />
-        <Route path="/admin/template"   element={<AdminGuard planScope="paid"><AdminTemplate /></AdminGuard>} />
-        <Route path="/admin/retention"  element={<AdminGuard><AdminRetention /></AdminGuard>} />
+        <Route path="/admin/videos" element={<AdminGuard planScope="paid"><AdminVideos /></AdminGuard>} />
+        <Route path="/admin/blocks" element={<AdminGuard planScope="paid"><AdminBlocks /></AdminGuard>} />
+        <Route path="/admin/visual" element={<AdminGuard planScope="paid"><AdminVisual /></AdminGuard>} />
+        <Route path="/admin/template" element={<AdminGuard planScope="paid"><AdminTemplate /></AdminGuard>} />
+        <Route path="/admin/retention" element={<AdminGuard><AdminRetention /></AdminGuard>} />
 
-        {/* Entradas generales: Gratis nunca debe renderizar AdminDashboard */}
         <Route path="/admin" element={<AdminGuard planScope="paid"><AdminDashboard /></AdminGuard>} />
         <Route path="/" element={<AdminGuard planScope="paid"><AdminDashboard /></AdminGuard>} />
-
-        {/* Rutas desconocidas en app.intaprd.com:
-            si parecen slug público, redirigir a intaprd.com/{slug} */}
         <Route path="*" element={<UnknownAppRouteRedirect />} />
       </Routes>
+      <FreeContextHelp />
     </BrowserRouter>
   )
 }
