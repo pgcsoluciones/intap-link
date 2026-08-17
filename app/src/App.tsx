@@ -15,6 +15,7 @@ import AdminTemplate from './components/admin/AdminTemplate'
 import AdminRetention from './components/admin/AdminRetention'
 import SuperAdminDashboard from './components/admin/SuperAdminDashboard'
 import SuperAdminArtifacts from './components/admin/SuperAdminArtifacts'
+import SuperAdminSupport from './components/admin/SuperAdminSupport'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
@@ -100,6 +101,7 @@ function App() {
         {/* Super Admin interno: autorización independiente del plan/perfil */}
         <Route path="/superadmin" element={<SuperAdminGuard><SuperAdminDashboard /></SuperAdminGuard>} />
         <Route path="/superadmin/products" element={<SuperAdminGuard><SuperAdminArtifacts /></SuperAdminGuard>} />
+        <Route path="/superadmin/support" element={<SuperAdminGuard><SuperAdminSupport /></SuperAdminGuard>} />
 
         {/* Panel Premium */}
         <Route path="/admin/links"    element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
