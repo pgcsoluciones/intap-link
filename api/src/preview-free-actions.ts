@@ -221,4 +221,33 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
   })
 })
 
+// Preview front door: keep app.preview.intaprd.com as the single browser origin
+// while serving the latest approved branch build from Cloudflare Pages.
+// API routes above continue to execute in this Worker, so auth cookies remain
+// first-party and host-only on app.preview.intaprd.com.
+app.all('*', async (c: any) => {
+  const requestUrl = new URL(c.req.url)
+  if (requestUrl.pathname.startsWith('/api/')) {
+    return c.json({ ok: false, error: 'API route not found' }, 404)
+  }
+
+  const pagesOrigin = String(c.env.APP_PAGES_ORIGIN || '').replace(/\/$/, '')
+  if (!pagesOrigin) {
+    return c.text('Preview app origin is not configured.', 503)
+  }
+
+  const target = new URL(`${requestUrl.pathname}${requestUrl.search}`, `${pagesOrigin}/`)
+  const method = c.req.raw.method.toUpperCase()
+  const headers = new Headers(c.req.raw.headers)
+  headers.delete('host')
+  headers.set('x-intap-preview-proxy', '1')
+
+  return fetch(target.toString(), {
+    method,
+    headers,
+    body: method === 'GET' || method === 'HEAD' ? undefined : c.req.raw.body,
+    redirect: 'manual',
+  })
+})
+
 export default app
