@@ -9,7 +9,7 @@
 
 .ilx-save-contact {
   width: 100%;
-  min-height: 50px;
+  min-height: 56px;
   margin: 0 0 4px;
   display: flex;
   align-items: center;
@@ -20,15 +20,15 @@
   background: transparent;
   color: var(--ilx-text);
   font: inherit;
-  font-size: 12px;
-  font-weight: 760;
+  font-size: 16px;
+  font-weight: 800;
   cursor: pointer;
   transition: transform 170ms ease, background-color 170ms ease;
 }
 
 .ilx-save-contact svg {
   color: var(--ilx-accent);
-  font-size: 17px;
+  font-size: 20px;
 }
 
 .ilx-save-contact:hover {
@@ -99,9 +99,19 @@
 }
 
 .ilx-footer-login {
-  font-size: 10px !important;
-  font-weight: 650 !important;
-  opacity: .72;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 14px;
+  border: 1px solid var(--ilx-border);
+  border-radius: 999px;
+  background: var(--ilx-surface);
+  color: var(--ilx-primary) !important;
+  font-size: 12px !important;
+  font-weight: 760 !important;
+  line-height: 1;
+  opacity: .88;
 }
 
 @media (max-width: 560px) {
