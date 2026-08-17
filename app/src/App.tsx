@@ -32,6 +32,7 @@ import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboa
 import FreeOnboardingContact from './components/admin/free/onboarding/FreeOnboardingContact'
 import FreeOnboardingDone from './components/admin/free/onboarding/FreeOnboardingDone'
 import FreeOnboardingWelcome from './components/admin/free/onboarding/FreeOnboardingWelcome'
+import FreeOnboardingProduct from './components/admin/free/onboarding/FreeOnboardingProduct'
 import FreeOnboardingBootstrap from './components/admin/free/onboarding/FreeOnboardingBootstrap'
 import FreeOnboardingIntro from './components/admin/free/onboarding/FreeOnboardingIntro'
 import FreeOnboardingSource from './components/admin/free/onboarding/FreeOnboardingSource'
@@ -70,6 +71,7 @@ function App() {
 
         {/* KAWVO LINK Gratis · onboarding guiado */}
         <Route path="/admin/free/onboarding/welcome" element={<AdminGuard requireProfile={false}><FreeOnboardingWelcome /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/product" element={<AdminGuard requireProfile={false}><FreeOnboardingProduct /></AdminGuard>} />
         <Route path="/admin/free/onboarding/bootstrap" element={<AdminGuard requireProfile={false}><FreeOnboardingBootstrap /></AdminGuard>} />
         <Route path="/admin/free/onboarding/intro" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingIntro /></AdminGuard>} />
         <Route path="/admin/free/onboarding/category" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingCategory /></AdminGuard>} />
