@@ -4,7 +4,7 @@ import { apiDelete } from '../../../lib/api'
 
 type Props = {
   slug: string
-  email: string
+  email?: string
 }
 
 const ONBOARDING_SESSION_KEYS = [
@@ -15,7 +15,7 @@ const ONBOARDING_SESSION_KEYS = [
   'intap_activation_public_code',
 ]
 
-export default function FreeProfileDangerZone({ slug, email }: Props) {
+export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [phrase, setPhrase] = useState('')
@@ -25,7 +25,7 @@ export default function FreeProfileDangerZone({ slug, email }: Props) {
   const [error, setError] = useState('')
 
   const expectedPhrase = `ELIMINAR ${slug}`
-  const ready = acknowledged && phrase === expectedPhrase && emailConfirm.trim().toLowerCase() === email.trim().toLowerCase()
+  const ready = acknowledged && phrase === expectedPhrase && emailConfirm.trim().length > 3
 
   const close = () => {
     if (deleting) return
@@ -66,11 +66,7 @@ export default function FreeProfileDangerZone({ slug, email }: Props) {
       <p className="mt-2 text-xs leading-5 text-slate-600">
         Esta acción elimina el perfil, su contenido y su URL pública. Tu cuenta de acceso no se elimina. Los productos físicos seguirán perteneciendo a tu cuenta, pero quedarán sin perfil asociado.
       </p>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-4 w-full rounded-xl border border-rose-300 bg-white px-4 py-3 text-xs font-black text-rose-700"
-      >
+      <button type="button" onClick={() => setOpen(true)} className="mt-4 w-full rounded-xl border border-rose-300 bg-white px-4 py-3 text-xs font-black text-rose-700">
         Eliminar mi perfil
       </button>
 
@@ -91,25 +87,12 @@ export default function FreeProfileDangerZone({ slug, email }: Props) {
 
             <label className="mt-5 block text-xs font-black text-slate-700">
               Escribe exactamente <span className="font-mono text-rose-700">{expectedPhrase}</span>
-              <input
-                value={phrase}
-                onChange={(event) => setPhrase(event.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
-              />
+              <input value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" spellCheck={false} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
             </label>
 
             <label className="mt-4 block text-xs font-black text-slate-700">
               Confirma tu correo de acceso
-              <input
-                type="email"
-                value={emailConfirm}
-                onChange={(event) => setEmailConfirm(event.target.value)}
-                placeholder={email}
-                autoComplete="email"
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100"
-              />
+              <input type="email" value={emailConfirm} onChange={(event) => setEmailConfirm(event.target.value)} placeholder={email || 'tu-correo@ejemplo.com'} autoComplete="email" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
             </label>
 
             <label className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-200 p-3 text-xs leading-5 text-slate-600">
