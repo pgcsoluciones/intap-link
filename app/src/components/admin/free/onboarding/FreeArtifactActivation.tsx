@@ -79,7 +79,7 @@ export default function FreeArtifactActivation() {
         <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
           <div className="w-full rounded-[28px] border border-slate-200 bg-white p-6">
             <p className="text-lg font-black">{error}</p>
-            <Link to="/activate" className="mt-4 inline-flex font-black text-cyan-700">Volver a identificar el producto</Link>
+            <Link to="/activate" className="mt-4 inline-flex font-black text-cyan-700">Volver a revisar mi código de compra</Link>
           </div>
         </section>
       </main>
@@ -90,19 +90,20 @@ export default function FreeArtifactActivation() {
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK · Activación</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK · antes INTAP</p>
           <h1 className="mt-2 text-2xl font-black">Confirma tu artículo</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Ya identificamos tu producto. Ingresa el código secreto para vincularlo a tu cuenta.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Ya encontramos tu producto con el código de compra. Ahora escribe el código de activación para vincularlo a tu cuenta.</p>
 
           <div className="mt-4 rounded-2xl bg-cyan-50 p-4">
             <p className="text-sm font-black">{PRODUCT_LABELS[product?.product_type] || PRODUCT_LABELS.other}</p>
+            <p className="mt-1 text-[11px] font-black uppercase tracking-[0.1em] text-slate-400">Código de compra</p>
             <p className="mt-1 font-mono text-xs font-bold text-slate-500">{product?.public_code}</p>
             <p className="mt-2 text-xs text-slate-500">Cuenta: {me?.email}</p>
           </div>
 
           <form onSubmit={activate}>
             <label className="mt-5 block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">
-              Código secreto de activación
+              Código de activación
               <input value={secret} onChange={(event) => setSecret(event.target.value.toUpperCase())} autoComplete="off" spellCheck={false} placeholder="ABCD2345…" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-black tracking-[0.12em] uppercase outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
             </label>
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
