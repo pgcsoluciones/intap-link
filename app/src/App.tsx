@@ -36,6 +36,7 @@ import FreeOnboardingBootstrap from './components/admin/free/onboarding/FreeOnbo
 import FreeOnboardingIntro from './components/admin/free/onboarding/FreeOnboardingIntro'
 import FreeOnboardingSource from './components/admin/free/onboarding/FreeOnboardingSource'
 import FreeOnboardingBuilder from './components/admin/free/onboarding/FreeOnboardingBuilder'
+import FreeOnboardingReview from './components/admin/free/onboarding/FreeOnboardingReview'
 import FreeArtifactActivation from './components/admin/free/onboarding/FreeArtifactActivation'
 import { ArtifactActivation, ArtifactManager } from './components/admin/ArtifactActivation'
 
@@ -74,6 +75,7 @@ function App() {
         <Route path="/admin/free/onboarding/category" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingCategory /></AdminGuard>} />
         <Route path="/admin/free/onboarding/source" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSource /></AdminGuard>} />
         <Route path="/admin/free/onboarding/builder" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingBuilder /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/review" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingReview /></AdminGuard>} />
 
         {/* Rutas anteriores conservadas por compatibilidad mientras cerramos la migración */}
         <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSlug /></AdminGuard>} />
