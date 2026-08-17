@@ -4,6 +4,8 @@ import { apiGet, apiPost, apiPut } from '../../../lib/api'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
 import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
+import FreeHelpTip from './FreeHelpTip'
+import FreeSupportPanel from './FreeSupportPanel'
 
 interface MeData {
   email: string
@@ -20,16 +22,76 @@ interface MeData {
 }
 
 const freeItems = [
-  { title: 'Reservar mi identificador', text: 'Elige tu enlace corto /usuario', to: '/admin/free/identifier', icon: '@' },
-  { title: 'Estilo de mi perfil', text: 'Impacto, Personal o Esencial', to: '/admin/free/style', icon: '◫' },
-  { title: 'Editar identidad', text: 'Nombre, foto y descripción', to: '/admin/free/onboarding/identity', icon: '✎' },
-  { title: 'Datos de contacto', text: 'WhatsApp, teléfono y correo', to: '/admin/free/onboarding/contact', icon: '☎' },
-  { title: 'Accesos rápidos', text: 'Elige hasta 3: Llamar, Instagram, Ubicación, Email o TikTok', to: '/admin/free/quick-actions', icon: '◉' },
-  { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖' },
-  { title: 'Mis enlaces', text: 'Hasta 3 accesos importantes', to: '/admin/free/links', icon: '↗' },
-  { title: 'Portafolio', text: 'Hasta 5 imágenes de tu trabajo', to: '/admin/free/portfolio', icon: '▧' },
-  { title: 'Servicios', text: 'Hasta 3 servicios, sin complicaciones', to: '/admin/free/services', icon: '◇' },
-  { title: 'Mis productos físicos', text: 'Activa y administra tus productos Kawvo', to: '/admin/artifacts', icon: '⌁' },
+  {
+    title: 'Reservar mi identificador',
+    text: 'Elige tu enlace corto /usuario',
+    to: '/admin/free/identifier',
+    icon: '@',
+    help: 'Este será tu nombre único en el enlace público. Por ejemplo: kawvo.com/juanperez. Conviene elegir uno corto, fácil de recordar y relacionado contigo o tu negocio.',
+  },
+  {
+    title: 'Estilo de mi perfil (plantillas)',
+    text: 'Elige cómo se verá: Impacto, Personal o Esencial',
+    to: '/admin/free/style',
+    icon: '◫',
+    help: 'Aquí eliges la plantilla, los colores y la forma general de tu perfil. No cambia tu información; solamente cambia cómo se presenta visualmente.',
+  },
+  {
+    title: 'Mi información principal',
+    text: 'Nombre, foto, actividad y descripción',
+    to: '/admin/free/onboarding/identity',
+    icon: '✎',
+    help: 'Completa el nombre que quieres mostrar, tu foto o imagen principal y una descripción breve para que las personas entiendan rápidamente quién eres y qué haces.',
+  },
+  {
+    title: 'Datos de contacto',
+    text: 'WhatsApp, teléfono y correo',
+    to: '/admin/free/onboarding/contact',
+    icon: '☎',
+    help: 'Coloca los medios reales por los que quieres que tus clientes te contacten. Los datos de ejemplo del starter deben cambiarse por los tuyos antes de publicar.',
+  },
+  {
+    title: 'Botones rápidos',
+    text: 'Hasta 3: Llamar, Instagram, Ubicación, Email o TikTok',
+    to: '/admin/free/quick-actions',
+    icon: '◉',
+    help: 'Son los botones que aparecen primero en tu perfil. Elige las acciones más importantes para que una persona pueda contactarte o encontrarte con un solo toque.',
+  },
+  {
+    title: 'Ubicación',
+    text: 'Dirección y mapa de tu negocio',
+    to: '/admin/free/location',
+    icon: '⌖',
+    help: 'Agrega la dirección real de tu negocio y, si corresponde, el enlace del mapa. Si trabajas sin local físico puedes dejar esta sección sin mostrar.',
+  },
+  {
+    title: 'Mis enlaces',
+    text: 'Hasta 3 enlaces importantes',
+    to: '/admin/free/links',
+    icon: '↗',
+    help: 'Puedes agregar páginas, catálogos, formularios u otros enlaces que quieras destacar. Usa nombres sencillos para que el visitante entienda a dónde va.',
+  },
+  {
+    title: 'Mis trabajos (portafolio)',
+    text: 'Hasta 5 imágenes de tu trabajo',
+    to: '/admin/free/portfolio',
+    icon: '▧',
+    help: 'Muestra ejemplos reales de lo que haces. El starter incluye imágenes de referencia, pero para publicar debes reemplazarlas por fotografías o trabajos tuyos.',
+  },
+  {
+    title: 'Servicios',
+    text: 'Hasta 3 servicios con imagen y descripción',
+    to: '/admin/free/services',
+    icon: '◇',
+    help: 'Explica claramente qué ofreces. Cada servicio puede tener un título, una descripción corta y una imagen. Reemplaza los servicios de ejemplo por los reales.',
+  },
+  {
+    title: 'Mis productos Kawvo (NFC/QR)',
+    text: 'Activa y administra tus productos físicos',
+    to: '/admin/artifacts',
+    icon: '⌁',
+    help: 'Aquí administras las tarjetas, etiquetas u otros productos Kawvo vinculados a tu cuenta y al perfil digital.',
+  },
 ]
 
 export default function FreeDashboard() {
@@ -155,8 +217,13 @@ export default function FreeDashboard() {
 
         {publicUrl && (
           <article className="rounded-[24px] border border-slate-200 bg-white p-5">
-            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
-            <p className="mt-2 truncate text-sm font-black text-cyan-700">{publicUrl.replace(/^https?:\/\//, '')}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
+                <p className="mt-2 truncate text-sm font-black text-cyan-700">{publicUrl.replace(/^https?:\/\//, '')}</p>
+              </div>
+              <FreeHelpTip title="Vista previa" text="Puedes abrir tu perfil aunque todavía esté en borrador. La vista previa no significa que ya esté publicado; solo te permite revisar cómo lo verá otra persona." />
+            </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <a href={`${publicUrl}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Vista previa</a>
               <button type="button" onClick={() => void navigator.clipboard?.writeText(publicUrl)} className="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">Copiar enlace</button>
@@ -178,22 +245,27 @@ export default function FreeDashboard() {
         <div className="pt-2">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Tu perfil</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Lo esencial para empezar</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Toca el signo <strong>?</strong> cuando quieras saber para qué sirve una sección.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
           {freeItems.map((item) => (
-            <button key={item.title} onClick={() => navigate(item.to)} className="flex w-full items-center gap-4 rounded-[22px] border border-slate-200 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl font-black text-slate-700">{item.icon}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-black text-slate-900">{item.title}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-slate-400">{item.text}</span>
-              </span>
-              <span className="text-lg text-slate-300">›</span>
-            </button>
+            <div key={item.title} className="relative flex w-full items-center gap-3 rounded-[22px] border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-md">
+              <button onClick={() => navigate(item.to)} className="flex min-w-0 flex-1 items-center gap-4 text-left">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl font-black text-slate-700">{item.icon}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-black text-slate-900">{item.title}</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-slate-400">{item.text}</span>
+                </span>
+              </button>
+              <FreeHelpTip title={item.title} text={item.help} />
+              <button type="button" onClick={() => navigate(item.to)} aria-label={`Abrir ${item.title}`} className="text-lg text-slate-300">›</button>
+            </div>
           ))}
         </div>
 
         <FreeUpgradeCard />
+        <FreeSupportPanel />
 
         {me?.slug && <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />}
       </section>
