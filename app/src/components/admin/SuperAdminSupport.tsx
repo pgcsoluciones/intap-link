@@ -15,6 +15,8 @@ type Ticket = {
   updated_at?: string | null
   resolved_at?: string | null
   user_email?: string | null
+  profile_email?: string | null
+  user_phone?: string | null
   profile_slug?: string | null
   profile_name?: string | null
 }
@@ -86,7 +88,7 @@ export default function SuperAdminSupport() {
           <div>
             <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 1, textTransform: 'uppercase', color: '#0891b2' }}>Soporte</div>
             <h1 style={{ margin: '6px 0 0', fontSize: 28, fontWeight: 900 }}>Tickets de usuarios</h1>
-            <p style={{ margin: '7px 0 0', color: '#64748b', maxWidth: 650 }}>Dudas enviadas desde el editor Kawvo Link. Los tickets nuevos y en seguimiento aparecen primero.</p>
+            <p style={{ margin: '7px 0 0', color: '#64748b', maxWidth: 650 }}>Dudas enviadas desde el editor Kawvo Link. El correo y teléfono se toman automáticamente de la cuenta y del perfil; el usuario no tiene que escribirlos de nuevo.</p>
           </div>
           <select value={filter} onChange={(event) => setFilter(event.target.value)} style={{ border: '1px solid #dbe3ee', borderRadius: 12, padding: '10px 12px', background: '#fff', fontWeight: 800 }}>
             <option value="active">Pendientes</option>
@@ -111,7 +113,8 @@ export default function SuperAdminSupport() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'start' }}>
                     <div>
                       <div style={{ fontWeight: 900, fontSize: 16 }}>{ticket.subject}</div>
-                      <div style={{ marginTop: 5, color: '#64748b', fontSize: 13 }}>{ticket.user_email || 'Usuario'} {ticket.profile_slug ? `· @${ticket.profile_slug}` : ''}</div>
+                      <div style={{ marginTop: 5, color: '#64748b', fontSize: 13 }}>{ticket.user_email || ticket.profile_email || 'Usuario'} {ticket.profile_slug ? `· @${ticket.profile_slug}` : ''}</div>
+                      {ticket.user_phone && <div style={{ marginTop: 4, color: '#475569', fontSize: 13, fontWeight: 700 }}>Teléfono / WhatsApp: {ticket.user_phone}</div>}
                     </div>
                     <span style={{ borderRadius: 999, background: ticket.status === 'open' ? '#ecfeff' : '#f1f5f9', padding: '6px 10px', fontSize: 11, fontWeight: 900, color: '#0f6175' }}>{statusLabel(ticket.status)}</span>
                   </div>
