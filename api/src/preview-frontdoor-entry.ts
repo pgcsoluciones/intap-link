@@ -18,11 +18,30 @@ async function proxyWebPreview(request: Request, env: PreviewEnv) {
   headers.delete('host')
   headers.set('x-intap-preview-proxy', 'web-custom-domain')
 
-  return fetch(target.toString(), {
+  const upstream = await fetch(target.toString(), {
     method,
     headers,
     body: method === 'GET' || method === 'HEAD' ? undefined : request.body,
     redirect: 'manual',
+  })
+
+  // The Free editor intentionally embeds only draft preview URLs (?preview=1).
+  // Keep public pages protected from framing, but allow this authenticated
+  // Preview-only editor use case by removing frame-blocking response headers.
+  if (requestUrl.searchParams.get('preview') !== '1') return upstream
+
+  const responseHeaders = new Headers(upstream.headers)
+  responseHeaders.delete('x-frame-options')
+  const csp = responseHeaders.get('content-security-policy')
+  if (csp && /frame-ancestors/i.test(csp)) {
+    responseHeaders.delete('content-security-policy')
+  }
+  responseHeaders.set('cache-control', 'no-store')
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: responseHeaders,
   })
 }
 
