@@ -326,7 +326,6 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           {services.length > 0 && (
             <section className="ilx-section ilx-services-section">
               <div className="ilx-services-heading">
-                <span className="ilx-services-kicker">Nuestros servicios</span>
                 <h2>{profile.servicesTitle}</h2>
                 {profile.servicesDescription && <p>{profile.servicesDescription}</p>}
               </div>

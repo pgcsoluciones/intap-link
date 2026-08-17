@@ -163,15 +163,6 @@
   margin-bottom: 18px;
 }
 
-.ilx-services-kicker {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--ilx-accent);
-  font-size: 12px;
-  font-weight: 850;
-  letter-spacing: .02em;
-}
-
 .ilx-services-heading h2 {
   margin: 0;
 }
