@@ -5,6 +5,7 @@ export type SuperAdminSection =
   | 'subscribers'
   | 'billing'
   | 'paymentLinks'
+  | 'support'
   | 'landing'
   | 'plans'
   | 'gateways'
@@ -17,6 +18,7 @@ type SuperAdminNavSection = SuperAdminSection | 'products'
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
+  { key: 'support', label: 'Soporte / tickets' },
   { key: 'billing', label: 'Billing / Pagos' },
   { key: 'paymentLinks', label: 'Enlaces de pago' },
   { key: 'products', label: 'Productos / códigos' },
@@ -45,6 +47,12 @@ export default function SuperAdminLayout({
     if (section === 'products') {
       if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/products') {
         window.location.href = '/superadmin/products'
+      }
+      return
+    }
+    if (section === 'support') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/support') {
+        window.location.href = '/superadmin/support'
       }
       return
     }
@@ -81,13 +89,13 @@ export default function SuperAdminLayout({
               textTransform: 'uppercase',
             }}
           >
-            INTAP LINK
+            KAWVO LINK
           </div>
           <div style={{ fontSize: 24, fontWeight: 900, marginTop: 6 }}>
             Super Admin
           </div>
           <div style={{ fontSize: 13, color: '#6b7280', marginTop: 6, lineHeight: 1.45 }}>
-            Consola SaaS para perfiles, planes, pagos y landing pública.
+            Consola SaaS para perfiles, soporte, planes, pagos y operación.
           </div>
         </div>
 
@@ -151,7 +159,7 @@ export default function SuperAdminLayout({
           <div>
             <div style={{ fontSize: 24, fontWeight: 900 }}>Panel de control</div>
             <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-              Gestión administrativa, monetización, usuarios y operación SaaS.
+              Gestión administrativa, soporte, monetización, usuarios y operación SaaS.
             </div>
           </div>
 
