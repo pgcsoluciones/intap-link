@@ -21,8 +21,9 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         navigate('/admin/login', { replace: true })
         return
       }
+
       if (requireProfile && !json.data?.profile_id) {
-        navigate('/admin/free/onboarding/slug', { replace: true })
+        navigate('/admin/free/onboarding/welcome', { replace: true })
         return
       }
 
