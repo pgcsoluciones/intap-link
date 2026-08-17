@@ -28,8 +28,9 @@ export default function AuthCallback() {
           return
         }
 
-        const authMode = sessionStorage.getItem('kawvo_auth_mode') || 'login'
+        const authMode = sessionStorage.getItem('kawvo_auth_mode') || localStorage.getItem('kawvo_auth_mode') || 'login'
         sessionStorage.removeItem('kawvo_auth_mode')
+        localStorage.removeItem('kawvo_auth_mode')
 
         apiGet('/me/artifacts/activation/intent')
           .then((intent: any) => {
