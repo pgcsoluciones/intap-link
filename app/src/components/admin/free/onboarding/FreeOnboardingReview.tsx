@@ -10,7 +10,12 @@ export default function FreeOnboardingReview() {
   const [error, setError] = useState('')
   const [previewVersion, setPreviewVersion] = useState(1)
   const variant = Number(sessionStorage.getItem('kawvo_free_starter_variant') || '1') === 2 ? 2 : 1
-  const webBase = useMemo(() => (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, ''), [])
+  const webBase = useMemo(() => {
+    if (import.meta.env.VITE_ENVIRONMENT === 'preview') {
+      return 'https://feature-intap-link-approved-v9ix.intap-link.pages.dev'
+    }
+    return (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
+  }, [])
   const previewUrl = me?.slug ? `${webBase}/${encodeURIComponent(me.slug)}?preview=1&starter=1&v=${previewVersion}` : ''
 
   useEffect(() => {
