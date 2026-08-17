@@ -36,7 +36,8 @@ import FreeOnboardingBootstrap from './components/admin/free/onboarding/FreeOnbo
 import FreeOnboardingIntro from './components/admin/free/onboarding/FreeOnboardingIntro'
 import FreeOnboardingSource from './components/admin/free/onboarding/FreeOnboardingSource'
 import FreeOnboardingBuilder from './components/admin/free/onboarding/FreeOnboardingBuilder'
-import { ArtifactActivation, ArtifactActivationAuthenticated, ArtifactManager } from './components/admin/ArtifactActivation'
+import FreeArtifactActivation from './components/admin/free/onboarding/FreeArtifactActivation'
+import { ArtifactActivation, ArtifactManager } from './components/admin/ArtifactActivation'
 
 function UnknownAppRouteRedirect() {
   const location = useLocation()
@@ -87,7 +88,7 @@ function App() {
         <Route path="/admin/free/quick-actions" element={<AdminGuard planScope="free"><FreeQuickActions /></AdminGuard>} />
         <Route path="/admin/free/services" element={<AdminGuard planScope="free"><FreeServices /></AdminGuard>} />
         <Route path="/admin/free/style" element={<AdminGuard planScope="free"><FreeStyle /></AdminGuard>} />
-        <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><ArtifactActivationAuthenticated /></AdminGuard>} />
+        <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><FreeArtifactActivation /></AdminGuard>} />
         <Route path="/admin/artifacts" element={<AdminGuard requireProfile={false}><ArtifactManager /></AdminGuard>} />
 
         {/* Super Admin interno: autorización independiente del plan/perfil */}
