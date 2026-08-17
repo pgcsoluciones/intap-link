@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut } from '../../../lib/api'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
+import FreeProfileDangerZone from './FreeProfileDangerZone'
 
 interface MeData {
   email: string
@@ -211,6 +212,8 @@ export default function FreeDashboard() {
         </div>
 
         <FreeUpgradeCard />
+
+        {me?.slug && me?.email && <FreeProfileDangerZone slug={me.slug} email={me.email} />}
       </section>
     </main>
   )
