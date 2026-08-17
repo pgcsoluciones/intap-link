@@ -6,7 +6,6 @@ export type SuperAdminSection =
   | 'subscribers'
   | 'billing'
   | 'paymentLinks'
-  | 'support'
   | 'landing'
   | 'plans'
   | 'gateways'
@@ -14,7 +13,7 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -33,7 +32,7 @@ const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
 
 type SuperAdminLayoutProps = {
   currentSection?: SuperAdminNavSection
-  onNavigate?: (section: any) => void
+  onNavigate?: (section: SuperAdminSection) => void
   onLogout?: () => void
   children: ReactNode
 }
