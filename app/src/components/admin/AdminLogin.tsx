@@ -11,6 +11,11 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const persistAuthMode = (nextMode: Mode) => {
+    sessionStorage.setItem('kawvo_auth_mode', nextMode)
+    localStorage.setItem('kawvo_auth_mode', nextMode)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -19,7 +24,7 @@ export default function AdminLogin() {
       const json: any = await apiPost('/auth/magic-link/start', { email, mode })
       if (json.ok) {
         sessionStorage.setItem('magic_link_email', email)
-        sessionStorage.setItem('kawvo_auth_mode', mode)
+        persistAuthMode(mode)
         navigate('/admin/check-email')
       } else {
         setError(json.error || 'Error al enviar el enlace')
@@ -32,7 +37,7 @@ export default function AdminLogin() {
   }
 
   const handleGoogle = () => {
-    sessionStorage.setItem('kawvo_auth_mode', mode)
+    persistAuthMode(mode)
     window.location.href = `${API_BASE}/auth/google/start`
   }
 
