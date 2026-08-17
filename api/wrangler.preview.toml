@@ -7,7 +7,12 @@ workers_dev = true
 pattern = "app.preview.intaprd.com/*"
 zone_name = "intaprd.com"
 
-# El Worker Preview actúa como front door de app.preview.intaprd.com:
+[[routes]]
+pattern = "preview.intaprd.com/*"
+zone_name = "intaprd.com"
+
+# El Worker Preview actúa como front door de ambos custom domains:
+# app.preview.intaprd.com sirve App Preview y preview.intaprd.com sirve Web Preview.
 # /api/* se resuelve aquí y el resto se sirve desde los Pages Preview aprobados.
 
 [vars]
