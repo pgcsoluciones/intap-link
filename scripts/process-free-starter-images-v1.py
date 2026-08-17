@@ -185,8 +185,15 @@ def main() -> int:
         }
         print(f'✓ {category}: {len(files)} origen -> {len(public_paths)} assets')
 
-    # "Otros" intentionally has no source folder yet; keep an explicit empty pool for safe fallback handling.
-    manifest['Otros'] = {'slug': 'otros', 'count': 0, 'images': [], 'sourceFiles': []}
+    # "Otros" keeps its own generic starter text but reuses the Servicios generales image bank.
+    servicios_generales = manifest['Servicios generales']
+    manifest['Otros'] = {
+        'slug': 'otros',
+        'count': servicios_generales['count'],
+        'images': list(servicios_generales['images']),
+        'sourceFiles': list(servicios_generales['sourceFiles']),
+        'assetFallbackFrom': 'Servicios generales',
+    }
 
     MANIFEST_JSON.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     MANIFEST_TS.write_text(render_ts(manifest), encoding='utf-8')

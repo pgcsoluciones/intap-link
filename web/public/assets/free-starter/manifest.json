@@ -1,0 +1,485 @@
+{
+  "Moda y accesorios": {
+    "slug": "moda-accesorios",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/moda-accesorios/moda-accesorios-01.webp",
+      "/assets/free-starter/moda-accesorios/moda-accesorios-02.webp",
+      "/assets/free-starter/moda-accesorios/moda-accesorios-03.webp",
+      "/assets/free-starter/moda-accesorios/moda-accesorios-04.webp",
+      "/assets/free-starter/moda-accesorios/moda-accesorios-05.webp",
+      "/assets/free-starter/moda-accesorios/moda-accesorios-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 08_41_24 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 08_41_25 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 08_41_25 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 08_41_25 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 08_41_26 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 08_41_26 p.m. (6).png"
+    ]
+  },
+  "Belleza y estética": {
+    "slug": "belleza-estetica",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/belleza-estetica/belleza-estetica-01.webp",
+      "/assets/free-starter/belleza-estetica/belleza-estetica-02.webp",
+      "/assets/free-starter/belleza-estetica/belleza-estetica-03.webp",
+      "/assets/free-starter/belleza-estetica/belleza-estetica-04.webp",
+      "/assets/free-starter/belleza-estetica/belleza-estetica-05.webp",
+      "/assets/free-starter/belleza-estetica/belleza-estetica-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 08_47_47 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 08_47_47 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 08_47_47 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 08_47_48 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 08_47_48 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 08_47_48 p.m. (6).png"
+    ]
+  },
+  "Salud y bienestar": {
+    "slug": "salud-bienestar",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/salud-bienestar/salud-bienestar-01.webp",
+      "/assets/free-starter/salud-bienestar/salud-bienestar-02.webp",
+      "/assets/free-starter/salud-bienestar/salud-bienestar-03.webp",
+      "/assets/free-starter/salud-bienestar/salud-bienestar-04.webp",
+      "/assets/free-starter/salud-bienestar/salud-bienestar-05.webp",
+      "/assets/free-starter/salud-bienestar/salud-bienestar-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 08_42_31 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 08_42_32 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 08_42_32 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 08_42_32 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 08_42_33 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 08_42_33 p.m. (6).png"
+    ]
+  },
+  "Gastronomía y alimentos": {
+    "slug": "gastronomia-alimentos",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/gastronomia-alimentos/gastronomia-alimentos-01.webp",
+      "/assets/free-starter/gastronomia-alimentos/gastronomia-alimentos-02.webp",
+      "/assets/free-starter/gastronomia-alimentos/gastronomia-alimentos-03.webp",
+      "/assets/free-starter/gastronomia-alimentos/gastronomia-alimentos-04.webp",
+      "/assets/free-starter/gastronomia-alimentos/gastronomia-alimentos-05.webp",
+      "/assets/free-starter/gastronomia-alimentos/gastronomia-alimentos-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 08_50_21 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 08_50_21 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 08_50_21 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 08_50_22 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 08_50_22 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 08_50_22 p.m. (6).png"
+    ]
+  },
+  "Tecnología y electrónica": {
+    "slug": "tecnologia-electronica",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/tecnologia-electronica/tecnologia-electronica-01.webp",
+      "/assets/free-starter/tecnologia-electronica/tecnologia-electronica-02.webp",
+      "/assets/free-starter/tecnologia-electronica/tecnologia-electronica-03.webp",
+      "/assets/free-starter/tecnologia-electronica/tecnologia-electronica-04.webp",
+      "/assets/free-starter/tecnologia-electronica/tecnologia-electronica-05.webp",
+      "/assets/free-starter/tecnologia-electronica/tecnologia-electronica-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 09_51_13 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 09_51_13 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 09_51_14 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 09_51_14 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 09_51_17 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 09_51_18 p.m. (6).png"
+    ]
+  },
+  "Marketing y comunicación digital": {
+    "slug": "marketing-comunicacion-digital",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/marketing-comunicacion-digital/marketing-comunicacion-digital-01.webp",
+      "/assets/free-starter/marketing-comunicacion-digital/marketing-comunicacion-digital-02.webp",
+      "/assets/free-starter/marketing-comunicacion-digital/marketing-comunicacion-digital-03.webp",
+      "/assets/free-starter/marketing-comunicacion-digital/marketing-comunicacion-digital-04.webp",
+      "/assets/free-starter/marketing-comunicacion-digital/marketing-comunicacion-digital-05.webp",
+      "/assets/free-starter/marketing-comunicacion-digital/marketing-comunicacion-digital-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 01_12_27 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 01_12_27 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 01_12_28 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 01_12_29 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 01_12_29 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 01_12_29 a.m. (6).png"
+    ]
+  },
+  "Arte, diseño y creatividad": {
+    "slug": "arte-diseno-creatividad",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/arte-diseno-creatividad/arte-diseno-creatividad-01.webp",
+      "/assets/free-starter/arte-diseno-creatividad/arte-diseno-creatividad-02.webp",
+      "/assets/free-starter/arte-diseno-creatividad/arte-diseno-creatividad-03.webp",
+      "/assets/free-starter/arte-diseno-creatividad/arte-diseno-creatividad-04.webp",
+      "/assets/free-starter/arte-diseno-creatividad/arte-diseno-creatividad-05.webp",
+      "/assets/free-starter/arte-diseno-creatividad/arte-diseno-creatividad-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 10_42_22 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 10_42_22 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 10_42_22 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 10_42_23 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 10_42_23 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 10_42_23 p.m. (6).png"
+    ]
+  },
+  "Educación y formación": {
+    "slug": "educacion-formacion",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/educacion-formacion/educacion-formacion-01.webp",
+      "/assets/free-starter/educacion-formacion/educacion-formacion-02.webp",
+      "/assets/free-starter/educacion-formacion/educacion-formacion-03.webp",
+      "/assets/free-starter/educacion-formacion/educacion-formacion-04.webp",
+      "/assets/free-starter/educacion-formacion/educacion-formacion-05.webp",
+      "/assets/free-starter/educacion-formacion/educacion-formacion-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 10_04_08 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 10_04_09 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 10_04_10 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 10_04_10 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 10_04_10 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 10_04_11 p.m. (6).png"
+    ]
+  },
+  "Construcción e ingeniería": {
+    "slug": "construccion-ingenieria",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/construccion-ingenieria/construccion-ingenieria-01.webp",
+      "/assets/free-starter/construccion-ingenieria/construccion-ingenieria-02.webp",
+      "/assets/free-starter/construccion-ingenieria/construccion-ingenieria-03.webp",
+      "/assets/free-starter/construccion-ingenieria/construccion-ingenieria-04.webp",
+      "/assets/free-starter/construccion-ingenieria/construccion-ingenieria-05.webp",
+      "/assets/free-starter/construccion-ingenieria/construccion-ingenieria-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 11_33_41 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 11_33_41 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 11_33_42 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 11_33_42 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 11_33_43 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 11_33_43 p.m. (6).png"
+    ]
+  },
+  "Hogar, decoración y mobiliario": {
+    "slug": "hogar-decoracion-mobiliario",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/hogar-decoracion-mobiliario/hogar-decoracion-mobiliario-01.webp",
+      "/assets/free-starter/hogar-decoracion-mobiliario/hogar-decoracion-mobiliario-02.webp",
+      "/assets/free-starter/hogar-decoracion-mobiliario/hogar-decoracion-mobiliario-03.webp",
+      "/assets/free-starter/hogar-decoracion-mobiliario/hogar-decoracion-mobiliario-04.webp",
+      "/assets/free-starter/hogar-decoracion-mobiliario/hogar-decoracion-mobiliario-05.webp",
+      "/assets/free-starter/hogar-decoracion-mobiliario/hogar-decoracion-mobiliario-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 12_58_47 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 12_58_47 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 12_58_47 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 12_58_48 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 12_58_48 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 12_58_49 a.m. (6).png"
+    ]
+  },
+  "Mantenimiento e instalaciones técnicas": {
+    "slug": "mantenimiento-instalaciones-tecnicas",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/mantenimiento-instalaciones-tecnicas/mantenimiento-instalaciones-tecnicas-01.webp",
+      "/assets/free-starter/mantenimiento-instalaciones-tecnicas/mantenimiento-instalaciones-tecnicas-02.webp",
+      "/assets/free-starter/mantenimiento-instalaciones-tecnicas/mantenimiento-instalaciones-tecnicas-03.webp",
+      "/assets/free-starter/mantenimiento-instalaciones-tecnicas/mantenimiento-instalaciones-tecnicas-04.webp",
+      "/assets/free-starter/mantenimiento-instalaciones-tecnicas/mantenimiento-instalaciones-tecnicas-05.webp",
+      "/assets/free-starter/mantenimiento-instalaciones-tecnicas/mantenimiento-instalaciones-tecnicas-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 02_23_55 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 02_23_56 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 02_23_56 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 02_23_57 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 02_23_57 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 02_23_57 a.m. (6).png"
+    ]
+  },
+  "Inmobiliaria y propiedades": {
+    "slug": "inmobiliaria-propiedades",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/inmobiliaria-propiedades/inmobiliaria-propiedades-01.webp",
+      "/assets/free-starter/inmobiliaria-propiedades/inmobiliaria-propiedades-02.webp",
+      "/assets/free-starter/inmobiliaria-propiedades/inmobiliaria-propiedades-03.webp",
+      "/assets/free-starter/inmobiliaria-propiedades/inmobiliaria-propiedades-04.webp",
+      "/assets/free-starter/inmobiliaria-propiedades/inmobiliaria-propiedades-05.webp",
+      "/assets/free-starter/inmobiliaria-propiedades/inmobiliaria-propiedades-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 12_17_40 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 12_17_40 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 12_17_40 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 12_17_41 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 12_17_41 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 12_17_41 a.m. (6).png"
+    ]
+  },
+  "Automotriz y mecánica": {
+    "slug": "automotriz-mecanica",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/automotriz-mecanica/automotriz-mecanica-01.webp",
+      "/assets/free-starter/automotriz-mecanica/automotriz-mecanica-02.webp",
+      "/assets/free-starter/automotriz-mecanica/automotriz-mecanica-03.webp",
+      "/assets/free-starter/automotriz-mecanica/automotriz-mecanica-04.webp",
+      "/assets/free-starter/automotriz-mecanica/automotriz-mecanica-05.webp",
+      "/assets/free-starter/automotriz-mecanica/automotriz-mecanica-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 11_39_02 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 11_39_02 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 11_39_03 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 11_39_03 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 11_39_04 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 11_39_04 p.m. (6).png"
+    ]
+  },
+  "Comercio, retail y tiendas virtuales": {
+    "slug": "comercio-retail-tiendas-virtuales",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/comercio-retail-tiendas-virtuales/comercio-retail-tiendas-virtuales-01.webp",
+      "/assets/free-starter/comercio-retail-tiendas-virtuales/comercio-retail-tiendas-virtuales-02.webp",
+      "/assets/free-starter/comercio-retail-tiendas-virtuales/comercio-retail-tiendas-virtuales-03.webp",
+      "/assets/free-starter/comercio-retail-tiendas-virtuales/comercio-retail-tiendas-virtuales-04.webp",
+      "/assets/free-starter/comercio-retail-tiendas-virtuales/comercio-retail-tiendas-virtuales-05.webp",
+      "/assets/free-starter/comercio-retail-tiendas-virtuales/comercio-retail-tiendas-virtuales-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 12_10_33 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 12_10_34 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 12_10_34 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 12_10_34 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 12_10_34 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 12_10_34 a.m. (6).png"
+    ]
+  },
+  "Servicios profesionales": {
+    "slug": "servicios-profesionales",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/servicios-profesionales/servicios-profesionales-01.webp",
+      "/assets/free-starter/servicios-profesionales/servicios-profesionales-02.webp",
+      "/assets/free-starter/servicios-profesionales/servicios-profesionales-03.webp",
+      "/assets/free-starter/servicios-profesionales/servicios-profesionales-04.webp",
+      "/assets/free-starter/servicios-profesionales/servicios-profesionales-05.webp",
+      "/assets/free-starter/servicios-profesionales/servicios-profesionales-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 11_29_32 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 11_29_32 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 11_29_33 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 11_29_34 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 11_29_34 p.m. (6).png",
+      "ChatGPT Image 16 ago 2026, 11_30_33 p.m..png"
+    ]
+  },
+  "Turismo, viajes y hospitalidad": {
+    "slug": "turismo-viajes-hospitalidad",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/turismo-viajes-hospitalidad/turismo-viajes-hospitalidad-01.webp",
+      "/assets/free-starter/turismo-viajes-hospitalidad/turismo-viajes-hospitalidad-02.webp",
+      "/assets/free-starter/turismo-viajes-hospitalidad/turismo-viajes-hospitalidad-03.webp",
+      "/assets/free-starter/turismo-viajes-hospitalidad/turismo-viajes-hospitalidad-04.webp",
+      "/assets/free-starter/turismo-viajes-hospitalidad/turismo-viajes-hospitalidad-05.webp",
+      "/assets/free-starter/turismo-viajes-hospitalidad/turismo-viajes-hospitalidad-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 11_20_54 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 11_20_54 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 11_20_54 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 11_20_54 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 11_20_55 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 11_20_55 p.m. (6).png"
+    ]
+  },
+  "Deportes y fitness": {
+    "slug": "deportes-fitness",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/deportes-fitness/deportes-fitness-01.webp",
+      "/assets/free-starter/deportes-fitness/deportes-fitness-02.webp",
+      "/assets/free-starter/deportes-fitness/deportes-fitness-03.webp",
+      "/assets/free-starter/deportes-fitness/deportes-fitness-04.webp",
+      "/assets/free-starter/deportes-fitness/deportes-fitness-05.webp",
+      "/assets/free-starter/deportes-fitness/deportes-fitness-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 02_47_33 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 02_47_34 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 02_47_34 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 02_47_34 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 02_47_34 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 02_47_34 a.m. (6).png"
+    ]
+  },
+  "Agropecuario y jardinería": {
+    "slug": "agropecuario-jardineria",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/agropecuario-jardineria/agropecuario-jardineria-01.webp",
+      "/assets/free-starter/agropecuario-jardineria/agropecuario-jardineria-02.webp",
+      "/assets/free-starter/agropecuario-jardineria/agropecuario-jardineria-03.webp",
+      "/assets/free-starter/agropecuario-jardineria/agropecuario-jardineria-04.webp",
+      "/assets/free-starter/agropecuario-jardineria/agropecuario-jardineria-05.webp",
+      "/assets/free-starter/agropecuario-jardineria/agropecuario-jardineria-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 16 ago 2026, 11_43_40 p.m. (1).png",
+      "ChatGPT Image 16 ago 2026, 11_43_41 p.m. (2).png",
+      "ChatGPT Image 16 ago 2026, 11_43_41 p.m. (3).png",
+      "ChatGPT Image 16 ago 2026, 11_43_41 p.m. (4).png",
+      "ChatGPT Image 16 ago 2026, 11_43_42 p.m. (5).png",
+      "ChatGPT Image 16 ago 2026, 11_43_42 p.m. (6).png"
+    ]
+  },
+  "Logística, mensajería y entregas": {
+    "slug": "logistica-mensajeria-entregas",
+    "count": 7,
+    "images": [
+      "/assets/free-starter/logistica-mensajeria-entregas/logistica-mensajeria-entregas-01.webp",
+      "/assets/free-starter/logistica-mensajeria-entregas/logistica-mensajeria-entregas-02.webp",
+      "/assets/free-starter/logistica-mensajeria-entregas/logistica-mensajeria-entregas-03.webp",
+      "/assets/free-starter/logistica-mensajeria-entregas/logistica-mensajeria-entregas-04.webp",
+      "/assets/free-starter/logistica-mensajeria-entregas/logistica-mensajeria-entregas-05.webp",
+      "/assets/free-starter/logistica-mensajeria-entregas/logistica-mensajeria-entregas-06.webp",
+      "/assets/free-starter/logistica-mensajeria-entregas/logistica-mensajeria-entregas-07.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 01_51_06 a.m..png",
+      "ChatGPT Image 17 ago 2026, 01_51_14 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 01_51_15 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 01_51_16 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 01_51_16 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 01_51_17 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 01_51_17 a.m. (6).png"
+    ]
+  },
+  "Eventos y entretenimiento": {
+    "slug": "eventos-entretenimiento",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/eventos-entretenimiento/eventos-entretenimiento-01.webp",
+      "/assets/free-starter/eventos-entretenimiento/eventos-entretenimiento-02.webp",
+      "/assets/free-starter/eventos-entretenimiento/eventos-entretenimiento-03.webp",
+      "/assets/free-starter/eventos-entretenimiento/eventos-entretenimiento-04.webp",
+      "/assets/free-starter/eventos-entretenimiento/eventos-entretenimiento-05.webp",
+      "/assets/free-starter/eventos-entretenimiento/eventos-entretenimiento-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 01_54_32 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 01_54_32 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 01_54_33 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 01_54_33 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 01_54_33 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 01_54_34 a.m. (6).png"
+    ]
+  },
+  "Artesanía y productos hechos a mano": {
+    "slug": "artesania-productos-hechos-mano",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/artesania-productos-hechos-mano/artesania-productos-hechos-mano-01.webp",
+      "/assets/free-starter/artesania-productos-hechos-mano/artesania-productos-hechos-mano-02.webp",
+      "/assets/free-starter/artesania-productos-hechos-mano/artesania-productos-hechos-mano-03.webp",
+      "/assets/free-starter/artesania-productos-hechos-mano/artesania-productos-hechos-mano-04.webp",
+      "/assets/free-starter/artesania-productos-hechos-mano/artesania-productos-hechos-mano-05.webp",
+      "/assets/free-starter/artesania-productos-hechos-mano/artesania-productos-hechos-mano-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 02_52_07 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 02_52_08 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 02_52_08 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 02_52_09 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 02_52_10 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 02_52_11 a.m. (6).png"
+    ]
+  },
+  "Mascotas y animales": {
+    "slug": "mascotas-animales",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/mascotas-animales/mascotas-animales-01.webp",
+      "/assets/free-starter/mascotas-animales/mascotas-animales-02.webp",
+      "/assets/free-starter/mascotas-animales/mascotas-animales-03.webp",
+      "/assets/free-starter/mascotas-animales/mascotas-animales-04.webp",
+      "/assets/free-starter/mascotas-animales/mascotas-animales-05.webp",
+      "/assets/free-starter/mascotas-animales/mascotas-animales-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 02_57_37 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 02_57_38 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 02_57_38 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 02_57_38 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 02_57_39 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 02_57_39 a.m. (6).png"
+    ]
+  },
+  "Servicios generales": {
+    "slug": "servicios-generales",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/servicios-generales/servicios-generales-01.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-02.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-03.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-04.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-05.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 03_25_08 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 03_25_09 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 03_25_09 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 03_25_09 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 03_25_10 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 03_25_10 a.m. (6).png"
+    ]
+  },
+  "Otros": {
+    "slug": "otros",
+    "count": 6,
+    "images": [
+      "/assets/free-starter/servicios-generales/servicios-generales-01.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-02.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-03.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-04.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-05.webp",
+      "/assets/free-starter/servicios-generales/servicios-generales-06.webp"
+    ],
+    "sourceFiles": [
+      "ChatGPT Image 17 ago 2026, 03_25_08 a.m. (1).png",
+      "ChatGPT Image 17 ago 2026, 03_25_09 a.m. (2).png",
+      "ChatGPT Image 17 ago 2026, 03_25_09 a.m. (3).png",
+      "ChatGPT Image 17 ago 2026, 03_25_09 a.m. (4).png",
+      "ChatGPT Image 17 ago 2026, 03_25_10 a.m. (5).png",
+      "ChatGPT Image 17 ago 2026, 03_25_10 a.m. (6).png"
+    ],
+    "assetFallbackFrom": "Servicios generales"
+  }
+}
