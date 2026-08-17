@@ -11,28 +11,48 @@ const BUILDER_IMAGES = [
 ]
 
 const STATUS_MESSAGES = [
-  'Preparando la estructura de tu perfil…',
-  'Organizando una base para tu sector…',
-  'Seleccionando contenido e imágenes…',
-  'Dándole los últimos toques…',
+  'Nuestro equipo está trabajando para entregarte algo chulo.',
+  'Estamos preparando una base pensada para tu actividad comercial.',
+  'Organizando textos, imágenes y secciones para que tengas un buen punto de partida.',
+  'Las cosas buenas se hacen con cuidado…',
+  'Ya casi, casi… estamos dando los últimos toques.',
+  'Un momento más. Queremos que cuando lo veas ya se sienta como tu perfil.',
 ]
+
+const FIRST_BUILD_MS = 42000
+const SECOND_BUILD_MS = 26000
 
 export default function FreeOnboardingBuilder() {
   const navigate = useNavigate()
   const [imageIndex, setImageIndex] = useState(0)
   const [statusIndex, setStatusIndex] = useState(0)
+  const [progress, setProgress] = useState(4)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const webBase = useMemo(() => (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, ''), [])
+  const builderMediaBase = useMemo(() => import.meta.env.VITE_ENVIRONMENT === 'preview'
+    ? 'https://feature-intap-link-approved-v9ix.intap-link.pages.dev'
+    : webBase, [webBase])
+  const variant = Number(sessionStorage.getItem('kawvo_free_starter_variant') || '1') === 2 ? 2 : 1
+  const buildDuration = variant === 2 ? SECOND_BUILD_MS : FIRST_BUILD_MS
 
   useEffect(() => {
     if (done || error) return
-    const timer = window.setInterval(() => {
+    const imageTimer = window.setInterval(() => {
       setImageIndex((value) => (value + 1) % BUILDER_IMAGES.length)
+    }, 6200)
+    const messageTimer = window.setInterval(() => {
       setStatusIndex((value) => Math.min(value + 1, STATUS_MESSAGES.length - 1))
-    }, 1150)
-    return () => window.clearInterval(timer)
-  }, [done, error])
+    }, Math.floor(buildDuration / STATUS_MESSAGES.length))
+    const progressTimer = window.setInterval(() => {
+      setProgress((value) => Math.min(96, value + 2))
+    }, Math.max(500, Math.floor(buildDuration / 46)))
+    return () => {
+      window.clearInterval(imageTimer)
+      window.clearInterval(messageTimer)
+      window.clearInterval(progressTimer)
+    }
+  }, [buildDuration, done, error])
 
   useEffect(() => {
     let cancelled = false
@@ -65,13 +85,16 @@ export default function FreeOnboardingBuilder() {
         free_starter_category: category,
         free_starter_subcategory: subcategory,
         free_starter_lead_source: leadSource,
+        free_starter_variant: variant,
         free_starter_generated_at: new Date().toISOString(),
       }
 
       const result: any = await apiPut('/me/profile', {
         category,
         bio: starter.bio,
+        layout_id: variant === 2 ? 'personal' : 'impacto',
         template_data: nextTemplate,
+        is_published: false,
       }).catch(() => ({ ok: false, error: 'No pudimos guardar la configuración inicial.' }))
 
       if (!result.ok) {
@@ -79,15 +102,18 @@ export default function FreeOnboardingBuilder() {
         return
       }
 
-      const minimumWait = Math.max(0, 4800 - (Date.now() - startedAt))
+      const minimumWait = Math.max(0, buildDuration - (Date.now() - startedAt))
       window.setTimeout(() => {
-        if (!cancelled) setDone(true)
+        if (!cancelled) {
+          setProgress(100)
+          setDone(true)
+        }
       }, minimumWait)
     }
 
     void build()
     return () => { cancelled = true }
-  }, [navigate])
+  }, [buildDuration, navigate, variant])
 
   if (done) {
     return (
@@ -104,9 +130,9 @@ export default function FreeOnboardingBuilder() {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-3xl">✓</div>
             <p className="mt-5 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
             <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.04em]">¡Tu perfil base está listo!</h1>
-            <p className="mt-3 text-[15px] leading-6 text-slate-500">Ya preparamos una configuración inicial según tu sector. Ahora toca editarla con tus datos reales.</p>
-            <div className="mt-4 rounded-2xl bg-cyan-50 p-4 text-sm leading-6 text-slate-600">No te preocupes, te ayudaremos paso a paso hasta completar lo necesario para publicar tu perfil.</div>
-            <button type="button" onClick={() => navigate('/admin/free')} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">Editar mi perfil</button>
+            <p className="mt-3 text-[15px] leading-6 text-slate-500">Ya preparamos {variant === 2 ? 'una nueva propuesta' : 'una configuración inicial'} según tu actividad comercial. Ahora queremos que la veas antes de seguir.</p>
+            <div className="mt-4 rounded-2xl bg-cyan-50 p-4 text-sm leading-6 text-slate-600">Todavía es una vista previa y no está lista para publicarse. Después te guiaremos para reemplazar o confirmar tus datos reales.</div>
+            <button type="button" onClick={() => navigate('/admin/free/onboarding/review')} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">Ver mi perfil base</button>
           </div>
         </section>
       </main>
@@ -115,14 +141,20 @@ export default function FreeOnboardingBuilder() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
-      <style>{`@keyframes kawvoWorkerCross{0%{transform:translateX(-115%);opacity:0}12%{opacity:1}78%{opacity:1}100%{transform:translateX(115%);opacity:0}}`}</style>
+      <style>{`@keyframes kawvoWorkerCross{0%{transform:translateX(-18px);opacity:.25}14%{opacity:1}86%{opacity:1}100%{transform:translateX(18px);opacity:.25}}`}</style>
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">Estamos construyendo</p>
         <h1 className="mt-3 text-[28px] font-black leading-tight tracking-[-0.04em]">Ten paciencia, nuestros asistentes están haciendo algo chulo para ti</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">En unos segundos tendrás una base lista para empezar a personalizar.</p>
+        <p className="mt-3 text-sm leading-6 text-slate-500">Queremos entregarte una base que ya se parezca a un perfil real, no una pantalla vacía.</p>
 
-        <div className="relative mt-8 h-56 w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-          <img key={imageIndex} src={`${webBase}${BUILDER_IMAGES[imageIndex]}`} alt="Asistentes preparando tu perfil" className="absolute bottom-0 left-0 h-full w-full object-contain" style={{ animation: 'kawvoWorkerCross 1.15s ease-in-out both' }} />
+        <div className="relative mt-8 h-60 w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
+          <img
+            key={imageIndex}
+            src={`${builderMediaBase}${BUILDER_IMAGES[imageIndex]}`}
+            alt="Asistentes preparando tu perfil"
+            className="absolute inset-0 h-full w-full object-contain p-2"
+            style={{ animation: 'kawvoWorkerCross 6.2s ease-in-out both' }}
+          />
         </div>
 
         {error ? (
@@ -132,10 +164,11 @@ export default function FreeOnboardingBuilder() {
           </div>
         ) : (
           <>
-            <p className="mt-6 text-sm font-extrabold text-slate-700">{STATUS_MESSAGES[statusIndex]}</p>
-            <div className="mt-4 flex gap-2" aria-hidden="true">
-              {STATUS_MESSAGES.map((_, index) => <span key={index} className={`h-2 w-8 rounded-full transition ${index <= statusIndex ? 'bg-cyan-500' : 'bg-slate-200'}`} />)}
+            <p className="mt-6 min-h-12 text-sm font-extrabold leading-6 text-slate-700">{STATUS_MESSAGES[statusIndex]}</p>
+            <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200" aria-label={`Progreso ${progress}%`}>
+              <div className="h-full rounded-full bg-cyan-500 transition-all duration-700" style={{ width: `${progress}%` }} />
             </div>
+            <p className="mt-2 text-xs font-bold text-slate-400">{progress}%</p>
           </>
         )}
       </section>
