@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../../../lib/api'
-
-const CATEGORIES = [
-  'Moda y accesorios', 'Salud y bienestar', 'Belleza y estética', 'Gastronomía',
-  'Tecnología', 'Educación', 'Arte y diseño', 'Deportes y fitness',
-  'Turismo y viajes', 'Servicios profesionales', 'Construcción y hogar',
-  'Automotriz', 'Agropecuario', 'Retail', 'Otros',
-]
+import { FREE_PROFILE_CATEGORIES } from '../../../../../../shared/free-profile-starter-content'
 
 export default function FreeOnboardingCategory() {
   const navigate = useNavigate()
@@ -52,7 +46,7 @@ export default function FreeOnboardingCategory() {
 
         <div className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
           <div className="flex flex-wrap gap-2.5">
-            {CATEGORIES.map((item) => (
+            {FREE_PROFILE_CATEGORIES.map((item) => (
               <button
                 key={item}
                 type="button"
