@@ -17,18 +17,29 @@ export default function AuthCallback() {
     fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}`, { credentials: 'include' })
       .then((res) => res.json())
       .then((json: any) => {
-        if (json.ok) {
-          const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
-          if (pendingPublicCode) {
-            navigate('/admin/artifacts/activate', { replace: true })
-            return
-          }
-          apiGet('/me/artifacts/activation/intent')
-            .then((intent: any) => navigate(intent.ok ? '/admin/artifacts/activate' : '/admin/free/onboarding/welcome', { replace: true }))
-            .catch(() => navigate('/admin/free/onboarding/welcome', { replace: true }))
-        } else {
+        if (!json.ok) {
           setError(json.error || 'Enlace inválido o expirado')
+          return
         }
+
+        const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
+        if (pendingPublicCode) {
+          navigate('/admin/artifacts/activate', { replace: true })
+          return
+        }
+
+        const authMode = sessionStorage.getItem('kawvo_auth_mode') || 'login'
+        sessionStorage.removeItem('kawvo_auth_mode')
+
+        apiGet('/me/artifacts/activation/intent')
+          .then((intent: any) => {
+            if (intent.ok) {
+              navigate('/admin/artifacts/activate', { replace: true })
+              return
+            }
+            navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true })
+          })
+          .catch(() => navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true }))
       })
       .catch(() => setError('Error de conexión. Inténtalo de nuevo.'))
   }, [navigate, searchParams])
