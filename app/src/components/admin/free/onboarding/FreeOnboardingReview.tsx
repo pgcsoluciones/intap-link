@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPut } from '../../../../lib/api'
+import { apiGet, apiPost } from '../../../../lib/api'
 import FreeStarterNativePreview from './FreeStarterNativePreview'
 
 export default function FreeOnboardingReview() {
@@ -28,23 +28,28 @@ export default function FreeOnboardingReview() {
 
   const accept = async () => {
     if (!me || saving) return
-    setSaving(true)
-    setError('')
-    const previousTemplate = me.templateData && typeof me.templateData === 'object' ? me.templateData : {}
-    const result: any = await apiPut('/me/profile', {
-      is_published: false,
-      template_data: {
-        ...previousTemplate,
-        free_starter_selected_variant: variant,
-        free_starter_unconfirmed: true,
-      },
-    }).catch(() => ({ ok: false, error: 'No pudimos guardar tu elección.' }))
-    setSaving(false)
-    if (!result.ok) {
-      setError(result.error || 'No pudimos guardar tu elección.')
+    if (!category || !subcategory) {
+      setError('Falta definir tu actividad comercial antes de aplicar esta base.')
       return
     }
+
+    setSaving(true)
+    setError('')
+
+    const result: any = await apiPost('/me/free/starter/apply', {
+      category,
+      subcategory,
+      variant,
+    }).catch(() => ({ ok: false, error: 'No pudimos aplicar tu perfil base.' }))
+
+    setSaving(false)
+    if (!result.ok) {
+      setError(result.error || 'No pudimos aplicar tu perfil base.')
+      return
+    }
+
     sessionStorage.setItem('kawvo_free_starter_selected', String(variant))
+    sessionStorage.setItem('kawvo_free_starter_materialized', '1')
     navigate('/admin/free', { replace: true })
   }
 
@@ -91,19 +96,19 @@ export default function FreeOnboardingReview() {
           <aside className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.07)] lg:sticky lg:top-5">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">¿Qué te parece?</p>
             <h2 className="mt-2 text-xl font-black">Elige cómo quieres continuar</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">No tienes que decidir todo ahora. El objetivo es darte un buen punto de partida.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Al elegir esta base la vamos a colocar de verdad dentro de tu editor para que empieces desde ella, no desde una pantalla vacía.</p>
 
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</p>}
 
             <button type="button" onClick={() => void accept()} disabled={saving} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-50">
-              {saving ? 'Guardando…' : 'Me quedo con esta base'}
+              {saving ? 'Aplicando tu base…' : 'Me quedo con esta base'}
             </button>
 
-            <button type="button" onClick={generateAlternative} className="mt-3 w-full rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-4 text-sm font-extrabold text-cyan-800">
+            <button type="button" onClick={generateAlternative} disabled={saving} className="mt-3 w-full rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-4 text-sm font-extrabold text-cyan-800 disabled:opacity-50">
               {variant === 1 ? 'Quiero ver otra propuesta' : 'Prefiero volver a la propuesta 1'}
             </button>
 
-            <button type="button" onClick={changeActivity} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-600">
+            <button type="button" onClick={changeActivity} disabled={saving} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-600 disabled:opacity-50">
               Cambiar mi actividad comercial
             </button>
           </aside>
