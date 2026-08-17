@@ -31,6 +31,11 @@ import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboa
 import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
 import FreeOnboardingContact from './components/admin/free/onboarding/FreeOnboardingContact'
 import FreeOnboardingDone from './components/admin/free/onboarding/FreeOnboardingDone'
+import FreeOnboardingWelcome from './components/admin/free/onboarding/FreeOnboardingWelcome'
+import FreeOnboardingBootstrap from './components/admin/free/onboarding/FreeOnboardingBootstrap'
+import FreeOnboardingIntro from './components/admin/free/onboarding/FreeOnboardingIntro'
+import FreeOnboardingSource from './components/admin/free/onboarding/FreeOnboardingSource'
+import FreeOnboardingBuilder from './components/admin/free/onboarding/FreeOnboardingBuilder'
 import { ArtifactActivation, ArtifactActivationAuthenticated, ArtifactManager } from './components/admin/ArtifactActivation'
 
 function UnknownAppRouteRedirect() {
@@ -61,12 +66,20 @@ function App() {
         <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/onboarding/contact"  element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingContact /></AdminGuard>} />
 
-        {/* INTAP LINK Gratis · rutas propias */}
-        <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSlug /></AdminGuard>} />
+        {/* KAWVO LINK Gratis · onboarding guiado */}
+        <Route path="/admin/free/onboarding/welcome" element={<AdminGuard requireProfile={false}><FreeOnboardingWelcome /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/bootstrap" element={<AdminGuard requireProfile={false}><FreeOnboardingBootstrap /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/intro" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingIntro /></AdminGuard>} />
         <Route path="/admin/free/onboarding/category" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingCategory /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/source" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSource /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/builder" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingBuilder /></AdminGuard>} />
+
+        {/* Rutas anteriores conservadas por compatibilidad mientras cerramos la migración */}
+        <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSlug /></AdminGuard>} />
         <Route path="/admin/free/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/free/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingContact /></AdminGuard>} />
         <Route path="/admin/free/onboarding/done" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingDone /></AdminGuard>} />
+
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
         <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />
         <Route path="/admin/free/location" element={<AdminGuard planScope="free"><FreeLocation /></AdminGuard>} />
