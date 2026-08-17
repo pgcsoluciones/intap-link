@@ -8,14 +8,14 @@ pattern = "app.preview.intaprd.com/*"
 zone_name = "intaprd.com"
 
 # El Worker Preview actúa como front door de app.preview.intaprd.com:
-# /api/* se resuelve aquí y el resto se sirve desde el Pages branch aprobado.
+# /api/* se resuelve aquí y el resto se sirve desde los Pages Preview aprobados.
 
 [vars]
 ENVIRONMENT = "preview"
 WORKER_NAME = "intap-api-preview"
 APP_URL = "https://app.preview.intaprd.com"
-APP_PAGES_ORIGIN = "https://feature-intap-link-approved-1h9k.intap-web2.pages.dev"
-WEB_PAGES_ORIGIN = "https://feature-intap-link-approved-v9ix.intap-link.pages.dev"
+APP_PAGES_ORIGIN = "https://feature-intap-link-approved-jqq6.intap-web2.pages.dev"
+WEB_PAGES_ORIGIN = "https://feature-intap-link-approved-4nq2.intap-link.pages.dev"
 API_URL = "https://intap-api-preview.fliaprince.workers.dev"
 WEB_URL = "https://preview.intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
