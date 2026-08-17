@@ -495,7 +495,7 @@ app.post('/api/v1/public/artifacts/identify', async (c) => {
 
   const publicCode = String(body?.public_code || '').trim().toUpperCase()
   if (!isPublicCodeShape(publicCode)) {
-    return c.json({ ok: false, error: 'Código público inválido.' }, 400)
+    return c.json({ ok: false, error: 'Código de compra inválido.' }, 400)
   }
 
   const row = await c.env.DB.prepare(
@@ -515,7 +515,7 @@ app.post('/api/v1/public/artifacts/identify', async (c) => {
       WHERE a.public_code = ? LIMIT 1`
   ).bind(publicCode).first()
 
-  if (!row) return c.json({ ok: false, error: 'Producto INTAP no encontrado.' }, 404)
+  if (!row) return c.json({ ok: false, error: 'Producto Kawvo (antes INTAP) no encontrado.' }, 404)
   const artifact = row as any
   if (artifact.owner_user_id || !['available', 'unassigned'].includes(String(artifact.status))) {
     return c.json({ ok: false, error: 'Este producto ya fue reclamado.' }, 409)
@@ -913,6 +913,93 @@ app.post('/api/v1/superadmin/artifacts/:id/activation-code/rotate', requireSuper
 const me = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 me.use('*', requireAuth)
 
+type FreePublicationReadiness = {
+  ready: boolean
+  missing: string[]
+  steps: {
+    identifier: boolean
+    identity: boolean
+    contact: boolean
+    quick_actions: boolean
+    portfolio: boolean
+    services: boolean
+  }
+  counts: {
+    quick_actions: number
+    portfolio: number
+    services: number
+  }
+}
+
+async function getFreePublicationReadiness(c: any, profileId: string): Promise<FreePublicationReadiness> {
+  const [profileRow, contactRow, quickRow, galleryRow, servicesRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT slug, name, template_data FROM profiles WHERE id = ? LIMIT 1`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT whatsapp, phone, email FROM profile_contact WHERE profile_id = ? LIMIT 1`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n
+         FROM profile_social_links
+        WHERE profile_id = ?
+          AND enabled = 1
+          AND type IN ('call','instagram','location','email','tiktok')`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM profile_gallery WHERE profile_id = ?`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n
+         FROM profile_products
+        WHERE profile_id = ?
+          AND trim(COALESCE(title, '')) <> ''
+          AND trim(COALESCE(description, '')) <> ''
+          AND trim(COALESCE(image_url, '')) <> ''`
+    ).bind(profileId).first(),
+  ])
+
+  const profile = (profileRow || {}) as any
+  const contact = (contactRow || {}) as any
+  let templateData: Record<string, any> = {}
+  try { templateData = JSON.parse(String(profile.template_data || '{}')) } catch { templateData = {} }
+
+  const slug = String(profile.slug || '').trim()
+  const role = String(templateData.role || templateData.title || '').trim()
+  const quickActions = Number((quickRow as any)?.n || 0)
+  const portfolio = Number((galleryRow as any)?.n || 0)
+  const services = Number((servicesRow as any)?.n || 0)
+
+  const steps = {
+    identifier: Boolean(slug && !slug.startsWith('kawvo-')),
+    identity: Boolean(String(profile.name || '').trim() && role && templateData.free_identity_confirmed === true),
+    contact: Boolean(String(contact.whatsapp || '').trim() || String(contact.phone || '').trim() || String(contact.email || '').trim()),
+    quick_actions: quickActions >= 2,
+    portfolio: portfolio >= 3,
+    services: services >= 2,
+  }
+
+  const labels: Record<keyof typeof steps, string> = {
+    identifier: 'Reserva tu identificador público',
+    identity: 'Confirma tu nombre o marca y a qué te dedicas',
+    contact: 'Agrega al menos un medio de contacto',
+    quick_actions: 'Configura al menos 2 accesos rápidos',
+    portfolio: 'Agrega al menos 3 imágenes reales a tu portafolio',
+    services: 'Completa al menos 2 servicios con título, descripción e imagen',
+  }
+
+  const missing = (Object.keys(steps) as Array<keyof typeof steps>)
+    .filter((key) => !steps[key])
+    .map((key) => labels[key])
+
+  return {
+    ready: missing.length === 0,
+    missing,
+    steps,
+    counts: { quick_actions: quickActions, portfolio, services },
+  }
+}
+
 me.get('/', async (c) => {
   const userId = c.get('userId') as string
   const row = await c.env.DB.prepare(
@@ -1006,6 +1093,9 @@ me.get('/', async (c) => {
   }
 
   const templateData = (() => { try { return JSON.parse(r.template_data || '{}') } catch { return {} } })()
+  const freeReadiness = r.profile_id && String(r.plan_id || 'free') === 'free'
+    ? await getFreePublicationReadiness(c, String(r.profile_id)).catch(() => null)
+    : null
   return c.json({
     ok: true,
     data: {
@@ -1013,6 +1103,7 @@ me.get('/', async (c) => {
       profileId: r.profile_id,
       onboardingStatus,
       templateData,
+      freeReadiness,
       // Plan / retention summary — null if user has no profile yet
       ...(planSummary ?? {}),
     },
@@ -1255,7 +1346,7 @@ me.post('/artifacts/activate-direct', async (c) => {
   const activationCode = normalizeActivationCode(body?.activation_code)
   const requestedProfileId = String(body?.profile_id || '').trim()
 
-  if (!isPublicCodeShape(publicCode)) return c.json({ ok: false, error: 'Código público inválido.' }, 400)
+  if (!isPublicCodeShape(publicCode)) return c.json({ ok: false, error: 'Código de compra inválido.' }, 400)
   if (!isActivationCodeShape(activationCode)) return c.json({ ok: false, error: 'Código de activación inválido.' }, 400)
   if (!requestedProfileId) return c.json({ ok: false, error: 'Debes crear o seleccionar tu perfil antes de activar el producto.' }, 409)
 
@@ -1281,7 +1372,7 @@ me.post('/artifacts/activate-direct', async (c) => {
   ).bind(publicCode, activationHash).first()
 
   if (!candidate) {
-    return c.json({ ok: false, error: 'El código secreto no corresponde a este producto o ya no está disponible.' }, 409)
+    return c.json({ ok: false, error: 'El código de activación no corresponde a este producto o ya no está disponible.' }, 409)
   }
 
   const artifactId = String((candidate as any).artifact_id)
@@ -1521,6 +1612,18 @@ me.put('/profile', async (c) => {
   const template_data = body.template_data !== undefined
     ? JSON.stringify(typeof body.template_data === 'object' ? body.template_data : {})
     : undefined
+
+  if (is_published === 1 && String((profile as any).plan_id || 'free') === 'free') {
+    const readiness = await getFreePublicationReadiness(c, String((profile as any).id))
+    if (!readiness.ready) {
+      return c.json({
+        ok: false,
+        error: 'profile_incomplete',
+        message: 'Completa los pasos mínimos antes de publicar tu perfil.',
+        readiness,
+      }, 422)
+    }
+  }
 
   try {
     await c.env.DB.prepare(
@@ -3212,7 +3315,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, layout_id, free_palette_id, free_brand_color, hero_url, hero_position_x, hero_position_y, hero_zoom, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, layout_id, free_palette_id, free_brand_color, hero_url, hero_position_x, hero_position_y, hero_zoom, is_published, name, bio, avatar_url, category, subcategory, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -3221,8 +3324,8 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   // Allow owner to preview unpublished profiles
   if (!(profile as any).is_published) {
-    let isOwner = false
-    if (isPreview) {
+    let isOwner = isPreview && isPreviewEnvironment(c.env)
+    if (isPreview && !isOwner) {
       try {
         const rawSession = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).session)
         if (rawSession) {
@@ -3343,6 +3446,8 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       blocksOrder,
       name: (profile as any).name,
       bio: (profile as any).bio,
+      category: (profile as any).category ?? null,
+      subcategory: (profile as any).subcategory ?? null,
       avatarUrl: toAssetUrl((profile as any).avatar_url || ''),
       whatsapp_number: (profile as any).whatsapp_number ?? null,
       layout_id: (profile as any).layout_id ?? 'esencial',

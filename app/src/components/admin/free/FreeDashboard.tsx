@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut } from '../../../lib/api'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
 import FreeProfileDangerZone from './FreeProfileDangerZone'
+import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
 
 interface MeData {
   email: string
@@ -15,9 +16,11 @@ interface MeData {
   is_published: number
   plan_id: string | null
   plan_code?: string
+  freeReadiness?: FreePublicationReadiness | null
 }
 
 const freeItems = [
+  { title: 'Reservar mi identificador', text: 'Elige tu enlace corto /usuario', to: '/admin/free/identifier', icon: '@' },
   { title: 'Estilo de mi perfil', text: 'Impacto, Personal o Esencial', to: '/admin/free/style', icon: '◫' },
   { title: 'Editar identidad', text: 'Nombre, foto y descripción', to: '/admin/free/onboarding/identity', icon: '✎' },
   { title: 'Datos de contacto', text: 'WhatsApp, teléfono y correo', to: '/admin/free/onboarding/contact', icon: '☎' },
@@ -26,7 +29,7 @@ const freeItems = [
   { title: 'Mis enlaces', text: 'Hasta 3 accesos importantes', to: '/admin/free/links', icon: '↗' },
   { title: 'Portafolio', text: 'Hasta 5 imágenes de tu trabajo', to: '/admin/free/portfolio', icon: '▧' },
   { title: 'Servicios', text: 'Hasta 3 servicios, sin complicaciones', to: '/admin/free/services', icon: '◇' },
-  { title: 'Mis productos físicos', text: 'Activa y administra tus productos INTAP', to: '/admin/artifacts', icon: '⌁' },
+  { title: 'Mis productos físicos', text: 'Activa y administra tus productos Kawvo', to: '/admin/artifacts', icon: '⌁' },
 ]
 
 export default function FreeDashboard() {
@@ -36,6 +39,7 @@ export default function FreeDashboard() {
   const [publishing, setPublishing] = useState(false)
   const [hasSuperAdminAccess, setHasSuperAdminAccess] = useState(false)
   const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
+  const [publishError, setPublishError] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -54,11 +58,23 @@ export default function FreeDashboard() {
 
   const togglePublished = async () => {
     if (!me || publishing) return
-    setPublishing(true)
     const next = me.is_published ? 0 : 1
+    if (next === 1 && me.freeReadiness && !me.freeReadiness.ready) {
+      setPublishError('Todavía faltan algunos pasos. Sigue la guía y te avisaremos cuando esté listo para publicar.')
+      return
+    }
+    setPublishing(true)
+    setPublishError('')
     try {
       const result: any = await apiPut('/me/profile', { is_published: next === 1 })
-      if (result.ok) setMe({ ...me, is_published: next })
+      if (result.ok) {
+        setMe({ ...me, is_published: next })
+      } else if (result.error === 'profile_incomplete') {
+        setPublishError(result.message || 'Completa los pasos mínimos antes de publicar.')
+        setMe({ ...me, freeReadiness: result.readiness || me.freeReadiness })
+      } else {
+        setPublishError(result.error || 'No pudimos cambiar el estado de publicación.')
+      }
     } finally {
       setPublishing(false)
     }
@@ -74,7 +90,7 @@ export default function FreeDashboard() {
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[430px] items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">INTAP LINK</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">KAWVO LINK</p>
             <h1 className="mt-0.5 text-xl font-black tracking-[-0.03em]">Mi panel</h1>
           </div>
           <div className="flex items-center gap-2">
@@ -135,6 +151,8 @@ export default function FreeDashboard() {
           </button>
         )}
 
+        {me?.freeReadiness && <FreeFirstRunGuide readiness={me.freeReadiness} />}
+
         {publicUrl && (
           <article className="rounded-[24px] border border-slate-200 bg-white p-5">
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
@@ -148,12 +166,14 @@ export default function FreeDashboard() {
                 <p className="text-sm font-black">{me?.is_published ? 'Publicado' : 'Borrador'}</p>
                 <p className="mt-0.5 text-xs text-slate-400">{me?.is_published ? 'Tu perfil está visible.' : 'Solo tú puedes verlo por ahora.'}</p>
               </div>
-              <button onClick={togglePublished} disabled={publishing} className={`rounded-full px-4 py-2 text-xs font-black ${me?.is_published ? 'bg-slate-100 text-slate-700' : 'bg-cyan-600 text-white'} disabled:opacity-50`}>
-                {publishing ? 'Guardando…' : me?.is_published ? 'Ocultar' : 'Publicar'}
+              <button onClick={togglePublished} disabled={publishing || (!me?.is_published && Boolean(me?.freeReadiness && !me.freeReadiness.ready))} className={`rounded-full px-4 py-2 text-xs font-black ${me?.is_published ? 'bg-slate-100 text-slate-700' : me?.freeReadiness?.ready ? 'bg-cyan-600 text-white' : 'bg-slate-200 text-slate-400'} disabled:cursor-not-allowed disabled:opacity-80`}>
+                {publishing ? 'Guardando…' : me?.is_published ? 'Ocultar' : me?.freeReadiness?.ready ? 'Publicar' : 'Completa los pasos'}
               </button>
             </div>
           </article>
         )}
+
+        {publishError && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-800">{publishError}</p>}
 
         <div className="pt-2">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Tu perfil</p>

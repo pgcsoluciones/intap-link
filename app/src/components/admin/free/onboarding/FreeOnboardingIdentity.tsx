@@ -75,7 +75,7 @@ export default function FreeOnboardingIdentity() {
       const body: Record<string, unknown> = {
         name: name.trim(),
         bio: bio.trim(),
-        template_data: { ...templateData, role: role.trim(), about_section_title: aboutTitle },
+        template_data: { ...templateData, role: role.trim(), about_section_title: aboutTitle, free_identity_confirmed: true },
       }
       if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
       const result: any = await apiPut('/me/profile', body)

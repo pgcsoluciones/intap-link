@@ -118,11 +118,13 @@ function resolveVisibleServices(data: UnknownRecord, category: string, templateD
 
   const starter = resolveStarterPack(category)
   const assets = resolveFreeStarterAssets(starter.category)
+  const variant = Number(templateData.free_starter_variant || 1) === 2 ? 2 : 1
+  const offset = variant === 2 ? 2 : 0
   return starter.services.slice(0, 3).map((service, index) => ({
     id: `starter-service-${index + 1}`,
     title: service.title,
     description: service.description.slice(0, 90),
-    image: assets[index] || undefined,
+    image: assets.length ? assets[(offset + index) % assets.length] : undefined,
     iconKey: SERVICE_ICON_SEQUENCE[index % SERVICE_ICON_SEQUENCE.length],
   }))
 }
@@ -215,9 +217,15 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
   const links = readRecords(data, 'links')
   const socialLinks = readRecords(data, 'social_links', 'socialLinks')
   const slug = readString(data, 'slug') || 'perfil'
-  const name = readString(data, 'name') || slug
   const colors = resolveFreeProfileAppearanceColors(data)
-  const starter = resolveStarterPack(readString(data, 'category'))
+  const category = readString(data, 'category')
+  const starter = resolveStarterPack(category)
+  const starterGenerated = templateData.free_starter_generated === true || String(templateData.free_starter_generated || '').toLowerCase() === 'true'
+  const starterVariant = Number(templateData.free_starter_variant || 1) === 2 ? 2 : 1
+  const starterAssets = resolveFreeStarterAssets(starter.category)
+  const starterOffset = starterVariant === 2 ? 2 : 0
+  const starterAsset = (offset: number) => starterAssets.length ? starterAssets[(starterOffset + offset) % starterAssets.length] : ''
+  const name = readString(data, 'name') || (starterGenerated ? (starter.heroLabel || readString(data, 'subcategory') || starter.role) : slug)
 
   const whatsappLink = findLinkUrl(links, isWhatsAppLink)
   const mapLink = findLinkUrl(links, isMapLink)
@@ -225,15 +233,23 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
   const phone = normalizePhone(phoneSource)
   const instagram = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
   const location = findSocialUrl(socialLinks, 'free_location') || readString(contact, 'map_url') || mapLink
-  const category = readString(data, 'category')
   const role = readString(templateData, 'role', 'title') || readString(data, 'subcategory', 'category') || starter.role
   const greetingName = readString(templateData, 'whatsapp_greeting_name') || name.split(/\s+/)[0] || name
-  const portrait = readString(data, 'avatarUrl', 'avatar_url') || buildAvatarPlaceholder(name, colors)
-  const hero = readString(data, 'heroUrl', 'hero_url') || readString(templateData, 'hero_url')
+  const portrait = readString(data, 'avatarUrl', 'avatar_url') || (starterGenerated ? starterAsset(0) : '') || buildAvatarPlaceholder(name, colors)
+  const hero = readString(data, 'heroUrl', 'hero_url') || readString(templateData, 'hero_url') || (starterGenerated ? starterAsset(1) : '')
   const heroPositionX = Number(data.heroPositionX ?? data.hero_position_x ?? 50)
   const heroPositionY = Number(data.heroPositionY ?? data.hero_position_y ?? 50)
   const heroZoom = Number(data.heroZoom ?? data.hero_zoom ?? 1)
   const safeSlug = slug.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'perfil'
+  const actualPortfolio = resolvePortfolio(data)
+  const starterPortfolio = starterGenerated
+    ? [starterAsset(3), starterAsset(4), starterAsset(5)].filter(Boolean).map((image, index) => ({
+        id: `starter-portfolio-${index + 1}`,
+        title: `Inspiración ${index + 1}`,
+        description: 'Imagen de referencia para ayudarte a visualizar tu perfil. Sustitúyela por una foto real de tu negocio.',
+        image,
+      }))
+    : []
 
   return {
     layout: resolveFreeProfileLayout(data),
@@ -263,7 +279,7 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       vcardFileName: `${safeSlug}.vcf`,
       quickActions: resolveQuickActions(data, phone, instagram, location),
       services: resolveVisibleServices(data, category || starter.category, templateData),
-      portfolio: resolvePortfolio(data),
+      portfolio: actualPortfolio.length > 0 ? actualPortfolio : starterPortfolio,
       customLinks: resolveCustomLinks(data),
     },
   }

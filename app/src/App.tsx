@@ -20,6 +20,7 @@ import OnboardingCategory from './components/admin/onboarding/OnboardingCategory
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
 import OnboardingContact from './components/admin/onboarding/OnboardingContact'
 import FreeDashboard from './components/admin/free/FreeDashboard'
+import FreeIdentifier from './components/admin/free/FreeIdentifier'
 import FreeLinks from './components/admin/free/FreeLinks'
 import FreeLocation from './components/admin/free/FreeLocation'
 import FreePortfolio from './components/admin/free/FreePortfolio'
@@ -86,6 +87,7 @@ function App() {
         <Route path="/admin/free/onboarding/done" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingDone /></AdminGuard>} />
 
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
+        <Route path="/admin/free/identifier" element={<AdminGuard planScope="free"><FreeIdentifier /></AdminGuard>} />
         <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />
         <Route path="/admin/free/location" element={<AdminGuard planScope="free"><FreeLocation /></AdminGuard>} />
         <Route path="/admin/free/portfolio" element={<AdminGuard planScope="free"><FreePortfolio /></AdminGuard>} />
