@@ -358,7 +358,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           </section>
 
           <footer className="ilx-footer">
-            <a href="/">Creado con <strong>INTAP Link</strong> · Crea el tuyo <strong>Gratis</strong></a>
+            <a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">Creado con <strong>Kawvo Link</strong> · Crea el tuyo <strong>Gratis</strong></a>
             <a className="ilx-footer-login" href={loginUrl()}>Iniciar sesión</a>
           </footer>
         </div>
