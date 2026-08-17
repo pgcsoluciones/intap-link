@@ -257,6 +257,18 @@ class StarterAssetAttributeRewriter {
   }
 }
 
+class StarterRouteBootstrapRewriter {
+  constructor(private route: string) {}
+
+  element(element: Element) {
+    const route = JSON.stringify(this.route)
+    element.prepend(
+      `<script>history.replaceState(null, '', ${route});</script>`,
+      { html: true },
+    )
+  }
+}
+
 app.get('/starter-preview/:slug', requirePreviewAuth, async (c: any) => {
   const webOrigin = String(c.env.WEB_PAGES_ORIGIN || '').replace(/\/$/, '')
   if (!webOrigin) return c.text('Preview web origin is not configured.', 503)
@@ -285,7 +297,10 @@ app.get('/starter-preview/:slug', requirePreviewAuth, async (c: any) => {
   const contentType = headers.get('content-type') || ''
   if (!contentType.includes('text/html')) return response
 
+  const browserRoute = `/${slug}${requestUrl.search}`
+
   return new HTMLRewriter()
+    .on('head', new StarterRouteBootstrapRewriter(browserRoute))
     .on('[src]', new StarterAssetAttributeRewriter('src'))
     .on('link[href]', new StarterAssetAttributeRewriter('href'))
     .transform(response)
