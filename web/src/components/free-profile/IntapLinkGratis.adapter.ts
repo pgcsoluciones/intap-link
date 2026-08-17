@@ -8,6 +8,7 @@ import type {
   FreeProfileServiceIconKey,
 } from './IntapLinkGratis.types'
 import { resolvePalette, resolveStarterPack } from './IntapLinkGratis.experience'
+import { resolveFreeStarterAssets } from '../../../../shared/free-profile-starter-assets'
 
 export type FreeProfileAdapterResult = {
   profile: FreeProfileData
@@ -107,6 +108,23 @@ function resolveServices(data: UnknownRecord): FreeProfileService[] {
       iconKey,
     }
   }).filter((item) => Boolean(item.title))
+}
+function resolveVisibleServices(data: UnknownRecord, category: string, templateData: UnknownRecord): FreeProfileService[] {
+  const actual = resolveServices(data)
+  if (actual.length > 0) return actual
+
+  const starterGenerated = templateData.free_starter_generated === true || String(templateData.free_starter_generated || '').toLowerCase() === 'true'
+  if (!starterGenerated) return []
+
+  const starter = resolveStarterPack(category)
+  const assets = resolveFreeStarterAssets(starter.category)
+  return starter.services.slice(0, 3).map((service, index) => ({
+    id: `starter-service-${index + 1}`,
+    title: service.title,
+    description: service.description.slice(0, 90),
+    image: assets[index] || undefined,
+    iconKey: SERVICE_ICON_SEQUENCE[index % SERVICE_ICON_SEQUENCE.length],
+  }))
 }
 function resolveCustomLinks(data: UnknownRecord): FreeProfileData['customLinks'] {
   return readRecords(data, 'links').filter((link) => !isSystemLink(link)).map((link, index) => ({
@@ -244,7 +262,7 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       category: category || starter.category,
       vcardFileName: `${safeSlug}.vcf`,
       quickActions: resolveQuickActions(data, phone, instagram, location),
-      services: resolveServices(data),
+      services: resolveVisibleServices(data, category || starter.category, templateData),
       portfolio: resolvePortfolio(data),
       customLinks: resolveCustomLinks(data),
     },
