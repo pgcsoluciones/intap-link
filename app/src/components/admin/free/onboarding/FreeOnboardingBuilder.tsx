@@ -57,6 +57,7 @@ export default function FreeOnboardingBuilder() {
       const previousTemplate = me.data?.templateData && typeof me.data.templateData === 'object' ? me.data.templateData : {}
       const nextTemplate = {
         ...previousTemplate,
+        role: subcategory || starter.role,
         services_section_title: starter.servicesTitle,
         services_section_description: starter.servicesDescription,
         free_starter_generated: true,
@@ -69,7 +70,6 @@ export default function FreeOnboardingBuilder() {
 
       const result: any = await apiPut('/me/profile', {
         category,
-        role: subcategory || starter.role,
         bio: starter.bio,
         template_data: nextTemplate,
       }).catch(() => ({ ok: false, error: 'No pudimos guardar la configuración inicial.' }))
