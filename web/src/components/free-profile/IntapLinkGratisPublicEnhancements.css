@@ -394,3 +394,28 @@
     font-size: 13.5px;
   }
 }
+
+/* IMPACTO · avatar siempre sobre el hero */
+.ilx-impact-person {
+  position: relative;
+  z-index: 3;
+  margin-top: 0;
+}
+
+.ilx-impact-avatar {
+  position: relative;
+  z-index: 4;
+  width: 168px;
+  height: 168px;
+  flex: 0 0 168px;
+  margin-top: -84px;
+}
+
+@media (max-width: 560px) {
+  .ilx-impact-avatar {
+    width: 160px;
+    height: 160px;
+    flex-basis: 160px;
+    margin-top: -80px;
+  }
+}
