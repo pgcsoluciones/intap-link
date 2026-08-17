@@ -219,7 +219,7 @@
   padding: 11px 9px 10px;
   align-items: stretch;
   justify-content: flex-start;
-  text-align: left;
+  text-align: center;
 }
 
 .ilx-service-copy h3 {
@@ -227,10 +227,10 @@
   min-height: 2.5em;
   overflow: hidden;
   color: var(--ilx-text);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 850;
   line-height: 1.25;
-  text-align: left;
+  text-align: center;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
@@ -243,6 +243,7 @@
   color: var(--ilx-muted);
   font-size: 10.5px;
   line-height: 1.45;
+  text-align: center;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
@@ -256,8 +257,8 @@
   border: 1px solid var(--ilx-primary);
   border-radius: 999px;
   color: var(--ilx-primary);
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: 12.5px;
+  font-weight: 850;
   text-align: center;
 }
 
@@ -289,7 +290,7 @@
   }
 
   .ilx-service-copy h3 {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .ilx-service-copy p {
@@ -297,8 +298,8 @@
   }
 
   .ilx-service-more {
-    min-height: 32px;
-    padding-inline: 4px;
-    font-size: 10px;
+    min-height: 34px;
+    padding-inline: 5px;
+    font-size: 12px;
   }
 }
