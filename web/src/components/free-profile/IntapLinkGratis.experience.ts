@@ -18,6 +18,8 @@ export type FreeProfileStarterPack = {
   role: string
   bio: string
   heroLabel: string
+  servicesTitle: string
+  servicesDescription: string
   recommendedPalette: FreePaletteId
   services: Array<{
     title: string
@@ -216,6 +218,8 @@ function toFreeProfileStarterPack(pack: FreeStarterContentPack): FreeProfileStar
     role: pack.role,
     bio: pack.bio,
     heroLabel: pack.heroLabel,
+    servicesTitle: pack.servicesTitle,
+    servicesDescription: pack.servicesDescription,
     recommendedPalette: pack.recommendedPalette,
     services: pack.services.map(({ title, description }) => ({ title, description })),
     portfolio: [],
