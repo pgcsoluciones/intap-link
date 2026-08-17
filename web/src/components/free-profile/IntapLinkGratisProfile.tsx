@@ -112,8 +112,8 @@ function ensureReadableColor(foreground: string, background: string, minimum = 4
 function whatsappUrl(profile: FreeProfileData, subject?: string) {
   if (!profile.phone) return ''
   const message = subject
-    ? `Hola ${profile.whatsappGreetingName}, vi "${subject}" en tu perfil de INTAP LINK y me gustaría recibir más información.`
-    : `Hola ${profile.whatsappGreetingName}, vi tu perfil en INTAP LINK y me gustaría recibir más información.`
+    ? `Hola ${profile.whatsappGreetingName}, vi "${subject}" en tu perfil de Kawvo Link y me gustaría recibir más información.`
+    : `Hola ${profile.whatsappGreetingName}, vi tu perfil en Kawvo Link y me gustaría recibir más información.`
   return `https://wa.me/${profile.phone}?text=${encodeURIComponent(message)}`
 }
 
@@ -267,20 +267,20 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     if (!qrDataUrl) return
     const link = document.createElement('a')
     link.href = qrDataUrl
-    link.download = `${profile.slug || 'intap-link'}-qr.png`
+    link.download = `${profile.slug || 'kawvo-link'}-qr.png`
     document.body.appendChild(link)
     link.click()
     link.remove()
   }
 
   function shareProfileQrWhatsApp() {
-    const message = `Conoce el perfil de ${profile.name} en INTAP LINK:\n${window.location.href}`
+    const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${window.location.href}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
   async function shareProfile() {
     try {
-      if (navigator.share) await navigator.share({ title: `${profile.name} | INTAP LINK`, text: `Conoce el perfil de ${profile.name}`, url: window.location.href })
+      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: window.location.href })
       else await copyProfileLink()
     } catch { /* cancelar compartir no es error */ }
   }
@@ -368,7 +368,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
         <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQrOpen(false) }}>
           <article className="ilx-qr-modal" role="dialog" aria-modal="true" aria-labelledby="ilx-qr-title">
             <button type="button" className="ilx-modal-close" onClick={() => setQrOpen(false)} aria-label="Cerrar"><FaTimes /></button>
-            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">INTAP LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar QR</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
+            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">KAWVO LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar QR</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
           </article>
         </div>
       )}
