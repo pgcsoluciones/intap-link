@@ -25,6 +25,9 @@ const QUICK_ACTION_LABELS: Record<FreeProfileQuickActionType, string> = {
 const QUICK_ACTION_TYPES = new Set<FreeProfileQuickActionType>(['call', 'instagram', 'location', 'email', 'tiktok'])
 const ABOUT_TITLES = new Set(['Sobre mí', 'Quién soy', 'Conóceme'])
 const PORTFOLIO_TITLES = new Set(['Portafolio', 'Mis trabajos', 'Proyectos'])
+const STARTER_PHONE = '8090000000'
+const STARTER_INSTAGRAM = 'https://www.instagram.com/intaprd'
+const STARTER_LOCATION = 'https://www.google.com/maps/search/?api=1&query=Santo%20Domingo%2C%20Rep%C3%BAblica%20Dominicana'
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -225,14 +228,16 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
   const starterAssets = resolveFreeStarterAssets(starter.category)
   const starterOffset = starterVariant === 2 ? 2 : 0
   const starterAsset = (offset: number) => starterAssets.length ? starterAssets[(starterOffset + offset) % starterAssets.length] : ''
-  const name = readString(data, 'name') || (starterGenerated ? (starter.heroLabel || readString(data, 'subcategory') || starter.role) : slug)
+  const name = readString(data, 'name') || (starterGenerated ? (readString(data, 'subcategory') || readString(templateData, 'free_starter_subcategory') || starter.heroLabel || starter.role) : slug)
 
   const whatsappLink = findLinkUrl(links, isWhatsAppLink)
   const mapLink = findLinkUrl(links, isMapLink)
-  const phoneSource = readString(data, 'whatsapp_number', 'whatsappNumber') || readString(contact, 'whatsapp', 'phone') || whatsappLink
-  const phone = normalizePhone(phoneSource)
-  const instagram = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
-  const location = findSocialUrl(socialLinks, 'free_location') || readString(contact, 'map_url') || mapLink
+  const realPhoneSource = readString(data, 'whatsapp_number', 'whatsappNumber') || readString(contact, 'whatsapp', 'phone') || whatsappLink
+  const phone = normalizePhone(realPhoneSource) || (starterGenerated ? STARTER_PHONE : '')
+  const realInstagram = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
+  const instagram = realInstagram || (starterGenerated ? STARTER_INSTAGRAM : '')
+  const realLocation = findSocialUrl(socialLinks, 'free_location') || readString(contact, 'map_url') || mapLink
+  const location = realLocation || (starterGenerated ? STARTER_LOCATION : '')
   const role = readString(templateData, 'role', 'title') || readString(data, 'subcategory', 'category') || starter.role
   const greetingName = readString(templateData, 'whatsapp_greeting_name') || name.split(/\s+/)[0] || name
   const portrait = readString(data, 'avatarUrl', 'avatar_url') || (starterGenerated ? starterAsset(0) : '') || buildAvatarPlaceholder(name, colors)
@@ -262,8 +267,8 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       personalBadge: readString(templateData, 'personal_badge') || 'Marca personal',
       aboutTitle: allowedTitle(readString(templateData, 'about_section_title'), ABOUT_TITLES, 'Sobre mí'),
       portfolioTitle: allowedTitle(readString(templateData, 'portfolio_section_title'), PORTFOLIO_TITLES, 'Portafolio'),
-      servicesTitle: readString(templateData, 'services_section_title').slice(0, 60) || 'Servicios',
-      servicesDescription: readString(templateData, 'services_section_description').slice(0, 240),
+      servicesTitle: readString(templateData, 'services_section_title').slice(0, 60) || starter.servicesTitle || 'Servicios',
+      servicesDescription: readString(templateData, 'services_section_description').slice(0, 240) || starter.servicesDescription,
       bio: readString(data, 'bio') || starter.bio,
       phone,
       whatsappGreetingName: greetingName,
