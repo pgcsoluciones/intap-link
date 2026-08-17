@@ -301,8 +301,17 @@ app.delete('/api/v1/me/profile', requirePreviewAuth, async (c: any) => {
   await c.env.DB.prepare(
     `UPDATE intap_artifacts
         SET profile_id = NULL, updated_at = datetime('now')
-      WHERE profile_id = ? AND owner_user_id = ?`,
-  ).bind(profileId, userId).run()
+      WHERE profile_id = ?`,
+  ).bind(profileId).run()
+
+  // Activation receipts are permanent audit records. Keep the receipt, but detach
+  // its nullable profile reference before deleting the profile. Without this step,
+  // artifact_activation_claims.profile_id (NO ACTION by schema) blocks the delete.
+  await c.env.DB.prepare(
+    `UPDATE artifact_activation_claims
+        SET profile_id = NULL
+      WHERE profile_id = ?`,
+  ).bind(profileId).run()
 
   // Foreign-key cascades remove profile-owned relational content.
   await c.env.DB.prepare(
