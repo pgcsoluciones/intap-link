@@ -221,6 +221,35 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
   })
 })
 
+// Same-origin starter preview for onboarding. The Web Pages branch keeps its
+// normal anti-framing headers; only this authenticated Preview proxy removes
+// those headers so app.preview.intaprd.com can show the draft inside an iframe.
+app.get('/starter-preview/:slug', requirePreviewAuth, async (c: any) => {
+  const webOrigin = String(c.env.WEB_PAGES_ORIGIN || '').replace(/\/$/, '')
+  if (!webOrigin) return c.text('Preview web origin is not configured.', 503)
+
+  const slug = encodeURIComponent(c.req.param('slug'))
+  const requestUrl = new URL(c.req.url)
+  const target = new URL(`/${slug}${requestUrl.search}`, `${webOrigin}/`)
+  const upstream = await fetch(target.toString(), {
+    method: 'GET',
+    headers: { 'x-intap-preview-proxy': 'starter-review' },
+    redirect: 'manual',
+  })
+
+  const headers = new Headers(upstream.headers)
+  headers.delete('x-frame-options')
+  const csp = headers.get('content-security-policy')
+  if (csp && /frame-ancestors/i.test(csp)) headers.delete('content-security-policy')
+  headers.set('cache-control', 'no-store')
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers,
+  })
+})
+
 // Preview front door: keep app.preview.intaprd.com as the single browser origin
 // while serving the latest approved branch build from Cloudflare Pages.
 // API routes above continue to execute in this Worker, so auth cookies remain
