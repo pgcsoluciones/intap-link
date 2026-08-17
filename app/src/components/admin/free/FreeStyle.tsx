@@ -53,7 +53,7 @@ export default function FreeStyle() {
   const [previewVersion, setPreviewVersion] = useState(1)
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
-  const previewUrl = useMemo(() => slug ? `${webUrl}/${encodeURIComponent(slug)}?preview=1&v=${previewVersion}` : '', [webUrl, slug, previewVersion])
+  const previewUrl = useMemo(() => slug ? `${webUrl}/${encodeURIComponent(slug)}?preview=1&embedded=1&v=${previewVersion}` : '', [webUrl, slug, previewVersion])
   const refreshPreview = () => setPreviewVersion((current) => current + 1)
 
   useEffect(() => {
