@@ -102,6 +102,7 @@ export default function FreeDashboard() {
   const [hasSuperAdminAccess, setHasSuperAdminAccess] = useState(false)
   const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
   const [publishError, setPublishError] = useState('')
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -139,6 +140,16 @@ export default function FreeDashboard() {
       }
     } finally {
       setPublishing(false)
+    }
+  }
+
+  const copyPublicUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setLinkCopied(true)
+      window.setTimeout(() => setLinkCopied(false), 1800)
+    } catch {
+      setLinkCopied(false)
     }
   }
 
@@ -226,7 +237,14 @@ export default function FreeDashboard() {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <a href={`${publicUrl}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Vista previa</a>
-              <button type="button" onClick={() => void navigator.clipboard?.writeText(publicUrl)} className="min-h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">Copiar enlace</button>
+              <button
+                type="button"
+                onClick={() => void copyPublicUrl(publicUrl)}
+                className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-black transition-all duration-200 ${linkCopied ? 'scale-[1.04] border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-600'}`}
+                aria-live="polite"
+              >
+                {linkCopied ? '✓ Enlace copiado' : 'Copiar enlace'}
+              </button>
             </div>
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
               <div>
