@@ -42,6 +42,46 @@ async function addEvent(db: D1Database, ticketId: string, eventType: string, sta
   ).bind(crypto.randomUUID(), ticketId, eventType, statusKey, message || null, channel || null, actorType).run()
 }
 
+async function addNotification(
+  db: D1Database,
+  input: {
+    userId: string
+    profileId?: string | null
+    type: string
+    title: string
+    message: string
+    sourceType?: string | null
+    sourceId?: string | null
+    actionLabel?: string | null
+    actionUrl?: string | null
+  },
+) {
+  await db.prepare(
+    `INSERT INTO user_notifications
+      (id, user_id, profile_id, type, title, message, source_type, source_id, action_label, action_url, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+  ).bind(
+    crypto.randomUUID(), input.userId, input.profileId || null, input.type,
+    input.title, input.message, input.sourceType || null, input.sourceId || null,
+    input.actionLabel || null, input.actionUrl || null,
+  ).run()
+}
+
+async function loadUserTicket(db: D1Database, ticketId: string, userId: string) {
+  const ticket = await db.prepare(
+    `SELECT id, category, subject, message, status, priority, source_path, admin_note,
+            response_channel, responded_at, created_at, updated_at, resolved_at
+       FROM support_tickets
+      WHERE id = ? AND user_id = ? LIMIT 1`,
+  ).bind(ticketId, userId).first()
+  if (!ticket) return null
+  const events = await db.prepare(
+    `SELECT id, event_type, status_key, message, channel, actor_type, created_at
+       FROM support_ticket_events WHERE ticket_id = ? ORDER BY created_at ASC`,
+  ).bind(ticketId).all()
+  return { ...(ticket as any), events: events.results || [] }
+}
+
 app.post('/api/v1/me/support-tickets', requirePreviewAuth, async (c: any) => {
   const userId = c.get('userId') as string
   let body: any = {}
@@ -99,13 +139,96 @@ app.get('/api/v1/me/support-tickets', requirePreviewAuth, async (c: any) => {
 
   const items = [] as any[]
   for (const row of rows.results || []) {
-    const events = await c.env.DB.prepare(
-      `SELECT id, event_type, status_key, message, channel, actor_type, created_at
-         FROM support_ticket_events WHERE ticket_id = ? ORDER BY created_at ASC`,
-    ).bind((row as any).id).all()
-    items.push({ ...(row as any), events: events.results || [] })
+    const detail = await loadUserTicket(c.env.DB, String((row as any).id), userId)
+    if (detail) items.push(detail)
   }
   return c.json({ ok: true, data: { items } })
+})
+
+app.get('/api/v1/me/support-tickets/:id', requirePreviewAuth, async (c: any) => {
+  const userId = c.get('userId') as string
+  const id = String(c.req.param('id') || '').trim()
+  const detail = await loadUserTicket(c.env.DB, id, userId)
+  if (!detail) return c.json({ ok: false, error: 'Ticket no encontrado.' }, 404)
+  return c.json({ ok: true, data: detail })
+})
+
+app.post('/api/v1/me/support-tickets/:id/reply', requirePreviewAuth, async (c: any) => {
+  const userId = c.get('userId') as string
+  const id = String(c.req.param('id') || '').trim()
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const message = String(body.message || '').trim().slice(0, 1200)
+  if (message.length < 2) return c.json({ ok: false, error: 'Escribe tu respuesta antes de enviarla.' }, 400)
+
+  const ticket = await c.env.DB.prepare(
+    `SELECT id, status FROM support_tickets WHERE id = ? AND user_id = ? LIMIT 1`,
+  ).bind(id, userId).first()
+  if (!ticket) return c.json({ ok: false, error: 'Ticket no encontrado.' }, 404)
+
+  await c.env.DB.prepare(
+    `UPDATE support_tickets
+        SET status = 'in_progress', resolved_at = NULL, updated_at = datetime('now')
+      WHERE id = ?`,
+  ).bind(id).run()
+  await addEvent(c.env.DB, id, 'user_reply', 'user_reply', 'user', message, 'system')
+
+  return c.json({ ok: true, data: await loadUserTicket(c.env.DB, id, userId) })
+})
+
+app.get('/api/v1/me/notifications', requirePreviewAuth, async (c: any) => {
+  const userId = c.get('userId') as string
+  const limit = Math.min(50, Math.max(1, Number(c.req.query('limit') || 30)))
+  const [rows, unread] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT id, type, title, message, source_type, source_id, action_label, action_url, read_at, created_at
+         FROM user_notifications
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?`,
+    ).bind(userId, limit).all(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM user_notifications WHERE user_id = ? AND read_at IS NULL`,
+    ).bind(userId).first(),
+  ])
+  return c.json({ ok: true, data: { items: rows.results || [], unread_count: Number((unread as any)?.n || 0) } })
+})
+
+app.patch('/api/v1/me/notifications/:id/read', requirePreviewAuth, async (c: any) => {
+  const userId = c.get('userId') as string
+  const id = String(c.req.param('id') || '').trim()
+  await c.env.DB.prepare(
+    `UPDATE user_notifications SET read_at = COALESCE(read_at, datetime('now')) WHERE id = ? AND user_id = ?`,
+  ).bind(id, userId).run()
+  return c.json({ ok: true })
+})
+
+app.patch('/api/v1/me/notifications/read-all', requirePreviewAuth, async (c: any) => {
+  const userId = c.get('userId') as string
+  await c.env.DB.prepare(
+    `UPDATE user_notifications SET read_at = COALESCE(read_at, datetime('now')) WHERE user_id = ?`,
+  ).bind(userId).run()
+  return c.json({ ok: true })
+})
+
+app.post('/api/v1/superadmin/notifications', requireSuperAdmin('support'), async (c: any) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const userId = String(body.user_id || '').trim()
+  const profileId = body.profile_id ? String(body.profile_id).trim() : null
+  const title = String(body.title || '').trim().slice(0, 140)
+  const message = String(body.message || '').trim().slice(0, 1000)
+  const actionLabel = body.action_label ? String(body.action_label).trim().slice(0, 80) : null
+  const actionUrl = body.action_url ? String(body.action_url).trim().slice(0, 500) : null
+  if (!userId) return c.json({ ok: false, error: 'Selecciona un usuario.' }, 400)
+  if (title.length < 2 || message.length < 2) return c.json({ ok: false, error: 'Título y mensaje son obligatorios.' }, 400)
+  const user = await c.env.DB.prepare(`SELECT id FROM users WHERE id = ? LIMIT 1`).bind(userId).first()
+  if (!user) return c.json({ ok: false, error: 'Usuario no encontrado.' }, 404)
+  await addNotification(c.env.DB, {
+    userId, profileId, type: 'system_promo', title, message,
+    sourceType: 'system', sourceId: null, actionLabel, actionUrl,
+  })
+  return c.json({ ok: true })
 })
 
 app.get('/api/v1/superadmin/support-tickets', requireSuperAdmin('support'), async (c: any) => {
@@ -195,11 +318,11 @@ app.post('/api/v1/superadmin/support-tickets/:id/respond', requireSuperAdmin('su
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
   const channel = String(body.channel || '').trim().toLowerCase()
   const response = String(body.message || '').trim().slice(0, 1600)
-  if (!VALID_CHANNELS.has(channel)) return c.json({ ok: false, error: 'Canal de respuesta inválido.' }, 400)
+  if (!VALID_CHANNELS.has(channel)) return c.json({ ok: false, error: 'Selecciona un canal de respuesta.' }, 400)
   if (response.length < 2) return c.json({ ok: false, error: 'Escribe la respuesta antes de enviarla.' }, 400)
 
   const ticket = await c.env.DB.prepare(
-    `SELECT t.id, t.subject, u.email AS user_email,
+    `SELECT t.id, t.user_id, t.profile_id, t.subject, u.email AS user_email,
             COALESCE(NULLIF(pc.whatsapp, ''), NULLIF(pc.phone, '')) AS user_phone
        FROM support_tickets t
        JOIN users u ON u.id = t.user_id
@@ -239,6 +362,17 @@ app.post('/api/v1/superadmin/support-tickets/:id/respond', requireSuperAdmin('su
       WHERE id = ?`,
   ).bind(response, channel, id).run()
   await addEvent(c.env.DB, id, 'response', 'responded', 'support', response, channel)
+  await addNotification(c.env.DB, {
+    userId: String((ticket as any).user_id),
+    profileId: (ticket as any).profile_id || null,
+    type: 'support_response',
+    title: 'Soporte Kawvo respondió tu solicitud',
+    message: response,
+    sourceType: 'support_ticket',
+    sourceId: id,
+    actionLabel: 'Ver respuesta',
+    actionUrl: null,
+  })
 
   return c.json({ ok: true, data: { status: 'resolved', channel, whatsapp_url: whatsappUrl } })
 })
