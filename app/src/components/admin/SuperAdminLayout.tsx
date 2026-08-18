@@ -13,12 +13,13 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
   { key: 'support', label: 'Soporte / tickets' },
+  { key: 'feedback', label: 'Onboarding / bajas' },
   { key: 'billing', label: 'Billing / Pagos' },
   { key: 'paymentLinks', label: 'Enlaces de pago' },
   { key: 'products', label: 'Productos / códigos' },
@@ -57,15 +58,15 @@ export default function SuperAdminLayout({
 
   function navigate(section: SuperAdminNavSection) {
     if (section === 'products') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/products') {
-        window.location.href = '/superadmin/products'
-      }
+      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/products') window.location.href = '/superadmin/products'
       return
     }
     if (section === 'support') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/support') {
-        window.location.href = '/superadmin/support'
-      }
+      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/support') window.location.href = '/superadmin/support'
+      return
+    }
+    if (section === 'feedback') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/feedback') window.location.href = '/superadmin/feedback'
       return
     }
     onNavigate?.(section)
