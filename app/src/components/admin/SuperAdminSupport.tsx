@@ -90,11 +90,12 @@ export default function SuperAdminSupport() {
     if (selectedId === ticket.id) {
       setSelectedId('')
       setSelectedDetail(null)
+      setNote('')
       return
     }
     setSelectedId(ticket.id)
     setSelectedDetail(ticket)
-    setNote(ticket.admin_note || '')
+    setNote('')
     setReplyChannel((ticket.response_channel as any) || 'system')
     setFeedback('')
     setError('')
@@ -102,7 +103,7 @@ export default function SuperAdminSupport() {
       const json: any = await apiGet(`/superadmin/support-tickets/${ticket.id}`)
       if (json?.ok) {
         setSelectedDetail(json.data)
-        setNote(json.data?.admin_note || '')
+        setNote('')
         setReplyChannel((json.data?.response_channel as any) || 'system')
       }
     } catch { /* summary remains usable */ }
@@ -116,10 +117,7 @@ export default function SuperAdminSupport() {
     setError('')
     setFeedback('')
     try {
-      const json: any = await apiPatch(`/superadmin/support-tickets/${selected.id}`, {
-        status,
-        admin_note: note,
-      })
+      const json: any = await apiPatch(`/superadmin/support-tickets/${selected.id}`, { status })
       if (!json?.ok) throw new Error(json?.error || 'No se pudo actualizar el ticket.')
       setFeedback(`Estado actualizado: ${statusLabel(status)}.`)
       await load()
@@ -164,6 +162,7 @@ export default function SuperAdminSupport() {
       } else {
         setFeedback('Respuesta publicada y enviada a la bandeja de notificaciones del usuario.')
       }
+      setNote('')
       await load()
       const detail: any = await apiGet(`/superadmin/support-tickets/${selected.id}`)
       if (detail?.ok) setSelectedDetail(detail.data)
@@ -232,7 +231,7 @@ export default function SuperAdminSupport() {
 
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 900, color: '#334155' }}>
                       Respuesta de soporte <span style={{ color: '#e11d48' }}>*</span>
-                      <textarea value={note} onChange={(event) => { setNote(event.target.value); if (error) setError('') }} rows={5} placeholder="Escribe aquí la respuesta para el usuario…" style={{ marginTop: 8, width: '100%', boxSizing: 'border-box', border: error && note.trim().length < 2 ? '2px solid #fb7185' : '1px solid #cbd5e1', borderRadius: 12, padding: 12, resize: 'vertical', font: 'inherit' }} />
+                      <textarea value={note} onChange={(event) => { setNote(event.target.value); if (error) setError('') }} rows={5} placeholder="Escribe aquí una nueva respuesta para el usuario…" autoComplete="off" style={{ marginTop: 8, width: '100%', boxSizing: 'border-box', border: error && note.trim().length < 2 ? '2px solid #fb7185' : '1px solid #cbd5e1', borderRadius: 12, padding: 12, resize: 'vertical', font: 'inherit' }} />
                     </label>
 
                     <div style={{ display: 'grid', gap: 8 }}>
