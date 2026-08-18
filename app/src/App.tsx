@@ -29,6 +29,7 @@ import FreeQuickActions from './components/admin/free/FreeQuickActions'
 import FreeServices from './components/admin/free/FreeServices'
 import FreeStyle from './components/admin/free/FreeStyle'
 import FreeContextHelp from './components/admin/free/FreeContextHelp'
+import FreeRouteUx from './components/admin/free/FreeRouteUx'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
 import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
 import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
@@ -59,6 +60,7 @@ function UnknownAppRouteRedirect() {
 function App() {
   return (
     <BrowserRouter>
+      <FreeRouteUx />
       <Routes>
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/check-email" element={<AdminVerify />} />
