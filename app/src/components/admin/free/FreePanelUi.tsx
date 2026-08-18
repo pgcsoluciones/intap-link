@@ -2,9 +2,14 @@ import type { MouseEventHandler } from 'react'
 
 const BASIC_PLAN_PHONE = '18097059802'
 const BASIC_PLAN_MESSAGE = 'Tengo un perfil Digital Gratis y me gustaría pasarme al Plan Básico.'
+const BASIC_TRIAL_MESSAGE = 'Tengo un perfil Digital Gratis y quiero probar el Plan Básico por 7 días gratis.'
 
 export function basicPlanWhatsAppUrl() {
   return `https://wa.me/${BASIC_PLAN_PHONE}?text=${encodeURIComponent(BASIC_PLAN_MESSAGE)}`
+}
+
+export function basicTrialWhatsAppUrl() {
+  return `https://wa.me/${BASIC_PLAN_PHONE}?text=${encodeURIComponent(BASIC_TRIAL_MESSAGE)}`
 }
 
 export function FreeBackButton({
