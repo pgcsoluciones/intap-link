@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiGet, apiPatch } from '../../../lib/api'
 
 type NotificationItem = {
@@ -21,6 +21,7 @@ function formatDate(value?: string | null) {
 }
 
 export default function FreeNotificationBell() {
+  const bellRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<NotificationItem[]>([])
   const [unread, setUnread] = useState(0)
@@ -50,8 +51,30 @@ export default function FreeNotificationBell() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!open) return
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null
+      if (target && bellRef.current && !bellRef.current.contains(target)) setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('touchstart', onPointerDown, { passive: true })
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('touchstart', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
   const openItem = async (item: NotificationItem) => {
     setSelected(item)
+    setOpen(false)
     if (!item.read_at) {
       setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry))
       setUnread((value) => Math.max(0, value - 1))
@@ -81,7 +104,7 @@ export default function FreeNotificationBell() {
   }
 
   return (
-    <div className="relative">
+    <div ref={bellRef} className="relative">
       <button
         type="button"
         onClick={() => { setOpen((value) => !value); if (!open) void load() }}
