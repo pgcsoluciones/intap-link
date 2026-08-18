@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiGet, apiPost } from '../../../lib/api'
 
 type EventItem = {
@@ -62,9 +62,11 @@ function formatDate(value?: string | null) {
 }
 
 export default function FreeSupportPanel() {
+  const panelRef = useRef<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
   const [category, setCategory] = useState('editor')
   const [message, setMessage] = useState('')
+  const [messageResetKey, setMessageResetKey] = useState(0)
   const [sending, setSending] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [tickets, setTickets] = useState<Ticket[]>([])
@@ -108,9 +110,26 @@ export default function FreeSupportPanel() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: PointerEvent) => {
+      if (!panelRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !selectedTicket) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, selectedTicket])
+
   async function submit() {
     if (sending) return
-    if (message.trim().length < 8) {
+    const cleanMessage = message.trim()
+    if (cleanMessage.length < 8) {
       setFeedback('Escribe un poco más sobre tu duda antes de enviarla.')
       return
     }
@@ -119,7 +138,7 @@ export default function FreeSupportPanel() {
     try {
       const result: any = await apiPost('/me/support-tickets', {
         category,
-        message: message.trim(),
+        message: cleanMessage,
         source_path: window.location.pathname,
       })
       if (!result?.ok) {
@@ -127,6 +146,7 @@ export default function FreeSupportPanel() {
         return
       }
       setMessage('')
+      setMessageResetKey((current) => current + 1)
       setFeedback(`Enviada. Tu solicitud ${result.data?.reference || ''} quedó en la cola de soporte. Nuestro equipo la atenderá lo antes posible.`)
       await loadTickets()
     } catch {
@@ -162,60 +182,67 @@ export default function FreeSupportPanel() {
   }
 
   return (
-    <section id="kawvo-support-panel" className="rounded-[22px] border border-cyan-100 bg-cyan-50/55 p-4">
-      <div className="flex items-start gap-3">
+    <section ref={panelRef} id="kawvo-support-panel" className="overflow-hidden rounded-[22px] border border-cyan-100 bg-cyan-50/55 transition-all duration-200">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-controls="kawvo-support-content"
+        className="flex w-full items-center gap-3 p-4 text-left"
+      >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-lg">?</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">¿Necesitas ayuda?</p>
-          <h2 className="mt-1 text-base font-black text-slate-950">Soporte Kawvo</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-600">Antes de hacer un cambio importante o eliminar tu perfil, cuéntanos tu duda. Nuestro equipo de soporte podrá darle seguimiento.</p>
-        </div>
-      </div>
-
-      <button type="button" onClick={() => setOpen((current) => !current)} className="mt-4 w-full rounded-xl bg-white px-4 py-3 text-xs font-black text-cyan-800 shadow-sm">
-        {open ? 'Cerrar formulario' : 'Pedir ayuda'}
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">¿Necesitas ayuda?</span>
+          <span className="mt-1 block text-base font-black text-slate-950">Soporte Kawvo</span>
+          <span className="mt-1 block text-xs leading-5 text-slate-600">Envía una duda y revisa el seguimiento de tus solicitudes.</span>
+        </span>
+        <span aria-hidden="true" className={`shrink-0 text-xl font-black text-cyan-700 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>⌄</span>
       </button>
 
       {open && (
-        <div className="mt-4 space-y-3 border-t border-cyan-100 pt-4">
-          <label className="block text-xs font-black text-slate-700">
-            ¿Con qué necesitas ayuda?
-            <select value={category} onChange={(event) => setCategory(event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100">
-              {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
+        <div id="kawvo-support-content" className="border-t border-cyan-100 px-4 pb-4 pt-4">
+          <p className="mb-4 rounded-xl bg-white/75 px-3 py-2 text-[11px] font-semibold leading-5 text-slate-500">Antes de hacer un cambio importante o eliminar tu perfil, cuéntanos tu duda. Nuestro equipo de soporte podrá darle seguimiento.</p>
 
-          <label className="block text-xs font-black text-slate-700">
-            Cuéntanos tu duda
-            <textarea value={message} onChange={(event) => message.length <= 1200 && setMessage(event.target.value)} maxLength={1200} rows={4} placeholder="Ejemplo: no sé qué debo cambiar antes de publicar mi perfil…" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100" />
-          </label>
+          <div className="space-y-3">
+            <label className="block text-xs font-black text-slate-700">
+              ¿Con qué necesitas ayuda?
+              <select value={category} onChange={(event) => setCategory(event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100">
+                {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
 
-          <p className="rounded-xl bg-white/80 px-3 py-2 text-[11px] font-semibold leading-5 text-slate-500">Al enviarla, tu solicitud entra en una cola de atención. El equipo de soporte la revisará por orden y te responderá lo antes posible.</p>
+            <label className="block text-xs font-black text-slate-700">
+              Cuéntanos tu duda
+              <textarea key={messageResetKey} value={message} onChange={(event) => setMessage(event.target.value.slice(0, 1200))} maxLength={1200} rows={4} placeholder="Ejemplo: no sé qué debo cambiar antes de publicar mi perfil…" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100" />
+            </label>
 
-          <button type="button" onClick={() => void submit()} disabled={sending} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">
-            {sending ? 'Enviando…' : 'Enviar a soporte'}
-          </button>
-          {feedback && <p className={`rounded-xl px-3 py-2 text-xs font-semibold leading-5 ${message.trim().length < 8 && feedback.startsWith('Escribe') ? 'bg-rose-50 text-rose-700' : 'bg-white text-slate-600'}`}>{feedback}</p>}
-        </div>
-      )}
+            <p className="rounded-xl bg-white/80 px-3 py-2 text-[11px] font-semibold leading-5 text-slate-500">Al enviarla, tu solicitud entra en una cola de atención. El equipo de soporte la revisará por orden y te responderá lo antes posible.</p>
 
-      {tickets.length > 0 && (
-        <div className="mt-4 border-t border-cyan-100 pt-4">
-          <p className="text-xs font-black text-slate-700">Tus solicitudes recientes</p>
-          <div className="mt-2 space-y-2">
-            {tickets.slice(0, 3).map((ticket) => (
-              <button key={ticket.id} type="button" onClick={() => void openTicketById(ticket.id)} className="block w-full rounded-xl bg-white p-3 text-left text-xs transition hover:-translate-y-0.5 hover:shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <strong className="text-slate-800">{ticket.subject}</strong>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-500">{statusLabel(ticket.status)}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-400">
-                  <span>{formatDate(ticket.created_at)}</span>
-                  <span className="text-cyan-700">Ver solicitud →</span>
-                </div>
-              </button>
-            ))}
+            <button type="button" onClick={() => void submit()} disabled={sending} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">
+              {sending ? 'Enviando…' : 'Enviar a soporte'}
+            </button>
+            {feedback && <p className={`rounded-xl px-3 py-2 text-xs font-semibold leading-5 ${feedback.startsWith('Escribe') || feedback.startsWith('No pudimos') ? 'bg-rose-50 text-rose-700' : 'bg-white text-slate-600'}`}>{feedback}</p>}
           </div>
+
+          {tickets.length > 0 && (
+            <div className="mt-4 border-t border-cyan-100 pt-4">
+              <p className="text-xs font-black text-slate-700">Tus solicitudes recientes</p>
+              <div className="mt-2 space-y-2">
+                {tickets.slice(0, 3).map((ticket) => (
+                  <button key={ticket.id} type="button" onClick={() => void openTicketById(ticket.id)} className="block w-full rounded-xl bg-white p-3 text-left text-xs transition hover:-translate-y-0.5 hover:shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <strong className="text-slate-800">{ticket.subject}</strong>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-500">{statusLabel(ticket.status)}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-400">
+                      <span>{formatDate(ticket.created_at)}</span>
+                      <span className="text-cyan-700">Ver solicitud →</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
