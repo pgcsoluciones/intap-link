@@ -74,6 +74,8 @@ const CODE_LABELS: Record<CodeStatus, string> = {
   none: 'Sin código',
 }
 
+const PAGE_SIZE = 15
+
 function productLabel(type: ProductType) {
   return PRODUCT_TYPES.find(item => item.value === type)?.label || 'Producto INTAP'
 }
@@ -98,6 +100,8 @@ export default function SuperAdminArtifacts() {
   const [loadingInventory, setLoadingInventory] = useState(true)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [productFilter, setProductFilter] = useState('')
+  const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<ArtifactItem | null>(null)
   const [selectedProfileId, setSelectedProfileId] = useState('')
   const [rotatedCode, setRotatedCode] = useState('')
@@ -109,7 +113,7 @@ export default function SuperAdminArtifacts() {
   const loadInventory = async () => {
     setLoadingInventory(true)
     try {
-      const params = new URLSearchParams({ limit: '100' })
+      const params = new URLSearchParams({ limit: '200' })
       if (query.trim()) params.set('q', query.trim())
       if (statusFilter) params.set('status', statusFilter)
       const [artifactsJson, subscribersJson]: any[] = await Promise.all([
@@ -120,6 +124,7 @@ export default function SuperAdminArtifacts() {
       if (!artifactsJson?.ok) throw new Error(artifactsJson?.error || 'No se pudo cargar el inventario.')
       const items = artifactsJson.data?.items || artifactsJson.data || []
       setArtifacts(Array.isArray(items) ? items : [])
+      setPage(1)
 
       if (subscribersJson?.ok) {
         const subscribers = subscribersJson.data?.subscribers || subscribersJson.data || []
@@ -142,6 +147,7 @@ export default function SuperAdminArtifacts() {
   }
 
   useEffect(() => { void loadInventory() }, [])
+  useEffect(() => { setPage(1) }, [productFilter])
 
   const stats = useMemo(() => ({
     total: artifacts.length,
@@ -149,6 +155,17 @@ export default function SuperAdminArtifacts() {
     activated: artifacts.filter(item => item.status === 'activated').length,
     suspended: artifacts.filter(item => item.status === 'suspended').length,
   }), [artifacts])
+
+  const filteredArtifacts = useMemo(
+    () => productFilter ? artifacts.filter(item => item.product_type === productFilter) : artifacts,
+    [artifacts, productFilter],
+  )
+  const pageCount = Math.max(1, Math.ceil(filteredArtifacts.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount)
+  const pageStart = (safePage - 1) * PAGE_SIZE
+  const pagedArtifacts = filteredArtifacts.slice(pageStart, pageStart + PAGE_SIZE)
+  const shownFrom = filteredArtifacts.length ? pageStart + 1 : 0
+  const shownTo = Math.min(pageStart + PAGE_SIZE, filteredArtifacts.length)
 
   async function createArtifact() {
     if (saving) return
@@ -173,7 +190,6 @@ export default function SuperAdminArtifacts() {
       setSaving(false)
     }
   }
-
 
   async function createBatch() {
     if (batchRunning || saving) return
@@ -417,7 +433,6 @@ export default function SuperAdminArtifacts() {
           </section>
         )}
 
-
         {batchResults.length > 0 && (
           <section className="rounded-3xl border-2 border-violet-200 bg-violet-50 p-5 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -439,11 +454,12 @@ export default function SuperAdminArtifacts() {
 
         <section className="rounded-3xl bg-white p-6 shadow-sm md:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Inventario</p><h2 className="mt-1 text-2xl font-black">Productos generados</h2></div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Inventario</p><h2 className="mt-1 text-2xl font-black">Productos generados</h2><p className="mt-1 text-xs text-slate-400">15 códigos por página para mantener la gestión rápida y ordenada.</p></div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <input value={query} onChange={event => setQuery(event.target.value.toUpperCase())} placeholder="Código público, email o slug" className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400" />
+              <select value={productFilter} onChange={event => setProductFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold"><option value="">Todos los productos</option>{PRODUCT_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
               <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold"><option value="">Todos los estados</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-              <button onClick={() => void loadInventory()} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white">Buscar</button>
+              <button onClick={() => { setPage(1); void loadInventory() }} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white">Buscar</button>
             </div>
           </div>
 
@@ -451,7 +467,7 @@ export default function SuperAdminArtifacts() {
             <table className="w-full min-w-[960px] text-left text-sm">
               <thead className="text-[11px] uppercase tracking-wide text-slate-400"><tr><th className="border-b p-3">Código</th><th className="border-b p-3">Producto</th><th className="border-b p-3">Estado</th><th className="border-b p-3">Código activación</th><th className="border-b p-3">Propietario</th><th className="border-b p-3">Destino</th><th className="border-b p-3">Creado</th><th className="border-b p-3"></th></tr></thead>
               <tbody>
-                {artifacts.map(item => (
+                {pagedArtifacts.map(item => (
                   <tr key={item.id} className="border-b border-slate-100 align-top">
                     <td className="p-3 font-mono font-black">{item.public_code}</td>
                     <td className="p-3">{productLabel(item.product_type)}</td>
@@ -463,10 +479,21 @@ export default function SuperAdminArtifacts() {
                     <td className="p-3"><button onClick={() => { setRotatedCode(''); void openDetail(item) }} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">Gestionar</button></td>
                   </tr>
                 ))}
-                {!loadingInventory && artifacts.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-400">No hay productos con estos filtros.</td></tr>}
+                {!loadingInventory && filteredArtifacts.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-400">No hay productos con estos filtros.</td></tr>}
               </tbody>
             </table>
           </div>
+
+          {!loadingInventory && filteredArtifacts.length > 0 && (
+            <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-semibold text-slate-400">Mostrando {shownFrom}–{shownTo} de {filteredArtifacts.length} códigos</p>
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={safePage <= 1} onClick={() => setPage(current => Math.max(1, current - 1))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-35">← Anterior</button>
+                <span className="min-w-20 text-center text-xs font-black text-slate-600">Página {safePage} de {pageCount}</span>
+                <button type="button" disabled={safePage >= pageCount} onClick={() => setPage(current => Math.min(pageCount, current + 1))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-35">Siguiente →</button>
+              </div>
+            </div>
+          )}
           {loadingInventory && <p className="mt-5 text-sm text-slate-400">Cargando inventario…</p>}
         </section>
       </div>
