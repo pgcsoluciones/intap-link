@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPost } from '../../../lib/api'
 import { basicTrialWhatsAppUrl } from './FreePanelUi'
@@ -25,6 +25,10 @@ const EXIT_REASONS = [
   'Otro motivo',
 ]
 
+function normalizePhrase(value: string) {
+  return value.trim().replace(/\s+/g, ' ').toUpperCase()
+}
+
 export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -40,8 +44,12 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
   const [checkingOptions, setCheckingOptions] = useState(false)
 
   const expectedPhrase = `ELIMINAR ${slug}`
+  const phraseMatches = normalizePhrase(phrase) === normalizePhrase(expectedPhrase)
+  const emailMatches = email
+    ? emailConfirm.trim().toLowerCase() === email.trim().toLowerCase()
+    : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailConfirm.trim())
   const surveyReady = Boolean(reason && improvementOne.trim().length >= 3 && improvementTwo.trim().length >= 3)
-  const ready = surveyReady && acknowledged && phrase === expectedPhrase && emailConfirm.trim().length > 3
+  const ready = surveyReady && acknowledged && phraseMatches && emailMatches
 
   const openDialog = async () => {
     setOpen(true)
@@ -69,6 +77,15 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
     setError('')
   }
 
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, deleting])
+
   const destroy = async () => {
     if (!ready || deleting) return
     setDeleting(true)
@@ -85,7 +102,7 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
       }
 
       const result: any = await apiDelete('/me/profile', {
-        confirm_slug: phrase,
+        confirm_slug: expectedPhrase,
         confirm_email: emailConfirm.trim(),
       })
       if (!result.ok) {
@@ -114,14 +131,29 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="delete-profile-title">
-          <div className="max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-[28px] bg-white p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-rose-600">Antes de irte</p>
-                <h2 id="delete-profile-title" className="mt-1 text-xl font-black text-slate-950">Ayúdanos a mejorar</h2>
-              </div>
-              <button type="button" onClick={close} disabled={deleting} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-500">Cerrar</button>
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-profile-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) close()
+          }}
+        >
+          <div className="relative max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-[28px] bg-white p-5 shadow-2xl">
+            <button
+              type="button"
+              onClick={close}
+              disabled={deleting}
+              aria-label="Cerrar"
+              className="sticky top-0 z-20 ml-auto flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-xl font-semibold text-slate-700 shadow-lg"
+            >
+              ×
+            </button>
+
+            <div className="-mt-8 pr-12">
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-rose-600">Antes de irte</p>
+              <h2 id="delete-profile-title" className="mt-1 text-xl font-black text-slate-950">Ayúdanos a mejorar</h2>
             </div>
 
             <p className="mt-3 text-xs leading-5 text-slate-500">Son tres respuestas breves. Nos ayudan a entender qué debemos mejorar antes de completar la eliminación.</p>
@@ -159,19 +191,27 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
             </div>
 
             <label className="mt-5 block text-xs font-black text-slate-700">
-              Escribe exactamente <span className="font-mono text-rose-700">{expectedPhrase}</span>
-              <input value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" spellCheck={false} className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
+              Escribe <span className="font-mono text-rose-700">{expectedPhrase}</span>
+              <input value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" spellCheck={false} className={`mt-2 w-full rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-rose-100 ${phrase && !phraseMatches ? 'border-rose-300' : 'border-slate-200 focus:border-rose-400'}`} />
+              {phrase && !phraseMatches && <span className="mt-1 block text-xs text-rose-600">La frase todavía no coincide.</span>}
             </label>
 
             <label className="mt-4 block text-xs font-black text-slate-700">
               Confirma tu correo de acceso
-              <input type="email" value={emailConfirm} onChange={(event) => setEmailConfirm(event.target.value)} placeholder={email || 'tu-correo@ejemplo.com'} autoComplete="email" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
+              <input type="email" value={emailConfirm} onChange={(event) => setEmailConfirm(event.target.value)} placeholder={email || 'tu-correo@ejemplo.com'} autoComplete="email" className={`mt-2 w-full rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:ring-4 focus:ring-rose-100 ${emailConfirm && !emailMatches ? 'border-rose-300' : 'border-slate-200 focus:border-rose-400'}`} />
+              {emailConfirm && !emailMatches && <span className="mt-1 block text-xs text-rose-600">El correo debe coincidir con tu correo de acceso.</span>}
             </label>
 
             <label className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-200 p-3 text-xs leading-5 text-slate-600">
-              <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} className="mt-0.5 h-4 w-4" />
+              <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0" />
               <span>Entiendo que el perfil y sus datos no podrán recuperarse después de confirmar.</span>
             </label>
+
+            {!ready && (
+              <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">
+                Para activar el botón completa las 3 respuestas, escribe la frase indicada, confirma el mismo correo de acceso y marca la casilla final.
+              </div>
+            )}
 
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</p>}
 
