@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { apiGet, apiPost } from '../../../lib/api'
 
+type TicketEvent = {
+  id: string
+  status_key: string
+  message?: string | null
+  channel?: string | null
+  created_at?: string | null
+}
+
 type Ticket = {
   id: string
   category?: string
@@ -8,9 +16,12 @@ type Ticket = {
   message?: string | null
   status: string
   admin_note?: string | null
+  response_channel?: string | null
+  responded_at?: string | null
   created_at?: string | null
   updated_at?: string | null
   resolved_at?: string | null
+  events?: TicketEvent[]
 }
 
 const categories = [
@@ -26,6 +37,22 @@ function statusLabel(status: string) {
   if (status === 'resolved') return 'Respondido'
   if (status === 'closed') return 'Cerrado'
   return 'Recibida'
+}
+
+function eventLabel(status: string) {
+  if (status === 'submitted') return 'Enviada'
+  if (status === 'received') return 'Recibida'
+  if (status === 'in_progress') return 'En proceso'
+  if (status === 'responded') return 'Respuesta'
+  if (status === 'closed') return 'Cerrada'
+  return status
+}
+
+function channelLabel(channel?: string | null) {
+  if (channel === 'email') return 'Correo'
+  if (channel === 'whatsapp') return 'WhatsApp'
+  if (channel === 'system') return 'Sistema'
+  return ''
 }
 
 function formatDate(value?: string | null) {
@@ -46,7 +73,11 @@ export default function FreeSupportPanel() {
   const loadTickets = () => {
     apiGet('/me/support-tickets')
       .then((json: any) => {
-        if (json?.ok) setTickets(Array.isArray(json.data?.items) ? json.data.items : [])
+        if (json?.ok) {
+          const items = Array.isArray(json.data?.items) ? json.data.items : []
+          setTickets(items)
+          setSelectedTicket((current) => current ? (items.find((item: Ticket) => item.id === current.id) || current) : null)
+        }
       })
       .catch(() => undefined)
   }
@@ -127,7 +158,7 @@ export default function FreeSupportPanel() {
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-400">
                   <span>{formatDate(ticket.created_at)}</span>
-                  <span className="text-cyan-700">Ver solicitud →</span>
+                  <span className="text-cyan-700">Ver seguimiento →</span>
                 </div>
               </button>
             ))}
@@ -147,7 +178,7 @@ export default function FreeSupportPanel() {
             </div>
 
             <div className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 p-3">
-              <span className="text-xs font-bold text-slate-500">Estado</span>
+              <span className="text-xs font-bold text-slate-500">Estado actual</span>
               <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-cyan-700 shadow-sm">{statusLabel(selectedTicket.status)}</span>
             </div>
 
@@ -160,9 +191,30 @@ export default function FreeSupportPanel() {
               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">{selectedTicket.message || 'Sin mensaje disponible.'}</p>
             </div>
 
+            {(selectedTicket.events || []).length > 0 && (
+              <div className="mt-4 rounded-2xl border border-slate-200 p-4">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Seguimiento</p>
+                <div className="mt-3 space-y-3">
+                  {(selectedTicket.events || []).map((event, index) => (
+                    <div key={event.id} className="relative flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <span className={`mt-1 h-3 w-3 rounded-full ${event.status_key === 'responded' ? 'bg-emerald-500' : event.status_key === 'in_progress' ? 'bg-cyan-500' : event.status_key === 'closed' ? 'bg-slate-700' : 'bg-slate-300'}`} />
+                        {index < (selectedTicket.events || []).length - 1 && <span className="mt-1 h-full min-h-8 w-px bg-slate-200" />}
+                      </div>
+                      <div className="min-w-0 flex-1 pb-2">
+                        <div className="flex flex-wrap items-center gap-1.5"><strong className="text-xs text-slate-800">{eventLabel(event.status_key)}</strong>{event.channel && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-500">{channelLabel(event.channel)}</span>}</div>
+                        {event.message && <p className="mt-1 text-[11px] leading-5 text-slate-500">{event.message}</p>}
+                        <p className="mt-1 text-[10px] text-slate-400">{formatDate(event.created_at)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {selectedTicket.admin_note && (
               <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Respuesta del equipo de soporte</p>
+                <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Respuesta del equipo</p>{selectedTicket.response_channel && <span className="rounded-full bg-white px-2 py-1 text-[9px] font-black text-emerald-700">Vía {channelLabel(selectedTicket.response_channel)}</span>}</div>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-emerald-950">{selectedTicket.admin_note}</p>
               </div>
             )}
