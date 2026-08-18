@@ -117,7 +117,7 @@ export default function FreeOnboardingBuilder() {
 
   if (done) {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+      <main className="relative min-h-screen overflow-hidden bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950 sm:px-5 sm:py-8">
         <style>{`@keyframes kawvoConfetti{0%{transform:translateY(-15vh) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(620deg);opacity:0}}`}</style>
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
           {Array.from({ length: 24 }).map((_, index) => (
@@ -128,11 +128,11 @@ export default function FreeOnboardingBuilder() {
         <section className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
           <div className="w-full rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-3xl">✓</div>
-            <p className="mt-5 text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
+            <p className="mt-5 text-sm font-black uppercase tracking-[0.16em] text-cyan-700">KAWVO LINK</p>
             <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.04em]">¡Tu perfil base está listo!</h1>
-            <p className="mt-3 text-[15px] leading-6 text-slate-500">Ya preparamos {variant === 2 ? 'una nueva propuesta' : 'una configuración inicial'} según tu actividad comercial. Ahora queremos que la veas antes de seguir.</p>
-            <div className="mt-4 rounded-2xl bg-cyan-50 p-4 text-sm leading-6 text-slate-600">Esta propuesta usa contenido e imágenes de ejemplo. Antes de publicar te guiaremos para sustituirlos por la información real de tu negocio.</div>
-            <button type="button" onClick={() => navigate('/admin/free/onboarding/review')} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">Ver mi perfil base</button>
+            <p className="mt-4 text-base font-medium leading-7 text-slate-700">Ya preparamos {variant === 2 ? 'una nueva propuesta' : 'una configuración inicial'} según tu actividad comercial. Ahora queremos que la veas antes de seguir.</p>
+            <div className="mt-5 rounded-2xl bg-cyan-100 p-4 text-base font-semibold leading-7 text-slate-800">Esta propuesta usa contenido e imágenes de ejemplo. Antes de publicar te guiaremos para sustituirlos por la información real de tu negocio.</div>
+            <button type="button" onClick={() => navigate('/admin/free/onboarding/review')} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white">Ver mi perfil base</button>
           </div>
         </section>
       </main>
@@ -140,12 +140,12 @@ export default function FreeOnboardingBuilder() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+    <main className="min-h-screen overflow-hidden bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950 sm:px-5 sm:py-8">
       <style>{`@keyframes kawvoWorkerCross{0%{transform:translateX(-18px);opacity:.25}14%{opacity:1}86%{opacity:1}100%{transform:translateX(18px);opacity:.25}}`}</style>
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
-        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">Estamos construyendo</p>
+        <p className="text-sm font-black uppercase tracking-[0.16em] text-cyan-700">Estamos construyendo</p>
         <h1 className="mt-3 text-[28px] font-black leading-tight tracking-[-0.04em]">Ten paciencia, nuestros asistentes están haciendo algo chulo para ti</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-500">Queremos entregarte una base que ya se parezca a un perfil real, no una pantalla vacía.</p>
+        <p className="mt-4 text-base font-medium leading-7 text-slate-700">Queremos entregarte una base que ya se parezca a un perfil real, no una pantalla vacía.</p>
 
         <div className="relative mt-8 h-60 w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
           <img
@@ -158,17 +158,17 @@ export default function FreeOnboardingBuilder() {
         </div>
 
         {error ? (
-          <div className="mt-6 w-full rounded-2xl bg-rose-50 p-4 text-sm font-semibold leading-6 text-rose-700">
+          <div className="mt-6 w-full rounded-2xl bg-rose-50 p-4 text-base font-semibold leading-7 text-rose-700">
             {error}
-            <button type="button" onClick={() => window.location.reload()} className="mt-3 block w-full rounded-xl bg-white px-4 py-3 text-xs font-black text-rose-700">Intentar otra vez</button>
+            <button type="button" onClick={() => window.location.reload()} className="mt-3 block w-full rounded-xl bg-white px-4 py-3 text-sm font-black text-rose-700">Intentar otra vez</button>
           </div>
         ) : (
           <>
-            <p className="mt-6 min-h-12 text-sm font-extrabold leading-6 text-slate-700">{STATUS_MESSAGES[statusIndex]}</p>
+            <p className="mt-6 min-h-14 text-base font-extrabold leading-7 text-slate-800">{STATUS_MESSAGES[statusIndex]}</p>
             <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-200" aria-label={`Progreso ${progress}%`}>
               <div className="h-full rounded-full bg-cyan-500 transition-all duration-700" style={{ width: `${progress}%` }} />
             </div>
-            <p className="mt-2 text-xs font-bold text-slate-400">{progress}%</p>
+            <p className="mt-2 text-sm font-bold text-slate-600">{progress}%</p>
           </>
         )}
       </section>
