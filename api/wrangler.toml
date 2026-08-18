@@ -1,5 +1,5 @@
 name = "intap-api"
-main = "src/index.ts"
+main = "src/preview-free-entry.ts"
 compatibility_date = "2024-02-08"
 
 # Rutas de producción — el Worker maneja /api/* en ambos dominios.
