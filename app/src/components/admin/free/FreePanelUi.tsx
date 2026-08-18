@@ -36,18 +36,18 @@ export function FreeUpgradeCard({
 }) {
   return (
     <aside
-      className={`rounded-[24px] border border-violet-100 bg-violet-50/70 ${compact ? 'p-4' : 'p-5'}`}
+      className={`rounded-[24px] border border-sky-200 bg-sky-50/90 ${compact ? 'p-4' : 'p-5'}`}
     >
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-lg">✦</span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-slate-900">Amplía tu alcance</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Logra mayor impacto con más herramientas en tu perfil. Pásate a un Plan Básico.</p>
+          <p className="text-base font-black text-slate-900">Amplía tu alcance</p>
+          <p className="mt-1 text-sm font-medium leading-6 text-slate-700">Logra mayor impacto con más herramientas en tu perfil. Pásate a un Plan Básico.</p>
           <a
             href={basicPlanWhatsAppUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm"
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-sm font-black text-sky-800 shadow-sm"
           >
             Conocer Plan Básico
           </a>
@@ -63,14 +63,14 @@ export function FreeLimitUpgradeCard({
   text: string
 }) {
   return (
-    <aside className="mt-4 rounded-[20px] border border-amber-200 bg-amber-50 p-4">
-      <p className="text-xs font-black text-amber-900">Límite del Plan Gratis alcanzado</p>
-      <p className="mt-1 text-xs leading-5 text-amber-800">{text}</p>
+    <aside className="mt-4 rounded-[20px] border border-sky-200 bg-sky-50 p-4">
+      <p className="text-sm font-black text-sky-950">Límite del Plan Gratis alcanzado</p>
+      <p className="mt-1 text-sm font-medium leading-6 text-slate-700">{text}</p>
       <a
         href={basicPlanWhatsAppUrl()}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm"
+        className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-sm font-black text-sky-800 shadow-sm"
       >
         Pasarme al Plan Básico
       </a>
