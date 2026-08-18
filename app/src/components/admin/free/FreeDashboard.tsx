@@ -6,6 +6,7 @@ import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
 import FreeHelpTip from './FreeHelpTip'
 import FreeSupportPanel from './FreeSupportPanel'
+import FreeNotificationBell from './FreeNotificationBell'
 
 interface MeData {
   email: string
@@ -167,6 +168,7 @@ export default function FreeDashboard() {
             <h1 className="mt-0.5 text-xl font-black tracking-[-0.03em]">Mi panel</h1>
           </div>
           <div className="flex items-center gap-2">
+            <FreeNotificationBell />
             {hasSuperAdminAccess && (
               <button type="button" onClick={() => navigate('/superadmin')} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white">Super Admin</button>
             )}
