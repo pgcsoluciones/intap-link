@@ -60,51 +60,52 @@ export default function FreeOnboardingCategory() {
   if (loading) return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
 
   return (
-    <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
-      <section className="mx-auto w-full max-w-[430px] py-4">
-        <div className="mb-8 flex gap-2" aria-label="Paso 1 de 2">
+    <main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950 sm:px-5 sm:py-8">
+      <section className="mx-auto w-full max-w-[430px] py-3 sm:py-4">
+        <div className="mb-7 flex gap-2" aria-label="Paso 1 de 2">
           <span className="h-1.5 flex-1 rounded-full bg-cyan-500" />
           <span className="h-1.5 flex-1 rounded-full bg-slate-200" />
         </div>
 
-        <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.18em] text-cyan-600">Paso 1 de 2</p>
+        <p className="mb-2 text-sm font-extrabold uppercase tracking-[0.14em] text-cyan-700">Paso 1 de 2</p>
         <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">¿A qué te dedicas?</h1>
-        <p className="mt-2 text-[15px] leading-6 text-slate-500">Elige tu actividad comercial. Después te mostraremos opciones más específicas para preparar mejor tu perfil.</p>
+        <p className="mt-3 text-base font-medium leading-7 text-slate-700">Elige tu actividad comercial. Después te mostraremos opciones más específicas para preparar mejor tu perfil.</p>
 
         <div className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-          <label className="block text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+          <label className="block text-sm font-black uppercase tracking-[0.08em] text-slate-600">
             Actividad comercial
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={category || 'Busca o selecciona una actividad'}
-              className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-800 outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base font-bold text-slate-900 outline-none placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
             />
           </label>
 
-          <div className="mt-3 max-h-52 overflow-y-auto rounded-2xl border border-slate-100 bg-white p-2">
+          <div className="mt-3 max-h-64 overflow-y-auto rounded-2xl border border-slate-100 bg-white p-2">
             {filteredCategories.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => chooseCategory(item)}
-                className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-bold transition ${category === item ? 'bg-cyan-50 text-cyan-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                className={`flex min-h-12 w-full items-center justify-between rounded-xl px-3 py-3 text-left text-base font-bold transition ${category === item ? 'bg-cyan-50 text-cyan-800' : 'text-slate-700 hover:bg-slate-50'}`}
               >
                 <span>{item}</span>
                 {category === item && <span aria-hidden="true">✓</span>}
               </button>
             ))}
-            {filteredCategories.length === 0 && <p className="px-3 py-4 text-sm text-slate-400">No encontramos una coincidencia. Prueba con otra palabra o selecciona “Otros”.</p>}
+            {filteredCategories.length === 0 && <p className="px-3 py-4 text-base font-medium leading-6 text-slate-600">No encontramos una coincidencia. Prueba con otra palabra o selecciona “Otros”.</p>}
           </div>
 
           {category && (
-            <div className="mt-6 border-t border-slate-100 pt-5">
-              <label className="block text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+            <div className="mt-7 border-t border-slate-100 pt-6">
+              <label className="block text-sm font-black normal-case tracking-normal text-slate-700">
                 ¿Cuál opción describe mejor lo que haces?
+                <span className="mt-1 block text-sm font-medium leading-6 text-slate-600">Selecciona la subcategoría que más se acerque a tu actividad.</span>
                 <select
                   value={subcategory}
                   onChange={(event) => setSubcategory(event.target.value)}
-                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-bold text-slate-700 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base font-bold text-slate-800 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
                 >
                   <option value="">Selecciona una opción</option>
                   {subcategories.map((item) => <option key={item} value={item}>{item}</option>)}
@@ -113,13 +114,13 @@ export default function FreeOnboardingCategory() {
             </div>
           )}
 
-          {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
+          {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700">{error}</p>}
 
           <button
             type="button"
             onClick={handleContinue}
             disabled={!category || !subcategory || saving}
-            className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35"
+            className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35"
           >
             {saving ? 'Guardando…' : 'Continuar'}
           </button>
