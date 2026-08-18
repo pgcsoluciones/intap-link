@@ -53,7 +53,7 @@ export default function FreeStyle() {
   const [previewVersion, setPreviewVersion] = useState(1)
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
-  const previewUrl = useMemo(() => slug ? `${webUrl}/${encodeURIComponent(slug)}?preview=1&embedded=1&v=${previewVersion}` : '', [webUrl, slug, previewVersion])
+  const previewUrl = useMemo(() => slug ? `/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}?v=${previewVersion}` : '', [slug, previewVersion])
   const refreshPreview = () => setPreviewVersion((current) => current + 1)
 
   useEffect(() => {
@@ -109,30 +109,30 @@ export default function FreeStyle() {
     }
   }
 
-  if (loading) return <main className="min-h-screen bg-[#f7f9fc] font-['Inter']"><div className="flex min-h-screen items-center justify-center text-sm font-bold text-slate-400">Cargando…</div></main>
+  if (loading) return <main className="min-h-screen bg-[#f7f9fc] font-['Inter']"><div className="flex min-h-screen items-center justify-center text-base font-bold text-slate-600">Cargando…</div></main>
 
   return (
-    <main className="min-h-screen bg-[#f7f9fc] px-5 py-5 font-['Inter'] text-slate-950">
+    <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950 sm:px-5">
       <section className="mx-auto w-full max-w-[1040px]">
         <FreeBackButton onClick={() => navigate('/admin/free')} />
 
         <div className="grid gap-8 lg:grid-cols-[430px_minmax(0,1fr)] lg:items-start">
           <div className="contents lg:block">
             <div className="order-1 lg:order-none">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">INTAP LINK</p>
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-cyan-700">KAWVO LINK</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Estilo de mi perfil</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-500">Tus datos son los mismos. Elige cómo quieres presentarlos.</p>
-              {category && <p className="mt-3 inline-flex rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-500 shadow-sm">{category}</p>}
+              <p className="mt-3 text-base font-medium leading-7 text-slate-700">Tus datos son los mismos. Elige cómo quieres presentarlos.</p>
+              {category && <p className="mt-3 inline-flex rounded-full bg-white px-3 py-2 text-sm font-black text-slate-700 shadow-sm">{category}</p>}
 
               <section className="mt-7">
-                <h2 className="text-sm font-black">Diseño</h2>
+                <h2 className="text-base font-black">Diseño</h2>
                 <div className="mt-3 space-y-3">
                   {layouts.map((layout) => {
                     const active = selected === layout.id
                     return (
                       <button key={layout.id} type="button" disabled={saving} onClick={() => void chooseLayout(layout.id)} className={`w-full rounded-[22px] border bg-white p-4 text-left transition ${active ? 'border-cyan-500 ring-4 ring-cyan-100' : 'border-slate-200 hover:border-slate-300'} disabled:opacity-60`}>
-                        <div className="flex items-start justify-between gap-4"><div><h3 className="text-base font-black">{layout.name}</h3><p className="mt-1 text-[11px] font-bold text-cyan-600">{layout.recommended}</p></div>{active && <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase text-cyan-700">Activo</span>}</div>
-                        <p className="mt-2 text-xs leading-5 text-slate-500">{layout.description}</p>
+                        <div className="flex items-start justify-between gap-4"><div><h3 className="text-lg font-black">{layout.name}</h3><p className="mt-1 text-sm font-bold text-cyan-700">{layout.recommended}</p></div>{active && <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-black uppercase text-cyan-800">Activo</span>}</div>
+                        <p className="mt-2 text-base font-medium leading-7 text-slate-700">{layout.description}</p>
                       </button>
                     )
                   })}
@@ -141,34 +141,34 @@ export default function FreeStyle() {
             </div>
 
             <section className="order-3 mt-7 lg:order-none">
-              <h2 className="text-sm font-black">Colores de mi marca</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Elige una combinación completa. No necesitas configurar cada sección.</p>
+              <h2 className="text-base font-black">Colores de mi marca</h2>
+              <p className="mt-1 text-sm font-medium leading-6 text-slate-600">Elige una combinación completa. No necesitas configurar cada sección.</p>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {palettes.map((item) => {
                   const active = palette === item.id
                   return (
                     <button key={item.id} type="button" disabled={saving} onClick={() => void choosePalette(item.id)} className={`rounded-[20px] border bg-white p-3 text-left transition ${active ? 'border-cyan-500 ring-4 ring-cyan-100' : 'border-slate-200 hover:border-slate-300'} disabled:opacity-60`}>
                       <div className="flex gap-1.5">{item.colors.map((color) => <span key={color} className="h-8 flex-1 rounded-lg border border-black/5" style={{ backgroundColor: color }} />)}</div>
-                      <div className="mt-2 flex items-center justify-between"><span className="text-xs font-black">{item.name}</span>{active && <span className="text-[10px] font-black text-cyan-600">Activa</span>}</div>
+                      <div className="mt-2 flex items-center justify-between"><span className="text-sm font-black">{item.name}</span>{active && <span className="text-xs font-black text-cyan-700">Activa</span>}</div>
                     </button>
                   )
                 })}
               </div>
 
               <div className={`mt-3 rounded-[22px] border bg-white p-4 ${palette === 'personalizada' ? 'border-cyan-500 ring-4 ring-cyan-100' : 'border-slate-200'}`}>
-                <div className="flex items-center justify-between gap-3"><div><h3 className="text-sm font-black">Personalizar</h3><p className="mt-1 text-xs leading-5 text-slate-400">Elige tu color principal y el sistema crea el resto.</p></div><input type="color" value={brandColor} onChange={(event) => setBrandColor(event.target.value.toUpperCase())} className="h-11 w-14 cursor-pointer rounded-xl border border-slate-200 bg-white p-1" aria-label="Color principal" /></div>
-                <div className="mt-3 flex gap-2"><input value={brandColor} onChange={(event) => setBrandColor(event.target.value.toUpperCase())} maxLength={7} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold uppercase outline-none focus:border-cyan-400" /><button type="button" disabled={saving} onClick={() => void choosePalette('personalizada', brandColor)} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50">Aplicar</button></div>
+                <div className="flex items-center justify-between gap-3"><div><h3 className="text-base font-black">Personalizar</h3><p className="mt-1 text-sm font-medium leading-6 text-slate-600">Elige tu color principal y el sistema crea el resto.</p></div><input type="color" value={brandColor} onChange={(event) => setBrandColor(event.target.value.toUpperCase())} className="h-11 w-14 cursor-pointer rounded-xl border border-slate-200 bg-white p-1" aria-label="Color principal" /></div>
+                <div className="mt-3 flex gap-2"><input value={brandColor} onChange={(event) => setBrandColor(event.target.value.toUpperCase())} maxLength={7} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-base font-bold uppercase outline-none focus:border-cyan-400" /><button type="button" disabled={saving} onClick={() => void choosePalette('personalizada', brandColor)} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Aplicar</button></div>
               </div>
-              {message && <p className="order-4 mt-5 text-center text-xs font-bold text-slate-500 lg:order-none">{message}</p>}
+              {message && <p className="order-4 mt-5 text-center text-sm font-bold text-slate-700 lg:order-none">{message}</p>}
               <div className="mt-5"><FreeUpgradeCard compact /></div>
             </section>
           </div>
 
           <aside className="order-2 lg:sticky lg:top-6">
             <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-              <div className="mb-3 flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Vista previa</p><p className="mt-1 text-xs font-bold text-slate-600">Así se ve tu perfil</p></div><button type="button" onClick={refreshPreview} className="rounded-xl bg-slate-100 px-3 py-2 text-[11px] font-black text-slate-600">Actualizar</button></div>
-              {slug ? <div className="mx-auto overflow-hidden rounded-[24px] border border-slate-200 bg-[#eef3f8]"><iframe key={previewVersion} src={previewUrl} title="Vista previa de mi perfil" className="h-[720px] w-full bg-white" /></div> : <div className="flex h-[520px] items-center justify-center rounded-[24px] bg-slate-50 p-8 text-center text-sm font-bold text-slate-400">Completa tu perfil para ver la vista previa.</div>}
-              {slug && <a href={`${webUrl}/${slug}`} target="_blank" rel="noopener noreferrer" className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Abrir perfil completo</a>}
+              <div className="mb-3 flex items-center justify-between"><div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-600">Vista previa</p><p className="mt-1 text-sm font-bold text-slate-700">Así se ve tu perfil</p></div><button type="button" onClick={refreshPreview} className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-black text-slate-700">Actualizar</button></div>
+              {slug ? <div className="mx-auto overflow-hidden rounded-[24px] border border-slate-200 bg-[#eef3f8]"><iframe key={previewVersion} src={previewUrl} title="Vista previa de mi perfil" className="h-[720px] w-full bg-white" /></div> : <div className="flex h-[520px] items-center justify-center rounded-[24px] bg-slate-50 p-8 text-center text-base font-bold text-slate-600">Completa tu perfil para ver la vista previa.</div>}
+              {slug && <a href={`${webUrl}/${slug}`} target="_blank" rel="noopener noreferrer" className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-black text-white">Abrir perfil completo</a>}
             </div>
           </aside>
         </div>
