@@ -58,6 +58,18 @@
     line-height: 1.15rem !important;
   }
 
+  body.kawvo-free-mobile .font-black {
+    font-weight: 700 !important;
+  }
+
+  body.kawvo-free-mobile .font-extrabold {
+    font-weight: 700 !important;
+  }
+
+  body.kawvo-free-mobile .font-bold {
+    font-weight: 600 !important;
+  }
+
   body.kawvo-free-mobile .text-slate-300 {
     color: #64748b !important;
   }
