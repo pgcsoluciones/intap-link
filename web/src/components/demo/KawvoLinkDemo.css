@@ -59,14 +59,43 @@
 .kawvo-demo-preview {
   width: min(100%, 430px);
   margin: 0 auto;
+  padding: 0;
   border-radius: 28px;
   overflow: hidden;
   box-shadow: 0 18px 50px rgba(15, 23, 42, .12);
   background: #fff;
 }
 
+.kawvo-demo-preview .ilx-page,
+.kawvo-demo-preview .ilx-shell,
+.kawvo-demo-preview .ilx-identity,
+.kawvo-demo-preview .ilx-impact,
+.kawvo-demo-preview .ilx-impact-cover {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
 .kawvo-demo-preview .ilx-page {
   min-height: auto;
+}
+
+.kawvo-demo-preview .ilx-impact-cover {
+  border-radius: 0 !important;
+}
+
+.kawvo-demo-preview .ilx-impact-cover img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.kawvo-demo-preview .ilx-impact-avatar img {
+  object-fit: cover;
+  object-position: 42% 30%;
 }
 
 .kawvo-demo-sticky-cta {
