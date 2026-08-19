@@ -180,7 +180,7 @@ function normalizeInstagram(value: string) {
 }
 
 export default function KawvoLinkDemo() {
-  const [stage, setStage] = useState<DemoStage>('welcome')
+  const [stage, setStage] = useState<DemoStage>('sector')
   const [form, setForm] = useState<DemoForm>(DEFAULT_PRESET.form)
   const [portrait, setPortrait] = useState(DEFAULT_PRESET.portrait)
   const [hero, setHero] = useState(DEFAULT_PRESET.hero)
@@ -241,7 +241,7 @@ export default function KawvoLinkDemo() {
     setForm(preset.form)
     setPortrait(preset.portrait)
     setHero(preset.hero)
-    setStage('edit')
+    setStage('welcome')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -281,7 +281,7 @@ export default function KawvoLinkDemo() {
     setPortrait(DEFAULT_PRESET.portrait)
     setHero(DEFAULT_PRESET.hero)
     setForm(DEFAULT_PRESET.form)
-    setStage('welcome')
+    setStage('sector')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -301,7 +301,7 @@ export default function KawvoLinkDemo() {
         </section>
         {preview}
         <div className="kawvo-demo-sticky-cta">
-          <button type="button" onClick={() => setStage('sector')}>Pruébalo con tus datos</button>
+          <button type="button" onClick={() => setStage('edit')}>Pruébalo con tus datos</button>
           <small>Lo que cambies existe solamente en este dispositivo mientras mantengas abierta la demo.</small>
         </div>
       </main>
@@ -312,7 +312,6 @@ export default function KawvoLinkDemo() {
     return (
       <main className="kawvo-demo-page kawvo-demo-sector-page">
         <section className="kawvo-demo-sector-shell">
-          <button type="button" className="kawvo-demo-sector-back" onClick={() => setStage('welcome')}>← Volver</button>
           <span className="kawvo-demo-pill">ELIGE UN EJEMPLO</span>
           <h1>¿Cuál se parece más a ti o a tu negocio?</h1>
           <p>Elige una opción y cargaremos un ejemplo para que puedas personalizarlo en segundos.</p>
