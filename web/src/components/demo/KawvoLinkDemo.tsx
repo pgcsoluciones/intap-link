@@ -303,13 +303,30 @@ export default function KawvoLinkDemo() {
   if (stage === 'welcome') {
     return (
       <main className="kawvo-demo-page">
+        <button
+          type="button"
+          onClick={() => setStage('sector')}
+          style={{
+            display: 'block',
+            margin: '0 auto',
+            padding: '14px 16px 2px',
+            border: 0,
+            background: 'transparent',
+            color: '#64748b',
+            fontSize: 13,
+            fontWeight: 600,
+            textAlign: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          Cambiar profesión
+        </button>
         <section className="kawvo-demo-intro">
           <span className="kawvo-demo-pill">DEMO INTERACTIVO</span>
           <h1>Mira cómo podría verse tu perfil digital.</h1>
           <p>Esta demostración es temporal. No crea cuentas, no publica perfiles y no guarda tus datos.</p>
         </section>
         {preview}
-        <button type="button" className="kawvo-demo-sector-skip" onClick={() => setStage('sector')}>Cambiar la profesión</button>
         <div className="kawvo-demo-sticky-cta">
           <button type="button" onClick={() => setStage('edit')}>Pruébalo con tus datos</button>
           <small>Lo que cambies existe solamente en este dispositivo mientras mantengas abierta la demo.</small>
