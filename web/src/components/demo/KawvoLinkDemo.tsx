@@ -4,6 +4,7 @@ import type {
   FreeProfileAppearanceColors,
   FreeProfileData,
   FreeProfileLayoutId,
+  FreeProfilePortfolioItem,
   FreeProfileService,
 } from '../free-profile/IntapLinkGratis.types'
 import './KawvoLinkDemo.css'
@@ -20,6 +21,7 @@ type DemoForm = {
   layout: FreeProfileLayoutId
   palette: keyof typeof PALETTES
   services: FreeProfileService[]
+  portfolio: FreeProfilePortfolioItem[]
 }
 
 type DemoPreset = {
@@ -64,6 +66,15 @@ function demoServices(folder: string, items: Array<[string, string]>): FreeProfi
   }))
 }
 
+function demoPortfolio(folder: string): FreeProfilePortfolioItem[] {
+  return [2, 3, 4, 5, 6].map((number, index) => ({
+    id: `demo-portfolio-${index + 1}`,
+    title: `Trabajo ${index + 1}`,
+    description: 'Ejemplo visual de trabajos, proyectos o productos.',
+    image: `/assets/free-starter/${folder}/${folder}-${String(number).padStart(2, '0')}.webp`,
+  }))
+}
+
 const PRESETS: Record<DemoSectorKey, DemoPreset> = {
   professional: {
     label: 'Profesional / Servicios',
@@ -80,6 +91,7 @@ const PRESETS: Record<DemoSectorKey, DemoPreset> = {
         ['Consultoría profesional', 'Acompañamiento claro para tomar mejores decisiones.'],
         ['Atención especializada', 'Un servicio directo, profesional y cercano.'],
       ]),
+      portfolio: demoPortfolio('servicios-profesionales'),
     },
   },
   wellness: {
@@ -97,6 +109,7 @@ const PRESETS: Record<DemoSectorKey, DemoPreset> = {
         ['Tratamientos', 'Opciones de bienestar con acompañamiento profesional.'],
         ['Reserva tu cita', 'Coordina tu próxima atención de forma sencilla.'],
       ]),
+      portfolio: demoPortfolio('salud-bienestar'),
     },
   },
   food: {
@@ -114,6 +127,7 @@ const PRESETS: Record<DemoSectorKey, DemoPreset> = {
         ['Pedidos', 'Haz tu pedido de forma rápida y sencilla.'],
         ['Eventos y catering', 'Opciones especiales para reuniones y celebraciones.'],
       ]),
+      portfolio: demoPortfolio('gastronomia-alimentos'),
     },
   },
   retail: {
@@ -131,6 +145,7 @@ const PRESETS: Record<DemoSectorKey, DemoPreset> = {
         ['Pedidos', 'Consulta disponibilidad y realiza tu pedido.'],
         ['Atención personalizada', 'Te ayudamos a encontrar la mejor opción.'],
       ]),
+      portfolio: demoPortfolio('comercio-retail-tiendas-virtuales'),
     },
   },
   creative: {
@@ -148,6 +163,7 @@ const PRESETS: Record<DemoSectorKey, DemoPreset> = {
         ['Proyectos creativos', 'Ideas visuales desarrolladas de principio a fin.'],
         ['Creaciones especiales', 'Piezas únicas para regalos, marcas y ocasiones.'],
       ]),
+      portfolio: demoPortfolio('arte-diseno-creatividad'),
     },
   },
   business: {
@@ -165,6 +181,7 @@ const PRESETS: Record<DemoSectorKey, DemoPreset> = {
         ['Soporte y atención', 'Respuesta directa para solicitudes y requerimientos.'],
         ['Cotizaciones', 'Recibe información y una propuesta para tu necesidad.'],
       ]),
+      portfolio: demoPortfolio('servicios-generales'),
     },
   },
 }
@@ -216,7 +233,7 @@ export default function KawvoLinkDemo() {
         ...(instagram ? [{ type: 'instagram' as const, label: 'Instagram', url: `https://instagram.com/${instagram}` }] : []),
         { type: 'location' as const, label: 'Ubicación', url: DEFAULT_MAP_URL },
       ],
-      services: form.services, portfolio: [], customLinks: [],
+      services: form.services, portfolio: form.portfolio, customLinks: [],
     }
   }, [form, portrait, hero])
 
