@@ -23,6 +23,8 @@ type DemoForm = {
 
 const DEFAULT_PORTRAIT = '/assets/free-starter/servicios-profesionales/servicios-profesionales-02.webp'
 const DEFAULT_HERO = '/assets/free-starter/servicios-profesionales/servicios-profesionales-01.webp'
+const DEFAULT_LOCATION = 'Parque Duarte, Samaná'
+const DEFAULT_MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Parque+Duarte+Samana'
 const COMMERCIAL_URL = 'https://nfc.kawvoia.com'
 
 const PALETTES: Record<string, FreeProfileAppearanceColors> = {
@@ -45,8 +47,20 @@ const PALETTES: Record<string, FreeProfileAppearanceColors> = {
 }
 
 const INITIAL_SERVICES: FreeProfileService[] = [
-  { id: 'demo-service-1', title: 'Asesoría personalizada', description: 'Una solución pensada para lo que necesitas.', iconKey: 'handshake' },
-  { id: 'demo-service-2', title: 'Servicio profesional', description: 'Atención clara, rápida y profesional.', iconKey: 'chart-line' },
+  {
+    id: 'demo-service-1',
+    title: 'Asesoría personalizada',
+    description: 'Una solución pensada para lo que necesitas.',
+    image: '/assets/free-starter/servicios-profesionales/servicios-profesionales-03.webp',
+    iconKey: 'handshake',
+  },
+  {
+    id: 'demo-service-2',
+    title: 'Servicio profesional',
+    description: 'Atención clara, rápida y profesional.',
+    image: '/assets/free-starter/servicios-profesionales/servicios-profesionales-04.webp',
+    iconKey: 'chart-line',
+  },
 ]
 
 const INITIAL_FORM: DemoForm = {
@@ -78,7 +92,9 @@ export default function KawvoLinkDemo() {
   const [form, setForm] = useState<DemoForm>(INITIAL_FORM)
   const [portrait, setPortrait] = useState(DEFAULT_PORTRAIT)
   const [uploadedPortrait, setUploadedPortrait] = useState<string | null>(null)
+  const [serviceUploads, setServiceUploads] = useState<Record<string, string>>({})
   const fileRef = useRef<HTMLInputElement>(null)
+  const serviceFileRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => {
     document.body.classList.add('kawvo-demo-body')
@@ -87,7 +103,8 @@ export default function KawvoLinkDemo() {
 
   useEffect(() => () => {
     if (uploadedPortrait) URL.revokeObjectURL(uploadedPortrait)
-  }, [uploadedPortrait])
+    Object.values(serviceUploads).forEach((url) => URL.revokeObjectURL(url))
+  }, [uploadedPortrait, serviceUploads])
 
   const profile = useMemo<FreeProfileData>(() => {
     const instagram = normalizeInstagram(form.instagram)
@@ -107,7 +124,7 @@ export default function KawvoLinkDemo() {
       whatsappGreetingName: form.name.trim() || 'Hola',
       whatsappCtaLabel: 'Hablar por WhatsApp',
       instagram,
-      location: '',
+      location: DEFAULT_LOCATION,
       portrait,
       hero: DEFAULT_HERO,
       heroPositionX: 50,
@@ -118,6 +135,7 @@ export default function KawvoLinkDemo() {
       quickActions: [
         ...(phone ? [{ type: 'call' as const, label: 'Llamar', url: `tel:+${phone}` }] : []),
         ...(instagram ? [{ type: 'instagram' as const, label: 'Instagram', url: `https://instagram.com/${instagram}` }] : []),
+        { type: 'location' as const, label: 'Ubicación', url: DEFAULT_MAP_URL },
       ],
       services: form.services,
       portfolio: [],
@@ -149,6 +167,7 @@ export default function KawvoLinkDemo() {
             id: `demo-service-${current.services.length + 1}`,
             title: 'Nuevo servicio',
             description: 'Describe brevemente este servicio.',
+            image: '/assets/free-starter/servicios-profesionales/servicios-profesionales-05.webp',
             iconKey: 'handshake',
           },
         ],
@@ -157,7 +176,18 @@ export default function KawvoLinkDemo() {
   }
 
   function removeService(index: number) {
-    setForm((current) => ({ ...current, services: current.services.filter((_, i) => i !== index) }))
+    setForm((current) => {
+      const service = current.services[index]
+      if (service && serviceUploads[service.id]) {
+        URL.revokeObjectURL(serviceUploads[service.id])
+        setServiceUploads((uploads) => {
+          const next = { ...uploads }
+          delete next[service.id]
+          return next
+        })
+      }
+      return { ...current, services: current.services.filter((_, i) => i !== index) }
+    })
   }
 
   function choosePhoto(file?: File) {
@@ -168,9 +198,25 @@ export default function KawvoLinkDemo() {
     setPortrait(url)
   }
 
+  function chooseServicePhoto(serviceId: string, file?: File) {
+    if (!file || !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) return
+    const previousUrl = serviceUploads[serviceId]
+    if (previousUrl) URL.revokeObjectURL(previousUrl)
+    const url = URL.createObjectURL(file)
+    setServiceUploads((current) => ({ ...current, [serviceId]: url }))
+    setForm((current) => ({
+      ...current,
+      services: current.services.map((service) =>
+        service.id === serviceId ? { ...service, image: url } : service,
+      ),
+    }))
+  }
+
   function resetDemo() {
     if (uploadedPortrait) URL.revokeObjectURL(uploadedPortrait)
+    Object.values(serviceUploads).forEach((url) => URL.revokeObjectURL(url))
     setUploadedPortrait(null)
+    setServiceUploads({})
     setPortrait(DEFAULT_PORTRAIT)
     setForm(INITIAL_FORM)
     setStage('welcome')
@@ -276,6 +322,17 @@ export default function KawvoLinkDemo() {
               {form.services.map((service, index) => (
                 <article key={service.id}>
                   <div className="kawvo-demo-service-top"><strong>Servicio {index + 1}</strong>{form.services.length > 1 && <button type="button" onClick={() => removeService(index)}>Quitar</button>}</div>
+                  <div className="kawvo-demo-photo-row">
+                    {service.image && <img src={service.image} alt={`Imagen de ${service.title}`} />}
+                    <button type="button" onClick={() => serviceFileRefs.current[service.id]?.click()}>Cambiar imagen</button>
+                    <input
+                      ref={(node) => { serviceFileRefs.current[service.id] = node }}
+                      hidden
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => chooseServicePhoto(service.id, event.target.files?.[0])}
+                    />
+                  </div>
                   <input aria-label={`Título servicio ${index + 1}`} maxLength={60} value={service.title} onChange={(event) => updateService(index, 'title', event.target.value)} />
                   <textarea aria-label={`Descripción servicio ${index + 1}`} rows={2} maxLength={120} value={service.description} onChange={(event) => updateService(index, 'description', event.target.value)} />
                 </article>
