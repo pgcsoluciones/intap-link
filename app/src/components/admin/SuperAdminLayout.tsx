@@ -13,11 +13,12 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
+  { key: 'demo', label: 'Resultados Demo' },
   { key: 'support', label: 'Soporte / tickets' },
   { key: 'feedback', label: 'Onboarding / bajas' },
   { key: 'billing', label: 'Billing / Pagos' },
@@ -67,6 +68,10 @@ export default function SuperAdminLayout({
     }
     if (section === 'feedback') {
       if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/feedback') window.location.href = '/superadmin/feedback'
+      return
+    }
+    if (section === 'demo') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/demo') window.location.href = '/superadmin/demo'
       return
     }
     onNavigate?.(section)
