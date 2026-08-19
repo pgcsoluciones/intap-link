@@ -109,12 +109,17 @@ export default function KawvoLinkDemoShared() {
 
       <div className="kawvo-demo-shared-preview" onClickCapture={(event) => {
         const target = event.target as HTMLElement
-        if (target.closest('a, button')) {
+        const anchor = target.closest('a[href]') as HTMLAnchorElement | null
+
+        if (!anchor) return
+
+        const href = (anchor.getAttribute('href') || '').trim()
+
+        if (href && !href.startsWith('#') && !href.startsWith('/')) {
           event.preventDefault()
           event.stopPropagation()
         }
       }}>
-        <style>{`.kawvo-demo-shared-preview a, .kawvo-demo-shared-preview button { pointer-events: none !important; }`}</style>
         <IntapLinkGratisProfile
           profile={profile}
           layout={data.snapshot.layout}
@@ -124,10 +129,10 @@ export default function KawvoLinkDemoShared() {
 
       <section className="kawvo-demo-shared-cta">
         <span>DEMO KAWVO LINK</span>
-        <h2>¿Quieres ver cómo se vería con tu profesión?</h2>
-        <p>No importa si el perfil que recibiste es de mecánica, belleza, contabilidad u otro negocio. Kawvo Link se adapta a lo que tú haces.</p>
-        <button type="button" onClick={startOwnDemo}>Prueba con tu profesión</button>
-        <small>Sin registro. Primero eliges un ejemplo parecido a ti y luego lo personalizas con tus datos.</small>
+        <h2>¿Quieres ver cómo se vería tu propio Perfil Digital?</h2>
+        <p>Personalízalo con tu foto, tus servicios y tus redes. Mira en segundos cómo podría verse hecho para ti.</p>
+        <button type="button" onClick={startOwnDemo}>Haz tu propia demo</button>
+        <small>Sin registro. Elige tu profesión, personalízalo y mira el resultado al instante.</small>
       </section>
     </main>
   )

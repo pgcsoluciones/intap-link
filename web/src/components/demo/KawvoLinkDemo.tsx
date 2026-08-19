@@ -499,7 +499,7 @@ export default function KawvoLinkDemo() {
             <button type="button" className="kawvo-demo-share" onClick={createShare} disabled={shareStatus === 'loading'}>
               {shareStatus === 'loading' ? 'Preparando enlace…' : 'Compartir por WhatsApp'}
             </button>
-            <span>La vista compartida será estática, sin enlaces activos y estará disponible por 24 horas.</span>
+            <span>Esta demo compartida desaparece en 24 horas.</span>
             {shareStatus === 'error' && <strong>No pudimos crear el enlace. Inténtalo nuevamente.</strong>}
           </div>
           <button type="button" onClick={() => setStage('edit')}>Seguir probando</button>
