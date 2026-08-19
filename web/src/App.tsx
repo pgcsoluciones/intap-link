@@ -29,6 +29,10 @@ const MarketingLanding = lazy(
   () => import('./components/marketing/MarketingLanding'),
 )
 
+const KawvoLinkDemo = lazy(
+  () => import('./components/demo/KawvoLinkDemo'),
+)
+
 const IntapProfileBioPestsManager = lazy(
   () =>
     import(
@@ -82,6 +86,11 @@ function App() {
           <Route
             path="/"
             element={<RootRoute />}
+          />
+
+          <Route
+            path="/demo"
+            element={<KawvoLinkDemo />}
           />
 
           <Route
