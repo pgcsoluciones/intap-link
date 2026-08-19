@@ -33,6 +33,10 @@ const KawvoLinkDemo = lazy(
   () => import('./components/demo/KawvoLinkDemo'),
 )
 
+const KawvoLinkDemoShared = lazy(
+  () => import('./components/demo/KawvoLinkDemoShared'),
+)
+
 const IntapProfileBioPestsManager = lazy(
   () =>
     import(
@@ -91,6 +95,11 @@ function App() {
           <Route
             path="/demo"
             element={<KawvoLinkDemo />}
+          />
+
+          <Route
+            path="/demo/s/:token"
+            element={<KawvoLinkDemoShared />}
           />
 
           <Route
