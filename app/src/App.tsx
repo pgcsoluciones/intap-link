@@ -17,6 +17,7 @@ import SuperAdminDashboard from './components/admin/SuperAdminDashboard'
 import SuperAdminArtifacts from './components/admin/SuperAdminArtifacts'
 import SuperAdminSupport from './components/admin/SuperAdminSupport'
 import SuperAdminFeedback from './components/admin/SuperAdminFeedback'
+import SuperAdminDemoMetrics from './components/admin/SuperAdminDemoMetrics'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
@@ -102,6 +103,7 @@ function App() {
         <Route path="/superadmin/products" element={<SuperAdminGuard><SuperAdminArtifacts /></SuperAdminGuard>} />
         <Route path="/superadmin/support" element={<SuperAdminGuard><SuperAdminSupport /></SuperAdminGuard>} />
         <Route path="/superadmin/feedback" element={<SuperAdminGuard><SuperAdminFeedback /></SuperAdminGuard>} />
+        <Route path="/superadmin/demo" element={<SuperAdminGuard><SuperAdminDemoMetrics /></SuperAdminGuard>} />
 
         <Route path="/admin/links" element={<AdminGuard planScope="paid"><AdminLinks /></AdminGuard>} />
         <Route path="/admin/faqs" element={<AdminGuard planScope="paid"><AdminFAQs /></AdminGuard>} />
