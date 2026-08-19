@@ -21,8 +21,8 @@ type DemoForm = {
   services: FreeProfileService[]
 }
 
-const DEFAULT_PORTRAIT = '/assets/free-starter/servicios-profesionales/servicios-profesionales-02.webp'
 const DEFAULT_HERO = '/assets/free-starter/servicios-profesionales/servicios-profesionales-01.webp'
+const DEFAULT_PORTRAIT = DEFAULT_HERO
 const DEFAULT_LOCATION = 'Parque Duarte, Samaná'
 const DEFAULT_MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Parque+Duarte+Samana'
 const COMMERCIAL_URL = 'https://nfc.kawvoia.com'
