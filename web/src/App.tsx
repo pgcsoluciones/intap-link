@@ -37,6 +37,10 @@ const KawvoLinkDemoShared = lazy(
   () => import('./components/demo/KawvoLinkDemoShared'),
 )
 
+const ArtifactLinkResolver = lazy(
+  () => import('./components/ArtifactLinkResolver'),
+)
+
 const IntapProfileBioPestsManager = lazy(
   () =>
     import(
@@ -90,6 +94,11 @@ function App() {
           <Route
             path="/"
             element={<RootRoute />}
+          />
+
+          <Route
+            path="/l/:publicCode"
+            element={<ArtifactLinkResolver />}
           />
 
           <Route
