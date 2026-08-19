@@ -245,20 +245,6 @@ export default function KawvoLinkDemo() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  function addService() {
-    setForm((current) => {
-      if (current.services.length >= 3) return current
-      return { ...current, services: [...current.services, {
-        id: `demo-service-${current.services.length + 1}`, title: 'Nuevo servicio', description: 'Describe brevemente este servicio.',
-        image: '/assets/free-starter/servicios-profesionales/servicios-profesionales-05.webp', iconKey: 'handshake',
-      }] }
-    })
-  }
-
-  function removeService(index: number) {
-    setForm((current) => ({ ...current, services: current.services.filter((_, i) => i !== index) }))
-  }
-
   function choosePhoto(file?: File) {
     if (!file || !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) return
     if (uploadedPortrait) URL.revokeObjectURL(uploadedPortrait)
@@ -353,8 +339,8 @@ export default function KawvoLinkDemo() {
               )
             })}
           </div>
-          <button type="button" className="kawvo-demo-sector-skip" onClick={() => applyPreset('professional')}>Solo quiero probarlo</button>
-          <small className="kawvo-demo-sector-note">No es un registro. Solo cambia el ejemplo visual con el que empezarás.</small>
+          <button type="button" className="kawvo-demo-sector-skip" onClick={() => applyPreset('professional')}>Probaré con cualquiera</button>
+          <small className="kawvo-demo-sector-note">No es un registro. Elegiremos un ejemplo para que empieces más rápido.</small>
         </section>
       </main>
     )
@@ -428,11 +414,11 @@ export default function KawvoLinkDemo() {
           </fieldset>
 
           <fieldset>
-            <div className="kawvo-demo-services-head"><legend>Servicios</legend><button type="button" onClick={addService} disabled={form.services.length >= 3}>+ Agregar</button></div>
+            <div className="kawvo-demo-services-head"><legend>Servicios</legend></div>
             <div className="kawvo-demo-services-list">
               {form.services.map((service, index) => (
                 <article key={service.id}>
-                  <div className="kawvo-demo-service-top"><strong>Servicio {index + 1}</strong>{form.services.length > 1 && <button type="button" onClick={() => removeService(index)}>Quitar</button>}</div>
+                  <div className="kawvo-demo-service-top"><strong>Servicio {index + 1}</strong></div>
                   <div className="kawvo-demo-photo-row">
                     {service.image && <img src={service.image} alt={`Imagen de ${service.title}`} />}
                     <button type="button" onClick={() => serviceFileRefs.current[service.id]?.click()}>Cambiar imagen</button>
