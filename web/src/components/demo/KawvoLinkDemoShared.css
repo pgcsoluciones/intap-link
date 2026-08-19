@@ -1,0 +1,154 @@
+.kawvo-demo-shared-body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.kawvo-demo-shared-page {
+  min-height: 100vh;
+  background: #f8fafc;
+  padding-bottom: 40px;
+}
+
+.kawvo-demo-shared-banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, .96);
+  color: white;
+  font-size: 12px;
+  backdrop-filter: blur(12px);
+}
+
+.kawvo-demo-shared-banner strong {
+  font-size: 13px;
+  letter-spacing: .02em;
+}
+
+.kawvo-demo-shared-banner span {
+  color: #cbd5e1;
+  text-align: right;
+}
+
+.kawvo-demo-shared-preview {
+  max-width: 540px;
+  margin: 0 auto;
+  background: white;
+}
+
+.kawvo-demo-shared-preview a,
+.kawvo-demo-shared-preview button {
+  cursor: default !important;
+}
+
+.kawvo-demo-shared-cta {
+  max-width: 540px;
+  margin: 22px auto 0;
+  padding: 28px 22px;
+  text-align: center;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .08);
+}
+
+.kawvo-demo-shared-cta > span {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.kawvo-demo-shared-cta h2 {
+  margin: 0;
+  font-size: clamp(24px, 6vw, 34px);
+  line-height: 1.08;
+}
+
+.kawvo-demo-shared-cta p {
+  margin: 14px auto 20px;
+  max-width: 460px;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.kawvo-demo-shared-cta button,
+.kawvo-demo-shared-state button {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 15px 20px;
+  background: #0f172a;
+  color: white;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kawvo-demo-shared-cta small {
+  display: block;
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kawvo-demo-shared-state {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 14px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 32px 22px;
+  text-align: center;
+}
+
+.kawvo-demo-shared-state h1,
+.kawvo-demo-shared-state p {
+  margin: 0;
+}
+
+.kawvo-demo-shared-state p {
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.kawvo-demo-shared-mark {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.kawvo-demo-shared-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0f172a;
+  border-radius: 50%;
+  animation: kawvo-demo-shared-spin .8s linear infinite;
+}
+
+@keyframes kawvo-demo-shared-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .kawvo-demo-shared-banner {
+    align-items: flex-start;
+  }
+
+  .kawvo-demo-shared-cta {
+    margin: 16px 12px 0;
+    border-radius: 20px;
+  }
+}

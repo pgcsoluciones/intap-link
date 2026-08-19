@@ -555,3 +555,59 @@
     font-size: 13px;
   }
 }
+
+
+/* Demo viral: compartir es secundario al CTA comercial */
+.kawvo-demo-share-block {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin: 6px 0 4px;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 1px solid #dbe4ef;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.kawvo-demo-share-block > small {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.kawvo-demo-purchase .kawvo-demo-share {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #16a34a;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #15803d;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.kawvo-demo-purchase .kawvo-demo-share:hover,
+.kawvo-demo-purchase .kawvo-demo-share:focus-visible {
+  background: #f0fdf4;
+}
+
+.kawvo-demo-purchase .kawvo-demo-share:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.kawvo-demo-share-block > span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.kawvo-demo-share-block > strong {
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.4;
+}

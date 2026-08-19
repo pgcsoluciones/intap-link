@@ -35,7 +35,7 @@ type DemoPreset = {
 
 const DEFAULT_LOCATION = 'Parque Duarte, Samaná'
 const DEFAULT_MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Parque+Duarte+Samana'
-const COMMERCIAL_URL = 'https://nfc.kawvoia.com'
+const COMMERCIAL_URL = 'https://nfc.kawvoia.com/precios'
 
 const PALETTES: Record<string, FreeProfileAppearanceColors> = {
   oceano: {
@@ -196,6 +196,28 @@ function normalizeInstagram(value: string) {
   return value.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/\/$/, '').slice(0, 40)
 }
 
+function getSessionKey() {
+  const storageKey = 'kawvo_demo_session'
+  try {
+    const existing = window.sessionStorage.getItem(storageKey)
+    if (existing) return existing
+    const value = crypto.randomUUID()
+    window.sessionStorage.setItem(storageKey, value)
+    return value
+  } catch {
+    return `demo-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  }
+}
+
+function postDemoEvent(body: Record<string, unknown>) {
+  fetch('/api/v1/public/demo/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    keepalive: true,
+  }).catch(() => undefined)
+}
+
 export default function KawvoLinkDemo() {
   const [stage, setStage] = useState<DemoStage>('sector')
   const [form, setForm] = useState<DemoForm>(DEFAULT_PRESET.form)
@@ -203,18 +225,26 @@ export default function KawvoLinkDemo() {
   const [hero, setHero] = useState(DEFAULT_PRESET.hero)
   const [uploadedPortrait, setUploadedPortrait] = useState<string | null>(null)
   const [serviceUploads, setServiceUploads] = useState<Record<string, string>>({})
+  const [currentSector, setCurrentSector] = useState<DemoSectorKey | null>(null)
+  const [shareStatus, setShareStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const fileRef = useRef<HTMLInputElement>(null)
   const serviceFileRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const sessionKeyRef = useRef<string>('')
+  const completionTrackedRef = useRef(false)
+  const fromTokenRef = useRef<string | null>(null)
 
   useEffect(() => {
     document.body.classList.add('kawvo-demo-body')
+    sessionKeyRef.current = getSessionKey()
+    fromTokenRef.current = new URLSearchParams(window.location.search).get('from')
+    postDemoEvent({
+      event_type: 'demo_started',
+      session_key: sessionKeyRef.current,
+      snapshot_token: fromTokenRef.current,
+      source: fromTokenRef.current ? 'shared_preview' : 'demo',
+    })
     return () => document.body.classList.remove('kawvo-demo-body')
   }, [])
-
-  useEffect(() => () => {
-    if (uploadedPortrait) URL.revokeObjectURL(uploadedPortrait)
-    Object.values(serviceUploads).forEach((url) => URL.revokeObjectURL(url))
-  }, [uploadedPortrait, serviceUploads])
 
   const profile = useMemo<FreeProfileData>(() => {
     const instagram = normalizeInstagram(form.instagram)
@@ -255,10 +285,19 @@ export default function KawvoLinkDemo() {
   function applyPreset(key: DemoSectorKey) {
     clearTemporaryImages()
     const preset = PRESETS[key]
+    setCurrentSector(key)
     setForm(preset.form)
     setPortrait(preset.portrait)
     setHero(preset.hero)
     setStage('welcome')
+    completionTrackedRef.current = false
+    postDemoEvent({
+      event_type: 'sector_selected',
+      sector_key: key,
+      session_key: sessionKeyRef.current,
+      snapshot_token: fromTokenRef.current,
+      source: fromTokenRef.current ? 'shared_preview' : 'demo',
+    })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -284,6 +323,9 @@ export default function KawvoLinkDemo() {
     setPortrait(DEFAULT_PRESET.portrait)
     setHero(DEFAULT_PRESET.hero)
     setForm(DEFAULT_PRESET.form)
+    setCurrentSector(null)
+    setShareStatus('idle')
+    completionTrackedRef.current = false
     setStage('sector')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -293,6 +335,71 @@ export default function KawvoLinkDemo() {
     if (target.closest('.ilx-footer a')) {
       event.preventDefault()
       event.stopPropagation()
+    }
+  }
+
+  function finishDemo() {
+    if (!completionTrackedRef.current) {
+      completionTrackedRef.current = true
+      const baseEvent = {
+        sector_key: currentSector,
+        session_key: sessionKeyRef.current,
+        snapshot_token: fromTokenRef.current,
+        source: fromTokenRef.current ? 'shared_preview' : 'demo',
+      }
+      postDemoEvent({ event_type: 'demo_completed', ...baseEvent })
+      if (fromTokenRef.current) postDemoEvent({ event_type: 'recipient_demo_completed', ...baseEvent })
+    }
+    setStage('result')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  async function createShare() {
+    if (shareStatus === 'loading') return
+    setShareStatus('loading')
+    postDemoEvent({
+      event_type: 'share_clicked',
+      sector_key: currentSector,
+      session_key: sessionKeyRef.current,
+      snapshot_token: fromTokenRef.current,
+      source: fromTokenRef.current ? 'shared_preview' : 'demo',
+    })
+
+    try {
+      const payload = {
+        profile,
+        layout: form.layout,
+        colors: PALETTES[form.palette],
+      }
+      const body = new FormData()
+      body.set('snapshot', JSON.stringify(payload))
+      body.set('sector_key', currentSector || '')
+      body.set('session_key', sessionKeyRef.current)
+
+      if (uploadedPortrait) {
+        const blob = await fetch(uploadedPortrait).then((response) => response.blob())
+        body.set('portrait', blob, 'portrait')
+      }
+
+      for (let index = 0; index < form.services.length; index += 1) {
+        const service = form.services[index]
+        const uploadUrl = serviceUploads[service.id]
+        if (!uploadUrl) continue
+        const blob = await fetch(uploadUrl).then((response) => response.blob())
+        body.set(`service_${index}`, blob, `service-${index}`)
+      }
+
+      const response = await fetch('/api/v1/public/demo/share', { method: 'POST', body })
+      const json = await response.json().catch(() => ({}))
+      if (!response.ok || !json?.url) throw new Error(json?.error || 'No se pudo crear el enlace')
+
+      const message = `Mira cómo quedó mi Perfil Digital 😄\nLo hice en una demo de Kawvo Link.\n${json.url}`
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+      const opened = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+      if (!opened) window.location.href = whatsappUrl
+      setShareStatus('idle')
+    } catch {
+      setShareStatus('error')
     }
   }
 
@@ -370,13 +477,31 @@ export default function KawvoLinkDemo() {
           <span className="kawvo-demo-success">✓</span>
           <p className="kawvo-demo-eyebrow">KAWVO LINK</p>
           <h1>Así se vería tu Perfil Digital.</h1>
-          <p>Esta es una demostración. Para crear y conservar tu perfil real debes adquirir un artículo de contacto Kawvo.</p>
+          <p>Esta es una demostración. Para solicitar tu tarjeta digital y conservar tu perfil real, consulta las opciones disponibles.</p>
         </section>
         {preview}
         <section className="kawvo-demo-purchase">
-          <button type="button" className="kawvo-demo-reset" onClick={() => setStage('sector')}>Cambiar la profesión</button>
           <p>Tarjeta · Llavero · Ping · Pulsera · Estación</p>
-          <a href={COMMERCIAL_URL}>Quiero mi Perfil Digital</a>
+          <a
+            href={COMMERCIAL_URL}
+            onClick={() => postDemoEvent({
+              event_type: 'purchase_clicked',
+              sector_key: currentSector,
+              session_key: sessionKeyRef.current,
+              snapshot_token: fromTokenRef.current,
+              source: fromTokenRef.current ? 'shared_preview' : 'demo',
+            })}
+          >
+            Quiero mi Perfil Digital
+          </a>
+          <div className="kawvo-demo-share-block">
+            <small>¿Te gustó cómo quedó?</small>
+            <button type="button" className="kawvo-demo-share" onClick={createShare} disabled={shareStatus === 'loading'}>
+              {shareStatus === 'loading' ? 'Preparando enlace…' : 'Compartir por WhatsApp'}
+            </button>
+            <span>Esta demo compartida desaparece en 24 horas.</span>
+            {shareStatus === 'error' && <strong>No pudimos crear el enlace. Inténtalo nuevamente.</strong>}
+          </div>
           <button type="button" onClick={() => setStage('edit')}>Seguir probando</button>
           <button type="button" className="kawvo-demo-reset" onClick={resetDemo}>Reiniciar demo</button>
         </section>
@@ -448,7 +573,7 @@ export default function KawvoLinkDemo() {
             </div>
           </fieldset>
 
-          <button type="button" className="kawvo-demo-finish" onClick={() => { setStage('result'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Ver cómo quedó</button>
+          <button type="button" className="kawvo-demo-finish" onClick={finishDemo}>Ver cómo quedó</button>
         </section>
 
         <aside className="kawvo-demo-live">
