@@ -392,6 +392,133 @@
   color: #64748b;
 }
 
+.kawvo-demo-sector-page {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 22px 16px 40px;
+}
+
+.kawvo-demo-sector-shell {
+  width: min(100%, 720px);
+  text-align: center;
+}
+
+.kawvo-demo-sector-back {
+  display: flex;
+  margin: 0 0 16px;
+  border: 0;
+  background: transparent;
+  color: #475569;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kawvo-demo-sector-shell h1 {
+  margin: 14px auto 0;
+  max-width: 560px;
+  font-size: clamp(30px, 8vw, 42px);
+  line-height: 1.04;
+  letter-spacing: -.035em;
+}
+
+.kawvo-demo-sector-shell > p {
+  margin: 12px auto 0;
+  max-width: 520px;
+  color: #475569;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.kawvo-demo-sector-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.kawvo-demo-sector-card {
+  width: 100%;
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #dbe4ef;
+  border-radius: 18px;
+  background: #fff;
+  color: #0f172a;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(15,23,42,.05);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.kawvo-demo-sector-card:hover,
+.kawvo-demo-sector-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #67e8f9;
+  box-shadow: 0 12px 28px rgba(15,23,42,.10);
+  outline: none;
+}
+
+.kawvo-demo-sector-card img {
+  width: 100%;
+  height: 100%;
+  min-height: 92px;
+  object-fit: cover;
+}
+
+.kawvo-demo-sector-card > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 14px;
+}
+
+.kawvo-demo-sector-card strong {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.kawvo-demo-sector-card small {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.kawvo-demo-sector-skip {
+  width: min(100%, 430px);
+  min-height: 50px;
+  margin: 16px auto 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 15px;
+  background: #fff;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.kawvo-demo-sector-note {
+  display: block;
+  margin: 9px auto 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (min-width: 620px) {
+  .kawvo-demo-sector-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 900px) {
   .kawvo-demo-editor-grid {
     display: grid;
