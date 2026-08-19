@@ -285,8 +285,17 @@ export default function KawvoLinkDemo() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  function blockDemoFooterNavigation(event: React.MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement
+    if (target.closest('.ilx-footer a')) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
   const preview = (
-    <div className="kawvo-demo-preview" aria-label="Vista previa del perfil demo">
+    <div className="kawvo-demo-preview" aria-label="Vista previa del perfil demo" onClickCapture={blockDemoFooterNavigation}>
+      <style>{`.kawvo-demo-preview .ilx-footer a { pointer-events: none; cursor: default; opacity: .72; }`}</style>
       <IntapLinkGratisProfile profile={profile} layout={form.layout} colors={PALETTES[form.palette]} />
     </div>
   )
@@ -300,6 +309,7 @@ export default function KawvoLinkDemo() {
           <p>Esta demostración es temporal. No crea cuentas, no publica perfiles y no guarda tus datos.</p>
         </section>
         {preview}
+        <button type="button" className="kawvo-demo-sector-skip" onClick={() => setStage('sector')}>Cambiar la profesión</button>
         <div className="kawvo-demo-sticky-cta">
           <button type="button" onClick={() => setStage('edit')}>Pruébalo con tus datos</button>
           <small>Lo que cambies existe solamente en este dispositivo mientras mantengas abierta la demo.</small>
@@ -344,6 +354,7 @@ export default function KawvoLinkDemo() {
         </section>
         {preview}
         <section className="kawvo-demo-purchase">
+          <button type="button" className="kawvo-demo-reset" onClick={() => setStage('sector')}>Cambiar la profesión</button>
           <p>Tarjeta · Llavero · Ping · Pulsera · Estación</p>
           <a href={COMMERCIAL_URL}>Quiero mi Perfil Digital</a>
           <button type="button" onClick={() => setStage('edit')}>Seguir probando</button>
