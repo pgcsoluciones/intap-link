@@ -7,6 +7,7 @@ import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
+import { registerDemoViralRoutes } from './routes/demo-viral'
 import {
   ARTIFACT_PRODUCT_TYPES,
   generateHumanCode,
@@ -76,6 +77,8 @@ app.use('*', cors({
   maxAge: 86400,
 }))
 app.options('*', (c) => c.body(null, 204))
+
+registerDemoViralRoutes(app)
 
 
 app.use('/api/*', async (c, next) => {
