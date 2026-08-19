@@ -246,11 +246,6 @@ export default function KawvoLinkDemo() {
     return () => document.body.classList.remove('kawvo-demo-body')
   }, [])
 
-  useEffect(() => () => {
-    if (uploadedPortrait) URL.revokeObjectURL(uploadedPortrait)
-    Object.values(serviceUploads).forEach((url) => URL.revokeObjectURL(url))
-  }, [uploadedPortrait, serviceUploads])
-
   const profile = useMemo<FreeProfileData>(() => {
     const instagram = normalizeInstagram(form.instagram)
     const phone = normalizePhone(form.whatsapp)
@@ -486,7 +481,6 @@ export default function KawvoLinkDemo() {
         </section>
         {preview}
         <section className="kawvo-demo-purchase">
-          <button type="button" className="kawvo-demo-reset" onClick={() => setStage('sector')}>Cambiar la profesión</button>
           <p>Tarjeta · Llavero · Ping · Pulsera · Estación</p>
           <a
             href={COMMERCIAL_URL}
