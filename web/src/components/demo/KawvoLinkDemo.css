@@ -312,8 +312,10 @@
   gap: 12px;
 }
 
-.kawvo-demo-services-head button:disabled {
-  opacity: .45;
+.kawvo-demo-services-head button:disabled,
+.kawvo-demo-service-top button:disabled {
+  opacity: .35;
+  color: #94a3b8;
   cursor: not-allowed;
 }
 
