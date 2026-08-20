@@ -12,7 +12,9 @@ export function cookieNames(env: any): CookieNames {
   if (isPreviewEnvironment(env)) {
     return {
       session: 'intap_preview_session_id',
-      activationIntent: 'intap_preview_activation_intent',
+      // V2 deliberately uses a new name so older host/domain-scoped preview
+      // activation cookies cannot shadow the scan-to-claim continuation.
+      activationIntent: 'intap_preview_scan_activation_v2',
       oauthState: 'intap_preview_oauth_state',
     }
   }
@@ -37,19 +39,15 @@ export function buildScopedCookie(
   try {
     const hostname = new URL(appUrl).hostname
 
-    if (isPreviewEnvironment(env)) {
-      // Preview sessions and OAuth state stay host-only. The activation intent is
-      // the one exception: it starts on preview.intaprd.com from /l/:publicCode
-      // and must survive the handoff to app.preview.intaprd.com for login/claim.
-      // Scope only that opaque intent cookie to the isolated preview subtree;
-      // it never reaches production intaprd.com/app.intaprd.com.
-      if (name === cookieNames(env).activationIntent && hostname.endsWith('.preview.intaprd.com')) {
-        cookie += '; Domain=.preview.intaprd.com'
+    if (!isPreviewEnvironment(env)) {
+      if (hostname === 'intaprd.com' || hostname.endsWith('.intaprd.com')) {
+        // Production keeps its established cross-subdomain contract for now.
+        cookie += '; Domain=.intaprd.com'
       }
-    } else if (hostname === 'intaprd.com' || hostname.endsWith('.intaprd.com')) {
-      // Production keeps its established cross-subdomain cookie contract.
-      cookie += '; Domain=.intaprd.com'
     }
+    // Preview cookies stay host-only. Scan-to-claim now creates its intent from
+    // app.preview.intaprd.com after the public-site handoff, so no activation
+    // credential needs to cross subdomains.
   } catch { /* Invalid configuration: omit Domain safely. */ }
 
   return cookie
