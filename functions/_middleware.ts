@@ -10,11 +10,6 @@ import {
 /**
  * Cloudflare Pages Functions middleware.
  * Runs at the edge for every request, before static assets are served.
- *
- * Handles:
- *   1. /admin and /admin/* → redirect to app.intaprd.com (panel admin)
- *   2. /?slug=VALUE        → redirect to /VALUE (perfil público)
- *   3. /novi               → inject Open Graph / Twitter Card metadata
  */
 export async function onRequest(context: {
   request: Request;
@@ -23,8 +18,7 @@ export async function onRequest(context: {
   const withSecurityHeaders = (response: Response): Response => {
     const headers = new Headers(response.headers);
     const requestUrl = new URL(context.request.url);
-    const isPreviewHost =
-      requestUrl.hostname === 'preview.intaprd.com';
+    const isPreviewHost = requestUrl.hostname === 'preview.intaprd.com';
 
     headers.set('X-Content-Type-Options', 'nosniff');
 
@@ -76,29 +70,18 @@ export async function onRequest(context: {
     const imageUrl = escapeHtml(metadata.image);
     const siteName = escapeHtml(metadata.siteName);
     const imageType = escapeHtml(metadata.imageType);
-    const imageWidthTag =
-      metadata.imageWidth
-        ? `<meta property="og:image:width" content="${String(metadata.imageWidth)}" />`
-        : '';
-    const imageHeightTag =
-      metadata.imageHeight
-        ? `<meta property="og:image:height" content="${String(metadata.imageHeight)}" />`
-        : '';
-    const ogType = escapeHtml(
-      metadata.ogType || 'website'
-    );
-    const twitterCard = escapeHtml(
-      metadata.twitterCard || 'summary_large_image'
-    );
-    const ogLocale = metadata.language === 'en-US'
-      ? 'en_US'
-      : 'es_DO';
-    const alternateOgLocale = metadata.language === 'en-US'
-      ? 'es_DO'
-      : 'en_US';
+    const imageWidthTag = metadata.imageWidth
+      ? `<meta property="og:image:width" content="${String(metadata.imageWidth)}" />`
+      : '';
+    const imageHeightTag = metadata.imageHeight
+      ? `<meta property="og:image:height" content="${String(metadata.imageHeight)}" />`
+      : '';
+    const ogType = escapeHtml(metadata.ogType || 'website');
+    const twitterCard = escapeHtml(metadata.twitterCard || 'summary_large_image');
+    const ogLocale = metadata.language === 'en-US' ? 'en_US' : 'es_DO';
+    const alternateOgLocale = metadata.language === 'en-US' ? 'es_DO' : 'en_US';
     const seoHeadHtml = metadata.seoHeadHtml || '';
-    const semanticFallbackHtml =
-      metadata.semanticFallbackHtml || '';
+    const semanticFallbackHtml = metadata.semanticFallbackHtml || '';
 
     const metaBlock = `
   <!-- INTAP LINK: Open Graph + SEO + GEO metadata -->
@@ -135,18 +118,12 @@ ${seoHeadHtml}
     );
 
     if (output.includes('</head>')) {
-      output = output.replace(
-        '</head>',
-        `${metaBlock}\n</head>`
-      );
+      output = output.replace('</head>', `${metaBlock}\n</head>`);
     }
 
     if (semanticFallbackHtml) {
       if (output.includes('</body>')) {
-        output = output.replace(
-          '</body>',
-          `${semanticFallbackHtml}\n</body>`
-        );
+        output = output.replace('</body>', `${semanticFallbackHtml}\n</body>`);
       } else {
         output += semanticFallbackHtml;
       }
@@ -156,18 +133,14 @@ ${seoHeadHtml}
   };
 
   const url = new URL(context.request.url);
-
   const discoveryRuntime = createDiscoveryRuntime(url);
-  const discoveryResponse =
-    await handleDiscoveryRequest(url, discoveryRuntime);
+  const discoveryResponse = await handleDiscoveryRequest(url, discoveryRuntime);
 
   if (discoveryResponse) {
     return withSecurityHeaders(discoveryResponse);
   }
 
   // Physical artifact URLs are operational redirects, not profile pages.
-  // Resolve them at the edge through the runtime-matched API so the NFC/QR
-  // destination can change without reprogramming the physical artifact.
   const artifactMatch = url.pathname.match(/^\/l\/([^/]+)\/?$/i);
   if (artifactMatch) {
     const publicCode = decodeURIComponent(artifactMatch[1]).trim().toUpperCase();
@@ -225,8 +198,6 @@ ${seoHeadHtml}
       }
 
       const destination = new URL(redirectPath, url.origin);
-      // Preserve query parameters supplied to the physical URL for future
-      // campaign/analytics use, while never caching the redirect destination.
       for (const [key, value] of url.searchParams) destination.searchParams.append(key, value);
       const headers = new Headers({
         Location: destination.toString(),
@@ -242,10 +213,7 @@ ${seoHeadHtml}
     }
   }
 
-  // Redirigir /admin solo cuando la solicitud viene del frontend público.
-  // Los hosts del panel y los deployments pages.dev deben servir la app directamente.
-  const isAdminPath =
-    url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+  const isAdminPath = url.pathname === '/admin' || url.pathname.startsWith('/admin/');
 
   if (isAdminPath) {
     const productionPublicHosts = new Set([
@@ -265,7 +233,6 @@ ${seoHeadHtml}
     }
   }
 
-  // Redirigir /?slug=VALUE → /VALUE
   if (url.pathname === '/' && url.searchParams.has('slug')) {
     const slug = url.searchParams.get('slug')!.trim();
     if (slug) {
@@ -276,14 +243,103 @@ ${seoHeadHtml}
     }
   }
 
+  const injectSimpleSocialCard = async (metadata: {
+    title: string;
+    description: string;
+    image: string;
+    canonicalUrl?: string;
+    noIndex?: boolean;
+  }): Promise<Response> => {
+    const response = await context.next();
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return withSecurityHeaders(response);
+
+    const html = await response.text();
+    const updatedHtml = injectHeadMetadata(html, {
+      title: metadata.title,
+      description: metadata.description,
+      url: metadata.canonicalUrl || url.toString(),
+      image: metadata.image,
+      siteName: 'Kawvo Link',
+      imageType: metadata.image.toLowerCase().includes('.webp') ? 'image/webp' : 'image/jpeg',
+      ogType: 'website',
+      twitterCard: 'summary_large_image',
+      language: 'es-DO',
+    });
+    const headers = new Headers(response.headers);
+    headers.set('content-type', 'text/html; charset=UTF-8');
+    headers.set(
+      'x-robots-tag',
+      metadata.noIndex || discoveryRuntime.isPreview
+        ? 'noindex, nofollow, noarchive'
+        : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    );
+    return withSecurityHeaders(new Response(updatedHtml, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    }));
+  };
+
+  // Card general de la marca.
+  if (url.pathname === '/' || url.pathname === '') {
+    return injectSimpleSocialCard({
+      title: 'Crea tu Perfil Digital con Kawvo Link',
+      description: 'Muestra lo que haces, comparte tus servicios y destaca tu negocio con un perfil digital moderno, editable y listo para compartir por QR, NFC o enlace.',
+      image: `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`,
+      canonicalUrl: `${url.origin}/`,
+    });
+  }
+
+  // Card específica de la demo interactiva.
+  if (url.pathname === '/demo' || url.pathname === '/demo/') {
+    return injectSimpleSocialCard({
+      title: 'Prueba gratis cómo se vería tu Perfil Digital | Kawvo Link',
+      description: 'Elige tu actividad, personaliza tu información y mira en segundos cómo se vería tu perfil digital. Sin registro, sin descarga y sin compromiso.',
+      image: `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`,
+      canonicalUrl: `${url.origin}/demo`,
+    });
+  }
+
+  // Card dinámica de una demo compartida. WhatsApp/Facebook reciben metadata
+  // server-side aunque la vista del perfil se renderice luego con React.
+  const sharedDemoMatch = url.pathname.match(/^\/demo\/s\/([a-f0-9]{48})\/?$/i);
+  if (sharedDemoMatch) {
+    const token = sharedDemoMatch[1].toLowerCase();
+    try {
+      const shareResponse = await fetch(`${discoveryRuntime.apiBase}/demo/share/${token}`, {
+        headers: { Accept: 'application/json' },
+        cf: { cacheTtl: 0, cacheEverything: false },
+      } as RequestInit);
+      if (shareResponse.ok) {
+        const share = await shareResponse.json() as any;
+        const profile = share?.snapshot?.profile || {};
+        const name = String(profile?.name || 'Perfil Digital').trim().slice(0, 80);
+        const role = String(profile?.role || '').trim().slice(0, 120);
+        const portraitAsset = share?.assets?.portrait ? String(share.assets.portrait) : '';
+        const hero = String(profile?.hero || '').trim();
+        const image = portraitAsset
+          || (hero.startsWith('http') ? hero : hero.startsWith('/') ? `${url.origin}${hero}` : '')
+          || `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`;
+        return injectSimpleSocialCard({
+          title: `Así se vería el Perfil Digital de ${name} | Kawvo Link`,
+          description: role
+            ? `${role}. Mira esta vista previa y prueba gratis cómo se vería el tuyo.`
+            : 'Mira esta vista previa y prueba gratis cómo se vería tu propio Perfil Digital con Kawvo Link.',
+          image,
+          canonicalUrl: `${url.origin}/demo/s/${token}`,
+          noIndex: true,
+        });
+      }
+    } catch {
+      // Si la API temporal no responde, la SPA conserva su pantalla de error/expiración.
+    }
+  }
+
   const slug = url.pathname.replace(/^\/+|\/+$/g, '');
-  const staticProfile = getStaticProfileDiscovery(
-    slug,
-    discoveryRuntime,
-  );
+  const staticProfile = getStaticProfileDiscovery(slug, discoveryRuntime);
 
   if (staticProfile) {
-
     const response = await context.next();
     const contentType = response.headers.get('content-type') || '';
 
@@ -301,16 +357,10 @@ ${seoHeadHtml}
       imageType: staticProfile.imageType,
       imageWidth: staticProfile.imageWidth,
       imageHeight: staticProfile.imageHeight,
-      ogType: staticProfile.schemaType === 'Person'
-        ? 'profile'
-        : 'profile',
+      ogType: 'profile',
       twitterCard: 'summary',
-      seoHeadHtml:
-        buildProfileSeoHead(staticProfile, discoveryRuntime),
-      semanticFallbackHtml:
-        buildProfileSemanticFallback(
-          staticProfile,
-        ),
+      seoHeadHtml: buildProfileSeoHead(staticProfile, discoveryRuntime),
+      semanticFallbackHtml: buildProfileSemanticFallback(staticProfile),
       language: staticProfile.language,
     });
     const headers = new Headers(response.headers);
@@ -330,107 +380,48 @@ ${seoHeadHtml}
     }));
   }
 
+  const dynamicSlugEligible = /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug);
 
-  // Perfil dinámico: cualquier slug público válido que
-  // no tenga metadata estática obtiene SEO/GEO/IA
-  // desde el API central.
-  const dynamicSlugEligible =
-    /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(
-      slug
-    )
-
-  if (
-    !staticProfile &&
-    dynamicSlugEligible
-  ) {
-    const dynamicMeta =
-      await getDynamicProfileSeoBundle(
-        slug,
-        discoveryRuntime,
-      )
+  if (!staticProfile && dynamicSlugEligible) {
+    const dynamicMeta = await getDynamicProfileSeoBundle(slug, discoveryRuntime);
 
     if (dynamicMeta) {
-      const response =
-        await context.next()
+      const response = await context.next();
+      const contentType = response.headers.get('content-type') || '';
 
-      const contentType =
-        response.headers.get(
-          'content-type'
-        ) || ''
-
-      if (
-        !contentType.includes(
-          'text/html'
-        )
-      ) {
-        return withSecurityHeaders(
-          response
-        )
+      if (!contentType.includes('text/html')) {
+        return withSecurityHeaders(response);
       }
 
-      const html =
-        await response.text()
+      const html = await response.text();
+      const updatedHtml = injectHeadMetadata(html, {
+        title: dynamicMeta.title,
+        description: dynamicMeta.description,
+        url: dynamicMeta.url,
+        image: dynamicMeta.image,
+        imageType: dynamicMeta.imageType,
+        siteName: dynamicMeta.siteName,
+        ogType: 'profile',
+        twitterCard: dynamicMeta.twitterCard,
+        language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
+        seoHeadHtml: dynamicMeta.seoHeadHtml,
+        semanticFallbackHtml: dynamicMeta.semanticFallbackHtml,
+      });
 
-      const updatedHtml =
-        injectHeadMetadata(
-          html,
-          {
-            title:
-              dynamicMeta.title,
-            description:
-              dynamicMeta.description,
-            url:
-              dynamicMeta.url,
-            image:
-              dynamicMeta.image,
-            imageType:
-              dynamicMeta.imageType,
-            siteName:
-              dynamicMeta.siteName,
-            ogType:
-              'profile',
-            twitterCard:
-              dynamicMeta.twitterCard,
-            language: discoveryRuntime.language === 'en'
-              ? 'en-US'
-              : 'es-DO',
-            seoHeadHtml:
-              dynamicMeta.seoHeadHtml,
-            semanticFallbackHtml:
-              dynamicMeta
-                .semanticFallbackHtml,
-          }
-        )
-
-      const headers =
-        new Headers(
-          response.headers
-        )
-
-      headers.set(
-        'content-type',
-        'text/html; charset=UTF-8'
-      )
-
+      const headers = new Headers(response.headers);
+      headers.set('content-type', 'text/html; charset=UTF-8');
       headers.set(
         'x-robots-tag',
         discoveryRuntime.isPreview
           ? 'noindex, nofollow, noarchive'
-          : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
-      )
+          : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+      );
 
-      return withSecurityHeaders(
-        new Response(
-          updatedHtml,
-          {
-            status:
-              response.status,
-            statusText:
-              response.statusText,
-            headers,
-          }
-        )
-      )
+      return withSecurityHeaders(new Response(updatedHtml, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      }));
     }
   }
 
