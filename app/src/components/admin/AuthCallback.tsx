@@ -22,25 +22,44 @@ export default function AuthCallback() {
           return
         }
 
-        const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
-        if (pendingPublicCode) {
-          navigate('/admin/artifacts/activate', { replace: true })
-          return
-        }
-
         const authMode = sessionStorage.getItem('kawvo_auth_mode') || localStorage.getItem('kawvo_auth_mode') || 'login'
         sessionStorage.removeItem('kawvo_auth_mode')
         localStorage.removeItem('kawvo_auth_mode')
 
-        apiGet('/me/artifacts/activation/intent')
-          .then((intent: any) => {
-            if (intent.ok) {
+        // Scan-to-claim always has priority after authentication. If the user
+        // arrived from /l/:publicCode, resume that server-side intent instead
+        // of falling back to the legacy onboarding/code-entry flow.
+        apiGet('/me/artifacts/scan/pending')
+          .then((scan: any) => {
+            if (scan.ok) {
+              navigate('/admin/artifacts/activate?scan=1', { replace: true })
+              return
+            }
+
+            const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
+            if (pendingPublicCode) {
+              navigate('/admin/artifacts/activate', { replace: true })
+              return
+            }
+
+            apiGet('/me/artifacts/activation/intent')
+              .then((intent: any) => {
+                if (intent.ok) {
+                  navigate('/admin/artifacts/activate', { replace: true })
+                  return
+                }
+                navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true })
+              })
+              .catch(() => navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true }))
+          })
+          .catch(() => {
+            const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
+            if (pendingPublicCode) {
               navigate('/admin/artifacts/activate', { replace: true })
               return
             }
             navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true })
           })
-          .catch(() => navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true }))
       })
       .catch(() => setError('Error de conexión. Inténtalo de nuevo.'))
   }, [navigate, searchParams])
