@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { API_BASE, apiGet, apiPost, apiPut, apiUpload } from '../../lib/api'
 import ImageCropModal from './ImageCropModal'
 import RetentionPanel from './RetentionPanel'
@@ -243,6 +243,9 @@ export default function AdminDashboard() {
   const savedTheme    = me?.theme_id || 'default'
   const displayTheme  = pendingTheme ?? savedTheme
   const maxTopLink = stats?.topLinks?.[0]?.clics || 1
+  const isFreePlan = (me?.plan_code || me?.plan_id || 'free') === 'free'
+
+  if (isFreePlan) return <Navigate to="/admin/free" replace />
 
   return (
     <div className="min-h-screen bg-intap-dark text-white font-['Inter'] flex flex-col items-center py-10 px-4">
@@ -550,6 +553,17 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-sm font-bold">Productos y servicios</p>
                 <p className="text-xs text-slate-400">Catálogo con precios</p>
+              </div>
+            </div>
+            <span className="text-slate-400">›</span>
+          </Link>
+
+          <Link to="/admin/artifacts" className="glass-card p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">📲</span>
+              <div>
+                <p className="text-sm font-bold">Mis productos físicos</p>
+                <p className="text-xs text-slate-400">Activa y vincula tu NFC o QR</p>
               </div>
             </div>
             <span className="text-slate-400">›</span>

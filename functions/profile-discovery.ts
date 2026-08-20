@@ -44,12 +44,62 @@ export type ProfileDiscovery = {
     jobTitle: string;
   };
   lastUpdated: string;
+  language?: 'es-DO' | 'en-US';
 };
 
 const BASE_URL = 'https://intaprd.com';
+const PREVIEW_API_BASE =
+  'https://intap-api-preview.fliaprince.workers.dev/api/v1/public';
+const PRODUCTION_API_BASE =
+  'https://api.intaprd.com/api/v1/public';
 
-const PUBLIC_API_BASE =
-  `${BASE_URL}/api/v1/public`;
+// Endpoint Worker accesible desde Pages Functions.
+// El dominio canónico de los perfiles continúa siendo
+// https://intaprd.com/{slug}.
+export type DiscoveryRuntime = {
+  baseUrl: string;
+  apiBase: string;
+  isPreview: boolean;
+  language: 'es' | 'en';
+};
+
+function normalizeOrigin(value: string): string {
+  try {
+    return new URL(value).origin.replace(/\/+$/, '');
+  } catch {
+    return BASE_URL;
+  }
+}
+
+function isProductionHost(hostname: string): boolean {
+  return hostname === 'intaprd.com' || hostname === 'www.intaprd.com';
+}
+
+export function createDiscoveryRuntime(
+  input?: URL | string,
+): DiscoveryRuntime {
+  const url = input instanceof URL
+    ? input
+    : input
+      ? new URL(input)
+      : new URL(BASE_URL);
+  const production = isProductionHost(url.hostname);
+  const isPreview = !production;
+  // Fase actual:
+  // SEO, GEO y AI Discovery permanecen en español.
+  // DiscoveryRuntime conserva el tipo ES/EN para que
+  // podamos habilitar SEO localizado en una fase futura.
+  const language: 'es' = 'es';
+
+  return {
+    baseUrl: production ? BASE_URL : normalizeOrigin(url.origin),
+    apiBase: production ? PRODUCTION_API_BASE : PREVIEW_API_BASE,
+    isPreview,
+    language,
+  };
+}
+
+const DEFAULT_RUNTIME = createDiscoveryRuntime();
 
 // INTAP DYNAMIC DISCOVERY V2
 type DynamicDiscoveryProfile = {
@@ -57,6 +107,8 @@ type DynamicDiscoveryProfile = {
   name: string;
   bio: string;
   avatarUrl?: string | null;
+  heroUrl?: string | null;
+  hero_url?: string | null;
   category?: string | null;
   subcategory?: string | null;
   updatedAt?: string | null;
@@ -70,6 +122,7 @@ type DynamicPublicProfile = {
   category?: string | null;
   subcategory?: string | null;
   updatedAt?: string | null;
+  templateData?: Record<string, unknown> | null;
   whatsapp_number?: string | null;
   contact?: {
     whatsapp?: string | null;
@@ -95,6 +148,12 @@ type DynamicPublicProfile = {
     title?: string;
     description?: string | null;
   }>;
+  gallery?: Array<{
+    image_url?: string | null;
+    imageUrl?: string | null;
+    title?: string | null;
+    description?: string | null;
+  }>;
 };
 
 function compactText(
@@ -117,8 +176,24 @@ function markdownEscape(value: string): string {
   );
 }
 
-function publicProfileUrl(slug: string): string {
-  return `${BASE_URL}/${encodeURIComponent(slug)}`;
+function publicProfileUrl(
+  slug: string,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
+  language = runtime.language,
+): string {
+  const suffix = language === 'en' && slug === 'aycdom'
+    ? '?lang=en'
+    : '';
+  return `${runtime.baseUrl}/${encodeURIComponent(slug)}${suffix}`;
+}
+
+function profileResourceUrl(
+  profileUrl: string,
+  resource: 'ai.md' | 'facts.json',
+): string {
+  const url = new URL(profileUrl);
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/${resource}`;
+  return url.toString();
 }
 
 function discoveryDate(value: unknown): string {
@@ -158,11 +233,12 @@ function collectHttpUrls(
   return Array.from(new Set(urls));
 }
 
-async function fetchDynamicDiscoveryProfiles():
-Promise<DynamicDiscoveryProfile[]> {
+async function fetchDynamicDiscoveryProfiles(
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
+): Promise<DynamicDiscoveryProfile[]> {
   try {
     const response = await fetch(
-      `${PUBLIC_API_BASE}/discovery/profiles`,
+      `${runtime.apiBase}/discovery/profiles`,
       {
         headers: {
           Accept: 'application/json',
@@ -238,11 +314,12 @@ Promise<DynamicDiscoveryProfile[]> {
 }
 
 async function fetchDynamicPublicProfile(
-  slug: string
+  slug: string,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): Promise<DynamicPublicProfile | null> {
   try {
     const response = await fetch(
-      `${PUBLIC_API_BASE}/profiles/${encodeURIComponent(slug)}`,
+      `${runtime.apiBase}/profiles/${encodeURIComponent(slug)}`,
       {
         headers: {
           Accept: 'application/json',
@@ -270,9 +347,361 @@ async function fetchDynamicPublicProfile(
   }
 }
 
+
+function dynamicTemplateText(
+  profile: DynamicPublicProfile,
+  ...keys: string[]
+): string {
+  const data = profile.templateData
+
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    Array.isArray(data)
+  ) {
+    return ''
+  }
+
+  for (const key of keys) {
+    const value = (
+      data as Record<string, unknown>
+    )[key]
+
+    const normalized =
+      compactText(value)
+
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return ''
+}
+
+function dynamicCompanyName(
+  profile: DynamicPublicProfile
+): string {
+  return dynamicTemplateText(
+    profile,
+    'companyName'
+  )
+}
+
+function dynamicRole(
+  profile: DynamicPublicProfile
+): string {
+  const explicitRole =
+    dynamicTemplateText(
+      profile,
+      'role',
+      'jobTitle'
+    )
+
+  if (explicitRole) {
+    return explicitRole
+  }
+
+  const title =
+    dynamicTemplateText(
+      profile,
+      'title'
+    )
+
+  const company =
+    dynamicCompanyName(profile)
+
+  if (
+    title &&
+    company &&
+    title.toLowerCase() !==
+      company.toLowerCase()
+  ) {
+    return title
+  }
+
+  return ''
+}
+
+function dynamicEntityType(
+  profile: DynamicPublicProfile
+): 'Person' | 'Organization' {
+  return dynamicRole(profile)
+    ? 'Person'
+    : 'Organization'
+}
+
+function truncateSeoText(
+  value: string,
+  maxLength: number
+): string {
+  const normalized =
+    compactText(value)
+
+  if (
+    normalized.length <= maxLength
+  ) {
+    return normalized
+  }
+
+  const clipped = normalized
+    .slice(0, maxLength - 1)
+    .replace(/\s+\S*$/, '')
+    .trim()
+
+  return `${clipped || normalized.slice(
+    0,
+    maxLength - 1
+  )}…`
+}
+
+function inferDynamicImageType(
+  image: string
+): string {
+  const clean = image
+    .toLowerCase()
+    .split('?')[0]
+
+  if (clean.endsWith('.png')) {
+    return 'image/png'
+  }
+
+  if (clean.endsWith('.webp')) {
+    return 'image/webp'
+  }
+
+  if (clean.endsWith('.gif')) {
+    return 'image/gif'
+  }
+
+  return 'image/jpeg'
+}
+
+export async function getDynamicProfileSeoBundle(
+  requestedSlug: string,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
+): Promise<{
+  title: string;
+  description: string;
+  url: string;
+  image: string;
+  imageType: string;
+  siteName: string;
+  twitterCard: 'summary' | 'summary_large_image';
+  seoHeadHtml: string;
+  semanticFallbackHtml: string;
+} | null> {
+  const profile =
+    await fetchDynamicPublicProfile(
+      requestedSlug,
+      runtime,
+    )
+
+  if (!profile) {
+    return null
+  }
+
+  const slug = compactText(
+    profile.slug,
+    requestedSlug
+  ).toLowerCase()
+
+  if (
+    !slug ||
+    slug.includes('/')
+  ) {
+    return null
+  }
+
+  const name = compactText(
+    profile.name,
+    slug
+  )
+
+  const company =
+    dynamicCompanyName(profile)
+
+  const role =
+    dynamicRole(profile)
+
+  const entityType =
+    dynamicEntityType(profile)
+
+  const titleSource = role
+    ? `${name} | ${role}`
+    : (
+        company &&
+        company.toLowerCase() !==
+          name.toLowerCase()
+      )
+      ? `${name} | ${company}`
+      : name
+
+  const descriptionSource =
+    compactText(profile.bio) ||
+    dynamicTemplateText(
+      profile,
+      'shortDescription',
+      'companyHeadline',
+      'companyAbout'
+    ) ||
+    `Perfil digital de ${name} en INTAP LINK`
+
+  const title =
+    truncateSeoText(
+      titleSource,
+      80
+    )
+
+  const description =
+    truncateSeoText(
+      descriptionSource,
+      180
+    )
+
+  const url =
+    publicProfileUrl(slug, runtime)
+
+  const heroImage =
+    compactText(
+      profile.heroUrl
+    ) ||
+    compactText(
+      profile.hero_url
+    ) ||
+    dynamicTemplateText(
+      profile,
+      'heroUrl',
+      'hero_url'
+    )
+
+  const galleryImage =
+    Array.isArray(profile.gallery)
+      ? (
+          profile.gallery
+            .map((item) =>
+              compactText(
+                item?.image_url
+              ) ||
+              compactText(
+                item?.imageUrl
+              )
+            )
+            .find(Boolean) || ''
+        )
+      : ''
+
+  const avatarImage =
+    compactText(
+      profile.avatarUrl
+    )
+
+  const image =
+    heroImage ||
+    galleryImage ||
+    avatarImage ||
+    `${runtime.baseUrl}/favicon.ico`
+
+  const twitterCard:
+    'summary' | 'summary_large_image' =
+      (
+        heroImage ||
+        galleryImage
+      )
+        ? 'summary_large_image'
+        : 'summary'
+
+  const telephones =
+    Array.from(
+      new Set([
+        compactText(
+          profile.contact?.phone
+        ),
+        compactText(
+          profile.contact?.whatsapp
+        ),
+        compactText(
+          profile.whatsapp_number
+        ),
+      ].filter(Boolean))
+    )
+
+  const email =
+    compactText(
+      profile.contact?.email
+    )
+
+  const address =
+    compactText(
+      profile.contact?.address
+    )
+
+  const sameAs =
+    collectHttpUrls([
+      ...(
+        Array.isArray(
+          profile.social_links
+        )
+          ? profile.social_links.map(
+              (item) => item?.url
+            )
+          : []
+      ),
+      ...(
+        Array.isArray(
+          profile.links
+        )
+          ? profile.links.map(
+              (item) => item?.url
+            )
+          : []
+      ),
+    ])
+
+  const seoInput = {
+    name,
+    description,
+    url,
+    image,
+    entityType,
+    jobTitle: role || undefined,
+    telephones,
+    email: email || undefined,
+    address: address || undefined,
+    sameAs,
+  }
+
+  return {
+    title,
+    description,
+    url,
+    image,
+    imageType:
+      inferDynamicImageType(image),
+    siteName:
+      company || name,
+    twitterCard,
+    seoHeadHtml:
+      buildDynamicProfileSeoHead(
+        seoInput,
+        runtime,
+      ),
+    semanticFallbackHtml:
+      buildDynamicProfileSemanticFallback({
+        name,
+        description,
+        url,
+        telephones,
+        email: email || undefined,
+        address: address || undefined,
+        sameAs,
+      }, runtime),
+  }
+}
+
 function buildDynamicAiMarkdown(
   profile: DynamicPublicProfile,
-  requestedSlug: string
+  requestedSlug: string,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): string {
   const slug = compactText(
     profile.slug,
@@ -289,7 +718,7 @@ function buildDynamicAiMarkdown(
     `Perfil de ${name} en INTAP LINK`
   );
 
-  const canonical = publicProfileUrl(slug);
+  const canonical = publicProfileUrl(slug, runtime);
 
   const category = [
     compactText(profile.category),
@@ -374,7 +803,7 @@ function buildDynamicAiMarkdown(
 > ${markdownEscape(description)}
 
 - URL canónica: ${canonical}
-- Tipo de entidad: Organization
+- Tipo de entidad: ${dynamicEntityType(profile)}
 - Categoría: ${markdownEscape(category || 'No especificada')}
 - Idioma: es-DO
 - Última actualización: ${
@@ -419,7 +848,7 @@ ${officialUrls.length
 
 ## Datos estructurados
 
-- JSON verificable: ${canonical}/facts.json
+- JSON verificable: ${profileResourceUrl(canonical, 'facts.json')}
 - Página oficial: ${canonical}
 ${faqMarkdown}
 `;
@@ -427,7 +856,8 @@ ${faqMarkdown}
 
 function buildDynamicFactsJson(
   profile: DynamicPublicProfile,
-  requestedSlug: string
+  requestedSlug: string,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): string {
   const slug = compactText(
     profile.slug,
@@ -444,7 +874,7 @@ function buildDynamicFactsJson(
     `Perfil de ${name} en INTAP LINK`
   );
 
-  const canonical = publicProfileUrl(slug);
+  const canonical = publicProfileUrl(slug, runtime);
 
   const phones = Array.from(
     new Set([
@@ -511,7 +941,7 @@ function buildDynamicFactsJson(
           ? discoveryDate(profile.updatedAt)
           : null,
       entity: {
-        type: 'Organization',
+        type: dynamicEntityType(profile),
         name,
         description,
         category:
@@ -942,6 +1372,194 @@ export const STATIC_PROFILE_DISCOVERY: Record<
     lastUpdated: '2026-07-24',
   },
 
+  aycdom2: {
+    slug: 'aycdom2',
+    title:
+      'Freddy Fulgencio | Gerente de operaciones de A&C Dominicana',
+    name: 'A&C Dominicana, S.R.L.',
+    alternateName: [
+      'A&C Dominicana',
+      'A y C Dominicana',
+      'Freddy Fulgencio A&C Dominicana',
+    ],
+    description:
+      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.',
+    longDescription:
+      'A&C Dominicana integra diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución. Puede atender desde una pieza puntual hasta una línea de proceso completa.',
+    url: `${BASE_URL}/aycdom2`,
+    image:
+      `${BASE_URL}/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1`,
+    imageType: 'image/png',
+    imageWidth: 676,
+    imageHeight: 675,
+    siteName: 'A&C Dominicana, S.R.L.',
+    schemaType: 'ProfessionalService',
+    telephones: [
+      '+18092939270',
+      '+18094767325',
+    ],
+    email: 'freddy@aycdominicana.com',
+    address: {
+      streetAddress:
+        'C/ Juan José Duarte #73, entre Mauricio Báez y Paraguay, Ensanche La Fe',
+      addressLocality: 'Santo Domingo',
+      addressRegion: 'Distrito Nacional',
+      addressCountry: 'DO',
+    },
+    sameAs: [
+      'https://www.instagram.com/aycdominicana/',
+      'https://www.facebook.com/aycdominicana/',
+    ],
+    services: [
+      {
+        name: 'Metalmecánica y mecanizados',
+        description:
+          'Fabricación y reparación de piezas industriales mediante procesos convencionales y CNC.',
+      },
+      {
+        name: 'Corte láser CNC',
+        description:
+          'Corte de precisión para planchas, tubos, piezas y componentes industriales.',
+      },
+      {
+        name: 'Automatización industrial',
+        description:
+          'Integración de controles y equipos para mejorar productividad, seguridad y continuidad operativa.',
+      },
+      {
+        name: 'Conveyors y transporte',
+        description:
+          'Sistemas de transporte adaptados al espacio, producto y flujo de cada industria.',
+      },
+      {
+        name: 'Máquinas y equipos a medida',
+        description:
+          'Soluciones especiales para procesos que requieren equipos personalizados.',
+      },
+      {
+        name: 'Soldaduras especializadas',
+        description:
+          'Fabricación y reparación en materiales y aplicaciones de exigencia industrial.',
+      },
+    ],
+    areaServed: [
+      'Santo Domingo',
+      'República Dominicana',
+    ],
+    keywords: [
+      'A&C Dominicana',
+      'Freddy Fulgencio',
+      'Gerente de operaciones',
+      'metalmecánica',
+      'mecanizados CNC',
+      'corte láser CNC',
+      'automatización industrial',
+      'conveyors',
+      'equipos industriales',
+      'soldadura especializada',
+      'soluciones industriales',
+    ],
+    person: {
+      name: 'Freddy Fulgencio',
+      jobTitle: 'Gerente de operaciones',
+    },
+    lastUpdated: '2026-08-06',
+  },
+
+  aycdom: {
+    slug: 'aycdom',
+    title:
+      'Mario Medina | Sales Engineer de A&C Dominicana',
+    name: 'A&C Dominicana, S.R.L.',
+    alternateName: [
+      'A&C Dominicana',
+      'A y C Dominicana',
+      'Mario Medina A&C Dominicana',
+    ],
+    description:
+      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución.',
+    longDescription:
+      'Integramos diseño técnico, mecanizado, soldadura, fabricación de equipos, automatización e instalación dentro de una misma solución. Podemos atender desde una pieza puntual hasta una línea de proceso completa.',
+    url: `${BASE_URL}/aycdom`,
+    image:
+      `${BASE_URL}/assets/aycdom/social/perfil-link-ayc-10.png?v=aycdom-og-v1`,
+    imageType: 'image/png',
+    imageWidth: 676,
+    imageHeight: 675,
+    siteName: 'A&C Dominicana, S.R.L.',
+    schemaType: 'ProfessionalService',
+    telephones: [
+      '+18098163911',
+      '+18094767325',
+    ],
+    email: 'mario.medina@aycdominicana.com',
+    address: {
+      streetAddress:
+        'C/ Juan José Duarte #73, entre Mauricio Báez y Paraguay, Ensanche La Fe',
+      addressLocality: 'Santo Domingo',
+      addressRegion: 'Distrito Nacional',
+      addressCountry: 'DO',
+    },
+    sameAs: [
+      'https://www.instagram.com/aycdominicana/',
+      'https://www.facebook.com/aycdominicana/',
+    ],
+    services: [
+      {
+        name: 'Metalmecánica y mecanizados',
+        description:
+          'Fabricación y reparación de piezas industriales mediante procesos convencionales y CNC.',
+      },
+      {
+        name: 'Corte láser CNC',
+        description:
+          'Corte de precisión para planchas, tubos, piezas y componentes industriales.',
+      },
+      {
+        name: 'Automatización industrial',
+        description:
+          'Integración de controles y equipos para mejorar productividad, seguridad y continuidad operativa.',
+      },
+      {
+        name: 'Conveyors y transporte',
+        description:
+          'Sistemas de transporte adaptados al espacio, producto y flujo de cada industria.',
+      },
+      {
+        name: 'Máquinas y equipos a medida',
+        description:
+          'Soluciones especiales para procesos que requieren equipos personalizados.',
+      },
+      {
+        name: 'Soldaduras especializadas',
+        description:
+          'Fabricación y reparación en materiales y aplicaciones de exigencia industrial.',
+      },
+    ],
+    areaServed: [
+      'Santo Domingo',
+      'República Dominicana',
+    ],
+    keywords: [
+      'A&C Dominicana',
+      'Mario Medina',
+      'Sales Engineer',
+      'metalmecánica',
+      'mecanizados CNC',
+      'corte láser CNC',
+      'automatización industrial',
+      'conveyors',
+      'equipos industriales',
+      'soldadura especializada',
+      'soluciones industriales',
+    ],
+    person: {
+      name: 'Mario Medina',
+      jobTitle: 'Sales Engineer',
+    },
+    lastUpdated: '2026-08-06',
+  },
+
   biopestsgrd: {
     slug: 'biopestsgrd',
     title:
@@ -1113,10 +1731,116 @@ export const STATIC_PROFILE_DISCOVERY: Record<
   },
 };
 
+const AYC_EN_SERVICES: ProfileService[] = [
+  {
+    name: 'Metalworking and CNC machining',
+    description:
+      'Precision manufacturing and machining of industrial parts for technical and production applications.',
+  },
+  {
+    name: 'Industrial equipment design and manufacturing',
+    description:
+      'Development and construction of industrial solutions adapted to each customer’s process.',
+  },
+  {
+    name: 'Automation and instrumentation',
+    description:
+      'Integration of control, monitoring, and instrumentation systems to optimize industrial processes.',
+  },
+  {
+    name: 'Cutting, forming, and welding',
+    description:
+      'Material transformation and metal fabrication for industrial structures, parts, and assemblies.',
+  },
+  {
+    name: 'Industrial maintenance and repair',
+    description:
+      'Technical support services to restore, maintain, and improve equipment performance.',
+  },
+  {
+    name: 'Dust and gas control',
+    description:
+      'Environmental control and particle-management solutions for industrial and construction operations.',
+  },
+  {
+    name: 'Custom parts, equipment, and components',
+    description:
+      'Supply and manufacturing of commercial or custom-made industrial components.',
+  },
+];
+
+const AYC_EN_FAQS: ProfileFaq[] = [
+  {
+    question: 'Do you provide custom industrial work?',
+    answer:
+      'Yes. Each project is evaluated according to the requirement, material, process, and operating conditions.',
+  },
+  {
+    question: 'Can you manufacture a part from an existing sample?',
+    answer:
+      'It depends on the condition of the sample, required tolerances, and material. Our technical team must evaluate it before confirming production.',
+  },
+  {
+    question: 'Do you only work on large projects?',
+    answer:
+      'No. A&C can handle anything from a single part or specific repair to a complete machine or production line.',
+  },
+  {
+    question: 'Do you provide installation and commissioning?',
+    answer:
+      'Yes, when required by the project scope. Installation and commissioning are defined as part of the technical proposal.',
+  },
+];
+
+function runtimeAssetUrl(
+  value: string,
+  runtime: DiscoveryRuntime,
+): string {
+  return value.startsWith(`${BASE_URL}/`)
+    ? `${runtime.baseUrl}${value.slice(BASE_URL.length)}`
+    : value;
+}
+
 export function getStaticProfileDiscovery(
-  slug: string
+  slug: string,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): ProfileDiscovery | null {
-  return STATIC_PROFILE_DISCOVERY[slug] || null;
+  const source = STATIC_PROFILE_DISCOVERY[slug];
+  if (!source) return null;
+
+  const localized = slug === 'aycdom' && runtime.language === 'en'
+    ? {
+        ...source,
+        title: 'Mario Medina | Sales Engineer at A&C Dominicana',
+        description:
+          'Technical design, machining, welding, equipment manufacturing, automation, and installation integrated into industrial solutions.',
+        longDescription:
+          'With more than 30 years of experience in the industrial market, A&C Dominicana develops solutions for automation, process improvement, equipment and parts supply, and industrial projects. We integrate technical design, machining, welding, equipment manufacturing, automation, and installation into comprehensive solutions.',
+        services: AYC_EN_SERVICES,
+        faqs: AYC_EN_FAQS,
+        keywords: [
+          'A&C Dominicana',
+          'Mario Medina',
+          'Sales Engineer',
+          'CNC machining',
+          'industrial automation',
+          'industrial equipment',
+          'specialized welding',
+          'industrial solutions',
+        ],
+      }
+    : source;
+
+  const language = localized === source
+    ? 'es-DO'
+    : 'en-US';
+
+  return {
+    ...localized,
+    url: publicProfileUrl(slug, runtime),
+    image: runtimeAssetUrl(localized.image, runtime),
+    language,
+  };
 }
 
 function escapeHtml(value: string): string {
@@ -1132,9 +1856,10 @@ function jsonForScript(value: unknown): string {
 }
 
 function buildJsonLd(
-  profile: ProfileDiscovery
+  profile: ProfileDiscovery,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): Record<string, unknown> {
-  const websiteId = `${BASE_URL}/#website`;
+  const websiteId = `${runtime.baseUrl}/#website`;
   const webpageId = `${profile.url}#webpage`;
   const entityId = `${profile.url}#entity`;
   const imageId = `${profile.url}#primaryimage`;
@@ -1185,7 +1910,9 @@ function buildJsonLd(
             ? 'customer service'
             : 'sales',
         areaServed: 'DO',
-        availableLanguage: ['es'],
+        availableLanguage: [
+          profile.language === 'en-US' ? 'en' : 'es',
+        ],
       })
     ),
     makesOffer: profile.services.map((service) => ({
@@ -1202,9 +1929,9 @@ function buildJsonLd(
     {
       '@type': 'WebSite',
       '@id': websiteId,
-      url: `${BASE_URL}/`,
+      url: `${runtime.baseUrl}/`,
       name: 'INTAP LINK',
-      inLanguage: 'es-DO',
+      inLanguage: profile.language || 'es-DO',
     },
     {
       '@type': 'ImageObject',
@@ -1221,7 +1948,7 @@ function buildJsonLd(
       url: profile.url,
       name: profile.title,
       description: profile.description,
-      inLanguage: 'es-DO',
+      inLanguage: profile.language || 'es-DO',
       isPartOf: {
         '@id': websiteId,
       },
@@ -1241,7 +1968,7 @@ function buildJsonLd(
       '@type': 'FAQPage',
       '@id': `${profile.url}#faq`,
       url: `${profile.url}#faq`,
-      inLanguage: 'es-DO',
+      inLanguage: profile.language || 'es-DO',
       mainEntity: profile.faqs.map((faq) => ({
         '@type': 'Question',
         name: faq.question,
@@ -1260,7 +1987,8 @@ function buildJsonLd(
 }
 
 export function buildProfileSeoHead(
-  profile: ProfileDiscovery
+  profile: ProfileDiscovery,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): string {
   const keywords = escapeHtml(
     profile.keywords.join(', ')
@@ -1270,17 +1998,25 @@ export function buildProfileSeoHead(
     ? escapeHtml(profile.address.addressLocality)
     : 'República Dominicana';
 
+  const indexDirective = runtime.isPreview
+    ? 'noindex,nofollow,noarchive'
+    : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+  const aiUrl = profileResourceUrl(profile.url, 'ai.md');
+  const factsUrl = profileResourceUrl(profile.url, 'facts.json');
+  // SEO bilingüe se activará en una fase posterior.
+  const hreflang = '';
+
   return `
   <!-- INTAP LINK: SEO + GEO + AI DISCOVERY -->
-  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <meta name="bingbot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <meta name="robots" content="${indexDirective}" />
+  <meta name="googlebot" content="${indexDirective}" />
+  <meta name="bingbot" content="${indexDirective}" />
   <meta name="keywords" content="${keywords}" />
   <meta name="geo.region" content="DO" />
   <meta name="geo.placename" content="${locality}" />
-  <link rel="alternate" type="text/markdown" title="${escapeHtml(profile.name)} para agentes IA" href="${profile.url}/ai.md" />
-  <link rel="alternate" type="application/json" title="${escapeHtml(profile.name)} datos verificables" href="${profile.url}/facts.json" />
-  <script type="application/ld+json">${jsonForScript(buildJsonLd(profile))}</script>
+  <link rel="alternate" type="text/markdown" title="${escapeHtml(profile.name)} para agentes IA" href="${escapeHtml(aiUrl)}" />
+  <link rel="alternate" type="application/json" title="${escapeHtml(profile.name)} datos verificables" href="${escapeHtml(factsUrl)}" />${hreflang}
+  <script type="application/ld+json">${jsonForScript(buildJsonLd(profile, runtime))}</script>
 `;
 }
 
@@ -1289,41 +2025,104 @@ export function buildDynamicProfileSeoHead(input: {
   description: string;
   url: string;
   image: string;
-}): string {
+  entityType?: 'Person' | 'Organization';
+  jobTitle?: string;
+  telephones?: string[];
+  email?: string;
+  address?: string;
+  sameAs?: string[];
+}, runtime: DiscoveryRuntime = DEFAULT_RUNTIME): string {
+  const entity: Record<string, unknown> = {
+    '@type':
+      input.entityType ||
+      'Organization',
+    '@id': `${input.url}#entity`,
+    name: input.name,
+    description:
+      input.description,
+    url: input.url,
+    image: input.image,
+  }
+
+  if (input.jobTitle) {
+    entity.jobTitle =
+      input.jobTitle
+  }
+
+  if (input.telephones?.length) {
+    entity.telephone =
+      input.telephones
+  }
+
+  if (input.email) {
+    entity.email =
+      input.email
+  }
+
+  if (input.address) {
+    entity.address = {
+      '@type':
+        'PostalAddress',
+      streetAddress:
+        input.address,
+      addressCountry:
+        'DO',
+    }
+  }
+
+  if (input.sameAs?.length) {
+    entity.sameAs =
+      input.sameAs
+  }
+
   const jsonLd = {
-    '@context': 'https://schema.org',
+    '@context':
+      'https://schema.org',
     '@graph': [
       {
-        '@type': 'WebPage',
-        '@id': `${input.url}#webpage`,
-        url: input.url,
-        name: input.name,
-        description: input.description,
-        inLanguage: 'es-DO',
+        '@type':
+          'WebPage',
+        '@id':
+          `${input.url}#webpage`,
+        url:
+          input.url,
+        name:
+          input.name,
+        description:
+          input.description,
+        inLanguage:
+          runtime.language === 'en' ? 'en-US' : 'es-DO',
         mainEntity: {
-          '@id': `${input.url}#entity`,
+          '@id':
+            `${input.url}#entity`,
         },
       },
-      {
-        '@type': 'Organization',
-        '@id': `${input.url}#entity`,
-        name: input.name,
-        description: input.description,
-        url: input.url,
-        image: input.image,
-      },
+      entity,
     ],
-  };
+  }
+
+  const geoPlacename =
+    input.address
+      ? `
+  <meta name="geo.placename" content="${escapeHtml(input.address)}" />`
+      : ''
+
+  const indexDirective = runtime.isPreview
+    ? 'noindex,nofollow,noarchive'
+    : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+  const aiUrl = profileResourceUrl(input.url, 'ai.md');
+  const factsUrl = profileResourceUrl(input.url, 'facts.json');
 
   return `
-  <!-- INTAP LINK: DYNAMIC SEO DISCOVERY -->
-  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <meta name="googlebot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <meta name="bingbot" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
-  <link rel="alternate" type="text/markdown" title="${escapeHtml(input.name)} para agentes IA" href="${escapeHtml(input.url)}/ai.md" />
-  <link rel="alternate" type="application/json" title="${escapeHtml(input.name)} datos verificables" href="${escapeHtml(input.url)}/facts.json" />
+  <!-- INTAP LINK: DYNAMIC SEO + GEO + AI DISCOVERY -->
+  <meta name="robots" content="${indexDirective}" />
+  <meta name="googlebot" content="${indexDirective}" />
+  <meta name="bingbot" content="${indexDirective}" />
+  <meta name="geo.region" content="DO" />${geoPlacename}
+  <link rel="alternate" type="text/markdown" title="${escapeHtml(input.name)} para agentes IA" href="${escapeHtml(aiUrl)}" />
+  <link rel="alternate" type="application/json" title="${escapeHtml(input.name)} datos verificables" href="${escapeHtml(factsUrl)}" />
   <script type="application/ld+json">${jsonForScript(jsonLd)}</script>
-`;
+`
 }
 
 export function buildProfileSemanticFallback(
@@ -1362,9 +2161,18 @@ export function buildProfileSemanticFallback(
         .join(', ')
     : '';
 
+  const english = profile.language === 'en-US';
+  const language = english ? 'en-US' : 'es-DO';
+  const servicesTitle = english ? 'Services' : 'Servicios';
+  const contactTitle = english ? 'Contact' : 'Contacto';
+  const officialLinksTitle = english ? 'Official links' : 'Enlaces oficiales';
+  const profileLink = english
+    ? 'View interactive digital profile'
+    : 'Ver perfil digital interactivo';
+
   return `
   <noscript>
-    <main id="intap-semantic-profile" lang="es-DO">
+    <main id="intap-semantic-profile" lang="${language}">
       <article>
         <header>
           <h1>${escapeHtml(profile.name)}</h1>
@@ -1372,12 +2180,12 @@ export function buildProfileSemanticFallback(
         </header>
 
         <section>
-          <h2>Servicios</h2>
+          <h2>${servicesTitle}</h2>
           <ul>${services}</ul>
         </section>
 
         <section>
-          <h2>Contacto</h2>
+          <h2>${contactTitle}</h2>
           <ul>${phones}</ul>
           ${
             profile.email
@@ -1392,14 +2200,14 @@ export function buildProfileSemanticFallback(
         </section>
 
         ${
-          officialLinks
-            ? `<section><h2>Enlaces oficiales</h2><ul>${officialLinks}</ul></section>`
+            officialLinks
+              ? `<section><h2>${officialLinksTitle}</h2><ul>${officialLinks}</ul></section>`
             : ''
         }
 
         <p>
           <a href="${profile.url}">
-            Ver perfil digital interactivo
+            ${profileLink}
           </a>
         </p>
       </article>
@@ -1413,23 +2221,77 @@ export function buildDynamicProfileSemanticFallback(
     name: string;
     description: string;
     url: string;
-  }
+    telephones?: string[];
+    email?: string;
+    address?: string;
+    sameAs?: string[];
+  },
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): string {
+  const phones = (
+    input.telephones || []
+  )
+    .map(
+      (telephone) =>
+        `<li><a href="tel:${escapeHtml(telephone)}">${escapeHtml(telephone)}</a></li>`
+    )
+    .join('')
+
+  const links = (
+    input.sameAs || []
+  )
+    .map(
+      (url) =>
+        `<li><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></li>`
+    )
+    .join('')
+
+  const english = runtime.language === 'en';
+  const language = english ? 'en-US' : 'es-DO';
+
   return `
   <noscript>
-    <main id="intap-semantic-profile" lang="es-DO">
+    <main id="intap-semantic-profile" lang="${language}">
       <article>
         <h1>${escapeHtml(input.name)}</h1>
         <p>${escapeHtml(input.description)}</p>
+
+        ${
+          phones ||
+          input.email ||
+          input.address
+            ? `<section>
+          <h2>${english ? 'Contact' : 'Contacto'}</h2>
+          ${phones ? `<ul>${phones}</ul>` : ''}
+          ${
+            input.email
+              ? `<p>Correo: <a href="mailto:${escapeHtml(input.email)}">${escapeHtml(input.email)}</a></p>`
+              : ''
+          }
+          ${
+            input.address
+              ? `<address>${escapeHtml(input.address)}</address>`
+              : ''
+          }
+        </section>`
+            : ''
+        }
+
+        ${
+            links
+              ? `<section><h2>${english ? 'Official links' : 'Enlaces oficiales'}</h2><ul>${links}</ul></section>`
+            : ''
+        }
+
         <p>
           <a href="${escapeHtml(input.url)}">
-            Ver perfil digital
+            ${english ? 'View digital profile' : 'Ver perfil digital'}
           </a>
         </p>
       </article>
     </main>
   </noscript>
-`;
+`
 }
 
 function buildAiMarkdown(
@@ -1481,7 +2343,7 @@ function buildAiMarkdown(
 
 - URL canónica: ${profile.url}
 - Tipo de entidad: ${profile.schemaType}
-- Idioma: es-DO
+- Idioma: ${profile.language || 'es-DO'}
 - Última actualización: ${profile.lastUpdated}
 
 ## Descripción
@@ -1504,7 +2366,7 @@ ${links || `- ${profile.url}`}
 
 ## Datos estructurados
 
-- JSON verificable: ${profile.url}/facts.json
+- JSON verificable: ${profileResourceUrl(profile.url, 'facts.json')}
 - Página oficial: ${profile.url}
 ${faqs}
 `;
@@ -1516,7 +2378,7 @@ function buildFactsJson(
   return JSON.stringify(
     {
       schemaVersion: '1.0',
-      language: 'es-DO',
+      language: profile.language || 'es-DO',
       canonicalUrl: profile.url,
       lastUpdated: profile.lastUpdated,
       entity: {
@@ -1549,7 +2411,17 @@ function buildFactsJson(
   );
 }
 
-function buildRobotsTxt(): string {
+function buildRobotsTxt(
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
+): string {
+  if (runtime.isPreview) {
+    return `# INTAP LINK Preview — no indexar
+
+User-agent: *
+Disallow: /
+`;
+  }
+
   return `# INTAP LINK — rastreo para buscadores y asistentes IA
 
 User-agent: OAI-SearchBot
@@ -1598,12 +2470,13 @@ Allow: /
 Disallow: /admin
 Disallow: /auth
 
-Sitemap: ${BASE_URL}/sitemap.xml
+Sitemap: ${runtime.baseUrl}/sitemap.xml
 `;
 }
 
 function buildSitemapXml(
-  dynamicProfiles: DynamicDiscoveryProfile[]
+  dynamicProfiles: DynamicDiscoveryProfile[],
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): string {
   const entries = new Map<
     string,
@@ -1614,11 +2487,9 @@ function buildSitemapXml(
     }
   >();
 
-  for (
-    const profile of Object.values(
-      STATIC_PROFILE_DISCOVERY
-    )
-  ) {
+  for (const slug of Object.keys(STATIC_PROFILE_DISCOVERY)) {
+    const profile = getStaticProfileDiscovery(slug, runtime);
+    if (!profile) continue;
     entries.set(profile.slug, {
       slug: profile.slug,
       url: profile.url,
@@ -1631,7 +2502,7 @@ function buildSitemapXml(
 
     entries.set(profile.slug, {
       slug: profile.slug,
-      url: publicProfileUrl(profile.slug),
+      url: publicProfileUrl(profile.slug, runtime),
       lastUpdated:
         profile.updatedAt
           ? discoveryDate(profile.updatedAt)
@@ -1663,7 +2534,8 @@ ${urls}
 }
 
 function buildLlmsTxt(
-  dynamicProfiles: DynamicDiscoveryProfile[]
+  dynamicProfiles: DynamicDiscoveryProfile[],
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): string {
   const entries = new Map<
     string,
@@ -1675,11 +2547,9 @@ function buildLlmsTxt(
     }
   >();
 
-  for (
-    const profile of Object.values(
-      STATIC_PROFILE_DISCOVERY
-    )
-  ) {
+  for (const slug of Object.keys(STATIC_PROFILE_DISCOVERY)) {
+    const profile = getStaticProfileDiscovery(slug, runtime);
+    if (!profile) continue;
     entries.set(profile.slug, {
       slug: profile.slug,
       name: profile.name,
@@ -1695,7 +2565,7 @@ function buildLlmsTxt(
       slug: profile.slug,
       name: profile.name,
       description: profile.bio,
-      url: publicProfileUrl(profile.slug),
+      url: publicProfileUrl(profile.slug, runtime),
     });
   }
 
@@ -1716,8 +2586,8 @@ function buildLlmsTxt(
       );
 
       return `- [${name}](${profile.url}): ${description}
-  - [Resumen para agentes](${profile.url}/ai.md)
-  - [Datos verificables](${profile.url}/facts.json)`;
+  - [Resumen para agentes](${profileResourceUrl(profile.url, 'ai.md')})
+  - [Datos verificables](${profileResourceUrl(profile.url, 'facts.json')})`;
     })
     .join('\n');
 
@@ -1742,8 +2612,8 @@ Cada perfil incluye:
 
 ## Contacto del sitio
 
-- Sitio principal: ${BASE_URL}
-- Sitemap: ${BASE_URL}/sitemap.xml
+- Sitio principal: ${runtime.baseUrl}
+- Sitemap: ${runtime.baseUrl}/sitemap.xml
 `;
 }
 
@@ -1751,15 +2621,21 @@ function machineResponse(
   body: string,
   contentType: string,
   canonical?: string,
-  status = 200
+  status = 200,
+  runtime: DiscoveryRuntime = DEFAULT_RUNTIME,
 ): Response {
   const headers = new Headers({
     'content-type': `${contentType}; charset=UTF-8`,
-    'content-language': 'es-DO',
-    'cache-control':
-      'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
+    'content-language': runtime.language === 'en' ? 'en-US' : 'es-DO',
+    'cache-control': runtime.isPreview
+      ? 'no-store'
+      : 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400',
     'access-control-allow-origin': '*',
   });
+
+  if (runtime.isPreview) {
+    headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
+  }
 
   if (canonical) {
     headers.set(
@@ -1775,35 +2651,49 @@ function machineResponse(
 }
 
 export async function handleDiscoveryRequest(
-  pathname: string
+  input: URL | string,
+  suppliedRuntime?: DiscoveryRuntime,
 ): Promise<Response | null> {
+  const url = input instanceof URL
+    ? input
+    : new URL(input, BASE_URL);
+  const runtime = suppliedRuntime || createDiscoveryRuntime(url);
   const normalized =
-    pathname.replace(/\/+$/, '') || '/';
+    url.pathname.replace(/\/+$/, '') || '/';
 
   if (normalized === '/robots.txt') {
     return machineResponse(
-      buildRobotsTxt(),
-      'text/plain'
+      buildRobotsTxt(runtime),
+      'text/plain',
+      undefined,
+      200,
+      runtime
     );
   }
 
   if (normalized === '/sitemap.xml') {
     const dynamicProfiles =
-      await fetchDynamicDiscoveryProfiles();
+      await fetchDynamicDiscoveryProfiles(runtime);
 
     return machineResponse(
-      buildSitemapXml(dynamicProfiles),
-      'application/xml'
+      buildSitemapXml(dynamicProfiles, runtime),
+      'application/xml',
+      undefined,
+      200,
+      runtime
     );
   }
 
   if (normalized === '/llms.txt') {
     const dynamicProfiles =
-      await fetchDynamicDiscoveryProfiles();
+      await fetchDynamicDiscoveryProfiles(runtime);
 
     return machineResponse(
-      buildLlmsTxt(dynamicProfiles),
-      'text/plain'
+      buildLlmsTxt(dynamicProfiles, runtime),
+      'text/plain',
+      undefined,
+      200,
+      runtime
     );
   }
 
@@ -1824,38 +2714,44 @@ export async function handleDiscoveryRequest(
       'Not Found\n',
       'text/plain',
       undefined,
-      404
+      404,
+      runtime
     );
   }
 
   const staticProfile =
-    getStaticProfileDiscovery(slug);
+    getStaticProfileDiscovery(slug, runtime);
 
   if (staticProfile) {
     if (match[2] === 'ai.md') {
       return machineResponse(
         buildAiMarkdown(staticProfile),
         'text/markdown',
-        staticProfile.url
+        staticProfile.url,
+        200,
+        runtime
       );
     }
 
     return machineResponse(
       buildFactsJson(staticProfile),
       'application/json',
-      staticProfile.url
+      staticProfile.url,
+      200,
+      runtime
     );
   }
 
   const dynamicProfile =
-    await fetchDynamicPublicProfile(slug);
+    await fetchDynamicPublicProfile(slug, runtime);
 
   if (!dynamicProfile) {
     return machineResponse(
       'Not Found\n',
       'text/plain',
       undefined,
-      404
+      404,
+      runtime
     );
   }
 
@@ -1865,25 +2761,31 @@ export async function handleDiscoveryRequest(
   ).toLowerCase();
 
   const canonical =
-    publicProfileUrl(canonicalSlug);
+    publicProfileUrl(canonicalSlug, runtime);
 
   if (match[2] === 'ai.md') {
-    return machineResponse(
-      buildDynamicAiMarkdown(
-        dynamicProfile,
-        canonicalSlug
-      ),
+      return machineResponse(
+        buildDynamicAiMarkdown(
+          dynamicProfile,
+          canonicalSlug,
+          runtime,
+        ),
       'text/markdown',
-      canonical
+      canonical,
+      200,
+      runtime
     );
   }
 
   return machineResponse(
     buildDynamicFactsJson(
       dynamicProfile,
-      canonicalSlug
+      canonicalSlug,
+      runtime,
     ),
     'application/json',
-    canonical
+    canonical,
+    200,
+    runtime
   );
 }

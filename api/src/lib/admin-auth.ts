@@ -15,6 +15,8 @@
  * away from the env-var approach.
  */
 
+import { cookieNames } from './cookies'
+
 export type AdminRole = 'viewer' | 'support' | 'super_admin'
 
 const ROLE_RANK: Record<AdminRole, number> = {
@@ -57,7 +59,7 @@ export function requireSuperAdmin(minRole: AdminRole = 'viewer') {
   return async (c: any, next: any) => {
     // 1. Session validation
     const cookieHeader = c.req.header('Cookie') || ''
-    const rawSession   = parseCookie(cookieHeader, 'session_id')
+    const rawSession   = parseCookie(cookieHeader, cookieNames(c.env).session)
     if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
     const sessionHash = await sha256Hex(rawSession)

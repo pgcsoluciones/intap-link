@@ -11,9 +11,88 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+  }
+
   body {
     @apply bg-intap-dark text-white antialiased;
     font-family: 'Inter', sans-serif;
+  }
+
+  body.kawvo-free-mobile {
+    overflow-x: clip;
+    background: #f7f9fc;
+    color: #0f172a;
+  }
+}
+
+@media (max-width: 640px) {
+  body.kawvo-free-mobile,
+  body.kawvo-free-mobile #root,
+  body.kawvo-free-mobile main,
+  body.kawvo-free-mobile section,
+  body.kawvo-free-mobile article,
+  body.kawvo-free-mobile form,
+  body.kawvo-free-mobile header,
+  body.kawvo-free-mobile aside {
+    max-width: 100%;
+  }
+
+  body.kawvo-free-mobile .text-xs {
+    font-size: 0.875rem !important;
+    line-height: 1.35rem !important;
+  }
+
+  body.kawvo-free-mobile .text-sm {
+    font-size: 1rem !important;
+    line-height: 1.5rem !important;
+  }
+
+  body.kawvo-free-mobile [class~="text-[10px]"],
+  body.kawvo-free-mobile [class~="text-[11px]"] {
+    font-size: 0.8125rem !important;
+    line-height: 1.15rem !important;
+  }
+
+  body.kawvo-free-mobile .font-black {
+    font-weight: 700 !important;
+  }
+
+  body.kawvo-free-mobile .font-extrabold {
+    font-weight: 700 !important;
+  }
+
+  body.kawvo-free-mobile .font-bold {
+    font-weight: 600 !important;
+  }
+
+  body.kawvo-free-mobile .text-slate-300 {
+    color: #64748b !important;
+  }
+
+  body.kawvo-free-mobile .text-slate-400 {
+    color: #64748b !important;
+  }
+
+  body.kawvo-free-mobile .text-slate-500 {
+    color: #475569 !important;
+  }
+
+  body.kawvo-free-mobile input,
+  body.kawvo-free-mobile select,
+  body.kawvo-free-mobile textarea {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 1rem !important;
+  }
+
+  body.kawvo-free-mobile button,
+  body.kawvo-free-mobile a {
+    touch-action: manipulation;
   }
 }
 

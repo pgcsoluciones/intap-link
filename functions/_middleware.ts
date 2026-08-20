@@ -1,18 +1,15 @@
 import {
   buildProfileSemanticFallback,
   buildProfileSeoHead,
+  createDiscoveryRuntime,
   getStaticProfileDiscovery,
+  getDynamicProfileSeoBundle,
   handleDiscoveryRequest,
 } from './profile-discovery';
 
 /**
  * Cloudflare Pages Functions middleware.
  * Runs at the edge for every request, before static assets are served.
- *
- * Handles:
- *   1. /admin and /admin/* → redirect to app.intaprd.com (panel admin)
- *   2. /?slug=VALUE        → redirect to /VALUE (perfil público)
- *   3. /novi               → inject Open Graph / Twitter Card metadata
  */
 export async function onRequest(context: {
   request: Request;
@@ -20,10 +17,24 @@ export async function onRequest(context: {
 }): Promise<Response> {
   const withSecurityHeaders = (response: Response): Response => {
     const headers = new Headers(response.headers);
+    const requestUrl = new URL(context.request.url);
+    const isPreviewHost = requestUrl.hostname === 'preview.intaprd.com';
+
     headers.set('X-Content-Type-Options', 'nosniff');
-    headers.set('X-Frame-Options', 'DENY');
+
+    if (isPreviewHost) {
+      headers.delete('X-Frame-Options');
+      headers.set(
+        'Content-Security-Policy',
+        'frame-ancestors https://app.preview.intaprd.com'
+      );
+    } else {
+      headers.set('X-Frame-Options', 'DENY');
+    }
+
     headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -45,8 +56,11 @@ export async function onRequest(context: {
     image: string;
     siteName: string;
     imageType: string;
-    imageWidth: number;
-    imageHeight: number;
+    imageWidth?: number;
+    imageHeight?: number;
+    ogType?: string;
+    twitterCard?: string;
+    language?: string;
     seoHeadHtml?: string;
     semanticFallbackHtml?: string;
   }): string => {
@@ -56,50 +70,60 @@ export async function onRequest(context: {
     const imageUrl = escapeHtml(metadata.image);
     const siteName = escapeHtml(metadata.siteName);
     const imageType = escapeHtml(metadata.imageType);
-    const imageWidth = String(metadata.imageWidth);
-    const imageHeight = String(metadata.imageHeight);
+    const imageWidthTag = metadata.imageWidth
+      ? `<meta property="og:image:width" content="${String(metadata.imageWidth)}" />`
+      : '';
+    const imageHeightTag = metadata.imageHeight
+      ? `<meta property="og:image:height" content="${String(metadata.imageHeight)}" />`
+      : '';
+    const ogType = escapeHtml(metadata.ogType || 'website');
+    const twitterCard = escapeHtml(metadata.twitterCard || 'summary_large_image');
+    const ogLocale = metadata.language === 'en-US' ? 'en_US' : 'es_DO';
+    const alternateOgLocale = metadata.language === 'en-US' ? 'es_DO' : 'en_US';
     const seoHeadHtml = metadata.seoHeadHtml || '';
-    const semanticFallbackHtml =
-      metadata.semanticFallbackHtml || '';
+    const semanticFallbackHtml = metadata.semanticFallbackHtml || '';
 
     const metaBlock = `
   <!-- INTAP LINK: Open Graph + SEO + GEO metadata -->
   <title>${title}</title>
   <link rel="canonical" href="${pageUrl}" />
   <meta name="description" content="${description}" />
-  <meta property="og:type" content="website" />
+  <meta property="og:type" content="${ogType}" />
   <meta property="og:site_name" content="${siteName}" />
+  <meta property="og:locale" content="${ogLocale}" />
+  <meta property="og:locale:alternate" content="${alternateOgLocale}" />
   <meta property="og:title" content="${title}" />
   <meta property="og:description" content="${description}" />
   <meta property="og:url" content="${pageUrl}" />
   <meta property="og:image" content="${imageUrl}" />
   <meta property="og:image:secure_url" content="${imageUrl}" />
   <meta property="og:image:type" content="${imageType}" />
-  <meta property="og:image:width" content="${imageWidth}" />
-  <meta property="og:image:height" content="${imageHeight}" />
+${imageWidthTag}
+${imageHeightTag}
   <meta property="og:image:alt" content="${title}" />
-  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:card" content="${twitterCard}" />
   <meta name="twitter:title" content="${title}" />
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${imageUrl}" />
+  <meta name="twitter:image:alt" content="${title}" />
 ${seoHeadHtml}
 `;
 
     let output = html.replace(/<title>[\s\S]*?<\/title>/i, '');
+    const language = metadata.language || 'es-DO';
+    output = output.replace(
+      /<html\b([^>]*)>/i,
+      (_match, attributes: string) =>
+        `<html${attributes.replace(/\s+lang=(?:"[^"]*"|'[^']*'|[^\s>]+)/i, '')} lang="${language}">`,
+    );
 
     if (output.includes('</head>')) {
-      output = output.replace(
-        '</head>',
-        `${metaBlock}\n</head>`
-      );
+      output = output.replace('</head>', `${metaBlock}\n</head>`);
     }
 
     if (semanticFallbackHtml) {
       if (output.includes('</body>')) {
-        output = output.replace(
-          '</body>',
-          `${semanticFallbackHtml}\n</body>`
-        );
+        output = output.replace('</body>', `${semanticFallbackHtml}\n</body>`);
       } else {
         output += semanticFallbackHtml;
       }
@@ -109,23 +133,106 @@ ${seoHeadHtml}
   };
 
   const url = new URL(context.request.url);
-
-  const discoveryResponse =
-    await handleDiscoveryRequest(url.pathname);
+  const discoveryRuntime = createDiscoveryRuntime(url);
+  const discoveryResponse = await handleDiscoveryRequest(url, discoveryRuntime);
 
   if (discoveryResponse) {
     return withSecurityHeaders(discoveryResponse);
   }
 
-  // Redirigir rutas /admin al panel admin en app.intaprd.com
-  // Sólo desde el dominio público — evita loop si app.intaprd.com usa el mismo proyecto
-  if (url.hostname !== 'app.intaprd.com' &&
-      (url.pathname === '/admin' || url.pathname.startsWith('/admin/'))) {
-    const target = 'https://app.intaprd.com' + url.pathname + url.search;
-    return withSecurityHeaders(Response.redirect(target, 302));
+  // Physical artifact URLs are operational redirects, not profile pages.
+  const artifactMatch = url.pathname.match(/^\/l\/([^/]+)\/?$/i);
+  if (artifactMatch) {
+    const publicCode = decodeURIComponent(artifactMatch[1]).trim().toUpperCase();
+    if (!/^[A-Z2-9]{8,24}$/.test(publicCode)) {
+      return withSecurityHeaders(new Response('Artefacto no encontrado.', {
+        status: 404,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+      }));
+    }
+
+    let resolution: Response;
+    try {
+      resolution = await fetch(
+        `${discoveryRuntime.apiBase}/artifacts/${encodeURIComponent(publicCode)}/resolve`,
+        { headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } } as RequestInit,
+      );
+    } catch {
+      return withSecurityHeaders(new Response('Resolución temporalmente no disponible.', {
+        status: 503,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+      }));
+    }
+
+    if (!resolution.ok) {
+      const status = resolution.status === 410 || resolution.status === 409
+        ? resolution.status
+        : resolution.status >= 500 ? 503 : 404;
+      let resolverMessage = '';
+      if (status === 409) {
+        try {
+          const payload = await resolution.clone().json() as { error?: string; reason?: string };
+          resolverMessage = String(payload.error || '');
+        } catch {
+          resolverMessage = '';
+        }
+      }
+      return withSecurityHeaders(new Response(
+        status === 409
+          ? (resolverMessage || 'Este producto todavía no está vinculado a un perfil público.')
+          : status === 410
+            ? 'Este producto no está disponible.'
+            : 'Artefacto no encontrado.',
+        {
+          status,
+          headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+        },
+      ));
+    }
+
+    try {
+      const payload = await resolution.json() as { ok?: boolean; data?: { redirect_path?: string } };
+      const redirectPath = payload.ok === true ? String(payload.data?.redirect_path || '') : '';
+      if (!redirectPath.startsWith('/') || redirectPath.startsWith('//') || redirectPath.includes('\\')) {
+        throw new Error('invalid redirect path');
+      }
+
+      const destination = new URL(redirectPath, url.origin);
+      for (const [key, value] of url.searchParams) destination.searchParams.append(key, value);
+      const headers = new Headers({
+        Location: destination.toString(),
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        Pragma: 'no-cache',
+      });
+      return withSecurityHeaders(new Response(null, { status: 302, headers }));
+    } catch {
+      return withSecurityHeaders(new Response('Respuesta de artefacto inválida.', {
+        status: 502,
+        headers: { 'Content-Type': 'text/plain; charset=UTF-8', 'Cache-Control': 'no-store' },
+      }));
+    }
   }
 
-  // Redirigir /?slug=VALUE → /VALUE
+  const isAdminPath = url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+
+  if (isAdminPath) {
+    const productionPublicHosts = new Set([
+      'intaprd.com',
+      'www.intaprd.com',
+      'link.intaprd.com',
+    ]);
+
+    if (productionPublicHosts.has(url.hostname)) {
+      const target = 'https://app.intaprd.com' + url.pathname + url.search;
+      return withSecurityHeaders(Response.redirect(target, 302));
+    }
+
+    if (url.hostname === 'preview.intaprd.com') {
+      const target = 'https://app.preview.intaprd.com' + url.pathname + url.search;
+      return withSecurityHeaders(Response.redirect(target, 302));
+    }
+  }
+
   if (url.pathname === '/' && url.searchParams.has('slug')) {
     const slug = url.searchParams.get('slug')!.trim();
     if (slug) {
@@ -136,81 +243,103 @@ ${seoHeadHtml}
     }
   }
 
-  // STATIC PROFILE GRAPH CARDS V2
-  const staticProfileMeta: Record<string, {
+  const injectSimpleSocialCard = async (metadata: {
     title: string;
     description: string;
-    url: string;
     image: string;
-    siteName: string;
-    imageType: string;
-    imageWidth: number;
-    imageHeight: number;
-  }> = {
-    novi: {
-      title: 'NoviHome -Noldys Vicente-',
-      description:
-        'Asesora inmobiliaria. Propiedades listas, orientación clara y acompañamiento confiable para comprar o invertir con seguridad.',
-      url: 'https://intaprd.com/novi',
-      image:
-        'https://intaprd.com/assets/landing/nuevo-perfil-novi.jpg?v=novi-og-v3',
-      siteName: 'NoviHome',
-      imageType: 'image/jpeg',
-      imageWidth: 631,
-      imageHeight: 752,
-    },
-    rentaord: {
-      title: 'Rentao RD Car Rental',
-      description:
-        'Renta vehículos modernos, seguros y listos para moverte sin complicaciones. Opciones para uso personal, familiar, ejecutivo y de trabajo.',
-      url: 'https://intaprd.com/rentaord',
-      image:
-        'https://intaprd.com/assets/rentaord/logo-rentao.png?v=rentaord-og-logo-v1',
-      siteName: 'Rentao RD',
-      imageType: 'image/png',
-      imageWidth: 1667,
-      imageHeight: 814,
-    },
-    jason: {
-      title:
-        'Comercial Jason S.R.L. | Gomas y aros en Santo Domingo',
-      description:
-        'Venta de gomas nuevas y usadas, aros, reparación y mantenimiento de aros en Santo Domingo. Más de 25 años de experiencia.',
-      url: 'https://intaprd.com/jason',
-      image:
-        'https://intaprd.com/assets/landing/hero-jason-05.png?v=jason-og-v1',
-      siteName: 'Comercial Jason S.R.L.',
-      imageType: 'image/png',
-      imageWidth: 629,
-      imageHeight: 354,
-    },
-    '1aeventos': {
-      title: '1A Eventos | Gabriel Reyes Bello',
-      description:
-        'Perfil digital de Gabriel Reyes Bello, asesor comercial de 1A Eventos. Mobiliario premium, cristalería, mantelería, lounge y accesorios para eventos.',
-      url: 'https://intaprd.com/1aeventos',
-      image:
-        'https://intaprd.com/assets/1A%20eventos/perfil/perfil-gabriel-01.jpg?v=1aeventos-og-gabriel-v1',
-      siteName: '1A Eventos',
-      imageType: 'image/jpeg',
-      imageWidth: 886,
-      imageHeight: 1164,
-    },
+    canonicalUrl?: string;
+    noIndex?: boolean;
+  }): Promise<Response> => {
+    const response = await context.next();
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return withSecurityHeaders(response);
+
+    const html = await response.text();
+    const updatedHtml = injectHeadMetadata(html, {
+      title: metadata.title,
+      description: metadata.description,
+      url: metadata.canonicalUrl || url.toString(),
+      image: metadata.image,
+      siteName: 'Kawvo Link',
+      imageType: metadata.image.toLowerCase().includes('.webp') ? 'image/webp' : 'image/jpeg',
+      ogType: 'website',
+      twitterCard: 'summary_large_image',
+      language: 'es-DO',
+    });
+    const headers = new Headers(response.headers);
+    headers.set('content-type', 'text/html; charset=UTF-8');
+    headers.set(
+      'x-robots-tag',
+      metadata.noIndex || discoveryRuntime.isPreview
+        ? 'noindex, nofollow, noarchive'
+        : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    );
+    return withSecurityHeaders(new Response(updatedHtml, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    }));
   };
 
-  const slug = url.pathname.replace(/^\/+|\/+$/g, '');
-  const staticMeta = staticProfileMeta[slug];
+  // Card general de la marca.
+  if (url.pathname === '/' || url.pathname === '') {
+    return injectSimpleSocialCard({
+      title: 'Crea tu Perfil Digital con Kawvo Link',
+      description: 'Muestra lo que haces, comparte tus servicios y destaca tu negocio con un perfil digital moderno, editable y listo para compartir por QR, NFC o enlace.',
+      image: `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`,
+      canonicalUrl: `${url.origin}/`,
+    });
+  }
 
-  if (staticMeta) {
-    const discoveryProfile =
-      getStaticProfileDiscovery(slug);
+  // Card específica de la demo interactiva.
+  if (url.pathname === '/demo' || url.pathname === '/demo/') {
+    return injectSimpleSocialCard({
+      title: 'Prueba gratis cómo se vería tu Perfil Digital | Kawvo Link',
+      description: 'Elige tu actividad, personaliza tu información y mira en segundos cómo se vería tu perfil digital. Sin registro, sin descarga y sin compromiso.',
+      image: `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`,
+      canonicalUrl: `${url.origin}/demo`,
+    });
+  }
 
-    if (!discoveryProfile) {
-      throw new Error(
-        `Missing discovery profile for ${slug}`
-      );
+  // Card dinámica de una demo compartida. WhatsApp/Facebook reciben metadata
+  // server-side aunque la vista del perfil se renderice luego con React.
+  const sharedDemoMatch = url.pathname.match(/^\/demo\/s\/([a-f0-9]{48})\/?$/i);
+  if (sharedDemoMatch) {
+    const token = sharedDemoMatch[1].toLowerCase();
+    try {
+      const shareResponse = await fetch(`${discoveryRuntime.apiBase}/demo/share/${token}`, {
+        headers: { Accept: 'application/json' },
+        cf: { cacheTtl: 0, cacheEverything: false },
+      } as RequestInit);
+      if (shareResponse.ok) {
+        const share = await shareResponse.json() as any;
+        const profile = share?.snapshot?.profile || {};
+        const name = String(profile?.name || 'Perfil Digital').trim().slice(0, 80);
+        const role = String(profile?.role || '').trim().slice(0, 120);
+        const portraitAsset = share?.assets?.portrait ? String(share.assets.portrait) : '';
+        const hero = String(profile?.hero || '').trim();
+        const image = portraitAsset
+          || (hero.startsWith('http') ? hero : hero.startsWith('/') ? `${url.origin}${hero}` : '')
+          || `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`;
+        return injectSimpleSocialCard({
+          title: `Así se vería el Perfil Digital de ${name} | Kawvo Link`,
+          description: role
+            ? `${role}. Mira esta vista previa y prueba gratis cómo se vería el tuyo.`
+            : 'Mira esta vista previa y prueba gratis cómo se vería tu propio Perfil Digital con Kawvo Link.',
+          image,
+          canonicalUrl: `${url.origin}/demo/s/${token}`,
+          noIndex: true,
+        });
+      }
+    } catch {
+      // Si la API temporal no responde, la SPA conserva su pantalla de error/expiración.
     }
+  }
 
+  const slug = url.pathname.replace(/^\/+|\/+$/g, '');
+  const staticProfile = getStaticProfileDiscovery(slug, discoveryRuntime);
+
+  if (staticProfile) {
     const response = await context.next();
     const contentType = response.headers.get('content-type') || '';
 
@@ -220,20 +349,28 @@ ${seoHeadHtml}
 
     const html = await response.text();
     const updatedHtml = injectHeadMetadata(html, {
-      ...staticMeta,
-      seoHeadHtml:
-        buildProfileSeoHead(discoveryProfile),
-      semanticFallbackHtml:
-        buildProfileSemanticFallback(
-          discoveryProfile
-        ),
+      title: staticProfile.title,
+      description: staticProfile.description,
+      url: staticProfile.url,
+      image: staticProfile.image,
+      siteName: staticProfile.siteName,
+      imageType: staticProfile.imageType,
+      imageWidth: staticProfile.imageWidth,
+      imageHeight: staticProfile.imageHeight,
+      ogType: 'profile',
+      twitterCard: 'summary',
+      seoHeadHtml: buildProfileSeoHead(staticProfile, discoveryRuntime),
+      semanticFallbackHtml: buildProfileSemanticFallback(staticProfile),
+      language: staticProfile.language,
     });
     const headers = new Headers(response.headers);
 
     headers.set('content-type', 'text/html; charset=UTF-8');
     headers.set(
       'x-robots-tag',
-      'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+      discoveryRuntime.isPreview
+        ? 'noindex, nofollow, noarchive'
+        : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     );
 
     return withSecurityHeaders(new Response(updatedHtml, {
@@ -241,6 +378,51 @@ ${seoHeadHtml}
       statusText: response.statusText,
       headers,
     }));
+  }
+
+  const dynamicSlugEligible = /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug);
+
+  if (!staticProfile && dynamicSlugEligible) {
+    const dynamicMeta = await getDynamicProfileSeoBundle(slug, discoveryRuntime);
+
+    if (dynamicMeta) {
+      const response = await context.next();
+      const contentType = response.headers.get('content-type') || '';
+
+      if (!contentType.includes('text/html')) {
+        return withSecurityHeaders(response);
+      }
+
+      const html = await response.text();
+      const updatedHtml = injectHeadMetadata(html, {
+        title: dynamicMeta.title,
+        description: dynamicMeta.description,
+        url: dynamicMeta.url,
+        image: dynamicMeta.image,
+        imageType: dynamicMeta.imageType,
+        siteName: dynamicMeta.siteName,
+        ogType: 'profile',
+        twitterCard: dynamicMeta.twitterCard,
+        language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
+        seoHeadHtml: dynamicMeta.seoHeadHtml,
+        semanticFallbackHtml: dynamicMeta.semanticFallbackHtml,
+      });
+
+      const headers = new Headers(response.headers);
+      headers.set('content-type', 'text/html; charset=UTF-8');
+      headers.set(
+        'x-robots-tag',
+        discoveryRuntime.isPreview
+          ? 'noindex, nofollow, noarchive'
+          : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+      );
+
+      return withSecurityHeaders(new Response(updatedHtml, {
+        status: response.status,
+        statusText: response.statusText,
+        headers,
+      }));
+    }
   }
 
   return withSecurityHeaders(await context.next());

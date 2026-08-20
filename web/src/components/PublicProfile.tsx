@@ -1,6 +1,30 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import IntapProfileV2, { type IntapProfileV2Profile } from './profile-templates/IntapProfileV2'
+import React, {
+  lazy,
+  Suspense,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react'
+
+import {
+  useParams,
+  Link,
+} from 'react-router-dom'
+
+import type {
+  IntapProfileV2Profile,
+} from './profile-templates/IntapProfileV2'
+
+const IntapProfileV2 = lazy(
+  () =>
+    import(
+      './profile-templates/IntapProfileV2'
+    ),
+)
+import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
+import { adaptPublicProfileApiResponse } from './free-profile/IntapLinkGratis.adapter'
 import { renderRegisteredProfileTemplate } from './profile-templates/registry'
 
 declare global {
@@ -69,6 +93,7 @@ interface PublicData {
   slug: string
   planId: string
   themeId: string
+  layout_id?: 'impacto' | 'personal' | 'esencial'
   accentColor?: string
   buttonStyle?: string
   blocksOrder?: string[]
@@ -2089,7 +2114,34 @@ export default function PublicProfile() {
     return registeredTemplate
   }
 
-  return <IntapProfileV2 profile={publicProfileV2} />
+  if (data.planId === 'free') {
+    const freeProfile = adaptPublicProfileApiResponse(data)
+
+    return (
+      <IntapLinkGratisProfile
+        profile={freeProfile.profile}
+        layout={freeProfile.layout}
+        colors={freeProfile.colors}
+      />
+    )
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            minHeight: '100vh',
+            background: '#ffffff',
+          }}
+        />
+      }
+    >
+      <IntapProfileV2
+        profile={publicProfileV2}
+      />
+    </Suspense>
+  )
 
 
 }

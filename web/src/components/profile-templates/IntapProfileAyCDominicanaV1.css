@@ -1,0 +1,4251 @@
+:root {
+  --ayc-navy: #101f4b;
+  --ayc-navy-deep: #08132f;
+  --ayc-blue: #205fb5;
+  --ayc-red: #ed3237;
+  --ayc-ink: #172033;
+  --ayc-muted: #687386;
+  --ayc-line: #e3e8f0;
+  --ayc-soft: #f5f7fb;
+  --ayc-white: #ffffff;
+}
+
+html,
+body,
+#root {
+  background: #eef1f6 !important;
+}
+
+.ayc-mobile-page,
+.ayc-mobile-page * {
+  box-sizing: border-box;
+}
+
+.ayc-mobile-page {
+  min-height: 100vh;
+  color: var(--ayc-ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.ayc-mobile-page a {
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ayc-mobile-page button {
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ayc-mobile-shell {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--ayc-white);
+  overflow: hidden;
+  box-shadow: 0 0 45px rgba(20, 31, 59, 0.12);
+}
+
+.ayc-mobile-hero {
+  position: relative;
+  min-height: 455px;
+  overflow: hidden;
+  background: var(--ayc-navy-deep);
+}
+
+.ayc-mobile-hero-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ayc-mobile-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(5, 14, 38, 0.18) 0%, rgba(5, 14, 38, 0.42) 38%, rgba(5, 14, 38, 0.96) 100%),
+    linear-gradient(90deg, rgba(7, 20, 49, 0.48), rgba(7, 20, 49, 0.05));
+}
+
+.ayc-mobile-hero-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 20px 0;
+}
+
+.ayc-mobile-logo-card {
+  width: 270px;
+  min-height: 78px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 28px rgba(5, 13, 35, 0.24);
+}
+
+.ayc-mobile-logo {
+  display: block;
+  width: 100%;
+  height: 58px;
+  object-fit: contain;
+}
+
+.ayc-share-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: rgba(7, 20, 49, 0.62);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.ayc-mobile-hero-copy {
+  position: absolute;
+  z-index: 2;
+  left: 20px;
+  right: 20px;
+  bottom: 34px;
+  color: white;
+}
+
+.ayc-mobile-kicker {
+  display: block;
+  margin-bottom: 10px;
+  color: #ff6d71;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ayc-mobile-hero h1 {
+  max-width: 400px;
+  margin: 0;
+  font-size: clamp(34px, 9vw, 44px);
+  line-height: 0.99;
+  letter-spacing: -0.045em;
+  font-weight: 850;
+}
+
+.ayc-mobile-hero-copy > p {
+  max-width: 400px;
+  margin: 14px 0 18px;
+  color: rgba(255, 255, 255, 0.87);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ayc-mobile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ayc-mobile-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: white;
+  background: rgba(7, 20, 49, 0.58);
+  backdrop-filter: blur(8px);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.ayc-mobile-badges svg {
+  color: #ff6d71;
+}
+
+.ayc-quick-actions {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: -20px 14px 0;
+  padding: 10px;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 18px 35px rgba(27, 42, 73, 0.16);
+}
+
+.ayc-quick-actions a {
+  min-width: 0;
+  min-height: 78px;
+  border-radius: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--ayc-navy);
+  background: var(--ayc-soft);
+  text-align: center;
+}
+
+.ayc-quick-actions a.is-featured {
+  color: white;
+  background: var(--ayc-blue);
+}
+
+.ayc-quick-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--ayc-navy);
+  font-size: 14px;
+}
+
+.ayc-quick-actions a.is-featured .ayc-quick-icon {
+  color: var(--ayc-blue);
+  background: white;
+}
+
+.ayc-quick-actions strong {
+  max-width: 100%;
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.ayc-mobile-section {
+  padding: 34px 22px;
+}
+
+.ayc-section-heading {
+  margin-bottom: 20px;
+}
+
+.ayc-section-heading.compact {
+  text-align: center;
+}
+
+.ayc-section-heading > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--ayc-red);
+  font-size: 10px;
+  line-height: 1.3;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ayc-section-heading h2 {
+  margin: 0;
+  color: var(--ayc-navy);
+  font-size: 25px;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  font-weight: 850;
+}
+
+.ayc-contact-section {
+  padding-top: 38px;
+}
+
+.ayc-contact-list {
+  border-top: 1px solid var(--ayc-line);
+}
+
+.ayc-contact-list > a,
+.ayc-contact-list > div {
+  min-height: 70px;
+  border-bottom: 1px solid var(--ayc-line);
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 2px;
+}
+
+.ayc-contact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--ayc-red);
+  box-shadow: 0 8px 16px rgba(237, 50, 55, 0.18);
+}
+
+.ayc-contact-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.ayc-contact-copy small {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ayc-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ayc-contact-copy strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ayc-ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ayc-contact-arrow {
+  flex: 0 0 auto;
+  color: #a9b2c2;
+  font-size: 12px;
+}
+
+.ayc-primary-wide {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 18px;
+  border: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: white;
+  background: var(--ayc-navy);
+  box-shadow: 0 12px 24px rgba(16, 31, 75, 0.18);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ayc-divider {
+  height: 1px;
+  margin: 0 22px;
+  background: var(--ayc-line);
+}
+
+.ayc-about-section > p {
+  margin: 0;
+  color: #3f495b;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.ayc-inline-cta {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ayc-red) !important;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ayc-services-section,
+.ayc-projects-section {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.ayc-services-section .ayc-section-heading,
+.ayc-projects-section .ayc-section-heading {
+  padding: 0 22px;
+}
+
+.ayc-service-scroller,
+.ayc-project-scroller {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 0 22px 12px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+
+.ayc-service-scroller::-webkit-scrollbar,
+.ayc-project-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.ayc-service-card {
+  position: relative;
+  min-width: 82%;
+  max-width: 340px;
+  padding: 0;
+  border: 1px solid var(--ayc-line);
+  border-radius: 20px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  color: var(--ayc-ink);
+  background: white;
+  box-shadow: 0 13px 28px rgba(25, 39, 69, 0.08);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ayc-service-image {
+  width: 100%;
+  height: 175px;
+  object-fit: cover;
+}
+
+.ayc-media-fallback {
+  background:
+    radial-gradient(circle at 70% 30%, rgba(237, 50, 55, 0.42), transparent 28%),
+    linear-gradient(135deg, #254b8f, #0b1738 72%);
+}
+
+.ayc-service-icon {
+  position: absolute;
+  top: 150px;
+  left: 18px;
+  width: 48px;
+  height: 48px;
+  border: 4px solid white;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--ayc-red);
+  font-size: 18px;
+}
+
+.ayc-service-card > div {
+  padding: 31px 18px 20px;
+}
+
+.ayc-service-card h3,
+.ayc-project-card h3 {
+  margin: 0;
+  color: var(--ayc-navy);
+  font-size: 19px;
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+}
+
+.ayc-service-card p,
+.ayc-project-card p {
+  margin: 9px 0 14px;
+  color: var(--ayc-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.ayc-service-card strong,
+.ayc-project-card a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ayc-red);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ayc-scroll-hint {
+  margin: 2px 22px 0;
+  color: #9aa4b4;
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.ayc-process-section {
+  background: var(--ayc-soft);
+}
+
+.ayc-process-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.ayc-process-grid article {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 7px 18px rgba(24, 39, 73, 0.05);
+}
+
+.ayc-process-grid article > span {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--ayc-blue);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.ayc-process-grid h3 {
+  margin: 1px 0 4px;
+  color: var(--ayc-navy);
+  font-size: 14px;
+}
+
+.ayc-process-grid p {
+  margin: 0;
+  color: var(--ayc-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.ayc-project-card {
+  min-width: 84%;
+  max-width: 350px;
+  border: 1px solid var(--ayc-line);
+  border-radius: 20px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  background: white;
+  box-shadow: 0 13px 28px rgba(25, 39, 69, 0.08);
+}
+
+.ayc-project-image {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+}
+
+.ayc-project-card > div {
+  padding: 17px 18px 20px;
+}
+
+.ayc-project-card > div > span {
+  display: inline-flex;
+  margin-bottom: 9px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--ayc-red);
+  background: #fff0f1;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ayc-faq-list {
+  border-top: 1px solid var(--ayc-line);
+}
+
+.ayc-faq-list article {
+  border-bottom: 1px solid var(--ayc-line);
+}
+
+.ayc-faq-list button {
+  width: 100%;
+  min-height: 64px;
+  padding: 14px 0;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--ayc-navy);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ayc-faq-list button svg {
+  flex: 0 0 auto;
+  transition: transform 0.2s ease;
+}
+
+.ayc-faq-list article.is-open button svg {
+  transform: rotate(180deg);
+}
+
+.ayc-faq-list article > p {
+  margin: -3px 0 16px;
+  color: var(--ayc-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.ayc-map-card {
+  overflow: hidden;
+  border: 1px solid var(--ayc-line);
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 12px 25px rgba(24, 39, 73, 0.08);
+}
+
+.ayc-map-card iframe {
+  display: block;
+  width: 100%;
+  height: 235px;
+  border: 0;
+}
+
+.ayc-map-card > div {
+  padding: 17px;
+}
+
+.ayc-map-card strong {
+  color: var(--ayc-navy);
+  font-size: 14px;
+}
+
+.ayc-map-card p {
+  margin: 7px 0 14px;
+  color: var(--ayc-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ayc-map-card a {
+  min-height: 46px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: var(--ayc-red);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ayc-final-cta {
+  margin: 10px 16px 28px;
+  padding: 30px 22px;
+  border-radius: 24px;
+  color: white;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(237, 50, 55, 0.48), transparent 30%),
+    linear-gradient(145deg, var(--ayc-navy), var(--ayc-navy-deep));
+  text-align: center;
+}
+
+.ayc-final-cta > span {
+  color: #ff7478;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ayc-final-cta h2 {
+  margin: 9px 0 10px;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+.ayc-final-cta p {
+  margin: 0 0 18px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.ayc-final-cta a {
+  min-height: 50px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: white;
+  background: var(--ayc-red);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.ayc-mobile-footer {
+  padding: 28px 22px 34px;
+  border-top: 1px solid var(--ayc-line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  background: #fafbfe;
+  text-align: center;
+}
+
+.ayc-footer-logo {
+  width: 255px;
+  height: 70px;
+  object-fit: contain;
+}
+
+.ayc-social-row {
+  display: flex;
+  gap: 10px;
+}
+
+.ayc-social-row a {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--ayc-navy);
+}
+
+.ayc-mobile-footer > button {
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ayc-blue);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ayc-mobile-footer small {
+  color: #9aa4b4;
+  font-size: 10px;
+}
+
+.ayc-service-modal {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.ayc-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(4, 10, 24, 0.68);
+  backdrop-filter: blur(5px);
+}
+
+.ayc-service-modal > article {
+  position: relative;
+  z-index: 2;
+  width: min(480px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 0 22px 24px;
+  border-radius: 26px 26px 0 0;
+  background: white;
+  box-shadow: 0 -20px 50px rgba(4, 10, 24, 0.26);
+}
+
+.ayc-modal-close {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--ayc-navy);
+  background: white;
+  box-shadow: 0 8px 22px rgba(4, 10, 24, 0.16);
+  cursor: pointer;
+}
+
+.ayc-modal-image {
+  width: calc(100% + 44px);
+  height: 230px;
+  margin-left: -22px;
+  object-fit: cover;
+}
+
+.ayc-modal-icon {
+  width: 54px;
+  height: 54px;
+  margin-top: -27px;
+  border: 4px solid white;
+  border-radius: 17px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: var(--ayc-red);
+  font-size: 20px;
+}
+
+.ayc-service-modal h2 {
+  margin: 16px 0 10px;
+  color: var(--ayc-navy);
+  font-size: 25px;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+}
+
+.ayc-service-modal > article > p {
+  margin: 0;
+  color: var(--ayc-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.ayc-service-modal ul {
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.ayc-service-modal li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #354055;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.ayc-service-modal li svg {
+  color: var(--ayc-red);
+}
+
+.ayc-service-modal > article > a {
+  min-height: 50px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: white;
+  background: var(--ayc-red);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+@media (max-width: 380px) {
+  .ayc-mobile-logo-card {
+    width: 235px;
+  }
+
+  .ayc-mobile-hero h1 {
+    font-size: 32px;
+  }
+
+  .ayc-quick-actions {
+    gap: 5px;
+    margin-left: 8px;
+    margin-right: 8px;
+    padding: 7px;
+  }
+
+  .ayc-quick-actions a {
+    min-height: 72px;
+  }
+}
+
+@media (min-width: 600px) {
+  .ayc-mobile-shell {
+    margin-top: 22px;
+    margin-bottom: 22px;
+    border-radius: 28px;
+  }
+
+  .ayc-mobile-hero {
+    border-radius: 28px 28px 0 0;
+  }
+
+  .ayc-service-modal {
+    align-items: center;
+  }
+
+  .ayc-service-modal > article {
+    border-radius: 26px;
+  }
+}
+
+
+/* HERO A&C V2 · REFERENCIA BIOPESTS */
+
+.ayc-mobile-cover {
+  position: relative;
+  width: 100%;
+  height: clamp(260px, 68vw, 330px);
+  overflow: hidden;
+  background: var(--ayc-navy-deep);
+}
+
+.ayc-mobile-cover-media {
+  position: absolute;
+  inset: 0;
+}
+
+.ayc-mobile-cover-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transform: scale(1.035);
+  transition:
+    opacity 800ms ease,
+    transform 4800ms ease;
+}
+
+.ayc-mobile-cover-media img.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.ayc-mobile-cover-dots {
+  position: absolute;
+  z-index: 3;
+  right: 17px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ayc-mobile-cover-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition:
+    width 220ms ease,
+    background 220ms ease;
+}
+
+.ayc-mobile-cover-dots button.is-active {
+  width: 25px;
+  background: var(--ayc-red);
+}
+
+.ayc-mobile-brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 26px 20px;
+  background: white;
+}
+
+.ayc-mobile-brand-logo .ayc-mobile-logo {
+  width: min(310px, 84%);
+  height: auto;
+  max-height: 94px;
+  object-fit: contain;
+}
+
+.ayc-mobile-identity {
+  padding: 8px 30px 18px;
+  background: white;
+}
+
+.ayc-mobile-identity-kicker {
+  margin: 0 0 13px;
+  color: var(--ayc-navy);
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.ayc-mobile-identity h1 {
+  margin: 0;
+  color: var(--ayc-navy);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: -0.015em;
+  font-weight: 800;
+}
+
+.ayc-mobile-identity-description {
+  margin: 17px 0 23px;
+  color: var(--ayc-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.ayc-mobile-whatsapp {
+  width: 100%;
+  min-height: 56px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: white !important;
+  background: var(--ayc-red);
+  box-shadow: 0 12px 23px rgba(237, 50, 55, 0.2);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.ayc-quick-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 24px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ayc-quick-actions a,
+.ayc-quick-actions a.is-featured {
+  min-height: 84px;
+  border: 1px solid #d6dfed;
+  border-radius: 16px;
+  gap: 8px;
+  color: var(--ayc-navy);
+  background: white;
+}
+
+.ayc-quick-icon,
+.ayc-quick-actions a.is-featured .ayc-quick-icon {
+  width: 31px;
+  height: 31px;
+  color: var(--ayc-navy);
+  background: transparent;
+  font-size: 18px;
+}
+
+.ayc-quick-actions strong {
+  color: var(--ayc-navy);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.ayc-mobile-vcard {
+  padding: 10px 24px 30px;
+  background: white;
+}
+
+.ayc-mobile-vcard .ayc-primary-wide {
+  min-height: 54px;
+  margin: 0;
+  border: 1px solid #cbd8e9;
+  border-radius: 16px;
+  color: var(--ayc-navy);
+  background: #f6f8fc;
+  box-shadow: none;
+}
+
+@media (max-width: 370px) {
+  .ayc-mobile-identity {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .ayc-quick-actions {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+
+  .ayc-mobile-vcard {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}
+
+
+/* A&C VISUAL TUNE V3 */
+
+:root {
+  --ayc-blue: #2f67c8;
+  --ayc-navy: #183a7a;
+  --ayc-navy-deep: #112a59;
+}
+
+/* contenedor general sin sombra fuerte */
+.ayc-mobile-shell {
+  box-shadow: none;
+}
+
+/* hero más panorámico */
+.ayc-mobile-cover {
+  height: clamp(210px, 52vw, 250px);
+  border-radius: 0;
+}
+
+/* dots más limpios */
+.ayc-mobile-cover-dots button {
+  box-shadow: none;
+}
+
+.ayc-mobile-cover-dots button.is-active {
+  background: var(--ayc-blue);
+}
+
+/* logo */
+.ayc-mobile-brand-logo {
+  padding: 28px 24px 16px;
+}
+
+.ayc-mobile-brand-logo .ayc-mobile-logo {
+  width: min(300px, 82%);
+  max-height: 82px;
+}
+
+/* textos centrados */
+.ayc-mobile-identity {
+  padding: 8px 28px 18px;
+  background: white;
+  text-align: center;
+}
+
+.ayc-mobile-identity-kicker {
+  margin: 0 0 12px;
+  color: var(--ayc-navy-deep);
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ayc-mobile-identity h1 {
+  margin: 0;
+  color: var(--ayc-blue);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: -0.015em;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ayc-mobile-identity-description {
+  margin: 17px 0 22px;
+  color: var(--ayc-muted);
+  font-size: 14px;
+  line-height: 1.65;
+  text-align: center;
+}
+
+/* botón principal sin sombreado y azul cobalto */
+.ayc-mobile-whatsapp {
+  width: 100%;
+  min-height: 56px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: white !important;
+  background: var(--ayc-blue);
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background 180ms ease, transform 180ms ease;
+}
+
+.ayc-mobile-whatsapp:hover,
+.ayc-mobile-whatsapp:focus-visible {
+  background: #2458b3;
+  transform: translateY(-1px);
+}
+
+/* botones rápidos */
+.ayc-quick-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 24px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ayc-quick-actions a,
+.ayc-quick-actions a.is-featured {
+  min-height: 84px;
+  border: 1px solid #cad7ef;
+  border-radius: 16px;
+  gap: 8px;
+  color: var(--ayc-navy-deep);
+  background: white;
+  box-shadow: none;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.ayc-quick-actions a:hover,
+.ayc-quick-actions a:focus-visible,
+.ayc-quick-actions a.is-featured:hover,
+.ayc-quick-actions a.is-featured:focus-visible {
+  transform: translateY(-2px);
+  background: #edf4ff;
+  border-color: #8fb2ee;
+  color: var(--ayc-blue);
+}
+
+.ayc-quick-icon,
+.ayc-quick-actions a.is-featured .ayc-quick-icon {
+  width: 31px;
+  height: 31px;
+  color: var(--ayc-navy-deep);
+  background: transparent;
+  font-size: 18px;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.ayc-quick-actions a:hover .ayc-quick-icon,
+.ayc-quick-actions a:focus-visible .ayc-quick-icon {
+  color: var(--ayc-blue);
+  transform: scale(1.06);
+}
+
+.ayc-quick-actions strong {
+  color: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+/* guardar contacto sin sombra */
+.ayc-mobile-vcard {
+  padding: 10px 24px 28px;
+  background: white;
+}
+
+.ayc-mobile-vcard .ayc-primary-wide {
+  min-height: 54px;
+  margin: 0;
+  border: 1px solid #cad7ef;
+  border-radius: 16px;
+  color: var(--ayc-navy-deep);
+  background: #f7f9fd;
+  box-shadow: none;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.ayc-mobile-vcard .ayc-primary-wide:hover,
+.ayc-mobile-vcard .ayc-primary-wide:focus-visible {
+  background: #edf4ff;
+  border-color: #8fb2ee;
+  color: var(--ayc-blue);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 370px) {
+  .ayc-mobile-cover {
+    height: 205px;
+  }
+
+  .ayc-mobile-identity {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .ayc-quick-actions {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+
+  .ayc-mobile-vcard {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}
+
+
+/* A&C HERO TUNE V4 */
+
+:root {
+  --ayc-blue: #2864c7;
+  --ayc-blue-hover: #1b4e9d;
+  --ayc-blue-active: #12376f;
+  --ayc-navy: #173b7c;
+  --ayc-navy-deep: #102855;
+}
+
+/* Eliminar cualquier sombra heredada */
+.ayc-mobile-shell,
+.ayc-mobile-whatsapp,
+.ayc-quick-actions,
+.ayc-quick-actions a,
+.ayc-mobile-vcard .ayc-primary-wide {
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Logo más grande */
+.ayc-mobile-brand-logo {
+  padding: 30px 18px 18px;
+}
+
+.ayc-mobile-brand-logo .ayc-mobile-logo {
+  width: min(355px, 94%);
+  height: auto;
+  max-height: 112px;
+  object-fit: contain;
+}
+
+/* Identidad centralizada */
+.ayc-mobile-identity {
+  padding: 8px 28px 18px;
+  text-align: center;
+}
+
+.ayc-mobile-identity h1 {
+  margin: 0;
+  color: var(--ayc-blue);
+  font-size: 18px;
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ayc-mobile-identity-description {
+  margin: 16px 0 22px;
+  text-align: center;
+}
+
+/* WhatsApp cobalto sin resplandor */
+.ayc-mobile-whatsapp {
+  border: 0;
+  outline: none;
+  background: var(--ayc-blue);
+  transition:
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.ayc-mobile-whatsapp:hover,
+.ayc-mobile-whatsapp:focus-visible {
+  background: var(--ayc-blue-hover);
+  transform: translateY(-1px);
+}
+
+.ayc-mobile-whatsapp:active {
+  background: var(--ayc-blue-active);
+  transform: translateY(0) scale(0.985);
+}
+
+/* Accesos rápidos */
+.ayc-quick-actions a {
+  box-shadow: none !important;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.ayc-quick-actions a:hover,
+.ayc-quick-actions a:focus-visible {
+  color: white;
+  background: var(--ayc-blue-hover);
+  border-color: var(--ayc-blue-hover);
+  transform: translateY(-2px);
+}
+
+.ayc-quick-actions a:active {
+  color: white;
+  background: var(--ayc-blue-active);
+  border-color: var(--ayc-blue-active);
+  transform: translateY(0) scale(0.97);
+}
+
+.ayc-quick-actions a:hover .ayc-quick-icon,
+.ayc-quick-actions a:focus-visible .ayc-quick-icon,
+.ayc-quick-actions a:active .ayc-quick-icon {
+  color: white;
+}
+
+/* Guardar contacto */
+.ayc-mobile-vcard .ayc-primary-wide:hover,
+.ayc-mobile-vcard .ayc-primary-wide:focus-visible {
+  color: white;
+  background: var(--ayc-blue-hover);
+  border-color: var(--ayc-blue-hover);
+}
+
+.ayc-mobile-vcard .ayc-primary-wide:active {
+  color: white;
+  background: var(--ayc-blue-active);
+  border-color: var(--ayc-blue-active);
+  transform: scale(0.985);
+}
+
+/* Títulos menos pesados */
+.ayc-section-heading h2,
+.ayc-service-card h3,
+.ayc-process-grid h3,
+.ayc-project-card h3,
+.ayc-final-cta h2 {
+  font-weight: 700;
+}
+
+/* Sobre nosotros */
+.ayc-about-section {
+  padding-top: 30px;
+  text-align: center;
+}
+
+.ayc-about-heading {
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.ayc-about-heading h2 {
+  color: var(--ayc-blue);
+  font-size: 23px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.ayc-about-section > p {
+  margin: 0;
+  color: #4f5d70;
+  font-size: 14px;
+  line-height: 1.75;
+  text-align: center;
+}
+
+.ayc-about-section .ayc-inline-cta {
+  justify-content: center;
+  color: var(--ayc-blue) !important;
+}
+
+@media (max-width: 370px) {
+  .ayc-mobile-brand-logo .ayc-mobile-logo {
+    width: 96%;
+  }
+
+  .ayc-mobile-identity {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+}
+
+
+/* A&C COLOR SWEEP V5 · SIN AZULES FIJOS */
+
+:root {
+  --ayc-navy: #252b35;
+  --ayc-navy-deep: #171b22;
+  --ayc-blue: #285fb8;
+  --ayc-blue-hover: #17488f;
+  --ayc-blue-active: #103467;
+  --ayc-fixed-ink: #252b35;
+  --ayc-fixed-muted: #667085;
+  --ayc-fixed-line: #d6dce6;
+  --ayc-fixed-soft: #f7f8fa;
+}
+
+/* Títulos y textos: oscuros, no azules */
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2,
+.ayc-service-card h3,
+.ayc-project-card h3,
+.ayc-process-grid h3,
+.ayc-faq-list button,
+.ayc-map-card strong,
+.ayc-service-modal h2,
+.ayc-mobile-footer > button {
+  color: var(--ayc-fixed-ink) !important;
+}
+
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2 {
+  font-weight: 650 !important;
+}
+
+/* Punto activo del slider: rojo corporativo, no azul */
+.ayc-mobile-cover-dots button.is-active {
+  background: var(--ayc-red) !important;
+}
+
+/* WhatsApp: estado normal blanco */
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:hover {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Botones rápidos: siempre neutros en reposo */
+.ayc-quick-actions a,
+.ayc-quick-actions a:hover,
+.ayc-quick-actions a.is-featured,
+.ayc-quick-actions a.is-featured:hover {
+  border-color: var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ayc-quick-icon,
+.ayc-quick-actions a:hover .ayc-quick-icon,
+.ayc-quick-actions a.is-featured .ayc-quick-icon {
+  color: var(--ayc-fixed-ink) !important;
+  background: transparent !important;
+  transform: none !important;
+}
+
+/* Guardar contacto: neutro en reposo */
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:hover {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: var(--ayc-fixed-soft) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Enlace bajo Sobre nosotros:
+   sin fondo azul, sin franja y sin tap highlight */
+.ayc-about-section .ayc-inline-cta,
+.ayc-about-section .ayc-inline-cta:hover,
+.ayc-about-section .ayc-inline-cta:focus {
+  width: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Evitar una selección azul accidental persistente */
+.ayc-mobile-page a::selection,
+.ayc-mobile-page button::selection,
+.ayc-mobile-page h1::selection,
+.ayc-mobile-page h2::selection,
+.ayc-mobile-page h3::selection,
+.ayc-mobile-page p::selection,
+.ayc-mobile-page span::selection,
+.ayc-mobile-page strong::selection {
+  color: inherit;
+  background: rgba(237, 50, 55, 0.16);
+}
+
+/* Números del proceso: sin fondo azul fijo */
+.ayc-process-grid article > span {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Iconos sociales del footer: carbón, no azul */
+.ayc-social-row a {
+  color: #ffffff !important;
+  background: #252b35 !important;
+  box-shadow: none !important;
+}
+
+/* CTA final: fondo claro en lugar de bloque azul */
+.ayc-final-cta {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: var(--ayc-fixed-soft) !important;
+  box-shadow: none !important;
+}
+
+.ayc-final-cta > span {
+  color: var(--ayc-red) !important;
+}
+
+.ayc-final-cta h2 {
+  color: var(--ayc-fixed-ink) !important;
+}
+
+.ayc-final-cta p {
+  color: var(--ayc-fixed-muted) !important;
+}
+
+.ayc-final-cta a,
+.ayc-final-cta a:hover {
+  border: 1px solid var(--ayc-fixed-line) !important;
+  color: var(--ayc-fixed-ink) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Hover azul solamente en equipos con mouse real */
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-whatsapp:hover,
+  .ayc-quick-actions a:hover,
+  .ayc-quick-actions a.is-featured:hover,
+  .ayc-mobile-vcard .ayc-primary-wide:hover,
+  .ayc-final-cta a:hover {
+    border-color: var(--ayc-blue-hover) !important;
+    color: #ffffff !important;
+    background: var(--ayc-blue-hover) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .ayc-quick-actions a:hover .ayc-quick-icon {
+    color: #ffffff !important;
+    transform: scale(1.06) !important;
+  }
+
+  .ayc-about-section .ayc-inline-cta:hover {
+    color: var(--ayc-blue-hover) !important;
+  }
+}
+
+/* Estado presionado móvil: solo mientras se toca */
+.ayc-mobile-whatsapp:active,
+.ayc-quick-actions a:active,
+.ayc-quick-actions a.is-featured:active,
+.ayc-mobile-vcard .ayc-primary-wide:active,
+.ayc-final-cta a:active {
+  border-color: var(--ayc-blue-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-blue-active) !important;
+  transform: scale(0.975) !important;
+}
+
+.ayc-quick-actions a:active .ayc-quick-icon {
+  color: #ffffff !important;
+}
+
+/* Foco accesible sin llenar el elemento de azul */
+.ayc-mobile-whatsapp:focus-visible,
+.ayc-quick-actions a:focus-visible,
+.ayc-mobile-vcard .ayc-primary-wide:focus-visible,
+.ayc-about-section .ayc-inline-cta:focus-visible,
+.ayc-final-cta a:focus-visible {
+  outline: 2px solid rgba(40, 95, 184, 0.42) !important;
+  outline-offset: 3px !important;
+}
+
+
+/* A&C TYPOGRAPHY AND WHATSAPP V6 */
+
+:root {
+  --ayc-title-blue: #2864c7;
+  --ayc-title-blue-dark: #1d4f9b;
+  --ayc-body-dark: #465267;
+}
+
+/* WhatsApp completamente neutro en reposo.
+   Evita azul fijo después de tocar o enfocar. */
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:link,
+.ayc-mobile-whatsapp:visited,
+.ayc-mobile-whatsapp:hover,
+.ayc-mobile-whatsapp:focus,
+.ayc-mobile-whatsapp:focus-visible,
+.ayc-mobile-whatsapp:active {
+  border: 1px solid #cfd7e4 !important;
+  outline: none !important;
+  color: #252b35 !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Retroalimentación ligera al tocar en móvil,
+   sin dejar el botón azul. */
+.ayc-mobile-whatsapp:active {
+  background: #f1f3f7 !important;
+  transform: scale(0.985) !important;
+}
+
+/* Hover azul solamente cuando existe mouse real. */
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-whatsapp:hover {
+    border-color: var(--ayc-title-blue-dark) !important;
+    color: #ffffff !important;
+    background: var(--ayc-title-blue-dark) !important;
+    transform: translateY(-1px) !important;
+  }
+}
+
+/* Títulos azules, pero sin bold fuerte. */
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2,
+.ayc-service-card h3,
+.ayc-project-card h3,
+.ayc-process-grid h3,
+.ayc-faq-list button,
+.ayc-location-section h2 {
+  color: var(--ayc-title-blue) !important;
+  font-weight: 600 !important;
+}
+
+/* Título Sobre nosotros */
+.ayc-about-heading h2 {
+  font-size: 24px !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.018em !important;
+}
+
+/* Texto Sobre nosotros un poco mayor y más oscuro. */
+.ayc-about-section > p {
+  color: var(--ayc-body-dark) !important;
+  font-size: 15.5px !important;
+  line-height: 1.72 !important;
+  font-weight: 400 !important;
+}
+
+/* Enlace debajo de Sobre nosotros */
+.ayc-about-section .ayc-inline-cta,
+.ayc-about-section .ayc-inline-cta:link,
+.ayc-about-section .ayc-inline-cta:visited,
+.ayc-about-section .ayc-inline-cta:focus {
+  color: var(--ayc-title-blue) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-about-section .ayc-inline-cta:hover {
+    color: var(--ayc-title-blue-dark) !important;
+  }
+}
+
+@media (max-width: 370px) {
+  .ayc-about-section > p {
+    font-size: 15px !important;
+  }
+
+  .ayc-about-heading h2 {
+    font-size: 23px !important;
+  }
+}
+
+
+/* A&C MARIO + BUTTON SYSTEM V7 CORREGIDO */
+
+:root {
+  --ayc-action-blue: #2864c7;
+  --ayc-action-hover: #184b96;
+  --ayc-action-active: #10366f;
+  --ayc-action-line: #3974d2;
+}
+
+/* Mario Medina */
+
+.ayc-mobile-contact-person {
+  padding: 0 24px 6px;
+  text-align: center;
+}
+
+.ayc-mobile-contact-person strong {
+  display: block;
+  color: #252b35;
+  font-size: 22px;
+  line-height: 1.18;
+  font-weight: 650;
+}
+
+.ayc-mobile-contact-person span {
+  display: block;
+  margin-top: 5px;
+  color: #5d6879;
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 400;
+}
+
+/* WhatsApp principal siempre destacado */
+
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:link,
+.ayc-mobile-whatsapp:visited,
+.ayc-mobile-whatsapp:focus {
+  border: 1px solid var(--ayc-action-blue) !important;
+  outline: none !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-blue) !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.ayc-mobile-whatsapp:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.985) !important;
+}
+
+/* Cuatro accesos rápidos */
+
+.ayc-quick-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-right: 18px !important;
+  margin-left: 18px !important;
+}
+
+/* Reposo delineado */
+
+.ayc-quick-actions a,
+.ayc-quick-actions a:link,
+.ayc-quick-actions a:visited {
+  min-height: 82px !important;
+  border: 1px solid var(--ayc-action-line) !important;
+  color: var(--ayc-action-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.ayc-quick-actions a .ayc-quick-icon,
+.ayc-quick-actions a strong {
+  color: inherit !important;
+}
+
+/* Solo WhatsApp relleno */
+
+.ayc-quick-actions a.is-featured,
+.ayc-quick-actions a.is-featured:link,
+.ayc-quick-actions a.is-featured:visited,
+.ayc-quick-actions a.is-featured:focus {
+  border-color: var(--ayc-action-blue) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-blue) !important;
+}
+
+.ayc-quick-actions a.is-featured .ayc-quick-icon,
+.ayc-quick-actions a.is-featured strong {
+  color: #ffffff !important;
+}
+
+/* Toque móvil */
+
+.ayc-quick-actions a:active,
+.ayc-quick-actions a.is-featured:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.96) !important;
+}
+
+.ayc-quick-actions a:active .ayc-quick-icon,
+.ayc-quick-actions a:active strong {
+  color: #ffffff !important;
+}
+
+/* Guardar contacto delineado */
+
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:focus {
+  border: 1px solid var(--ayc-action-line) !important;
+  color: var(--ayc-action-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.ayc-mobile-vcard .ayc-primary-wide:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.985) !important;
+}
+
+/* Botones internos destacados en azul */
+
+.ayc-about-section .ayc-inline-cta,
+.ayc-project-card a,
+.ayc-map-card a,
+.ayc-final-cta a,
+.ayc-service-card strong,
+.ayc-service-modal > article > a {
+  border: 1px solid var(--ayc-action-blue) !important;
+  border-radius: 999px !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-blue) !important;
+  box-shadow: none !important;
+}
+
+.ayc-about-section .ayc-inline-cta {
+  padding: 11px 17px !important;
+}
+
+.ayc-service-card strong {
+  padding: 8px 13px !important;
+}
+
+.ayc-about-section .ayc-inline-cta:active,
+.ayc-project-card a:active,
+.ayc-map-card a:active,
+.ayc-final-cta a:active,
+.ayc-service-modal > article > a:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.98) !important;
+}
+
+/* Hover solo para mouse real */
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-whatsapp:hover,
+  .ayc-quick-actions a:hover,
+  .ayc-mobile-vcard .ayc-primary-wide:hover,
+  .ayc-about-section .ayc-inline-cta:hover,
+  .ayc-project-card a:hover,
+  .ayc-map-card a:hover,
+  .ayc-final-cta a:hover,
+  .ayc-service-card:hover strong,
+  .ayc-service-modal > article > a:hover {
+    border-color: var(--ayc-action-hover) !important;
+    color: #ffffff !important;
+    background: var(--ayc-action-hover) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .ayc-quick-actions a:hover .ayc-quick-icon,
+  .ayc-quick-actions a:hover strong {
+    color: #ffffff !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .ayc-quick-actions {
+    gap: 6px !important;
+    margin-right: 12px !important;
+    margin-left: 12px !important;
+  }
+
+  .ayc-quick-actions a {
+    min-height: 76px !important;
+  }
+
+  .ayc-quick-actions strong {
+    font-size: 8.5px !important;
+  }
+
+  .ayc-mobile-contact-person strong {
+    font-size: 20px;
+  }
+
+  .ayc-mobile-contact-person span {
+    font-size: 14px;
+  }
+}
+
+
+/* A&C LOGO + MARIO + ABOUT V8 */
+
+:root {
+  --ayc-mario-blue: #285fbe;
+  --ayc-action-blue: #2864c7;
+  --ayc-action-hover: #184b96;
+  --ayc-action-active: #10366f;
+  --ayc-action-line: #3974d2;
+}
+
+/* Logo un poco más limpio con el nuevo archivo */
+.ayc-mobile-brand-logo {
+  padding: 26px 18px 10px;
+}
+
+.ayc-mobile-brand-logo .ayc-mobile-logo {
+  width: min(380px, 96%);
+  max-height: 120px;
+  object-fit: contain;
+}
+
+/* Mario Medina */
+.ayc-mobile-contact-person {
+  padding: 0 24px 8px;
+  text-align: center;
+}
+
+.ayc-mobile-contact-person strong {
+  display: block;
+  color: var(--ayc-mario-blue) !important;
+  font-size: 31px !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+}
+
+.ayc-mobile-contact-person span {
+  display: block;
+  margin-top: 6px;
+  color: #5f6b80;
+  font-size: 16px;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+/* Accesos rápidos: 4 acciones sin WhatsApp pequeño */
+.ayc-quick-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-right: 18px !important;
+  margin-left: 18px !important;
+}
+
+.ayc-quick-actions a,
+.ayc-quick-actions a:link,
+.ayc-quick-actions a:visited,
+.ayc-quick-actions a.is-featured {
+  min-height: 82px !important;
+  border: 1px solid var(--ayc-action-line) !important;
+  color: var(--ayc-action-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.ayc-quick-actions a .ayc-quick-icon,
+.ayc-quick-actions a strong,
+.ayc-quick-actions a.is-featured .ayc-quick-icon,
+.ayc-quick-actions a.is-featured strong {
+  color: inherit !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-quick-actions a:hover,
+  .ayc-quick-actions a:focus-visible {
+    border-color: var(--ayc-action-hover) !important;
+    color: #ffffff !important;
+    background: var(--ayc-action-hover) !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .ayc-quick-actions a:hover .ayc-quick-icon,
+  .ayc-quick-actions a:hover strong,
+  .ayc-quick-actions a:focus-visible .ayc-quick-icon,
+  .ayc-quick-actions a:focus-visible strong {
+    color: #ffffff !important;
+  }
+}
+
+.ayc-quick-actions a:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.97) !important;
+}
+
+.ayc-quick-actions a:active .ayc-quick-icon,
+.ayc-quick-actions a:active strong {
+  color: #ffffff !important;
+}
+
+/* Guardar contacto delineado azul */
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:focus {
+  border: 1px solid var(--ayc-action-line) !important;
+  color: var(--ayc-action-blue) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-vcard .ayc-primary-wide:hover,
+  .ayc-mobile-vcard .ayc-primary-wide:focus-visible {
+    border-color: var(--ayc-action-hover) !important;
+    color: #ffffff !important;
+    background: var(--ayc-action-hover) !important;
+  }
+}
+
+.ayc-mobile-vcard .ayc-primary-wide:active {
+  border-color: var(--ayc-action-active) !important;
+  color: #ffffff !important;
+  background: var(--ayc-action-active) !important;
+  transform: scale(0.985) !important;
+}
+
+/* Sobre nosotros: texto justificado */
+.ayc-about-section {
+  text-align: left !important;
+}
+
+.ayc-about-heading {
+  text-align: center !important;
+}
+
+.ayc-about-section > p {
+  text-align: justify !important;
+  text-justify: inter-word;
+  hyphens: auto;
+}
+
+/* Asegurar que no quede botón debajo */
+.ayc-about-section .ayc-inline-cta {
+  display: none !important;
+}
+
+/* Título principal debajo de Mario */
+.ayc-mobile-identity h1 {
+  margin-top: 6px;
+}
+
+@media (max-width: 420px) {
+  .ayc-mobile-contact-person strong {
+    font-size: 28px !important;
+  }
+
+  .ayc-mobile-contact-person span {
+    font-size: 15px;
+  }
+
+  .ayc-quick-actions {
+    margin-right: 12px !important;
+    margin-left: 12px !important;
+    gap: 6px !important;
+  }
+
+  .ayc-quick-actions a {
+    min-height: 76px !important;
+  }
+
+  .ayc-quick-actions strong {
+    font-size: 8.5px !important;
+  }
+}
+
+
+/* A&C CORPORATE BLUE V9 */
+
+:root {
+  --ayc-blue: #05197A;
+  --ayc-title-blue: #05197A;
+  --ayc-mario-blue: #05197A;
+  --ayc-action-blue: #05197A;
+  --ayc-action-line: #05197A;
+
+  --ayc-blue-hover: #031052;
+  --ayc-title-blue-dark: #031052;
+  --ayc-action-hover: #031052;
+
+  --ayc-blue-active: #020A36;
+  --ayc-action-active: #020A36;
+}
+
+/* Títulos y nombre de Mario */
+
+.ayc-mobile-contact-person strong,
+.ayc-mobile-identity h1,
+.ayc-section-heading h2,
+.ayc-about-heading h2,
+.ayc-service-card h3,
+.ayc-project-card h3,
+.ayc-process-grid h3,
+.ayc-faq-list button,
+.ayc-location-section h2,
+.ayc-map-card strong,
+.ayc-service-modal h2 {
+  color: #05197A !important;
+}
+
+/* Botón principal WhatsApp */
+
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:link,
+.ayc-mobile-whatsapp:visited,
+.ayc-mobile-whatsapp:focus {
+  border-color: #05197A !important;
+  color: #ffffff !important;
+  background: #05197A !important;
+  box-shadow: none !important;
+}
+
+.ayc-mobile-whatsapp:active {
+  border-color: #020A36 !important;
+  background: #020A36 !important;
+}
+
+/* Accesos rápidos */
+
+.ayc-quick-actions a,
+.ayc-quick-actions a:link,
+.ayc-quick-actions a:visited,
+.ayc-quick-actions a.is-featured {
+  border-color: #05197A !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+}
+
+.ayc-quick-actions a .ayc-quick-icon,
+.ayc-quick-actions a strong,
+.ayc-quick-actions a.is-featured .ayc-quick-icon,
+.ayc-quick-actions a.is-featured strong {
+  color: #05197A !important;
+}
+
+/* Iconos más visibles */
+
+.ayc-quick-icon {
+  width: 44px !important;
+  height: 44px !important;
+  font-size: 25px !important;
+}
+
+.ayc-quick-icon svg {
+  width: 25px !important;
+  height: 25px !important;
+}
+
+.ayc-quick-actions strong {
+  margin-top: 2px;
+  font-size: 9.5px !important;
+  line-height: 1.2 !important;
+}
+
+/* Guardar contacto */
+
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:focus {
+  border-color: #05197A !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+}
+
+/* Botones internos */
+
+.ayc-about-section .ayc-inline-cta,
+.ayc-project-card a,
+.ayc-map-card a,
+.ayc-final-cta a,
+.ayc-service-card strong,
+.ayc-service-modal > article > a {
+  border-color: #05197A !important;
+  color: #ffffff !important;
+  background: #05197A !important;
+}
+
+/* Numeración del proceso */
+
+.ayc-process-grid article > span {
+  border-color: #05197A !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+}
+
+/* Enlaces sociales del footer */
+
+.ayc-social-row a {
+  color: #ffffff !important;
+  background: #05197A !important;
+}
+
+/* Hover únicamente en dispositivos con mouse */
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-mobile-whatsapp:hover,
+  .ayc-quick-actions a:hover,
+  .ayc-quick-actions a:focus-visible,
+  .ayc-mobile-vcard .ayc-primary-wide:hover,
+  .ayc-mobile-vcard .ayc-primary-wide:focus-visible,
+  .ayc-about-section .ayc-inline-cta:hover,
+  .ayc-project-card a:hover,
+  .ayc-map-card a:hover,
+  .ayc-final-cta a:hover,
+  .ayc-service-card:hover strong,
+  .ayc-service-modal > article > a:hover {
+    border-color: #031052 !important;
+    color: #ffffff !important;
+    background: #031052 !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .ayc-quick-actions a:hover .ayc-quick-icon,
+  .ayc-quick-actions a:hover strong,
+  .ayc-quick-actions a:focus-visible .ayc-quick-icon,
+  .ayc-quick-actions a:focus-visible strong {
+    color: #ffffff !important;
+  }
+
+  .ayc-social-row a:hover {
+    background: #031052 !important;
+    transform: translateY(-2px);
+  }
+}
+
+/* Respuesta al tocar en móvil */
+
+.ayc-quick-actions a:active,
+.ayc-mobile-vcard .ayc-primary-wide:active,
+.ayc-about-section .ayc-inline-cta:active,
+.ayc-project-card a:active,
+.ayc-map-card a:active,
+.ayc-final-cta a:active,
+.ayc-service-modal > article > a:active {
+  border-color: #020A36 !important;
+  color: #ffffff !important;
+  background: #020A36 !important;
+  transform: scale(0.97) !important;
+}
+
+.ayc-quick-actions a:active .ayc-quick-icon,
+.ayc-quick-actions a:active strong {
+  color: #ffffff !important;
+}
+
+@media (max-width: 390px) {
+  .ayc-quick-icon {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 23px !important;
+  }
+
+  .ayc-quick-icon svg {
+    width: 23px !important;
+    height: 23px !important;
+  }
+
+  .ayc-quick-actions strong {
+    font-size: 8.5px !important;
+  }
+}
+
+
+/* A&C BRAND BELT V10 FIXED */
+
+.ayc-brand-belt {
+  width: 100%;
+  margin: 26px 0 8px;
+  padding: 14px 0;
+  border-top: 2px solid #ed1c24;
+  border-bottom: 2px solid #ed1c24;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.ayc-brand-belt-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ayc-brand-belt-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ayc-brand-belt-item {
+  display: flex;
+  flex: 0 0 164px;
+  align-items: center;
+  justify-content: center;
+  height: 92px;
+  padding: 11px 13px;
+  border: 1px solid #e2e5e9;
+  border-radius: 17px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.04);
+  scroll-snap-align: start;
+}
+
+.ayc-brand-belt-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 420px) {
+  .ayc-brand-belt {
+    margin-top: 23px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .ayc-brand-belt-track {
+    gap: 10px;
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .ayc-brand-belt-item {
+    flex-basis: 154px;
+    height: 86px;
+    padding: 10px 12px;
+    border-radius: 15px;
+  }
+}
+
+/* A&C CONTINUOUS BRAND CAROUSEL V12 */
+
+.ayc-brand-belt {
+  position: relative;
+  width: 100%;
+  overflow: hidden !important;
+}
+
+/*
+ * La pista permanece fija.
+ * Los dos grupos idénticos se desplazan al mismo tiempo.
+ */
+.ayc-brand-belt-track {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  width: max-content !important;
+  max-width: none !important;
+  padding: 6px 0 !important;
+  overflow: visible !important;
+  scroll-snap-type: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+/*
+ * Cada grupo ocupa exactamente su propio ancho.
+ * Cuando avanza -100%, el segundo queda en la posición
+ * exacta que ocupaba el primero.
+ */
+.ayc-brand-belt-group {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 8px 0 0 !important;
+  animation: ayc-brand-group-loop 12s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+.ayc-brand-belt-item {
+  flex: 0 0 156px !important;
+  width: 156px !important;
+  height: 88px !important;
+  margin: 0 !important;
+}
+
+.ayc-brand-belt-logo {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+@keyframes ayc-brand-group-loop {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@media (max-width: 420px) {
+  .ayc-brand-belt-group {
+    gap: 7px !important;
+    padding-right: 7px !important;
+    animation-duration: 12s !important;
+  }
+
+  .ayc-brand-belt-item {
+    flex-basis: 148px !important;
+    width: 148px !important;
+    height: 84px !important;
+  }
+}
+
+
+/* A&C BRAND PRESS INTERACTION V13 */
+
+/* Recorrido completo en 18 segundos */
+.ayc-brand-belt-group {
+  animation-duration: 18s !important;
+}
+
+/* Pausa exacta mientras el usuario mantiene presionado */
+.ayc-brand-belt.is-paused .ayc-brand-belt-group {
+  animation-play-state: paused !important;
+}
+
+/* Preparación visual del logo */
+.ayc-brand-belt-item {
+  position: relative;
+  z-index: 1;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-y;
+  transform: translateZ(0);
+  transform-origin: center;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Zoom mientras se mantiene presionado */
+.ayc-brand-belt-item:active {
+  z-index: 4;
+  cursor: grabbing;
+  transform: scale(1.07) translateZ(0);
+  border-color: rgba(5, 25, 122, 0.28);
+  box-shadow:
+    0 9px 22px rgba(5, 25, 122, 0.14);
+}
+
+/* Evita selección o arrastre accidental de las imágenes */
+.ayc-brand-belt-logo {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+}
+
+@media (max-width: 420px) {
+  .ayc-brand-belt-group {
+    animation-duration: 18s !important;
+  }
+
+  .ayc-brand-belt-item:active {
+    transform: scale(1.065) translateZ(0);
+  }
+}
+
+
+/* A&C HERO BUTTON TYPOGRAPHY V14 */
+
+/* Botón principal destacado */
+
+.ayc-mobile-whatsapp,
+.ayc-mobile-whatsapp:link,
+.ayc-mobile-whatsapp:visited,
+.ayc-mobile-whatsapp:focus {
+  font-size: 17px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em;
+}
+
+.ayc-mobile-whatsapp svg {
+  width: 21px !important;
+  height: 21px !important;
+  flex: 0 0 auto;
+}
+
+/* Textos de los accesos rápidos */
+
+.ayc-quick-actions strong,
+.ayc-quick-actions a strong,
+.ayc-quick-actions a.is-featured strong {
+  font-size: 11.5px !important;
+  line-height: 1.18 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.005em;
+}
+
+/* Guardar contacto */
+
+.ayc-mobile-vcard .ayc-primary-wide,
+.ayc-mobile-vcard .ayc-primary-wide:focus {
+  font-size: 16px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+}
+
+.ayc-mobile-vcard .ayc-primary-wide svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 auto;
+}
+
+/*
+ * Mantener buena lectura en teléfonos angostos,
+ * sin volver al tamaño anterior de 8.5 px.
+ */
+
+@media (max-width: 390px) {
+  .ayc-mobile-whatsapp,
+  .ayc-mobile-whatsapp:link,
+  .ayc-mobile-whatsapp:visited,
+  .ayc-mobile-whatsapp:focus {
+    font-size: 16px !important;
+  }
+
+  .ayc-quick-actions strong,
+  .ayc-quick-actions a strong,
+  .ayc-quick-actions a.is-featured strong {
+    font-size: 10.5px !important;
+  }
+
+  .ayc-mobile-vcard .ayc-primary-wide,
+  .ayc-mobile-vcard .ayc-primary-wide:focus {
+    font-size: 15.5px !important;
+  }
+}
+
+/* A&C SERVICES CARDS + MODALS V16 */
+
+.ayc-mobile-section.ayc-services-section {
+  display: none !important;
+}
+
+.ayc-organized-services-section {
+  padding: 30px 14px 10px;
+}
+
+.ayc-organized-services-heading {
+  text-align: left;
+}
+
+.ayc-organized-services-heading span,
+.ayc-services-modal-heading span {
+  display: inline-block;
+  margin-bottom: 9px;
+  color: #ed3237;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.ayc-organized-services-heading h2,
+.ayc-services-modal-heading h2 {
+  margin: 0;
+  color: #05197A;
+  font-size: 27px;
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ayc-organized-services-heading p,
+.ayc-services-modal-heading p {
+  margin: 13px 0 0;
+  color: #5c6879;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.ayc-featured-services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.ayc-featured-service-card,
+.ayc-services-modal-card {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
+  border: 1px solid #dbe4ef;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 7px 18px rgba(15, 23, 42, 0.05);
+}
+
+.ayc-featured-service-media {
+  height: 132px;
+  overflow: hidden;
+  background: #edf2f9;
+}
+
+.ayc-services-modal-media {
+  height: 175px;
+  overflow: hidden;
+  background: #edf2f9;
+}
+
+.ayc-featured-service-image,
+.ayc-services-modal-image,
+.ayc-service-detail-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ayc-featured-service-body,
+.ayc-services-modal-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 13px;
+}
+
+.ayc-featured-service-body span,
+.ayc-services-modal-body span,
+.ayc-service-detail-body > span {
+  color: #ed3237;
+  font-size: 9px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.ayc-featured-service-body h3,
+.ayc-services-modal-body h3,
+.ayc-service-detail-body h3 {
+  margin: 8px 0 0;
+  color: #05197A;
+  font-size: 17px;
+  line-height: 1.18;
+  font-weight: 700;
+}
+
+.ayc-featured-service-body p,
+.ayc-services-modal-body p {
+  margin: 9px 0 0;
+  color: #5d6879;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.ayc-featured-service-link,
+.ayc-services-modal-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: auto;
+  padding: 13px 8px 0;
+  border: 0;
+  color: #05197A;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.ayc-featured-service-link:active,
+.ayc-services-modal-action:active {
+  transform: scale(0.97);
+}
+
+.ayc-services-catalog-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(420px, 100%);
+  margin: 22px auto 0;
+  padding: 16px 18px;
+  border: 1px solid #05197A;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #05197A;
+  box-shadow:
+    0 12px 24px rgba(5, 25, 122, 0.17);
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.ayc-services-modal-backdrop,
+.ayc-service-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14px 10px;
+  background: rgba(17, 24, 39, 0.66);
+  backdrop-filter: blur(4px);
+}
+
+.ayc-services-modal-sheet,
+.ayc-service-detail-sheet {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  border-radius: 26px;
+  background: #ffffff;
+  box-shadow:
+    0 22px 48px rgba(15, 23, 42, 0.22);
+}
+
+.ayc-services-modal-sheet {
+  padding: 22px 16px 18px;
+}
+
+.ayc-service-detail-sheet {
+  width: min(620px, 100%);
+  overflow: hidden auto;
+}
+
+.ayc-services-modal-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  z-index: 4;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  place-items: center;
+  color: #202938;
+  background: #ffffff;
+  box-shadow:
+    0 9px 22px rgba(15, 23, 42, 0.14);
+  font-size: 31px;
+  line-height: 1;
+}
+
+.ayc-services-modal-heading {
+  padding: 34px 4px 8px;
+}
+
+.ayc-services-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.ayc-services-modal-action {
+  margin-top: auto;
+  padding: 13px 14px;
+  border: 1px solid #05197A;
+  border-radius: 999px;
+}
+
+.ayc-service-detail-media {
+  height: 250px;
+  overflow: hidden;
+  background: #edf2f9;
+}
+
+.ayc-service-detail-body {
+  padding: 20px 18px 26px;
+}
+
+.ayc-service-detail-body h3 {
+  margin-top: 10px;
+  font-size: 27px;
+}
+
+.ayc-service-detail-summary {
+  margin: 14px 0 0;
+  color: #4d596a;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.ayc-service-detail-box {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #dbe4ef;
+  border-radius: 18px;
+  background: #fbfcfe;
+}
+
+.ayc-service-detail-box h4 {
+  margin: 0;
+  color: #05197A;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ayc-service-detail-box ul {
+  display: grid;
+  gap: 9px;
+  margin: 13px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ayc-service-detail-box li {
+  position: relative;
+  padding-left: 18px;
+  color: #596577;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ayc-service-detail-box li::before {
+  content: "";
+  position: absolute;
+  top: 0.5em;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #05197A;
+}
+
+.ayc-service-detail-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: min(380px, 100%);
+  margin: 22px auto 0;
+  padding: 15px 18px;
+  border-radius: 999px;
+  color: #ffffff !important;
+  background: #05197A !important;
+  box-shadow:
+    0 12px 24px rgba(5, 25, 122, 0.16);
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.ayc-service-detail-backlink {
+  display: flex;
+  margin: 18px auto 0;
+  padding: 4px;
+  border: 0;
+  color: #05197A;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+@media (max-width: 520px) {
+  .ayc-organized-services-heading h2,
+  .ayc-services-modal-heading h2 {
+    font-size: 24px;
+  }
+
+  .ayc-featured-service-media {
+    height: 118px;
+  }
+
+  .ayc-featured-service-body {
+    padding: 11px;
+  }
+
+  .ayc-featured-service-body h3 {
+    font-size: 15.5px;
+  }
+
+  .ayc-featured-service-body p {
+    font-size: 11.5px;
+  }
+
+  .ayc-featured-service-link {
+    font-size: 12.5px;
+  }
+
+  .ayc-services-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ayc-services-modal-media {
+    height: 185px;
+  }
+
+  .ayc-service-detail-media {
+    height: 225px;
+  }
+
+  .ayc-service-detail-body h3 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 350px) {
+  .ayc-featured-services-grid {
+    gap: 7px;
+  }
+
+  .ayc-featured-service-media {
+    height: 104px;
+  }
+
+  .ayc-featured-service-body {
+    padding: 9px;
+  }
+
+  .ayc-featured-service-body h3 {
+    font-size: 14px;
+  }
+
+  .ayc-featured-service-body p {
+    font-size: 10.5px;
+  }
+}
+
+
+/* A&C SERVICES VISUAL REFINEMENT V17 */
+
+/* Encabezado */
+.ayc-organized-services-heading span {
+  display: block !important;
+  margin-bottom: 8px !important;
+  color: #ed3237 !important;
+  font-size: 21px !important;
+  line-height: 1.12 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.015em !important;
+  text-transform: none !important;
+}
+
+.ayc-organized-services-heading h2 {
+  margin: 0 !important;
+  color: #05197A !important;
+  font-size: 30px !important;
+  line-height: 1.08 !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.ayc-organized-services-heading p {
+  margin-top: 12px !important;
+}
+
+/* Cards destacadas */
+.ayc-featured-service-card {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease !important;
+}
+
+.ayc-featured-service-media {
+  overflow: hidden !important;
+}
+
+.ayc-featured-service-image {
+  transition: transform 220ms ease !important;
+}
+
+.ayc-featured-service-body h3 {
+  margin-top: 10px !important;
+}
+
+.ayc-featured-service-body p {
+  margin-top: 11px !important;
+  min-height: 56px;
+}
+
+.ayc-featured-service-link {
+  width: 100% !important;
+  margin-top: 16px !important;
+  padding: 12px 14px !important;
+  border: 1px solid #05197A !important;
+  border-radius: 999px !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-featured-service-card:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(5, 25, 122, 0.30) !important;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.10) !important;
+  }
+
+  .ayc-featured-service-card:hover .ayc-featured-service-image {
+    transform: scale(1.04) !important;
+  }
+
+  .ayc-featured-service-card:hover .ayc-featured-service-link {
+    border-color: #05197A !important;
+    color: #ffffff !important;
+    background: #05197A !important;
+    transform: translateY(-1px) !important;
+  }
+}
+
+.ayc-featured-service-link:focus-visible,
+.ayc-featured-service-link:active {
+  border-color: #031052 !important;
+  color: #ffffff !important;
+  background: #031052 !important;
+  transform: scale(0.985) !important;
+}
+
+/* Modal: lista con separadores azules */
+.ayc-services-modal-grid {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+  margin-top: 22px !important;
+}
+
+.ayc-services-modal-card {
+  display: grid !important;
+  grid-template-columns: 210px 1fr !important;
+  gap: 16px !important;
+  align-items: start !important;
+  padding: 18px 0 20px !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(5, 25, 122, 0.22) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ayc-services-modal-card:last-child {
+  border-bottom: 1px solid rgba(5, 25, 122, 0.22) !important;
+}
+
+.ayc-services-modal-media {
+  height: 150px !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  background: #edf2f9 !important;
+}
+
+.ayc-services-modal-body {
+  padding: 2px 0 !important;
+}
+
+.ayc-services-modal-body h3 {
+  margin-top: 12px !important;
+  margin-bottom: 0 !important;
+}
+
+.ayc-services-modal-body p {
+  margin-top: 13px !important;
+  margin-bottom: 0 !important;
+}
+
+.ayc-services-modal-action {
+  width: fit-content !important;
+  min-width: 170px !important;
+  margin-top: 18px !important;
+  padding: 12px 18px !important;
+  align-self: start !important;
+  border: 1px solid #05197A !important;
+  border-radius: 999px !important;
+  color: #ffffff !important;
+  background: #05197A !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease !important;
+}
+
+.ayc-services-modal-action:hover,
+.ayc-services-modal-action:focus-visible {
+  border-color: #031052 !important;
+  background: #031052 !important;
+  transform: translateY(-1px) !important;
+}
+
+.ayc-services-modal-action:active {
+  border-color: #020A36 !important;
+  background: #020A36 !important;
+  transform: scale(0.985) !important;
+}
+
+/* Ajustes móvil */
+@media (max-width: 520px) {
+  .ayc-organized-services-heading span {
+    font-size: 18px !important;
+  }
+
+  .ayc-organized-services-heading h2 {
+    font-size: 26px !important;
+  }
+
+  .ayc-featured-service-body p {
+    min-height: 52px;
+  }
+
+  .ayc-services-modal-card {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    padding-top: 16px !important;
+    padding-bottom: 18px !important;
+  }
+
+  .ayc-services-modal-media {
+    height: 185px !important;
+  }
+
+  .ayc-services-modal-action {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+
+/* A&C SERVICE COPY + CLIENTS V19 */
+
+/* Etiqueta roja Servicio industrial */
+.ayc-featured-service-body > span {
+  display: block !important;
+  color: #ed3237 !important;
+  font-size: 11.5px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+}
+
+.ayc-services-modal-body > span {
+  display: block !important;
+  color: #ed3237 !important;
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+}
+
+.ayc-service-detail-body > span {
+  display: block !important;
+  color: #ed3237 !important;
+  font-size: 13px !important;
+  line-height: 1.25 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.07em !important;
+  text-transform: uppercase !important;
+}
+
+.ayc-featured-service-body > span + h3 {
+  margin-top: 11px !important;
+}
+
+.ayc-services-modal-body > span + h3 {
+  margin-top: 13px !important;
+}
+
+.ayc-service-detail-body > span + h3 {
+  margin-top: 12px !important;
+}
+
+/* Nuestros clientes */
+.ayc-clients-belt-section {
+  overflow: hidden;
+  padding: 36px 0 18px;
+}
+
+.ayc-clients-heading {
+  padding: 0 14px;
+}
+
+.ayc-clients-heading > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #ed3237;
+  font-size: 21px;
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.ayc-clients-heading h2 {
+  margin: 0;
+  color: #05197A;
+  font-size: 29px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ayc-clients-heading p {
+  margin: 13px 0 0;
+  color: #5c6879;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.ayc-clients-belt {
+  position: relative;
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px 0;
+  border-top:
+    1px solid rgba(5, 25, 122, 0.18);
+  border-bottom:
+    1px solid rgba(5, 25, 122, 0.18);
+  background: #ffffff;
+}
+
+.ayc-clients-belt::before,
+.ayc-clients-belt::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 46px;
+  pointer-events: none;
+}
+
+.ayc-clients-belt::before {
+  left: 0;
+  background:
+    linear-gradient(
+      to right,
+      #ffffff,
+      rgba(255, 255, 255, 0)
+    );
+}
+
+.ayc-clients-belt::after {
+  right: 0;
+  background:
+    linear-gradient(
+      to left,
+      #ffffff,
+      rgba(255, 255, 255, 0)
+    );
+}
+
+.ayc-clients-track {
+  display: flex;
+  width: max-content;
+  gap: 14px;
+  animation:
+    aycClientsInfiniteScroll
+    24s
+    linear
+    infinite;
+  will-change: transform;
+}
+
+.ayc-clients-belt.is-paused
+.ayc-clients-track {
+  animation-play-state: paused;
+}
+
+.ayc-clients-group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+}
+
+.ayc-client-logo-card {
+  display: grid;
+  flex: none;
+  width: 142px;
+  height: 92px;
+  padding: 12px;
+  overflow: hidden;
+  border:
+    1px solid rgba(5, 25, 122, 0.12);
+  border-radius: 16px;
+  place-items: center;
+  background: #ffffff;
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.ayc-client-logo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter:
+    grayscale(1)
+    saturate(0)
+    contrast(0.92)
+    opacity(0.78);
+  transform: scale(1);
+  transition:
+    filter 220ms ease,
+    transform 220ms ease,
+    opacity 220ms ease;
+}
+
+.ayc-client-logo-card.is-active {
+  z-index: 3;
+  border-color:
+    rgba(5, 25, 122, 0.38);
+  box-shadow:
+    0 12px 26px
+    rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+}
+
+.ayc-client-logo-card.is-active
+.ayc-client-logo-image {
+  filter:
+    grayscale(0)
+    saturate(1)
+    contrast(1)
+    opacity(1);
+  transform: scale(1.08);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-client-logo-card:hover {
+    z-index: 3;
+    border-color:
+      rgba(5, 25, 122, 0.38);
+    box-shadow:
+      0 12px 26px
+      rgba(15, 23, 42, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .ayc-client-logo-card:hover
+  .ayc-client-logo-image {
+    filter:
+      grayscale(0)
+      saturate(1)
+      contrast(1)
+      opacity(1);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes aycClientsInfiniteScroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform:
+      translateX(
+        calc(-50% - 7px)
+      );
+  }
+}
+
+@media (max-width: 520px) {
+  .ayc-featured-service-body > span {
+    font-size: 10.5px !important;
+  }
+
+  .ayc-services-modal-body > span {
+    font-size: 11.5px !important;
+  }
+
+  .ayc-service-detail-body > span {
+    font-size: 12px !important;
+  }
+
+  .ayc-clients-heading > span {
+    font-size: 18px;
+  }
+
+  .ayc-clients-heading h2 {
+    font-size: 25px;
+  }
+
+  .ayc-clients-heading p {
+    font-size: 14px;
+  }
+
+  .ayc-client-logo-card {
+    width: 126px;
+    height: 84px;
+    padding: 10px;
+  }
+
+  .ayc-clients-track,
+  .ayc-clients-group {
+    gap: 10px;
+  }
+
+  @keyframes aycClientsInfiniteScroll {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform:
+        translateX(
+          calc(-50% - 5px)
+        );
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ayc-clients-track {
+    animation-play-state: paused;
+  }
+
+  .ayc-client-logo-card,
+  .ayc-client-logo-image {
+    transition: none;
+  }
+}
+
+
+/* A&C CLIENTS + CORPORATE CONTACT V20 */
+
+/* Clientes */
+.ayc-clients-heading h2 {
+  font-weight: 500 !important;
+}
+
+.ayc-clients-heading p {
+  font-size: 15.5px !important;
+  line-height: 1.72 !important;
+}
+
+.ayc-clients-track {
+  animation-duration: 48s !important;
+}
+
+.ayc-client-logo-card {
+  align-items: center !important;
+  justify-items: center !important;
+  place-items: center !important;
+}
+
+.ayc-client-logo-image {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  margin: 0 auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+}
+
+.ayc-client-logo-card.is-active .ayc-client-logo-image {
+  transform: scale(1.08) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ayc-client-logo-card:hover .ayc-client-logo-image {
+    transform: scale(1.08) !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .ayc-clients-heading p {
+    font-size: 15px !important;
+  }
+
+  .ayc-clients-track {
+    animation-duration: 48s !important;
+  }
+}
+
+/* Contacto corporativo */
+.ayc-corporate-contact-section {
+  padding: 34px 14px 16px;
+}
+
+.ayc-corporate-contact-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #ed3237;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ayc-corporate-contact-intro {
+  margin: 14px 0 0;
+  color: #2d3645;
+  font-size: 16px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.ayc-corporate-contact-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.ayc-corporate-contact-item {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+  align-items: center;
+  text-decoration: none;
+}
+
+.ayc-corporate-contact-itemIcon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  place-items: center;
+  color: #05197A;
+  background: #eef4ff;
+  font-size: 18px;
+}
+
+.ayc-corporate-contact-itemIcon.is-whatsapp {
+  color: #ffffff;
+  background: #25d366;
+}
+
+.ayc-corporate-contact-itemIcon.is-web {
+  color: #ffffff;
+  background: #05197A;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.ayc-corporate-contact-itemText {
+  display: grid;
+  gap: 2px;
+}
+
+.ayc-corporate-contact-itemText strong {
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.ayc-corporate-contact-itemText span {
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .ayc-corporate-contact-banner {
+    font-size: 17px;
+  }
+
+  .ayc-corporate-contact-intro {
+    font-size: 15px;
+  }
+
+  .ayc-corporate-contact-itemText span {
+    font-size: 14.5px;
+  }
+}
+
+
+/* A&C PRECISE REFINEMENTS V21 */
+
+/* Clientes: velocidad V20 y centrado del marco */
+.ayc-clients-track {
+  animation-duration: 48s !important;
+}
+
+.ayc-client-logo-card {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 14px !important;
+  cursor: pointer;
+  text-align: center !important;
+}
+
+.ayc-client-logo-image,
+.ayc-client-logo-card img {
+  position: absolute !important;
+  inset: 14px !important;
+  display: block !important;
+  width: calc(100% - 28px) !important;
+  height: calc(100% - 28px) !important;
+  max-width: calc(100% - 28px) !important;
+  max-height: calc(100% - 28px) !important;
+  margin: auto !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform-origin: center center !important;
+}
+
+/* Contacto corporativo */
+.ayc-corporate-contact-item {
+  grid-template-columns: 50px 1fr !important;
+  gap: 15px !important;
+}
+
+.ayc-corporate-contact-itemIcon {
+  width: 46px !important;
+  height: 46px !important;
+  color: #05197A !important;
+  background: #eef4ff !important;
+  font-size: 24px !important;
+}
+
+.ayc-corporate-contact-itemIcon.is-whatsapp,
+.ayc-corporate-contact-itemIcon.is-web {
+  color: #05197A !important;
+  background: #eef4ff !important;
+  font-size: 24px !important;
+  font-weight: 400 !important;
+}
+
+.ayc-corporate-contact-itemText strong {
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+}
+
+.ayc-corporate-contact-itemText span {
+  font-size: 17px !important;
+  line-height: 1.5 !important;
+}
+
+/* Ubicación */
+.ayc-location-section-v21 {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.ayc-location-section-v21::before,
+.ayc-location-section-v21::after,
+.ayc-location-section-v21 hr,
+.ayc-location-section-v21 [class*="divider"],
+.ayc-location-section-v21 [class*="accent"],
+.ayc-location-section-v21 [class*="highlight"] {
+  display: none !important;
+}
+
+.ayc-map-company-v21 {
+  font-size: 25px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+}
+
+.ayc-route-button-v21 {
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+}
+
+/* Cotización con azul corporativo */
+.ayc-quote-section-v21 {
+  color: #ffffff !important;
+  background: #05197A !important;
+}
+
+.ayc-quote-section-v21 h2,
+.ayc-quote-section-v21 h3,
+.ayc-quote-section-v21 p {
+  color: #ffffff !important;
+}
+
+.ayc-quote-button-v21 {
+  border-color: #ffffff !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  font-weight: 800 !important;
+}
+
+/* Footer: logo, ubicación y marca de agua */
+.ayc-footer-v21 button,
+.ayc-footer-v21 nav,
+.ayc-footer-v21 [class*="actions"],
+.ayc-footer-v21 [class*="social"],
+.ayc-footer-v21 [aria-label="Compartir"],
+.ayc-footer-v21 [aria-label="Sitio web"] {
+  display: none !important;
+}
+
+.ayc-footer-v21 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 11px !important;
+  text-align: center !important;
+}
+
+.ayc-footer-location-v21 {
+  margin: 0 !important;
+  font-size: 19px !important;
+  line-height: 1.3 !important;
+  font-weight: 500 !important;
+}
+
+.ayc-footer-v21 small {
+  display: block !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+}
+
+@media (max-width: 520px) {
+  .ayc-corporate-contact-item {
+    grid-template-columns: 46px 1fr !important;
+  }
+
+  .ayc-corporate-contact-itemIcon {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 23px !important;
+  }
+
+  .ayc-corporate-contact-itemText strong {
+    font-size: 15.5px !important;
+  }
+
+  .ayc-corporate-contact-itemText span {
+    font-size: 16px !important;
+  }
+
+  .ayc-map-company-v21 {
+    font-size: 23px !important;
+  }
+
+  .ayc-route-button-v21,
+  .ayc-quote-button-v21 {
+    font-size: 17px !important;
+  }
+
+  .ayc-footer-location-v21 {
+    font-size: 18px !important;
+  }
+
+  .ayc-footer-v21 small {
+    font-size: 13.5px !important;
+  }
+}
+
+
+/* A&C MICRO REFINEMENTS V22 */
+
+/* Logos de clientes: que al tocar se aprecien mucho más */
+.ayc-client-logo-card {
+  overflow: visible !important;
+}
+
+.ayc-client-logo-card.is-active,
+.ayc-client-logo-card:hover {
+  z-index: 6 !important;
+}
+
+.ayc-client-logo-card.is-active .ayc-client-logo-image,
+.ayc-client-logo-card.is-active img,
+.ayc-client-logo-card:hover .ayc-client-logo-image,
+.ayc-client-logo-card:hover img {
+  transform: scale(1.28) !important;
+  z-index: 7 !important;
+  filter: grayscale(0) !important;
+}
+
+/* Quitar la franja azul o resaltado de WhatsApp / datos corporativos */
+.ayc-corporate-contact-item,
+.ayc-corporate-contact-item:hover,
+.ayc-corporate-contact-item:focus,
+.ayc-corporate-contact-item:focus-visible,
+.ayc-corporate-contact-item:active,
+.ayc-corporate-contact-item.is-whatsapp,
+.ayc-corporate-contact-item.is-whatsapp:hover,
+.ayc-corporate-contact-item.is-whatsapp:focus,
+.ayc-corporate-contact-item.is-whatsapp:focus-visible,
+.ayc-corporate-contact-item.is-whatsapp:active {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ayc-corporate-contact-item a,
+.ayc-corporate-contact-item a:hover,
+.ayc-corporate-contact-item a:focus,
+.ayc-corporate-contact-item a:focus-visible,
+.ayc-corporate-contact-item a:active {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* FAQ: subir fuente de preguntas y respuestas */
+.ayc-faq-section button,
+.ayc-faq-section summary,
+.ayc-faq-section [role="button"],
+.ayc-faq-section [aria-expanded],
+[class*="faq"] button,
+[class*="faq"] summary,
+[class*="faq"] [role="button"],
+[class*="faq"] [aria-expanded] {
+  font-size: 21px !important;
+  line-height: 1.4 !important;
+  font-weight: 700 !important;
+}
+
+.ayc-faq-section p,
+.ayc-faq-section [class*="answer"],
+.ayc-faq-section [class*="content"],
+[class*="faq"] p,
+[class*="faq"] [class*="answer"],
+[class*="faq"] [class*="content"] {
+  font-size: 17px !important;
+  line-height: 1.75 !important;
+}
+
+/* Caja azul de cotización */
+.ayc-quote-section-v21,
+.ayc-quote-section-v21 h2,
+.ayc-quote-section-v21 h3,
+.ayc-quote-section-v21 p,
+.ayc-quote-section-v21 span,
+.ayc-quote-section-v21 strong,
+.ayc-quote-section-v21 small {
+  color: #ffffff !important;
+}
+
+.ayc-quote-button-v21 {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #05197A !important;
+}
+
+.ayc-quote-button-v21 svg,
+.ayc-quote-button-v21 span,
+.ayc-quote-button-v21 strong {
+  color: #05197A !important;
+}
+
+/* Footer final */
+.ayc-footer-v21 small,
+.ayc-footer-location-v21 {
+  display: block !important;
+  color: #8e96a8 !important;
+  font-size: 18px !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+}
+
+@media (max-width: 520px) {
+  .ayc-client-logo-card.is-active .ayc-client-logo-image,
+  .ayc-client-logo-card.is-active img,
+  .ayc-client-logo-card:hover .ayc-client-logo-image,
+  .ayc-client-logo-card:hover img {
+    transform: scale(1.24) !important;
+  }
+
+  .ayc-faq-section button,
+  .ayc-faq-section summary,
+  .ayc-faq-section [role="button"],
+  .ayc-faq-section [aria-expanded],
+  [class*="faq"] button,
+  [class*="faq"] summary,
+  [class*="faq"] [role="button"],
+  [class*="faq"] [aria-expanded] {
+    font-size: 19px !important;
+  }
+
+  .ayc-faq-section p,
+  .ayc-faq-section [class*="answer"],
+  .ayc-faq-section [class*="content"],
+  [class*="faq"] p,
+  [class*="faq"] [class*="answer"],
+  [class*="faq"] [class*="content"] {
+    font-size: 16px !important;
+  }
+
+  .ayc-footer-v21 small,
+  .ayc-footer-location-v21 {
+    font-size: 17px !important;
+  }
+}
+
+
+/* A&C DEFINITIVE CORRECTIONS V23 */
+
+/* ================================================
+   LOGO ACTIVO DE CLIENTES: AMPLIACIÓN REAL
+   ================================================ */
+
+.ayc-clients-belt-section,
+.ayc-clients-belt,
+.ayc-clients-track,
+.ayc-clients-group {
+  overflow: visible !important;
+}
+
+.ayc-client-logo-card {
+  overflow: visible !important;
+  transform-origin: center center !important;
+}
+
+.ayc-client-logo-card.is-active {
+  z-index: 100 !important;
+  border-color: rgba(5, 25, 122, 0.65) !important;
+  background: #ffffff !important;
+  box-shadow:
+    0 24px 50px
+    rgba(5, 25, 122, 0.28) !important;
+  transform:
+    translateY(-7px)
+    scale(1.34) !important;
+}
+
+.ayc-client-logo-card.is-active
+.ayc-client-logo-image,
+.ayc-client-logo-card.is-active img {
+  z-index: 101 !important;
+  filter:
+    grayscale(0)
+    saturate(1)
+    contrast(1)
+    opacity(1) !important;
+  transform: scale(1.55) !important;
+}
+
+
+/* ================================================
+   QUITAR FRANJA AZUL DE WHATSAPP CORPORATIVO
+   ================================================ */
+
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row:link,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row:visited,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row:hover,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row:focus,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row:focus-visible,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row:active {
+  border: 0 !important;
+  outline: 0 !important;
+  color: inherit !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row::before,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row::after {
+  display: none !important;
+  content: none !important;
+}
+
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row *,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row *:hover,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row *:focus,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row *:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row *::selection {
+  color: inherit !important;
+  background: transparent !important;
+}
+
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row
+.ayc-corporate-contact-itemIcon {
+  color: #05197A !important;
+  background: #eef4ff !important;
+}
+
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row
+.ayc-corporate-contact-itemIcon svg,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row
+.ayc-corporate-contact-itemIcon svg path {
+  color: #05197A !important;
+  fill: #05197A !important;
+}
+
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row
+.ayc-corporate-contact-itemText,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row
+.ayc-corporate-contact-itemText strong,
+.ayc-corporate-contact-section
+.ayc-corporate-whatsapp-row
+.ayc-corporate-contact-itemText span {
+  color: #111827 !important;
+}
+
+
+/* ================================================
+   CTA BLANCO CON ICONO Y TEXTO AZULES
+   ================================================ */
+
+.ayc-final-cta
+.ayc-quote-button-v21 {
+  border: 2px solid #ffffff !important;
+  color: #05197A !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+.ayc-final-cta
+.ayc-quote-button-v21
+.ayc-quote-icon-v23,
+.ayc-final-cta
+.ayc-quote-button-v21
+.ayc-quote-icon-v23 path {
+  color: #05197A !important;
+  fill: #05197A !important;
+  stroke: none !important;
+}
+
+
+/* ================================================
+   FOOTER CON UBICACIÓN Y MARCA DE AGUA
+   ================================================ */
+
+.ayc-footer-v23 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  text-align: center !important;
+}
+
+.ayc-footer-v23
+.ayc-footer-location-v23 {
+  display: block !important;
+  margin: 5px 0 0 !important;
+  color: #667085 !important;
+  font-size: 18px !important;
+  line-height: 1.35 !important;
+  font-weight: 600 !important;
+}
+
+.ayc-footer-v23
+.ayc-footer-watermark-v23 {
+  display: block !important;
+  margin: 3px 0 0 !important;
+  color: #929bad !important;
+  font-size: 16px !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+}
+
+
+@media (max-width: 520px) {
+  .ayc-client-logo-card.is-active {
+    transform:
+      translateY(-6px)
+      scale(1.3) !important;
+  }
+
+  .ayc-client-logo-card.is-active
+  .ayc-client-logo-image,
+  .ayc-client-logo-card.is-active img {
+    transform: scale(1.5) !important;
+  }
+
+  .ayc-footer-v23
+  .ayc-footer-location-v23 {
+    font-size: 17px !important;
+  }
+
+  .ayc-footer-v23
+  .ayc-footer-watermark-v23 {
+    font-size: 15px !important;
+  }
+}
+
+/* A&C · selector de idioma */
+.ayc-language-switch-wrap {
+  position: absolute;
+  z-index: 20;
+  top: 12px;
+  right: 12px;
+}
+
+.ayc-language-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 7px 11px;
+  border: 1px solid rgba(5, 25, 122, 0.16);
+  border-radius: 999px;
+  color: #05197a;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 5px 16px rgba(5, 25, 122, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.ayc-language-switch svg {
+  font-size: 11px;
+}
+
+.ayc-language-switch:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.65);
+  outline-offset: 2px;
+}

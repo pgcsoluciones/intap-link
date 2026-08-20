@@ -1,14 +1,28 @@
 name = "intap-api-preview"
-main = "src/index.ts"
+main = "src/preview-frontdoor-entry.ts"
 compatibility_date = "2024-02-08"
 workers_dev = true
+
+[[routes]]
+pattern = "app.preview.intaprd.com/*"
+zone_name = "intaprd.com"
+
+[[routes]]
+pattern = "preview.intaprd.com/*"
+zone_name = "intaprd.com"
+
+# El Worker Preview actúa como front door de ambos custom domains:
+# app.preview.intaprd.com sirve App Preview y preview.intaprd.com sirve Web Preview.
+# /api/* se resuelve aquí y el resto se sirve desde los Pages Preview aprobados.
 
 [vars]
 ENVIRONMENT = "preview"
 WORKER_NAME = "intap-api-preview"
-APP_URL = "https://fix-special-profiles-templat.intap-link.pages.dev"
+APP_URL = "https://app.preview.intaprd.com"
+APP_PAGES_ORIGIN = "https://feature-intap-link-approved.intap-web2.pages.dev"
+WEB_PAGES_ORIGIN = "https://feature-intap-link-approved.intap-link.pages.dev"
 API_URL = "https://intap-api-preview.fliaprince.workers.dev"
-WEB_URL = "https://fix-special-profiles-templat.intap-link.pages.dev"
+WEB_URL = "https://preview.intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
 RESEND_FROM = "noreply@intaprd.com"
 ADMIN_EMAILS = "fliaprince@gmail.com"

@@ -6,6 +6,17 @@ import { checkPlanLimit } from './lib/plan-enforcement'
 import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
+import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
+import { registerDemoViralRoutes } from './routes/demo-viral'
+import {
+  ARTIFACT_PRODUCT_TYPES,
+  generateHumanCode,
+  hashActivationCode,
+  isActivationCodeShape,
+  isPublicCodeShape,
+  normalizeActivationCode,
+  publicArtifactUrl,
+} from './artifacts'
 
 type Bindings = {
   DB: D1Database
@@ -17,6 +28,7 @@ type Bindings = {
   GOOGLE_CLIENT_SECRET: string
   TURNSTILE_SECRET: string
   API_URL: string
+  WEB_URL?: string
   APP_URL: string
   ENVIRONMENT: string
   ADMIN_EMAILS: string
@@ -66,6 +78,8 @@ app.use('*', cors({
 }))
 app.options('*', (c) => c.body(null, 204))
 
+registerDemoViralRoutes(app)
+
 
 app.use('/api/*', async (c, next) => {
   await next()
@@ -104,15 +118,15 @@ function parseCookie(header: string, name: string): string | null {
   return match2 ? decodeURIComponent(match2[1]) : null
 }
 
-function buildSessionCookie(value: string, appUrl: string, maxAge: number): string {
-  let cookie = `session_id=${encodeURIComponent(value)}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`
-  try {
-    const u = new URL(appUrl)
-    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com')) {
-      cookie += '; Domain=.intaprd.com'
-    }
-  } catch { /* appUrl inválida — no agregar Domain */ }
-  return cookie
+function buildSessionCookie(value: string, c: any, maxAge: number): string {
+  return buildScopedCookie(c.env, configuredAppUrl(c), cookieNames(c.env).session, value, maxAge)
+}
+
+function configuredAppUrl(c: any): string {
+  const fallback = isPreviewEnvironment(c.env)
+    ? 'https://app.preview.intaprd.com'
+    : 'https://app.intaprd.com'
+  return String(c.env.APP_URL || fallback).replace(/\/$/, '')
 }
 
 // ─── Middlewares ──────────────────────────────────────────────────────────
@@ -120,7 +134,7 @@ function buildSessionCookie(value: string, appUrl: string, maxAge: number): stri
 const requireAdmin = async (c: any, next: any) => {
   // 1) Validar que hay sesión activa
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, cookieNames(c.env).session)
   if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
   const sessionHash = await sha256Hex(rawSession)
@@ -153,7 +167,7 @@ const requireAdmin = async (c: any, next: any) => {
 
 const requireAuth = async (c: any, next: any) => {
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, cookieNames(c.env).session)
   if (!rawSession) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
   const sessionHash = await sha256Hex(rawSession)
@@ -175,9 +189,47 @@ const requireAuth = async (c: any, next: any) => {
     .catch(() => { })
 }
 
+const ACTIVATION_INTENT_MAX_AGE = 15 * 60
+
+function buildActivationIntentCookie(value: string, c: any, maxAge: number): string {
+  return buildScopedCookie(c.env, configuredAppUrl(c), cookieNames(c.env).activationIntent, value, maxAge)
+}
+
+function clearActivationIntentCookie(c: any): string {
+  return buildActivationIntentCookie('', c, 0)
+}
+
+async function hasPendingActivationIntent(c: any): Promise<boolean> {
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).activationIntent)
+  if (!rawIntent) return false
+  const intentHash = await sha256Hex(rawIntent)
+  const row = await c.env.DB.prepare(
+    `SELECT i.id
+       FROM artifact_activation_intents i
+       JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+       JOIN intap_artifacts a ON a.id = i.artifact_id
+      WHERE i.intent_hash = ?
+        AND i.status = 'active'
+        AND i.revoked_at IS NULL
+        AND i.expires_at > datetime('now')
+        AND ac.status = 'active'
+        AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+        AND a.owner_user_id IS NULL
+        AND a.status IN ('available', 'unassigned')
+      LIMIT 1`
+  ).bind(intentHash).first()
+  return !!row
+}
+
 // ─── Routes ───────────────────────────────────────────────────────────────
 
-app.get('/api/health', (c) => c.json({ ok: true, status: 'healthy' }))
+app.get('/api/health', (c) => c.json({
+  ok: true,
+  status: 'healthy',
+  environment: (c.env as any).ENVIRONMENT || 'unknown',
+  worker: (c.env as any).WORKER_NAME || 'intap-api',
+  apiUrl: (c.env as any).API_URL || null,
+}))
 
 // ─── Magic Link ───────────────────────────────────────────────────────────
 
@@ -207,11 +259,9 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+10 minutes'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), email, tokenHash, ip, ua).run()
 
-  // El callback de autenticación SIEMPRE debe apuntar a app.intaprd.com.
-  // Usamos APP_URL solo si apunta al subdominio correcto; en caso contrario
-  // caemos al valor seguro para evitar que el token llegue al dominio principal.
-  const rawAppUrl = String((c.env as any).APP_URL || '')
-  const appUrl = rawAppUrl.startsWith('https://app.') ? rawAppUrl : 'https://app.intaprd.com'
+  // El callback se construye desde APP_URL server-side: producción usa
+  // app.intaprd.com y Preview usa app.preview.intaprd.com.
+  const appUrl = configuredAppUrl(c)
   const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
   const resendKey = (c.env as any).RESEND_API_KEY
   const resendFrom = (c.env as any).RESEND_FROM
@@ -266,8 +316,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), (user as any).id, sessionHash, reqIp, reqUa).run()
 
-  const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
-  const cookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
+  const cookie = buildSessionCookie(sessionRaw, c, 30 * 24 * 60 * 60)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
 })
@@ -296,7 +345,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
   headers.set('Location', `https://accounts.google.com/o/oauth2/v2/auth?${params}`)
   headers.set(
     'Set-Cookie',
-    `oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`,
+    buildScopedCookie(c.env, configuredAppUrl(c), cookieNames(c.env).oauthState, state, 600, '/api/v1/auth/google'),
   )
   return new Response(null, { status: 302, headers })
 })
@@ -306,14 +355,14 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const state = c.req.query('state') || ''
   const oauthError = c.req.query('error') || ''
 
-  const appUrl = (c.env as any).APP_URL || 'https://app.intaprd.com'
+  const appUrl = configuredAppUrl(c)
 
   if (oauthError || !code)
     return c.redirect(`${appUrl}/admin/login?error=oauth_denied`)
 
   // Validar state anti-CSRF
   const cookieHeader = c.req.header('Cookie') || ''
-  const savedState = parseCookie(cookieHeader, 'oauth_state')
+  const savedState = parseCookie(cookieHeader, cookieNames(c.env).oauthState)
   if (!savedState || savedState !== state)
     return c.redirect(`${appUrl}/admin/login?error=oauth_state`)
 
@@ -378,11 +427,12 @@ app.get('/api/v1/auth/google/callback', async (c) => {
      VALUES (?, ?, ?, datetime('now', '+30 days'), ?, ?, datetime('now'))`
   ).bind(generateToken(16), userId, sessionHash, reqIp, reqUa).run()
 
-  const sessionCookie = buildSessionCookie(sessionRaw, appUrl, 30 * 24 * 60 * 60)
-  const clearState = `oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=0`
+  const sessionCookie = buildSessionCookie(sessionRaw, c, 30 * 24 * 60 * 60)
+  const clearState = buildScopedCookie(c.env, appUrl, cookieNames(c.env).oauthState, '', 0, '/api/v1/auth/google')
 
   const headers = new Headers()
-  headers.set('Location', `${appUrl}/admin`)
+  const resumeActivation = await hasPendingActivationIntent(c)
+  headers.set('Location', `${appUrl}${resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
   headers.append('Set-Cookie', sessionCookie)
   headers.append('Set-Cookie', clearState)
   return new Response(null, { status: 302, headers })
@@ -392,7 +442,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
 app.post('/api/v1/auth/logout', async (c) => {
   const cookieHeader = c.req.header('Cookie') || ''
-  const rawSession = parseCookie(cookieHeader, 'session_id')
+  const rawSession = parseCookie(cookieHeader, cookieNames(c.env).session)
 
   if (rawSession) {
     const sessionHash = await sha256Hex(rawSession)
@@ -401,28 +451,566 @@ app.post('/api/v1/auth/logout', async (c) => {
     ).bind(sessionHash).run()
   }
 
-  const appUrlLogout = (c.env as any).APP_URL || 'https://app.intaprd.com'
-  let clearCookie = `session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`
-  try {
-    const u = new URL(appUrlLogout)
-    if (u.hostname === 'intaprd.com' || u.hostname.endsWith('.intaprd.com'))
-      clearCookie += '; Domain=.intaprd.com'
-  } catch { /* no agregar Domain */ }
+  const appUrlLogout = configuredAppUrl(c)
+  const clearCookie = buildScopedCookie(c.env, appUrlLogout, cookieNames(c.env).session, '', 0)
 
   return c.json({ ok: true }, 200, { 'Set-Cookie': clearCookie })
 })
+
+// ─── INTAP physical artifacts (B2) ───────────────────────────────────────
+
+function artifactWebOrigin(c: any): string {
+  const configured = String(c.env.WEB_URL || c.env.API_URL || '').trim()
+  try {
+    return new URL(configured || new URL(c.req.url).origin).origin
+  } catch {
+    return new URL(c.req.url).origin
+  }
+}
+
+function artifactPublicResponse(c: any, row: any) {
+  return {
+    id: row.id,
+    public_code: row.public_code,
+    product_type: row.product_type,
+    status: row.status,
+    profile_id: row.profile_id ?? null,
+    profile_slug: row.profile_slug ?? null,
+    profile_name: row.profile_name ?? null,
+    public_url: publicArtifactUrl(artifactWebOrigin(c), row.public_code),
+    activated_at: row.activated_at ?? null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }
+}
+
+function activationErrorMessage(status: string | null | undefined): string {
+  if (status === 'used') return 'Este código ya fue utilizado.'
+  if (status === 'revoked') return 'Este código ya no está disponible.'
+  return 'Código de activación inválido.'
+}
+
+// Public product identification by the non-secret code printed/programmed on the product.
+// This step never consumes the activation secret and never creates ownership.
+app.post('/api/v1/public/artifacts/identify', async (c) => {
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const publicCode = String(body?.public_code || '').trim().toUpperCase()
+  if (!isPublicCodeShape(publicCode)) {
+    return c.json({ ok: false, error: 'Código de compra inválido.' }, 400)
+  }
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.public_code, a.product_type, a.status, a.owner_user_id,
+            CASE
+              WHEN ac.id IS NULL THEN 'none'
+              WHEN ac.status = 'active' AND ac.expires_at IS NOT NULL AND ac.expires_at <= datetime('now') THEN 'expired'
+              ELSE ac.status
+            END AS activation_code_status
+       FROM intap_artifacts a
+       LEFT JOIN artifact_activation_codes ac
+         ON ac.id = (
+           SELECT ac2.id FROM artifact_activation_codes ac2
+            WHERE ac2.artifact_id = a.id
+            ORDER BY ac2.created_at DESC, ac2.id DESC LIMIT 1
+         )
+      WHERE a.public_code = ? LIMIT 1`
+  ).bind(publicCode).first()
+
+  if (!row) return c.json({ ok: false, error: 'Producto Kawvo (antes INTAP) no encontrado.' }, 404)
+  const artifact = row as any
+  if (artifact.owner_user_id || !['available', 'unassigned'].includes(String(artifact.status))) {
+    return c.json({ ok: false, error: 'Este producto ya fue reclamado.' }, 409)
+  }
+  if (artifact.activation_code_status !== 'active') {
+    return c.json({ ok: false, error: 'Este producto no tiene un código de activación disponible.' }, 409)
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      public_code: artifact.public_code,
+      product_type: artifact.product_type,
+      status: 'available',
+    },
+  })
+})
+
+// Public preflight. It reveals only product type and a stable public code;
+// it never returns ownership, profile, hashes, or the activation secret.
+app.post('/api/v1/public/artifacts/activation/inspect', async (c) => {
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const activationCode = normalizeActivationCode(body?.activation_code)
+  if (!isActivationCodeShape(activationCode)) {
+    return c.json({ ok: false, error: 'Código de activación inválido.' }, 400)
+  }
+
+  const codeHash = await hashActivationCode(activationCode)
+  const row = await c.env.DB.prepare(
+    `SELECT ac.status as code_status, ac.expires_at,
+            a.public_code, a.product_type, a.status as artifact_status
+       FROM artifact_activation_codes ac
+       JOIN intap_artifacts a ON a.id = ac.artifact_id
+      WHERE ac.activation_code_hash = ? LIMIT 1`
+  ).bind(codeHash).first()
+
+  if (!row) return c.json({ ok: false, error: 'Código de activación inválido.' }, 404)
+  const codeStatus = String((row as any).code_status || '')
+  const expired = !!(row as any).expires_at && new Date(String((row as any).expires_at) + 'Z').getTime() <= Date.now()
+  if (codeStatus !== 'active' || expired) {
+    return c.json({ ok: false, error: activationErrorMessage(expired ? 'revoked' : codeStatus) }, 409)
+  }
+  if (!['available', 'unassigned'].includes(String((row as any).artifact_status))) {
+    return c.json({ ok: false, error: 'Este producto ya no está disponible para activación.' }, 409)
+  }
+
+  const intentToken = generateToken(32)
+  const intentHash = await sha256Hex(intentToken)
+  const intentId = crypto.randomUUID()
+  try {
+    const intentResult = await c.env.DB.prepare(
+      `INSERT INTO artifact_activation_intents
+        (id, intent_hash, artifact_id, activation_code_id, status, expires_at, created_at)
+       SELECT ?, ?, ac.artifact_id, ac.id, 'active', datetime('now', '+15 minutes'), datetime('now')
+         FROM artifact_activation_codes ac
+         JOIN intap_artifacts a ON a.id = ac.artifact_id
+        WHERE ac.activation_code_hash = ?
+          AND ac.status = 'active'
+          AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+          AND a.owner_user_id IS NULL
+          AND a.status IN ('available', 'unassigned')`
+    ).bind(intentId, intentHash, codeHash).run()
+    if (Number((intentResult as any)?.meta?.changes || 0) !== 1) {
+      return c.json({ ok: false, error: 'El código ya no está disponible.' }, 409)
+    }
+  } catch (error) {
+    console.error('[POST /public/artifacts/activation/inspect]', error)
+    return c.json({ ok: false, error: 'No se pudo preparar la activación.' }, 500)
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      public_code: (row as any).public_code,
+      product_type: (row as any).product_type,
+      status: 'available',
+    },
+  }, 200, {
+    'Set-Cookie': buildActivationIntentCookie(intentToken, c, ACTIVATION_INTENT_MAX_AGE),
+  })
+})
+
+// Provisioning is deliberately admin-only. The plaintext activation code is
+// returned exactly once to the operator; only its SHA-256 hash is persisted.
+app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const productType = String(body?.product_type || 'other').trim().toLowerCase()
+  if (!(ARTIFACT_PRODUCT_TYPES as readonly string[]).includes(productType)) {
+    return c.json({ ok: false, error: 'Tipo de producto inválido.' }, 400)
+  }
+
+  const publicCode = generateHumanCode(10)
+  const activationCode = generateHumanCode(20)
+  const artifactId = crypto.randomUUID()
+  const activationId = crypto.randomUUID()
+  const activationHash = await hashActivationCode(activationCode)
+
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `INSERT INTO intap_artifacts
+          (id, public_code, product_type, status, created_at, updated_at)
+         VALUES (?, ?, ?, 'available', datetime('now'), datetime('now'))`
+      ).bind(artifactId, publicCode, productType),
+      c.env.DB.prepare(
+        `INSERT INTO artifact_activation_codes
+          (id, artifact_id, activation_code_hash, status, expires_at, created_at)
+         VALUES (?, ?, ?, 'active', ?, datetime('now'))`
+      ).bind(activationId, artifactId, activationHash, body?.expires_at || null),
+    ])
+  } catch (error) {
+    console.error('[POST /admin/artifacts]', error)
+    return c.json({ ok: false, error: 'No se pudo crear el artefacto.' }, 500)
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      id: artifactId,
+      public_code: publicCode,
+      activation_code: activationCode,
+      product_type: productType,
+      status: 'available',
+      public_url: publicArtifactUrl(artifactWebOrigin(c), publicCode),
+      warning: 'Guarda el código de activación. No se puede recuperar después.',
+    },
+  }, 201)
+})
+
+// Public resolver consumed by Pages Functions. It returns no profile content,
+// only a validated slug target; inactive/revoked artifacts never redirect.
+app.get('/api/v1/public/artifacts/:publicCode/resolve', async (c) => {
+  const publicCode = String(c.req.param('publicCode') || '').trim().toUpperCase()
+  if (!isPublicCodeShape(publicCode)) return c.json({ ok: false, error: 'Artefacto no encontrado.' }, 404)
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.public_code, a.status, a.profile_id,
+            p.slug, p.is_active, p.is_published
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+      WHERE a.public_code = ? LIMIT 1`
+  ).bind(publicCode).first()
+
+  if (!row) return c.json({ ok: false, error: 'Artefacto no encontrado.' }, 404)
+  const artifact = row as any
+  if (!['activated'].includes(String(artifact.status))) {
+    return c.json({ ok: false, error: 'Artefacto no disponible.' }, 410)
+  }
+  if (!artifact.profile_id || !artifact.slug) {
+    return c.json({ ok: false, error: 'Este producto todavía no tiene un perfil vinculado.', reason: 'PROFILE_NOT_LINKED' }, 409)
+  }
+  if (Number(artifact.is_active) !== 1) {
+    return c.json({ ok: false, error: 'El perfil vinculado no está activo.', reason: 'PROFILE_INACTIVE' }, 409)
+  }
+  if (Number(artifact.is_published) !== 1) {
+    return c.json({ ok: false, error: 'El perfil vinculado todavía no está publicado.', reason: 'PROFILE_UNPUBLISHED' }, 409)
+  }
+
+  return c.json({
+    ok: true,
+    data: {
+      public_code: publicCode,
+      profile_id: artifact.profile_id,
+      redirect_path: `/${encodeURIComponent(String(artifact.slug))}`,
+    },
+  }, 200, {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+  })
+})
+
+
+// ─── Super Admin — physical artifacts management ─────────────────────────
+// Read and operational management for the physical product inventory.
+// Plaintext activation secrets are NEVER stored; rotation revokes any still-active
+// code and returns the replacement secret exactly once.
+
+function normalizeSuperAdminArtifact(c: any, row: any) {
+  const codeStatus = row.activation_code_status || 'none'
+  return {
+    id: row.id,
+    public_code: row.public_code,
+    product_type: row.product_type,
+    status: row.status,
+    owner_user_id: row.owner_user_id ?? null,
+    owner_email: row.owner_email ?? null,
+    profile_id: row.profile_id ?? null,
+    profile_slug: row.profile_slug ?? null,
+    profile_name: row.profile_name ?? null,
+    profile_is_active: row.profile_is_active ?? null,
+    profile_is_published: row.profile_is_published ?? null,
+    activation_code_status: codeStatus,
+    activation_code_expires_at: row.activation_code_expires_at ?? null,
+    activation_code_used_at: row.activation_code_used_at ?? null,
+    activation_code_created_at: row.activation_code_created_at ?? null,
+    claim_at: row.claim_at ?? null,
+    activated_at: row.activated_at ?? null,
+    created_at: row.created_at ?? null,
+    updated_at: row.updated_at ?? null,
+    public_url: publicArtifactUrl(artifactWebOrigin(c), row.public_code),
+  }
+}
+
+const SUPERADMIN_ARTIFACT_SELECT = `
+  SELECT
+    a.id, a.public_code, a.product_type, a.status,
+    a.owner_user_id, a.profile_id, a.activated_at, a.created_at, a.updated_at,
+    u.email AS owner_email,
+    p.slug AS profile_slug, p.name AS profile_name,
+    p.is_active AS profile_is_active, p.is_published AS profile_is_published,
+    CASE
+      WHEN ac.id IS NULL THEN 'none'
+      WHEN ac.status = 'active' AND ac.expires_at IS NOT NULL AND ac.expires_at <= datetime('now') THEN 'expired'
+      ELSE ac.status
+    END AS activation_code_status,
+    ac.expires_at AS activation_code_expires_at,
+    ac.used_at AS activation_code_used_at,
+    ac.created_at AS activation_code_created_at,
+    cl.claim_at AS claim_at
+  FROM intap_artifacts a
+  LEFT JOIN users u ON u.id = a.owner_user_id
+  LEFT JOIN profiles p ON p.id = a.profile_id
+  LEFT JOIN artifact_activation_codes ac
+    ON ac.id = (
+      SELECT ac2.id
+      FROM artifact_activation_codes ac2
+      WHERE ac2.artifact_id = a.id
+      ORDER BY ac2.created_at DESC, ac2.id DESC
+      LIMIT 1
+    )
+  LEFT JOIN artifact_activation_claims cl ON cl.artifact_id = a.id
+`
+
+app.get('/api/v1/superadmin/artifacts', requireSuperAdmin('viewer'), async (c) => {
+  const limit = Math.min(200, Math.max(1, parseInt(c.req.query('limit') || '100', 10)))
+  const status = String(c.req.query('status') || '').trim().toLowerCase()
+  const q = String(c.req.query('q') || '').trim()
+  const validStatuses = ['unassigned', 'available', 'activated', 'suspended', 'revoked']
+  if (status && !validStatuses.includes(status)) {
+    return c.json({ ok: false, error: 'Estado de producto inválido.' }, 400)
+  }
+
+  const conditions: string[] = []
+  const bindings: unknown[] = []
+  if (status) { conditions.push('a.status = ?'); bindings.push(status) }
+  if (q) {
+    const like = `%${q}%`
+    conditions.push('(a.public_code LIKE ? OR u.email LIKE ? OR p.slug LIKE ? OR p.name LIKE ?)')
+    bindings.push(like, like, like, like)
+  }
+  const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : ''
+
+  const rows = await c.env.DB.prepare(
+    SUPERADMIN_ARTIFACT_SELECT + where + ' ORDER BY a.created_at DESC LIMIT ?'
+  ).bind(...bindings, limit).all()
+
+  return c.json({
+    ok: true,
+    data: { items: (rows.results || []).map(row => normalizeSuperAdminArtifact(c, row)) },
+  })
+})
+
+app.get('/api/v1/superadmin/artifacts/:id', requireSuperAdmin('viewer'), async (c) => {
+  const id = String(c.req.param('id') || '').trim()
+  const row = await c.env.DB.prepare(
+    SUPERADMIN_ARTIFACT_SELECT + ' WHERE a.id = ? LIMIT 1'
+  ).bind(id).first()
+  if (!row) return c.json({ ok: false, error: 'Producto no encontrado.' }, 404)
+  return c.json({ ok: true, data: normalizeSuperAdminArtifact(c, row) })
+})
+
+app.patch('/api/v1/superadmin/artifacts/:id/profile', requireSuperAdmin('support'), async (c) => {
+  const id = String(c.req.param('id') || '').trim()
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const profileId = body?.profile_id == null || body.profile_id === '' ? null : String(body.profile_id).trim()
+
+  const artifact = await c.env.DB.prepare(
+    'SELECT id, status FROM intap_artifacts WHERE id = ? LIMIT 1'
+  ).bind(id).first()
+  if (!artifact) return c.json({ ok: false, error: 'Producto no encontrado.' }, 404)
+  if (!['activated', 'suspended'].includes(String((artifact as any).status))) {
+    return c.json({ ok: false, error: 'El destino solo puede administrarse después de activar el producto.' }, 409)
+  }
+
+  if (profileId) {
+    const profile = await c.env.DB.prepare(
+      'SELECT id FROM profiles WHERE id = ? AND is_active = 1 LIMIT 1'
+    ).bind(profileId).first()
+    if (!profile) return c.json({ ok: false, error: 'Perfil destino no encontrado o inactivo.' }, 404)
+  }
+
+  await c.env.DB.prepare(
+    "UPDATE intap_artifacts SET profile_id = ?, updated_at = datetime('now') WHERE id = ?"
+  ).bind(profileId, id).run()
+
+  const row = await c.env.DB.prepare(
+    SUPERADMIN_ARTIFACT_SELECT + ' WHERE a.id = ? LIMIT 1'
+  ).bind(id).first()
+  return c.json({ ok: true, data: row ? normalizeSuperAdminArtifact(c, row) : null })
+})
+
+app.patch('/api/v1/superadmin/artifacts/:id/status', requireSuperAdmin('support'), async (c) => {
+  const id = String(c.req.param('id') || '').trim()
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+  const nextStatus = String(body?.status || '').trim().toLowerCase()
+  if (!['activated', 'suspended', 'revoked'].includes(nextStatus)) {
+    return c.json({ ok: false, error: 'Estado operativo inválido.' }, 400)
+  }
+
+  const current = await c.env.DB.prepare(
+    'SELECT id, status, owner_user_id FROM intap_artifacts WHERE id = ? LIMIT 1'
+  ).bind(id).first()
+  if (!current) return c.json({ ok: false, error: 'Producto no encontrado.' }, 404)
+
+  const currentStatus = String((current as any).status)
+  const allowed =
+    (nextStatus === 'revoked' && currentStatus !== 'revoked') ||
+    (currentStatus === 'activated' && nextStatus === 'suspended') ||
+    (currentStatus === 'suspended' && nextStatus === 'activated')
+
+  if (!allowed) {
+    return c.json({ ok: false, error: 'Transición de estado no permitida.', current_status: currentStatus }, 409)
+  }
+  if (nextStatus === 'activated' && !(current as any).owner_user_id) {
+    return c.json({ ok: false, error: 'No se puede activar operativamente un producto sin propietario.' }, 409)
+  }
+
+  await c.env.DB.prepare(
+    "UPDATE intap_artifacts SET status = ?, updated_at = datetime('now') WHERE id = ?"
+  ).bind(nextStatus, id).run()
+
+  const row = await c.env.DB.prepare(
+    SUPERADMIN_ARTIFACT_SELECT + ' WHERE a.id = ? LIMIT 1'
+  ).bind(id).first()
+  return c.json({ ok: true, data: row ? normalizeSuperAdminArtifact(c, row) : null })
+})
+
+app.post('/api/v1/superadmin/artifacts/:id/activation-code/rotate', requireSuperAdmin('support'), async (c) => {
+  const id = String(c.req.param('id') || '').trim()
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const artifact = await c.env.DB.prepare(
+    'SELECT id, public_code, status, owner_user_id FROM intap_artifacts WHERE id = ? LIMIT 1'
+  ).bind(id).first()
+  if (!artifact) return c.json({ ok: false, error: 'Producto no encontrado.' }, 404)
+  if ((artifact as any).owner_user_id || !['available', 'unassigned'].includes(String((artifact as any).status))) {
+    return c.json({ ok: false, error: 'No se puede emitir otro código después de que el producto fue reclamado.' }, 409)
+  }
+
+  const expiresAt = body?.expires_at == null || body.expires_at === '' ? null : String(body.expires_at).trim()
+  if (expiresAt && Number.isNaN(new Date(expiresAt).getTime())) {
+    return c.json({ ok: false, error: 'Fecha de vencimiento inválida.' }, 400)
+  }
+
+  const activationCode = generateHumanCode(20)
+  const activationHash = await hashActivationCode(activationCode)
+  const activationId = crypto.randomUUID()
+  const now = new Date().toISOString().replace('T', ' ').replace('Z', '')
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE artifact_activation_codes SET status = 'revoked' WHERE artifact_id = ? AND status = 'active'"
+    ).bind(id),
+    c.env.DB.prepare(
+      "UPDATE artifact_activation_intents SET status = 'revoked', revoked_at = ? WHERE artifact_id = ? AND status = 'active'"
+    ).bind(now, id),
+    c.env.DB.prepare(
+      `INSERT INTO artifact_activation_codes
+        (id, artifact_id, activation_code_hash, status, expires_at, created_at)
+       VALUES (?, ?, ?, 'active', ?, datetime('now'))`
+    ).bind(activationId, id, activationHash, expiresAt),
+  ])
+
+  return c.json({
+    ok: true,
+    data: {
+      artifact_id: id,
+      public_code: (artifact as any).public_code,
+      activation_code: activationCode,
+      expires_at: expiresAt,
+      warning: 'Guarda el nuevo código ahora. El secreto no puede recuperarse después.',
+    },
+  }, 201)
+})
+
 
 // ─── /me endpoints — sub-app aislado, requireAuth se aplica una sola vez ──
 
 const me = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 me.use('*', requireAuth)
 
+type FreePublicationReadiness = {
+  ready: boolean
+  missing: string[]
+  steps: {
+    identifier: boolean
+    identity: boolean
+    contact: boolean
+    quick_actions: boolean
+    portfolio: boolean
+    services: boolean
+  }
+  counts: {
+    quick_actions: number
+    portfolio: number
+    services: number
+  }
+}
+
+async function getFreePublicationReadiness(c: any, profileId: string): Promise<FreePublicationReadiness> {
+  const [profileRow, contactRow, quickRow, galleryRow, servicesRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT slug, name, template_data FROM profiles WHERE id = ? LIMIT 1`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT whatsapp, phone, email FROM profile_contact WHERE profile_id = ? LIMIT 1`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n
+         FROM profile_social_links
+        WHERE profile_id = ?
+          AND enabled = 1
+          AND type IN ('call','instagram','location','email','tiktok')`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM profile_gallery WHERE profile_id = ?`
+    ).bind(profileId).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS n
+         FROM profile_products
+        WHERE profile_id = ?
+          AND trim(COALESCE(title, '')) <> ''
+          AND trim(COALESCE(description, '')) <> ''
+          AND trim(COALESCE(image_url, '')) <> ''`
+    ).bind(profileId).first(),
+  ])
+
+  const profile = (profileRow || {}) as any
+  const contact = (contactRow || {}) as any
+  let templateData: Record<string, any> = {}
+  try { templateData = JSON.parse(String(profile.template_data || '{}')) } catch { templateData = {} }
+
+  const slug = String(profile.slug || '').trim()
+  const role = String(templateData.role || templateData.title || '').trim()
+  const quickActions = Number((quickRow as any)?.n || 0)
+  const portfolio = Number((galleryRow as any)?.n || 0)
+  const services = Number((servicesRow as any)?.n || 0)
+
+  const steps = {
+    identifier: Boolean(slug && !slug.startsWith('kawvo-')),
+    identity: Boolean(String(profile.name || '').trim() && role && templateData.free_identity_confirmed === true),
+    contact: Boolean(String(contact.whatsapp || '').trim() || String(contact.phone || '').trim() || String(contact.email || '').trim()),
+    quick_actions: quickActions >= 2,
+    portfolio: portfolio >= 3,
+    services: services >= 2,
+  }
+
+  const labels: Record<keyof typeof steps, string> = {
+    identifier: 'Reserva tu identificador público',
+    identity: 'Confirma tu nombre o marca y a qué te dedicas',
+    contact: 'Agrega al menos un medio de contacto',
+    quick_actions: 'Configura al menos 2 accesos rápidos',
+    portfolio: 'Agrega al menos 3 imágenes reales a tu portafolio',
+    services: 'Completa al menos 2 servicios con título, descripción e imagen',
+  }
+
+  const missing = (Object.keys(steps) as Array<keyof typeof steps>)
+    .filter((key) => !steps[key])
+    .map((key) => labels[key])
+
+  return {
+    ready: missing.length === 0,
+    missing,
+    steps,
+    counts: { quick_actions: quickActions, portfolio, services },
+  }
+}
+
 me.get('/', async (c) => {
   const userId = c.get('userId') as string
   const row = await c.env.DB.prepare(
     `SELECT u.id, u.email, p.id as profile_id, p.slug, p.name, p.bio,
             p.avatar_url, p.category, p.subcategory, p.is_published, p.theme_id,
-            p.accent_color, p.button_style,
+            p.accent_color, p.button_style, p.layout_id,
+            p.free_palette_id, p.free_brand_color,
+            p.hero_url, p.hero_position_x, p.hero_position_y, p.hero_zoom,
             p.template_id, p.template_data, p.plan_id
      FROM users u
      LEFT JOIN profiles p ON p.user_id = u.id
@@ -508,6 +1096,9 @@ me.get('/', async (c) => {
   }
 
   const templateData = (() => { try { return JSON.parse(r.template_data || '{}') } catch { return {} } })()
+  const freeReadiness = r.profile_id && String(r.plan_id || 'free') === 'free'
+    ? await getFreePublicationReadiness(c, String(r.profile_id)).catch(() => null)
+    : null
   return c.json({
     ok: true,
     data: {
@@ -515,10 +1106,409 @@ me.get('/', async (c) => {
       profileId: r.profile_id,
       onboardingStatus,
       templateData,
+      freeReadiness,
       // Plan / retention summary — null if user has no profile yet
       ...(planSummary ?? {}),
     },
   })
+})
+
+// ── Physical artifacts owned by the authenticated user ───────────────────
+
+me.get('/artifacts', async (c) => {
+  const userId = c.get('userId') as string
+  const rows = await c.env.DB.prepare(
+    `SELECT a.id, a.public_code, a.product_type, a.status, a.profile_id,
+            a.activated_at, a.created_at, a.updated_at,
+            p.slug as profile_slug, p.name as profile_name
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+      WHERE a.owner_user_id = ?
+      ORDER BY a.created_at DESC`
+  ).bind(userId).all()
+
+  return c.json({
+    ok: true,
+    data: (rows.results as any[]).map(row => artifactPublicResponse(c, row)),
+  })
+})
+
+me.get('/artifacts/activation/intent', async (c) => {
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).activationIntent)
+  if (!rawIntent) return c.json({ ok: false, error: 'No hay una activación pendiente.' }, 404)
+
+  const intentHash = await sha256Hex(rawIntent)
+  const row = await c.env.DB.prepare(
+    `SELECT a.public_code, a.product_type
+       FROM artifact_activation_intents i
+       JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+       JOIN intap_artifacts a ON a.id = i.artifact_id
+      WHERE i.intent_hash = ?
+        AND i.status = 'active'
+        AND i.revoked_at IS NULL
+        AND i.expires_at > datetime('now')
+        AND ac.status = 'active'
+        AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+        AND a.owner_user_id IS NULL
+        AND a.status IN ('available', 'unassigned')
+      LIMIT 1`
+  ).bind(intentHash).first()
+
+  if (!row) {
+    return c.json({ ok: false, error: 'La activación ya no está disponible.' }, 409, {
+      'Set-Cookie': clearActivationIntentCookie(c),
+    })
+  }
+
+  return c.json({ ok: true, data: row })
+})
+
+me.post('/artifacts/activate', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const rawIntent = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).activationIntent)
+  if (!rawIntent) return c.json({ ok: false, error: 'No hay una activación pendiente.' }, 409)
+  const intentHash = await sha256Hex(rawIntent)
+
+  const requestedProfileId = body?.profile_id == null || body.profile_id === ''
+    ? null
+    : String(body.profile_id).trim()
+  if (requestedProfileId) {
+    const profile = await c.env.DB.prepare(
+      `SELECT id FROM profiles WHERE id = ? AND user_id = ? AND is_active = 1 LIMIT 1`
+    ).bind(requestedProfileId, userId).first()
+    if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado.' }, 403)
+  }
+
+  // D1 batch is the atomic boundary. Each transition is guarded server-side;
+  // the final receipt INSERT computes ok from the resulting state and
+  // CHECK(ok = 1) turns any broken invariant into a SQL error inside the same
+  // batch. Its intent_hash primary key is the permanent one-time guard.
+  // meta.changes is intentionally not used as the rollback mechanism.
+  const claimAt = new Date().toISOString().replace('T', ' ').replace('Z', '')
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `UPDATE intap_artifacts
+            SET owner_user_id = ?,
+                profile_id = ?,
+                status = 'activated',
+                activated_at = ?,
+                updated_at = ?
+          WHERE id = (
+                  SELECT i.artifact_id
+                    FROM artifact_activation_intents i
+                   WHERE i.intent_hash = ?
+                )
+            AND owner_user_id IS NULL
+            AND status IN ('available', 'unassigned')
+            AND EXISTS (
+                  SELECT 1
+                    FROM artifact_activation_intents i
+                    JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+                    JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+                   WHERE i.intent_hash = ?
+                     AND i.status = 'active'
+                     AND i.revoked_at IS NULL
+                     AND i.expires_at > ?
+                     AND ac.status = 'active'
+                     AND (ac.expires_at IS NULL OR ac.expires_at > ?)
+                )
+            AND (
+                  ? IS NULL
+                  OR EXISTS (
+                       SELECT 1 FROM profiles p
+                        WHERE p.id = ?
+                          AND p.user_id = ?
+                          AND p.is_active = 1
+                     )
+                )`
+      ).bind(
+        userId, requestedProfileId, claimAt, claimAt,
+        intentHash, intentHash, claimAt, claimAt,
+        requestedProfileId, requestedProfileId, userId,
+      ),
+      c.env.DB.prepare(
+        `UPDATE artifact_activation_codes
+            SET status = 'used', used_at = ?
+          WHERE id = (
+                  SELECT i.activation_code_id
+                    FROM artifact_activation_intents i
+                   WHERE i.intent_hash = ?
+                )
+            AND status = 'active'
+            AND (expires_at IS NULL OR expires_at > ?)
+            AND EXISTS (
+                  SELECT 1
+                    FROM artifact_activation_intents i
+                    JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+                    JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+                   WHERE i.intent_hash = ?
+                     AND i.status = 'active'
+                     AND i.revoked_at IS NULL
+                     AND i.expires_at > ?
+                     AND a.owner_user_id = ?
+                     AND a.status = 'activated'
+                     AND a.activated_at = ?
+                )`
+      ).bind(claimAt, intentHash, claimAt, intentHash, claimAt, userId, claimAt),
+      c.env.DB.prepare(
+        `UPDATE artifact_activation_intents
+            SET status = 'consumed', consumed_at = ?
+          WHERE intent_hash = ?
+            AND status = 'active'
+            AND revoked_at IS NULL
+            AND expires_at > ?
+            AND EXISTS (
+                  SELECT 1
+                    FROM artifact_activation_codes ac
+                   WHERE ac.id = artifact_activation_intents.activation_code_id
+                     AND ac.artifact_id = artifact_activation_intents.artifact_id
+                     AND ac.status = 'used'
+                     AND ac.used_at = ?
+                )
+            AND EXISTS (
+                  SELECT 1
+                    FROM intap_artifacts a
+                   WHERE a.id = artifact_activation_intents.artifact_id
+                     AND a.owner_user_id = ?
+                     AND a.status = 'activated'
+                     AND a.activated_at = ?
+                )`
+      ).bind(claimAt, intentHash, claimAt, claimAt, userId, claimAt),
+      c.env.DB.prepare(
+        `INSERT INTO artifact_activation_claims
+          (intent_hash, artifact_id, activation_code_id, user_id, profile_id, claim_at, ok)
+         VALUES (
+           ?,
+           (SELECT i.artifact_id FROM artifact_activation_intents i WHERE i.intent_hash = ?),
+           (SELECT i.activation_code_id FROM artifact_activation_intents i WHERE i.intent_hash = ?),
+           ?, ?, ?, CASE WHEN EXISTS (
+           SELECT 1
+             FROM artifact_activation_intents i
+             JOIN artifact_activation_codes ac ON ac.id = i.activation_code_id
+             JOIN intap_artifacts a ON a.id = i.artifact_id AND ac.artifact_id = a.id
+            WHERE i.intent_hash = ?
+              AND i.status = 'consumed'
+              AND i.consumed_at = ?
+              AND ac.status = 'used'
+              AND ac.used_at = ?
+              AND a.id = (SELECT i2.artifact_id FROM artifact_activation_intents i2 WHERE i2.intent_hash = ?)
+              AND ac.id = (SELECT i3.activation_code_id FROM artifact_activation_intents i3 WHERE i3.intent_hash = ?)
+              AND a.owner_user_id = ?
+              AND a.status = 'activated'
+              AND a.activated_at = ?
+              AND ((? IS NULL AND a.profile_id IS NULL) OR (? IS NOT NULL AND a.profile_id = ?))
+              AND (? IS NULL OR EXISTS (
+                    SELECT 1 FROM profiles p
+                     WHERE p.id = a.profile_id
+                       AND p.user_id = ?
+                       AND p.is_active = 1
+                  ))
+         ) THEN 1 ELSE 0 END)`
+      ).bind(
+        intentHash, intentHash, intentHash, userId, requestedProfileId, claimAt,
+        intentHash, claimAt, claimAt, intentHash, intentHash, userId, claimAt,
+        requestedProfileId, requestedProfileId, requestedProfileId,
+        requestedProfileId, userId,
+      ),
+    ])
+  } catch (error) {
+    console.error('[POST /me/artifacts/activate] atomic claim rejected:', error)
+    return c.json({ ok: false, error: 'La activación ya no está disponible.' }, 409, {
+      'Set-Cookie': clearActivationIntentCookie(c),
+    })
+  }
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.id, a.public_code, a.product_type, a.status, a.profile_id,
+            a.activated_at, a.created_at, a.updated_at,
+            p.slug as profile_slug, p.name as profile_name
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+       JOIN artifact_activation_intents i ON i.artifact_id = a.id
+      WHERE i.intent_hash = ? AND i.status = 'consumed'
+        AND a.owner_user_id = ? LIMIT 1`
+  ).bind(intentHash, userId).first()
+
+  return c.json({ ok: true, data: row ? artifactPublicResponse(c, row) : null }, 201, {
+    'Set-Cookie': clearActivationIntentCookie(c),
+  })
+})
+
+// Activation v2: the public product code is identified first; after authentication
+// and profile creation, the secret is submitted once and the whole claim is committed atomically.
+me.post('/artifacts/activate-direct', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const publicCode = String(body?.public_code || '').trim().toUpperCase()
+  const activationCode = normalizeActivationCode(body?.activation_code)
+  const requestedProfileId = String(body?.profile_id || '').trim()
+
+  if (!isPublicCodeShape(publicCode)) return c.json({ ok: false, error: 'Código de compra inválido.' }, 400)
+  if (!isActivationCodeShape(activationCode)) return c.json({ ok: false, error: 'Código de activación inválido.' }, 400)
+  if (!requestedProfileId) return c.json({ ok: false, error: 'Debes crear o seleccionar tu perfil antes de activar el producto.' }, 409)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, slug, is_active, is_published FROM profiles
+      WHERE id = ? AND user_id = ? AND is_active = 1 LIMIT 1`
+  ).bind(requestedProfileId, userId).first()
+  if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado o inactivo.' }, 403)
+
+  const activationHash = await hashActivationCode(activationCode)
+  const candidate = await c.env.DB.prepare(
+    `SELECT a.id AS artifact_id, a.public_code, a.product_type,
+            ac.id AS activation_code_id
+       FROM intap_artifacts a
+       JOIN artifact_activation_codes ac ON ac.artifact_id = a.id
+      WHERE a.public_code = ?
+        AND ac.activation_code_hash = ?
+        AND ac.status = 'active'
+        AND (ac.expires_at IS NULL OR ac.expires_at > datetime('now'))
+        AND a.owner_user_id IS NULL
+        AND a.status IN ('available', 'unassigned')
+      LIMIT 1`
+  ).bind(publicCode, activationHash).first()
+
+  if (!candidate) {
+    return c.json({ ok: false, error: 'El código de activación no corresponde a este producto o ya no está disponible.' }, 409)
+  }
+
+  const artifactId = String((candidate as any).artifact_id)
+  const activationCodeId = String((candidate as any).activation_code_id)
+  const intentToken = generateToken(32)
+  const intentHash = await sha256Hex(intentToken)
+  const intentId = crypto.randomUUID()
+  const claimAt = new Date().toISOString().replace('T', ' ').replace('Z', '')
+
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare(
+        `INSERT INTO artifact_activation_intents
+          (id, intent_hash, artifact_id, activation_code_id, status, expires_at, created_at)
+         VALUES (?, ?, ?, ?, 'active', datetime(?, '+15 minutes'), ?)`
+      ).bind(intentId, intentHash, artifactId, activationCodeId, claimAt, claimAt),
+      c.env.DB.prepare(
+        `UPDATE intap_artifacts
+            SET owner_user_id = ?, profile_id = ?, status = 'activated',
+                activated_at = ?, updated_at = ?
+          WHERE id = ? AND public_code = ?
+            AND owner_user_id IS NULL
+            AND status IN ('available', 'unassigned')
+            AND EXISTS (
+              SELECT 1 FROM artifact_activation_codes ac
+               WHERE ac.id = ? AND ac.artifact_id = intap_artifacts.id
+                 AND ac.activation_code_hash = ?
+                 AND ac.status = 'active'
+                 AND (ac.expires_at IS NULL OR ac.expires_at > ?)
+            )`
+      ).bind(userId, requestedProfileId, claimAt, claimAt, artifactId, publicCode, activationCodeId, activationHash, claimAt),
+      c.env.DB.prepare(
+        `UPDATE artifact_activation_codes
+            SET status = 'used', used_at = ?
+          WHERE id = ? AND artifact_id = ? AND activation_code_hash = ?
+            AND status = 'active'
+            AND (expires_at IS NULL OR expires_at > ?)
+            AND EXISTS (
+              SELECT 1 FROM intap_artifacts a
+               WHERE a.id = ? AND a.owner_user_id = ? AND a.profile_id = ?
+                 AND a.status = 'activated' AND a.activated_at = ?
+            )`
+      ).bind(claimAt, activationCodeId, artifactId, activationHash, claimAt,
+             artifactId, userId, requestedProfileId, claimAt),
+      c.env.DB.prepare(
+        `UPDATE artifact_activation_intents
+            SET status = 'consumed', consumed_at = ?
+          WHERE id = ? AND intent_hash = ? AND artifact_id = ? AND activation_code_id = ?
+            AND status = 'active'
+            AND EXISTS (
+              SELECT 1 FROM artifact_activation_codes ac
+               WHERE ac.id = ? AND ac.status = 'used' AND ac.used_at = ?
+            )`
+      ).bind(claimAt, intentId, intentHash, artifactId, activationCodeId, activationCodeId, claimAt),
+      c.env.DB.prepare(
+        `INSERT INTO artifact_activation_claims
+          (intent_hash, artifact_id, activation_code_id, user_id, profile_id, claim_at, ok)
+         VALUES (?, ?, ?, ?, ?, ?, CASE WHEN EXISTS (
+           SELECT 1
+             FROM intap_artifacts a
+             JOIN artifact_activation_codes ac ON ac.id = ? AND ac.artifact_id = a.id
+             JOIN artifact_activation_intents i ON i.id = ? AND i.artifact_id = a.id AND i.activation_code_id = ac.id
+            WHERE a.id = ? AND a.owner_user_id = ? AND a.profile_id = ?
+              AND a.status = 'activated' AND a.activated_at = ?
+              AND ac.status = 'used' AND ac.used_at = ?
+              AND i.status = 'consumed' AND i.consumed_at = ?
+         ) THEN 1 ELSE 0 END)`
+      ).bind(intentHash, artifactId, activationCodeId, userId, requestedProfileId, claimAt,
+             activationCodeId, intentId, artifactId, userId, requestedProfileId,
+             claimAt, claimAt, claimAt),
+    ])
+  } catch (error) {
+    console.error('[POST /me/artifacts/activate-direct] atomic claim rejected:', error)
+    return c.json({ ok: false, error: 'No se pudo completar la vinculación. El producto no fue consumido; vuelve a intentarlo.' }, 409)
+  }
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.id, a.public_code, a.product_type, a.status, a.profile_id,
+            a.activated_at, a.created_at, a.updated_at,
+            p.slug as profile_slug, p.name as profile_name,
+            p.is_active as profile_is_active, p.is_published as profile_is_published
+       FROM intap_artifacts a
+       JOIN profiles p ON p.id = a.profile_id
+      WHERE a.id = ? AND a.owner_user_id = ? AND a.profile_id = ?
+        AND a.status = 'activated' LIMIT 1`
+  ).bind(artifactId, userId, requestedProfileId).first()
+
+  if (!row) return c.json({ ok: false, error: 'La activación se completó pero no pudo verificarse el vínculo final.' }, 500)
+
+  return c.json({
+    ok: true,
+    data: {
+      ...artifactPublicResponse(c, row),
+      profile_is_active: (row as any).profile_is_active,
+      profile_is_published: (row as any).profile_is_published,
+    },
+  }, 201)
+})
+
+me.patch('/artifacts/:id/profile', async (c) => {
+  const userId = c.get('userId') as string
+  const artifactId = c.req.param('id')
+  let body: any
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
+
+  const profileId = body?.profile_id == null || body.profile_id === ''
+    ? null
+    : String(body.profile_id).trim()
+  if (profileId) {
+    const profile = await c.env.DB.prepare(
+      `SELECT id FROM profiles WHERE id = ? AND user_id = ? AND is_active = 1 LIMIT 1`
+    ).bind(profileId, userId).first()
+    if (!profile) return c.json({ ok: false, error: 'Perfil no autorizado.' }, 403)
+  }
+
+  const result = await c.env.DB.prepare(
+    `UPDATE intap_artifacts
+        SET profile_id = ?, updated_at = datetime('now')
+      WHERE id = ? AND owner_user_id = ? AND status = 'activated'`
+  ).bind(profileId, artifactId, userId).run()
+  if (Number((result as any)?.meta?.changes || 0) !== 1) {
+    return c.json({ ok: false, error: 'Artefacto no encontrado o no pertenece a tu cuenta.' }, 404)
+  }
+
+  const row = await c.env.DB.prepare(
+    `SELECT a.id, a.public_code, a.product_type, a.status, a.profile_id,
+            a.activated_at, a.created_at, a.updated_at,
+            p.slug as profile_slug, p.name as profile_name
+       FROM intap_artifacts a
+       LEFT JOIN profiles p ON p.id = a.profile_id
+      WHERE a.id = ? AND a.owner_user_id = ? LIMIT 1`
+  ).bind(artifactId, userId).first()
+  return c.json({ ok: true, data: row ? artifactPublicResponse(c, row) : null })
 })
 
 me.post('/profile/claim', async (c) => {
@@ -531,7 +1521,7 @@ me.post('/profile/claim', async (c) => {
     'api', 'auth', 'me', 'assets', 'health', 'public',
     // rutas del panel admin (app.intaprd.com)
     'admin', 'login', 'logout', 'check-email', 'onboarding',
-    'dashboard', 'settings', 'account', 'profile', 'superadmin',
+    'dashboard', 'settings', 'account', 'profile', 'superadmin', 'activate', 'l', 'artifacts',
     // rutas de la landing (intaprd.com)
     'about', 'pricing', 'blog', 'help', 'terms', 'privacy', 'contact',
     // técnicos
@@ -555,8 +1545,10 @@ me.post('/profile/claim', async (c) => {
   const profileId = crypto.randomUUID()
   try {
     await c.env.DB.prepare(
-      `INSERT INTO profiles (id, user_id, slug, plan_id, theme_id, is_published)
-       VALUES (?, ?, ?, 'free', 'default', 0)`
+      `INSERT INTO profiles (
+         id, user_id, slug, plan_id, theme_id, layout_id, is_published
+       )
+       VALUES (?, ?, ?, 'free', 'default', 'esencial', 0)`
     ).bind(profileId, userId, slug).run()
   } catch (e: any) {
     console.error('[POST /me/profile/claim] D1 error:', e)
@@ -571,7 +1563,7 @@ me.put('/profile', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
   ).bind(userId).first()
   if (!profile) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
 
@@ -584,6 +1576,30 @@ me.put('/profile', async (c) => {
   const theme_id = body.theme_id !== undefined && VALID_THEMES.includes(String(body.theme_id))
     ? String(body.theme_id) : undefined
   const is_published = body.is_published !== undefined ? (body.is_published ? 1 : 0) : undefined
+
+  const VALID_FREE_LAYOUTS = ['impacto', 'personal', 'esencial']
+  const layout_id = body.layout_id !== undefined
+    ? (VALID_FREE_LAYOUTS.includes(String(body.layout_id))
+        ? String(body.layout_id)
+        : null)
+    : undefined
+
+  if (body.layout_id !== undefined && layout_id === null) {
+    return c.json({
+      ok: false,
+      error: 'Estilo de perfil no válido',
+    }, 400)
+  }
+
+  if (
+    body.layout_id !== undefined &&
+    String((profile as any).plan_id || 'free') !== 'free'
+  ) {
+    return c.json({
+      ok: false,
+      error: 'El estilo solicitado pertenece al perfil Gratis',
+    }, 403)
+  }
   const VALID_TEMPLATES = [
     'restaurante',
     'servicios',
@@ -600,6 +1616,18 @@ me.put('/profile', async (c) => {
     ? JSON.stringify(typeof body.template_data === 'object' ? body.template_data : {})
     : undefined
 
+  if (is_published === 1 && String((profile as any).plan_id || 'free') === 'free') {
+    const readiness = await getFreePublicationReadiness(c, String((profile as any).id))
+    if (!readiness.ready) {
+      return c.json({
+        ok: false,
+        error: 'profile_incomplete',
+        message: 'Completa los pasos mínimos antes de publicar tu perfil.',
+        readiness,
+      }, 422)
+    }
+  }
+
   try {
     await c.env.DB.prepare(
       `UPDATE profiles
@@ -610,14 +1638,15 @@ me.put('/profile', async (c) => {
            subcategory   = COALESCE(?5, subcategory),
            theme_id      = COALESCE(?6, theme_id),
            is_published  = COALESCE(?7, is_published),
-           template_id   = COALESCE(?9, template_id),
-           template_data = COALESCE(?10, template_data),
+           layout_id     = COALESCE(?9, layout_id),
+           template_id   = COALESCE(?10, template_id),
+           template_data = COALESCE(?11, template_data),
            updated_at    = datetime('now')
        WHERE id = ?8`
     ).bind(
       name ?? null, bio ?? null, avatar_url ?? null, category ?? null, subcategory ?? null,
       theme_id ?? null, is_published ?? null, (profile as any).id,
-      template_id ?? null, template_data ?? null,
+      layout_id ?? null, template_id ?? null, template_data ?? null,
     ).run()
   } catch (e: any) {
     console.error('[PUT /me/profile] D1 error:', e)
@@ -1305,6 +2334,130 @@ me.patch('/profile/visual', async (c) => {
   return c.json({ ok: true })
 })
 
+
+// ─── PATCH /api/v1/me/profile/free-appearance ────────────────────────────────
+// Apariencia exclusiva del plan Gratis.
+// No modifica template_id ni templates especializados.
+me.patch('/profile/free-appearance', async (c) => {
+  const userId = c.get('userId') as string
+  let body: any = {}
+
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON' }, 400)
+  }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  }
+
+  if (String((profile as any).plan_id) !== 'free') {
+    return c.json({
+      ok: false,
+      error: 'Esta apariencia pertenece al perfil Gratis',
+    }, 403)
+  }
+
+  const VALID_PALETTES = [
+    'intap',
+    'oceano',
+    'esmeralda',
+    'violeta',
+    'coral',
+    'grafito',
+    'arena',
+    'personalizada',
+  ]
+
+  const paletteId =
+    body.palette_id !== undefined
+      ? String(body.palette_id || '').trim()
+      : undefined
+
+  if (
+    paletteId !== undefined &&
+    !VALID_PALETTES.includes(paletteId)
+  ) {
+    return c.json({ ok: false, error: 'Paleta no válida' }, 400)
+  }
+
+  const brandColor =
+    body.brand_color !== undefined
+      ? String(body.brand_color || '').trim()
+      : undefined
+
+  if (
+    brandColor !== undefined &&
+    brandColor !== '' &&
+    !/^#[0-9A-Fa-f]{6}$/.test(brandColor)
+  ) {
+    return c.json({
+      ok: false,
+      error: 'El color principal debe usar formato #RRGGBB',
+    }, 400)
+  }
+
+  const heroUrl =
+    body.hero_url !== undefined
+      ? String(body.hero_url || '').trim()
+      : undefined
+
+  const numberOrUndefined = (value: any) => {
+    if (value === undefined) return undefined
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+  }
+
+  const x = numberOrUndefined(body.hero_position_x)
+  const y = numberOrUndefined(body.hero_position_y)
+  const zoom = numberOrUndefined(body.hero_zoom)
+
+  if (x === null || x! < 0 || x! > 100) {
+    return c.json({ ok: false, error: 'Posición horizontal no válida' }, 400)
+  }
+
+  if (y === null || y! < 0 || y! > 100) {
+    return c.json({ ok: false, error: 'Posición vertical no válida' }, 400)
+  }
+
+  if (zoom === null || zoom! < 1 || zoom! > 3) {
+    return c.json({ ok: false, error: 'Zoom no válido' }, 400)
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE profiles SET
+       free_palette_id = COALESCE(?1, free_palette_id),
+       free_brand_color = CASE
+         WHEN ?2 IS NULL THEN free_brand_color
+         ELSE ?2
+       END,
+       hero_url = CASE
+         WHEN ?3 IS NULL THEN hero_url
+         ELSE ?3
+       END,
+       hero_position_x = COALESCE(?4, hero_position_x),
+       hero_position_y = COALESCE(?5, hero_position_y),
+       hero_zoom = COALESCE(?6, hero_zoom),
+       updated_at = datetime('now')
+     WHERE id = ?7`
+  ).bind(
+    paletteId ?? null,
+    brandColor === undefined ? null : brandColor,
+    heroUrl === undefined ? null : heroUrl,
+    x ?? null,
+    y ?? null,
+    zoom ?? null,
+    (profile as any).id,
+  ).run()
+
+  return c.json({ ok: true })
+})
+
 // ─── GET /api/v1/me/plan-impact-preview?target=<plan_id> ─────────────────────
 // Simula el impacto de un downgrade al plan `target` sin aplicar ningún cambio.
 // Responde: qué recursos quedan activos, cuáles se pausan, si hace falta selección.
@@ -1535,6 +2688,49 @@ me.get('/gallery', async (c) => {
   return c.json({ ok: true, photos: photos.results })
 })
 
+
+
+// Editar metadatos de una imagen de portafolio.
+// La imagen permanece en R2; solo cambia su presentación.
+me.put('/gallery/:id', async (c) => {
+  const userId = c.get('userId') as string
+  const galleryId = c.req.param('id')
+
+  let body: any = {}
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Invalid JSON' }, 400)
+  }
+
+  const title = String(body.title || '').trim().slice(0, 80)
+  const description = String(body.description || '').trim().slice(0, 220)
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(userId).first()
+
+  if (!profile) {
+    return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+  }
+
+  const result = await c.env.DB.prepare(
+    `UPDATE profile_gallery
+        SET title = ?, description = ?
+      WHERE id = ? AND profile_id = ?`
+  ).bind(
+    title || null,
+    description || null,
+    galleryId,
+    (profile as any).id,
+  ).run()
+
+  if (Number((result as any)?.meta?.changes || 0) !== 1) {
+    return c.json({ ok: false, error: 'Imagen no encontrada' }, 404)
+  }
+
+  return c.json({ ok: true })
+})
 
 app.route('/api/v1/me', me)
 
@@ -1935,6 +3131,186 @@ app.get('/api/v1/public/assets/*', async (c) => {
   })
 })
 
+
+// ─── Discovery público de perfiles ───────────────────────────────────────
+// Fuente central para sitemap, llms.txt y metadata dinámica.
+// Solo expone perfiles activos y publicados.
+app.get('/api/v1/public/discovery/profiles', async (c) => {
+  const rows = await c.env.DB.prepare(
+    `SELECT
+       slug,
+       name,
+       bio,
+       avatar_url,
+       template_data,
+       updated_at
+     FROM profiles
+     WHERE is_active = 1
+       AND is_published = 1
+       AND slug IS NOT NULL
+       AND trim(slug) <> ''
+     ORDER BY lower(slug) ASC`
+  ).all()
+
+  const canonicalOrigin = (
+    (c.env as any).API_URL ||
+    'https://intaprd.com'
+  ).replace(/\/+$/, '')
+
+  const toAssetUrl = (
+    value: unknown
+  ): string | null => {
+    if (
+      typeof value !== 'string' ||
+      !value.trim()
+    ) {
+      return null
+    }
+
+    const raw = value.trim()
+
+    if (
+      raw.startsWith('https://') ||
+      raw.startsWith('http://')
+    ) {
+      return raw
+    }
+
+    const encodedKey = raw
+      .replace(/^\/+/, '')
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/')
+
+    return (
+      `${canonicalOrigin}` +
+      `/api/v1/public/assets/${encodedKey}`
+    )
+  }
+
+  const parseTemplateData = (
+    value: unknown
+  ): Record<string, unknown> => {
+    if (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value)
+    ) {
+      return value as Record<string, unknown>
+    }
+
+    if (typeof value !== 'string') {
+      return {}
+    }
+
+    try {
+      const parsed = JSON.parse(value)
+
+      return (
+        parsed &&
+        typeof parsed === 'object' &&
+        !Array.isArray(parsed)
+      )
+        ? parsed as Record<string, unknown>
+        : {}
+    } catch {
+      return {}
+    }
+  }
+
+  const templateText = (
+    data: Record<string, unknown>,
+    ...keys: string[]
+  ): string => {
+    for (const key of keys) {
+      const value = data[key]
+
+      if (
+        typeof value === 'string' &&
+        value.trim()
+      ) {
+        return value
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+    }
+
+    return ''
+  }
+
+  const data = (
+    rows.results as Record<string, unknown>[]
+  )
+    .map((row) => {
+      const slug =
+        typeof row.slug === 'string'
+          ? row.slug.trim().toLowerCase()
+          : ''
+
+      if (
+        !slug ||
+        slug.includes('/')
+      ) {
+        return null
+      }
+
+      const templateData =
+        parseTemplateData(
+          row.template_data
+        )
+
+      const name =
+        typeof row.name === 'string' &&
+        row.name.trim()
+          ? row.name.trim()
+          : slug
+
+      const bio =
+        (
+          typeof row.bio === 'string'
+            ? row.bio.trim()
+            : ''
+        ) ||
+        templateText(
+          templateData,
+          'shortDescription',
+          'companyHeadline',
+          'companyAbout'
+        ) ||
+        `Perfil de ${name} en INTAP LINK`
+
+      return {
+        slug,
+        name,
+        bio,
+        avatarUrl:
+          toAssetUrl(row.avatar_url),
+        category:
+          templateText(
+            templateData,
+            'category',
+            'businessCategory'
+          ) || null,
+        subcategory:
+          templateText(
+            templateData,
+            'subcategory',
+            'businessSubcategory'
+          ) || null,
+        updatedAt:
+          typeof row.updated_at === 'string'
+            ? row.updated_at
+            : null,
+      }
+    })
+    .filter(Boolean)
+
+  return c.json({
+    ok: true,
+    data,
+  })
+})
+
 // ─── Perfil Público ───────────────────────────────────────────────────────
 
 app.get('/api/v1/public/profiles/:slug', async (c) => {
@@ -1942,7 +3318,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, is_published, name, bio, avatar_url, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
+    'SELECT id, slug, plan_id, theme_id, layout_id, free_palette_id, free_brand_color, hero_url, hero_position_x, hero_position_y, hero_zoom, is_published, name, bio, avatar_url, category, subcategory, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -1951,10 +3327,10 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   // Allow owner to preview unpublished profiles
   if (!(profile as any).is_published) {
-    let isOwner = false
-    if (isPreview) {
+    let isOwner = isPreview && isPreviewEnvironment(c.env)
+    if (isPreview && !isOwner) {
       try {
-        const rawSession = parseCookie(c.req.header('Cookie') || '', 'session_id')
+        const rawSession = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).session)
         if (rawSession) {
           const sessionHash = await sha256Hex(rawSession)
           const session = await c.env.DB.prepare(
@@ -1979,7 +3355,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .bind((profile as any).id)
       .all(),
     c.env.DB.prepare(
-      'SELECT image_key FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC'
+      'SELECT id, image_key, alt_text, title, description, sort_order FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC'
     )
       .bind((profile as any).id)
       .all(),
@@ -2022,9 +3398,24 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isDemoKey = (key: string) =>
     key.startsWith('demo/') || key === 'profile_debug' || key.startsWith('profile_debug')
 
-  const gallery = (rawGallery.results as { image_key: string }[])
+  const gallery = (rawGallery.results as {
+    id: string
+    image_key: string
+    alt_text?: string | null
+    title?: string | null
+    description?: string | null
+    sort_order?: number
+  }[])
     .filter((g) => g.image_key && !isDemoKey(g.image_key))
-    .map((g) => ({ image_key: g.image_key, image_url: toAssetUrl(g.image_key) }))
+    .map((g) => ({
+      id: g.id,
+      image_key: g.image_key,
+      image_url: toAssetUrl(g.image_key),
+      alt_text: g.alt_text ?? null,
+      title: g.title ?? null,
+      description: g.description ?? null,
+      sort_order: Number(g.sort_order ?? 0),
+    }))
 
   const products = rawProducts.results as {
     id: string
@@ -2058,8 +3449,18 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       blocksOrder,
       name: (profile as any).name,
       bio: (profile as any).bio,
+      category: (profile as any).category ?? null,
+      subcategory: (profile as any).subcategory ?? null,
       avatarUrl: toAssetUrl((profile as any).avatar_url || ''),
       whatsapp_number: (profile as any).whatsapp_number ?? null,
+      layout_id: (profile as any).layout_id ?? 'esencial',
+      layoutId: (profile as any).layout_id ?? 'esencial',
+      freePaletteId: (profile as any).free_palette_id ?? 'intap',
+      freeBrandColor: (profile as any).free_brand_color ?? null,
+      heroUrl: toAssetUrl((profile as any).hero_url || ''),
+      heroPositionX: Number((profile as any).hero_position_x ?? 50),
+      heroPositionY: Number((profile as any).hero_position_y ?? 50),
+      heroZoom: Number((profile as any).hero_zoom ?? 1),
       templateId: (profile as any).template_id ?? null,
       templateData: (() => { try { return JSON.parse((profile as any).template_data || '{}') } catch { return {} } })(),
       social_links: rawSocialLinks.results,

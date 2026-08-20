@@ -34,9 +34,6 @@ export async function sendMagicLinkEmail(
   link: string,
 ): Promise<void> {
   const resend = new Resend(env.RESEND_API_KEY)
-  // RESEND_FROM debe apuntar a un dominio verificado en Resend (ej: noreply@intaprd.com).
-  // Mientras el dominio no esté verificado, usar 'onboarding@resend.dev' solo entrega
-  // al email del propietario de la cuenta de Resend (restricción del plan free).
   const from = env.RESEND_FROM || 'onboarding@resend.dev'
 
   await resend.emails.send({
@@ -55,6 +52,32 @@ export async function sendMagicLinkEmail(
           Si no solicitaste este acceso, ignora este correo.<br>
           Enlace: <a href="${link}" style="color:#888;">${link}</a>
         </p>
+      </div>
+    `,
+  })
+}
+
+export async function sendSupportResponseEmail(
+  env: { RESEND_API_KEY: string; RESEND_FROM?: string },
+  to: string,
+  payload: { reference: string; subject: string; response: string; appUrl?: string },
+): Promise<void> {
+  const resend = new Resend(env.RESEND_API_KEY)
+  const from = env.RESEND_FROM || 'onboarding@resend.dev'
+  const appUrl = payload.appUrl || 'https://app.intaprd.com/admin/free'
+
+  await resend.emails.send({
+    from,
+    to,
+    subject: `Respuesta de Soporte Kawvo · ${payload.reference}`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#0f172a;">
+        <p style="font-size:12px;font-weight:800;letter-spacing:.12em;color:#0891b2;text-transform:uppercase;">Soporte Kawvo</p>
+        <h2 style="margin:8px 0 0;">Tenemos una respuesta para ti</h2>
+        <p style="color:#64748b;font-size:14px;">${payload.subject} · ${payload.reference}</p>
+        <div style="margin-top:20px;padding:18px;border:1px solid #dbeafe;border-radius:16px;background:#f8fafc;line-height:1.65;white-space:pre-wrap;">${payload.response.replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char] || char))}</div>
+        <a href="${appUrl}" style="display:inline-block;margin-top:20px;padding:12px 18px;border-radius:12px;background:#0f172a;color:#fff;text-decoration:none;font-weight:800;">Ver mi soporte</a>
+        <p style="margin-top:22px;color:#94a3b8;font-size:12px;">Este mensaje corresponde a una solicitud creada desde tu perfil Kawvo Link.</p>
       </div>
     `,
   })

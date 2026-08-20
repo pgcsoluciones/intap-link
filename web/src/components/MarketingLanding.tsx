@@ -61,6 +61,8 @@ const faqs = [
 ]
 
 export default function MarketingLanding() {
+  const appUrl = (import.meta.env.VITE_APP_URL || 'https://app.intaprd.com').replace(/\/$/, '')
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -84,7 +86,7 @@ export default function MarketingLanding() {
         <a href="/" className="brand">INTAP LINK</a>
         <div className="nav-ctas">
           <a href="#como-funciona" className="ghost-btn">Cómo funciona</a>
-          <a href="https://app.intaprd.com/admin/login" className="primary-btn">Empezar gratis</a>
+          <a href={`${appUrl}/admin/login`} className="primary-btn">Empezar gratis</a>
         </div>
       </header>
 
@@ -99,7 +101,7 @@ export default function MarketingLanding() {
             </p>
 
             <div className="hero-actions">
-              <a href="https://app.intaprd.com/admin/login" className="primary-btn">Crear mi INTAP LINK</a>
+              <a href={`${appUrl}/admin/login`} className="primary-btn">Crear mi INTAP LINK</a>
               <a href="#diferencia" className="ghost-btn">Ver diferencia real</a>
             </div>
 
@@ -214,7 +216,7 @@ export default function MarketingLanding() {
                 <li><Icon name="check" /> Bloques esenciales</li>
                 <li><Icon name="check" /> Enlace único para tus canales</li>
               </ul>
-              <a href="https://app.intaprd.com/admin/login" className="ghost-btn">Comenzar gratis</a>
+              <a href={`${appUrl}/admin/login`} className="ghost-btn">Comenzar gratis</a>
             </article>
             <article className="price-card premium featured">
               <p className="tag">7 días premium</p>
@@ -224,7 +226,7 @@ export default function MarketingLanding() {
                 <li><Icon name="spark" /> Presentación comercial más completa</li>
                 <li><Icon name="spark" /> Prueba real antes de decidir</li>
               </ul>
-              <a href="https://app.intaprd.com/admin/login" className="primary-btn">Activar prueba premium</a>
+              <a href={`${appUrl}/admin/login`} className="primary-btn">Activar prueba premium</a>
             </article>
           </div>
         </section>
@@ -292,7 +294,7 @@ export default function MarketingLanding() {
               <h2>Haz que tu enlace se vea al nivel real de tu trabajo.</h2>
               <p>Empieza gratis hoy y activa 7 días premium para comparar el impacto en tu presentación y en tus contactos.</p>
               <div className="hero-actions">
-                <a href="https://app.intaprd.com/admin/login" className="primary-btn">Crear mi INTAP LINK</a>
+                <a href={`${appUrl}/admin/login`} className="primary-btn">Crear mi INTAP LINK</a>
                 <a href="#demo" className="ghost-btn">Ver hero otra vez</a>
               </div>
             </div>

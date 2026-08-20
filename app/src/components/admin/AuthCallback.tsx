@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { API_BASE } from '../../lib/api'
+import { API_BASE, apiGet } from '../../lib/api'
+
+const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+
+function readScanCode(): string {
+  const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
+  const code = value.trim().toUpperCase()
+  return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
+}
 
 export default function AuthCallback() {
   const navigate = useNavigate()
@@ -14,41 +22,65 @@ export default function AuthCallback() {
       return
     }
 
-    fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}`, {
-      credentials: 'include',
-    })
+    fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}`, { credentials: 'include' })
       .then((res) => res.json())
-      .then((json: any) => {
-        if (json.ok) {
-          navigate('/admin', { replace: true })
-        } else {
+      .then(async (json: any) => {
+        if (!json.ok) {
           setError(json.error || 'Enlace inválido o expirado')
+          return
         }
+
+        const authMode = sessionStorage.getItem('kawvo_auth_mode') || localStorage.getItem('kawvo_auth_mode') || 'login'
+        sessionStorage.removeItem('kawvo_auth_mode')
+        localStorage.removeItem('kawvo_auth_mode')
+
+        // Scan-to-claim is a standalone flow. If this authentication began from
+        // a physical product, return to that product route and let that screen
+        // create/resume the secure server intent. Do not enter legacy onboarding.
+        const scanCode = readScanCode()
+        if (scanCode) {
+          navigate(`/activate-product/${encodeURIComponent(scanCode)}?resume=1`, { replace: true })
+          return
+        }
+
+        // Non-scan logins keep their established account behavior.
+        const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
+        if (pendingPublicCode) {
+          navigate('/admin/artifacts/activate', { replace: true })
+          return
+        }
+
+        const intent: any = await apiGet('/me/artifacts/activation/intent').catch(() => ({ ok: false }))
+        if (intent.ok) {
+          navigate('/admin/artifacts/activate', { replace: true })
+          return
+        }
+
+        navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true })
       })
       .catch(() => setError('Error de conexión. Inténtalo de nuevo.'))
   }, [navigate, searchParams])
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter']">
-        <div className="w-full max-w-sm text-center">
-          <div className="text-5xl mb-4">❌</div>
-          <h1 className="text-xl font-black mb-2">Enlace inválido</h1>
-          <p className="text-sm text-slate-400 mb-6">{error}</p>
-          <a
-            href="/admin/login"
-            className="inline-block bg-gradient-to-r from-intap-blue to-purple-600 text-white font-bold py-2.5 px-6 rounded-xl text-sm"
-          >
-            Solicitar nuevo enlace
-          </a>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center">
-      <div className="loading-spinner" />
-    </div>
+    <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
+        <div className="w-full rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+          {error ? (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-rose-500">KAWVO LINK</p>
+              <h1 className="mt-3 text-xl font-black">No pudimos abrir este enlace</h1>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{error}</p>
+              <a href="/admin/login" className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">Solicitar nuevo acceso</a>
+            </>
+          ) : (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
+              <h1 className="mt-3 text-xl font-black">Validando tu acceso…</h1>
+              <p className="mt-2 text-sm text-slate-500">Un momento, estamos retomando tu proceso.</p>
+            </>
+          )}
+        </div>
+      </section>
+    </main>
   )
 }

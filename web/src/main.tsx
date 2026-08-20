@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import FreePreviewEditShortcut from './components/free-profile/FreePreviewEditShortcut'
 import './index.css'
 
 // ✅ Redirección ultra-temprana (antes de que React se monte)
@@ -24,5 +25,6 @@ import './index.css'
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
+    <FreePreviewEditShortcut />
   </React.StrictMode>
 )

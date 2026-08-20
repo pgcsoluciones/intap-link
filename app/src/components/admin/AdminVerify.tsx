@@ -5,31 +5,19 @@ export default function AdminCheckEmail() {
   const email = sessionStorage.getItem('magic_link_email') || ''
 
   return (
-    <div className="min-h-screen bg-intap-dark flex items-center justify-center px-4 font-['Inter']">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-4">📬</div>
-          <h1 className="text-2xl font-black mb-2">Revisa tu correo</h1>
-          <p className="text-sm text-slate-400">
-            Enviamos un enlace de acceso a{' '}
-            <span className="text-white font-bold">{email || 'tu correo'}</span>
-          </p>
+    <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
+        <div className="text-center">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">INTAP LINK</p>
+          <div className="mt-5 text-4xl">✉️</div>
+          <h1 className="mt-4 text-[28px] font-black tracking-[-0.04em]">Revisa tu correo</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Enviamos un enlace de acceso a <span className="font-extrabold text-slate-900">{email || 'tu correo'}</span>.</p>
         </div>
-
-        <div className="glass-card p-6 flex flex-col gap-4 text-center">
-          <p className="text-xs text-slate-400 leading-relaxed">
-            El enlace expira en <strong className="text-white">10 minutos</strong> y solo puede
-            usarse una vez. Revisa también tu carpeta de spam.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/admin/login')}
-            className="text-xs text-slate-500 hover:text-white transition-colors"
-          >
-            Volver e ingresar otro correo
-          </button>
+        <div className="mt-7 rounded-[28px] border border-slate-200 bg-white p-6 text-center shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+          <p className="text-xs leading-5 text-slate-500">El enlace expira en <strong className="text-slate-900">10 minutos</strong> y solo puede usarse una vez. Revisa también tu carpeta de spam.</p>
+          <button type="button" onClick={() => navigate('/admin/login')} className="mt-5 text-xs font-black text-cyan-700">Volver e ingresar otro correo</button>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }
