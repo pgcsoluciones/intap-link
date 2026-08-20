@@ -4,6 +4,7 @@ import SuperAdminGuard from './components/admin/SuperAdminGuard'
 import AdminLogin from './components/admin/AdminLogin'
 import AdminVerify from './components/admin/AdminVerify'
 import AuthCallback from './components/admin/AuthCallback'
+import ScanActivationEntry from './components/admin/ScanActivationEntry'
 import AdminDashboard from './components/admin/AdminDashboard'
 import AdminLinks from './components/admin/AdminLinks'
 import AdminFAQs from './components/admin/AdminFAQs'
@@ -67,6 +68,7 @@ function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/check-email" element={<AdminVerify />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/activate-product/:publicCode" element={<ScanActivationEntry />} />
         <Route path="/activate" element={<ArtifactActivation />} />
 
         <Route path="/admin/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingSlug /></AdminGuard>} />
