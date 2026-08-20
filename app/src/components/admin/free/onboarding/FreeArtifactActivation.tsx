@@ -146,13 +146,17 @@ export default function FreeArtifactActivation() {
         <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
           <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-            <h1 className="mt-3 text-[28px] font-black leading-tight tracking-[-0.04em]">Tu producto está listo</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-500">Lo reconocimos automáticamente. Confirma para conectarlo a tu cuenta y comenzar a editar tu Perfil Digital.</p>
+            <h1 className="mt-3 text-[28px] font-black leading-tight tracking-[-0.04em]">Producto confirmado</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500">Kawvo encontró y validó automáticamente los datos de activación asociados a este artículo. No necesitas escribir ningún código.</p>
 
             <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-              <p className="text-sm font-black text-emerald-800">✓ Producto verificado</p>
-              <p className="mt-1 text-base font-extrabold text-slate-900">{product?.label || PRODUCT_LABELS[product?.product_type] || PRODUCT_LABELS.other}</p>
-              <p className="mt-2 text-xs text-slate-500">Cuenta: {me?.email || product?.email}</p>
+              <p className="text-base font-extrabold text-slate-900">{product?.label || PRODUCT_LABELS[product?.product_type] || PRODUCT_LABELS.other}</p>
+              <div className="mt-3 space-y-2 text-sm font-bold text-emerald-800">
+                <p>✓ Producto confirmado</p>
+                <p>✓ Código de compra verificado</p>
+                <p>✓ Código de activación verificado</p>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">Cuenta: {me?.email || product?.email}</p>
             </div>
 
             <form onSubmit={activate}>
@@ -162,7 +166,7 @@ export default function FreeArtifactActivation() {
               </button>
             </form>
 
-            <p className="mt-4 text-center text-xs leading-5 text-slate-400">No necesitas escribir códigos. Kawvo valida el producto y conserva el comprobante de activación de forma interna.</p>
+            <p className="mt-4 text-center text-xs leading-5 text-slate-400">Al confirmar, Kawvo vinculará este producto a tu cuenta, conservará el comprobante interno y abrirá tu Perfil Digital para comenzar a editarlo.</p>
           </div>
         </section>
       </main>
