@@ -3,12 +3,19 @@ import { Link, useNavigate } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../../lib/api'
 
 const PENDING_PUBLIC_CODE = 'intap_activation_public_code'
+const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 
 type ActivationMode = 'scan' | 'legacy'
 
 const PRODUCT_LABELS: Record<string, string> = {
   card: 'Tarjeta NFC', ping: 'Ping NFC', bracelet: 'Pulsera NFC',
   keychain: 'Llavero NFC', stand: 'Estación de Contacto', qr: 'Código QR', other: 'Producto Kawvo',
+}
+
+function readScanCode(): string {
+  const raw = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
+  const code = raw.trim().toUpperCase()
+  return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
 }
 
 export default function FreeArtifactActivation() {
@@ -25,10 +32,22 @@ export default function FreeArtifactActivation() {
     let active = true
 
     const prepare = async () => {
-      // Primary flow: the permanent product URL already created a server-side
-      // activation intent. No customer code entry is required.
-      const scanPending: any = await apiGet('/me/artifacts/scan/pending')
+      let scanPending: any = await apiGet('/me/artifacts/scan/pending')
         .catch(() => ({ ok: false }))
+
+      // Recover the modern scan flow before considering any legacy route.
+      // The public code is continuity data, not the activation secret.
+      if (!scanPending.ok) {
+        const scanCode = readScanCode()
+        if (scanCode) {
+          const start: any = await apiPost('/public/artifacts/scan/start', { public_code: scanCode })
+            .catch(() => ({ ok: false }))
+          if (start.ok) {
+            scanPending = await apiGet('/me/artifacts/scan/pending')
+              .catch(() => ({ ok: false }))
+          }
+        }
+      }
 
       if (!active) return
 
@@ -40,10 +59,11 @@ export default function FreeArtifactActivation() {
         return
       }
 
-      // Legacy/manual fallback remains available for old packaging and support.
+      // Legacy/manual fallback remains available only for old packaging/support.
       const pendingCode = sessionStorage.getItem(PENDING_PUBLIC_CODE)
       if (!pendingCode) {
-        navigate('/admin/free/onboarding/welcome', { replace: true })
+        setError('No encontramos una activación pendiente para esta cuenta.')
+        setLoading(false)
         return
       }
 
@@ -95,8 +115,11 @@ export default function FreeArtifactActivation() {
         return
       }
 
+      const activatedCode = result.data?.public_code || product?.public_code || ''
       sessionStorage.removeItem(PENDING_PUBLIC_CODE)
-      sessionStorage.setItem('kawvo_free_artifact_activated', result.data?.public_code || product?.public_code || '')
+      sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      sessionStorage.setItem('kawvo_free_artifact_activated', activatedCode)
       navigate('/admin/free', { replace: true })
       return
     }
@@ -133,7 +156,7 @@ export default function FreeArtifactActivation() {
         <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
           <div className="w-full rounded-[28px] border border-slate-200 bg-white p-6">
             <p className="text-lg font-black">{error}</p>
-            <Link to="/admin/free/onboarding/welcome" className="mt-4 inline-flex font-black text-cyan-700">Volver a activación</Link>
+            <Link to="/admin/login" className="mt-4 inline-flex font-black text-cyan-700">Volver al acceso</Link>
           </div>
         </section>
       </main>
