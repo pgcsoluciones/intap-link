@@ -225,10 +225,13 @@ export default function KawvoLinkDemo() {
   const [hero, setHero] = useState(DEFAULT_PRESET.hero)
   const [uploadedPortrait, setUploadedPortrait] = useState<string | null>(null)
   const [serviceUploads, setServiceUploads] = useState<Record<string, string>>({})
+  const [portfolioUploads, setPortfolioUploads] = useState<Record<string, string>>({})
   const [currentSector, setCurrentSector] = useState<DemoSectorKey | null>(null)
   const [shareStatus, setShareStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const fileRef = useRef<HTMLInputElement>(null)
   const serviceFileRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const portfolioFileRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const portfolioAddRef = useRef<HTMLInputElement>(null)
   const sessionKeyRef = useRef<string>('')
   const completionTrackedRef = useRef(false)
   const fromTokenRef = useRef<string | null>(null)
@@ -275,11 +278,17 @@ export default function KawvoLinkDemo() {
     setForm((current) => ({ ...current, services: current.services.map((service, currentIndex) => currentIndex === index ? { ...service, [key]: value } : service) }))
   }
 
+  function updatePortfolio(index: number, key: 'title' | 'description', value: string) {
+    setForm((current) => ({ ...current, portfolio: current.portfolio.map((item, currentIndex) => currentIndex === index ? { ...item, [key]: value } : item) }))
+  }
+
   function clearTemporaryImages() {
     if (uploadedPortrait) URL.revokeObjectURL(uploadedPortrait)
     Object.values(serviceUploads).forEach((url) => URL.revokeObjectURL(url))
+    Object.values(portfolioUploads).forEach((url) => URL.revokeObjectURL(url))
     setUploadedPortrait(null)
     setServiceUploads({})
+    setPortfolioUploads({})
   }
 
   function applyPreset(key: DemoSectorKey) {
@@ -316,6 +325,46 @@ export default function KawvoLinkDemo() {
     const url = URL.createObjectURL(file)
     setServiceUploads((current) => ({ ...current, [serviceId]: url }))
     setForm((current) => ({ ...current, services: current.services.map((service) => service.id === serviceId ? { ...service, image: url } : service) }))
+  }
+
+  function choosePortfolioPhoto(itemId: string, file?: File) {
+    if (!file || !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) return
+    const previousUrl = portfolioUploads[itemId]
+    if (previousUrl) URL.revokeObjectURL(previousUrl)
+    const url = URL.createObjectURL(file)
+    setPortfolioUploads((current) => ({ ...current, [itemId]: url }))
+    setForm((current) => ({ ...current, portfolio: current.portfolio.map((item) => item.id === itemId ? { ...item, image: url } : item) }))
+  }
+
+  function addPortfolioPhoto(file?: File) {
+    if (!file || !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024 || form.portfolio.length >= 5) return
+    const id = `demo-portfolio-${crypto.randomUUID()}`
+    const url = URL.createObjectURL(file)
+    setPortfolioUploads((current) => ({ ...current, [id]: url }))
+    setForm((current) => ({
+      ...current,
+      portfolio: [
+        ...current.portfolio,
+        {
+          id,
+          title: `Trabajo ${current.portfolio.length + 1}`,
+          description: 'Ejemplo visual de trabajos, proyectos o productos.',
+          image: url,
+        },
+      ],
+    }))
+    if (portfolioAddRef.current) portfolioAddRef.current.value = ''
+  }
+
+  function removePortfolioItem(itemId: string) {
+    const uploaded = portfolioUploads[itemId]
+    if (uploaded) URL.revokeObjectURL(uploaded)
+    setPortfolioUploads((current) => {
+      const next = { ...current }
+      delete next[itemId]
+      return next
+    })
+    setForm((current) => ({ ...current, portfolio: current.portfolio.filter((item) => item.id !== itemId) }))
   }
 
   function resetDemo() {
@@ -387,6 +436,14 @@ export default function KawvoLinkDemo() {
         if (!uploadUrl) continue
         const blob = await fetch(uploadUrl).then((response) => response.blob())
         body.set(`service_${index}`, blob, `service-${index}`)
+      }
+
+      for (let index = 0; index < form.portfolio.length; index += 1) {
+        const item = form.portfolio[index]
+        const uploadUrl = portfolioUploads[item.id]
+        if (!uploadUrl) continue
+        const blob = await fetch(uploadUrl).then((response) => response.blob())
+        body.set(`portfolio_${index}`, blob, `portfolio-${index}`)
       }
 
       const response = await fetch('/api/v1/public/demo/share', { method: 'POST', body })
@@ -553,6 +610,31 @@ export default function KawvoLinkDemo() {
                 </button>
               ))}
             </div>
+          </fieldset>
+
+          <fieldset>
+            <div className="kawvo-demo-services-head">
+              <legend>Galería / Mis trabajos</legend>
+              <button type="button" disabled={form.portfolio.length >= 5} onClick={() => portfolioAddRef.current?.click()}>+ Agregar</button>
+              <input ref={portfolioAddRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => addPortfolioPhoto(event.target.files?.[0])} />
+            </div>
+            <div className="kawvo-demo-services-list">
+              {form.portfolio.map((item, index) => (
+                <article key={item.id}>
+                  <div className="kawvo-demo-service-top">
+                    <strong>Trabajo {index + 1} · {form.portfolio.length}/5</strong>
+                    <button type="button" onClick={() => removePortfolioItem(item.id)}>Eliminar</button>
+                  </div>
+                  <div className="kawvo-demo-photo-row">
+                    {item.image && <img src={item.image} alt={`Imagen de ${item.title}`} />}
+                    <button type="button" onClick={() => portfolioFileRefs.current[item.id]?.click()}>Cambiar imagen</button>
+                    <input ref={(node) => { portfolioFileRefs.current[item.id] = node }} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => choosePortfolioPhoto(item.id, event.target.files?.[0])} />
+                  </div>
+                  <input aria-label={`Título trabajo ${index + 1}`} maxLength={60} value={item.title || ''} onChange={(event) => updatePortfolio(index, 'title', event.target.value)} />
+                </article>
+              ))}
+            </div>
+            <small style={{ color: '#64748b', fontSize: 12 }}>Puedes mostrar hasta 5 trabajos. Cambia, elimina o agrega imágenes y verás el resultado al instante.</small>
           </fieldset>
 
           <fieldset>
