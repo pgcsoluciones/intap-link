@@ -16,20 +16,34 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    apiGet('/me').then((json: any) => {
+    setReady(false)
+
+    apiGet('/me').then(async (json: any) => {
       if (!json.ok) {
         navigate('/admin/login', { replace: true })
         return
       }
 
-      if (requireProfile && !json.data?.profile_id) {
-        navigate('/admin/free/onboarding/welcome', { replace: true })
-        return
+      // Server-side scan activation has priority over every onboarding route.
+      // This also rescues users who land on an old /free/onboarding/* URL after
+      // authentication while a valid scan-to-claim intent is still pending.
+      if (location.pathname !== '/admin/artifacts/activate') {
+        const scanPending: any = await apiGet('/me/artifacts/scan/pending')
+          .catch(() => ({ ok: false }))
+        if (scanPending.ok) {
+          navigate('/admin/artifacts/activate?scan=1', { replace: true })
+          return
+        }
       }
 
       const pendingActivation = sessionStorage.getItem('intap_activation_public_code')
       if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate') {
         navigate('/admin/artifacts/activate', { replace: true })
+        return
+      }
+
+      if (requireProfile && !json.data?.profile_id) {
+        navigate('/admin/free/onboarding/welcome', { replace: true })
         return
       }
 
