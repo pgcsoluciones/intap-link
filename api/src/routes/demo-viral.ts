@@ -63,6 +63,15 @@ async function insertEvent(c: any, input: {
   ).run()
 }
 
+function portfolioKeysFromPayload(row: any): Array<string | null> {
+  try {
+    const parsed = JSON.parse(String(row?.payload_json || '{}'))
+    return Array.isArray(parsed?.__portfolio_image_keys) ? parsed.__portfolio_image_keys : []
+  } catch {
+    return []
+  }
+}
+
 async function deleteSnapshotAssets(c: any, row: any) {
   const keys: string[] = []
   if (row?.portrait_key) keys.push(String(row.portrait_key))
@@ -72,6 +81,7 @@ async function deleteSnapshotAssets(c: any, row: any) {
       if (Array.isArray(parsed)) parsed.forEach((key) => { if (key) keys.push(String(key)) })
     } catch { /* ignore malformed legacy value */ }
   }
+  portfolioKeysFromPayload(row).forEach((key) => { if (key) keys.push(String(key)) })
   await Promise.all(keys.map((key) => c.env.BUCKET.delete(key).catch(() => undefined)))
 }
 
@@ -130,6 +140,7 @@ export function registerDemoViralRoutes(app: any) {
 
     let portraitKey: string | null = null
     const serviceKeys: Array<string | null> = [null, null, null]
+    const portfolioKeys: Array<string | null> = [null, null, null, null, null]
 
     const putImage = async (field: string, suffix: string): Promise<string | null> => {
       const value = form.get(field)
@@ -145,14 +156,19 @@ export function registerDemoViralRoutes(app: any) {
       for (let index = 0; index < serviceKeys.length; index += 1) {
         serviceKeys[index] = await putImage(`service_${index}`, `service-${index}`)
       }
+      for (let index = 0; index < portfolioKeys.length; index += 1) {
+        portfolioKeys[index] = await putImage(`portfolio_${index}`, `portfolio-${index}`)
+      }
     } catch (error) {
       await Promise.all([
         portraitKey ? c.env.BUCKET.delete(portraitKey) : Promise.resolve(),
         ...serviceKeys.filter(Boolean).map((key) => c.env.BUCKET.delete(String(key))),
+        ...portfolioKeys.filter(Boolean).map((key) => c.env.BUCKET.delete(String(key))),
       ])
       return c.json({ ok: false, error: error instanceof Error && error.message === 'INVALID_IMAGE' ? 'Imagen inválida o demasiado grande' : 'No se pudo guardar la vista previa' }, 400)
     }
 
+    payload.__portfolio_image_keys = portfolioKeys
     const expiresAt = new Date(Date.now() + SHARE_TTL_HOURS * 60 * 60 * 1000).toISOString()
 
     await c.env.DB.prepare(
@@ -227,6 +243,9 @@ export function registerDemoViralRoutes(app: any) {
       serviceKeys = Array.isArray(parsed) ? parsed : []
     } catch { serviceKeys = [] }
 
+    const portfolioKeys = Array.isArray(payload?.__portfolio_image_keys) ? payload.__portfolio_image_keys : []
+    delete payload.__portfolio_image_keys
+
     const assetBase = `${webOrigin(c)}/api/v1/public/demo/share/${token}/asset`
     return c.json({
       ok: true,
@@ -237,6 +256,7 @@ export function registerDemoViralRoutes(app: any) {
       assets: {
         portrait: (row as any).portrait_key ? `${assetBase}/portrait` : null,
         services: serviceKeys.map((key, index) => key ? `${assetBase}/service-${index}` : null),
+        portfolio: portfolioKeys.map((key: string | null, index: number) => key ? `${assetBase}/portfolio-${index}` : null),
       },
     })
   })
@@ -248,7 +268,7 @@ export function registerDemoViralRoutes(app: any) {
 
     const tokenHash = await sha256Hex(token)
     const row = await c.env.DB.prepare(
-      `SELECT id, portrait_key, service_image_keys_json, expires_at
+      `SELECT id, payload_json, portrait_key, service_image_keys_json, expires_at
          FROM demo_share_snapshots
         WHERE token_hash = ? LIMIT 1`
     ).bind(tokenHash).first()
@@ -262,6 +282,11 @@ export function registerDemoViralRoutes(app: any) {
         const parsed = JSON.parse(String((row as any).service_image_keys_json || '[]'))
         if (Array.isArray(parsed)) key = parsed[index] || null
       } catch { key = null }
+    }
+    if (/^portfolio-[0-4]$/.test(kind)) {
+      const index = Number(kind.split('-')[1])
+      const parsed = portfolioKeysFromPayload(row)
+      key = parsed[index] || null
     }
     if (!key) return c.body(null, 404)
 
@@ -342,7 +367,7 @@ export function registerDemoViralRoutes(app: any) {
 
   app.post('/api/v1/superadmin/demo/cleanup', requireSuperAdmin('support'), async (c: any) => {
     const expired = await c.env.DB.prepare(
-      `SELECT id, portrait_key, service_image_keys_json
+      `SELECT id, payload_json, portrait_key, service_image_keys_json
          FROM demo_share_snapshots
         WHERE expires_at <= datetime('now')
         LIMIT 200`
