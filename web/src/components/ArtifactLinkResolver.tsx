@@ -68,31 +68,15 @@ export default function ArtifactLinkResolver() {
     return () => { active = false }
   }, [code])
 
-  const activateNow = async () => {
+  const activateNow = () => {
     if (!code || starting) return
     setStarting(true)
     setMessage('')
 
-    try {
-      const response = await fetch(`${appOrigin()}/api/v1/public/artifacts/scan/start`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ public_code: code }),
-      })
-      const json: any = await response.json().catch(() => ({ ok: false }))
-
-      if (!response.ok || !json?.ok || !json?.next_url) {
-        setMessage(json?.error || 'No pudimos iniciar la activación.')
-        setStarting(false)
-        return
-      }
-
-      window.location.assign(String(json.next_url))
-    } catch {
-      setMessage('No pudimos iniciar la activación. Intenta nuevamente.')
-      setStarting(false)
-    }
+    // The public site only confirms the customer's intention. The actual
+    // one-time activation intent is created from the APP origin, after this
+    // handoff, so no security-critical cookie has to cross subdomains.
+    window.location.assign(`${appOrigin()}/activate-product/${encodeURIComponent(code)}`)
   }
 
   const cardStyle: React.CSSProperties = {
@@ -151,7 +135,7 @@ export default function ArtifactLinkResolver() {
             </div>
             <p style={{ margin: '0 0 18px', lineHeight: 1.6, color: '#475569' }}>¿Deseas activarlo ahora?</p>
             <button type="button" onClick={activateNow} disabled={starting} style={{ ...primaryButton, opacity: starting ? .6 : 1 }}>
-              {starting ? 'Preparando activación…' : 'Activarlo ahora'}
+              {starting ? 'Continuando…' : 'Activarlo ahora'}
             </button>
             <button type="button" onClick={() => setState('later')} style={secondaryButton}>Lo haré más tarde</button>
             {message && <p style={{ margin: '14px 0 0', color: '#be123c', lineHeight: 1.5 }}>{message}</p>}
