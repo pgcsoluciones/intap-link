@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../lib/api'
 
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 
-type Phase = 'loading' | 'pending' | 'later' | 'verified' | 'activated' | 'blocked' | 'error'
+type Phase = 'loading' | 'verified' | 'activated' | 'blocked' | 'error'
 
 type ProductInfo = {
   public_code?: string
@@ -15,7 +15,6 @@ type ProductInfo = {
 
 export default function ScanActivationEntry() {
   const { publicCode = '' } = useParams()
-  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
   const code = useMemo(() => publicCode.trim().toUpperCase(), [publicCode])
@@ -27,7 +26,6 @@ export default function ScanActivationEntry() {
   const [busy, setBusy] = useState(false)
 
   const validCode = /^[A-Z2-9]{8,24}$/.test(code)
-  const shouldResume = searchParams.get('resume') === '1'
 
   const rememberCode = () => {
     sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, code)
@@ -119,41 +117,26 @@ export default function ScanActivationEntry() {
         return
       }
 
+      // The public /l/:code screen already asked “¿Deseas activarlo ahora?”.
+      // Do not repeat that decision in the APP. From this point the APP only
+      // authenticates (when needed), prepares the one-time intent and shows
+      // the final verification/confirmation screen.
       const me: any = await apiGet('/me').catch(() => ({ ok: false }))
       if (!active) return
 
-      if (me.ok) setAccountEmail(String(me.data?.email || ''))
-
-      if (shouldResume && me.ok) {
-        await startOrResume()
+      if (!me.ok) {
+        navigate(`/admin/login?activation=scan&public_code=${encodeURIComponent(code)}`, { replace: true })
         return
       }
 
-      setPhase('pending')
+      setAccountEmail(String(me.data?.email || ''))
+      await startOrResume()
     }
 
     void inspect()
     return () => { active = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [code, shouldResume, validCode])
-
-  const activateNow = async () => {
-    if (!validCode || busy) return
-    rememberCode()
-    setBusy(true)
-    setMessage('')
-
-    const me: any = await apiGet('/me').catch(() => ({ ok: false }))
-    setBusy(false)
-
-    if (!me.ok) {
-      navigate(`/admin/login?activation=scan&public_code=${encodeURIComponent(code)}`, { replace: false })
-      return
-    }
-
-    setAccountEmail(String(me.data?.email || ''))
-    await startOrResume()
-  }
+  }, [code, validCode, navigate])
 
   const confirmActivation = async () => {
     if (busy) return
@@ -187,34 +170,8 @@ export default function ScanActivationEntry() {
           {phase === 'loading' && (
             <div className="py-8 text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-cyan-500" />
-              <h1 className="mt-4 text-xl font-black">Reconociendo tu producto…</h1>
-              <p className="mt-2 text-sm text-slate-500">Estamos comprobando su estado.</p>
-            </div>
-          )}
-
-          {phase === 'pending' && (
-            <>
-              <div className="mx-auto mt-4 grid h-12 w-12 place-items-center rounded-full bg-cyan-50 text-xl font-black text-cyan-700">✓</div>
-              <h1 className="mt-4 text-center text-[28px] font-black leading-tight">Bienvenido a Kawvo Link</h1>
-              <p className="mt-3 text-center text-sm leading-6 text-slate-500">Encontramos tu {product?.label || 'producto Kawvo'}.</p>
-              <div className="mt-5 rounded-2xl bg-slate-50 p-4">
-                <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-400">Estado</p>
-                <p className="mt-1 text-base font-black">Pendiente de activar</p>
-              </div>
-              <p className="mt-5 text-center text-sm text-slate-600">¿Deseas activarlo ahora?</p>
-              <button type="button" onClick={activateNow} disabled={busy} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-40">
-                {busy ? 'Comprobando…' : 'Activarlo ahora'}
-              </button>
-              <button type="button" onClick={() => setPhase('later')} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-extrabold text-slate-700">Lo haré más tarde</button>
-            </>
-          )}
-
-          {phase === 'later' && (
-            <div className="py-4 text-center">
-              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-600">✓</div>
-              <h1 className="mt-4 text-2xl font-black">Puedes activarlo cuando quieras</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-500">Tu producto sigue pendiente y disponible. Vuelve a escanear su QR o NFC cuando estés listo.</p>
-              <button type="button" onClick={() => setPhase('pending')} className="mt-5 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-extrabold text-slate-700">Volver</button>
+              <h1 className="mt-4 text-xl font-black">Preparando tu activación…</h1>
+              <p className="mt-2 text-sm text-slate-500">Estamos verificando de forma segura tu producto y tu cuenta.</p>
             </div>
           )}
 
