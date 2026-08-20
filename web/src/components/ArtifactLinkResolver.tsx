@@ -2,9 +2,19 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 function appOrigin() {
+  // Canonical public hosts must always hand off to the admin APP host.
+  // Resolve them at runtime before considering build-time env values so a
+  // local/CI env override can never keep /activate-product on the public site.
+  const host = window.location.hostname.toLowerCase()
+  if (host === 'preview.intaprd.com') return 'https://app.preview.intaprd.com'
+  if (host === 'intaprd.com' || host === 'www.intaprd.com' || host === 'link.intaprd.com') {
+    return 'https://app.intaprd.com'
+  }
+
   const configured = String(import.meta.env.VITE_APP_URL || '').replace(/\/$/, '')
   if (configured) return configured
-  return window.location.hostname.includes('preview')
+
+  return host.includes('preview')
     ? 'https://app.preview.intaprd.com'
     : 'https://app.intaprd.com'
 }
@@ -73,9 +83,7 @@ export default function ArtifactLinkResolver() {
     setStarting(true)
     setMessage('')
 
-    // The public site only confirms the customer's intention. The actual
-    // one-time activation intent is created from the APP origin, after this
-    // handoff, so no security-critical cookie has to cross subdomains.
+    // Public site only confirms intention. Handoff must be an absolute APP URL.
     window.location.assign(`${appOrigin()}/activate-product/${encodeURIComponent(code)}`)
   }
 
