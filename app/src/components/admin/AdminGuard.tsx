@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { apiGet } from '../../lib/api'
+import { apiGet, apiPost } from '../../lib/api'
 
 interface Props {
   children: React.ReactNode
@@ -8,6 +8,14 @@ interface Props {
   requireProfile?: boolean
   /** Keep Gratis and paid editors separated. */
   planScope?: 'free' | 'paid'
+}
+
+const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+
+function readScanCode(): string {
+  const raw = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
+  const code = raw.trim().toUpperCase()
+  return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
 }
 
 export default function AdminGuard({ children, requireProfile = true, planScope }: Props) {
@@ -24,12 +32,26 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         return
       }
 
-      // Server-side scan activation has priority over every onboarding route.
-      // This also rescues users who land on an old /free/onboarding/* URL after
-      // authentication while a valid scan-to-claim intent is still pending.
       if (location.pathname !== '/admin/artifacts/activate') {
-        const scanPending: any = await apiGet('/me/artifacts/scan/pending')
+        // First resume an existing one-time scan intent.
+        let scanPending: any = await apiGet('/me/artifacts/scan/pending')
           .catch(() => ({ ok: false }))
+
+        // If transient intent continuity was lost but this browser still knows
+        // which permanent product was scanned, recreate the intent from the APP
+        // origin before any legacy onboarding redirect can run.
+        if (!scanPending.ok) {
+          const scanCode = readScanCode()
+          if (scanCode) {
+            const start: any = await apiPost('/public/artifacts/scan/start', { public_code: scanCode })
+              .catch(() => ({ ok: false }))
+            if (start.ok) {
+              scanPending = await apiGet('/me/artifacts/scan/pending')
+                .catch(() => ({ ok: false }))
+            }
+          }
+        }
+
         if (scanPending.ok) {
           navigate('/admin/artifacts/activate?scan=1', { replace: true })
           return
