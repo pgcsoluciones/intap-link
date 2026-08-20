@@ -3,6 +3,7 @@ import './preview-support-tickets'
 import './preview-exit-feedback'
 import './free-profile-preview'
 import './free-feedback'
+import './scan-status'
 import './scan-to-claim'
 import app from './preview-free-actions'
 
