@@ -261,7 +261,7 @@ ${seoHeadHtml}
       url: metadata.canonicalUrl || url.toString(),
       image: metadata.image,
       siteName: 'Kawvo Link',
-      imageType: metadata.image.toLowerCase().includes('.webp') ? 'image/webp' : 'image/jpeg',
+      imageType: metadata.image.toLowerCase().includes('.webp') ? 'image/webp' : metadata.image.toLowerCase().includes('.png') ? 'image/png' : 'image/jpeg',
       ogType: 'website',
       twitterCard: 'summary_large_image',
       language: 'es-DO',
@@ -286,7 +286,7 @@ ${seoHeadHtml}
     return injectSimpleSocialCard({
       title: 'Crea tu Perfil Digital con Kawvo Link',
       description: 'Muestra lo que haces, comparte tus servicios y destaca tu negocio con un perfil digital moderno, editable y listo para compartir por QR, NFC o enlace.',
-      image: `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`,
+      image: `${url.origin}/assets/og/kawvo-link-og.png`,
       canonicalUrl: `${url.origin}/`,
     });
   }
@@ -296,7 +296,7 @@ ${seoHeadHtml}
     return injectSimpleSocialCard({
       title: 'Prueba gratis cómo se vería tu Perfil Digital | Kawvo Link',
       description: 'Elige tu actividad, personaliza tu información y mira en segundos cómo se vería tu perfil digital. Sin registro, sin descarga y sin compromiso.',
-      image: `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`,
+      image: `${url.origin}/assets/og/kawvo-link-og.png`,
       canonicalUrl: `${url.origin}/demo`,
     });
   }
@@ -320,7 +320,7 @@ ${seoHeadHtml}
         const hero = String(profile?.hero || '').trim();
         const image = portraitAsset
           || (hero.startsWith('http') ? hero : hero.startsWith('/') ? `${url.origin}${hero}` : '')
-          || `${url.origin}/assets/landing/nuevo-perfil-novi.jpg`;
+          || `${url.origin}/assets/og/kawvo-link-og.png`;
         return injectSimpleSocialCard({
           title: `Así se vería el Perfil Digital de ${name} | Kawvo Link`,
           description: role
