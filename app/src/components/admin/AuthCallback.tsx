@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { API_BASE, apiGet, apiPost } from '../../lib/api'
+import { API_BASE, apiGet } from '../../lib/api'
 
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 
@@ -34,30 +34,16 @@ export default function AuthCallback() {
         sessionStorage.removeItem('kawvo_auth_mode')
         localStorage.removeItem('kawvo_auth_mode')
 
-        // 1) If a valid scan intent already exists, resume it.
-        const pending: any = await apiGet('/me/artifacts/scan/pending').catch(() => ({ ok: false }))
-        if (pending.ok) {
-          navigate('/admin/artifacts/activate?scan=1', { replace: true })
-          return
-        }
-
-        // 2) Deterministic recovery: the scanned public code is continuity data,
-        // not an activation secret. Recreate the one-time server intent now that
-        // authentication is complete, from the APP origin itself.
+        // Scan-to-claim is a standalone flow. If this authentication began from
+        // a physical product, return to that product route and let that screen
+        // create/resume the secure server intent. Do not enter legacy onboarding.
         const scanCode = readScanCode()
         if (scanCode) {
-          const start: any = await apiPost('/public/artifacts/scan/start', { public_code: scanCode })
-            .catch(() => ({ ok: false, error: 'No pudimos preparar la activación.' }))
-          if (start.ok) {
-            navigate('/admin/artifacts/activate?scan=1', { replace: true })
-            return
-          }
-          setError(start.error || 'No pudimos reanudar la activación de tu producto.')
+          navigate(`/activate-product/${encodeURIComponent(scanCode)}?resume=1`, { replace: true })
           return
         }
 
-        // Legacy/manual compatibility only when this login did not originate
-        // from the permanent product scan flow.
+        // Non-scan logins keep their established account behavior.
         const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
         if (pendingPublicCode) {
           navigate('/admin/artifacts/activate', { replace: true })
@@ -90,7 +76,7 @@ export default function AuthCallback() {
             <>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
               <h1 className="mt-3 text-xl font-black">Validando tu acceso…</h1>
-              <p className="mt-2 text-sm text-slate-500">Un momento, estamos retomando la activación de tu producto.</p>
+              <p className="mt-2 text-sm text-slate-500">Un momento, estamos retomando tu proceso.</p>
             </>
           )}
         </div>
