@@ -357,6 +357,7 @@ export default function KawvoLinkDemo() {
   }
 
   function removePortfolioItem(itemId: string) {
+    if (form.portfolio.length <= 3) return
     const uploaded = portfolioUploads[itemId]
     if (uploaded) URL.revokeObjectURL(uploaded)
     setPortfolioUploads((current) => {
@@ -623,7 +624,7 @@ export default function KawvoLinkDemo() {
                 <article key={item.id}>
                   <div className="kawvo-demo-service-top">
                     <strong>Trabajo {index + 1} · {form.portfolio.length}/5</strong>
-                    <button type="button" onClick={() => removePortfolioItem(item.id)}>Eliminar</button>
+                    <button type="button" disabled={form.portfolio.length <= 3} onClick={() => removePortfolioItem(item.id)}>Eliminar</button>
                   </div>
                   <div className="kawvo-demo-photo-row">
                     {item.image && <img src={item.image} alt={`Imagen de ${item.title}`} />}
@@ -634,7 +635,7 @@ export default function KawvoLinkDemo() {
                 </article>
               ))}
             </div>
-            <small style={{ color: '#64748b', fontSize: 12 }}>Puedes mostrar hasta 5 trabajos. Cambia, elimina o agrega imágenes y verás el resultado al instante.</small>
+            <small style={{ color: '#64748b', fontSize: 12 }}>Tu galería debe tener entre 3 y 5 trabajos. Cambia las imágenes o los títulos y verás el resultado al instante.</small>
           </fieldset>
 
           <fieldset>
