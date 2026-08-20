@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { API_BASE, apiGet } from '../../lib/api'
 
+const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+
+function readScanCode(): string {
+  const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
+  const code = value.trim().toUpperCase()
+  return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
+}
+
 export default function AuthCallback() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -16,15 +24,9 @@ export default function AuthCallback() {
 
     fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}`, { credentials: 'include' })
       .then((res) => res.json())
-      .then((json: any) => {
+      .then(async (json: any) => {
         if (!json.ok) {
           setError(json.error || 'Enlace inválido o expirado')
-          return
-        }
-
-        const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
-        if (pendingPublicCode) {
-          navigate('/admin/artifacts/activate', { replace: true })
           return
         }
 
@@ -32,15 +34,29 @@ export default function AuthCallback() {
         sessionStorage.removeItem('kawvo_auth_mode')
         localStorage.removeItem('kawvo_auth_mode')
 
-        apiGet('/me/artifacts/activation/intent')
-          .then((intent: any) => {
-            if (intent.ok) {
-              navigate('/admin/artifacts/activate', { replace: true })
-              return
-            }
-            navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true })
-          })
-          .catch(() => navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true }))
+        // Scan-to-claim is a standalone flow. If this authentication began from
+        // a physical product, return to that product route and let that screen
+        // create/resume the secure server intent. Do not enter legacy onboarding.
+        const scanCode = readScanCode()
+        if (scanCode) {
+          navigate(`/activate-product/${encodeURIComponent(scanCode)}?resume=1`, { replace: true })
+          return
+        }
+
+        // Non-scan logins keep their established account behavior.
+        const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
+        if (pendingPublicCode) {
+          navigate('/admin/artifacts/activate', { replace: true })
+          return
+        }
+
+        const intent: any = await apiGet('/me/artifacts/activation/intent').catch(() => ({ ok: false }))
+        if (intent.ok) {
+          navigate('/admin/artifacts/activate', { replace: true })
+          return
+        }
+
+        navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true })
       })
       .catch(() => setError('Error de conexión. Inténtalo de nuevo.'))
   }, [navigate, searchParams])
@@ -60,7 +76,7 @@ export default function AuthCallback() {
             <>
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
               <h1 className="mt-3 text-xl font-black">Validando tu acceso…</h1>
-              <p className="mt-2 text-sm text-slate-500">Un momento, estamos abriendo tu cuenta.</p>
+              <p className="mt-2 text-sm text-slate-500">Un momento, estamos retomando tu proceso.</p>
             </>
           )}
         </div>

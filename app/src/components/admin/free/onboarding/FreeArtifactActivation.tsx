@@ -3,14 +3,24 @@ import { Link, useNavigate } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../../lib/api'
 
 const PENDING_PUBLIC_CODE = 'intap_activation_public_code'
+const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+
+type ActivationMode = 'scan' | 'legacy'
 
 const PRODUCT_LABELS: Record<string, string> = {
-  card: 'Tarjeta NFC', ping: 'Ping NFC', bracelet: 'Brazalete NFC',
-  keychain: 'Llavero NFC', stand: 'Stand NFC', qr: 'Código QR', other: 'Producto Kawvo',
+  card: 'Tarjeta NFC', ping: 'Ping NFC', bracelet: 'Pulsera NFC',
+  keychain: 'Llavero NFC', stand: 'Estación de Contacto', qr: 'Código QR', other: 'Producto Kawvo',
+}
+
+function readScanCode(): string {
+  const raw = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
+  const code = raw.trim().toUpperCase()
+  return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
 }
 
 export default function FreeArtifactActivation() {
   const navigate = useNavigate()
+  const [mode, setMode] = useState<ActivationMode>('scan')
   const [me, setMe] = useState<any>(null)
   const [product, setProduct] = useState<any>(null)
   const [secret, setSecret] = useState('')
@@ -19,38 +29,105 @@ export default function FreeArtifactActivation() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const pendingCode = sessionStorage.getItem(PENDING_PUBLIC_CODE)
-    if (!pendingCode) {
-      navigate('/admin/free/onboarding/welcome', { replace: true })
-      return
+    let active = true
+
+    const prepare = async () => {
+      let scanPending: any = await apiGet('/me/artifacts/scan/pending')
+        .catch(() => ({ ok: false }))
+
+      // Recover the modern scan flow before considering any legacy route.
+      // The public code is continuity data, not the activation secret.
+      if (!scanPending.ok) {
+        const scanCode = readScanCode()
+        if (scanCode) {
+          const start: any = await apiPost('/public/artifacts/scan/start', { public_code: scanCode })
+            .catch(() => ({ ok: false }))
+          if (start.ok) {
+            scanPending = await apiGet('/me/artifacts/scan/pending')
+              .catch(() => ({ ok: false }))
+          }
+        }
+      }
+
+      if (!active) return
+
+      if (scanPending.ok) {
+        setMode('scan')
+        setMe({ email: scanPending.data?.email })
+        setProduct(scanPending.data)
+        setLoading(false)
+        return
+      }
+
+      // Legacy/manual fallback remains available only for old packaging/support.
+      const pendingCode = sessionStorage.getItem(PENDING_PUBLIC_CODE)
+      if (!pendingCode) {
+        setError('No encontramos una activación pendiente para esta cuenta.')
+        setLoading(false)
+        return
+      }
+
+      const [meResult, productResult]: any[] = await Promise.all([
+        apiGet('/me').catch(() => ({ ok: false })),
+        apiPost('/public/artifacts/identify', { public_code: pendingCode })
+          .catch(() => ({ ok: false, error: 'Este producto ya no está disponible.' })),
+      ])
+
+      if (!active) return
+      if (!meResult.ok) {
+        navigate('/admin/login', { replace: true })
+        return
+      }
+      if (!productResult.ok) {
+        setError(productResult.error || 'Este producto ya no está disponible.')
+        setLoading(false)
+        return
+      }
+      if (!meResult.data?.profile_id) {
+        navigate('/admin/free/onboarding/bootstrap', { replace: true })
+        return
+      }
+
+      setMode('legacy')
+      setMe(meResult.data)
+      setProduct(productResult.data)
+      setLoading(false)
     }
 
-    Promise.all([apiGet('/me'), apiPost('/public/artifacts/identify', { public_code: pendingCode })])
-      .then(([meResult, productResult]: any[]) => {
-        if (!meResult.ok) {
-          navigate('/admin/login', { replace: true })
-          return
-        }
-        if (!productResult.ok) {
-          setError(productResult.error || 'Este producto ya no está disponible.')
-          return
-        }
-        if (!meResult.data?.profile_id) {
-          navigate('/admin/free/onboarding/bootstrap', { replace: true })
-          return
-        }
-        setMe(meResult.data)
-        setProduct(productResult.data)
-      })
-      .catch(() => setError('No se pudo preparar la activación.'))
-      .finally(() => setLoading(false))
+    void prepare()
+    return () => { active = false }
   }, [navigate])
 
   const activate = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!me?.profile_id || !product?.public_code || !secret.trim() || saving) return
+    if (saving) return
+
     setSaving(true)
     setError('')
+
+    if (mode === 'scan') {
+      const result: any = await apiPost('/me/artifacts/scan/confirm', {})
+        .catch(() => ({ ok: false, error: 'No se pudo completar la activación.' }))
+
+      setSaving(false)
+      if (!result.ok) {
+        setError(result.error || 'No se pudo completar la activación.')
+        return
+      }
+
+      const activatedCode = result.data?.public_code || product?.public_code || ''
+      sessionStorage.removeItem(PENDING_PUBLIC_CODE)
+      sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      sessionStorage.setItem('kawvo_free_artifact_activated', activatedCode)
+      navigate('/admin/free', { replace: true })
+      return
+    }
+
+    if (!me?.profile_id || !product?.public_code || !secret.trim()) {
+      setSaving(false)
+      return
+    }
 
     const result: any = await apiPost('/me/artifacts/activate-direct', {
       public_code: product.public_code,
@@ -79,7 +156,40 @@ export default function FreeArtifactActivation() {
         <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col items-center justify-center text-center">
           <div className="w-full rounded-[28px] border border-slate-200 bg-white p-6">
             <p className="text-lg font-black">{error}</p>
-            <Link to="/activate" className="mt-4 inline-flex font-black text-cyan-700">Volver a revisar mi código de compra</Link>
+            <Link to="/admin/login" className="mt-4 inline-flex font-black text-cyan-700">Volver al acceso</Link>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (mode === 'scan') {
+    return (
+      <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
+        <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
+          <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
+            <h1 className="mt-3 text-[28px] font-black leading-tight tracking-[-0.04em]">Producto confirmado</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500">Kawvo encontró y validó automáticamente los datos de activación asociados a este artículo. No necesitas escribir ningún código.</p>
+
+            <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <p className="text-base font-extrabold text-slate-900">{product?.label || PRODUCT_LABELS[product?.product_type] || PRODUCT_LABELS.other}</p>
+              <div className="mt-3 space-y-2 text-sm font-bold text-emerald-800">
+                <p>✓ Producto confirmado</p>
+                <p>✓ Código de compra verificado</p>
+                <p>✓ Código de activación verificado</p>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">Cuenta: {me?.email || product?.email}</p>
+            </div>
+
+            <form onSubmit={activate}>
+              {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-xs font-semibold leading-5 text-rose-700">{error}</p>}
+              <button disabled={saving} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-40">
+                {saving ? 'Activando…' : 'Confirmar y empezar'}
+              </button>
+            </form>
+
+            <p className="mt-4 text-center text-xs leading-5 text-slate-400">Al confirmar, Kawvo vinculará este producto a tu cuenta, conservará el comprobante interno y abrirá tu Perfil Digital para comenzar a editarlo.</p>
           </div>
         </section>
       </main>
@@ -90,9 +200,9 @@ export default function FreeArtifactActivation() {
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK · antes INTAP</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK · activación manual</p>
           <h1 className="mt-2 text-2xl font-black">Confirma tu artículo</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Ya encontramos tu producto con el código de compra. Ahora escribe el código de activación para vincularlo a tu cuenta.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Este es el método de respaldo para productos anteriores. Introduce el código de activación.</p>
 
           <div className="mt-4 rounded-2xl bg-cyan-50 p-4">
             <p className="text-sm font-black">{PRODUCT_LABELS[product?.product_type] || PRODUCT_LABELS.other}</p>
