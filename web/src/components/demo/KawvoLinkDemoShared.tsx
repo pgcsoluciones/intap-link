@@ -20,6 +20,7 @@ type SharedResponse = {
   assets?: {
     portrait?: string | null
     services?: Array<string | null>
+    portfolio?: Array<string | null>
   }
   error?: string
   expired?: boolean
@@ -68,10 +69,15 @@ export default function KawvoLinkDemoShared() {
       ...service,
       image: data?.assets?.services?.[index] || service.image,
     }))
+    const portfolio = (base.portfolio || []).map((item, index) => ({
+      ...item,
+      image: data?.assets?.portfolio?.[index] || item.image,
+    }))
     return {
       ...base,
       portrait: data?.assets?.portrait || base.portrait,
       services,
+      portfolio,
     }
   }, [data])
 
