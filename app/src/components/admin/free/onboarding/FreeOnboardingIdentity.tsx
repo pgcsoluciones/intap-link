@@ -5,22 +5,28 @@ import ImageCropModal from '../../ImageCropModal'
 import { FreeBackButton, FreeUpgradeCard } from '../FreePanelUi'
 
 const ABOUT_TITLES = ['Sobre mí', 'Quién soy', 'Conóceme'] as const
+type LayoutId = 'impacto' | 'personal' | 'esencial'
+type CropTarget = 'avatar' | 'hero'
 
 export default function FreeOnboardingIdentity() {
   const navigate = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
+  const heroFileRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [bio, setBio] = useState('')
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({})
   const [aboutTitle, setAboutTitle] = useState<(typeof ABOUT_TITLES)[number]>('Sobre mí')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [heroUrl, setHeroUrl] = useState('')
+  const [layoutId, setLayoutId] = useState<LayoutId>('esencial')
   const [profileId, setProfileId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropTarget, setCropTarget] = useState<CropTarget>('avatar')
 
   useEffect(() => {
     apiGet('/me').then((json: any) => {
@@ -34,6 +40,8 @@ export default function FreeOnboardingIdentity() {
       const saved = String(currentTemplateData.about_section_title || 'Sobre mí') as (typeof ABOUT_TITLES)[number]
       setAboutTitle(ABOUT_TITLES.includes(saved) ? saved : 'Sobre mí')
       setAvatarUrl(d.avatar_url || '')
+      setHeroUrl(d.hero_url || currentTemplateData.hero_url || '')
+      if (d.layout_id === 'impacto' || d.layout_id === 'personal' || d.layout_id === 'esencial') setLayoutId(d.layout_id)
       setProfileId(d.profile_id || null)
     }).finally(() => setLoading(false))
   }, [])
@@ -42,6 +50,15 @@ export default function FreeOnboardingIdentity() {
     const file = event.target.files?.[0]
     if (!file || !profileId) return
     if (fileRef.current) fileRef.current.value = ''
+    setCropTarget('avatar')
+    setCropFile(file)
+  }
+
+  const chooseHero = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !profileId) return
+    if (heroFileRef.current) heroFileRef.current.value = ''
+    setCropTarget('hero')
     setCropFile(file)
   }
 
@@ -57,6 +74,42 @@ export default function FreeOnboardingIdentity() {
       else setError(result.error || 'No pudimos subir la foto.')
     } catch {
       setError('No pudimos subir la foto.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const uploadHero = async (blob: Blob) => {
+    setCropFile(null)
+    setUploading(true)
+    setError('')
+    try {
+      // El uploader de perfil ya optimiza y almacena imágenes del propietario.
+      // Guardamos el nuevo asset como hero y restauramos la foto de perfil en la misma actualización.
+      const form = new FormData()
+      form.append('file', blob, 'hero.jpg')
+      const uploadResult: any = await apiUpload('/me/profile/avatar', form)
+      if (!uploadResult.ok || !uploadResult.avatar_url) {
+        setError(uploadResult.error || 'No pudimos subir la imagen de portada.')
+        return
+      }
+
+      const uploadedHeroUrl = String(uploadResult.avatar_url)
+      const saveResult: any = await apiPut('/me/profile', {
+        avatar_url: avatarUrl,
+        hero_url: uploadedHeroUrl,
+      })
+
+      if (!saveResult.ok) {
+        await apiPut('/me/profile', { avatar_url: avatarUrl }).catch(() => undefined)
+        setError(saveResult.error || 'No pudimos guardar la imagen de portada.')
+        return
+      }
+
+      setHeroUrl(uploadedHeroUrl)
+    } catch {
+      await apiPut('/me/profile', { avatar_url: avatarUrl }).catch(() => undefined)
+      setError('No pudimos subir la imagen de portada.')
     } finally {
       setUploading(false)
     }
@@ -78,6 +131,7 @@ export default function FreeOnboardingIdentity() {
         template_data: { ...templateData, role: role.trim(), about_section_title: aboutTitle, free_identity_confirmed: true },
       }
       if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
+      if (layoutId === 'impacto' && heroUrl.trim()) body.hero_url = heroUrl.trim()
       const result: any = await apiPut('/me/profile', body)
       if (result.ok) navigate('/admin/free/onboarding/contact')
       else setError(result.error || 'No pudimos guardar tus datos.')
@@ -92,7 +146,15 @@ export default function FreeOnboardingIdentity() {
 
   return (
     <>
-      {cropFile && <ImageCropModal file={cropFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setCropFile(null)} />}
+      {cropFile && (
+        <ImageCropModal
+          file={cropFile}
+          aspectRatio={cropTarget === 'hero' ? 16 / 9 : 1}
+          outputWidth={cropTarget === 'hero' ? 1200 : 400}
+          onSave={cropTarget === 'hero' ? uploadHero : uploadAvatar}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
       <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950 sm:px-5">
         <section className="mx-auto w-full max-w-[430px] py-1">
           <FreeBackButton onClick={() => navigate('/admin/free')} />
@@ -108,10 +170,27 @@ export default function FreeOnboardingIdentity() {
               <div className="h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100">{avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-3xl text-slate-400">👤</div>}</div>
               <div className="flex-1">
                 <p className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">Foto de perfil</p>
-                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading || !profileId} className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40">{uploading ? 'Subiendo…' : 'Subir foto'}</button>
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading || !profileId} className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40">{uploading && cropTarget === 'avatar' ? 'Subiendo…' : avatarUrl ? 'Cambiar foto' : 'Subir foto'}</button>
                 <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={chooseAvatar} />
               </div>
             </div>
+
+            {layoutId === 'impacto' && (
+              <div className="mt-6 border-t border-slate-100 pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">Imagen de portada / Hero</p>
+                    <p className="mt-1 text-xs font-medium leading-5 text-slate-500">Esta imagen aparece detrás de tu identidad en la plantilla Impacto.</p>
+                  </div>
+                  <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase text-cyan-700">Impacto</span>
+                </div>
+                <div className="mt-3 aspect-video overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                  {heroUrl ? <img src={heroUrl} alt="Vista previa de portada" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm font-bold text-slate-400">Agrega una imagen de portada para completar el diseño Impacto.</div>}
+                </div>
+                <button type="button" onClick={() => heroFileRef.current?.click()} disabled={uploading || !profileId} className="mt-3 w-full rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-sm font-black text-cyan-700 hover:bg-cyan-100 disabled:opacity-40">{uploading && cropTarget === 'hero' ? 'Subiendo portada…' : heroUrl ? 'Cambiar imagen de portada' : 'Subir imagen de portada'}</button>
+                <input ref={heroFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={chooseHero} />
+              </div>
+            )}
 
             <div className="mt-6 space-y-4">
               <label className="block"><span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">Nombre o marca</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Tu nombre o marca" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold text-slate-900 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" /></label>
@@ -125,7 +204,7 @@ export default function FreeOnboardingIdentity() {
             </div>
 
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700">{error}</p>}
-            <button type="submit" disabled={saving} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : 'Continuar'}</button>
+            <button type="submit" disabled={saving || uploading} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : 'Continuar'}</button>
           </form>
           <div className="mt-5"><FreeUpgradeCard compact /></div>
         </section>
