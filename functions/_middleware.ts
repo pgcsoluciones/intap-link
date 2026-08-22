@@ -19,10 +19,29 @@ export async function onRequest(context: {
     const headers = new Headers(response.headers);
     const requestUrl = new URL(context.request.url);
     const isPreviewHost = requestUrl.hostname === 'preview.intaprd.com';
+    const isProductionHost =
+      requestUrl.hostname === 'intaprd.com' ||
+      requestUrl.hostname === 'www.intaprd.com';
+
+    const isEmbeddedProfile =
+      requestUrl.searchParams.get('embed') === '1' &&
+      requestUrl.searchParams.get('preview') === '1';
 
     headers.set('X-Content-Type-Options', 'nosniff');
 
-    if (isPreviewHost) {
+    if (isEmbeddedProfile && isProductionHost) {
+      headers.delete('X-Frame-Options');
+      headers.set(
+        'Content-Security-Policy',
+        'frame-ancestors https://app.intaprd.com'
+      );
+    } else if (isEmbeddedProfile && isPreviewHost) {
+      headers.delete('X-Frame-Options');
+      headers.set(
+        'Content-Security-Policy',
+        'frame-ancestors https://app.preview.intaprd.com'
+      );
+    } else if (isPreviewHost) {
       headers.delete('X-Frame-Options');
       headers.set(
         'Content-Security-Policy',
