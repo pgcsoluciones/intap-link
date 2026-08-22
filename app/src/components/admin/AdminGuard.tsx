@@ -18,6 +18,11 @@ function readScanCode(): string {
   return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
 }
 
+function clearScanCode() {
+  sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+  localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+}
+
 export default function AdminGuard({ children, requireProfile = true, planScope }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -33,28 +38,35 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       }
 
       if (location.pathname !== '/admin/artifacts/activate') {
-        // First resume an existing one-time scan intent.
-        let scanPending: any = await apiGet('/me/artifacts/scan/pending')
-          .catch(() => ({ ok: false }))
+        // Scan-to-claim continuity only needs to run when this browser actually
+        // remembers a scanned product. Avoid probing /scan/pending on every
+        // normal panel reload: a 404 is the expected "nothing pending" state
+        // and was delaying the guard while showing the dark loading screen.
+        const scanCode = readScanCode()
+        if (scanCode) {
+          let scanPending: any = await apiGet('/me/artifacts/scan/pending')
+            .catch(() => ({ ok: false }))
 
-        // If transient intent continuity was lost but this browser still knows
-        // which permanent product was scanned, recreate the intent from the APP
-        // origin before any legacy onboarding redirect can run.
-        if (!scanPending.ok) {
-          const scanCode = readScanCode()
-          if (scanCode) {
+          if (!scanPending.ok) {
             const start: any = await apiPost('/public/artifacts/scan/start', { public_code: scanCode })
               .catch(() => ({ ok: false }))
-            if (start.ok) {
+
+            if (start.ok && start.state === 'ready') {
               scanPending = await apiGet('/me/artifacts/scan/pending')
                 .catch(() => ({ ok: false }))
+            } else if (start.ok && start.state === 'activated') {
+              clearScanCode()
+            } else if (!start.ok) {
+              // A stale/invalid remembered code must not penalize every future
+              // reload. Visiting /l/:code again will recreate continuity.
+              clearScanCode()
             }
           }
-        }
 
-        if (scanPending.ok) {
-          navigate('/admin/artifacts/activate?scan=1', { replace: true })
-          return
+          if (scanPending.ok && scanPending.data?.public_code) {
+            navigate('/admin/artifacts/activate?scan=1', { replace: true })
+            return
+          }
         }
       }
 
@@ -87,7 +99,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-intap-dark flex items-center justify-center">
+      <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center">
         <div className="loading-spinner" />
       </div>
     )
