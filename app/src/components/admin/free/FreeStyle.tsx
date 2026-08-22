@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { API_BASE, apiGet, apiPatch, apiPut } from '../../../lib/api'
+import { apiGet, apiPatch, apiPut } from '../../../lib/api'
 import { FreeBackButton, FreeUpgradeCard } from './FreePanelUi'
 
 type LayoutId = 'impacto' | 'personal' | 'esencial'
@@ -53,7 +53,10 @@ export default function FreeStyle() {
   const [previewVersion, setPreviewVersion] = useState(1)
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
-  const previewUrl = useMemo(() => slug ? `${API_BASE}/me/free/profile-preview/${encodeURIComponent(slug)}?v=${previewVersion}` : '', [slug, previewVersion])
+  const previewUrl = useMemo(
+    () => slug ? `${webUrl}/${encodeURIComponent(slug)}?preview=1&embed=1&v=${previewVersion}` : '',
+    [slug, previewVersion, webUrl],
+  )
   const refreshPreview = () => setPreviewVersion((current) => current + 1)
 
   useEffect(() => {
