@@ -63,7 +63,9 @@ function isAllowedOrigin(origin: string): boolean {
         u.hostname === 'intaprd.com' ||
         u.hostname.endsWith('.intaprd.com') ||
         u.hostname === 'intap-link.pages.dev' ||
-        u.hostname.endsWith('.intap-link.pages.dev')
+        u.hostname.endsWith('.intap-link.pages.dev') ||
+        u.hostname === 'intap-web2.pages.dev' ||
+        u.hostname.endsWith('.intap-web2.pages.dev')
       )
     )
   } catch { return false }
