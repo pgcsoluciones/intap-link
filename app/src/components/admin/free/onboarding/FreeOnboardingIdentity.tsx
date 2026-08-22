@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPut, apiUpload } from '../../../../lib/api'
+import { apiGet, apiPatch, apiPut, apiUpload } from '../../../../lib/api'
 import ImageCropModal from '../../ImageCropModal'
 import { FreeBackButton, FreeUpgradeCard } from '../FreePanelUi'
 
@@ -19,11 +19,14 @@ export default function FreeOnboardingIdentity() {
   const [aboutTitle, setAboutTitle] = useState<(typeof ABOUT_TITLES)[number]>('Sobre mí')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [heroUrl, setHeroUrl] = useState('')
+  const [pendingHeroBlob, setPendingHeroBlob] = useState<Blob | null>(null)
+  const [pendingHeroPreview, setPendingHeroPreview] = useState('')
   const [layoutId, setLayoutId] = useState<LayoutId>('esencial')
   const [profileId, setProfileId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [heroSaved, setHeroSaved] = useState(false)
   const [error, setError] = useState('')
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropTarget, setCropTarget] = useState<CropTarget>('avatar')
@@ -46,6 +49,10 @@ export default function FreeOnboardingIdentity() {
     }).finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => () => {
+    if (pendingHeroPreview) URL.revokeObjectURL(pendingHeroPreview)
+  }, [pendingHeroPreview])
+
   const chooseAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file || !profileId) return
@@ -58,6 +65,7 @@ export default function FreeOnboardingIdentity() {
     const file = event.target.files?.[0]
     if (!file || !profileId) return
     if (heroFileRef.current) heroFileRef.current.value = ''
+    setHeroSaved(false)
     setCropTarget('hero')
     setCropFile(file)
   }
@@ -79,15 +87,28 @@ export default function FreeOnboardingIdentity() {
     }
   }
 
-  const uploadHero = async (blob: Blob) => {
+  const prepareHero = async (blob: Blob) => {
     setCropFile(null)
+    setError('')
+    setHeroSaved(false)
+    setPendingHeroBlob(blob)
+    setPendingHeroPreview((current) => {
+      if (current) URL.revokeObjectURL(current)
+      return URL.createObjectURL(blob)
+    })
+  }
+
+  const saveHero = async () => {
+    if (!pendingHeroBlob || !profileId || uploading) return
     setUploading(true)
     setError('')
+    setHeroSaved(false)
     try {
-      // El uploader de perfil ya optimiza y almacena imágenes del propietario.
-      // Guardamos el nuevo asset como hero y restauramos la foto de perfil en la misma actualización.
       const form = new FormData()
-      form.append('file', blob, 'hero.jpg')
+      form.append('file', pendingHeroBlob, 'hero.jpg')
+
+      // Reutilizamos el uploader propietario para almacenar el asset y, acto seguido,
+      // guardamos la URL en el endpoint de apariencia, que es el que persiste hero_url.
       const uploadResult: any = await apiUpload('/me/profile/avatar', form)
       if (!uploadResult.ok || !uploadResult.avatar_url) {
         setError(uploadResult.error || 'No pudimos subir la imagen de portada.')
@@ -95,21 +116,35 @@ export default function FreeOnboardingIdentity() {
       }
 
       const uploadedHeroUrl = String(uploadResult.avatar_url)
-      const saveResult: any = await apiPut('/me/profile', {
-        avatar_url: avatarUrl,
+      const heroResult: any = await apiPatch('/me/profile/free-appearance', {
         hero_url: uploadedHeroUrl,
       })
 
-      if (!saveResult.ok) {
-        await apiPut('/me/profile', { avatar_url: avatarUrl }).catch(() => undefined)
-        setError(saveResult.error || 'No pudimos guardar la imagen de portada.')
+      // El uploader anterior actualiza temporalmente avatar_url. Lo restauramos para
+      // mantener foto de perfil y portada como imágenes completamente independientes.
+      const restoreAvatarResult: any = await apiPut('/me/profile', {
+        avatar_url: avatarUrl,
+      })
+
+      if (!heroResult.ok) {
+        setError(heroResult.error || 'No pudimos guardar la imagen de portada.')
+        return
+      }
+      if (!restoreAvatarResult.ok) {
+        setError(restoreAvatarResult.error || 'La portada se guardó, pero no pudimos restaurar la foto de perfil.')
         return
       }
 
       setHeroUrl(uploadedHeroUrl)
+      setPendingHeroBlob(null)
+      setPendingHeroPreview((current) => {
+        if (current) URL.revokeObjectURL(current)
+        return ''
+      })
+      setHeroSaved(true)
     } catch {
       await apiPut('/me/profile', { avatar_url: avatarUrl }).catch(() => undefined)
-      setError('No pudimos subir la imagen de portada.')
+      setError('No pudimos guardar la imagen de portada.')
     } finally {
       setUploading(false)
     }
@@ -119,6 +154,10 @@ export default function FreeOnboardingIdentity() {
     event.preventDefault()
     if (!name.trim() || !role.trim()) {
       setError('Completa tu nombre y a qué te dedicas.')
+      return
+    }
+    if (layoutId === 'impacto' && pendingHeroBlob) {
+      setError('Guarda la nueva portada antes de continuar.')
       return
     }
 
@@ -131,7 +170,6 @@ export default function FreeOnboardingIdentity() {
         template_data: { ...templateData, role: role.trim(), about_section_title: aboutTitle, free_identity_confirmed: true },
       }
       if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
-      if (layoutId === 'impacto' && heroUrl.trim()) body.hero_url = heroUrl.trim()
       const result: any = await apiPut('/me/profile', body)
       if (result.ok) navigate('/admin/free/onboarding/contact')
       else setError(result.error || 'No pudimos guardar tus datos.')
@@ -151,7 +189,7 @@ export default function FreeOnboardingIdentity() {
           file={cropFile}
           aspectRatio={cropTarget === 'hero' ? 16 / 9 : 1}
           outputWidth={cropTarget === 'hero' ? 1200 : 400}
-          onSave={cropTarget === 'hero' ? uploadHero : uploadAvatar}
+          onSave={cropTarget === 'hero' ? prepareHero : uploadAvatar}
           onCancel={() => setCropFile(null)}
         />
       )}
@@ -185,10 +223,19 @@ export default function FreeOnboardingIdentity() {
                   <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase text-cyan-700">Impacto</span>
                 </div>
                 <div className="mt-3 aspect-video overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-                  {heroUrl ? <img src={heroUrl} alt="Vista previa de portada" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm font-bold text-slate-400">Agrega una imagen de portada para completar el diseño Impacto.</div>}
+                  {(pendingHeroPreview || heroUrl) ? <img src={pendingHeroPreview || heroUrl} alt="Vista previa de portada" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm font-bold text-slate-400">Agrega una imagen de portada para completar el diseño Impacto.</div>}
                 </div>
-                <button type="button" onClick={() => heroFileRef.current?.click()} disabled={uploading || !profileId} className="mt-3 w-full rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-sm font-black text-cyan-700 hover:bg-cyan-100 disabled:opacity-40">{uploading && cropTarget === 'hero' ? 'Subiendo portada…' : heroUrl ? 'Cambiar imagen de portada' : 'Subir imagen de portada'}</button>
+                <button type="button" onClick={() => heroFileRef.current?.click()} disabled={uploading || !profileId} className="mt-3 w-full rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-sm font-black text-cyan-700 hover:bg-cyan-100 disabled:opacity-40">{pendingHeroBlob ? 'Elegir otra imagen' : heroUrl ? 'Cambiar imagen de portada' : 'Subir imagen de portada'}</button>
                 <input ref={heroFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={chooseHero} />
+
+                {pendingHeroBlob && (
+                  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-xs font-bold leading-5 text-amber-800">La nueva portada está lista para guardar.</p>
+                    <button type="button" onClick={() => void saveHero()} disabled={uploading} className="mt-2 w-full rounded-xl bg-slate-950 px-3.5 py-3 text-sm font-black text-white disabled:opacity-40">{uploading ? 'Guardando portada…' : 'Guardar portada'}</button>
+                  </div>
+                )}
+
+                {heroSaved && !pendingHeroBlob && <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-700">✓ Portada guardada correctamente.</p>}
               </div>
             )}
 
