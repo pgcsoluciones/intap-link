@@ -31,6 +31,7 @@ import FreePortfolio from './components/admin/free/FreePortfolio'
 import FreeQuickActions from './components/admin/free/FreeQuickActions'
 import FreeServices from './components/admin/free/FreeServices'
 import FreeStyle from './components/admin/free/FreeStyle'
+import FreeVisualEditor from './components/admin/free/FreeVisualEditor'
 import FreeContextHelp from './components/admin/free/FreeContextHelp'
 import FreeRouteUx from './components/admin/free/FreeRouteUx'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
@@ -91,6 +92,7 @@ function App() {
         <Route path="/admin/free/onboarding/done" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingDone /></AdminGuard>} />
 
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
+        <Route path="/admin/free/editor" element={<AdminGuard planScope="free"><FreeVisualEditor /></AdminGuard>} />
         <Route path="/admin/free/identifier" element={<AdminGuard planScope="free"><FreeIdentifier /></AdminGuard>} />
         <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />
         <Route path="/admin/free/location" element={<AdminGuard planScope="free"><FreeLocation /></AdminGuard>} />
