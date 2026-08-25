@@ -11,6 +11,8 @@ import {
   useLocation,
 } from 'react-router-dom'
 
+import PublicBankAccounts from './components/free-profile/PublicBankAccounts'
+
 /*
  * IMPORTANTE
  * ----------
@@ -86,6 +88,15 @@ function RootRoute() {
   return <MarketingLanding />
 }
 
+function PublicProfileRoute() {
+  return (
+    <>
+      <PublicProfile />
+      <PublicBankAccounts />
+    </>
+  )
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -147,7 +158,7 @@ function App() {
 
           <Route
             path="/:slug"
-            element={<PublicProfile />}
+            element={<PublicProfileRoute />}
           />
         </Routes>
       </Suspense>
