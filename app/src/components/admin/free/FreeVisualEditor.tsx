@@ -38,6 +38,7 @@ const sectionLinks = [
   { title: 'Portafolio', text: 'Agrega o reemplaza imágenes de tus trabajos.', to: '/admin/free/portfolio', icon: '▧' },
   { title: 'Servicios', text: 'Edita tus servicios, imágenes y descripciones.', to: '/admin/free/services', icon: '◇' },
   { title: 'Enlaces', text: 'Catálogo, formularios u otros enlaces importantes.', to: '/admin/free/links', icon: '⌁' },
+  { title: 'Cuentas bancarias', text: 'Hasta 3 cuentas para recibir transferencias. Puedes mostrar u ocultar la sección.', to: '/admin/free/bank-accounts', icon: '$' },
 ]
 
 export default function FreeVisualEditor() {
@@ -92,10 +93,7 @@ export default function FreeVisualEditor() {
         bio: bio.trim(),
         template_data: nextTemplateData,
       })
-      if (!json?.ok) {
-        setMessage(json?.error || 'No se pudieron guardar los cambios.')
-        return
-      }
+      if (!json?.ok) return setMessage(json?.error || 'No se pudieron guardar los cambios.')
       setTemplateData(nextTemplateData)
       setMessage('✓ Cambios guardados')
       refreshPreview()
@@ -112,10 +110,7 @@ export default function FreeVisualEditor() {
     setMessage('')
     try {
       const json: any = await apiPut('/me/profile', { layout_id: nextLayout })
-      if (!json?.ok) {
-        setMessage(json?.error || 'No se pudo cambiar la plantilla.')
-        return
-      }
+      if (!json?.ok) return setMessage(json?.error || 'No se pudo cambiar la plantilla.')
       setLayout(nextLayout)
       setMessage('✓ Plantilla actualizada')
       refreshPreview()
@@ -132,10 +127,7 @@ export default function FreeVisualEditor() {
     setMessage('')
     try {
       const json: any = await apiPatch('/me/profile/free-appearance', { palette_id: nextPalette })
-      if (!json?.ok) {
-        setMessage(json?.error || 'No se pudieron cambiar los colores.')
-        return
-      }
+      if (!json?.ok) return setMessage(json?.error || 'No se pudieron cambiar los colores.')
       setPalette(nextPalette)
       setMessage('✓ Colores actualizados')
       refreshPreview()
@@ -146,9 +138,7 @@ export default function FreeVisualEditor() {
     }
   }
 
-  if (loading) {
-    return <main className="min-h-screen bg-[#f7f9fc] grid place-items-center font-['Inter']"><div className="loading-spinner" /></main>
-  }
+  if (loading) return <main className="min-h-screen bg-[#f7f9fc] grid place-items-center font-['Inter']"><div className="loading-spinner" /></main>
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
@@ -167,7 +157,7 @@ export default function FreeVisualEditor() {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">KAWVO LINK</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Edita tu perfil como lo ves</h1>
-              <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Haz cambios aquí y comprueba el resultado en la vista previa. Mantuvimos el guardado seguro del perfil real, pero con una experiencia más parecida a la Demo.</p>
+              <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Haz cambios aquí y comprueba el resultado en la vista previa. La experiencia se parece a la Demo, pero tus cambios se guardan en tu perfil real.</p>
             </div>
 
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
@@ -197,7 +187,7 @@ export default function FreeVisualEditor() {
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
               <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">3. Completa tu perfil</p>
               <h2 className="mt-1 text-xl font-black">Edita cada bloque</h2>
-              <p className="mt-2 text-sm font-medium leading-6 text-slate-500">En esta primera versión visual mantenemos los editores especializados para imágenes, servicios y enlaces. Tu vista previa seguirá siendo el punto de referencia.</p>
+              <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Los bloques especializados siguen separados para que puedas editarlos con comodidad sin perder la vista previa como referencia.</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {sectionLinks.map((item) => <button key={item.to} type="button" onClick={() => navigate(item.to)} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left hover:border-cyan-200 hover:bg-cyan-50/40"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-lg font-black text-cyan-700 shadow-sm">{item.icon}</span><span><span className="block text-sm font-black text-slate-900">{item.title}</span><span className="mt-1 block text-xs font-medium leading-5 text-slate-500">{item.text}</span></span></button>)}
               </div>
@@ -206,9 +196,18 @@ export default function FreeVisualEditor() {
 
           <aside className={`${mobileMode === 'edit' ? 'hidden' : 'block'} lg:sticky lg:top-5 lg:block`}>
             <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-              <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Vista previa en vivo</p><p className="mt-1 text-sm font-bold text-slate-700">Así lo verá otra persona</p></div><button type="button" onClick={refreshPreview} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">Actualizar</button></div>
-              {previewUrl ? <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50"><iframe key={previewVersion} src={previewUrl} title="Vista previa del perfil" className="h-[720px] w-full bg-white" /></div> : <div className="grid h-[520px] place-items-center rounded-[24px] bg-slate-50 p-8 text-center text-sm font-bold text-slate-500">Reserva tu identificador para activar la vista previa.</div>}
-              {slug && <a href={`${webUrl}/${encodeURIComponent(slug)}?preview=1`} target="_blank" rel="noopener noreferrer" className="mt-3 flex w-full justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Abrir en pantalla completa</a>}
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Vista previa en vivo</p><p className="mt-1 text-sm font-bold text-slate-700">Así lo verá tu cliente</p></div>
+                <button type="button" onClick={refreshPreview} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">Actualizar</button>
+              </div>
+              {slug ? (
+                <div className="mx-auto overflow-hidden rounded-[24px] border border-slate-200 bg-[#eef3f8]">
+                  <iframe key={previewVersion} src={previewUrl} title="Vista previa del perfil" className="h-[760px] w-full bg-white" />
+                </div>
+              ) : (
+                <div className="grid h-[520px] place-items-center rounded-[24px] bg-slate-50 p-8 text-center text-sm font-bold text-slate-500">Reserva tu identificador para ver la vista previa.</div>
+              )}
+              {slug && <a href={`${webUrl}/${encodeURIComponent(slug)}?preview=1`} target="_blank" rel="noopener noreferrer" className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Abrir perfil completo</a>}
             </div>
           </aside>
         </div>
