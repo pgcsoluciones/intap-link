@@ -17,7 +17,16 @@ export default function AdminLogin() {
   const isScanFlow = searchParams.get('activation') === 'scan' && /^[A-Z2-9]{8,24}$/.test(scanCode)
 
   useEffect(() => {
-    if (!isScanFlow) return
+    if (!isScanFlow) {
+      // A normal/direct login must not inherit an old scan-to-claim context.
+      // Otherwise AdminGuard can correctly authenticate the user and then
+      // redirect them to /admin/artifacts/activate?scan=1 because a stale
+      // product code remained in browser storage from a previous test/scan.
+      sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      return
+    }
+
     sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
     localStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
     // A customer arriving from a physical product can create an account if
