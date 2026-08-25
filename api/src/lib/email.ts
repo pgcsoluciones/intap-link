@@ -7,7 +7,7 @@ function resendErrorMessage(error: any): string {
   try { return JSON.stringify(error) } catch { return 'Error desconocido de Resend' }
 }
 
-async function sendWithResend(resend: Resend, payload: Parameters<Resend['emails']['send']>[0]) {
+async function sendWithResend(resend: Resend, payload: any) {
   const result: any = await resend.emails.send(payload)
   if (result?.error) {
     throw new Error(`Resend: ${resendErrorMessage(result.error)}`)
