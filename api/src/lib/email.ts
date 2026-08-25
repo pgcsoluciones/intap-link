@@ -1,5 +1,20 @@
 import { Resend } from 'resend'
 
+function resendErrorMessage(error: any): string {
+  if (!error) return 'Error desconocido de Resend'
+  if (typeof error === 'string') return error
+  if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim()
+  try { return JSON.stringify(error) } catch { return 'Error desconocido de Resend' }
+}
+
+async function sendWithResend(resend: Resend, payload: Parameters<Resend['emails']['send']>[0]) {
+  const result: any = await resend.emails.send(payload)
+  if (result?.error) {
+    throw new Error(`Resend: ${resendErrorMessage(result.error)}`)
+  }
+  return result?.data ?? null
+}
+
 export async function sendLeadNotificationEmail(
   env: { RESEND_API_KEY: string; RESEND_FROM?: string },
   to: string,
@@ -8,7 +23,7 @@ export async function sendLeadNotificationEmail(
   const resend = new Resend(env.RESEND_API_KEY)
   const from   = env.RESEND_FROM || 'onboarding@resend.dev'
 
-  await resend.emails.send({
+  await sendWithResend(resend, {
     from,
     to,
     subject: `Nuevo contacto: ${lead.name}`,
@@ -36,7 +51,7 @@ export async function sendMagicLinkEmail(
   const resend = new Resend(env.RESEND_API_KEY)
   const from = env.RESEND_FROM || 'onboarding@resend.dev'
 
-  await resend.emails.send({
+  await sendWithResend(resend, {
     from,
     to,
     subject: 'Tu enlace de acceso a INTAP Link',
@@ -66,7 +81,7 @@ export async function sendSupportResponseEmail(
   const from = env.RESEND_FROM || 'onboarding@resend.dev'
   const appUrl = payload.appUrl || 'https://app.intaprd.com/admin/free'
 
-  await resend.emails.send({
+  await sendWithResend(resend, {
     from,
     to,
     subject: `Respuesta de Soporte Kawvo · ${payload.reference}`,
