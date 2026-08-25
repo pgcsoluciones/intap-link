@@ -22,34 +22,27 @@ interface MeData {
   freeReadiness?: FreePublicationReadiness | null
 }
 
+type BankSummary = {
+  allowed: boolean
+  source: 'plan' | 'fair' | null
+  enabled: boolean
+  count: number
+}
+
 const freeItems = [
   {
     title: 'Reservar mi identificador',
     text: 'Elige tu enlace corto /usuario',
     to: '/admin/free/identifier',
     icon: '@',
-    help: 'Este será tu nombre único en el enlace público. Por ejemplo: kawvo.com/juanperez. Conviene elegir uno corto, fácil de recordar y relacionado contigo o tu negocio.',
-  },
-  {
-    title: 'Estilo de mi perfil (plantillas)',
-    text: 'Elige cómo se verá: Impacto, Personal o Esencial',
-    to: '/admin/free/style',
-    icon: '◫',
-    help: 'Aquí eliges la plantilla, los colores y la forma general de tu perfil. No cambia tu información; solamente cambia cómo se presenta visualmente.',
-  },
-  {
-    title: 'Mi información principal',
-    text: 'Nombre, foto, actividad y descripción',
-    to: '/admin/free/onboarding/identity',
-    icon: '✎',
-    help: 'Completa el nombre que quieres mostrar, tu foto o imagen principal y una descripción breve para que las personas entiendan rápidamente quién eres y qué haces.',
+    help: 'Este será tu nombre único en el enlace público. Conviene elegir uno corto, fácil de recordar y relacionado contigo o tu negocio.',
   },
   {
     title: 'Datos de contacto',
     text: 'WhatsApp, teléfono y correo',
     to: '/admin/free/onboarding/contact',
     icon: '☎',
-    help: 'Coloca los medios reales por los que quieres que tus clientes te contacten. Los datos de ejemplo del starter deben cambiarse por los tuyos antes de publicar.',
+    help: 'Coloca los medios reales por los que quieres que tus clientes te contacten. Necesitas al menos uno para habilitar la vista previa.',
   },
   {
     title: 'Botones rápidos',
@@ -77,14 +70,14 @@ const freeItems = [
     text: 'Hasta 5 imágenes de tu trabajo',
     to: '/admin/free/portfolio',
     icon: '▧',
-    help: 'Muestra ejemplos reales de lo que haces. El starter incluye imágenes de referencia, pero para publicar debes reemplazarlas por fotografías o trabajos tuyos.',
+    help: 'Muestra ejemplos reales de lo que haces. Para publicar debes completar al menos 3 imágenes reales.',
   },
   {
     title: 'Servicios',
     text: 'Hasta 3 servicios con imagen y descripción',
     to: '/admin/free/services',
     icon: '◇',
-    help: 'Explica claramente qué ofreces. Cada servicio puede tener un título, una descripción corta y una imagen. Reemplaza los servicios de ejemplo por los reales.',
+    help: 'Explica claramente qué ofreces. Para publicar debes completar al menos 2 servicios con título, descripción e imagen.',
   },
   {
     title: 'Mis productos Kawvo (NFC/QR)',
@@ -104,14 +97,24 @@ export default function FreeDashboard() {
   const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [linkCopied, setLinkCopied] = useState(false)
+  const [bankSummary, setBankSummary] = useState<BankSummary>({ allowed: false, source: null, enabled: false, count: 0 })
 
   useEffect(() => {
     Promise.all([
       apiGet('/me'),
       apiGet('/superadmin/metrics/overview').catch(() => ({ ok: false })),
-    ]).then(([meJson, superAdminJson]: any[]) => {
+      apiGet('/me/bank-accounts').catch(() => ({ ok: false })),
+    ]).then(([meJson, superAdminJson, bankJson]: any[]) => {
       if (meJson?.ok) setMe(meJson.data)
       setHasSuperAdminAccess(Boolean(superAdminJson?.ok))
+      if (bankJson?.ok) {
+        setBankSummary({
+          allowed: Boolean(bankJson.data?.access?.allowed),
+          source: bankJson.data?.access?.source || null,
+          enabled: bankJson.data?.enabled !== false,
+          count: Array.isArray(bankJson.data?.items) ? bankJson.data.items.length : 0,
+        })
+      }
     }).finally(() => setLoading(false))
   }, [])
 
@@ -124,7 +127,7 @@ export default function FreeDashboard() {
     if (!me || publishing) return
     const next = me.is_published ? 0 : 1
     if (next === 1 && me.freeReadiness && !me.freeReadiness.ready) {
-      setPublishError('Todavía faltan algunos pasos. Sigue la guía y te avisaremos cuando esté listo para publicar.')
+      setPublishError('Aún no puedes publicar. Completa los pasos marcados abajo; el sistema te avisará cuando tu perfil esté listo.')
       return
     }
     setPublishing(true)
@@ -158,6 +161,18 @@ export default function FreeDashboard() {
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   const publicUrl = me?.slug ? `${webUrl}/${me.slug}` : null
+  const readiness = me?.freeReadiness
+  const previewReady = Boolean(readiness?.steps?.identifier && readiness?.steps?.identity && readiness?.steps?.contact)
+  const previewMissing = [
+    !readiness?.steps?.identifier ? 'tu identificador' : '',
+    !readiness?.steps?.identity ? 'tu información principal' : '',
+    !readiness?.steps?.contact ? 'al menos un medio de contacto' : '',
+  ].filter(Boolean)
+  const publishMissing = [
+    !readiness?.steps?.quick_actions ? 'accesos rápidos' : '',
+    !readiness?.steps?.portfolio ? 'portafolio' : '',
+    !readiness?.steps?.services ? 'servicios' : '',
+  ].filter(Boolean)
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
@@ -191,8 +206,14 @@ export default function FreeDashboard() {
               {me?.slug && <p className="mt-0.5 text-xs font-semibold text-slate-400">@{me.slug}</p>}
               {me?.category && <p className="mt-1 text-xs font-bold text-cyan-600">{me.category}</p>}
             </div>
-            <button onClick={() => navigate('/admin/free/onboarding/identity')} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Editar</button>
           </div>
+          <button type="button" onClick={() => navigate('/admin/free/editor')} className="mt-5 flex w-full items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-left text-white shadow-sm">
+            <span>
+              <span className="block text-base font-black">Editar mi Perfil Digital</span>
+              <span className="mt-1 block text-xs font-medium text-slate-300">Edita y mira cómo queda en tiempo real.</span>
+            </span>
+            <span className="text-xl text-slate-400">›</span>
+          </button>
         </article>
 
         <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
@@ -235,37 +256,81 @@ export default function FreeDashboard() {
                 <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
                 <p className="mt-2 truncate text-sm font-black text-cyan-700">{publicUrl.replace(/^https?:\/\//, '')}</p>
               </div>
-              <FreeHelpTip title="Vista previa" text="Puedes abrir tu perfil aunque todavía esté en borrador. La vista previa no significa que ya esté publicado; solo te permite revisar cómo lo verá otra persona." />
+              <FreeHelpTip title="Vista previa" text="La vista previa se habilita cuando completas tu identificador, información principal y al menos un medio de contacto. Así nunca tendrás que revisar un perfil vacío." />
             </div>
+
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <a href={`${publicUrl}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Vista previa</a>
+              {previewReady ? (
+                <a href={`${publicUrl}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Vista previa</a>
+              ) : (
+                <button type="button" disabled className="min-h-10 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Vista previa</button>
+              )}
               <button
                 type="button"
                 onClick={() => void copyPublicUrl(publicUrl)}
-                className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-black transition-all duration-200 ${linkCopied ? 'scale-[1.04] border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-600'}`}
+                disabled={!me?.is_published}
+                className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-black transition-all duration-200 ${!me?.is_published ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400' : linkCopied ? 'scale-[1.04] border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm' : 'border-slate-200 bg-slate-50 text-slate-600'}`}
                 aria-live="polite"
               >
                 {linkCopied ? '✓ Enlace copiado' : 'Copiar enlace'}
               </button>
             </div>
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
-              <div>
-                <p className="text-sm font-black">{me?.is_published ? 'Publicado' : 'Borrador'}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{me?.is_published ? 'Tu perfil está visible.' : 'Solo tú puedes verlo por ahora.'}</p>
+
+            {!previewReady && (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-5 text-amber-800">
+                <strong>Vista previa deshabilitada.</strong> Completa {previewMissing.join(', ')}. En cuanto termines esos datos básicos, este botón se habilitará automáticamente.
               </div>
-              <button onClick={togglePublished} disabled={publishing || (!me?.is_published && Boolean(me?.freeReadiness && !me.freeReadiness.ready))} className={`rounded-full px-4 py-2 text-xs font-black ${me?.is_published ? 'bg-slate-100 text-slate-700' : me?.freeReadiness?.ready ? 'bg-cyan-600 text-white' : 'bg-slate-200 text-slate-400'} disabled:cursor-not-allowed disabled:opacity-80`}>
-                {publishing ? 'Guardando…' : me?.is_published ? 'Ocultar' : me?.freeReadiness?.ready ? 'Publicar' : 'Completa los pasos'}
-              </button>
+            )}
+
+            {!me?.is_published && (
+              <p className="mt-2 text-xs leading-5 text-slate-500">El botón <strong>Copiar enlace</strong> se habilitará cuando publiques el perfil, para evitar compartir un enlace que todavía está en borrador.</p>
+            )}
+
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black">{me?.is_published ? 'Publicado' : 'Borrador'}</p>
+                  <p className="mt-0.5 text-xs text-slate-400">{me?.is_published ? 'Tu perfil está visible.' : 'Solo tú puedes verlo por ahora.'}</p>
+                </div>
+                <button onClick={togglePublished} disabled={publishing || (!me?.is_published && Boolean(me?.freeReadiness && !me.freeReadiness.ready))} className={`rounded-full px-4 py-2 text-xs font-black ${me?.is_published ? 'bg-slate-100 text-slate-700' : me?.freeReadiness?.ready ? 'bg-cyan-600 text-white' : 'bg-slate-200 text-slate-400'} disabled:cursor-not-allowed disabled:opacity-80`}>
+                  {publishing ? 'Guardando…' : me?.is_published ? 'Ocultar' : me?.freeReadiness?.ready ? 'Publicar' : 'Completa los pasos'}
+                </button>
+              </div>
+
+              {!me?.is_published && me?.freeReadiness && !me.freeReadiness.ready && (
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold leading-5 text-slate-600">
+                  <strong>Publicar está deshabilitado.</strong> {publishMissing.length > 0 ? `Todavía faltan ${publishMissing.join(', ')}.` : 'Todavía faltan algunos pasos de la guía.'} Completa la guía y el sistema habilitará el botón automáticamente.
+                </div>
+              )}
             </div>
           </article>
         )}
 
         {publishError && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold leading-5 text-amber-800">{publishError}</p>}
 
+        <article className={`rounded-[24px] border p-5 ${bankSummary.allowed ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Cuentas bancarias</p>
+              <h2 className="mt-1 text-lg font-black text-slate-950">Recibe transferencias desde tu perfil</h2>
+              {bankSummary.allowed ? (
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{bankSummary.enabled ? 'Sección activa' : 'Sección desactivada'} · {bankSummary.count}/3 cuentas configuradas{bankSummary.source === 'fair' ? ' · Beneficio de feria' : ''}.</p>
+              ) : (
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Esta función no está incluida en tu acceso actual. Está disponible en Plan Básico o mediante una promoción vigente.</p>
+              )}
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${bankSummary.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{bankSummary.allowed ? 'Disponible' : 'Bloqueado'}</span>
+          </div>
+          <button type="button" onClick={() => navigate('/admin/free/bank-accounts')} className={`mt-4 w-full rounded-xl px-4 py-3 text-sm font-black ${bankSummary.allowed ? 'bg-slate-950 text-white' : 'border border-slate-200 bg-slate-50 text-slate-600'}`}>
+            {bankSummary.allowed ? 'Administrar cuentas bancarias' : 'Ver por qué está bloqueado'}
+          </button>
+          {bankSummary.allowed && bankSummary.count >= 3 && <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">Ya alcanzaste el máximo de 3 cuentas. Para agregar otra, primero elimina una existente.</p>}
+        </article>
+
         <div className="pt-2">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Tu perfil</p>
-          <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Lo esencial para empezar</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Toca el signo <strong>?</strong> cuando quieras saber para qué sirve una sección.</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Accesos directos</p>
+          <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Edita un bloque específico</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">El editor visual es la forma principal de editar. Estos accesos te llevan directamente a una sección cuando quieras cambiar solo algo puntual.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
