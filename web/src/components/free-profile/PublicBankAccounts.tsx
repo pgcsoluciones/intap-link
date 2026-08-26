@@ -30,13 +30,18 @@ export default function PublicBankAccounts() {
   const [enabled, setEnabled] = useState(false)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
 
   useEffect(() => {
     if (!slug) return
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
-    fetch(`${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/bank-accounts`, {
+    const endpoint = isPreview
+      ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/preview-bank-accounts?preview=1`
+      : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/bank-accounts`
+
+    fetch(endpoint, {
       headers: { Accept: 'application/json' },
-      credentials: 'omit',
+      credentials: isPreview ? 'include' : 'omit',
     })
       .then((response) => response.json())
       .then((json) => {
@@ -45,7 +50,7 @@ export default function PublicBankAccounts() {
         setItems(Array.isArray(json.data?.items) ? json.data.items : [])
       })
       .catch(() => undefined)
-  }, [slug])
+  }, [slug, isPreview])
 
   useEffect(() => {
     if (!enabled || items.length === 0 || window.location.hash !== '#bancos') return
@@ -73,10 +78,14 @@ export default function PublicBankAccounts() {
 
   async function copyHolderId(account: PublicBankAccount) {
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    const endpoint = isPreview
+      ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/preview-bank-accounts/${encodeURIComponent(account.id)}/holder-id?preview=1`
+      : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/bank-accounts/${encodeURIComponent(account.id)}/holder-id`
+
     try {
-      const response = await fetch(`${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/bank-accounts/${encodeURIComponent(account.id)}/holder-id`, {
+      const response = await fetch(endpoint, {
         headers: { Accept: 'application/json' },
-        credentials: 'omit',
+        credentials: isPreview ? 'include' : 'omit',
       })
       const json = await response.json()
       if (!json?.ok || !json.data?.copy_value) return
