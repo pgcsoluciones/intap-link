@@ -4,6 +4,7 @@ import { cookieNames } from './lib/cookies'
 type AccountType = 'savings' | 'checking'
 type Currency = 'DOP' | 'USD'
 type DisplayMode = 'masked' | 'visible'
+type HolderIdType = 'cedula' | 'rnc'
 
 const MAX_BANK_ACCOUNTS = 3
 const FAIR_CUTOFF_UTC = '2026-09-06 04:00:00'
@@ -40,6 +41,10 @@ function cleanAccountNumber(value: unknown): string {
   return String(value || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 40)
 }
 
+function cleanHolderId(value: unknown): string {
+  return String(value || '').replace(/\D/g, '').slice(0, 20)
+}
+
 function maskAccountNumber(value: string): string {
   const clean = cleanAccountNumber(value)
   if (!clean) return ''
@@ -66,6 +71,13 @@ function normalizeDisplayMode(value: unknown): DisplayMode | null {
   return raw === 'masked' || raw === 'visible' ? raw : null
 }
 
+function normalizeHolderIdType(value: unknown): HolderIdType | null {
+  const raw = String(value || '').trim().toLowerCase()
+  if (raw === 'cedula' || raw === 'cédula') return 'cedula'
+  if (raw === 'rnc') return 'rnc'
+  return null
+}
+
 async function bankAccess(c: any, profileId: string, planId: string) {
   if (String(planId || 'free') !== 'free') {
     return { allowed: true, source: 'plan' as const }
@@ -81,9 +93,6 @@ async function bankAccess(c: any, profileId: string, planId: string) {
 
   if (moduleRow) return { allowed: true, source: 'fair' as const }
 
-  // Durante la promoción de feria el usuario Free debe poder configurar sus
-  // cuentas antes de publicar. La primera publicación dentro del periodo
-  // persiste el entitlement permanentemente mediante la migración/trigger D1.
   const promo = await c.env.DB.prepare(
     `SELECT CASE WHEN datetime('now') < ? THEN 1 ELSE 0 END AS active`,
   ).bind(FAIR_CUTOFF_UTC).first()
@@ -112,6 +121,8 @@ function serializeOwnerAccount(row: any) {
     account_type: row.account_type,
     currency: row.currency,
     holder_name: row.holder_name,
+    holder_id_type: row.holder_id_type || null,
+    holder_id_number: String(row.holder_id_number || ''),
     display_mode: row.display_mode,
     sort_order: Number(row.sort_order || 0),
     is_active: Boolean(row.is_active),
@@ -132,7 +143,7 @@ app.get('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
   const rows = access.allowed
     ? await c.env.DB.prepare(
         `SELECT id, bank_code, bank_name, account_number, account_type, currency,
-                holder_name, display_mode, sort_order, is_active
+                holder_name, holder_id_type, holder_id_number, display_mode, sort_order, is_active
            FROM profile_bank_accounts
           WHERE profile_id = ?
           ORDER BY sort_order ASC, created_at ASC`,
@@ -197,6 +208,8 @@ app.post('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
   const accountType = normalizeAccountType(body.account_type)
   const currency = normalizeCurrency(body.currency)
   const holderName = String(body.holder_name || '').trim().slice(0, 120)
+  const holderIdType = normalizeHolderIdType(body.holder_id_type)
+  const holderIdNumber = cleanHolderId(body.holder_id_number)
   const displayMode = normalizeDisplayMode(body.display_mode || 'masked')
 
   if (!bankName) return c.json({ ok: false, error: 'Selecciona el banco.' }, 400)
@@ -204,6 +217,8 @@ app.post('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
   if (!accountType) return c.json({ ok: false, error: 'Tipo de cuenta no válido.' }, 400)
   if (!currency) return c.json({ ok: false, error: 'Moneda no válida.' }, 400)
   if (!holderName) return c.json({ ok: false, error: 'Indica el titular de la cuenta.' }, 400)
+  if (!holderIdType) return c.json({ ok: false, error: 'Selecciona si el titular usa Cédula o RNC.' }, 400)
+  if (holderIdNumber.length < 9) return c.json({ ok: false, error: 'Indica un número de Cédula o RNC válido.' }, 400)
   if (!displayMode) return c.json({ ok: false, error: 'Modo de visualización no válido.' }, 400)
 
   const sortRow = await c.env.DB.prepare(
@@ -215,9 +230,9 @@ app.post('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
   await c.env.DB.prepare(
     `INSERT INTO profile_bank_accounts
       (id, profile_id, bank_code, bank_name, account_number, account_type, currency,
-       holder_name, display_mode, sort_order, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))`,
-  ).bind(id, profileId, bankCode, bankName, accountNumber, accountType, currency, holderName, displayMode, sortOrder).run()
+       holder_name, holder_id_type, holder_id_number, display_mode, sort_order, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))`,
+  ).bind(id, profileId, bankCode, bankName, accountNumber, accountType, currency, holderName, holderIdType, holderIdNumber, displayMode, sortOrder).run()
 
   const row = await c.env.DB.prepare(
     `SELECT * FROM profile_bank_accounts WHERE id = ? AND profile_id = ? LIMIT 1`,
@@ -249,19 +264,21 @@ app.put('/api/v1/me/bank-accounts/:id', requireBankAuth, async (c: any) => {
   const accountType = body.account_type !== undefined ? normalizeAccountType(body.account_type) : (existing as any).account_type as AccountType
   const currency = body.currency !== undefined ? normalizeCurrency(body.currency) : (existing as any).currency as Currency
   const holderName = body.holder_name !== undefined ? String(body.holder_name || '').trim().slice(0, 120) : String((existing as any).holder_name)
+  const holderIdType = body.holder_id_type !== undefined ? normalizeHolderIdType(body.holder_id_type) : normalizeHolderIdType((existing as any).holder_id_type)
+  const holderIdNumber = body.holder_id_number !== undefined ? cleanHolderId(body.holder_id_number) : cleanHolderId((existing as any).holder_id_number)
   const displayMode = body.display_mode !== undefined ? normalizeDisplayMode(body.display_mode) : (existing as any).display_mode as DisplayMode
   const isActive = body.is_active !== undefined ? (body.is_active ? 1 : 0) : Number((existing as any).is_active || 0)
 
-  if (!bankName || accountNumber.length < 4 || !accountType || !currency || !holderName || !displayMode) {
-    return c.json({ ok: false, error: 'Revisa los datos de la cuenta.' }, 400)
+  if (!bankName || accountNumber.length < 4 || !accountType || !currency || !holderName || !holderIdType || holderIdNumber.length < 9 || !displayMode) {
+    return c.json({ ok: false, error: 'Revisa todos los datos requeridos de la cuenta, incluyendo Cédula o RNC.' }, 400)
   }
 
   await c.env.DB.prepare(
     `UPDATE profile_bank_accounts SET
        bank_code = ?, bank_name = ?, account_number = ?, account_type = ?, currency = ?,
-       holder_name = ?, display_mode = ?, is_active = ?, updated_at = datetime('now')
+       holder_name = ?, holder_id_type = ?, holder_id_number = ?, display_mode = ?, is_active = ?, updated_at = datetime('now')
      WHERE id = ? AND profile_id = ?`,
-  ).bind(bankCode, bankName, accountNumber, accountType, currency, holderName, displayMode, isActive, c.req.param('id'), profileId).run()
+  ).bind(bankCode, bankName, accountNumber, accountType, currency, holderName, holderIdType, holderIdNumber, displayMode, isActive, c.req.param('id'), profileId).run()
 
   const row = await c.env.DB.prepare(
     `SELECT * FROM profile_bank_accounts WHERE id = ? AND profile_id = ? LIMIT 1`,
@@ -298,8 +315,6 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
     return c.json({ ok: false, error: 'Perfil no disponible' }, 404)
   }
 
-  // Un borrador no debe exponer datos bancarios por una URL pública. Para la
-  // vista previa devolvemos una sección vacía en lugar de un 404 ruidoso.
   if (!(profile as any).is_published) {
     return c.json({ ok: true, data: { enabled: false, items: [] } })
   }
@@ -316,7 +331,7 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
 
   const rows = await c.env.DB.prepare(
     `SELECT id, bank_code, bank_name, account_number, account_type, currency,
-            holder_name, display_mode, sort_order
+            holder_name, holder_id_type, display_mode, sort_order
        FROM profile_bank_accounts
       WHERE profile_id = ? AND is_active = 1
       ORDER BY sort_order ASC, created_at ASC
@@ -336,6 +351,7 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
           account_type: row.account_type,
           currency: row.currency,
           holder_name: row.holder_name,
+          holder_id_type: row.holder_id_type || null,
           display_mode: row.display_mode,
           display_number: row.display_mode === 'visible' ? accountNumber : maskAccountNumber(accountNumber),
           copy_value: accountNumber,
@@ -343,6 +359,39 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
       }),
     },
   })
+})
+
+app.get('/api/v1/public/profiles/:slug/bank-accounts/:id/holder-id', async (c: any) => {
+  const slug = String(c.req.param('slug') || '').trim().toLowerCase()
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id, is_published, is_active FROM profiles WHERE lower(slug) = ? LIMIT 1`,
+  ).bind(slug).first()
+
+  if (!profile || !(profile as any).is_active || !(profile as any).is_published) {
+    return c.json({ ok: false, error: 'Perfil no disponible' }, 404)
+  }
+
+  const profileId = String((profile as any).id)
+  const access = await bankAccess(c, profileId, String((profile as any).plan_id || 'free'))
+  if (!access.allowed) return c.json({ ok: false, error: 'Datos no disponibles' }, 404)
+
+  const settings = await c.env.DB.prepare(
+    `SELECT is_enabled FROM profile_bank_settings WHERE profile_id = ? LIMIT 1`,
+  ).bind(profileId).first()
+  if (settings && !Boolean((settings as any).is_enabled)) return c.json({ ok: false, error: 'Datos no disponibles' }, 404)
+
+  const row = await c.env.DB.prepare(
+    `SELECT holder_id_type, holder_id_number
+       FROM profile_bank_accounts
+      WHERE id = ? AND profile_id = ? AND is_active = 1
+      LIMIT 1`,
+  ).bind(c.req.param('id'), profileId).first()
+
+  const idType = normalizeHolderIdType((row as any)?.holder_id_type)
+  const idNumber = cleanHolderId((row as any)?.holder_id_number)
+  if (!row || !idType || !idNumber) return c.json({ ok: false, error: 'Identificación no disponible' }, 404)
+
+  return c.json({ ok: true, data: { type: idType, copy_value: idNumber } })
 })
 
 export default app
