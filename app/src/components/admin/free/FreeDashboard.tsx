@@ -29,13 +29,24 @@ type BankSummary = {
   count: number
 }
 
-const freeItems = [
+type FreeItem = {
+  title: string
+  text: string
+  to: string
+  icon: string
+  help: string
+  readinessKey?: keyof FreePublicationReadiness['steps']
+  optional?: boolean
+}
+
+const freeItems: FreeItem[] = [
   {
     title: 'Reservar mi identificador',
     text: 'Elige tu enlace corto /usuario',
     to: '/admin/free/identifier',
     icon: '@',
     help: 'Este será tu nombre único en el enlace público. Conviene elegir uno corto, fácil de recordar y relacionado contigo o tu negocio.',
+    readinessKey: 'identifier',
   },
   {
     title: 'Datos de contacto',
@@ -43,6 +54,7 @@ const freeItems = [
     to: '/admin/free/onboarding/contact',
     icon: '☎',
     help: 'Coloca los medios reales por los que quieres que tus clientes te contacten. Necesitas al menos uno para habilitar la vista previa.',
+    readinessKey: 'contact',
   },
   {
     title: 'Botones rápidos',
@@ -50,6 +62,7 @@ const freeItems = [
     to: '/admin/free/quick-actions',
     icon: '◉',
     help: 'Son los botones que aparecen primero en tu perfil. Elige las acciones más importantes para que una persona pueda contactarte o encontrarte con un solo toque.',
+    readinessKey: 'quick_actions',
   },
   {
     title: 'Ubicación',
@@ -57,6 +70,7 @@ const freeItems = [
     to: '/admin/free/location',
     icon: '⌖',
     help: 'Agrega la dirección real de tu negocio y, si corresponde, el enlace del mapa. Si trabajas sin local físico puedes dejar esta sección sin mostrar.',
+    optional: true,
   },
   {
     title: 'Mis enlaces',
@@ -64,6 +78,7 @@ const freeItems = [
     to: '/admin/free/links',
     icon: '↗',
     help: 'Puedes agregar páginas, catálogos, formularios u otros enlaces que quieras destacar. Usa nombres sencillos para que el visitante entienda a dónde va.',
+    optional: true,
   },
   {
     title: 'Mis trabajos (portafolio)',
@@ -71,6 +86,7 @@ const freeItems = [
     to: '/admin/free/portfolio',
     icon: '▧',
     help: 'Muestra ejemplos reales de lo que haces. Para publicar debes completar al menos 3 imágenes reales.',
+    readinessKey: 'portfolio',
   },
   {
     title: 'Servicios',
@@ -78,6 +94,7 @@ const freeItems = [
     to: '/admin/free/services',
     icon: '◇',
     help: 'Explica claramente qué ofreces. Para publicar debes completar al menos 2 servicios con título, descripción e imagen.',
+    readinessKey: 'services',
   },
   {
     title: 'Mis productos Kawvo (NFC/QR)',
@@ -85,6 +102,7 @@ const freeItems = [
     to: '/admin/artifacts',
     icon: '⌁',
     help: 'Aquí administras las tarjetas, etiquetas u otros productos Kawvo vinculados a tu cuenta y al perfil digital.',
+    optional: true,
   },
 ]
 
@@ -330,23 +348,47 @@ export default function FreeDashboard() {
         <div className="pt-2">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Accesos directos</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Edita un bloque específico</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">El editor visual es la forma principal de editar. Estos accesos te llevan directamente a una sección cuando quieras cambiar solo algo puntual.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Verde significa completado, ámbar indica que aún falta y gris identifica bloques opcionales.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          {freeItems.map((item) => (
-            <div key={item.title} className="relative flex w-full items-center gap-3 rounded-[22px] border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:shadow-md">
-              <button onClick={() => navigate(item.to)} className="flex min-w-0 flex-1 items-center gap-4 text-left">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-xl font-black text-slate-700">{item.icon}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-black text-slate-900">{item.title}</span>
-                  <span className="mt-0.5 block text-xs leading-5 text-slate-400">{item.text}</span>
-                </span>
-              </button>
-              <FreeHelpTip title={item.title} text={item.help} />
-              <button type="button" onClick={() => navigate(item.to)} aria-label={`Abrir ${item.title}`} className="text-lg text-slate-300">›</button>
-            </div>
-          ))}
+          {freeItems.map((item) => {
+            const completed = item.readinessKey ? Boolean(readiness?.steps?.[item.readinessKey]) : false
+            const optional = Boolean(item.optional)
+            const statusLabel = optional ? 'Opcional' : completed ? 'Completado' : 'Pendiente'
+            const cardClass = optional
+              ? 'border-slate-200 bg-white'
+              : completed
+                ? 'border-emerald-200 bg-emerald-50/60'
+                : 'border-amber-200 bg-amber-50/60'
+            const iconClass = optional
+              ? 'bg-slate-100 text-slate-600'
+              : completed
+                ? 'bg-emerald-600 text-white'
+                : 'bg-amber-100 text-amber-800'
+            const badgeClass = optional
+              ? 'bg-slate-100 text-slate-500'
+              : completed
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-amber-100 text-amber-800'
+
+            return (
+              <div key={item.title} className={`relative flex w-full items-center gap-3 rounded-[22px] border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${cardClass}`}>
+                <button onClick={() => navigate(item.to)} className="flex min-w-0 flex-1 items-center gap-4 text-left">
+                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg font-black ${iconClass}`}>{completed && !optional ? '✓' : item.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="block text-sm font-black text-slate-900">{item.title}</span>
+                      <span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wide ${badgeClass}`}>{statusLabel}</span>
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-5 text-slate-500">{item.text}</span>
+                  </span>
+                </button>
+                <FreeHelpTip title={item.title} text={item.help} />
+                <button type="button" onClick={() => navigate(item.to)} aria-label={`Abrir ${item.title}`} className="text-lg text-slate-300">›</button>
+              </div>
+            )
+          })}
         </div>
 
         <FreeUpgradeCard />
