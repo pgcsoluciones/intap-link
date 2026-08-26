@@ -9,6 +9,7 @@ import {
   Route,
   Routes,
   useLocation,
+  useParams,
 } from 'react-router-dom'
 
 import PublicBankAccounts from './components/free-profile/PublicBankAccounts'
@@ -97,6 +98,11 @@ function PublicProfileRoute() {
   )
 }
 
+function LegacyBankRoute() {
+  const { slug = '' } = useParams()
+  return <Navigate to={`/${encodeURIComponent(slug)}#bancos`} replace />
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -158,7 +164,7 @@ function App() {
 
           <Route
             path="/:slug/bancos"
-            element={<PublicBankAccounts standalone />}
+            element={<LegacyBankRoute />}
           />
 
           <Route
