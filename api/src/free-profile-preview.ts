@@ -29,10 +29,19 @@ async function requireProfileOwner(c: any, next: any) {
   await next()
 }
 
-class BaseHrefRewriter {
-  constructor(private readonly href: string) {}
+class EmbeddedPreviewHeadRewriter {
+  constructor(
+    private readonly assetOrigin: string,
+    private readonly profilePath: string,
+  ) {}
+
   element(element: Element) {
-    element.prepend(`<base href="${this.href}/">`, { html: true })
+    // Assets deben resolver contra el deployment inmutable, mientras que
+    // BrowserRouter debe ver /{slug} y no la ruta /api/... del iframe proxy.
+    element.prepend(
+      `<base href="${this.assetOrigin}/"><script>history.replaceState(null,'',${JSON.stringify(this.profilePath)});</script>`,
+      { html: true },
+    )
   }
 }
 
@@ -46,12 +55,11 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   ).bind(userId, slug).first()
   if (!owned) return c.text('Perfil no encontrado.', 404)
 
-  // El iframe autenticado debe consumir HTML y assets del MISMO deployment
-  // inmutable de Pages. Así evitamos mezclar HTML cacheado del custom domain
-  // con hashes JS/CSS de otro deployment, causa del error MIME text/html.
   const publicWebOrigin = String(c.env.WEB_URL || 'https://intaprd.com').replace(/\/$/, '')
   const immutableWebOrigin = String(c.env.WEB_PAGES_ORIGIN || publicWebOrigin).replace(/\/$/, '')
-  const target = `${immutableWebOrigin}/${encodeURIComponent(slug)}?preview=1&embedded=1`
+  const encodedSlug = encodeURIComponent(slug)
+  const profilePath = `/${encodedSlug}?preview=1&embedded=1`
+  const target = `${immutableWebOrigin}${profilePath}`
   const upstream = await fetch(target, {
     method: 'GET',
     headers: { 'x-kawvo-embedded-preview': '1' },
@@ -74,7 +82,7 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   if (!contentType.includes('text/html')) return response
 
   return new HTMLRewriter()
-    .on('head', new BaseHrefRewriter(immutableWebOrigin))
+    .on('head', new EmbeddedPreviewHeadRewriter(immutableWebOrigin, profilePath))
     .transform(response)
 })
 
