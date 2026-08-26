@@ -46,8 +46,12 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   ).bind(userId, slug).first()
   if (!owned) return c.text('Perfil no encontrado.', 404)
 
-  const webOrigin = String(c.env.WEB_URL || 'https://intaprd.com').replace(/\/$/, '')
-  const target = `${webOrigin}/${encodeURIComponent(slug)}?preview=1&embedded=1`
+  // El iframe autenticado debe consumir HTML y assets del MISMO deployment
+  // inmutable de Pages. Así evitamos mezclar HTML cacheado del custom domain
+  // con hashes JS/CSS de otro deployment, causa del error MIME text/html.
+  const publicWebOrigin = String(c.env.WEB_URL || 'https://intaprd.com').replace(/\/$/, '')
+  const immutableWebOrigin = String(c.env.WEB_PAGES_ORIGIN || publicWebOrigin).replace(/\/$/, '')
+  const target = `${immutableWebOrigin}/${encodeURIComponent(slug)}?preview=1&embedded=1`
   const upstream = await fetch(target, {
     method: 'GET',
     headers: { 'x-kawvo-embedded-preview': '1' },
@@ -70,7 +74,7 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   if (!contentType.includes('text/html')) return response
 
   return new HTMLRewriter()
-    .on('head', new BaseHrefRewriter(webOrigin))
+    .on('head', new BaseHrefRewriter(immutableWebOrigin))
     .transform(response)
 })
 
