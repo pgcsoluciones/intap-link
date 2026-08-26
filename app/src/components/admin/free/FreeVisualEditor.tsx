@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPatch, apiPut } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
+import type { FreePublicationReadiness } from './FreeFirstRunGuide'
 
 type LayoutId = 'impacto' | 'personal' | 'esencial'
 type PaletteId = 'intap' | 'oceano' | 'esmeralda' | 'violeta' | 'coral' | 'grafito' | 'arena'
@@ -13,6 +14,16 @@ type MeData = {
   layout_id?: LayoutId | null
   free_palette_id?: PaletteId | null
   templateData?: Record<string, unknown> | null
+  freeReadiness?: FreePublicationReadiness | null
+}
+
+type SectionLink = {
+  title: string
+  text: string
+  to: string
+  icon: string
+  readinessKey?: keyof FreePublicationReadiness['steps']
+  optional?: boolean
 }
 
 const layouts: Array<{ id: LayoutId; name: string; text: string }> = [
@@ -31,14 +42,14 @@ const palettes: Array<{ id: PaletteId; name: string; colors: string[] }> = [
   { id: 'arena', name: 'Arena', colors: ['#5C4033', '#8B6F47', '#B08968'] },
 ]
 
-const sectionLinks = [
-  { title: 'Foto y portada', text: 'Cambia tu foto de perfil y, en Impacto, la imagen Hero.', to: '/admin/free/onboarding/identity', icon: '◉' },
-  { title: 'Contacto', text: 'WhatsApp, teléfono y correo.', to: '/admin/free/onboarding/contact', icon: '☎' },
-  { title: 'Botones rápidos', text: 'Llamar, Instagram, ubicación, email o TikTok.', to: '/admin/free/quick-actions', icon: '↗' },
-  { title: 'Portafolio', text: 'Agrega o reemplaza imágenes de tus trabajos.', to: '/admin/free/portfolio', icon: '▧' },
-  { title: 'Servicios', text: 'Edita tus servicios, imágenes y descripciones.', to: '/admin/free/services', icon: '◇' },
-  { title: 'Enlaces', text: 'Catálogo, formularios u otros enlaces importantes.', to: '/admin/free/links', icon: '⌁' },
-  { title: 'Cuentas bancarias', text: 'Agrega tus datos bancarios para que tus clientes los copien fácilmente al hacer una transferencia.', to: '/admin/free/bank-accounts', icon: '$' },
+const sectionLinks: SectionLink[] = [
+  { title: 'Foto y portada', text: 'Cambia tu foto de perfil y, en Impacto, la imagen Hero.', to: '/admin/free/onboarding/identity', icon: '◉', readinessKey: 'identity' },
+  { title: 'Contacto', text: 'WhatsApp, teléfono y correo.', to: '/admin/free/onboarding/contact', icon: '☎', readinessKey: 'contact' },
+  { title: 'Botones rápidos', text: 'Llamar, Instagram, ubicación, email o TikTok.', to: '/admin/free/quick-actions', icon: '↗', readinessKey: 'quick_actions' },
+  { title: 'Portafolio', text: 'Agrega o reemplaza imágenes de tus trabajos.', to: '/admin/free/portfolio', icon: '▧', readinessKey: 'portfolio' },
+  { title: 'Servicios', text: 'Edita tus servicios, imágenes y descripciones.', to: '/admin/free/services', icon: '◇', readinessKey: 'services' },
+  { title: 'Enlaces', text: 'Catálogo, formularios u otros enlaces importantes.', to: '/admin/free/links', icon: '⌁', optional: true },
+  { title: 'Cuentas bancarias', text: 'Agrega tus datos bancarios para que tus clientes los copien fácilmente al hacer una transferencia.', to: '/admin/free/bank-accounts', icon: '$', optional: true },
 ]
 
 export default function FreeVisualEditor() {
@@ -53,28 +64,35 @@ export default function FreeVisualEditor() {
   const [templateData, setTemplateData] = useState<Record<string, unknown>>({})
   const [layout, setLayout] = useState<LayoutId>('esencial')
   const [palette, setPalette] = useState<PaletteId>('intap')
+  const [readiness, setReadiness] = useState<FreePublicationReadiness | null>(null)
   const [previewVersion, setPreviewVersion] = useState(1)
   const [mobileMode, setMobileMode] = useState<'edit' | 'preview'>('edit')
 
-  const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
+  const isPreviewEnvironment = import.meta.env.VITE_ENVIRONMENT === 'preview' || window.location.hostname.includes('preview.intaprd.com')
+  const configuredWebUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
+  const webUrl = isPreviewEnvironment ? 'https://preview.intaprd.com' : configuredWebUrl
   const previewUrl = useMemo(
-    () => slug ? `${webUrl}/${encodeURIComponent(slug)}?preview=1&embed=1&v=${previewVersion}` : '',
-    [slug, webUrl, previewVersion],
+    () => slug ? `/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}?v=${previewVersion}` : '',
+    [slug, previewVersion],
   )
 
+  async function loadMe() {
+    const json: any = await apiGet('/me')
+    if (!json?.ok) return
+    const data = (json.data || {}) as MeData
+    const td = data.templateData && typeof data.templateData === 'object' ? data.templateData : {}
+    setSlug(String(data.slug || ''))
+    setName(String(data.name || ''))
+    setBio(String(data.bio || ''))
+    setTemplateData(td)
+    setRole(String(td.role || td.title || ''))
+    setReadiness(data.freeReadiness || null)
+    if (data.layout_id === 'impacto' || data.layout_id === 'personal' || data.layout_id === 'esencial') setLayout(data.layout_id)
+    if (data.free_palette_id && palettes.some((item) => item.id === data.free_palette_id)) setPalette(data.free_palette_id)
+  }
+
   useEffect(() => {
-    apiGet('/me').then((json: any) => {
-      if (!json?.ok) return
-      const data = (json.data || {}) as MeData
-      const td = data.templateData && typeof data.templateData === 'object' ? data.templateData : {}
-      setSlug(String(data.slug || ''))
-      setName(String(data.name || ''))
-      setBio(String(data.bio || ''))
-      setTemplateData(td)
-      setRole(String(td.role || td.title || ''))
-      if (data.layout_id === 'impacto' || data.layout_id === 'personal' || data.layout_id === 'esencial') setLayout(data.layout_id)
-      if (data.free_palette_id && palettes.some((item) => item.id === data.free_palette_id)) setPalette(data.free_palette_id)
-    }).finally(() => setLoading(false))
+    loadMe().finally(() => setLoading(false))
   }, [])
 
   const refreshPreview = () => setPreviewVersion((value) => value + 1)
@@ -98,6 +116,7 @@ export default function FreeVisualEditor() {
         return false
       }
       setTemplateData(nextTemplateData)
+      await loadMe()
       setMessage('✓ Cambios guardados')
       refreshPreview()
       return true
@@ -149,6 +168,10 @@ export default function FreeVisualEditor() {
     }
   }
 
+  const requiredKeys: Array<keyof FreePublicationReadiness['steps']> = ['identifier', 'identity', 'contact', 'quick_actions', 'portfolio', 'services']
+  const completedRequired = requiredKeys.filter((key) => readiness?.steps?.[key]).length
+  const completionPercent = Math.round((completedRequired / requiredKeys.length) * 100)
+
   if (loading) return <main className="min-h-screen bg-[#f7f9fc] grid place-items-center font-['Inter']"><div className="loading-spinner" /></main>
 
   return (
@@ -168,8 +191,17 @@ export default function FreeVisualEditor() {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">KAWVO LINK</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Edita tu perfil como lo ves</h1>
-              <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Haz cambios aquí y comprueba el resultado en la vista previa. La experiencia se parece a la Demo, pero tus cambios se guardan en tu perfil real.</p>
+              <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Haz cambios aquí y comprueba el resultado en la vista previa. Tus cambios se guardan en tu perfil real.</p>
             </div>
+
+            <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Progreso</p><h2 className="mt-1 text-lg font-black">Tu perfil está {completionPercent}% completo</h2></div>
+                <span className={`rounded-full px-3 py-1.5 text-xs font-black ${completionPercent === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-50 text-cyan-700'}`}>{completedRequired}/6</span>
+              </div>
+              <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full transition-all ${completionPercent === 100 ? 'bg-emerald-500' : 'bg-cyan-600'}`} style={{ width: `${completionPercent}%` }} /></div>
+              <p className="mt-2 text-xs font-medium leading-5 text-slate-500">El porcentaje usa solo los 6 requisitos necesarios para publicar. Los bloques opcionales no lo reducen.</p>
+            </section>
 
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
               <div className="flex items-center justify-between gap-3">
@@ -198,9 +230,22 @@ export default function FreeVisualEditor() {
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
               <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">3. Completa tu perfil</p>
               <h2 className="mt-1 text-xl font-black">Edita cada bloque</h2>
-              <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Los bloques especializados siguen separados para que puedas editarlos con comodidad sin perder la vista previa como referencia.</p>
+              <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Verde significa completado, ámbar indica pendiente y gris identifica un bloque opcional.</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {sectionLinks.map((item) => <button key={item.to} type="button" onClick={() => navigate(item.to)} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left hover:border-cyan-200 hover:bg-cyan-50/40"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-lg font-black text-cyan-700 shadow-sm">{item.icon}</span><span><span className="block text-sm font-black text-slate-900">{item.title}</span><span className="mt-1 block text-xs font-medium leading-5 text-slate-500">{item.text}</span></span></button>)}
+                {sectionLinks.map((item) => {
+                  const completed = item.readinessKey ? Boolean(readiness?.steps?.[item.readinessKey]) : false
+                  const optional = Boolean(item.optional)
+                  const status = optional ? 'Opcional' : completed ? 'Completado' : 'Pendiente'
+                  const cardClass = optional ? 'border-slate-200 bg-slate-50' : completed ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70'
+                  const iconClass = optional ? 'bg-white text-slate-600' : completed ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-800'
+                  const badgeClass = optional ? 'bg-slate-200 text-slate-500' : completed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'
+                  return (
+                    <button key={item.to} type="button" onClick={() => navigate(item.to)} className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition hover:shadow-sm ${cardClass}`}>
+                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg font-black shadow-sm ${iconClass}`}>{completed && !optional ? '✓' : item.icon}</span>
+                      <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="block text-sm font-black text-slate-900">{item.title}</span><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${badgeClass}`}>{status}</span></span><span className="mt-1 block text-xs font-medium leading-5 text-slate-500">{item.text}</span></span>
+                    </button>
+                  )
+                })}
               </div>
             </section>
           </div>
