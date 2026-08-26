@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
 type PublicBankAccount = {
   id: string
@@ -13,6 +13,10 @@ type PublicBankAccount = {
   copy_value: string
 }
 
+type PublicBankAccountsProps = {
+  standalone?: boolean
+}
+
 function bankInitials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'B'
 }
@@ -21,11 +25,12 @@ function accountTypeLabel(type: PublicBankAccount['account_type']) {
   return type === 'checking' ? 'Cuenta corriente' : 'Cuenta de ahorros'
 }
 
-export default function PublicBankAccounts() {
+export default function PublicBankAccounts({ standalone = false }: PublicBankAccountsProps) {
   const { slug = '' } = useParams()
   const [items, setItems] = useState<PublicBankAccount[]>([])
   const [enabled, setEnabled] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -62,11 +67,48 @@ export default function PublicBankAccounts() {
     }
   }
 
-  if (!enabled || items.length === 0) return null
+  async function shareBankPage() {
+    const url = `${window.location.origin}/${encodeURIComponent(slug)}/bancos`
+    const title = 'Datos bancarios'
+    const text = 'Aquí puedes consultar los datos bancarios para realizar una transferencia.'
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url })
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      window.setTimeout(() => setShareCopied(false), 1800)
+    } catch {
+      // Cancelar el panel nativo de compartir no es un error.
+    }
+  }
+
+  if (!enabled || items.length === 0) {
+    if (!standalone) return null
+    return (
+      <main className="min-h-screen bg-[#f7f9fc] px-4 py-8 font-['Inter'] text-slate-950">
+        <div className="mx-auto w-full max-w-[430px] rounded-[26px] border border-slate-200 bg-white p-5 text-center shadow-sm">
+          <p className="text-sm font-black text-slate-900">Datos bancarios no disponibles</p>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Este perfil no tiene cuentas bancarias visibles en este momento.</p>
+          <Link to={`/${encodeURIComponent(slug)}`} className="mt-5 inline-flex rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Volver al perfil</Link>
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <section className="bg-[#f7f9fc] px-4 pb-28 pt-2 font-['Inter'] text-slate-950">
+    <section className={`${standalone ? 'min-h-screen pt-8' : 'pt-2'} bg-[#f7f9fc] px-4 pb-28 font-['Inter'] text-slate-950`}>
       <div className="mx-auto w-full max-w-[430px]">
+        {standalone && (
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Link to={`/${encodeURIComponent(slug)}`} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">← Volver al perfil</Link>
+            <button type="button" onClick={() => void shareBankPage()} className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white">
+              {shareCopied ? '✓ Enlace copiado' : 'Compartir'}
+            </button>
+          </div>
+        )}
+
         <div className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
           <div className="mb-4">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">Datos para transferencias</p>
@@ -99,6 +141,12 @@ export default function PublicBankAccounts() {
               </article>
             ))}
           </div>
+
+          {!standalone && (
+            <Link to={`/${encodeURIComponent(slug)}/bancos`} className="mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-800">
+              Abrir datos bancarios
+            </Link>
+          )}
         </div>
       </div>
     </section>
