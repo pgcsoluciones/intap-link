@@ -38,7 +38,7 @@ const sectionLinks = [
   { title: 'Portafolio', text: 'Agrega o reemplaza imágenes de tus trabajos.', to: '/admin/free/portfolio', icon: '▧' },
   { title: 'Servicios', text: 'Edita tus servicios, imágenes y descripciones.', to: '/admin/free/services', icon: '◇' },
   { title: 'Enlaces', text: 'Catálogo, formularios u otros enlaces importantes.', to: '/admin/free/links', icon: '⌁' },
-  { title: 'Cuentas bancarias', text: 'Hasta 3 cuentas para recibir transferencias. Puedes mostrar u ocultar la sección.', to: '/admin/free/bank-accounts', icon: '$' },
+  { title: 'Cuentas bancarias', text: 'Agrega tus datos bancarios para que tus clientes los copien fácilmente al hacer una transferencia.', to: '/admin/free/bank-accounts', icon: '$' },
 ]
 
 export default function FreeVisualEditor() {
@@ -82,7 +82,7 @@ export default function FreeVisualEditor() {
   async function saveIdentity() {
     if (!name.trim() || !role.trim()) {
       setMessage('Completa tu nombre o marca y a qué te dedicas.')
-      return
+      return false
     }
     setSaving(true)
     setMessage('')
@@ -93,15 +93,26 @@ export default function FreeVisualEditor() {
         bio: bio.trim(),
         template_data: nextTemplateData,
       })
-      if (!json?.ok) return setMessage(json?.error || 'No se pudieron guardar los cambios.')
+      if (!json?.ok) {
+        setMessage(json?.error || 'No se pudieron guardar los cambios.')
+        return false
+      }
       setTemplateData(nextTemplateData)
       setMessage('✓ Cambios guardados')
       refreshPreview()
+      return true
     } catch {
       setMessage('No se pudieron guardar los cambios.')
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  async function saveAndRefreshPreview() {
+    if (saving) return
+    const saved = await saveIdentity()
+    if (saved) setMessage('✓ Guardado y vista previa actualizada')
   }
 
   async function chooseLayout(nextLayout: LayoutId) {
@@ -198,7 +209,7 @@ export default function FreeVisualEditor() {
             <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Vista previa en vivo</p><p className="mt-1 text-sm font-bold text-slate-700">Así lo verá tu cliente</p></div>
-                <button type="button" onClick={refreshPreview} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">Actualizar</button>
+                <button type="button" onClick={() => void saveAndRefreshPreview()} disabled={saving} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar y actualizar'}</button>
               </div>
               {slug ? (
                 <div className="mx-auto overflow-hidden rounded-[24px] border border-slate-200 bg-[#eef3f8]">
