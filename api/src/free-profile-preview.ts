@@ -1,10 +1,19 @@
 import app from './preview-entry'
 import { cookieNames } from './lib/cookies'
 
+const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'
+const PREVIEW_SESSION_TTL_SECONDS = 15 * 60
+
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
   const hash = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(hash)).map((value) => value.toString(16).padStart(2, '0')).join('')
+}
+
+function generateToken(bytes = 32): string {
+  const array = new Uint8Array(bytes)
+  crypto.getRandomValues(array)
+  return Array.from(array).map((value) => value.toString(16).padStart(2, '0')).join('')
 }
 
 function parseCookie(header: string, name: string): string | null {
@@ -29,20 +38,8 @@ async function requireProfileOwner(c: any, next: any) {
   await next()
 }
 
-class EmbeddedPreviewHeadRewriter {
-  constructor(
-    private readonly assetOrigin: string,
-    private readonly profilePath: string,
-  ) {}
-
-  element(element: Element) {
-    // Assets deben resolver contra el deployment inmutable, mientras que
-    // BrowserRouter debe ver /{slug} y no la ruta /api/... del iframe proxy.
-    element.prepend(
-      `<base href="${this.assetOrigin}/"><script>history.replaceState(null,'',${JSON.stringify(this.profilePath)});</script>`,
-      { html: true },
-    )
-  }
+function previewSessionCookie(value: string, maxAge: number) {
+  return `${PREVIEW_SESSION_COOKIE}=${encodeURIComponent(value)}; Domain=.preview.intaprd.com; Path=/; Max-Age=${maxAge}; Secure; HttpOnly; SameSite=Lax`
 }
 
 app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: any) => {
@@ -55,35 +52,28 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   ).bind(userId, slug).first()
   if (!owned) return c.text('Perfil no encontrado.', 404)
 
-  const publicWebOrigin = String(c.env.WEB_URL || 'https://intaprd.com').replace(/\/$/, '')
-  const immutableWebOrigin = String(c.env.WEB_PAGES_ORIGIN || publicWebOrigin).replace(/\/$/, '')
-  const encodedSlug = encodeURIComponent(slug)
-  const profilePath = `/${encodedSlug}?preview=1&embedded=1`
-  const target = `${immutableWebOrigin}${profilePath}`
-  const upstream = await fetch(target, {
-    method: 'GET',
-    headers: { 'x-kawvo-embedded-preview': '1' },
-    redirect: 'manual',
-  })
+  const profileId = String((owned as any).id || '')
+  const rawToken = generateToken(32)
+  const tokenHash = await sha256Hex(rawToken)
+  const sessionId = crypto.randomUUID()
 
-  const headers = new Headers(upstream.headers)
-  headers.delete('x-frame-options')
-  const csp = headers.get('content-security-policy')
-  if (csp && /frame-ancestors/i.test(csp)) headers.delete('content-security-policy')
-  headers.set('cache-control', 'no-store')
+  await c.env.DB.prepare(
+    `DELETE FROM profile_preview_sessions WHERE expires_at <= datetime('now')`,
+  ).run().catch(() => undefined)
 
-  const response = new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers,
-  })
+  await c.env.DB.prepare(
+    `INSERT INTO profile_preview_sessions (id, profile_id, token_hash, expires_at, created_at)
+     VALUES (?, ?, ?, datetime('now', '+15 minutes'), datetime('now'))`,
+  ).bind(sessionId, profileId, tokenHash).run()
 
-  const contentType = headers.get('content-type') || ''
-  if (!contentType.includes('text/html')) return response
+  const publicWebOrigin = String(c.env.WEB_URL || 'https://preview.intaprd.com').replace(/\/$/, '')
+  const target = `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1&embedded=1`
+  const headers = new Headers()
+  headers.set('Location', target)
+  headers.set('Cache-Control', 'no-store')
+  headers.set('Set-Cookie', previewSessionCookie(rawToken, PREVIEW_SESSION_TTL_SECONDS))
 
-  return new HTMLRewriter()
-    .on('head', new EmbeddedPreviewHeadRewriter(immutableWebOrigin, profilePath))
-    .transform(response)
+  return new Response(null, { status: 302, headers })
 })
 
 export default app
