@@ -6,6 +6,7 @@ type Currency = 'DOP' | 'USD'
 type DisplayMode = 'masked' | 'visible'
 
 const MAX_BANK_ACCOUNTS = 3
+const FAIR_CUTOFF_UTC = '2026-09-06 04:00:00'
 
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
@@ -78,9 +79,20 @@ async function bankAccess(c: any, profileId: string, planId: string) {
       LIMIT 1`,
   ).bind(profileId).first()
 
-  return moduleRow
-    ? { allowed: true, source: 'fair' as const }
-    : { allowed: false, source: null, locked_reason: 'plan_required' as const }
+  if (moduleRow) return { allowed: true, source: 'fair' as const }
+
+  // Durante la promoción de feria el usuario Free debe poder configurar sus
+  // cuentas antes de publicar. La primera publicación dentro del periodo
+  // persiste el entitlement permanentemente mediante la migración/trigger D1.
+  const promo = await c.env.DB.prepare(
+    `SELECT CASE WHEN datetime('now') < ? THEN 1 ELSE 0 END AS active`,
+  ).bind(FAIR_CUTOFF_UTC).first()
+
+  if (Number((promo as any)?.active || 0) === 1) {
+    return { allowed: true, source: 'fair' as const }
+  }
+
+  return { allowed: false, source: null, locked_reason: 'plan_required' as const }
 }
 
 async function ownerProfile(c: any, userId: string) {
@@ -282,8 +294,14 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
     `SELECT id, plan_id, is_published, is_active FROM profiles WHERE lower(slug) = ? LIMIT 1`,
   ).bind(slug).first()
 
-  if (!profile || !(profile as any).is_active || !(profile as any).is_published) {
+  if (!profile || !(profile as any).is_active) {
     return c.json({ ok: false, error: 'Perfil no disponible' }, 404)
+  }
+
+  // Un borrador no debe exponer datos bancarios por una URL pública. Para la
+  // vista previa devolvemos una sección vacía en lugar de un 404 ruidoso.
+  if (!(profile as any).is_published) {
+    return c.json({ ok: true, data: { enabled: false, items: [] } })
   }
 
   const profileId = String((profile as any).id)
