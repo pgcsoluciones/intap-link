@@ -312,11 +312,11 @@ export default function FreeDashboard() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Cuentas bancarias</p>
-              <h2 className="mt-1 text-lg font-black text-slate-950">Recibe transferencias desde tu perfil</h2>
+              <h2 className="mt-1 text-lg font-black text-slate-950">Facilita las transferencias bancarias</h2>
               {bankSummary.allowed ? (
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{bankSummary.enabled ? 'Sección activa' : 'Sección desactivada'} · {bankSummary.count}/3 cuentas configuradas{bankSummary.source === 'fair' ? ' · Beneficio de feria' : ''}.</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes los copien fácilmente al momento de hacer una transferencia. {bankSummary.enabled ? 'Sección activa' : 'Sección desactivada'} · {bankSummary.count}/3 cuentas configuradas{bankSummary.source === 'fair' ? ' · Promoción de feria' : ''}.</p>
               ) : (
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Esta función no está incluida en tu acceso actual. Está disponible en Plan Básico o mediante una promoción vigente.</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes puedan copiarlos fácilmente. Disponible en Plan Básico y para perfiles Free durante promociones vigentes.</p>
               )}
             </div>
             <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${bankSummary.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{bankSummary.allowed ? 'Disponible' : 'Bloqueado'}</span>
