@@ -157,6 +157,11 @@ function App() {
           />
 
           <Route
+            path="/:slug/bancos"
+            element={<PublicBankAccounts standalone />}
+          />
+
+          <Route
             path="/:slug"
             element={<PublicProfileRoute />}
           />
