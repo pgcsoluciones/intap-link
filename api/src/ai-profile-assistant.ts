@@ -136,14 +136,14 @@ function validateProposal(raw: unknown, maxServices: number): AssistantProposal 
 function validateAssistantResult(raw: unknown, maxServices: number): AssistantResult | null {
   const value = objectValue(raw)
   if (value.status === 'needs_more_info') {
-    if ('proposal' in value) return null
+    if (value.proposal !== null) return null
     const questions = Array.isArray(value.questions)
       ? value.questions.map((q: unknown) => text(q, 180)).filter(Boolean).slice(0, 3)
       : []
     return questions.length ? { status: 'needs_more_info', questions } : null
   }
   if (value.status === 'ready') {
-    if ('questions' in value) return null
+    if (value.questions !== null) return null
     const proposal = validateProposal(value.proposal, maxServices)
     return proposal ? { status: 'ready', proposal } : null
   }
@@ -286,10 +286,14 @@ const proposalSchema = {
 }
 
 const responseSchema = {
-  anyOf: [
-    { type: 'object', additionalProperties: false, properties: { status: { type: 'string', enum: ['ready'] }, proposal: proposalSchema }, required: ['status','proposal'] },
-    { type: 'object', additionalProperties: false, properties: { status: { type: 'string', enum: ['needs_more_info'] }, questions: { type: 'array', items: { type: 'string' } } }, required: ['status','questions'] },
-  ],
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    status: { type: 'string', enum: ['ready','needs_more_info'] },
+    proposal: { anyOf: [proposalSchema, { type: 'null' }] },
+    questions: { anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }] },
+  },
+  required: ['status','proposal','questions'],
 }
 
 const EDITORIAL_INSTRUCTIONS = [
@@ -313,7 +317,7 @@ const EDITORIAL_INSTRUCTIONS = [
   'CONTENIDO EXISTENTE: si ya es bueno conserva su esencia y mejora claridad, estructura, posicionamiento, lectura móvil y conversión. No reemplaces por cambiar.',
   'MÓVIL: frases cortas, palabras concretas, jerarquía clara, lectura rápida y cero relleno.',
   'REVISIÓN SILENCIOSA antes de ready: claridad, especificidad, credibilidad, diferenciación, beneficio, conversión, lectura móvil, coherencia, ausencia de redundancia y fidelidad a los hechos. Si el texto podría servir sin cambios a cien negocios, hazlo más específico usando solo el contexto disponible.',
-  'SALIDA: devuelve exclusivamente JSON válido conforme al esquema. No HTML, Markdown, comentarios, explicaciones ni razonamiento interno.',
+  'SALIDA: devuelve exclusivamente JSON válido conforme al esquema. La raíz siempre contiene status, proposal y questions. Si status=ready, proposal contiene la propuesta y questions=null. Si status=needs_more_info, proposal=null y questions contiene 1 a 3 preguntas. No HTML, Markdown, comentarios, explicaciones ni razonamiento interno.',
 ].join('\n')
 
 app.get('/api/v1/me/ai-profile-assistant/context', requireAssistantAuth, async (c: any) => {

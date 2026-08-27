@@ -136,7 +136,7 @@ try {
       assert.match(payload.instructions, /portafolio/i)
       assert.match(payload.input, /"editing_scope":"missing_only"/)
       assert.match(payload.instructions, /nunca inventes/i)
-      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL }), usage: { input_tokens: 500, output_tokens: 240 } }) }
+      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL, questions: null }), usage: { input_tokens: 500, output_tokens: 240 } }) }
     }
     const db = new FakeDB({ channels: ['whatsapp'] })
     const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'soy electricista pongo abanico lampara inversore y arreglo corto 😅', clients: 'casas y negocios', next_action: 'que me escriban pa cotizar' }, round: 1 }, {}, db)
@@ -152,7 +152,7 @@ try {
     globalThis.fetch = async (_url, init) => {
       const payload = JSON.parse(init.body)
       assert.match(payload.input, /\"editing_scope\":\"full_profile\"/)
-      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL }), usage: {} }) }
+      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL, questions: null }), usage: {} }) }
     }
     const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.', preferred_contact: 'whatsapp' }, round: 1, editing_scope: 'full_profile' })
     assert.equal(result.status, 200)
@@ -161,7 +161,7 @@ try {
 
   // B: the model can request only high-value missing information.
   {
-    globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'needs_more_info', questions: ['¿Atiendes hogares, negocios o ambos?'] }), usage: {} }) })
+    globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'needs_more_info', proposal: null, questions: ['¿Atiendes hogares, negocios o ambos?'] }), usage: {} }) })
     const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Hago instalaciones eléctricas.' }, preferred_contact: 'whatsapp', round: 1 })
     assert.equal(result.status, 200)
     assert.equal(result.body.data.status, 'needs_more_info')
@@ -170,7 +170,7 @@ try {
 
   // E: backend normalizes excessive model questions to at most three.
   {
-    globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'needs_more_info', questions: ['Q1','Q2','Q3','Q4'] }), usage: {} }) })
+    globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'needs_more_info', proposal: null, questions: ['Q1','Q2','Q3','Q4'] }), usage: {} }) })
     const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Hago instalaciones eléctricas.' }, preferred_contact: 'whatsapp', round: 1 })
     assert.equal(result.status, 200)
     assert.equal(result.body.data.questions.length, 3)
@@ -181,7 +181,7 @@ try {
     const proposal = { ...BASE_PROPOSAL, services: Array.from({ length: 5 }, (_, i) => ({ title: `Servicio ${i+1}`, description: `Descripción ${i+1}` })) }
     globalThis.fetch = async (_url, init) => {
       assert.match(JSON.parse(init.body).instructions, /Nunca inventes/i)
-      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal }), usage: {} }) }
+      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal, questions: null }), usage: {} }) }
     }
     const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Hago trabajos eléctricos.', preferred_contact: 'whatsapp' }, round: 1 })
     assert.equal(result.status, 200)
