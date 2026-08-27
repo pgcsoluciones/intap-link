@@ -199,9 +199,9 @@ export default function FreeVisualEditor() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,58%)_minmax(360px,42%)] lg:items-start">
           <div className={`${mobileMode === 'preview' ? 'hidden' : 'block'} space-y-5 lg:block`}>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">KAWVO LINK</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Edita tu perfil como lo ves</h1>
-              <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Haz cambios aquí y comprueba el resultado en la vista previa. Tus cambios se guardan en tu perfil real.</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">KAWVO LINK · DISEÑO Y APARIENCIA</p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Personaliza cómo se ve tu perfil</h1>
+              <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Elige tu plantilla, ajusta colores y edita el contenido principal mientras ves el resultado en tiempo real.</p>
             </div>
 
             <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -227,8 +227,9 @@ export default function FreeVisualEditor() {
             </section>
 
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">2. Apariencia</p>
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">2. Diseño y apariencia</p>
               <h2 className="mt-1 text-xl font-black">Plantilla y colores</h2>
+              <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Escoge la estructura visual de tu perfil y la combinación de colores que mejor represente tu marca.</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-3">
                 {layouts.map((item) => <button key={item.id} type="button" disabled={saving} onClick={() => void chooseLayout(item.id)} className={`rounded-2xl border p-4 text-left transition ${layout === item.id ? 'border-cyan-500 bg-cyan-50 ring-4 ring-cyan-100' : 'border-slate-200 bg-white hover:border-slate-300'}`}><span className="block text-base font-black">{item.name}</span><span className="mt-1 block text-xs font-medium leading-5 text-slate-500">{item.text}</span></button>)}
               </div>
