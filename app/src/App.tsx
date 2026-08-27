@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AdminGuard from './components/admin/AdminGuard'
 import SuperAdminGuard from './components/admin/SuperAdminGuard'
@@ -32,7 +33,6 @@ import FreeQuickActions from './components/admin/free/FreeQuickActions'
 import FreeServices from './components/admin/free/FreeServices'
 import FreeStyle from './components/admin/free/FreeStyle'
 import FreeVisualEditor from './components/admin/free/FreeVisualEditor'
-import FreeAiProfileAssistant from './components/admin/free/FreeAiProfileAssistant'
 import FreeBankAccounts from './components/admin/free/FreeBankAccounts'
 import FreeContextHelp from './components/admin/free/FreeContextHelp'
 import FreeRouteUx from './components/admin/free/FreeRouteUx'
@@ -50,6 +50,12 @@ import FreeOnboardingBuilder from './components/admin/free/onboarding/FreeOnboar
 import FreeOnboardingReview from './components/admin/free/onboarding/FreeOnboardingReview'
 import FreeArtifactActivation from './components/admin/free/onboarding/FreeArtifactActivation'
 import { ArtifactActivation, ArtifactManager } from './components/admin/ArtifactActivation'
+
+const FreeAiProfileAssistant = lazy(() => import('./components/admin/free/FreeAiProfileAssistant'))
+
+function AiRouteFallback() {
+  return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
+}
 
 function UnknownAppRouteRedirect() {
   const location = useLocation()
@@ -95,7 +101,7 @@ function App() {
 
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
         <Route path="/admin/free/editor" element={<AdminGuard planScope="free"><FreeVisualEditor /></AdminGuard>} />
-        <Route path="/admin/free/ai-profile" element={<AdminGuard planScope="free"><FreeAiProfileAssistant /></AdminGuard>} />
+        <Route path="/admin/free/ai-profile" element={<AdminGuard planScope="free"><Suspense fallback={<AiRouteFallback />}><FreeAiProfileAssistant /></Suspense></AdminGuard>} />
         <Route path="/admin/free/bank-accounts" element={<AdminGuard planScope="free"><FreeBankAccounts /></AdminGuard>} />
         <Route path="/admin/free/identifier" element={<AdminGuard planScope="free"><FreeIdentifier /></AdminGuard>} />
         <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />
