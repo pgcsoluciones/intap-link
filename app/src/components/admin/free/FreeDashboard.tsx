@@ -236,11 +236,16 @@ export default function FreeDashboard() {
           </div>
           <button type="button" onClick={() => navigate('/admin/free/editor')} className="mt-5 flex w-full items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-left text-white shadow-sm">
             <span>
-              <span className="block text-base font-black">Editar mi Perfil Digital</span>
-              <span className="mt-1 block text-xs font-medium text-slate-300">Edita y mira cómo queda en tiempo real.</span>
+              <span className="block text-base font-black">Personaliza el diseño de tu perfil</span>
+              <span className="mt-1 block text-xs font-medium text-slate-300">Plantilla, colores, identidad y vista previa en vivo.</span>
             </span>
             <span className="text-xl text-slate-400">›</span>
           </button>
+          {previewReady && me?.slug ? (
+            <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(me.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">Ver mi perfil</a>
+          ) : (
+            <button type="button" disabled className="mt-2 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-black text-slate-400">Ver mi perfil</button>
+          )}
         </article>
 
         <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">

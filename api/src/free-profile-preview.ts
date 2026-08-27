@@ -38,8 +38,10 @@ async function requireProfileOwner(c: any, next: any) {
   await next()
 }
 
-function previewSessionCookie(value: string, maxAge: number) {
-  return `${PREVIEW_SESSION_COOKIE}=${encodeURIComponent(value)}; Domain=.preview.intaprd.com; Path=/; Max-Age=${maxAge}; Secure; HttpOnly; SameSite=Lax`
+function previewSessionCookie(value: string, maxAge: number, environment?: string) {
+  const isProduction = String(environment || '').toLowerCase() === 'production'
+  const domain = isProduction ? '.intaprd.com' : '.preview.intaprd.com'
+  return `${PREVIEW_SESSION_COOKIE}=${encodeURIComponent(value)}; Domain=${domain}; Path=/; Max-Age=${maxAge}; Secure; HttpOnly; SameSite=Lax`
 }
 
 app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: any) => {
@@ -67,15 +69,17 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   ).bind(sessionId, profileId, tokenHash).run()
 
   const publicWebOrigin = String(c.env.WEB_URL || 'https://preview.intaprd.com').replace(/\/$/, '')
+  const environment = String(c.env.ENVIRONMENT || '').toLowerCase()
   const full = c.req.query('full') === '1'
+  const embeddedParam = environment === 'production' ? 'embed=1' : 'embedded=1'
   const target = full
     ? `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1`
-    : `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1&embedded=1`
+    : `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1&${embeddedParam}`
 
   const headers = new Headers()
   headers.set('Location', target)
   headers.set('Cache-Control', 'no-store')
-  headers.set('Set-Cookie', previewSessionCookie(rawToken, PREVIEW_SESSION_TTL_SECONDS))
+  headers.set('Set-Cookie', previewSessionCookie(rawToken, PREVIEW_SESSION_TTL_SECONDS, environment))
 
   return new Response(null, { status: 302, headers })
 })
