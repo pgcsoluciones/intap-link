@@ -23,7 +23,7 @@ type SectionLink = {
   to: string
   icon: string
   readinessKey?: keyof FreePublicationReadiness['steps']
-  optional?: boolean
+  statusMode?: 'standard' | 'available' | 'bank'
 }
 
 const layouts: Array<{ id: LayoutId; name: string; text: string }> = [
@@ -48,8 +48,8 @@ const sectionLinks: SectionLink[] = [
   { title: 'Botones rápidos', text: 'Llamar, Instagram, ubicación, email o TikTok.', to: '/admin/free/quick-actions', icon: '↗', readinessKey: 'quick_actions' },
   { title: 'Portafolio', text: 'Agrega o reemplaza imágenes de tus trabajos.', to: '/admin/free/portfolio', icon: '▧', readinessKey: 'portfolio' },
   { title: 'Servicios', text: 'Edita tus servicios, imágenes y descripciones.', to: '/admin/free/services', icon: '◇', readinessKey: 'services' },
-  { title: 'Enlaces', text: 'Catálogo, formularios u otros enlaces importantes.', to: '/admin/free/links', icon: '⌁', optional: true },
-  { title: 'Cuentas bancarias', text: 'Agrega tus datos bancarios para que tus clientes los copien fácilmente al hacer una transferencia.', to: '/admin/free/bank-accounts', icon: '$', optional: true },
+  { title: 'Enlaces', text: 'Catálogo, formularios u otros enlaces importantes.', to: '/admin/free/links', icon: '⌁', statusMode: 'available' },
+  { title: 'Cuentas bancarias', text: 'Agrega tus datos bancarios para que tus clientes los copien fácilmente al hacer una transferencia.', to: '/admin/free/bank-accounts', icon: '$', statusMode: 'bank' },
 ]
 
 export default function FreeVisualEditor() {
@@ -65,6 +65,7 @@ export default function FreeVisualEditor() {
   const [layout, setLayout] = useState<LayoutId>('esencial')
   const [palette, setPalette] = useState<PaletteId>('intap')
   const [readiness, setReadiness] = useState<FreePublicationReadiness | null>(null)
+  const [bankCount, setBankCount] = useState(0)
   const [previewVersion, setPreviewVersion] = useState(1)
   const [mobileMode, setMobileMode] = useState<'edit' | 'preview'>('edit')
 
@@ -91,8 +92,17 @@ export default function FreeVisualEditor() {
     if (data.free_palette_id && palettes.some((item) => item.id === data.free_palette_id)) setPalette(data.free_palette_id)
   }
 
+  async function loadBankSummary() {
+    try {
+      const json: any = await apiGet('/me/bank-accounts')
+      setBankCount(json?.ok && Array.isArray(json.data?.items) ? Math.min(3, json.data.items.length) : 0)
+    } catch {
+      setBankCount(0)
+    }
+  }
+
   useEffect(() => {
-    loadMe().finally(() => setLoading(false))
+    Promise.all([loadMe(), loadBankSummary()]).finally(() => setLoading(false))
   }, [])
 
   const refreshPreview = () => setPreviewVersion((value) => value + 1)
@@ -200,7 +210,7 @@ export default function FreeVisualEditor() {
                 <span className={`rounded-full px-3 py-1.5 text-xs font-black ${completionPercent === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-50 text-cyan-700'}`}>{completedRequired}/6</span>
               </div>
               <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full transition-all ${completionPercent === 100 ? 'bg-emerald-500' : 'bg-cyan-600'}`} style={{ width: `${completionPercent}%` }} /></div>
-              <p className="mt-2 text-xs font-medium leading-5 text-slate-500">El porcentaje usa solo los 6 requisitos necesarios para publicar. Los bloques opcionales no lo reducen.</p>
+              <p className="mt-2 text-xs font-medium leading-5 text-slate-500">El porcentaje usa solo los 6 requisitos necesarios para publicar. Enlaces y cuentas bancarias no reducen ese porcentaje.</p>
             </section>
 
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
@@ -230,18 +240,19 @@ export default function FreeVisualEditor() {
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
               <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">3. Completa tu perfil</p>
               <h2 className="mt-1 text-xl font-black">Edita cada bloque</h2>
-              <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Verde significa completado, ámbar indica pendiente y gris identifica un bloque opcional.</p>
+              <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Verde significa completado, ámbar indica pendiente y gris identifica una función disponible que no forma parte de los 6 requisitos de publicación.</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 {sectionLinks.map((item) => {
-                  const completed = item.readinessKey ? Boolean(readiness?.steps?.[item.readinessKey]) : false
-                  const optional = Boolean(item.optional)
-                  const status = optional ? 'Opcional' : completed ? 'Completado' : 'Pendiente'
-                  const cardClass = optional ? 'border-slate-200 bg-slate-50' : completed ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70'
-                  const iconClass = optional ? 'bg-white text-slate-600' : completed ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-800'
-                  const badgeClass = optional ? 'bg-slate-200 text-slate-500' : completed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'
+                  const isBank = item.statusMode === 'bank'
+                  const isAvailable = item.statusMode === 'available'
+                  const completed = isBank ? bankCount > 0 : item.readinessKey ? Boolean(readiness?.steps?.[item.readinessKey]) : false
+                  const status = isBank ? `${completed ? 'Completado' : 'Pendiente'} · ${bankCount}/3` : isAvailable ? 'Disponible' : completed ? 'Completado' : 'Pendiente'
+                  const cardClass = isAvailable ? 'border-slate-200 bg-slate-50' : completed ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70'
+                  const iconClass = isAvailable ? 'bg-white text-slate-600' : completed ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-800'
+                  const badgeClass = isAvailable ? 'bg-slate-200 text-slate-600' : completed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'
                   return (
                     <button key={item.to} type="button" onClick={() => navigate(item.to)} className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition hover:shadow-sm ${cardClass}`}>
-                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg font-black shadow-sm ${iconClass}`}>{completed && !optional ? '✓' : item.icon}</span>
+                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg font-black shadow-sm ${iconClass}`}>{completed ? '✓' : item.icon}</span>
                       <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="block text-sm font-black text-slate-900">{item.title}</span><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${badgeClass}`}>{status}</span></span><span className="mt-1 block text-xs font-medium leading-5 text-slate-500">{item.text}</span></span>
                     </button>
                   )
