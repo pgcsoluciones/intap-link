@@ -7,6 +7,7 @@ import './bank-accounts'
 import './preview-bank-accounts'
 import './scan-status'
 import './scan-to-claim'
+import './ai-profile-assistant'
 import app from './preview-free-actions'
 
 export default app
