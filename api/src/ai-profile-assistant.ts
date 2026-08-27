@@ -100,40 +100,74 @@ function configuredChannels(contact: any): string[] {
   return [contact.whatsapp && 'whatsapp', contact.phone && 'phone', contact.email && 'email', contact.address && 'visit'].filter(Boolean) as string[]
 }
 
-function validateProposal(raw: unknown, maxServices: number): AssistantProposal | null {
+function strictText(value: unknown, max: number): string | null {
+  const normalized = String(value || '').replace(/\s+/g, ' ').trim()
+  return normalized.length <= max ? normalized : null
+}
+
+function validateProposal(raw: unknown, maxServices: number, maxPortfolio: number): AssistantProposal | null {
   const value = objectValue(raw)
   const cta = objectValue(value.cta)
   const goal = ALLOWED_GOALS.has(String(cta.goal)) ? String(cta.goal) as AssistantProposal['cta']['goal'] : 'contact'
-  const services = Array.isArray(value.services)
-    ? value.services.slice(0, maxServices).map((item: any) => ({
-        title: text(item?.title, 60), description: text(item?.description, 90),
-      })).filter((item: any) => item.title && item.description)
-    : []
-  const portfolio = Array.isArray(value.portfolio)
-    ? value.portfolio.slice(0, FREE_MAX_PORTFOLIO).map((item: any) => ({
-        id: text(item?.id, 80), title: text(item?.title, 80), description: text(item?.description, 90),
-      })).filter((item: PortfolioProposal) => item.id)
-    : []
-  const imageSuggestions = Array.isArray(value.image_suggestions)
-    ? value.image_suggestions.slice(0, 4).map((item: any) => ({
-        purpose: text(item?.purpose, 70), suggestion: text(item?.suggestion, 180),
-      })).filter((item: any) => item.purpose && item.suggestion)
-    : []
+
+  const rawServices = Array.isArray(value.services) ? value.services.slice(0, maxServices) : []
+  const services = rawServices.map((item: any) => ({
+    title: strictText(item?.title, 60),
+    description: strictText(item?.description, 90),
+  }))
+  if (services.some((item) => item.title === null || item.description === null)) return null
+
+  const rawPortfolio = Array.isArray(value.portfolio) ? value.portfolio.slice(0, maxPortfolio) : []
+  const portfolio = rawPortfolio.map((item: any) => ({
+    id: strictText(item?.id, 80),
+    title: strictText(item?.title, 80),
+    description: strictText(item?.description, 90),
+  }))
+  if (portfolio.some((item) => item.id === null || item.title === null || item.description === null)) return null
+
+  const rawImageSuggestions = Array.isArray(value.image_suggestions) ? value.image_suggestions.slice(0, 4) : []
+  const imageSuggestions = rawImageSuggestions.map((item: any) => ({
+    purpose: strictText(item?.purpose, 70),
+    suggestion: strictText(item?.suggestion, 180),
+  }))
+  if (imageSuggestions.some((item) => item.purpose === null || item.suggestion === null)) return null
+
+  const professionalTitle = strictText(value.professional_title, 80)
+  const bio = strictText(value.bio, 300)
+  const servicesSectionTitle = strictText(value.services_section_title, 60)
+  const servicesSectionDescription = strictText(value.services_section_description, 240)
+  const ctaLabel = strictText(cta.label, 45)
+
+  if (
+    professionalTitle === null ||
+    bio === null ||
+    servicesSectionTitle === null ||
+    servicesSectionDescription === null ||
+    ctaLabel === null
+  ) return null
+
   const proposal: AssistantProposal = {
-    professional_title: text(value.professional_title, 80),
-    bio: text(value.bio, 300),
-    services_section_title: text(value.services_section_title, 60),
-    services_section_description: text(value.services_section_description, 240),
-    services,
-    portfolio,
-    cta: { label: text(cta.label, 45), goal },
-    image_suggestions: imageSuggestions,
+    professional_title: professionalTitle,
+    bio,
+    services_section_title: servicesSectionTitle,
+    services_section_description: servicesSectionDescription,
+    services: services
+      .filter((item) => item.title && item.description)
+      .map((item) => ({ title: item.title!, description: item.description! })),
+    portfolio: portfolio
+      .filter((item) => item.id)
+      .map((item) => ({ id: item.id!, title: item.title!, description: item.description! })),
+    cta: { label: ctaLabel, goal },
+    image_suggestions: imageSuggestions
+      .filter((item) => item.purpose && item.suggestion)
+      .map((item) => ({ purpose: item.purpose!, suggestion: item.suggestion! })),
   }
-  if (!proposal.professional_title || !proposal.bio || !proposal.services_section_title || !proposal.cta.label || services.length < 1) return null
+
+  if (!proposal.professional_title || !proposal.bio || !proposal.services_section_title || !proposal.cta.label || proposal.services.length < 1) return null
   return proposal
 }
 
-function validateAssistantResult(raw: unknown, maxServices: number): AssistantResult | null {
+function validateAssistantResult(raw: unknown, maxServices: number, maxPortfolio: number): AssistantResult | null {
   const value = objectValue(raw)
   if (value.status === 'needs_more_info') {
     if (value.proposal !== null) return null
@@ -144,7 +178,7 @@ function validateAssistantResult(raw: unknown, maxServices: number): AssistantRe
   }
   if (value.status === 'ready') {
     if (value.questions !== null) return null
-    const proposal = validateProposal(value.proposal, maxServices)
+    const proposal = validateProposal(value.proposal, maxServices, maxPortfolio)
     return proposal ? { status: 'ready', proposal } : null
   }
   return null
@@ -455,7 +489,7 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
     }
     let parsed: any = null
     try { parsed = JSON.parse(responseText(payload)) } catch {}
-    const result = validateAssistantResult(parsed, limits.max_services)
+    const result = validateAssistantResult(parsed, limits.max_services, limits.max_portfolio)
     if (!result) {
       await insertUsage(c,{ userId,profileId:context.profileId,operation:'generate',status:'error',model,inputTokens:usage.input_tokens,outputTokens:usage.output_tokens,errorCode:'invalid_structured_output' })
       return c.json({ ok:false,error:'La respuesta de IA llegó incompleta. Tu perfil sigue sin cambios.' },502)
@@ -477,7 +511,7 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
   try { body = await c.req.json() } catch { return c.json({ ok:false,error:'Solicitud no válida.' },400) }
   const limits = planLimits(c,context.planId)
   const editingScope: EditingScope = body?.editing_scope === 'full_profile' ? 'full_profile' : 'missing_only'
-  const proposal = validateProposal(body?.proposal, limits.max_services)
+  const proposal = validateProposal(body?.proposal, limits.max_services, limits.max_portfolio)
   if (!proposal) return c.json({ ok:false,error:'La propuesta no es válida.' },400)
   const apply = objectValue(body?.apply)
   const applyIdentity = Boolean(apply.identity)
