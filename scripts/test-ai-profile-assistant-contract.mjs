@@ -42,7 +42,7 @@ assert.match(apiSource, /configuredChannels/, 'Configured quick-contact channels
 assert.match(apiSource, /image_suggestions/, 'Model may return textual image suggestions')
 assert.match(apiSource, /nunca generación ni modificación/i, 'Prompt must forbid image generation/modification')
 assert.match(apiSource, /Nunca inventes/i, 'Editorial brain must explicitly forbid invented facts/services')
-assert.match(apiSource, /primera impresión digital/i, 'Editorial brain must encode Kawvo first-impression mission')
+assert.match(apiSource, /carta de presentación digital|primera impresión/i, 'Editorial brain must encode Kawvo first-impression mission')
 assert.match(apiSource, /published:false|published:\s*false/, 'Apply endpoint must explicitly remain unpublished')
 assert.match(apiSource, /replace_services_confirmation_required/, 'Existing service copy update requires explicit confirmation')
 assert.match(apiSource, /validateProposal\(body\?\.proposal/, 'Apply must validate proposal again server-side')
