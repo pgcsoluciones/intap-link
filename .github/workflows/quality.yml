@@ -18,6 +18,8 @@ jobs:
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=critical
       - run: node scripts/test-ai-profile-assistant-contract.mjs
+      - run: npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-ai-api.mjs
+      - run: node scripts/test-ai-profile-assistant-integration.mjs
       - run: npm run build -w web
       - run: npm run build:preview -w web
       - run: npm run build -w app
