@@ -114,10 +114,13 @@ export default function FreeServices() {
     }
   }
 
-
   const add = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!canAdd || !title.trim()) return
+    if (!canAdd) return
+    if (!title.trim() || !description.trim()) {
+      setError('Completa primero el título y la descripción del servicio.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
@@ -321,11 +324,11 @@ export default function FreeServices() {
 
         <form onSubmit={add} className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-black">Agregar servicio</h2>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} disabled={!canAdd} maxLength={80} placeholder="Ej. Diseño e impresión" className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400 disabled:opacity-50" />
-          <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, DESCRIPTION_LIMIT))} disabled={!canAdd} maxLength={DESCRIPTION_LIMIT} rows={2} placeholder="Explica brevemente este servicio" className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400 disabled:opacity-50" />
+          <input value={title} onChange={(e) => { setTitle(e.target.value); if (error) setError('') }} disabled={!canAdd} maxLength={80} placeholder="Ej. Diseño e impresión" className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400 disabled:opacity-50" />
+          <textarea value={description} onChange={(e) => { setDescription(e.target.value.slice(0, DESCRIPTION_LIMIT)); if (error) setError('') }} disabled={!canAdd} maxLength={DESCRIPTION_LIMIT} rows={2} placeholder="Explica brevemente este servicio" className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400 disabled:opacity-50" />
           <Counter value={description} />
-          {error && <p className="mt-3 text-xs font-semibold text-red-500">{error}</p>}
-          <button disabled={!canAdd || !title.trim() || saving} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : canAdd ? 'Agregar servicio' : 'Límite completado'}</button>
+          {error && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-bold leading-5 text-amber-800">{error}</p>}
+          <button disabled={!canAdd || saving} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : canAdd ? 'Agregar servicio' : 'Límite completado'}</button>
         </form>
 
         {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Básico para ampliar tu perfil." />}
