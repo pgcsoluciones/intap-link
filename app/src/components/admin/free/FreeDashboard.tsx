@@ -36,6 +36,7 @@ type FreeItem = {
   icon: string
   help: string
   readinessKey?: keyof FreePublicationReadiness['steps']
+  stateKey?: 'location'
   available?: boolean
   optional?: boolean
 }
@@ -71,7 +72,7 @@ const freeItems: FreeItem[] = [
     to: '/admin/free/location',
     icon: '⌖',
     help: 'Agrega la dirección real de tu negocio y, si corresponde, el enlace del mapa. Si trabajas sin local físico puedes dejar esta sección sin mostrar.',
-    available: true,
+    stateKey: 'location',
   },
   {
     title: 'Mis enlaces',
@@ -116,6 +117,7 @@ export default function FreeDashboard() {
   const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [linkCopied, setLinkCopied] = useState(false)
+  const [locationConfigured, setLocationConfigured] = useState(false)
   const [bankSummary, setBankSummary] = useState<BankSummary>({ allowed: false, source: null, enabled: false, count: 0 })
 
   useEffect(() => {
@@ -123,7 +125,8 @@ export default function FreeDashboard() {
       apiGet('/me'),
       apiGet('/superadmin/metrics/overview').catch(() => ({ ok: false })),
       apiGet('/me/bank-accounts').catch(() => ({ ok: false })),
-    ]).then(([meJson, superAdminJson, bankJson]: any[]) => {
+      apiGet('/me/contact').catch(() => ({ ok: false })),
+    ]).then(([meJson, superAdminJson, bankJson, contactJson]: any[]) => {
       if (meJson?.ok) setMe(meJson.data)
       setHasSuperAdminAccess(Boolean(superAdminJson?.ok))
       if (bankJson?.ok) {
@@ -133,6 +136,11 @@ export default function FreeDashboard() {
           enabled: bankJson.data?.enabled !== false,
           count: Array.isArray(bankJson.data?.items) ? bankJson.data.items.length : 0,
         })
+      }
+      if (contactJson?.ok && contactJson.data) {
+        const place = String(contactJson.data.place_name || contactJson.data.address || '').trim()
+        const mapUrl = String(contactJson.data.map_url || '').trim()
+        setLocationConfigured(Boolean(place && mapUrl))
       }
     }).finally(() => setLoading(false))
   }, [])
@@ -354,7 +362,11 @@ export default function FreeDashboard() {
 
         <div className="grid grid-cols-1 gap-3">
           {freeItems.map((item) => {
-            const completed = item.readinessKey ? Boolean(readiness?.steps?.[item.readinessKey]) : false
+            const completed = item.readinessKey
+              ? Boolean(readiness?.steps?.[item.readinessKey])
+              : item.stateKey === 'location'
+                ? locationConfigured
+                : false
             const available = Boolean(item.available)
             const optional = Boolean(item.optional)
             const statusLabel = optional ? 'Opcional' : available ? 'Disponible' : completed ? 'Completado' : 'Pendiente'
