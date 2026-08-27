@@ -209,19 +209,19 @@ export default function PublicBankAccounts() {
               className="rounded-[20px] border p-4"
               style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-soft-primary)' }}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-4">
                 <div
-                  className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border bg-white p-1.5 shadow-sm"
+                  className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border bg-white p-1 shadow-sm"
                   style={{ borderColor: 'var(--ilx-border)' }}
                 >
                   {logo ? (
                     <img src={logo} alt={`Logo de ${account.bank_name}`} className="h-full w-full object-contain" loading="lazy" decoding="async" />
                   ) : (
-                    <span className="text-xs font-black text-slate-600">{bankInitials(account.bank_name)}</span>
+                    <span className="text-sm font-black text-slate-600">{bankInitials(account.bank_name)}</span>
                   )}
                 </div>
 
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 pt-1">
                   <h3 className="text-sm font-black leading-5" style={{ color: 'var(--ilx-text)' }}>{account.bank_name}</h3>
                   <p className="mt-0.5 text-xs font-bold" style={{ color: 'var(--ilx-primary)' }}>{accountTypeLabel(account.account_type)} · {account.currency}</p>
                   <p className="mt-3 text-sm font-bold" style={{ color: 'var(--ilx-text)' }}>{account.holder_name}</p>
