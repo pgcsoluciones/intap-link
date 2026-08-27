@@ -368,15 +368,15 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
   const keys = ['activity_details','services_details','clients','preferred_contact','next_action','extra_context']
   const answers: Record<string,string> = {}
   for (const key of keys) answers[key] = text(rawAnswers[key], MAX_ANSWER_LENGTH)
-  const followUp = Array.isArray(body?.follow_up_answers)
-    ? body.follow_up_answers.slice(0, 3).map((item: any) => ({ question: text(item?.question, 180), answer: text(item?.answer, MAX_ANSWER_LENGTH) })).filter((item: any) => item.question && item.answer)
+  const followUp: FollowUpAnswer[] = Array.isArray(body?.follow_up_answers)
+    ? body.follow_up_answers.slice(0, 3).map((item: any) => ({ question: text(item?.question, 180), answer: text(item?.answer, MAX_ANSWER_LENGTH) })).filter((item: FollowUpAnswer) => item.question && item.answer)
     : []
-  const totalLength = Object.values(answers).reduce((sum,v) => sum + v.length, 0) + followUp.reduce((sum,v) => sum + v.question.length + v.answer.length, 0)
+  const totalLength = Object.values(answers).reduce((sum: number, value: string) => sum + value.length, 0) + followUp.reduce((sum: number, value: FollowUpAnswer) => sum + value.question.length + value.answer.length, 0)
   const hasExistingContent = Boolean(context.bio || context.professionalTitle || context.services.length)
   if (totalLength < 8 && !hasExistingContent) return c.json({ ok: false, error: 'Cuéntanos un poco más para preparar una propuesta útil.' }, 400)
   if (totalLength > MAX_TOTAL_INPUT_LENGTH) return c.json({ ok: false, error: 'La información es demasiado extensa. Resume un poco tus respuestas.' }, 413)
 
-  if (context.configuredChannels.length > 1 && !answers.preferred_contact && !followUp.some((x) => /contact|whatsapp|llamada|correo/i.test(x.question))) {
+  if (context.configuredChannels.length > 1 && !answers.preferred_contact && !followUp.some((item: FollowUpAnswer) => /contact|whatsapp|llamada|correo/i.test(item.question))) {
     return c.json({ ok: true, data: { status: 'needs_more_info', questions: ['¿Cómo prefieres que te contacten principalmente?'], options: context.configuredChannels, round } })
   }
 
