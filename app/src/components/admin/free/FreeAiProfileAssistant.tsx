@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiGet, apiPost } from '../../../lib/api'
 import { FreeBackButton, basicPlanWhatsAppUrl } from './FreePanelUi'
 import { useNavigate } from 'react-router-dom'
@@ -84,6 +84,37 @@ function Question({ label, hint, value, onChange, rows = 3 }: { label: string; h
   </label>
 }
 
+function StableInstructionQuestion({
+  label,
+  hint,
+  onDraft,
+  rows = 4,
+}: {
+  label: string
+  hint?: string
+  onDraft: (value: string) => void
+  rows?: number
+}) {
+  const [value, setValue] = useState('')
+
+  return <label className="block">
+    <span className="text-[15px] font-black text-slate-800">{label}</span>
+    {hint && <span className="mt-1 block text-sm font-medium leading-5 text-slate-500">{hint}</span>}
+    <textarea
+      value={value}
+      onChange={(event) => {
+        const next = event.target.value.slice(0, 700)
+        setValue(next)
+        onDraft(next)
+      }}
+      maxLength={700}
+      rows={rows}
+      className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base leading-6 outline-none focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+    />
+    <span className="mt-1 block text-right text-[11px] font-bold text-slate-400">{value.length}/700</span>
+  </label>
+}
+
 export default function FreeAiProfileAssistant() {
   const navigate = useNavigate()
   const [loading,setLoading] = useState(true)
@@ -107,6 +138,9 @@ export default function FreeAiProfileAssistant() {
   const [success,setSuccess] = useState('')
   const [portfolioTitles,setPortfolioTitles] = useState<Record<string,string>>({})
   const [remainingProfileItems,setRemainingProfileItems] = useState<string[]>([])
+  const instructionRef = useRef('')
+  const [instructionHasText,setInstructionHasText] = useState(false)
+  const [instructionEnough,setInstructionEnough] = useState(false)
 
   async function loadContext() {
     const json:any = await apiGet('/me/ai-profile-assistant/context')
@@ -146,7 +180,7 @@ export default function FreeAiProfileAssistant() {
     (missingServices || missingServicesSectionCopy) ? answers.services_details : '',
     missingPortfolioCopy ? answers.extra_context : '',
   ].reduce((sum,value)=>sum+value.trim().length,0)
-  const enoughInformation = hasExistingContent || totalAnswerLength >= 4
+  const enoughInformation = hasExistingContent || totalAnswerLength >= 4 || instructionEnough
   const atServiceLimit = Boolean(context && context.profile.services.length >= context.plan.limits.max_services)
 
   function chooseEditingScope(next: EditingScope) {
@@ -162,6 +196,9 @@ export default function FreeAiProfileAssistant() {
     setError('')
     setSuccess('')
     setRemainingProfileItems([])
+    instructionRef.current = ''
+    setInstructionHasText(false)
+    setInstructionEnough(false)
   }
 
   useEffect(()=>{
@@ -199,6 +236,10 @@ export default function FreeAiProfileAssistant() {
     if (generating || !context) return
     setGenerating(true); setError(''); setSuccess(''); setRemainingProfileItems([])
     try {
+      const currentAnswers: Answers = {
+        ...answers,
+        extra_context: instructionRef.current,
+      }
       const answeredTurns: ConversationTurn[] = followUp.flatMap((item)=>item.answer.trim() ? [{ role:'assistant' as const, content:item.question }, { role:'user' as const, content:item.answer.trim() }] : [])
       const conversationPayload = [...conversation, ...answeredTurns]
       const confirmedPortfolioTitles = missingPortfolioTitleItems
@@ -208,8 +249,8 @@ export default function FreeAiProfileAssistant() {
         ? `Títulos de portafolio confirmados por el usuario: ${confirmedPortfolioTitles.map((item)=>`Foto ${item.index}: ${item.title}`).join(' | ')}`
         : ''
       const answersForModel = {
-        ...answers,
-        extra_context: [answers.extra_context.trim(), portfolioContext].filter(Boolean).join(' ').slice(0,700),
+        ...currentAnswers,
+        extra_context: [currentAnswers.extra_context.trim(), portfolioContext].filter(Boolean).join(' ').slice(0,700),
       }
       const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers:answersForModel, follow_up_answers:followUp, conversation:conversationPayload, round:nextRound, editing_scope:editingScope })
       if (!json?.ok) {
@@ -371,11 +412,23 @@ export default function FreeAiProfileAssistant() {
               })}
             </div>
           </div>}
-          <Question label="¿Hay algo que quieras contarle a Kawvo antes de trabajar tu perfil?" hint="Opcional. Puedes escribirlo como se lo explicarías a una persona. No tienes que definir tu propuesta de valor ni saber de marketing: Kawvo hará ese análisis usando tu perfil y su conocimiento general." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} rows={4} />
+          <StableInstructionQuestion
+            key={editingScope}
+            label="¿Hay algo que quieras contarle a Kawvo antes de trabajar tu perfil?"
+            hint="Opcional. Puedes escribirlo como se lo explicarías a una persona. No tienes que definir tu propuesta de valor ni saber de marketing: Kawvo hará ese análisis usando tu perfil y su conocimiento general."
+            rows={4}
+            onDraft={(value)=>{
+              instructionRef.current = value
+              const hasText = Boolean(value.trim())
+              const enough = value.trim().length >= 4
+              setInstructionHasText((current)=>current === hasText ? current : hasText)
+              setInstructionEnough((current)=>current === enough ? current : enough)
+            }}
+          />
           <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">Kawvo ya conoce el contenido de tu perfil. Si tiene suficiente información, preparará la propuesta directamente. Si falta un hecho importante, te preguntará solo lo mínimo necesario.</div>
         </>}
 
-        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0 || missingPortfolioTitleItems.some((item)=>!(portfolioTitles[item.id] || '').trim())} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:answers.extra_context.trim()?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
+        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0 || missingPortfolioTitleItems.some((item)=>!(portfolioTitles[item.id] || '').trim())} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:instructionHasText?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
         <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">La IA usa el perfil completo como contexto, interpreta tus respuestas y solo pregunta cuando realmente necesita confirmar un hecho.</p>
       </section>}
 
