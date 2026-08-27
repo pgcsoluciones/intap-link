@@ -192,8 +192,21 @@ export default function FreeAiProfileAssistant() {
       }
       if (json.data?.status === 'needs_more_info') {
         const questions = (json.data.questions || []).slice(0,3)
+        const isContactPreflight = Array.isArray(json.data?.options) && json.data.options.length > 0
+
+        if (!isContactPreflight && nextRound >= context.plan.limits.ai_max_rounds) {
+          setFollowUp([])
+          setProposal(null)
+          setError('Con la información disponible todavía no pudimos preparar una propuesta suficientemente específica. Revisa tus respuestas e inténtalo nuevamente.')
+          return
+        }
+
         setFollowUp(questions.map((q:string)=>({ question:q, answer:'' })))
-        setRound(Math.min(nextRound + 1, context.plan.limits.ai_max_rounds))
+
+        if (!isContactPreflight) {
+          setRound(Math.min(nextRound + 1, context.plan.limits.ai_max_rounds))
+        }
+
         setProposal(null)
         window.scrollTo({ top:0, behavior:'smooth' })
         return
@@ -316,7 +329,10 @@ export default function FreeAiProfileAssistant() {
         <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Nos falta un dato</p><h2 className="mt-2 text-xl font-black">Para hacer la propuesta más específica</h2><p className="mt-2 text-sm font-medium leading-6 text-slate-600">Solo te preguntamos lo que realmente hace falta.</p>
         <div className="mt-5 space-y-5">{followUp.map((item,index)=>{
           const isChannelQuestion = /contact/i.test(item.question) && channels.length>1
-          return <div key={item.question}>{isChannelQuestion ? <><p className="text-[15px] font-black text-slate-800">{item.question}</p><div className="mt-3 flex flex-wrap gap-2">{channels.map((ch)=><button key={ch} type="button" onClick={()=>setFollowUp((items)=>items.map((x,i)=>i===index?{...x,answer:ch}:x))} className={`rounded-xl px-4 py-2.5 text-sm font-black ${item.answer===ch?'bg-cyan-700 text-white':'bg-slate-100 text-slate-700'}`}>{channelLabel(ch)}</button>)}</div></> : <Question label={item.question} value={item.answer} onChange={(v)=>setFollowUp((items)=>items.map((x,i)=>i===index?{...x,answer:v}:x))} />}</div>})}</div>
+          return <div key={item.question}>{isChannelQuestion ? <><p className="text-[15px] font-black text-slate-800">{item.question}</p><div className="mt-3 flex flex-wrap gap-2">{channels.map((ch)=><button key={ch} type="button" onClick={()=>{
+            setAnswers((a)=>({...a,preferred_contact:ch}))
+            setFollowUp((items)=>items.map((x,i)=>i===index?{...x,answer:ch}:x))
+          }} className={`rounded-xl px-4 py-2.5 text-sm font-black ${item.answer===ch?'bg-cyan-700 text-white':'bg-slate-100 text-slate-700'}`}>{channelLabel(ch)}</button>)}</div></> : <Question label={item.question} value={item.answer} onChange={(v)=>setFollowUp((items)=>items.map((x,i)=>i===index?{...x,answer:v}:x))} />}</div>})}</div>
         <button type="button" onClick={()=>void generate(round)} disabled={generating || followUp.some((x)=>!x.answer.trim())} className="mt-5 w-full rounded-2xl bg-cyan-700 px-5 py-4 font-black text-white disabled:opacity-35">{generating?'Preparando…':'Continuar con mi propuesta'}</button>
       </section>}
 
