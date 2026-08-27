@@ -16,6 +16,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=critical
       - run: node scripts/test-ai-profile-assistant-contract.mjs
       - run: npm run build -w web
       - run: npm run build:preview -w web
