@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { API_BASE, apiPost } from '../../lib/api'
+import { apiPost } from '../../lib/api'
 
 type Mode = 'login' | 'register'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
@@ -17,7 +17,16 @@ export default function AdminLogin() {
   const isScanFlow = searchParams.get('activation') === 'scan' && /^[A-Z2-9]{8,24}$/.test(scanCode)
 
   useEffect(() => {
-    if (!isScanFlow) return
+    if (!isScanFlow) {
+      // A normal/direct login must not inherit an old scan-to-claim context.
+      // Otherwise AdminGuard can correctly authenticate the user and then
+      // redirect them to /admin/artifacts/activate?scan=1 because a stale
+      // product code remained in browser storage from a previous test/scan.
+      sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      return
+    }
+
     sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
     localStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
     // A customer arriving from a physical product can create an account if
@@ -52,7 +61,10 @@ export default function AdminLogin() {
 
   const handleGoogle = () => {
     persistAuthMode(mode)
-    window.location.href = `${API_BASE}/auth/google/start`
+    // OAuth must start on the same app custom domain that owns the session.
+    // In Preview this yields app.preview.intaprd.com as redirect_uri instead
+    // of the workers.dev origin; Production likewise stays on app.intaprd.com.
+    window.location.href = '/api/v1/auth/google/start'
   }
 
   const isRegister = mode === 'register'

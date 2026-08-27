@@ -38,39 +38,56 @@ export default function FreeFirstRunGuide({ readiness }: { readiness: FreePublic
   const navigate = useNavigate()
   const next = GUIDE_STEPS.find((step) => !readiness.steps[step.key])
   const complete = GUIDE_STEPS.filter((step) => readiness.steps[step.key]).length
-
-  if (!next) {
-    return (
-      <section className="rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-700">Todo listo</p>
-        <h2 className="mt-1 text-lg font-black text-slate-950">Ya completaste lo necesario para publicar</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Revisa tu vista previa una vez más y, cuando estés conforme, publica tu perfil.</p>
-      </section>
-    )
-  }
+  const percent = Math.round((complete / GUIDE_STEPS.length) * 100)
 
   return (
-    <section className="rounded-[26px] border border-cyan-300 bg-cyan-50/70 p-5 shadow-[0_16px_45px_rgba(8,145,178,0.10)] ring-4 ring-cyan-100/70">
+    <section className={`rounded-[26px] border p-5 shadow-sm ${readiness.ready ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">Te guiamos paso a paso</p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">Empieza por aquí</h2>
+          <p className={`text-[11px] font-black uppercase tracking-[0.16em] ${readiness.ready ? 'text-emerald-700' : 'text-cyan-700'}`}>
+            {readiness.ready ? 'Todo listo' : 'Progreso de tu perfil'}
+          </p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">
+            {readiness.ready ? 'Ya puedes publicar tu perfil' : `Tu perfil está ${percent}% completo`}
+          </h2>
+          <p className="mt-1 text-xs font-semibold text-slate-500">{complete} de {GUIDE_STEPS.length} pasos necesarios completados.</p>
         </div>
-        <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-cyan-700 shadow-sm">{complete}/{GUIDE_STEPS.length}</span>
+        <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ${readiness.ready ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-50 text-cyan-700'}`}>{percent}%</span>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-        <p className="text-base font-black text-slate-950">{next.title}</p>
-        <p className="mt-1 text-sm leading-6 text-slate-500">{next.text}</p>
-        <button type="button" onClick={() => navigate(next.to)} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-extrabold text-white">
-          Hacer este paso
-        </button>
+      <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100" aria-label={`${percent}% completado`}>
+        <div className={`h-full rounded-full transition-all ${readiness.ready ? 'bg-emerald-500' : 'bg-cyan-600'}`} style={{ width: `${percent}%` }} />
       </div>
 
-      <div className="mt-4 flex gap-1.5" aria-label={`${complete} de ${GUIDE_STEPS.length} pasos completados`}>
-        {GUIDE_STEPS.map((step) => <span key={step.key} className={`h-1.5 flex-1 rounded-full ${readiness.steps[step.key] ? 'bg-cyan-600' : 'bg-cyan-200'}`} />)}
+      <div className="mt-4 grid gap-2">
+        {GUIDE_STEPS.map((step) => {
+          const done = readiness.steps[step.key]
+          const isNext = next?.key === step.key
+          return (
+            <button
+              key={step.key}
+              type="button"
+              onClick={() => navigate(step.to)}
+              className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition ${done ? 'border-emerald-200 bg-emerald-50/70' : isNext ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-100' : 'border-slate-200 bg-slate-50'}`}
+            >
+              <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-black ${done ? 'bg-emerald-600 text-white' : isNext ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-500'}`}>{done ? '✓' : isNext ? '!' : '○'}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-black text-slate-900">{step.title}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-slate-500">{step.text}</span>
+              </span>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${done ? 'bg-emerald-100 text-emerald-700' : isNext ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-500'}`}>
+                {done ? 'Completado' : isNext ? 'Continúa aquí' : 'Pendiente'}
+              </span>
+            </button>
+          )
+        })}
       </div>
-      <p className="mt-3 text-xs leading-5 text-slate-500">No tienes que saber de tecnología. Haz un paso a la vez y nosotros te diremos cuál sigue.</p>
+
+      {readiness.ready ? (
+        <p className="mt-4 text-sm leading-6 text-slate-600">Revisa tu vista previa una vez más y, cuando estés conforme, publica tu perfil.</p>
+      ) : (
+        <p className="mt-4 text-xs leading-5 text-slate-500">Los elementos opcionales no reducen este porcentaje. El 100% coincide con los requisitos necesarios para publicar.</p>
+      )}
     </section>
   )
 }

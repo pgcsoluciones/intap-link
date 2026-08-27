@@ -3,9 +3,48 @@ import app from './preview-free-entry'
 type PreviewEnv = {
   WEB_PAGES_ORIGIN?: string
   APP_PAGES_ORIGIN?: string
+  DB: D1Database
 }
 
-async function proxyPagesPreview(request: Request, origin: string | undefined, marker: string) {
+const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash)).map((value) => value.toString(16).padStart(2, '0')).join('')
+}
+
+function parseCookie(header: string, name: string): string | null {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+function slugFromPath(pathname: string): string {
+  const parts = pathname.split('/').filter(Boolean)
+  if (parts.length === 1) return decodeURIComponent(parts[0] || '')
+  const profileApiMatch = pathname.match(/^\/api\/v1\/public\/profiles\/([^/]+)/)
+  return profileApiMatch ? decodeURIComponent(profileApiMatch[1]) : ''
+}
+
+async function validatePreviewSession(request: Request, env: PreviewEnv, slug: string): Promise<boolean> {
+  if (!slug) return false
+  const rawToken = parseCookie(request.headers.get('Cookie') || '', PREVIEW_SESSION_COOKIE)
+  if (!rawToken) return false
+  const tokenHash = await sha256Hex(rawToken)
+  const row = await env.DB.prepare(
+    `SELECT s.id
+       FROM profile_preview_sessions s
+       JOIN profiles p ON p.id = s.profile_id
+      WHERE s.token_hash = ?
+        AND s.expires_at > datetime('now')
+        AND lower(p.slug) = lower(?)
+      LIMIT 1`,
+  ).bind(tokenHash, slug).first()
+  return Boolean(row)
+}
+
+async function proxyPagesPreview(request: Request, origin: string | undefined, marker: string, allowEmbeddedFrame = false) {
   const requestUrl = new URL(request.url)
   const pagesOrigin = String(origin || '').replace(/\/$/, '')
 
@@ -27,16 +66,9 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   })
 
   const responseHeaders = new Headers(upstream.headers)
-
-  // The Free editor intentionally embeds only draft preview URLs (?preview=1).
-  // Keep public pages protected from framing, but allow this authenticated
-  // Preview-only editor use case by removing frame-blocking response headers.
-  if (requestUrl.searchParams.get('preview') === '1') {
+  if (allowEmbeddedFrame) {
     responseHeaders.delete('x-frame-options')
-    const csp = responseHeaders.get('content-security-policy')
-    if (csp && /frame-ancestors/i.test(csp)) {
-      responseHeaders.delete('content-security-policy')
-    }
+    responseHeaders.set('content-security-policy', "frame-ancestors https://app.preview.intaprd.com")
     responseHeaders.set('cache-control', 'no-store')
   }
 
@@ -47,9 +79,51 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   })
 }
 
+function renewPreviewRedirect(slug: string, embedded: boolean) {
+  const mode = embedded ? '' : '?full=1'
+  const target = `https://app.preview.intaprd.com/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}${mode}`
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: target,
+      'Cache-Control': 'no-store',
+    },
+  })
+}
+
 export default {
   async fetch(request: Request, env: PreviewEnv, ctx: ExecutionContext) {
     const url = new URL(request.url)
+    const isDraftPreviewRequest = url.searchParams.get('preview') === '1'
+
+    if (
+      url.hostname === 'preview.intaprd.com' &&
+      !url.pathname.startsWith('/api/') &&
+      isDraftPreviewRequest
+    ) {
+      const slug = slugFromPath(url.pathname)
+      const embedded = url.searchParams.get('embedded') === '1'
+      const valid = await validatePreviewSession(request, env, slug)
+
+      if (!valid && slug) {
+        return renewPreviewRedirect(slug, embedded)
+      }
+
+      if (embedded) {
+        return proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain', true)
+      }
+    }
+
+    if (url.pathname.startsWith('/api/v1/public/profiles/') && isDraftPreviewRequest) {
+      const slug = slugFromPath(url.pathname)
+      const valid = await validatePreviewSession(request, env, slug)
+      if (!valid) {
+        return new Response(JSON.stringify({ ok: false, error: 'preview_session_required' }), {
+          status: 403,
+          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+        })
+      }
+    }
 
     // API stays on the Worker. Every other browser route is served from the
     // matching Pages application. This prevents app.preview.intaprd.com from
