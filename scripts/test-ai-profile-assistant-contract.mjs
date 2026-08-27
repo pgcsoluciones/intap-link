@@ -21,6 +21,10 @@ async function collectFiles(dir) {
   return result
 }
 
+function sqlBody(source) {
+  return source.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n').trim()
+}
+
 assert.match(apiSource, /https:\/\/api\.openai\.com\/v1\/responses/, 'Responses API must be used server-side')
 assert.match(apiSource, /OPENAI_API_KEY/, 'Worker must read the OpenAI secret from environment')
 assert.match(apiSource, /store:\s*false/, 'Responses must disable OpenAI response storage')
@@ -34,7 +38,7 @@ assert.match(apiSource, /replace_services_confirmation_required/, 'Replacing exi
 assert.match(apiSource, /validateProposal\(body\.proposal\)/, 'Apply endpoint must validate AI proposal again')
 assert.match(apiSource, /DB\.batch\(statements\)/, 'Apply operation must group database writes')
 assert.doesNotMatch(productionMigration, /answers|prompt|proposal|conversation/i, 'Usage table must not store user conversation text')
-assert.equal(productionMigration, previewMigration.replace('Preview: ', ''), 'Production and preview usage schemas must remain equivalent')
+assert.equal(sqlBody(productionMigration), sqlBody(previewMigration), 'Production and preview usage schemas must remain equivalent')
 assert.match(appRoutes, /\/admin\/free\/ai-profile/, 'Assistant must be reachable from authenticated Free routes')
 assert.match(appSource, /Aplicar a mi perfil/, 'Review must require an explicit apply action')
 assert.match(appSource, /Nada se aplicará/, 'UI must explain that generated content is not auto-applied')
