@@ -291,7 +291,7 @@ export default function FreeAiProfileAssistant() {
 
   if (context?.consent.required) return <main className="min-h-screen bg-[#f7f9fc] px-4 py-6 font-['Inter'] text-slate-950">
     <section className="mx-auto max-w-[620px]">
-      <FreeBackButton onClick={()=>navigate('/admin/free/editor')} />
+      <FreeBackButton onClick={()=>navigate('/admin/free')} />
       <div className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-sm sm:p-7">
         <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-700">Asistente IA de Kawvo · Beta</p>
         <h1 className="mt-2 text-2xl font-black tracking-[-0.03em]">Antes de comenzar</h1>
@@ -316,7 +316,7 @@ export default function FreeAiProfileAssistant() {
 
   return <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
     <section className="mx-auto w-full max-w-[760px] px-4 py-5 sm:px-5 sm:py-7">
-      <FreeBackButton onClick={()=>navigate('/admin/free/editor')} />
+      <FreeBackButton onClick={()=>navigate('/admin/free')} />
       <header className="rounded-[28px] border border-cyan-100 bg-gradient-to-br from-white to-cyan-50 p-5 shadow-sm sm:p-7">
         <p className="text-xs font-black uppercase tracking-[0.15em] text-cyan-700">Kawvo · Asistente IA · Beta</p>
         <h1 className="mt-2 text-[28px] font-black leading-tight tracking-[-0.04em]">Haz que tu perfil te presente mejor</h1>
