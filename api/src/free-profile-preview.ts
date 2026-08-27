@@ -2,7 +2,7 @@ import app from './preview-entry'
 import { cookieNames } from './lib/cookies'
 
 const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'
-const PREVIEW_SESSION_TTL_SECONDS = 15 * 60
+const PREVIEW_SESSION_TTL_SECONDS = 2 * 60 * 60
 
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
@@ -63,11 +63,15 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
 
   await c.env.DB.prepare(
     `INSERT INTO profile_preview_sessions (id, profile_id, token_hash, expires_at, created_at)
-     VALUES (?, ?, ?, datetime('now', '+15 minutes'), datetime('now'))`,
+     VALUES (?, ?, ?, datetime('now', '+2 hours'), datetime('now'))`,
   ).bind(sessionId, profileId, tokenHash).run()
 
   const publicWebOrigin = String(c.env.WEB_URL || 'https://preview.intaprd.com').replace(/\/$/, '')
-  const target = `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1&embedded=1`
+  const full = c.req.query('full') === '1'
+  const target = full
+    ? `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1`
+    : `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1&embedded=1`
+
   const headers = new Headers()
   headers.set('Location', target)
   headers.set('Cache-Control', 'no-store')
