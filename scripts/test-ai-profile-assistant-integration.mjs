@@ -8,9 +8,10 @@ const BASE_PROPOSAL = {
   services_section_title: 'Soluciones eléctricas',
   services_section_description: 'Trabajos eléctricos pensados para resolver necesidades concretas de instalación, reparación y mejora.',
   services: [
-    { title: 'Instalaciones eléctricas', description: 'Instalación de luminarias, abanicos, tomas y cableado para espacios residenciales o comerciales.' },
-    { title: 'Reparación de averías', description: 'Diagnóstico y corrección de cortos y fallas para recuperar el funcionamiento de la instalación.' },
+    { title: 'Instalaciones eléctricas', description: 'Instalación de luminarias, abanicos, tomas y cableado para hogares o negocios.' },
+    { title: 'Reparación de averías', description: 'Diagnóstico y corrección de cortos y fallas para recuperar el funcionamiento.' },
   ],
+  portfolio: [],
   cta: { label: 'Solicita una cotización', goal: 'quote' },
   image_suggestions: [
     { purpose: 'Mostrar experiencia real', suggestion: 'Foto trabajando en una instalación o del resultado terminado.' },
@@ -131,6 +132,9 @@ try {
       assert.equal(payload.text.verbosity, 'medium')
       assert.equal(payload.text.format.type, 'json_schema')
       assert.match(payload.instructions, /carta de presentación digital|primera impresión/i)
+      assert.match(payload.instructions, /editing_scope|ALCANCE DE EDICIÓN/i)
+      assert.match(payload.instructions, /portafolio/i)
+      assert.match(payload.input, /"editing_scope":"missing_only"/)
       assert.match(payload.instructions, /nunca inventes/i)
       return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL }), usage: { input_tokens: 500, output_tokens: 240 } }) }
     }
@@ -141,6 +145,18 @@ try {
     assert.equal(result.body.data.proposal.professional_title, BASE_PROPOSAL.professional_title)
     assert.equal(result.body.data.proposal.image_suggestions.length, 1)
     assert.equal(db.batches.length, 0)
+  }
+
+  // Editing scope is explicit and defaults to safe missing_only.
+  {
+    globalThis.fetch = async (_url, init) => {
+      const payload = JSON.parse(init.body)
+      assert.match(payload.input, /\"editing_scope\":\"full_profile\"/)
+      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL }), usage: {} }) }
+    }
+    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.', preferred_contact: 'whatsapp' }, round: 1, editing_scope: 'full_profile' })
+    assert.equal(result.status, 200)
+    assert.equal(result.body.data.status, 'ready')
   }
 
   // B: the model can request only high-value missing information.
@@ -190,9 +206,28 @@ try {
   // L/M: apply is explicit, non-destructive and never publishes.
   {
     const db = new FakeDB({ services: [{ id:'service-1', title:'Viejo', description:'Viejo', image_url:'profiles/p1/service.jpg', sort_order:0 }] })
-    const without = await call('/api/v1/me/ai-profile-assistant/apply', { proposal: BASE_PROPOSAL, apply: { services:true }, replace_existing_services:false }, {}, db)
-    assert.equal(without.status, 409)
-    const withConfirmation = await call('/api/v1/me/ai-profile-assistant/apply', { proposal: BASE_PROPOSAL, apply: { identity:true,bio:true,services_section:true,services:true }, replace_existing_services:true }, {}, db)
+    const safeMissingOnly = await call('/api/v1/me/ai-profile-assistant/apply', {
+      proposal: BASE_PROPOSAL,
+      apply: { services:true },
+      replace_existing_services:false,
+      editing_scope:'missing_only',
+    }, {}, db)
+    assert.equal(safeMissingOnly.status, 200)
+
+    const withoutConfirmation = await call('/api/v1/me/ai-profile-assistant/apply', {
+      proposal: BASE_PROPOSAL,
+      apply: { services:true },
+      replace_existing_services:false,
+      editing_scope:'full_profile',
+    }, {}, db)
+    assert.equal(withoutConfirmation.status, 409)
+
+    const withConfirmation = await call('/api/v1/me/ai-profile-assistant/apply', {
+      proposal: BASE_PROPOSAL,
+      apply: { identity:true,bio:true,services_section:true,services:true },
+      replace_existing_services:true,
+      editing_scope:'full_profile',
+    }, {}, db)
     assert.equal(withConfirmation.status, 200)
     assert.equal(withConfirmation.body.data.published, false)
     const statements = db.batches.at(-1)

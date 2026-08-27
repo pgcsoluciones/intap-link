@@ -38,6 +38,10 @@ assert.match(apiSource, /AI_TERMS_VERSION/, 'Terms version must be configurable'
 assert.match(apiSource, /AI_PROFILE_MONTHLY_LIMIT/, 'Monthly quota must be backend-configurable')
 assert.match(apiSource, /AI_PROFILE_MAX_ROUNDS/, 'Guided rounds must be backend-configurable')
 assert.match(apiSource, /FREE_MAX_SERVICES/, 'Free service cap must come from backend configuration')
+assert.match(apiSource, /FREE_MAX_PORTFOLIO/, 'Free portfolio cap must come from backend configuration')
+assert.match(apiSource, /editing_scope/, 'Editing scope must be enforced server-side and sent as model context')
+assert.match(apiSource, /profile_gallery/, 'Assistant must understand portfolio metadata without modifying images')
+assert.match(apiSource, /UPDATE profile_gallery SET title = \?, description = \?/, 'Portfolio apply may update text metadata only')
 assert.match(apiSource, /configuredChannels/, 'Configured quick-contact channels must be contextual input')
 assert.match(apiSource, /image_suggestions/, 'Model may return textual image suggestions')
 assert.match(apiSource, /nunca generación ni modificación/i, 'Prompt must forbid image generation/modification')
@@ -48,6 +52,7 @@ assert.match(apiSource, /replace_services_confirmation_required/, 'Existing serv
 assert.match(apiSource, /validateProposal\(body\?\.proposal/, 'Apply must validate proposal again server-side')
 assert.match(apiSource, /DB\.batch\(statements\)/, 'Apply must group writes')
 assert.doesNotMatch(apiSource, /DELETE\s+FROM\s+profile_products/i, 'AI may not delete existing services')
+assert.doesNotMatch(apiSource, /DELETE\s+FROM\s+profile_gallery/i, 'AI may not delete portfolio images')
 
 assert.doesNotMatch(usageProd, /answers|prompt|proposal|conversation/i, 'Usage table must not store conversation content')
 assert.equal(sqlBody(usageProd), sqlBody(usagePreview), 'Usage migrations must match')
@@ -71,6 +76,10 @@ assert.match(appSource, /Solicitar Plan Básico/, 'Free-plan limit notice must r
 assert.match(appSource, /Son recomendaciones, no imágenes generadas/, 'Image suggestions must remain textual')
 assert.match(appSource, /No cambia tus Botones rápidos/, 'Channel preference must not mutate quick actions')
 assert.match(appSource, /conservará los servicios existentes/i, 'UI must accurately explain non-destructive service updates')
+assert.match(appSource, /Completar solo lo que falta/, 'UI must offer safe missing-only scope')
+assert.match(appSource, /Revisar y mejorar mi contenido/, 'UI must offer full-profile editorial review')
+assert.match(appSource, /Puedes generar otra propuesta en/, 'Cooldown must be presented as normal waiting state')
+assert.match(appSource, /Mis trabajos/, 'Portfolio copy review must be visible')
 
 for (const area of ['app','web']) {
   for (const file of await collectFiles(join(root, area))) {

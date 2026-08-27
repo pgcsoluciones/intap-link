@@ -4,6 +4,8 @@ import { FreeBackButton, basicPlanWhatsAppUrl } from './FreePanelUi'
 import { useNavigate } from 'react-router-dom'
 
 type Service = { id?: string; title: string; description: string; has_image?: boolean }
+type PortfolioItem = { id: string; title: string; description: string }
+type EditingScope = 'missing_only' | 'full_profile'
 type ImageSuggestion = { purpose: string; suggestion: string }
 type Proposal = {
   professional_title: string
@@ -11,10 +13,11 @@ type Proposal = {
   services_section_title: string
   services_section_description: string
   services: Array<{ title: string; description: string }>
+  portfolio: PortfolioItem[]
   cta: { label: string; goal: string }
   image_suggestions: ImageSuggestion[]
 }
-type Limits = { max_services: number; ai_daily_generations: number; ai_monthly_generations: number; ai_max_rounds: number }
+type Limits = { max_services: number; max_portfolio: number; ai_daily_generations: number; ai_monthly_generations: number; ai_max_rounds: number }
 type AssistantContext = {
   beta: boolean
   consent: { required: boolean; accepted: boolean; terms_version: string }
@@ -27,6 +30,7 @@ type AssistantContext = {
     services_section_title?: string
     services_section_description?: string
     services: Service[]
+    portfolio: PortfolioItem[]
     contact: { whatsapp?: string; email?: string; phone?: string; address?: string }
     configured_channels: string[]
   }
@@ -41,7 +45,7 @@ type Answers = {
   next_action: string
   extra_context: string
 }
-type ApplySelection = { identity: boolean; bio: boolean; services_section: boolean; services: boolean }
+type ApplySelection = { identity: boolean; bio: boolean; services_section: boolean; services: boolean; portfolio: boolean }
 type FollowUp = { question: string; answer: string }
 
 const EMPTY_ANSWERS: Answers = { activity_details: '', services_details: '', clients: '', preferred_contact: '', next_action: '', extra_context: '' }
@@ -92,7 +96,9 @@ export default function FreeAiProfileAssistant() {
   const [accepting,setAccepting] = useState(false)
   const [termsChecked,setTermsChecked] = useState(false)
   const [showFullTerms,setShowFullTerms] = useState(false)
-  const [selection,setSelection] = useState<ApplySelection>({ identity:true,bio:true,services_section:true,services:true })
+  const [selection,setSelection] = useState<ApplySelection>({ identity:true,bio:true,services_section:true,services:true,portfolio:true })
+  const [editingScope,setEditingScope] = useState<EditingScope>('missing_only')
+  const [cooldownSeconds,setCooldownSeconds] = useState(0)
   const [replaceServices,setReplaceServices] = useState(false)
   const [error,setError] = useState('')
   const [success,setSuccess] = useState('')
@@ -102,17 +108,39 @@ export default function FreeAiProfileAssistant() {
     if (!json?.ok) throw new Error(json?.error || 'No pudimos cargar la ayuda con IA.')
     const data = json.data as AssistantContext
     setContext(data)
-    setSelection((s)=>({ ...s, services:(data.profile.services || []).length === 0 }))
   }
   useEffect(()=>{ loadContext().catch((e)=>setError(e?.message || 'No pudimos cargar la ayuda con IA.')).finally(()=>setLoading(false)) },[])
 
   const examples = useMemo(()=>categoryExamples(context?.profile.category || ''),[context?.profile.category])
   const hasExistingIdentity = Boolean(context?.profile.professional_title && context?.profile.bio)
   const hasExistingServices = Boolean(context?.profile.services?.length)
+  const hasExistingPortfolio = Boolean(context?.profile.portfolio?.length)
+  const hasExistingContent = Boolean(context?.profile.professional_title || context?.profile.bio || context?.profile.services?.length || context?.profile.portfolio?.some((x)=>x.title || x.description))
   const channels = context?.profile.configured_channels || []
   const totalAnswerLength = Object.values(answers).reduce((s,v)=>s+v.trim().length,0)
   const enoughInformation = totalAnswerLength >= 8 || Boolean(context?.profile.bio || context?.profile.services?.length)
   const atServiceLimit = Boolean(context && context.profile.services.length >= context.plan.limits.max_services)
+
+  useEffect(()=>{
+    if (!context) return
+    if (editingScope === 'full_profile') {
+      setSelection({ identity:true,bio:true,services_section:true,services:true,portfolio:context.profile.portfolio.length>0 })
+    } else {
+      setSelection({
+        identity:!context.profile.professional_title,
+        bio:!context.profile.bio,
+        services_section:!(context.profile.services_section_title && context.profile.services_section_description),
+        services:context.profile.services.length===0,
+        portfolio:context.profile.portfolio.some((item)=>!item.title || !item.description),
+      })
+    }
+  },[editingScope,context])
+
+  useEffect(()=>{
+    if (cooldownSeconds <= 0) return
+    const timer = window.setInterval(()=>setCooldownSeconds((value)=>Math.max(0,value-1)),1000)
+    return ()=>window.clearInterval(timer)
+  },[cooldownSeconds])
 
   async function acceptTerms() {
     if (!termsChecked || accepting) return
@@ -128,8 +156,11 @@ export default function FreeAiProfileAssistant() {
     if (generating || !context) return
     setGenerating(true); setError(''); setSuccess('')
     try {
-      const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers, follow_up_answers:followUp, round:nextRound })
-      if (!json?.ok) { setError(json?.error || 'No pudimos preparar tu propuesta. Tu perfil no fue modificado.'); return }
+      const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers, follow_up_answers:followUp, round:nextRound, editing_scope:editingScope })
+      if (!json?.ok) {
+        if (json?.code === 'cooldown') { setCooldownSeconds(Number(json.retry_after_seconds || 20)); setError(''); return }
+        setError(json?.error || 'No pudimos preparar tu propuesta. Tu perfil no fue modificado.'); return
+      }
       if (json.data?.status === 'needs_more_info') {
         const questions = (json.data.questions || []).slice(0,3)
         setFollowUp(questions.map((q:string)=>({ question:q, answer:'' })))
@@ -149,6 +180,7 @@ export default function FreeAiProfileAssistant() {
 
   function updateProposal<K extends keyof Proposal>(key:K,value:Proposal[K]) { setProposal((p)=>p ? { ...p,[key]:value }:p) }
   function updateService(index:number,key:'title'|'description',value:string) { setProposal((p)=>p ? { ...p,services:p.services.map((s,i)=>i===index?{...s,[key]:value}:s) }:p) }
+  function updatePortfolio(index:number,key:'title'|'description',value:string) { setProposal((p)=>p ? { ...p,portfolio:p.portfolio.map((item,i)=>i===index?{...item,[key]:value}:item) }:p) }
 
   async function applyProposal() {
     if (!proposal || applying) return
@@ -156,7 +188,7 @@ export default function FreeAiProfileAssistant() {
     if (selection.services && hasExistingServices && !replaceServices) { setError('Confirma que deseas actualizar el texto de tus servicios actuales.'); return }
     setApplying(true); setError(''); setSuccess('')
     try {
-      const json:any = await apiPost('/me/ai-profile-assistant/apply',{ proposal,apply:selection,replace_existing_services:replaceServices })
+      const json:any = await apiPost('/me/ai-profile-assistant/apply',{ proposal,apply:selection,replace_existing_services:replaceServices,editing_scope:editingScope })
       if (!json?.ok) { setError(json?.error || 'No pudimos aplicar los cambios. Tu perfil anterior se mantiene.'); return }
       setSuccess('Tus cambios fueron aplicados. El perfil no fue publicado automáticamente.')
       await loadContext()
@@ -201,6 +233,7 @@ export default function FreeAiProfileAssistant() {
       </header>
 
       {error && <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold leading-6 text-rose-700">{error}</div>}
+      {cooldownSeconds>0 && <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">Puedes generar otra propuesta en {cooldownSeconds} s.</div>}
       {success && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">✓ {success}</p><button type="button" onClick={()=>navigate('/admin/free/editor')} className="mt-3 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white">Volver a mi perfil</button></div>}
 
       {context && <section className="mt-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -213,6 +246,16 @@ export default function FreeAiProfileAssistant() {
         </div>
         <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">Disponibilidad IA hoy: {context.usage.remaining_today} · este mes: {context.usage.remaining_month}</p>
         {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a elegir y redactar los más importantes. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Básico</a>}</div>}
+      </section>}
+
+      {hasExistingContent && !proposal && followUp.length===0 && context && <section className="mt-5 rounded-[24px] border border-cyan-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Contenido existente</p>
+        <h2 className="mt-1 text-xl font-black">¿Cómo quieres que te ayude la IA?</h2>
+        <div className="mt-4 grid gap-3">
+          <button type="button" onClick={()=>setEditingScope('missing_only')} className={`rounded-2xl border p-4 text-left ${editingScope==='missing_only'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Completar solo lo que falta · Recomendado</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Conserva intactos los campos que ya completaste. La IA los usa como contexto y trabaja solo sobre lo pendiente.</p></button>
+          <button type="button" onClick={()=>setEditingScope('full_profile')} className={`rounded-2xl border p-4 text-left ${editingScope==='full_profile'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Revisar y mejorar mi contenido</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Puede proponerte mejoras de texto en título, presentación, trabajos y servicios. Tú revisas todo antes de aplicar.</p></button>
+        </div>
+        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">Nunca modifica imágenes, enlaces, cuentas bancarias, diseño, plantilla, colores ni orden.</p>
       </section>}
 
       {!proposal && followUp.length===0 && context && <section className="mt-5 space-y-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -238,19 +281,24 @@ export default function FreeAiProfileAssistant() {
         <div className="rounded-[24px] border border-cyan-200 bg-cyan-50 p-4"><p className="font-black text-cyan-900">Propuesta lista para revisar</p><p className="mt-1 text-sm font-semibold leading-6 text-cyan-800">Revisa la propuesta antes de aplicarla. Tú decides qué contenido utilizar. Nada se aplicará hasta que pulses <strong>Aplicar a mi perfil</strong>.</p></div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Identidad</p><h2 className="mt-1 text-xl font-black">Cómo te presentas</h2></div><label className="text-xs font-black"><input type="checkbox" checked={selection.identity} onChange={(e)=>setSelection((s)=>({...s,identity:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div>
-          <input value={proposal.professional_title} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-black" />
+          <input value={editingScope==='missing_only'&&context.profile.professional_title?context.profile.professional_title:proposal.professional_title} disabled={editingScope==='missing_only'&&Boolean(context.profile.professional_title)} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-black" />
         </div>
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex justify-between"><h2 className="text-xl font-black">Sobre ti o tu negocio</h2><label className="text-xs font-black"><input type="checkbox" checked={selection.bio} onChange={(e)=>setSelection((s)=>({...s,bio:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div><textarea value={proposal.bio} onChange={(e)=>updateProposal('bio',e.target.value.slice(0,300))} maxLength={300} rows={5} className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 leading-6" /></div>
+        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex justify-between"><h2 className="text-xl font-black">Sobre ti o tu negocio</h2><label className="text-xs font-black"><input type="checkbox" checked={selection.bio} onChange={(e)=>setSelection((s)=>({...s,bio:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div><textarea value={editingScope==='missing_only'&&context.profile.bio?context.profile.bio:proposal.bio} disabled={editingScope==='missing_only'&&Boolean(context.profile.bio)} onChange={(e)=>updateProposal('bio',e.target.value.slice(0,300))} maxLength={300} rows={5} className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 leading-6" /></div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex justify-between gap-3"><h2 className="text-xl font-black">Servicios</h2><div className="space-y-2 text-right text-xs font-black"><label className="block"><input type="checkbox" checked={selection.services_section} onChange={(e)=>setSelection((s)=>({...s,services_section:e.target.checked}))} className="mr-2 accent-cyan-700"/>Presentación</label><label className="block"><input type="checkbox" checked={selection.services} onChange={(e)=>setSelection((s)=>({...s,services:e.target.checked}))} className="mr-2 accent-cyan-700"/>Servicios</label></div></div>
           <input value={proposal.services_section_title} onChange={(e)=>updateProposal('services_section_title',e.target.value.slice(0,60))} className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 font-black" />
           <textarea value={proposal.services_section_description} onChange={(e)=>updateProposal('services_section_description',e.target.value.slice(0,240))} rows={3} className="mt-3 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 leading-6" />
-          <div className="mt-4 space-y-3">{proposal.services.map((s,index)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Servicio {index+1}</p><input value={s.title} onChange={(e)=>updateService(index,'title',e.target.value.slice(0,60))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-black"/><textarea value={s.description} onChange={(e)=>updateService(index,'description',e.target.value.slice(0,110))} rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5"/></div>)}</div>
+          <div className="mt-4 space-y-3">{proposal.services.map((s,index)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Servicio {index+1}</p><input value={s.title} onChange={(e)=>updateService(index,'title',e.target.value.slice(0,60))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-black"/><textarea value={s.description} onChange={(e)=>updateService(index,'description',e.target.value.slice(0,90))} rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5"/></div>)}</div>
           {hasExistingServices && selection.services && <label className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-5 text-amber-900"><input type="checkbox" checked={replaceServices} onChange={(e)=>setReplaceServices(e.target.checked)} className="mt-0.5 accent-amber-700"/><span>Confirmo que quiero actualizar el texto de los servicios propuestos. Kawvo conservará los servicios existentes, sus IDs, imágenes, precios, texto de WhatsApp y estado destacado; no se eliminarán automáticamente.</span></label>}
         </div>
+        {proposal.portfolio?.length>0 && <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Mis trabajos</p><h2 className="mt-1 text-xl font-black">Textos de tus fotos</h2></div><label className="text-xs font-black"><input type="checkbox" checked={selection.portfolio} onChange={(e)=>setSelection((s)=>({...s,portfolio:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div>
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Máximo 5 trabajos. Título 80 caracteres y descripción 90. Las imágenes no se reemplazan ni se reordenan.</p>
+          <div className="mt-4 space-y-3">{proposal.portfolio.map((item,index)=>{ const current=context.profile.portfolio.find((x)=>x.id===item.id); const lockTitle=editingScope==='missing_only'&&Boolean(current?.title); const lockDescription=editingScope==='missing_only'&&Boolean(current?.description); return <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Trabajo {index+1}</p><input value={lockTitle?(current?.title||''):item.title} disabled={lockTitle} onChange={(e)=>updatePortfolio(index,'title',e.target.value.slice(0,80))} maxLength={80} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-black disabled:bg-slate-100 disabled:text-slate-500"/>{lockTitle&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}<textarea value={lockDescription?(current?.description||''):item.description} disabled={lockDescription} onChange={(e)=>updatePortfolio(index,'description',e.target.value.slice(0,90))} maxLength={90} rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 disabled:bg-slate-100 disabled:text-slate-500"/>{lockDescription&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}</div>})}</div>
+        </div>}
         <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase text-slate-400">Siguiente acción sugerida</p><p className="mt-2 text-lg font-black">“{proposal.cta.label}”</p><p className="mt-1 text-sm font-medium leading-6 text-slate-500">Es una recomendación de copy. No cambia ni reordena tus Botones rápidos.</p></div>
         {proposal.image_suggestions?.length>0 && <div className="rounded-[24px] border border-violet-200 bg-violet-50 p-5"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet-700">Ideas de imágenes</p><p className="mt-2 text-sm font-semibold leading-6 text-violet-900">Son recomendaciones, no imágenes generadas.</p><div className="mt-3 space-y-2">{proposal.image_suggestions.map((x)=><div key={x.purpose} className="rounded-xl bg-white p-3"><p className="text-sm font-black">{x.purpose}</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">{x.suggestion}</p></div>)}</div></div>}
-        <div className="sticky bottom-3 z-30 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur"><button type="button" onClick={()=>void applyProposal()} disabled={applying || (selection.services && hasExistingServices && !replaceServices)} className="w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40">{applying?'Aplicando…':'Aplicar a mi perfil'}</button><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={()=>{setProposal(null);setFollowUp([]);setRound(1)}} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">Volver a preguntas</button><button type="button" onClick={()=>void generate(1)} disabled={generating} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">{generating?'Generando…':'Generar otra'}</button></div></div>
+        <div className="sticky bottom-3 z-30 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur"><button type="button" onClick={()=>void applyProposal()} disabled={applying || (selection.services && hasExistingServices && !replaceServices)} className="w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40">{applying?'Aplicando…':'Aplicar a mi perfil'}</button><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={()=>{setProposal(null);setFollowUp([]);setRound(1)}} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">Volver a preguntas</button><button type="button" onClick={()=>void generate(1)} disabled={generating || cooldownSeconds>0} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">{generating?'Generando…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:'Generar otra'}</button></div></div>
       </section>}
     </section>
   </main>

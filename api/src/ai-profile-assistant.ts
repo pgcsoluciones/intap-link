@@ -9,6 +9,7 @@ const MAX_GENERATIONS_PER_DAY = 8
 const MAX_GENERATIONS_PER_MONTH = 100
 const MAX_ROUNDS_PER_SESSION = 2
 const FREE_MAX_SERVICES = 3
+const FREE_MAX_PORTFOLIO = 5
 const COOLDOWN_SECONDS = 20
 const MAX_OUTPUT_TOKENS = 1800
 const INPUT_USD_PER_MILLION = 0.20
@@ -17,12 +18,15 @@ const OUTPUT_USD_PER_MILLION = 1.20
 const ALLOWED_GOALS = new Set(['contact', 'quote', 'book', 'visit', 'buy', 'learn_more'])
 
 type ImageSuggestion = { purpose: string; suggestion: string }
+type PortfolioProposal = { id: string; title: string; description: string }
+type EditingScope = 'missing_only' | 'full_profile'
 type AssistantProposal = {
   professional_title: string
   bio: string
   services_section_title: string
   services_section_description: string
   services: Array<{ title: string; description: string }>
+  portfolio: PortfolioProposal[]
   cta: { label: string; goal: 'contact' | 'quote' | 'book' | 'visit' | 'buy' | 'learn_more' }
   image_suggestions: ImageSuggestion[]
 }
@@ -31,9 +35,11 @@ type AssistantResult =
   | { status: 'needs_more_info'; questions: string[] }
 
 type ExistingService = { id: string; title: string; description: string; has_image: boolean }
+type ExistingPortfolio = { id: string; title: string; description: string }
 
 type PlanLimits = {
   max_services: number
+  max_portfolio: number
   ai_daily_generations: number
   ai_monthly_generations: number
   ai_max_rounds: number
@@ -84,6 +90,7 @@ function planLimits(c: any, planId: string): PlanLimits {
   const free = planId === 'free'
   return {
     max_services: free ? numericEnv(c.env.FREE_MAX_SERVICES, FREE_MAX_SERVICES, 1, 20) : numericEnv(c.env.PAID_MAX_SERVICES, 20, 1, 100),
+    max_portfolio: free ? numericEnv(c.env.FREE_MAX_PORTFOLIO, FREE_MAX_PORTFOLIO, 1, 20) : numericEnv(c.env.PAID_MAX_PORTFOLIO, 20, 1, 100),
     ai_daily_generations: numericEnv(c.env.AI_PROFILE_DAILY_LIMIT, MAX_GENERATIONS_PER_DAY, 1, 1000),
     ai_monthly_generations: numericEnv(c.env.AI_PROFILE_MONTHLY_LIMIT, MAX_GENERATIONS_PER_MONTH, 1, 10000),
     ai_max_rounds: numericEnv(c.env.AI_PROFILE_MAX_ROUNDS, MAX_ROUNDS_PER_SESSION, 1, 5),
@@ -99,8 +106,13 @@ function validateProposal(raw: unknown, maxServices: number): AssistantProposal 
   const goal = ALLOWED_GOALS.has(String(cta.goal)) ? String(cta.goal) as AssistantProposal['cta']['goal'] : 'contact'
   const services = Array.isArray(value.services)
     ? value.services.slice(0, maxServices).map((item: any) => ({
-        title: text(item?.title, 60), description: text(item?.description, 110),
+        title: text(item?.title, 60), description: text(item?.description, 90),
       })).filter((item: any) => item.title && item.description)
+    : []
+  const portfolio = Array.isArray(value.portfolio)
+    ? value.portfolio.slice(0, FREE_MAX_PORTFOLIO).map((item: any) => ({
+        id: text(item?.id, 80), title: text(item?.title, 80), description: text(item?.description, 90),
+      })).filter((item: PortfolioProposal) => item.id)
     : []
   const imageSuggestions = Array.isArray(value.image_suggestions)
     ? value.image_suggestions.slice(0, 4).map((item: any) => ({
@@ -113,6 +125,7 @@ function validateProposal(raw: unknown, maxServices: number): AssistantProposal 
     services_section_title: text(value.services_section_title, 60),
     services_section_description: text(value.services_section_description, 240),
     services,
+    portfolio,
     cta: { label: text(cta.label, 45), goal },
     image_suggestions: imageSuggestions,
   }
@@ -143,13 +156,17 @@ async function ownerContext(c: any, userId: string) {
   ).bind(userId).first()
   if (!profile) return null
   const profileId = String((profile as any).id)
-  const [servicesResult, contact] = await Promise.all([
+  const [servicesResult, portfolioResult, contact] = await Promise.all([
     c.env.DB.prepare(`SELECT id, title, description, image_url, sort_order FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC, created_at ASC LIMIT 20`).bind(profileId).all(),
+    c.env.DB.prepare(`SELECT id, title, description FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC, created_at ASC LIMIT 5`).bind(profileId).all(),
     c.env.DB.prepare(`SELECT whatsapp, email, phone, address FROM profile_contact WHERE profile_id = ? LIMIT 1`).bind(profileId).first(),
   ])
   const templateData = parseObject((profile as any).template_data)
   const services: ExistingService[] = (servicesResult.results as any[]).map((row) => ({
-    id: String(row.id), title: text(row.title, 60), description: text(row.description, 110), has_image: Boolean(row.image_url),
+    id: String(row.id), title: text(row.title, 60), description: text(row.description, 90), has_image: Boolean(row.image_url),
+  }))
+  const portfolio: ExistingPortfolio[] = (portfolioResult.results as any[]).map((row) => ({
+    id: String(row.id), title: text(row.title, 80), description: text(row.description, 90),
   }))
   const contactData = {
     whatsapp: text((contact as any)?.whatsapp, 80),
@@ -169,6 +186,7 @@ async function ownerContext(c: any, userId: string) {
     servicesSectionDescription: text(templateData.services_section_description, 240),
     templateData,
     services,
+    portfolio,
     contact: contactData,
     configuredChannels: configuredChannels(contactData),
   }
@@ -233,7 +251,7 @@ function responseText(payload: any): string {
   return ''
 }
 
-function buildInput(answers: Record<string, string>, followUp: Array<{ question: string; answer: string }>, context: any, limits: PlanLimits) {
+function buildInput(answers: Record<string, string>, followUp: Array<{ question: string; answer: string }>, context: any, limits: PlanLimits, editingScope: EditingScope) {
   const safeProfile = {
     name: context.name,
     category: context.category,
@@ -242,11 +260,14 @@ function buildInput(answers: Record<string, string>, followUp: Array<{ question:
     services_section_title: context.servicesSectionTitle,
     services_section_description: context.servicesSectionDescription,
     existing_services: context.services.map((s: ExistingService) => ({ title: s.title, description: s.description, has_image: s.has_image })),
+    portfolio: context.portfolio.map((item: ExistingPortfolio, index: number) => ({ index: index + 1, id: item.id, title: item.title, description: item.description })),
   }
   return JSON.stringify({
     profile: safeProfile,
     configured_channels: context.configuredChannels,
     plan: { code: context.planId, limits },
+    editing_scope: editingScope,
+    field_limits: { name: 80, professional_title: 80, bio: 300, portfolio_max: limits.max_portfolio, portfolio_title: 80, portfolio_description: 90, services_max: limits.max_services, service_title: 60, service_description: 90, services_section_title: 60, services_section_description: 240 },
     answers,
     follow_up_answers: followUp,
   })
@@ -257,10 +278,11 @@ const proposalSchema = {
   properties: {
     professional_title: { type: 'string' }, bio: { type: 'string' }, services_section_title: { type: 'string' }, services_section_description: { type: 'string' },
     services: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, description: { type: 'string' } }, required: ['title','description'] } },
+    portfolio: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' } }, required: ['id','title','description'] } },
     cta: { type: 'object', additionalProperties: false, properties: { label: { type: 'string' }, goal: { type: 'string', enum: ['contact','quote','book','visit','buy','learn_more'] } }, required: ['label','goal'] },
     image_suggestions: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { purpose: { type: 'string' }, suggestion: { type: 'string' } }, required: ['purpose','suggestion'] } },
   },
-  required: ['professional_title','bio','services_section_title','services_section_description','services','cta','image_suggestions'],
+  required: ['professional_title','bio','services_section_title','services_section_description','services','portfolio','cta','image_suggestions'],
 }
 
 const responseSchema = {
@@ -281,6 +303,9 @@ const EDITORIAL_INSTRUCTIONS = [
   'COHERENCIA: la propuesta cuenta una sola historia. professional_title posiciona; bio explica valor; servicios demuestran qué puede hacer; CTA indica el siguiente paso. Evita redundancia entre campos.',
   'TÍTULO: corto, específico y fácil de comprender. Puede usar especialidad + enfoque si está respaldado. Evita Emprendedor, Servicios profesionales o Soluciones integrales cuando exista algo más concreto.',
   'BIO: normalmente 2 o 3 frases breves. Explica qué hace, en qué situación ayuda, para quién y qué valor práctico obtiene el cliente cuando el contexto lo permita. No sobrecargues ni repitas servicios. Evita aperturas automáticas tipo Somos una empresa dedicada, En [nombre] realizamos o Nos especializamos en ofrecer.',
+  'LÍMITES REALES: respeta field_limits exactamente. Nombre y título/puesto 80; bio 300; portafolio máximo 5, título 80 y descripción 90; servicios máximo 3, título 60 y descripción 90; título de sección de servicios 60 y descripción general 240. No escribas texto que luego deba ser truncado por el editor.',
+  'ALCANCE DE EDICIÓN: editing_scope=missing_only significa conservar todo campo ya completado y proponer contenido únicamente para vacíos; puedes usar lo existente como contexto. editing_scope=full_profile permite proponer mejoras de texto, pero nunca modifica imágenes, URLs, canales, cuentas bancarias, diseño ni orden. El nombre no se cambia por IA en ningún alcance.',
+  'TRABAJOS/PORTAFOLIO: portfolio contiene hasta 5 fotos existentes y solo sus metadatos textuales. No inventes lo que muestra una foto si título y descripción no permiten saberlo; en ese caso usa needs_more_info con una pregunta mínima que permita describirla. Nunca propongas eliminar, reemplazar o reordenar fotos. portfolio de salida debe conservar los id recibidos.',
   'SERVICIOS: propone únicamente servicios reales y respeta plan.limits.max_services. Cada título debe ser concreto y escaneable; cada descripción debe expresar utilidad, beneficio o problema que resuelve. No inventes servicios para llenar cupos ni escribas definiciones de diccionario.',
   'SECCIÓN SERVICIOS: prefiere un título específico cuando surja natural; no fuerces creatividad. Si lo creativo suena artificial usa algo simple y claro. La descripción introduce desde necesidad, beneficio o contexto, sin repetir ni rellenar.',
   'CTA Y CANALES: configured_channels solo informa qué canales existen. Si hay varias alternativas razonables y el usuario no indicó preferencia, no elijas arbitrariamente: devuelve needs_more_info. Los canales no determinan por sí solos la intención. No sugieras una acción incompatible con canales existentes.',
@@ -320,7 +345,7 @@ app.get('/api/v1/me/ai-profile-assistant/context', requireAssistantAuth, async (
       professional_title: context.professionalTitle, bio: context.bio,
       services_section_title: context.servicesSectionTitle,
       services_section_description: context.servicesSectionDescription,
-      services: context.services, contact: context.contact,
+      services: context.services, portfolio: context.portfolio, contact: context.contact,
       configured_channels: context.configuredChannels,
     },
     plan: { code: context.planId, limits, upgrade_available: context.planId === 'free' },
@@ -361,6 +386,7 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
   let body: any
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Solicitud no válida.' }, 400) }
   const round = numericEnv(body?.round, 1, 1, 99)
+  const editingScope: EditingScope = body?.editing_scope === 'full_profile' ? 'full_profile' : 'missing_only'
   const limits = planLimits(c, context.planId)
   if (round > limits.ai_max_rounds) return c.json({ ok: false, error: 'Ya utilizaste las rondas de información disponibles para esta propuesta.', code: 'round_limit' }, 429)
 
@@ -402,7 +428,7 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
         reasoning: { effort: 'none' },
         text: { verbosity: 'medium', format: { type: 'json_schema', name: 'kawvo_profile_assistant_result', strict: true, schema: responseSchema } },
         instructions: EDITORIAL_INSTRUCTIONS,
-        input: buildInput(answers, followUp, context, limits),
+        input: buildInput(answers, followUp, context, limits, editingScope),
       }),
     })
     const payload: any = await response.json().catch(() => ({}))
@@ -440,6 +466,7 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
   let body:any
   try { body = await c.req.json() } catch { return c.json({ ok:false,error:'Solicitud no válida.' },400) }
   const limits = planLimits(c,context.planId)
+  const editingScope: EditingScope = body?.editing_scope === 'full_profile' ? 'full_profile' : 'missing_only'
   const proposal = validateProposal(body?.proposal, limits.max_services)
   if (!proposal) return c.json({ ok:false,error:'La propuesta no es válida.' },400)
   const apply = objectValue(body?.apply)
@@ -447,18 +474,26 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
   const applyBio = Boolean(apply.bio)
   const applyServicesSection = Boolean(apply.services_section)
   const applyServices = Boolean(apply.services)
+  const applyPortfolio = Boolean(apply.portfolio)
   const confirmExistingServicesUpdate = body?.replace_existing_services === true
-  if (!applyIdentity && !applyBio && !applyServicesSection && !applyServices) return c.json({ ok:false,error:'Selecciona al menos un cambio para aplicar.' },400)
-  if (applyServices && context.services.length > 0 && !confirmExistingServicesUpdate) return c.json({ ok:false,error:'Confirma explícitamente si deseas actualizar el texto de tus servicios actuales.',code:'replace_services_confirmation_required' },409)
+  if (!applyIdentity && !applyBio && !applyServicesSection && !applyServices && !applyPortfolio) return c.json({ ok:false,error:'Selecciona al menos un cambio para aplicar.' },400)
+  if (editingScope === 'full_profile' && applyServices && context.services.length > 0 && !confirmExistingServicesUpdate) return c.json({ ok:false,error:'Confirma explícitamente si deseas actualizar el texto de tus servicios actuales.',code:'replace_services_confirmation_required' },409)
+
+  const effectiveIdentity = applyIdentity && (editingScope === 'full_profile' || !context.professionalTitle)
+  const effectiveBio = applyBio && (editingScope === 'full_profile' || !context.bio)
+  const effectiveServices = applyServices && (editingScope === 'full_profile' || context.services.length === 0)
 
   const nextTemplateData = { ...context.templateData }
-  if (applyIdentity) { nextTemplateData.role = proposal.professional_title; nextTemplateData.free_identity_confirmed = true }
-  if (applyServicesSection) { nextTemplateData.services_section_title = proposal.services_section_title; nextTemplateData.services_section_description = proposal.services_section_description }
-  const statements:any[] = []
-  if (applyIdentity || applyBio || applyServicesSection) {
-    statements.push(c.env.DB.prepare(`UPDATE profiles SET bio = CASE WHEN ? = 1 THEN ? ELSE bio END, template_data = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`).bind(applyBio?1:0,proposal.bio,JSON.stringify(nextTemplateData),context.profileId,userId))
+  if (effectiveIdentity) { nextTemplateData.role = proposal.professional_title; nextTemplateData.free_identity_confirmed = true }
+  if (applyServicesSection) {
+    if (editingScope === 'full_profile' || !context.servicesSectionTitle) nextTemplateData.services_section_title = proposal.services_section_title
+    if (editingScope === 'full_profile' || !context.servicesSectionDescription) nextTemplateData.services_section_description = proposal.services_section_description
   }
-  if (applyServices) {
+  const statements:any[] = []
+  if (effectiveIdentity || effectiveBio || applyServicesSection) {
+    statements.push(c.env.DB.prepare(`UPDATE profiles SET bio = CASE WHEN ? = 1 THEN ? ELSE bio END, template_data = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`).bind(effectiveBio?1:0,proposal.bio,JSON.stringify(nextTemplateData),context.profileId,userId))
+  }
+  if (effectiveServices) {
     for (let index=0; index<proposal.services.length && index<limits.max_services; index+=1) {
       const service = proposal.services[index]
       const existing = context.services[index]
@@ -469,10 +504,22 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
       }
     }
   }
+  if (applyPortfolio) {
+    const portfolioById = new Map(context.portfolio.map((item: ExistingPortfolio) => [item.id, item]))
+    for (const item of proposal.portfolio.slice(0, limits.max_portfolio)) {
+      const existing = portfolioById.get(item.id)
+      if (!existing) continue
+      const nextTitle = editingScope === 'full_profile' || !existing.title ? item.title : existing.title
+      const nextDescription = editingScope === 'full_profile' || !existing.description ? item.description : existing.description
+      if (nextTitle !== existing.title || nextDescription !== existing.description) {
+        statements.push(c.env.DB.prepare(`UPDATE profile_gallery SET title = ?, description = ? WHERE id = ? AND profile_id = ?`).bind(nextTitle,nextDescription,existing.id,context.profileId))
+      }
+    }
+  }
   try { if (statements.length) await c.env.DB.batch(statements) } catch {
     await insertUsage(c,{ userId,profileId:context.profileId,operation:'apply',status:'error',errorCode:'db_write_failed' })
     return c.json({ ok:false,error:'No pudimos aplicar los cambios. Tu perfil anterior se mantiene.' },500)
   }
   await insertUsage(c,{ userId,profileId:context.profileId,operation:'apply',status:'success' })
-  return c.json({ ok:true,data:{ applied:{ identity:applyIdentity,bio:applyBio,services_section:applyServicesSection,services:applyServices }, published:false, services_preserved:applyServices && context.services.length>0, note:'Aplicar modifica únicamente los campos seleccionados. No publica, no cambia plantilla, colores, orden de botones, orden de secciones ni canales.' } })
+  return c.json({ ok:true,data:{ applied:{ identity:effectiveIdentity,bio:effectiveBio,services_section:applyServicesSection,services:effectiveServices,portfolio:applyPortfolio }, editing_scope:editingScope, published:false, services_preserved:effectiveServices && context.services.length>0, note:'Aplicar modifica únicamente los campos seleccionados. No publica, no cambia plantilla, colores, orden de botones, orden de secciones ni canales.' } })
 })
