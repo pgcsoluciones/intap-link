@@ -36,6 +36,7 @@ type FreeItem = {
   icon: string
   help: string
   readinessKey?: keyof FreePublicationReadiness['steps']
+  available?: boolean
   optional?: boolean
 }
 
@@ -70,7 +71,7 @@ const freeItems: FreeItem[] = [
     to: '/admin/free/location',
     icon: '⌖',
     help: 'Agrega la dirección real de tu negocio y, si corresponde, el enlace del mapa. Si trabajas sin local físico puedes dejar esta sección sin mostrar.',
-    optional: true,
+    available: true,
   },
   {
     title: 'Mis enlaces',
@@ -78,7 +79,7 @@ const freeItems: FreeItem[] = [
     to: '/admin/free/links',
     icon: '↗',
     help: 'Puedes agregar páginas, catálogos, formularios u otros enlaces que quieras destacar. Usa nombres sencillos para que el visitante entienda a dónde va.',
-    optional: true,
+    available: true,
   },
   {
     title: 'Mis trabajos (portafolio)',
@@ -348,25 +349,27 @@ export default function FreeDashboard() {
         <div className="pt-2">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Accesos directos</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Edita un bloque específico</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Verde significa completado, ámbar indica que aún falta y gris identifica bloques opcionales.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Verde significa completado, ámbar indica que aún falta y gris identifica funciones disponibles que no forman parte de los requisitos de publicación. Solo NFC/QR se marca como opcional.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
           {freeItems.map((item) => {
             const completed = item.readinessKey ? Boolean(readiness?.steps?.[item.readinessKey]) : false
+            const available = Boolean(item.available)
             const optional = Boolean(item.optional)
-            const statusLabel = optional ? 'Opcional' : completed ? 'Completado' : 'Pendiente'
-            const cardClass = optional
+            const statusLabel = optional ? 'Opcional' : available ? 'Disponible' : completed ? 'Completado' : 'Pendiente'
+            const neutral = optional || available
+            const cardClass = neutral
               ? 'border-slate-200 bg-white'
               : completed
                 ? 'border-emerald-200 bg-emerald-50/60'
                 : 'border-amber-200 bg-amber-50/60'
-            const iconClass = optional
+            const iconClass = neutral
               ? 'bg-slate-100 text-slate-600'
               : completed
                 ? 'bg-emerald-600 text-white'
                 : 'bg-amber-100 text-amber-800'
-            const badgeClass = optional
+            const badgeClass = neutral
               ? 'bg-slate-100 text-slate-500'
               : completed
                 ? 'bg-emerald-100 text-emerald-700'
@@ -375,7 +378,7 @@ export default function FreeDashboard() {
             return (
               <div key={item.title} className={`relative flex w-full items-center gap-3 rounded-[22px] border p-4 transition hover:-translate-y-0.5 hover:shadow-md ${cardClass}`}>
                 <button onClick={() => navigate(item.to)} className="flex min-w-0 flex-1 items-center gap-4 text-left">
-                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg font-black ${iconClass}`}>{completed && !optional ? '✓' : item.icon}</span>
+                  <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg font-black ${iconClass}`}>{completed && !neutral ? '✓' : item.icon}</span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="block text-sm font-black text-slate-900">{item.title}</span>
