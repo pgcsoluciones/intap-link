@@ -79,22 +79,39 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   })
 }
 
+function renewPreviewRedirect(slug: string, embedded: boolean) {
+  const mode = embedded ? '' : '?full=1'
+  const target = `https://app.preview.intaprd.com/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}${mode}`
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: target,
+      'Cache-Control': 'no-store',
+    },
+  })
+}
+
 export default {
   async fetch(request: Request, env: PreviewEnv, ctx: ExecutionContext) {
     const url = new URL(request.url)
-
     const isDraftPreviewRequest = url.searchParams.get('preview') === '1'
-    const isEmbeddedPreviewPage =
+
+    if (
       url.hostname === 'preview.intaprd.com' &&
       !url.pathname.startsWith('/api/') &&
-      isDraftPreviewRequest &&
-      url.searchParams.get('embedded') === '1'
-
-    if (isEmbeddedPreviewPage) {
+      isDraftPreviewRequest
+    ) {
       const slug = slugFromPath(url.pathname)
+      const embedded = url.searchParams.get('embedded') === '1'
       const valid = await validatePreviewSession(request, env, slug)
-      if (!valid) return new Response('Preview session expired or invalid.', { status: 403 })
-      return proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain', true)
+
+      if (!valid && slug) {
+        return renewPreviewRedirect(slug, embedded)
+      }
+
+      if (embedded) {
+        return proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain', true)
+      }
     }
 
     if (url.pathname.startsWith('/api/v1/public/profiles/') && isDraftPreviewRequest) {
