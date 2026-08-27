@@ -109,7 +109,11 @@ assert.match(appSource, /Ponle un título breve a cada trabajo/, 'Portfolio work
 assert.match(visualEditorSource, /Optimiza tu perfil/, 'Editor must expose the integrated AI optimization CTA')
 assert.match(visualEditorSource, /Completa y mejora tu presentación con ayuda de la IA de Kawvo/, 'AI CTA must explain the actual benefit')
 assert.match(dashboardSource, /Optimiza tu perfil/, 'Dashboard must expose the integrated AI optimization CTA')
-assert.doesNotMatch(routeUxSource, /fixed bottom-|Ayúdame con IA/, 'AI launcher must not overlap the platform help control')
+assert.match(routeUxSource, /bottom-24/, 'AI launcher must stay vertically separated from the platform help control')
+assert.match(routeUxSource, /Optimiza tu perfil/, 'Floating AI launcher must explain the optimization action')
+assert.match(routeUxSource, /Completa y mejora tu presentación con la IA de Kawvo/, 'Floating AI launcher must explain the assistant benefit')
+assert.match(routeUxSource, /Optimizar mi perfil/, 'Floating AI launcher must provide a clear CTA')
+assert.doesNotMatch(routeUxSource, /Ayúdame con IA/, 'Legacy ambiguous AI launcher copy must not return')
 assert.match(appSource, /missingServicesSectionCopy/, 'Missing-only planner must detect services-section title or intro')
 
 for (const area of ['app','web']) {
