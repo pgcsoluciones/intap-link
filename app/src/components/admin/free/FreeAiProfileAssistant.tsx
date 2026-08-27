@@ -105,12 +105,21 @@ export default function FreeAiProfileAssistant() {
   const [replaceServices,setReplaceServices] = useState(false)
   const [error,setError] = useState('')
   const [success,setSuccess] = useState('')
+  const [portfolioTitles,setPortfolioTitles] = useState<Record<string,string>>({})
+  const [remainingProfileItems,setRemainingProfileItems] = useState<string[]>([])
 
   async function loadContext() {
     const json:any = await apiGet('/me/ai-profile-assistant/context')
     if (!json?.ok) throw new Error(json?.error || 'No pudimos cargar la ayuda con IA.')
     const data = json.data as AssistantContext
     setContext(data)
+    setPortfolioTitles((current)=>{
+      const next: Record<string,string> = {}
+      for (const item of data.profile.portfolio || []) {
+        next[item.id] = current[item.id] || item.title || ''
+      }
+      return next
+    })
   }
   useEffect(()=>{ loadContext().catch((e)=>setError(e?.message || 'No pudimos cargar la ayuda con IA.')).finally(()=>setLoading(false)) },[])
 
@@ -126,6 +135,7 @@ export default function FreeAiProfileAssistant() {
   const missingServicesSectionDescription = Boolean(context && !(context.profile.services_section_description || '').trim())
   const missingServicesSectionCopy = missingServicesSectionTitle || missingServicesSectionDescription
   const incompletePortfolio = context?.profile.portfolio?.filter((item)=>!item.title.trim() || !item.description.trim()) || []
+  const missingPortfolioTitleItems = context?.profile.portfolio?.filter((item)=>!item.title.trim()) || []
   const missingPortfolioCopy = incompletePortfolio.length > 0
   const hasMissingEditorialContent = missingTitle || missingBio || missingServices || missingServicesSectionCopy || missingPortfolioCopy
   const channels = context?.profile.configured_channels || []
@@ -151,6 +161,7 @@ export default function FreeAiProfileAssistant() {
     setReplaceServices(false)
     setError('')
     setSuccess('')
+    setRemainingProfileItems([])
   }
 
   useEffect(()=>{
@@ -186,11 +197,21 @@ export default function FreeAiProfileAssistant() {
 
   async function generate(nextRound = round) {
     if (generating || !context) return
-    setGenerating(true); setError(''); setSuccess('')
+    setGenerating(true); setError(''); setSuccess(''); setRemainingProfileItems([])
     try {
       const answeredTurns: ConversationTurn[] = followUp.flatMap((item)=>item.answer.trim() ? [{ role:'assistant' as const, content:item.question }, { role:'user' as const, content:item.answer.trim() }] : [])
       const conversationPayload = [...conversation, ...answeredTurns]
-      const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers, follow_up_answers:followUp, conversation:conversationPayload, round:nextRound, editing_scope:editingScope })
+      const confirmedPortfolioTitles = missingPortfolioTitleItems
+        .map((item,index)=>({ index:context.profile.portfolio.findIndex((x)=>x.id===item.id)+1, id:item.id, title:(portfolioTitles[item.id] || '').trim().slice(0,80) }))
+        .filter((item)=>item.title)
+      const portfolioContext = confirmedPortfolioTitles.length
+        ? `Títulos de portafolio confirmados por el usuario: ${confirmedPortfolioTitles.map((item)=>`Foto ${item.index}: ${item.title}`).join(' | ')}`
+        : ''
+      const answersForModel = {
+        ...answers,
+        extra_context: [answers.extra_context.trim(), portfolioContext].filter(Boolean).join(' ').slice(0,700),
+      }
+      const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers:answersForModel, follow_up_answers:followUp, conversation:conversationPayload, round:nextRound, editing_scope:editingScope })
       if (!json?.ok) {
         if (json?.code === 'cooldown') { setCooldownSeconds(Number(json.retry_after_seconds || 20)); setError(''); return }
         setError(json?.error || 'No pudimos preparar tu propuesta. Tu perfil no fue modificado.'); return
@@ -220,6 +241,39 @@ export default function FreeAiProfileAssistant() {
   function updateService(index:number,key:'title'|'description',value:string) { setProposal((p)=>p ? { ...p,services:p.services.map((s,i)=>i===index?{...s,[key]:value}:s) }:p) }
   function updatePortfolio(index:number,key:'title'|'description',value:string) { setProposal((p)=>p ? { ...p,portfolio:p.portfolio.map((item,i)=>i===index?{...item,[key]:value}:item) }:p) }
 
+  async function loadRemainingProfileItems() {
+    try {
+      const [meJson, linksJson, bankJson, contactJson]: any[] = await Promise.all([
+        apiGet('/me').catch(()=>({ ok:false })),
+        apiGet('/me/links').catch(()=>({ ok:false })),
+        apiGet('/me/bank-accounts').catch(()=>({ ok:false })),
+        apiGet('/me/contact').catch(()=>({ ok:false })),
+      ])
+
+      const pending: string[] = []
+      const steps = meJson?.data?.freeReadiness?.steps || {}
+
+      if (!steps.quick_actions) pending.push('Botones rápidos')
+
+      const place = String(
+        contactJson?.data?.place_name ||
+        contactJson?.data?.address ||
+        ''
+      ).trim()
+      if (!place) pending.push('Ubicación')
+
+      const links = Array.isArray(linksJson?.data) ? linksJson.data : []
+      if (links.length === 0) pending.push('Enlaces')
+
+      const banks = Array.isArray(bankJson?.data?.items) ? bankJson.data.items : []
+      if (banks.length === 0) pending.push('Cuentas bancarias')
+
+      setRemainingProfileItems(pending)
+    } catch {
+      setRemainingProfileItems([])
+    }
+  }
+
   async function applyProposal() {
     if (!proposal || applying) return
     if (!Object.values(selection).some(Boolean)) { setError('Selecciona al menos un cambio para aplicar.'); return }
@@ -228,8 +282,8 @@ export default function FreeAiProfileAssistant() {
     try {
       const json:any = await apiPost('/me/ai-profile-assistant/apply',{ proposal,apply:selection,replace_existing_services:replaceServices,editing_scope:editingScope })
       if (!json?.ok) { setError(json?.error || 'No pudimos aplicar los cambios. Tu perfil anterior se mantiene.'); return }
-      setSuccess('Tus cambios fueron aplicados. El perfil no fue publicado automáticamente.')
-      await loadContext()
+      setSuccess('Cambios aplicados correctamente')
+      await Promise.all([loadContext(), loadRemainingProfileItems()])
     } catch { setError('No pudimos aplicar los cambios. Tu perfil anterior se mantiene.') } finally { setApplying(false) }
   }
 
@@ -272,8 +326,6 @@ export default function FreeAiProfileAssistant() {
 
       {error && <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold leading-6 text-rose-700">{error}</div>}
       {cooldownSeconds>0 && <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">Puedes generar otra propuesta en {cooldownSeconds} s.</div>}
-      {success && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">✓ {success}</p><button type="button" onClick={()=>navigate('/admin/free/editor')} className="mt-3 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-black text-white">Volver a mi perfil</button></div>}
-
       {context && <section className="mt-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Contexto que Kawvo ya conoce</p><span className="rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-black text-cyan-700">Plan {context.plan.code}</span></div>
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
@@ -303,11 +355,27 @@ export default function FreeAiProfileAssistant() {
         </div>
 
         {editingScope==='missing_only' && !hasMissingEditorialContent ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">No encontré campos de texto pendientes.</p><p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Si quieres que Kawvo proponga mejoras sobre lo que ya tienes, selecciona “Revisar y mejorar mi contenido”.</p></div> : <>
+          {missingPortfolioTitleItems.length>0 && <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-violet-700">Ayuda a Kawvo a identificar tus fotos</p>
+            <h3 className="mt-1 text-base font-black text-slate-900">Ponle un título breve a cada trabajo</h3>
+            <p className="mt-1 text-sm font-medium leading-6 text-slate-600">Kawvo no adivina lo que aparece en tus imágenes. Tú indicas qué muestra cada foto y la IA puede pulir el título y redactar una descripción corta a partir de ese dato y del contexto de tu perfil.</p>
+            <div className="mt-4 space-y-3">
+              {missingPortfolioTitleItems.map((item)=>{
+                const position=context.profile.portfolio.findIndex((x)=>x.id===item.id)+1
+                const value=portfolioTitles[item.id] || ''
+                return <label key={item.id} className="block rounded-xl bg-white p-3">
+                  <span className="text-sm font-black text-slate-800">Foto {position} · ¿Qué trabajo muestra?</span>
+                  <input value={value} onChange={(e)=>setPortfolioTitles((current)=>({...current,[item.id]:e.target.value.slice(0,80)}))} maxLength={80} placeholder="Ej. Identidad corporativa" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 font-semibold outline-none focus:border-violet-400" />
+                  <span className="mt-1 block text-right text-[11px] font-bold text-slate-400">{value.length}/80</span>
+                </label>
+              })}
+            </div>
+          </div>}
           <Question label="¿Hay algo que quieras contarle a Kawvo antes de trabajar tu perfil?" hint="Opcional. Puedes escribirlo como se lo explicarías a una persona. No tienes que definir tu propuesta de valor ni saber de marketing: Kawvo hará ese análisis usando tu perfil y su conocimiento general." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} rows={4} />
           <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">Kawvo ya conoce el contenido de tu perfil. Si tiene suficiente información, preparará la propuesta directamente. Si falta un hecho importante, te preguntará solo lo mínimo necesario.</div>
         </>}
 
-        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:answers.extra_context.trim()?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
+        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0 || missingPortfolioTitleItems.some((item)=>!(portfolioTitles[item.id] || '').trim())} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:answers.extra_context.trim()?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
         <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">La IA usa el perfil completo como contexto, interpreta tus respuestas y solo pregunta cuando realmente necesita confirmar un hecho.</p>
       </section>}
 
@@ -338,12 +406,36 @@ export default function FreeAiProfileAssistant() {
         </div>
         {proposal.portfolio?.length>0 && <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Mis trabajos</p><h2 className="mt-1 text-xl font-black">Textos de tus fotos</h2></div><label className="text-xs font-black"><input type="checkbox" checked={selection.portfolio} onChange={(e)=>setSelection((s)=>({...s,portfolio:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div>
-          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Máximo 5 trabajos. Título 80 caracteres y descripción 90. Las imágenes no se reemplazan ni se reordenan.</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Máximo 5 trabajos. Tú identificas cada foto; Kawvo puede pulir el título y redacta la descripción a partir de ese título y del contexto. Título máximo 80 caracteres y descripción máxima 90. Las imágenes no se reemplazan ni se reordenan.</p>
           <div className="mt-4 space-y-3">{proposal.portfolio.map((item,index)=>{ const current=context.profile.portfolio.find((x)=>x.id===item.id); const lockTitle=editingScope==='missing_only'&&Boolean(current?.title); const lockDescription=editingScope==='missing_only'&&Boolean(current?.description); return <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Trabajo {index+1}</p><input value={lockTitle?(current?.title||''):item.title} disabled={lockTitle} onChange={(e)=>updatePortfolio(index,'title',e.target.value.slice(0,80))} maxLength={80} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-black disabled:bg-slate-100 disabled:text-slate-500"/>{lockTitle&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}<textarea value={lockDescription?(current?.description||''):item.description} disabled={lockDescription} onChange={(e)=>updatePortfolio(index,'description',e.target.value.slice(0,90))} maxLength={90} rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 disabled:bg-slate-100 disabled:text-slate-500"/>{lockDescription&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}</div>})}</div>
         </div>}
         <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase text-slate-400">Siguiente acción sugerida</p><p className="mt-2 text-lg font-black">“{proposal.cta.label}”</p><p className="mt-1 text-sm font-medium leading-6 text-slate-500">Es una recomendación de copy. No cambia ni reordena tus Botones rápidos.</p></div>
         {proposal.image_suggestions?.length>0 && <div className="rounded-[24px] border border-violet-200 bg-violet-50 p-5"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet-700">Ideas de imágenes</p><p className="mt-2 text-sm font-semibold leading-6 text-violet-900">Son recomendaciones, no imágenes generadas.</p><div className="mt-3 space-y-2">{proposal.image_suggestions.map((x)=><div key={x.purpose} className="rounded-xl bg-white p-3"><p className="text-sm font-black">{x.purpose}</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">{x.suggestion}</p></div>)}</div></div>}
-        <div className="sticky bottom-3 z-30 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur"><button type="button" onClick={()=>void applyProposal()} disabled={applying || (selection.services && hasExistingServices && !replaceServices)} className="w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40">{applying?'Aplicando…':'Aplicar a mi perfil'}</button><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" onClick={()=>{setProposal(null);setFollowUp([]);setRound(1)}} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">Volver a preguntas</button><button type="button" onClick={()=>void generate(1)} disabled={generating || cooldownSeconds>0} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">{generating?'Generando…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:'Generar otra'}</button></div></div>
+        <div className="sticky bottom-3 z-30 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
+          {success ? <>
+            <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="font-black text-emerald-800">✓ Cambios aplicados correctamente</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Tu perfil fue actualizado. No se publicó automáticamente.</p>
+              {remainingProfileItems.length>0 && <div className="mt-3 rounded-xl bg-white/80 p-3">
+                <p className="text-sm font-black text-slate-800">Para obtener un perfil más completo todavía te falta:</p>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">{remainingProfileItems.join(' · ')}</p>
+                <p className="mt-1 text-xs font-medium leading-5 text-slate-500">Estos datos no los completa la IA. Puedes configurarlos desde tu editor.</p>
+              </div>}
+            </div>
+            <button type="button" disabled className="w-full cursor-not-allowed rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white opacity-35">✓ Cambios aplicados</button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button type="button" onClick={()=>{setSuccess('');setRemainingProfileItems([])}} className="rounded-xl bg-slate-100 px-3 py-3 text-sm font-black text-slate-700">Modificar datos</button>
+              <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(context.profile.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center rounded-xl bg-slate-950 px-3 py-3 text-sm font-black text-white">Ver mi perfil</a>
+            </div>
+            {remainingProfileItems.length>0 && <button type="button" onClick={()=>navigate('/admin/free/editor')} className="mt-2 w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm font-black text-amber-900">Completar campos pendientes</button>}
+          </> : <>
+            <button type="button" onClick={()=>void applyProposal()} disabled={applying || (selection.services && hasExistingServices && !replaceServices)} className="w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40">{applying?'Aplicando…':'Aplicar a mi perfil'}</button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button type="button" onClick={()=>{setProposal(null);setFollowUp([]);setRound(1)}} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">Volver a preguntas</button>
+              <button type="button" onClick={()=>void generate(1)} disabled={generating || cooldownSeconds>0} className="rounded-xl bg-slate-100 px-3 py-2.5 text-xs font-black">{generating?'Generando…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:'Generar otra'}</button>
+            </div>
+          </>}
+        </div>
       </section>}
     </section>
   </main>

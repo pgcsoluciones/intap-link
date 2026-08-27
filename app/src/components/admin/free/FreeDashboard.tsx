@@ -248,6 +248,16 @@ export default function FreeDashboard() {
           )}
         </article>
 
+        <button type="button" onClick={()=>navigate('/admin/free/ai-profile')} className="flex w-full items-center gap-3 rounded-[22px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 text-left shadow-sm transition hover:border-cyan-300">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-600 text-xl text-white">✦</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[10px] font-black uppercase tracking-[0.12em] text-cyan-700">IA de Kawvo</span>
+            <span className="mt-0.5 block text-base font-black text-slate-950">Optimiza tu perfil</span>
+            <span className="mt-1 block text-xs font-medium leading-5 text-slate-600">Completa y mejora tu presentación con ayuda de la IA de Kawvo.</span>
+          </span>
+          <span className="text-xl font-black text-cyan-700">›</span>
+        </button>
+
         <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
           <button type="button" onClick={() => setWatermarkUpsellOpen((current) => !current)} className="flex w-full items-center justify-between gap-4 p-4 text-left" aria-expanded={watermarkUpsellOpen}>
             <span className="min-w-0">
