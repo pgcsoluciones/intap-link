@@ -116,10 +116,34 @@ export default function FreeAiProfileAssistant() {
   const hasExistingServices = Boolean(context?.profile.services?.length)
   const hasExistingPortfolio = Boolean(context?.profile.portfolio?.length)
   const hasExistingContent = Boolean(context?.profile.professional_title || context?.profile.bio || context?.profile.services?.length || context?.profile.portfolio?.some((x)=>x.title || x.description))
+  const missingTitle = Boolean(context && !context.profile.professional_title.trim())
+  const missingBio = Boolean(context && !context.profile.bio.trim())
+  const missingServices = Boolean(context && context.profile.services.length === 0)
+  const incompletePortfolio = context?.profile.portfolio?.filter((item)=>!item.title.trim() || !item.description.trim()) || []
+  const missingPortfolioCopy = incompletePortfolio.length > 0
+  const hasMissingEditorialContent = missingTitle || missingBio || missingServices || missingPortfolioCopy
   const channels = context?.profile.configured_channels || []
   const totalAnswerLength = Object.values(answers).reduce((s,v)=>s+v.trim().length,0)
-  const enoughInformation = totalAnswerLength >= 8 || Boolean(context?.profile.bio || context?.profile.services?.length)
+  const missingOnlyAnswerLength = [
+    missingTitle ? answers.activity_details : '',
+    missingBio ? answers.clients : '',
+    missingServices ? answers.services_details : '',
+    missingPortfolioCopy ? answers.extra_context : '',
+  ].reduce((sum,value)=>sum+value.trim().length,0)
+  const enoughInformation = editingScope === 'missing_only' ? (!hasMissingEditorialContent || missingOnlyAnswerLength >= 4) : totalAnswerLength >= 8
   const atServiceLimit = Boolean(context && context.profile.services.length >= context.plan.limits.max_services)
+
+  function chooseEditingScope(next: EditingScope) {
+    if (next === editingScope) return
+    setEditingScope(next)
+    setAnswers(EMPTY_ANSWERS)
+    setFollowUp([])
+    setProposal(null)
+    setRound(1)
+    setReplaceServices(false)
+    setError('')
+    setSuccess('')
+  }
 
   useEffect(()=>{
     if (!context) return
@@ -252,21 +276,35 @@ export default function FreeAiProfileAssistant() {
         <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Contenido existente</p>
         <h2 className="mt-1 text-xl font-black">¿Cómo quieres que te ayude la IA?</h2>
         <div className="mt-4 grid gap-3">
-          <button type="button" onClick={()=>setEditingScope('missing_only')} className={`rounded-2xl border p-4 text-left ${editingScope==='missing_only'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Completar solo lo que falta · Recomendado</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Conserva intactos los campos que ya completaste. La IA los usa como contexto y trabaja solo sobre lo pendiente.</p></button>
-          <button type="button" onClick={()=>setEditingScope('full_profile')} className={`rounded-2xl border p-4 text-left ${editingScope==='full_profile'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Revisar y mejorar mi contenido</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Puede proponerte mejoras de texto en título, presentación, trabajos y servicios. Tú revisas todo antes de aplicar.</p></button>
+          <button type="button" onClick={()=>chooseEditingScope('missing_only')} className={`rounded-2xl border p-4 text-left ${editingScope==='missing_only'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Completar solo lo que falta · Recomendado</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Conserva intactos los campos que ya completaste. La IA los usa como contexto y trabaja solo sobre lo pendiente.</p></button>
+          <button type="button" onClick={()=>chooseEditingScope('full_profile')} className={`rounded-2xl border p-4 text-left ${editingScope==='full_profile'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Revisar y mejorar mi contenido</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Puede proponerte mejoras de texto en título, presentación, trabajos y servicios. Tú revisas todo antes de aplicar.</p></button>
         </div>
         <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">Nunca modifica imágenes, enlaces, cuentas bancarias, diseño, plantilla, colores ni orden.</p>
       </section>}
 
       {!proposal && followUp.length===0 && context && <section className="mt-5 space-y-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        {!hasExistingIdentity && <Question label="¿Qué haces exactamente?" hint={examples.activity} value={answers.activity_details} onChange={(v)=>setAnswers((a)=>({...a,activity_details:v}))} />}
-        {!hasExistingServices && <Question label="¿Qué trabajos o servicios te interesa destacar?" hint="Menciona solo los que realmente ofreces." value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} />}
-        <Question label="¿A qué tipo de clientes atiendes?" hint={examples.clients} value={answers.clients} onChange={(v)=>setAnswers((a)=>({...a,clients:v}))} />
-        {channels.length>1 && <div><p className="text-[15px] font-black text-slate-800">¿Cómo prefieres que te contacten principalmente?</p><p className="mt-1 text-sm font-medium text-slate-500">Solo para redactar el CTA. No cambia tus Botones rápidos.</p><div className="mt-3 flex flex-wrap gap-2">{channels.map((ch)=><button key={ch} type="button" onClick={()=>setAnswers((a)=>({...a,preferred_contact:ch}))} className={`rounded-xl px-4 py-2.5 text-sm font-black ${answers.preferred_contact===ch?'bg-cyan-700 text-white':'bg-slate-100 text-slate-700'}`}>{channelLabel(ch)}</button>)}</div></div>}
-        <Question label="¿Qué quieres que una persona haga después de visitar tu perfil?" hint={examples.action} value={answers.next_action} onChange={(v)=>setAnswers((a)=>({...a,next_action:v}))} />
-        {hasExistingIdentity && hasExistingServices && <Question label="¿Qué quieres mejorar o destacar más?" hint="Opcional. Por ejemplo: sonar más profesional, destacar cierto tipo de cliente o servicio." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />}
-        <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Preparando…':'✦ Preparar mi propuesta'}</button>
-        <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">Puedes escribir como hablas. Kawvo organiza la información sin inventar datos.</p>
+        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+          <p className="text-sm font-black text-slate-800">{editingScope==='missing_only'?'Voy a preguntarte solo por lo que falta.':'Voy a revisar tu perfil completo para entender qué conviene mejorar.'}</p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Las preguntas cambian según lo que ya tienes y la opción que elegiste.</p>
+        </div>
+
+        {editingScope==='missing_only' ? <>
+          {!hasMissingEditorialContent && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">No encontré campos de texto pendientes.</p><p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Si quieres que Kawvo proponga mejoras sobre lo que ya tienes, selecciona “Revisar y mejorar mi contenido”.</p></div>}
+          {missingTitle && <Question label="¿Cómo quieres que aparezca tu título, puesto u oficio?" hint={examples.activity} value={answers.activity_details} onChange={(v)=>setAnswers((a)=>({...a,activity_details:v}))} />}
+          {missingBio && <Question label="¿Qué debería entender una persona sobre ti o tu negocio en pocos segundos?" hint="Cuéntame a quién ayudas, qué haces y qué valor práctico ofreces." value={answers.clients} onChange={(v)=>setAnswers((a)=>({...a,clients:v}))} />}
+          {missingServices && <Question label="¿Cuáles son los servicios reales que quieres mostrar?" hint={`Menciona hasta ${context.plan.limits.max_services}. Kawvo no inventará servicios para completar espacios.`} value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} />}
+          {missingPortfolioCopy && <Question label={`Hay ${incompletePortfolio.length} trabajo${incompletePortfolio.length===1?'':'s'} con texto incompleto. ¿Qué muestra${incompletePortfolio.length===1?'':'n'}?`} hint="Descríbelos brevemente en el mismo orden de tus fotos. La IA solo completará títulos o descripciones vacías." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />}
+        </> : <>
+          <Question label="¿A qué tipo de cliente quieres hablarle principalmente?" hint={examples.clients} value={answers.clients} onChange={(v)=>setAnswers((a)=>({...a,clients:v}))} />
+          <Question label="¿Qué quieres que destaque o mejore de tu presentación actual?" hint="Por ejemplo: explicar mejor tu valor, sonar más profesional, enfocarte en cierto cliente o destacar una especialidad." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />
+          {(hasExistingServices || hasExistingPortfolio) && <Question label="¿Qué servicio o trabajo te interesa que tenga mayor protagonismo?" hint="Opcional. Menciona lo que más te interesa posicionar; no cambia el orden visual del perfil." value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} />}
+          <Question label="¿Qué quieres que una persona haga después de entender tu perfil?" hint={examples.action} value={answers.next_action} onChange={(v)=>setAnswers((a)=>({...a,next_action:v}))} />
+        </>}
+
+        {editingScope==='full_profile' && channels.length>1 && <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-sm font-black text-slate-800">El canal principal se definirá solo si hace falta</p><p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Kawvo conoce tus canales configurados. Si necesita elegir uno para redactar una recomendación de acción, te preguntará en la siguiente ronda. No cambia tus Botones rápidos.</p></div>}
+
+        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Preparando…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:'✦ Preparar mi propuesta'}</button> : null}
+        <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">Kawvo usa lo que ya existe como contexto y evita pedirte lo mismo dos veces.</p>
       </section>}
 
       {!proposal && followUp.length>0 && context && <section className="mt-5 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm sm:p-6">

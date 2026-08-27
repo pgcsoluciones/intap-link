@@ -80,6 +80,11 @@ assert.match(appSource, /Completar solo lo que falta/, 'UI must offer safe missi
 assert.match(appSource, /Revisar y mejorar mi contenido/, 'UI must offer full-profile editorial review')
 assert.match(appSource, /Puedes generar otra propuesta en/, 'Cooldown must be presented as normal waiting state')
 assert.match(appSource, /Mis trabajos/, 'Portfolio copy review must be visible')
+assert.match(appSource, /Voy a preguntarte solo por lo que falta/, 'Missing-only mode must have its own question planner')
+assert.match(appSource, /Voy a revisar tu perfil completo/, 'Full-profile mode must have its own strategic question planner')
+assert.match(appSource, /No encontré campos de texto pendientes/, 'Missing-only must stop when nothing is missing')
+assert.match(appSource, /texto incompleto/, 'Missing portfolio copy must have a targeted question')
+assert.match(appSource, /canal principal se definirá solo si hace falta/i, 'Full-profile contact preference must be deferred until actually needed')
 
 for (const area of ['app','web']) {
   for (const file of await collectFiles(join(root, area))) {
