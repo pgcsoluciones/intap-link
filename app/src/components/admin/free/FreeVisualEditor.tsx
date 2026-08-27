@@ -204,6 +204,16 @@ export default function FreeVisualEditor() {
               <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Elige tu plantilla, ajusta colores y edita el contenido principal mientras ves el resultado en tiempo real.</p>
             </div>
 
+            <button type="button" onClick={()=>navigate('/admin/free/ai-profile')} className="flex w-full items-center gap-3 rounded-[24px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-600 text-xl text-white">✦</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-black uppercase tracking-[0.12em] text-cyan-700">IA de Kawvo</span>
+                <span className="mt-0.5 block text-lg font-black text-slate-950">Optimiza tu perfil</span>
+                <span className="mt-1 block text-sm font-medium leading-5 text-slate-600">Completa y mejora tu presentación con ayuda de la IA de Kawvo.</span>
+              </span>
+              <span className="text-xl font-black text-cyan-700">›</span>
+            </button>
+
             <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Progreso</p><h2 className="mt-1 text-lg font-black">Tu perfil está {completionPercent}% completo</h2></div>

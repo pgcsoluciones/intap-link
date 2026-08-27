@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import AdminGuard from './components/admin/AdminGuard'
 import SuperAdminGuard from './components/admin/SuperAdminGuard'
@@ -50,6 +51,12 @@ import FreeOnboardingReview from './components/admin/free/onboarding/FreeOnboard
 import FreeArtifactActivation from './components/admin/free/onboarding/FreeArtifactActivation'
 import { ArtifactActivation, ArtifactManager } from './components/admin/ArtifactActivation'
 
+const FreeAiProfileAssistant = lazy(() => import('./components/admin/free/FreeAiProfileAssistant'))
+
+function AiRouteFallback() {
+  return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
+}
+
 function UnknownAppRouteRedirect() {
   const location = useLocation()
   const WEB_URL = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
@@ -94,6 +101,7 @@ function App() {
 
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
         <Route path="/admin/free/editor" element={<AdminGuard planScope="free"><FreeVisualEditor /></AdminGuard>} />
+        <Route path="/admin/free/ai-profile" element={<AdminGuard planScope="free"><Suspense fallback={<AiRouteFallback />}><FreeAiProfileAssistant /></Suspense></AdminGuard>} />
         <Route path="/admin/free/bank-accounts" element={<AdminGuard planScope="free"><FreeBankAccounts /></AdminGuard>} />
         <Route path="/admin/free/identifier" element={<AdminGuard planScope="free"><FreeIdentifier /></AdminGuard>} />
         <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />

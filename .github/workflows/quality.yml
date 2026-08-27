@@ -16,8 +16,14 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=critical
+      - run: node scripts/test-ai-profile-assistant-contract.mjs
+      - run: npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-ai-api.mjs
+      - run: node scripts/test-ai-profile-assistant-integration.mjs
       - run: npm run build -w web
       - run: npm run build:preview -w web
+      - run: npm run build -w app
+      - run: npm run build:preview -w app
       - run: npx tsc --noEmit -p api/tsconfig.json
       - run: npx tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM functions/_middleware.ts functions/profile-discovery.ts
       - run: python3 scripts/production_approval_guard.py

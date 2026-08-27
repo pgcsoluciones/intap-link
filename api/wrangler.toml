@@ -26,6 +26,14 @@ APP_URL = "https://app.intaprd.com"
 API_URL = "https://intaprd.com"
 WEB_URL = "https://intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
+# Asistente IA: OPENAI_API_KEY se configura únicamente como Worker secret.
+OPENAI_MODEL = "gpt-5.6-luna"
+AI_TERMS_VERSION = "ai-assistant-v1.0"
+AI_PROFILE_DAILY_LIMIT = "8"
+AI_PROFILE_MONTHLY_LIMIT = "100"
+AI_PROFILE_MAX_ROUNDS = "2"
+AI_PROFILE_COOLDOWN_SECONDS = "20"
+FREE_MAX_SERVICES = "3"
 # Remitente del magic link. Debe ser un dominio verificado en Resend.
 # Mientras no esté verificado, Resend solo entrega a la cuenta del owner (plan free).
 # Pasos: 1) Verificar intaprd.com en resend.com/domains  2) Hacer deploy
