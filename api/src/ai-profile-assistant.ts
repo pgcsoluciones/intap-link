@@ -220,9 +220,9 @@ async function insertUsage(c: any, data: {
 async function generationLimit(c: any, userId: string, limits: PlanLimits) {
   const row = await c.env.DB.prepare(
     `SELECT
-       SUM(CASE WHEN created_at >= datetime('now','-1 day') AND status IN ('success','error') THEN 1 ELSE 0 END) AS daily_count,
-       SUM(CASE WHEN strftime('%Y-%m', created_at) = strftime('%Y-%m','now') AND status IN ('success','error') THEN 1 ELSE 0 END) AS monthly_count,
-       MAX(CASE WHEN status IN ('success','error') THEN created_at ELSE NULL END) AS last_created_at
+       SUM(CASE WHEN created_at >= datetime('now','-1 day') AND status = 'success' THEN 1 ELSE 0 END) AS daily_count,
+       SUM(CASE WHEN strftime('%Y-%m', created_at) = strftime('%Y-%m','now') AND status = 'success' THEN 1 ELSE 0 END) AS monthly_count,
+       MAX(CASE WHEN status = 'success' THEN created_at ELSE NULL END) AS last_created_at
      FROM ai_profile_assistant_usage WHERE user_id = ? AND operation = 'generate'`,
   ).bind(userId).first()
   const daily = Number((row as any)?.daily_count || 0)
@@ -336,7 +336,7 @@ app.get('/api/v1/me/ai-profile-assistant/context', requireAssistantAuth, async (
         COALESCE(SUM(input_tokens),0) AS input_tokens,
         COALESCE(SUM(output_tokens),0) AS output_tokens,
         COALESCE(SUM(estimated_cost_usd),0) AS estimated_cost_usd
-       FROM ai_profile_assistant_usage WHERE user_id = ? AND operation = 'generate' AND status IN ('success','error')`,
+       FROM ai_profile_assistant_usage WHERE user_id = ? AND operation = 'generate' AND status = 'success'`,
     ).bind(userId).first()
   } catch {
     return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503)
