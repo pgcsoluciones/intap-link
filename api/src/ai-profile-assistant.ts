@@ -251,7 +251,7 @@ function responseText(payload: any): string {
   return ''
 }
 
-function buildInput(answers: Record<string, string>, followUp: Array<{ question: string; answer: string }>, context: any, limits: PlanLimits, editingScope: EditingScope) {
+function buildInput(answers: Record<string, string>, followUp: Array<{ question: string; answer: string }>, conversation: Array<{ role: 'user' | 'assistant'; content: string }>, context: any, limits: PlanLimits, editingScope: EditingScope, mustFinalize: boolean) {
   const safeProfile = {
     name: context.name,
     category: context.category,
@@ -270,6 +270,8 @@ function buildInput(answers: Record<string, string>, followUp: Array<{ question:
     field_limits: { name: 80, professional_title: 80, bio: 300, portfolio_max: limits.max_portfolio, portfolio_title: 80, portfolio_description: 90, services_max: limits.max_services, service_title: 60, service_description: 90, services_section_title: 60, services_section_description: 240 },
     answers,
     follow_up_answers: followUp,
+    conversation,
+    must_finalize: mustFinalize,
   })
 }
 
@@ -299,7 +301,11 @@ const responseSchema = {
 const EDITORIAL_INSTRUCTIONS = [
   'ROL: Eres el estratega de presentación, posicionamiento y copy de Kawvo Link. No eres un rellenador de campos, un chatbot genérico ni un generador de frases bonitas.',
   'MISIÓN KAWVO: un Perfil Digital Kawvo es una carta de presentación digital. En pocos segundos el visitante debe entender quién es la persona o negocio, qué hace, qué necesidad puede resolverle o qué valor aporta, por qué puede ser relevante y cuál es el siguiente paso. La meta no es vender por vender: es presentar mejor, comunicar valor con claridad, generar confianza y facilitar la siguiente acción.',
-  'SUFICIENCIA: antes de redactar decide si existe información suficiente para producir una presentación específica y creíble. No preguntes para completar una plantilla mental. Si falta información verdaderamente esencial, devuelve needs_more_info con 1 a 3 preguntas de alto valor informativo. No preguntes lo ya guardado, ya respondido o inferible de forma segura.',
+  'SUFICIENCIA Y AUTONOMÍA: analiza primero todo el perfil, respuestas y conversación. Si puedes producir una propuesta útil, específica y creíble, hazlo sin pedir permiso adicional. No preguntes para completar una plantilla mental. Solo devuelve needs_more_info cuando avanzar obligaría a inventar un hecho importante o cuando una aclaración pueda cambiar materialmente la propuesta. Normalmente haz una sola pregunta; usa hasta tres solo si son realmente imprescindibles. Nunca repitas algo ya guardado, ya respondido o inferible de forma razonable.',
+  'CONOCIMIENTO GENERAL: puedes usar libremente tu conocimiento general sobre profesiones, industrias, servicios, marketing, comportamiento del cliente, comunicación y buenas prácticas de copy para comprender el contexto, escoger vocabulario natural del sector, identificar beneficios razonablemente derivados y mejorar la presentación. Ese conocimiento sirve para interpretar y redactar; nunca lo conviertas en un hecho particular del usuario sin respaldo.',
+  'NO DELEGUES LA ESTRATEGIA: no preguntes al usuario qué valor quiere reflejar, qué beneficio quiere comunicar, cómo quiere posicionarse, qué mensaje debería transmitir ni qué lo hace diferente cuando eso pueda deducirse razonablemente del perfil y de sus respuestas. El usuario aporta hechos, contexto y preferencias básicas; tú haces el trabajo de análisis, posicionamiento, jerarquía y copy.',
+  'CONVERSACIÓN: conversation contiene el hilo de esta sesión. Úsalo como memoria de trabajo. Integra todas las respuestas previas y nunca vuelvas a preguntar lo ya respondido. follow_up_answers contiene las respuestas de la pantalla actual y también debe considerarse contexto confirmado.',
+  'ÚLTIMA RONDA: si must_finalize=true, produce la mejor propuesta posible con la información disponible. No devuelvas needs_more_info salvo que hacerlo implique inventar un hecho esencial que haga insegura o engañosa la propuesta.',
   'HECHOS E INFERENCIAS: distingue hechos confirmados, inferencias razonables y redacción comercial. Puedes inferir beneficios directos y evidentes, pero nunca convertir una posibilidad en una promesa. Nunca inventes certificaciones, experiencia, años, precios, ubicaciones, clientes, marcas, garantías, capacidades, resultados, ventajas competitivas, servicios, disponibilidad ni tiempos de entrega.',
   'INTERPRETACIÓN EDITORIAL: las respuestas del usuario son materia prima factual, no texto final para copiar. NO INVENTAR no significa transcribir literalmente. Reformula, condensa y conecta los hechos para convertir respuestas coloquiales, genéricas o descriptivas en copy natural, comercial y convincente, sin añadir hechos nuevos. Si el usuario dice algo como público en general, conserva la amplitud de audiencia pero exprésala desde el valor, la necesidad o la situación del cliente cuando el contexto lo permita; evita repetir la frase mecánicamente.',
   'PERSPECTIVA: piensa desde el visitante. No resumas mecánicamente ni respetes el orden de entrada. Prioriza lo que más ayude a comprender qué hace, cómo ayuda, qué valor tiene y qué debe hacer después. Esto aplica solo al copy; nunca sugieras reorganizar visualmente botones, módulos, secciones o servicios.',
@@ -313,7 +319,7 @@ const EDITORIAL_INSTRUCTIONS = [
   'TRABAJOS/PORTAFOLIO: portfolio contiene hasta 5 fotos existentes y solo sus metadatos textuales. No inventes lo que muestra una foto si título y descripción no permiten saberlo; en ese caso usa needs_more_info con una pregunta mínima que permita describirla. Nunca propongas eliminar, reemplazar o reordenar fotos. portfolio de salida debe conservar los id recibidos.',
   'SERVICIOS: propone únicamente servicios reales y respeta plan.limits.max_services. Cada título debe ser concreto y escaneable; cada descripción debe expresar utilidad, beneficio o problema que resuelve. No inventes servicios para llenar cupos ni escribas definiciones de diccionario.',
   'SECCIÓN SERVICIOS: prefiere un título específico cuando surja natural; no fuerces creatividad. Si lo creativo suena artificial usa algo simple y claro. La descripción introduce desde necesidad, beneficio o contexto, sin repetir ni rellenar.',
-  'CTA Y CANALES: configured_channels solo informa qué canales existen. Si hay varias alternativas razonables y el usuario no indicó preferencia, no elijas arbitrariamente: devuelve needs_more_info. Los canales no determinan por sí solos la intención. No sugieras una acción incompatible con canales existentes.',
+  'CTA Y CANALES: configured_channels informa qué canales existen, pero no obliga a elegir uno. Redacta un CTA compatible con la intención y con los canales disponibles. Si no hace falta un canal concreto, usa una acción genérica y útil como solicitar cotización, reservar o contactar. Pregunta por preferencia de canal solo si esa elección cambia materialmente la propuesta y no puede resolverse de forma segura con el contexto.',
   'IMÁGENES: image_suggestions son recomendaciones textuales, nunca generación ni modificación. Sugiere qué mostrar y por qué ayuda al visitante. Prioriza fotos reales del profesional, negocio, proceso, producto, trabajo realizado o resultado cuando sea pertinente.',
   'CONTENIDO EXISTENTE: si ya es bueno conserva su esencia y mejora claridad, estructura, posicionamiento, lectura móvil y conversión. No reemplaces por cambiar.',
   'MÓVIL: frases cortas, palabras concretas, jerarquía clara, lectura rápida y cero relleno.',
@@ -402,14 +408,13 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
   const followUp: FollowUpAnswer[] = Array.isArray(body?.follow_up_answers)
     ? body.follow_up_answers.slice(0, 3).map((item: any) => ({ question: text(item?.question, 180), answer: text(item?.answer, MAX_ANSWER_LENGTH) })).filter((item: FollowUpAnswer) => item.question && item.answer)
     : []
-  const totalLength = Object.values(answers).reduce((sum: number, value: string) => sum + value.length, 0) + followUp.reduce((sum: number, value: FollowUpAnswer) => sum + value.question.length + value.answer.length, 0)
+  const conversation: Array<{ role: 'user' | 'assistant'; content: string }> = Array.isArray(body?.conversation)
+    ? body.conversation.slice(-12).map((item: any) => ({ role: item?.role === 'assistant' ? 'assistant' as const : 'user' as const, content: text(item?.content, 700) })).filter((item: any) => item.content)
+    : []
+  const totalLength = Object.values(answers).reduce((sum: number, value: string) => sum + value.length, 0) + followUp.reduce((sum: number, value: FollowUpAnswer) => sum + value.question.length + value.answer.length, 0) + conversation.reduce((sum: number, value) => sum + value.content.length, 0)
   const hasExistingContent = Boolean(context.bio || context.professionalTitle || context.services.length)
   if (totalLength < 8 && !hasExistingContent) return c.json({ ok: false, error: 'Cuéntanos un poco más para preparar una propuesta útil.' }, 400)
   if (totalLength > MAX_TOTAL_INPUT_LENGTH) return c.json({ ok: false, error: 'La información es demasiado extensa. Resume un poco tus respuestas.' }, 413)
-
-  if (editingScope === 'full_profile' && context.configuredChannels.length > 1 && !answers.preferred_contact && !followUp.some((item: FollowUpAnswer) => /contact|whatsapp|llamada|correo/i.test(item.question))) {
-    return c.json({ ok: true, data: { status: 'needs_more_info', questions: ['¿Cómo prefieres que te contacten principalmente?'], options: context.configuredChannels, round } })
-  }
 
   let limit: any
   try { limit = await generationLimit(c, userId, limits) } catch { return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503) }
@@ -433,7 +438,7 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
         reasoning: { effort: 'none' },
         text: { verbosity: 'medium', format: { type: 'json_schema', name: 'kawvo_profile_assistant_result', strict: true, schema: responseSchema } },
         instructions: EDITORIAL_INSTRUCTIONS,
-        input: buildInput(answers, followUp, context, limits, editingScope),
+        input: buildInput(answers, followUp, conversation, context, limits, editingScope, round >= limits.ai_max_rounds),
       }),
     })
     const payload: any = await response.json().catch(() => ({}))

@@ -47,6 +47,7 @@ type Answers = {
 }
 type ApplySelection = { identity: boolean; bio: boolean; services_section: boolean; services: boolean; portfolio: boolean }
 type FollowUp = { question: string; answer: string }
+type ConversationTurn = { role: 'user' | 'assistant'; content: string }
 
 const EMPTY_ANSWERS: Answers = { activity_details: '', services_details: '', clients: '', preferred_contact: '', next_action: '', extra_context: '' }
 
@@ -91,6 +92,7 @@ export default function FreeAiProfileAssistant() {
   const [proposal,setProposal] = useState<Proposal|null>(null)
   const [suggestedProposal,setSuggestedProposal] = useState<Proposal|null>(null)
   const [followUp,setFollowUp] = useState<FollowUp[]>([])
+  const [conversation,setConversation] = useState<ConversationTurn[]>([])
   const [round,setRound] = useState(1)
   const [generating,setGenerating] = useState(false)
   const [applying,setApplying] = useState(false)
@@ -134,7 +136,7 @@ export default function FreeAiProfileAssistant() {
     (missingServices || missingServicesSectionCopy) ? answers.services_details : '',
     missingPortfolioCopy ? answers.extra_context : '',
   ].reduce((sum,value)=>sum+value.trim().length,0)
-  const enoughInformation = editingScope === 'missing_only' ? (!hasMissingEditorialContent || missingOnlyAnswerLength >= 4) : totalAnswerLength >= 8
+  const enoughInformation = hasExistingContent || totalAnswerLength >= 4
   const atServiceLimit = Boolean(context && context.profile.services.length >= context.plan.limits.max_services)
 
   function chooseEditingScope(next: EditingScope) {
@@ -142,6 +144,7 @@ export default function FreeAiProfileAssistant() {
     setEditingScope(next)
     setAnswers(EMPTY_ANSWERS)
     setFollowUp([])
+    setConversation([])
     setProposal(null)
     setSuggestedProposal(null)
     setRound(1)
@@ -185,33 +188,25 @@ export default function FreeAiProfileAssistant() {
     if (generating || !context) return
     setGenerating(true); setError(''); setSuccess('')
     try {
-      const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers, follow_up_answers:followUp, round:nextRound, editing_scope:editingScope })
+      const answeredTurns: ConversationTurn[] = followUp.flatMap((item)=>item.answer.trim() ? [{ role:'assistant' as const, content:item.question }, { role:'user' as const, content:item.answer.trim() }] : [])
+      const conversationPayload = [...conversation, ...answeredTurns]
+      const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers, follow_up_answers:followUp, conversation:conversationPayload, round:nextRound, editing_scope:editingScope })
       if (!json?.ok) {
         if (json?.code === 'cooldown') { setCooldownSeconds(Number(json.retry_after_seconds || 20)); setError(''); return }
         setError(json?.error || 'No pudimos preparar tu propuesta. Tu perfil no fue modificado.'); return
       }
       if (json.data?.status === 'needs_more_info') {
         const questions = (json.data.questions || []).slice(0,3)
-        const isContactPreflight = Array.isArray(json.data?.options) && json.data.options.length > 0
-
-        if (!isContactPreflight && nextRound >= context.plan.limits.ai_max_rounds) {
-          setFollowUp([])
-          setProposal(null)
-          setError('Con la información disponible todavía no pudimos preparar una propuesta suficientemente específica. Revisa tus respuestas e inténtalo nuevamente.')
-          return
-        }
-
+        setConversation(conversationPayload)
         setFollowUp(questions.map((q:string)=>({ question:q, answer:'' })))
-
-        if (!isContactPreflight) {
-          setRound(Math.min(nextRound + 1, context.plan.limits.ai_max_rounds))
-        }
+        setRound(Math.min(nextRound + 1, context.plan.limits.ai_max_rounds))
 
         setProposal(null)
         window.scrollTo({ top:0, behavior:'smooth' })
         return
       }
       if (json.data?.status === 'ready' && json.data.proposal) {
+        setConversation(conversationPayload)
         setProposal(json.data.proposal as Proposal)
         setSuggestedProposal(json.data.proposal as Proposal)
         setFollowUp([])
@@ -307,26 +302,17 @@ export default function FreeAiProfileAssistant() {
           <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Las preguntas cambian según lo que ya tienes y la opción que elegiste.</p>
         </div>
 
-        {editingScope==='missing_only' ? <>
-          {!hasMissingEditorialContent && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">No encontré campos de texto pendientes.</p><p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Si quieres que Kawvo proponga mejoras sobre lo que ya tienes, selecciona “Revisar y mejorar mi contenido”.</p></div>}
-          {missingTitle && <Question label="¿Cómo quieres que aparezca tu título, puesto u oficio?" hint={examples.activity} value={answers.activity_details} onChange={(v)=>setAnswers((a)=>({...a,activity_details:v}))} />}
-          {missingBio && <Question label="¿Qué debería entender una persona sobre ti o tu negocio en pocos segundos?" hint="Cuéntame a quién ayudas, qué haces y qué valor práctico ofreces." value={answers.clients} onChange={(v)=>setAnswers((a)=>({...a,clients:v}))} />}
-          {missingServices ? <Question label="¿Cuáles son los servicios reales que quieres mostrar?" hint={`Menciona hasta ${context.plan.limits.max_services}. Kawvo no inventará servicios para completar espacios.`} value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} /> : missingServicesSectionCopy ? <Question label="¿Cómo quieres presentar los servicios que ya tienes?" hint="Cuéntame qué tienen en común, qué necesidad resuelven o qué debería entender el visitante antes de leerlos. Kawvo redactará solo el título o introducción que falte." value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} /> : null}
-          {missingPortfolioCopy && <Question label={`Hay ${incompletePortfolio.length} trabajo${incompletePortfolio.length===1?'':'s'} con texto incompleto. ¿Qué muestra${incompletePortfolio.length===1?'':'n'}?`} hint="Descríbelos brevemente en el mismo orden de tus fotos. La IA solo completará títulos o descripciones vacías." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />}
-        </> : <>
-          <Question label="¿A qué tipo de cliente quieres hablarle principalmente?" hint={examples.clients} value={answers.clients} onChange={(v)=>setAnswers((a)=>({...a,clients:v}))} />
-          <Question label="¿Qué quieres que destaque o mejore de tu presentación actual?" hint="Por ejemplo: explicar mejor tu valor, sonar más profesional, enfocarte en cierto cliente o destacar una especialidad, servicio o trabajo. Kawvo tomará tus respuestas como información, no como copy literal." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />
-          <Question label="¿Qué quieres que una persona haga después de entender tu perfil?" hint={examples.action} value={answers.next_action} onChange={(v)=>setAnswers((a)=>({...a,next_action:v}))} />
+        {editingScope==='missing_only' && !hasMissingEditorialContent ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">No encontré campos de texto pendientes.</p><p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Si quieres que Kawvo proponga mejoras sobre lo que ya tienes, selecciona “Revisar y mejorar mi contenido”.</p></div> : <>
+          <Question label="¿Hay algo que quieras contarle a Kawvo antes de trabajar tu perfil?" hint="Opcional. Puedes escribirlo como se lo explicarías a una persona. No tienes que definir tu propuesta de valor ni saber de marketing: Kawvo hará ese análisis usando tu perfil y su conocimiento general." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} rows={4} />
+          <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">Kawvo ya conoce el contenido de tu perfil. Si tiene suficiente información, preparará la propuesta directamente. Si falta un hecho importante, te preguntará solo lo mínimo necesario.</div>
         </>}
 
-        {editingScope==='full_profile' && channels.length>1 && <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-sm font-black text-slate-800">El canal principal se definirá solo si hace falta</p><p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Kawvo conoce tus canales configurados. Si necesita elegir uno para redactar una recomendación de acción, te preguntará en la siguiente ronda. No cambia tus Botones rápidos.</p></div>}
-
-        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Preparando…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:'✦ Preparar mi propuesta'}</button> : null}
-        <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">Kawvo usa lo que ya existe como contexto y evita pedirte lo mismo dos veces.</p>
+        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:answers.extra_context.trim()?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
+        <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">La IA usa el perfil completo como contexto, interpreta tus respuestas y solo pregunta cuando realmente necesita confirmar un hecho.</p>
       </section>}
 
       {!proposal && followUp.length>0 && context && <section className="mt-5 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Nos falta un dato</p><h2 className="mt-2 text-xl font-black">Para hacer la propuesta más específica</h2><p className="mt-2 text-sm font-medium leading-6 text-slate-600">Solo te preguntamos lo que realmente hace falta.</p>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Kawvo necesita confirmar algo</p><h2 className="mt-2 text-xl font-black">Una aclaración antes de preparar tu propuesta</h2><p className="mt-2 text-sm font-medium leading-6 text-slate-600">La IA ya revisó tu perfil. Responde solo este dato y continuará con todo el contexto anterior.</p>
         <div className="mt-5 space-y-5">{followUp.map((item,index)=>{
           const isChannelQuestion = /contact/i.test(item.question) && channels.length>1
           return <div key={item.question}>{isChannelQuestion ? <><p className="text-[15px] font-black text-slate-800">{item.question}</p><div className="mt-3 flex flex-wrap gap-2">{channels.map((ch)=><button key={ch} type="button" onClick={()=>{

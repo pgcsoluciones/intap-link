@@ -112,20 +112,25 @@ try {
     assert.ok(db.runs.some((x) => /ai_assistant_terms_acceptances/.test(x.sql)))
   }
 
-  // C: full-profile review does not prioritize multiple configured channels arbitrarily.
+  // C: multiple configured channels are context for the model, not a deterministic preflight.
   {
     let upstreamCalled = false
-    globalThis.fetch = async () => { upstreamCalled = true; throw new Error('must not run') }
+    globalThis.fetch = async (_url, init) => {
+      upstreamCalled = true
+      const payload = JSON.parse(init.body)
+      assert.match(payload.input, /"configured_channels":\["whatsapp","phone","email"\]/)
+      assert.match(payload.instructions, /no obliga a elegir uno|Pregunta por preferencia de canal solo si/i)
+      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL, questions: null }), usage: {} }) }
+    }
     const db = new FakeDB({ channels: ['whatsapp','phone','email'] })
     const result = await call('/api/v1/me/ai-profile-assistant/generate', {
-      answers: { activity_details: 'Soy electricista.', clients: 'hogares' },
+      answers: { extra_context: 'Haz que mi perfil se presente mejor.' },
       round: 1,
       editing_scope: 'full_profile',
     }, {}, db)
     assert.equal(result.status, 200)
-    assert.equal(result.body.data.status, 'needs_more_info')
-    assert.deepEqual(result.body.data.options, ['whatsapp','phone','email'])
-    assert.equal(upstreamCalled, false)
+    assert.equal(result.body.data.status, 'ready')
+    assert.equal(upstreamCalled, true)
   }
 
   // C2: missing-only completion must not be blocked by contact preference.
@@ -171,7 +176,10 @@ try {
       assert.match(payload.instructions, /editing_scope|ALCANCE DE EDICIÓN/i)
       assert.match(payload.instructions, /portafolio/i)
       assert.match(payload.input, /"editing_scope":"missing_only"/)
+      assert.match(payload.input, /"conversation":/)
+      assert.match(payload.input, /"must_finalize":/)
       assert.match(payload.instructions, /nunca inventes/i)
+      assert.match(payload.instructions, /NO DELEGUES LA ESTRATEGIA/i)
       return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL, questions: null }), usage: { input_tokens: 500, output_tokens: 240 } }) }
     }
     const db = new FakeDB({ channels: ['whatsapp'] })
