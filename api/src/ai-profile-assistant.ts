@@ -191,8 +191,8 @@ async function ownerContext(c: any, userId: string) {
   if (!profile) return null
   const profileId = String((profile as any).id)
   const [servicesResult, portfolioResult, contact] = await Promise.all([
-    c.env.DB.prepare(`SELECT id, title, description, image_url, sort_order FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC, created_at ASC LIMIT 20`).bind(profileId).all(),
-    c.env.DB.prepare(`SELECT id, title, description FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC, created_at ASC LIMIT 5`).bind(profileId).all(),
+    c.env.DB.prepare(`SELECT id, title, description, image_url, sort_order FROM profile_products WHERE profile_id = ? ORDER BY sort_order ASC, id ASC LIMIT 20`).bind(profileId).all(),
+    c.env.DB.prepare(`SELECT id, title, description FROM profile_gallery WHERE profile_id = ? ORDER BY sort_order ASC, id ASC LIMIT 5`).bind(profileId).all(),
     c.env.DB.prepare(`SELECT whatsapp, email, phone, address FROM profile_contact WHERE profile_id = ? LIMIT 1`).bind(profileId).first(),
   ])
   const templateData = parseObject((profile as any).template_data)
