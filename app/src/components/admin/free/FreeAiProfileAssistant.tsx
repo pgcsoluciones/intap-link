@@ -89,6 +89,7 @@ export default function FreeAiProfileAssistant() {
   const [context,setContext] = useState<AssistantContext|null>(null)
   const [answers,setAnswers] = useState<Answers>(EMPTY_ANSWERS)
   const [proposal,setProposal] = useState<Proposal|null>(null)
+  const [suggestedProposal,setSuggestedProposal] = useState<Proposal|null>(null)
   const [followUp,setFollowUp] = useState<FollowUp[]>([])
   const [round,setRound] = useState(1)
   const [generating,setGenerating] = useState(false)
@@ -119,15 +120,18 @@ export default function FreeAiProfileAssistant() {
   const missingTitle = Boolean(context && !context.profile.professional_title.trim())
   const missingBio = Boolean(context && !context.profile.bio.trim())
   const missingServices = Boolean(context && context.profile.services.length === 0)
+  const missingServicesSectionTitle = Boolean(context && !(context.profile.services_section_title || '').trim())
+  const missingServicesSectionDescription = Boolean(context && !(context.profile.services_section_description || '').trim())
+  const missingServicesSectionCopy = missingServicesSectionTitle || missingServicesSectionDescription
   const incompletePortfolio = context?.profile.portfolio?.filter((item)=>!item.title.trim() || !item.description.trim()) || []
   const missingPortfolioCopy = incompletePortfolio.length > 0
-  const hasMissingEditorialContent = missingTitle || missingBio || missingServices || missingPortfolioCopy
+  const hasMissingEditorialContent = missingTitle || missingBio || missingServices || missingServicesSectionCopy || missingPortfolioCopy
   const channels = context?.profile.configured_channels || []
   const totalAnswerLength = Object.values(answers).reduce((s,v)=>s+v.trim().length,0)
   const missingOnlyAnswerLength = [
     missingTitle ? answers.activity_details : '',
     missingBio ? answers.clients : '',
-    missingServices ? answers.services_details : '',
+    (missingServices || missingServicesSectionCopy) ? answers.services_details : '',
     missingPortfolioCopy ? answers.extra_context : '',
   ].reduce((sum,value)=>sum+value.trim().length,0)
   const enoughInformation = editingScope === 'missing_only' ? (!hasMissingEditorialContent || missingOnlyAnswerLength >= 4) : totalAnswerLength >= 8
@@ -139,6 +143,7 @@ export default function FreeAiProfileAssistant() {
     setAnswers(EMPTY_ANSWERS)
     setFollowUp([])
     setProposal(null)
+    setSuggestedProposal(null)
     setRound(1)
     setReplaceServices(false)
     setError('')
@@ -195,6 +200,7 @@ export default function FreeAiProfileAssistant() {
       }
       if (json.data?.status === 'ready' && json.data.proposal) {
         setProposal(json.data.proposal as Proposal)
+        setSuggestedProposal(json.data.proposal as Proposal)
         setFollowUp([])
         setReplaceServices(false)
         window.scrollTo({ top:0, behavior:'smooth' })
@@ -292,12 +298,11 @@ export default function FreeAiProfileAssistant() {
           {!hasMissingEditorialContent && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">No encontré campos de texto pendientes.</p><p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Si quieres que Kawvo proponga mejoras sobre lo que ya tienes, selecciona “Revisar y mejorar mi contenido”.</p></div>}
           {missingTitle && <Question label="¿Cómo quieres que aparezca tu título, puesto u oficio?" hint={examples.activity} value={answers.activity_details} onChange={(v)=>setAnswers((a)=>({...a,activity_details:v}))} />}
           {missingBio && <Question label="¿Qué debería entender una persona sobre ti o tu negocio en pocos segundos?" hint="Cuéntame a quién ayudas, qué haces y qué valor práctico ofreces." value={answers.clients} onChange={(v)=>setAnswers((a)=>({...a,clients:v}))} />}
-          {missingServices && <Question label="¿Cuáles son los servicios reales que quieres mostrar?" hint={`Menciona hasta ${context.plan.limits.max_services}. Kawvo no inventará servicios para completar espacios.`} value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} />}
+          {missingServices ? <Question label="¿Cuáles son los servicios reales que quieres mostrar?" hint={`Menciona hasta ${context.plan.limits.max_services}. Kawvo no inventará servicios para completar espacios.`} value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} /> : missingServicesSectionCopy ? <Question label="¿Cómo quieres presentar los servicios que ya tienes?" hint="Cuéntame qué tienen en común, qué necesidad resuelven o qué debería entender el visitante antes de leerlos. Kawvo redactará solo el título o introducción que falte." value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} /> : null}
           {missingPortfolioCopy && <Question label={`Hay ${incompletePortfolio.length} trabajo${incompletePortfolio.length===1?'':'s'} con texto incompleto. ¿Qué muestra${incompletePortfolio.length===1?'':'n'}?`} hint="Descríbelos brevemente en el mismo orden de tus fotos. La IA solo completará títulos o descripciones vacías." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />}
         </> : <>
           <Question label="¿A qué tipo de cliente quieres hablarle principalmente?" hint={examples.clients} value={answers.clients} onChange={(v)=>setAnswers((a)=>({...a,clients:v}))} />
-          <Question label="¿Qué quieres que destaque o mejore de tu presentación actual?" hint="Por ejemplo: explicar mejor tu valor, sonar más profesional, enfocarte en cierto cliente o destacar una especialidad." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />
-          {(hasExistingServices || hasExistingPortfolio) && <Question label="¿Qué servicio o trabajo te interesa que tenga mayor protagonismo?" hint="Opcional. Menciona lo que más te interesa posicionar; no cambia el orden visual del perfil." value={answers.services_details} onChange={(v)=>setAnswers((a)=>({...a,services_details:v}))} />}
+          <Question label="¿Qué quieres que destaque o mejore de tu presentación actual?" hint="Por ejemplo: explicar mejor tu valor, sonar más profesional, enfocarte en cierto cliente o destacar una especialidad, servicio o trabajo. Kawvo tomará tus respuestas como información, no como copy literal." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} />
           <Question label="¿Qué quieres que una persona haga después de entender tu perfil?" hint={examples.action} value={answers.next_action} onChange={(v)=>setAnswers((a)=>({...a,next_action:v}))} />
         </>}
 
@@ -318,10 +323,10 @@ export default function FreeAiProfileAssistant() {
       {proposal && context && <section className="mt-5 space-y-5">
         <div className="rounded-[24px] border border-cyan-200 bg-cyan-50 p-4"><p className="font-black text-cyan-900">Propuesta lista para revisar</p><p className="mt-1 text-sm font-semibold leading-6 text-cyan-800">Revisa la propuesta antes de aplicarla. Tú decides qué contenido utilizar. Nada se aplicará hasta que pulses <strong>Aplicar a mi perfil</strong>.</p></div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Identidad</p><h2 className="mt-1 text-xl font-black">Cómo te presentas</h2></div><label className="text-xs font-black"><input type="checkbox" checked={selection.identity} onChange={(e)=>setSelection((s)=>({...s,identity:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div>
-          <input value={editingScope==='missing_only'&&context.profile.professional_title?context.profile.professional_title:proposal.professional_title} disabled={editingScope==='missing_only'&&Boolean(context.profile.professional_title)} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-black" />
+          <div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Identidad</p><h2 className="mt-1 text-xl font-black">Cómo te presentas</h2></div>
+          {editingScope==='full_profile' && context.profile.professional_title ? <div className="mt-4 space-y-3"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Tu texto actual</p><p className="mt-2 font-bold text-slate-700">{context.profile.professional_title}</p></div><div className="rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4"><p className="text-[11px] font-black uppercase text-cyan-700">Sugerencia de Kawvo</p><input value={proposal.professional_title} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-2 w-full rounded-xl border border-cyan-200 bg-white px-3 py-3 font-black"/></div><div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>{updateProposal('professional_title',context.profile.professional_title);setSelection((s)=>({...s,identity:false}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${!selection.identity?'bg-slate-900 text-white':'bg-slate-100 text-slate-700'}`}>Mantener mi texto</button><button type="button" onClick={()=>{if(suggestedProposal)updateProposal('professional_title',suggestedProposal.professional_title);setSelection((s)=>({...s,identity:true}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${selection.identity?'bg-cyan-700 text-white':'bg-cyan-50 text-cyan-800'}`}>Usar texto sugerido</button></div></div> : <input value={editingScope==='missing_only'&&context.profile.professional_title?context.profile.professional_title:proposal.professional_title} disabled={editingScope==='missing_only'&&Boolean(context.profile.professional_title)} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-black" />}
         </div>
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex justify-between"><h2 className="text-xl font-black">Sobre ti o tu negocio</h2><label className="text-xs font-black"><input type="checkbox" checked={selection.bio} onChange={(e)=>setSelection((s)=>({...s,bio:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div><textarea value={editingScope==='missing_only'&&context.profile.bio?context.profile.bio:proposal.bio} disabled={editingScope==='missing_only'&&Boolean(context.profile.bio)} onChange={(e)=>updateProposal('bio',e.target.value.slice(0,300))} maxLength={300} rows={5} className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 leading-6" /></div>
+        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-xl font-black">Sobre ti o tu negocio</h2>{editingScope==='full_profile' && context.profile.bio ? <div className="mt-4 space-y-3"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Tu texto actual</p><p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-6 text-slate-700">{context.profile.bio}</p></div><div className="rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4"><p className="text-[11px] font-black uppercase text-cyan-700">Sugerencia de Kawvo</p><textarea value={proposal.bio} onChange={(e)=>updateProposal('bio',e.target.value.slice(0,300))} maxLength={300} rows={5} className="mt-2 w-full resize-none rounded-xl border border-cyan-200 bg-white px-4 py-3.5 leading-6"/></div><div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>{updateProposal('bio',context.profile.bio);setSelection((s)=>({...s,bio:false}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${!selection.bio?'bg-slate-900 text-white':'bg-slate-100 text-slate-700'}`}>Mantener mi texto</button><button type="button" onClick={()=>{if(suggestedProposal)updateProposal('bio',suggestedProposal.bio);setSelection((s)=>({...s,bio:true}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${selection.bio?'bg-cyan-700 text-white':'bg-cyan-50 text-cyan-800'}`}>Usar texto sugerido</button></div></div> : <textarea value={editingScope==='missing_only'&&context.profile.bio?context.profile.bio:proposal.bio} disabled={editingScope==='missing_only'&&Boolean(context.profile.bio)} onChange={(e)=>updateProposal('bio',e.target.value.slice(0,300))} maxLength={300} rows={5} className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 leading-6" />}</div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex justify-between gap-3"><h2 className="text-xl font-black">Servicios</h2><div className="space-y-2 text-right text-xs font-black"><label className="block"><input type="checkbox" checked={selection.services_section} onChange={(e)=>setSelection((s)=>({...s,services_section:e.target.checked}))} className="mr-2 accent-cyan-700"/>Presentación</label><label className="block"><input type="checkbox" checked={selection.services} onChange={(e)=>setSelection((s)=>({...s,services:e.target.checked}))} className="mr-2 accent-cyan-700"/>Servicios</label></div></div>
           <input value={proposal.services_section_title} onChange={(e)=>updateProposal('services_section_title',e.target.value.slice(0,60))} className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 font-black" />

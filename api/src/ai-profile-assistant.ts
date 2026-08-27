@@ -301,6 +301,7 @@ const EDITORIAL_INSTRUCTIONS = [
   'MISIÓN KAWVO: un Perfil Digital Kawvo es una carta de presentación digital. En pocos segundos el visitante debe entender quién es la persona o negocio, qué hace, qué necesidad puede resolverle o qué valor aporta, por qué puede ser relevante y cuál es el siguiente paso. La meta no es vender por vender: es presentar mejor, comunicar valor con claridad, generar confianza y facilitar la siguiente acción.',
   'SUFICIENCIA: antes de redactar decide si existe información suficiente para producir una presentación específica y creíble. No preguntes para completar una plantilla mental. Si falta información verdaderamente esencial, devuelve needs_more_info con 1 a 3 preguntas de alto valor informativo. No preguntes lo ya guardado, ya respondido o inferible de forma segura.',
   'HECHOS E INFERENCIAS: distingue hechos confirmados, inferencias razonables y redacción comercial. Puedes inferir beneficios directos y evidentes, pero nunca convertir una posibilidad en una promesa. Nunca inventes certificaciones, experiencia, años, precios, ubicaciones, clientes, marcas, garantías, capacidades, resultados, ventajas competitivas, servicios, disponibilidad ni tiempos de entrega.',
+  'INTERPRETACIÓN EDITORIAL: las respuestas del usuario son materia prima factual, no texto final para copiar. NO INVENTAR no significa transcribir literalmente. Reformula, condensa y conecta los hechos para convertir respuestas coloquiales, genéricas o descriptivas en copy natural, comercial y convincente, sin añadir hechos nuevos. Si el usuario dice algo como público en general, conserva la amplitud de audiencia pero exprésala desde el valor, la necesidad o la situación del cliente cuando el contexto lo permita; evita repetir la frase mecánicamente.',
   'PERSPECTIVA: piensa desde el visitante. No resumas mecánicamente ni respetes el orden de entrada. Prioriza lo que más ayude a comprender qué hace, cómo ayuda, qué valor tiene y qué debe hacer después. Esto aplica solo al copy; nunca sugieras reorganizar visualmente botones, módulos, secciones o servicios.',
   'SECTOR: adapta vocabulario, tono, prioridad y forma de describir servicios a la actividad. Escribe en español natural, profesional y cercano para República Dominicana, sin jerga local innecesaria salvo que el tono del usuario la justifique.',
   'COPY: cada frase debe explicar, posicionar, diferenciar, generar interés, transmitir confianza, mostrar valor o facilitar una acción. Evita lenguaje infantil, robótico, académico, excesivamente formal, exageradamente publicitario, genérico o de plantilla. Evita frases vacías como calidad y confianza, somos tu mejor opción, soluciones a tu medida, servicio personalizado, excelencia garantizada o comprometidos con nuestros clientes salvo respaldo concreto.',
@@ -406,7 +407,7 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
   if (totalLength < 8 && !hasExistingContent) return c.json({ ok: false, error: 'Cuéntanos un poco más para preparar una propuesta útil.' }, 400)
   if (totalLength > MAX_TOTAL_INPUT_LENGTH) return c.json({ ok: false, error: 'La información es demasiado extensa. Resume un poco tus respuestas.' }, 413)
 
-  if (context.configuredChannels.length > 1 && !answers.preferred_contact && !followUp.some((item: FollowUpAnswer) => /contact|whatsapp|llamada|correo/i.test(item.question))) {
+  if (editingScope === 'full_profile' && context.configuredChannels.length > 1 && !answers.preferred_contact && !followUp.some((item: FollowUpAnswer) => /contact|whatsapp|llamada|correo/i.test(item.question))) {
     return c.json({ ok: true, data: { status: 'needs_more_info', questions: ['¿Cómo prefieres que te contacten principalmente?'], options: context.configuredChannels, round } })
   }
 
@@ -502,7 +503,7 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
       const service = proposal.services[index]
       const existing = context.services[index]
       if (existing) {
-        statements.push(c.env.DB.prepare(`UPDATE profile_products SET title = ?, description = ?, sort_order = ? WHERE id = ? AND profile_id = ?`).bind(service.title,service.description,index,existing.id,context.profileId))
+        statements.push(c.env.DB.prepare(`UPDATE profile_products SET title = ?, description = ? WHERE id = ? AND profile_id = ?`).bind(service.title,service.description,existing.id,context.profileId))
       } else {
         statements.push(c.env.DB.prepare(`INSERT INTO profile_products (id,profile_id,title,description,price,image_url,whatsapp_text,is_featured,sort_order,created_at) VALUES (?,?,?,?,'','','',0,?,datetime('now'))`).bind(crypto.randomUUID(),context.profileId,service.title,service.description,index))
       }

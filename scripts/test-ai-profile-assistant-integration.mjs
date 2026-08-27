@@ -112,16 +112,52 @@ try {
     assert.ok(db.runs.some((x) => /ai_assistant_terms_acceptances/.test(x.sql)))
   }
 
-  // C: multiple configured channels are not prioritized arbitrarily.
+  // C: full-profile review does not prioritize multiple configured channels arbitrarily.
   {
     let upstreamCalled = false
     globalThis.fetch = async () => { upstreamCalled = true; throw new Error('must not run') }
     const db = new FakeDB({ channels: ['whatsapp','phone','email'] })
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.', clients: 'hogares' }, round: 1 }, {}, db)
+    const result = await call('/api/v1/me/ai-profile-assistant/generate', {
+      answers: { activity_details: 'Soy electricista.', clients: 'hogares' },
+      round: 1,
+      editing_scope: 'full_profile',
+    }, {}, db)
     assert.equal(result.status, 200)
     assert.equal(result.body.data.status, 'needs_more_info')
     assert.deepEqual(result.body.data.options, ['whatsapp','phone','email'])
     assert.equal(upstreamCalled, false)
+  }
+
+  // C2: missing-only completion must not be blocked by contact preference.
+  {
+    let upstreamCalled = false
+    globalThis.fetch = async (_url, init) => {
+      upstreamCalled = true
+      const payload = JSON.parse(init.body)
+      assert.match(payload.input, /"editing_scope":"missing_only"/)
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: 'completed',
+          output_text: JSON.stringify({
+            status: 'ready',
+            proposal: BASE_PROPOSAL,
+            questions: null,
+          }),
+          usage: {},
+        }),
+      }
+    }
+    const db = new FakeDB({ channels: ['whatsapp','phone','email'] })
+    const result = await call('/api/v1/me/ai-profile-assistant/generate', {
+      answers: { activity_details: 'Soy electricista.', clients: 'hogares' },
+      round: 1,
+      editing_scope: 'missing_only',
+    }, {}, db)
+    assert.equal(result.status, 200)
+    assert.equal(result.body.data.status, 'ready')
+    assert.equal(upstreamCalled, true)
   }
 
   // D + A + K + N: one channel does not trigger needless question; ready proposal is textual and generation never mutates profile.

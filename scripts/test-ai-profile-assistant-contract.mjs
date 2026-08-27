@@ -49,6 +49,9 @@ assert.match(apiSource, /configuredChannels/, 'Configured quick-contact channels
 assert.match(apiSource, /image_suggestions/, 'Model may return textual image suggestions')
 assert.match(apiSource, /nunca generación ni modificación/i, 'Prompt must forbid image generation/modification')
 assert.match(apiSource, /Nunca inventes/i, 'Editorial brain must explicitly forbid invented facts/services')
+assert.match(apiSource, /NO INVENTAR no significa transcribir literalmente|INTERPRETACIÓN EDITORIAL/i, 'Editorial brain must transform grounded answers into copy instead of mirroring them')
+assert.match(apiSource, /editingScope === 'full_profile'.*configuredChannels.length > 1/s, 'Missing-only must not be blocked by contact preference')
+assert.doesNotMatch(apiSource, /UPDATE profile_products SET title = \?, description = \?, sort_order = \?/, 'AI service copy updates must preserve service order')
 assert.match(apiSource, /carta de presentación digital|primera impresión/i, 'Editorial brain must encode Kawvo first-impression mission')
 assert.match(apiSource, /published:false|published:\s*false/, 'Apply endpoint must explicitly remain unpublished')
 assert.match(apiSource, /replace_services_confirmation_required/, 'Existing service copy update requires explicit confirmation')
@@ -88,6 +91,10 @@ assert.match(appSource, /Voy a revisar tu perfil completo/, 'Full-profile mode m
 assert.match(appSource, /No encontré campos de texto pendientes/, 'Missing-only must stop when nothing is missing')
 assert.match(appSource, /texto incompleto/, 'Missing portfolio copy must have a targeted question')
 assert.match(appSource, /canal principal se definirá solo si hace falta/i, 'Full-profile contact preference must be deferred until actually needed')
+assert.match(appSource, /Mantener mi texto/, 'Full-profile review must let the user keep existing copy')
+assert.match(appSource, /Usar texto sugerido/, 'Full-profile review must let the user choose AI copy explicitly')
+assert.match(appSource, /Sugerencia de Kawvo/, 'Existing copy must be shown alongside the AI suggestion')
+assert.match(appSource, /missingServicesSectionCopy/, 'Missing-only planner must detect services-section title or intro')
 
 for (const area of ['app','web']) {
   for (const file of await collectFiles(join(root, area))) {
