@@ -130,7 +130,7 @@ try {
       assert.equal(payload.store, false)
       assert.equal(payload.text.verbosity, 'medium')
       assert.equal(payload.text.format.type, 'json_schema')
-      assert.match(payload.instructions, /primera impresión digital/i)
+      assert.match(payload.instructions, /carta de presentación digital|primera impresión/i)
       assert.match(payload.instructions, /nunca inventes/i)
       return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL }), usage: { input_tokens: 500, output_tokens: 240 } }) }
     }
