@@ -167,7 +167,12 @@ export default function FreeOnboardingIdentity() {
       const body: Record<string, unknown> = {
         name: name.trim(),
         bio: bio.trim(),
-        template_data: { ...templateData, role: role.trim(), about_section_title: aboutTitle, free_identity_confirmed: true },
+        template_data: {
+          ...templateData,
+          role: role.trim(),
+          about_section_title: aboutTitle,
+          free_identity_confirmed: true,
+        },
       }
       if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
       const result: any = await apiPut('/me/profile', body)
@@ -242,7 +247,12 @@ export default function FreeOnboardingIdentity() {
             <div className="mt-6 space-y-4">
               <label className="block"><span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">Nombre o marca</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Tu nombre o marca" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold text-slate-900 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" /></label>
               <label className="block"><span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">A qué te dedicas (Puesto / Cargo)</span><input value={role} onChange={(e) => setRole(e.target.value)} maxLength={80} placeholder="Ej. Asesor inmobiliario" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold text-slate-900 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" /></label>
-              <label className="block"><span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">Descripción breve</span><textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} rows={4} placeholder="Cuéntales brevemente lo que haces…" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base text-slate-900 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" /><span className="mt-1 block text-right text-sm text-slate-600">{bio.length}/300</span></label>
+              <label className="block">
+                <span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">Descripción breve</span>
+                <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} rows={4} placeholder="Cuéntales brevemente lo que haces…" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base text-slate-900 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
+                <span className="mt-1 block text-right text-sm text-slate-600">{bio.length}/300</span>
+              </label>
+
             </div>
 
             <div className="mt-5 border-t border-slate-100 pt-5">

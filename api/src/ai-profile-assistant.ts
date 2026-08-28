@@ -25,7 +25,7 @@ type AssistantProposal = {
   bio: string
   services_section_title: string
   services_section_description: string
-  services: Array<{ title: string; description: string }>
+  services: Array<{ id: string; title: string; description: string }>
   portfolio: PortfolioProposal[]
   cta: { label: string; goal: 'contact' | 'quote' | 'book' | 'visit' | 'buy' | 'learn_more' }
   image_suggestions: ImageSuggestion[]
@@ -112,10 +112,11 @@ function validateProposal(raw: unknown, maxServices: number, maxPortfolio: numbe
 
   const rawServices = Array.isArray(value.services) ? value.services.slice(0, maxServices) : []
   const services = rawServices.map((item: any) => ({
+    id: strictText(item?.id, 80),
     title: strictText(item?.title, 60),
     description: strictText(item?.description, 90),
   }))
-  if (services.some((item) => item.title === null || item.description === null)) return null
+  if (services.some((item) => item.id === null || item.title === null || item.description === null)) return null
 
   const rawPortfolio = Array.isArray(value.portfolio) ? value.portfolio.slice(0, maxPortfolio) : []
   const portfolio = rawPortfolio.map((item: any) => ({
@@ -152,8 +153,8 @@ function validateProposal(raw: unknown, maxServices: number, maxPortfolio: numbe
     services_section_title: servicesSectionTitle,
     services_section_description: servicesSectionDescription,
     services: services
-      .filter((item) => item.title && item.description)
-      .map((item) => ({ title: item.title!, description: item.description! })),
+      .filter((item) => item.id)
+      .map((item) => ({ id: item.id!, title: item.title!, description: item.description! })),
     portfolio: portfolio
       .filter((item) => item.id)
       .map((item) => ({ id: item.id!, title: item.title!, description: item.description! })),
@@ -163,7 +164,7 @@ function validateProposal(raw: unknown, maxServices: number, maxPortfolio: numbe
       .map((item) => ({ purpose: item.purpose!, suggestion: item.suggestion! })),
   }
 
-  if (!proposal.professional_title || !proposal.bio || !proposal.services_section_title || !proposal.cta.label || proposal.services.length < 1) return null
+  if (!proposal.professional_title || !proposal.bio || !proposal.services_section_title || !proposal.cta.label) return null
   return proposal
 }
 
@@ -186,7 +187,7 @@ function validateAssistantResult(raw: unknown, maxServices: number, maxPortfolio
 
 async function ownerContext(c: any, userId: string) {
   const profile = await c.env.DB.prepare(
-    `SELECT id, slug, plan_id, name, bio, category, template_data FROM profiles WHERE user_id = ? LIMIT 1`,
+    `SELECT id, slug, plan_id, name, bio, category, subcategory, template_data FROM profiles WHERE user_id = ? LIMIT 1`,
   ).bind(userId).first()
   if (!profile) return null
   const profileId = String((profile as any).id)
@@ -215,7 +216,9 @@ async function ownerContext(c: any, userId: string) {
     name: text((profile as any).name, 80),
     bio: text((profile as any).bio, 300),
     category: text((profile as any).category, 120),
+    subcategory: text((profile as any).subcategory, 120),
     professionalTitle: text(templateData.role || templateData.title, 80),
+    aiActivityContext: text(templateData.ai_activity_context, 500),
     servicesSectionTitle: text(templateData.services_section_title, 60),
     servicesSectionDescription: text(templateData.services_section_description, 240),
     templateData,
@@ -223,6 +226,64 @@ async function ownerContext(c: any, userId: string) {
     portfolio,
     contact: contactData,
     configuredChannels: configuredChannels(contactData),
+  }
+}
+
+function aiContextReadiness(context: any) {
+  const missing: string[] = []
+
+  if (!context.category) missing.push('category')
+  if (!context.subcategory) missing.push('subcategory')
+  if (!context.professionalTitle) missing.push('professional_title')
+  if (!context.aiActivityContext) missing.push('activity_context')
+
+  return {
+    ready: missing.length === 0,
+    missing,
+    summary: {
+      name: context.name,
+      category: context.category,
+      subcategory: context.subcategory,
+      professional_title: context.professionalTitle,
+      activity_context: context.aiActivityContext,
+      services_count: context.services.length,
+      portfolio_count: context.portfolio.length,
+      configured_channels: context.configuredChannels,
+    },
+  }
+}
+
+async function aiContextHash(context: any) {
+  return sha256Hex(JSON.stringify({
+    name: context.name || '',
+    category: context.category || '',
+    subcategory: context.subcategory || '',
+    professional_title: context.professionalTitle || '',
+    activity_context: context.aiActivityContext || '',
+  }))
+}
+
+async function aiContextConfirmation(context: any) {
+  const readiness = aiContextReadiness(context)
+
+  if (!readiness.ready) {
+    return {
+      confirmed: false,
+      required: false,
+      confirmed_at: null,
+    }
+  }
+
+  const currentHash = await aiContextHash(context)
+  const storedHash = text(context.templateData.ai_context_confirmed_hash, 128)
+  const confirmed = Boolean(storedHash && storedHash === currentHash)
+
+  return {
+    confirmed,
+    required: !confirmed,
+    confirmed_at: confirmed
+      ? text(context.templateData.ai_context_confirmed_at, 80) || null
+      : null,
   }
 }
 
@@ -249,6 +310,35 @@ async function insertUsage(c: any, data: {
     ).bind(crypto.randomUUID(), data.userId, data.profileId, data.operation, data.status, data.model || null, inputTokens, outputTokens, estimatedCost, data.errorCode || null).run()
   } catch {}
   return estimatedCost
+}
+
+
+async function isSuperAdminUser(c: any, userId: string): Promise<boolean> {
+  try {
+    const adminRow = await c.env.DB.prepare(
+      `SELECT role FROM admin_users WHERE user_id = ? LIMIT 1`,
+    ).bind(userId).first()
+
+    if (String((adminRow as any)?.role || '') === 'super_admin') return true
+  } catch {}
+
+  try {
+    const userRow = await c.env.DB.prepare(
+      `SELECT email FROM users WHERE id = ? LIMIT 1`,
+    ).bind(userId).first()
+
+    const email = String((userRow as any)?.email || '').trim().toLowerCase()
+    if (!email) return false
+
+    const adminList = String(c.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((value: string) => value.trim().toLowerCase())
+      .filter(Boolean)
+
+    return adminList.includes(email)
+  } catch {
+    return false
+  }
 }
 
 async function generationLimit(c: any, userId: string, limits: PlanLimits) {
@@ -289,11 +379,13 @@ function buildInput(answers: Record<string, string>, followUp: Array<{ question:
   const safeProfile = {
     name: context.name,
     category: context.category,
+    subcategory: context.subcategory,
     professional_title: context.professionalTitle,
+    activity_context_in_user_words: context.aiActivityContext,
     bio: context.bio,
     services_section_title: context.servicesSectionTitle,
     services_section_description: context.servicesSectionDescription,
-    existing_services: context.services.map((s: ExistingService) => ({ title: s.title, description: s.description, has_image: s.has_image })),
+    existing_services: context.services.map((s: ExistingService) => ({ id: s.id, title: s.title, description: s.description, has_image: s.has_image })),
     portfolio: context.portfolio.map((item: ExistingPortfolio, index: number) => ({ index: index + 1, id: item.id, title: item.title, description: item.description })),
   }
   return JSON.stringify({
@@ -313,7 +405,7 @@ const proposalSchema = {
   type: 'object', additionalProperties: false,
   properties: {
     professional_title: { type: 'string' }, bio: { type: 'string' }, services_section_title: { type: 'string' }, services_section_description: { type: 'string' },
-    services: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, description: { type: 'string' } }, required: ['title','description'] } },
+    services: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' } }, required: ['id','title','description'] } },
     portfolio: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { id: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' } }, required: ['id','title','description'] } },
     cta: { type: 'object', additionalProperties: false, properties: { label: { type: 'string' }, goal: { type: 'string', enum: ['contact','quote','book','visit','buy','learn_more'] } }, required: ['label','goal'] },
     image_suggestions: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { purpose: { type: 'string' }, suggestion: { type: 'string' } }, required: ['purpose','suggestion'] } },
@@ -337,23 +429,28 @@ const EDITORIAL_INSTRUCTIONS = [
   'MISIÓN KAWVO: un Perfil Digital Kawvo es una carta de presentación digital. En pocos segundos el visitante debe entender quién es la persona o negocio, qué hace, qué necesidad puede resolverle o qué valor aporta, por qué puede ser relevante y cuál es el siguiente paso. La meta no es vender por vender: es presentar mejor, comunicar valor con claridad, generar confianza y facilitar la siguiente acción.',
   'SUFICIENCIA Y AUTONOMÍA: analiza primero todo el perfil, respuestas y conversación. Si puedes producir una propuesta útil, específica y creíble, hazlo sin pedir permiso adicional. No preguntes para completar una plantilla mental. Solo devuelve needs_more_info cuando avanzar obligaría a inventar un hecho importante o cuando una aclaración pueda cambiar materialmente la propuesta. Normalmente haz una sola pregunta; usa hasta tres solo si son realmente imprescindibles. Nunca repitas algo ya guardado, ya respondido o inferible de forma razonable.',
   'CONOCIMIENTO GENERAL: puedes usar libremente tu conocimiento general sobre profesiones, industrias, servicios, marketing, comportamiento del cliente, comunicación y buenas prácticas de copy para comprender el contexto, escoger vocabulario natural del sector, identificar beneficios razonablemente derivados y mejorar la presentación. Ese conocimiento sirve para interpretar y redactar; nunca lo conviertas en un hecho particular del usuario sin respaldo.',
+  'PREGUNTAS SOLO POR HECHOS DEL USUARIO: una pregunta de seguimiento solo se justifica cuando falta un hecho personal, comercial u operativo que únicamente el usuario puede confirmar y cuya ausencia impide redactar de forma segura. No preguntes al usuario qué significa un concepto general, una categoría comercial, una expresión de marketing, una profesión, un tipo de solución o una funcionalidad que puedas comprender razonablemente usando el perfil, el contexto disponible y conocimiento general.',
+  'EXPRESIONES AMPLIAS: si el usuario usa una expresión como presentación digital completa, solución integral, servicio completo, atención personalizada o similar, no le pidas que defina la expresión solo para poder redactar. Interprétala como una idea general y escribe únicamente con los hechos concretos ya respaldados. Si no conoces componentes específicos, no los enumeres ni los inventes; redacta a un nivel de generalidad seguro.',
+  'NO PREGUNTES POR LA PROPIA SOLUCIÓN KAWVO: no delegues al usuario la tarea de explicarte conceptos, estructura, beneficios genéricos o lógica de un Perfil Digital Kawvo cuando puedan resolverse con las instrucciones del sistema y el contexto disponible. Pregunta únicamente por información particular de su negocio, actividad, cliente, servicio, preferencia o situación que no puedas conocer de otro modo.',
   'NO DELEGUES LA ESTRATEGIA: no preguntes al usuario qué valor quiere reflejar, qué beneficio quiere comunicar, cómo quiere posicionarse, qué mensaje debería transmitir ni qué lo hace diferente cuando eso pueda deducirse razonablemente del perfil y de sus respuestas. El usuario aporta hechos, contexto y preferencias básicas; tú haces el trabajo de análisis, posicionamiento, jerarquía y copy.',
+  'CONTEXTO EN PALABRAS DEL USUARIO: profile.activity_context_in_user_words contiene una explicación privada escrita libremente por el usuario sobre lo que hace. Trátala como fuente factual y de intención, no como copy final. Puede estar escrita de forma informal, incompleta o poco profesional: comprende su significado y conviértelo en comunicación clara sin inventar hechos.',
   'CONVERSACIÓN: conversation contiene el hilo de esta sesión. Úsalo como memoria de trabajo. Integra todas las respuestas previas y nunca vuelvas a preguntar lo ya respondido. follow_up_answers contiene las respuestas de la pantalla actual y también debe considerarse contexto confirmado.',
   'ÚLTIMA RONDA: si must_finalize=true, produce la mejor propuesta posible con la información disponible. No devuelvas needs_more_info salvo que hacerlo implique inventar un hecho esencial que haga insegura o engañosa la propuesta.',
   'HECHOS E INFERENCIAS: distingue hechos confirmados, inferencias razonables y redacción comercial. Puedes inferir beneficios directos y evidentes, pero nunca convertir una posibilidad en una promesa. Nunca inventes certificaciones, experiencia, años, precios, ubicaciones, clientes, marcas, garantías, capacidades, resultados, ventajas competitivas, servicios, disponibilidad ni tiempos de entrega.',
-  'INTERPRETACIÓN EDITORIAL: las respuestas del usuario son materia prima factual, no texto final para copiar. NO INVENTAR no significa transcribir literalmente. Reformula, condensa y conecta los hechos para convertir respuestas coloquiales, genéricas o descriptivas en copy natural, comercial y convincente, sin añadir hechos nuevos. Si el usuario dice algo como público en general, conserva la amplitud de audiencia pero exprésala desde el valor, la necesidad o la situación del cliente cuando el contexto lo permita; evita repetir la frase mecánicamente.',
-  'PERSPECTIVA: piensa desde el visitante. No resumas mecánicamente ni respetes el orden de entrada. Prioriza lo que más ayude a comprender qué hace, cómo ayuda, qué valor tiene y qué debe hacer después. Esto aplica solo al copy; nunca sugieras reorganizar visualmente botones, módulos, secciones o servicios.',
+  'INTERPRETACIÓN EDITORIAL: las respuestas del usuario son materia prima factual, no texto final para copiar. NO INVENTAR no significa transcribir literalmente ni escribir con miedo. Puedes reinterpretar, condensar, jerarquizar, combinar y reformular los hechos para encontrar una manera más clara, atractiva y estratégica de presentarlos. Busca primero cuál es el ángulo más fuerte de la propuesta y escribe desde ese ángulo. Puedes expresar beneficios razonablemente derivados, problemas que el producto o servicio ayuda a reducir y valor práctico evidente, siempre que no los conviertas en hechos específicos no respaldados. Evita repetir las mismas palabras del usuario cuando exista una forma más natural, poderosa o memorable de comunicar la misma idea.',
+  'PERSPECTIVA: piensa desde el visitante y desde la impresión que debe dejar el perfil. No resumas mecánicamente ni respetes el orden de entrada. Antes de redactar, identifica internamente qué idea merece protagonismo, qué tensión o necesidad del visitante conecta mejor con la oferta y cuál es la forma más distintiva de explicarla usando los hechos disponibles. Después construye el copy alrededor de esa idea principal. Esto aplica solo al copy; nunca sugieras reorganizar visualmente botones, módulos, secciones o servicios.',
   'SECTOR: adapta vocabulario, tono, prioridad y forma de describir servicios a la actividad. Escribe en español natural, profesional y cercano para República Dominicana, sin jerga local innecesaria salvo que el tono del usuario la justifique.',
-  'COPY: cada frase debe explicar, posicionar, diferenciar, generar interés, transmitir confianza, mostrar valor o facilitar una acción. Evita lenguaje infantil, robótico, académico, excesivamente formal, exageradamente publicitario, genérico o de plantilla. Evita frases vacías como calidad y confianza, somos tu mejor opción, soluciones a tu medida, servicio personalizado, excelencia garantizada o comprometidos con nuestros clientes salvo respaldo concreto.',
+  'COPY: cada frase debe explicar, posicionar, diferenciar, generar interés, transmitir confianza, mostrar valor o facilitar una acción. Escribe como un buen estratega de marca y copywriter humano, no como un formulario que rellena campos. La redacción puede tener personalidad, ritmo, contraste, síntesis y una idea memorable cuando el contexto lo permita. Evita construcciones de plantilla como propuesta pensada para, solución diseñada para, presencia clara para mostrar lo que haces, te ayudamos a, una forma práctica de o similares cuando puedan reemplazarse por una expresión más específica. Evita lenguaje infantil, robótico, académico, excesivamente formal, exageradamente publicitario o genérico. Evita frases vacías como calidad y confianza, somos tu mejor opción, soluciones a tu medida, servicio personalizado, excelencia garantizada o comprometidos con nuestros clientes salvo respaldo concreto.',
+  'LIBERTAD CREATIVA CONTROLADA: para professional_title, bio, services_section_title, services_section_description y CTA tienes libertad editorial real. No estás obligado a conservar la estructura, orden, vocabulario ni tono literal del texto existente. Puedes cambiar el enfoque, el punto de entrada y la manera de expresar el valor si el resultado representa mejor los mismos hechos. Piensa varias formulaciones internamente y entrega solo la más fuerte. La creatividad está limitada por los hechos, no por la redacción original.',
   'COHERENCIA: la propuesta cuenta una sola historia. professional_title posiciona; bio explica valor; servicios demuestran qué puede hacer; CTA indica el siguiente paso. Evita redundancia entre campos.',
   'TÍTULO: corto, específico y fácil de comprender. Puede usar especialidad + enfoque si está respaldado. Evita Emprendedor, Servicios profesionales o Soluciones integrales cuando exista algo más concreto.',
   'BIO: normalmente 2 o 3 frases breves. Explica qué hace, en qué situación ayuda, para quién y qué valor práctico obtiene el cliente cuando el contexto lo permita. No sobrecargues ni repitas servicios. Evita aperturas automáticas tipo Somos una empresa dedicada, En [nombre] realizamos o Nos especializamos en ofrecer.',
   'LÍMITES REALES: respeta field_limits exactamente. Nombre y título/puesto 80; bio 300; portafolio máximo 5, título 80 y descripción 90; servicios máximo 3, título 60 y descripción 90; título de sección de servicios 60 y descripción general 240; CTA máximo 45. Cada texto debe nacer terminado dentro de su límite. Nunca redactes una frase más larga esperando que el sistema la recorte. Si necesitas acortar, reescribe y cierra la idea naturalmente dentro del máximo permitido.',
   'ALCANCE DE EDICIÓN: editing_scope=missing_only significa conservar todo campo ya completado y proponer contenido únicamente para vacíos; puedes usar lo existente como contexto. editing_scope=full_profile permite proponer mejoras de texto, pero nunca modifica imágenes, URLs, canales, cuentas bancarias, diseño ni orden. El nombre no se cambia por IA en ningún alcance.',
-  'TRABAJOS/PORTAFOLIO: portfolio contiene hasta 5 fotos existentes y solo sus metadatos textuales; tú NO ves los píxeles de las imágenes. El título confirmado por el usuario es el ancla factual principal para comprender cada foto. Si el usuario aporta un título, puedes pulirlo sin cambiar su significado y debes generar a partir de ese título y del contexto una descripción útil, completa y de máximo 90 caracteres. Si falta título, pide al usuario que identifique brevemente esa foto con un nombre o título; no adivines su contenido ni hagas preguntas genéricas sobre qué podrían mostrar todas las fotos. Si el título existe y solo falta la descripción, intenta redactarla directamente sin preguntar salvo que el título sea realmente ambiguo. Nunca propongas eliminar, reemplazar o reordenar fotos. portfolio de salida debe conservar los id recibidos.',
-  'SERVICIOS: propone únicamente servicios reales y respeta plan.limits.max_services. Cada título debe ser concreto y escaneable; cada descripción debe expresar utilidad, beneficio o problema que resuelve. No inventes servicios para llenar cupos ni escribas definiciones de diccionario.',
+  'TRABAJOS/PORTAFOLIO: actúa únicamente como optimizador de texto ya escrito por el usuario. Tú NO ves los píxeles de las imágenes. Conserva exactamente cada id recibido. Si el título existente tiene texto, puedes mejorarlo sin cambiar su significado; si está vacío, debe permanecer vacío. Si la descripción existente tiene texto, puedes mejorar redacción, claridad y presentación sin añadir hechos nuevos; si está vacía, debe permanecer vacía. Nunca generes título o descripción desde cero, nunca completes un campo vacío y nunca deduzcas contenido de la foto. No elimines, reemplaces, reordenes ni cruces datos entre trabajos. En missing_only conserva portfolio sin cambios; en full_profile optimiza únicamente campos que ya contienen texto.',
+  'SERVICIOS: actúa únicamente como optimizador de los servicios ya creados por el usuario. Conserva exactamente cada id recibido y el mismo orden. No crees servicios nuevos ni elimines servicios existentes. Si el título existente tiene texto, puedes mejorarlo sin cambiar el servicio real; si está vacío, debe permanecer vacío. Si la descripción existente tiene texto, puedes mejorar claridad, utilidad y redacción sin añadir hechos nuevos; si está vacía, debe permanecer vacía. En missing_only conserva los servicios sin cambios; en full_profile optimiza únicamente campos que ya contienen texto. Respeta siempre los límites de caracteres.',
   'SECCIÓN SERVICIOS: prefiere un título específico cuando surja natural; no fuerces creatividad. Si lo creativo suena artificial usa algo simple y claro. La descripción introduce desde necesidad, beneficio o contexto, sin repetir ni rellenar.',
-  'CTA Y CANALES: configured_channels informa qué canales existen, pero no obliga a elegir uno. Redacta un CTA compatible con la intención y con los canales disponibles. Si no hace falta un canal concreto, usa una acción genérica y útil como solicitar cotización, reservar o contactar. Pregunta por preferencia de canal solo si esa elección cambia materialmente la propuesta y no puede resolverse de forma segura con el contexto.',
+  'CTA Y CANALES: configured_channels informa qué canales existen, pero no obliga a elegir uno. Redacta un CTA compatible con la intención y con los canales disponibles. Si no hace falta un canal concreto, usa una acción genérica y útil como solicitar cotización, reservar o contactar. Pregunta por preferencia de canal únicamente cuando necesites saber literalmente qué medio prefiere el usuario para recibir contactos y esa elección cambie materialmente la propuesta. La mera aparición de palabras como contacto, WhatsApp, correo, llamada o ubicación en otro contexto no convierte una pregunta en una pregunta de canal.',
   'IMÁGENES: image_suggestions son recomendaciones textuales, nunca generación ni modificación. Sugiere qué mostrar y por qué ayuda al visitante. Prioriza fotos reales del profesional, negocio, proceso, producto, trabajo realizado o resultado cuando sea pertinente.',
   'CONTENIDO EXISTENTE: si ya es bueno conserva su esencia y mejora claridad, estructura, posicionamiento, lectura móvil y conversión. No reemplaces por cambiar.',
   'MÓVIL: frases cortas, palabras concretas, jerarquía clara, lectura rápida y cero relleno.',
@@ -382,12 +479,20 @@ app.get('/api/v1/me/ai-profile-assistant/context', requireAssistantAuth, async (
     return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503)
   }
   const limits = planLimits(c, context.planId)
+  const unlimitedAi = await isSuperAdminUser(c, userId)
+  const contextReadiness = aiContextReadiness(context)
+  const contextConfirmation = await aiContextConfirmation(context)
   return c.json({ ok: true, data: {
     beta: true,
+    context_readiness: contextReadiness,
+    context_confirmation: contextConfirmation,
     consent: { required: !consent.accepted, accepted: consent.accepted, terms_version: consent.termsVersion },
     profile: {
       slug: context.slug, name: context.name, category: context.category,
-      professional_title: context.professionalTitle, bio: context.bio,
+      subcategory: context.subcategory,
+      professional_title: context.professionalTitle,
+      activity_context: context.aiActivityContext,
+      bio: context.bio,
       services_section_title: context.servicesSectionTitle,
       services_section_description: context.servicesSectionDescription,
       services: context.services, portfolio: context.portfolio, contact: context.contact,
@@ -395,9 +500,10 @@ app.get('/api/v1/me/ai-profile-assistant/context', requireAssistantAuth, async (
     },
     plan: { code: context.planId, limits, upgrade_available: context.planId === 'free' },
     usage: {
+      unlimited: unlimitedAi,
       daily: Number((usage as any)?.daily_count || 0), monthly: Number((usage as any)?.monthly_count || 0),
-      remaining_today: Math.max(0, limits.ai_daily_generations - Number((usage as any)?.daily_count || 0)),
-      remaining_month: Math.max(0, limits.ai_monthly_generations - Number((usage as any)?.monthly_count || 0)),
+      remaining_today: unlimitedAi ? null : Math.max(0, limits.ai_daily_generations - Number((usage as any)?.daily_count || 0)),
+      remaining_month: unlimitedAi ? null : Math.max(0, limits.ai_monthly_generations - Number((usage as any)?.monthly_count || 0)),
       input_tokens: Number((usage as any)?.input_tokens || 0), output_tokens: Number((usage as any)?.output_tokens || 0), estimated_cost_usd: Number((usage as any)?.estimated_cost_usd || 0),
     },
   } })
@@ -416,6 +522,142 @@ app.post('/api/v1/me/ai-profile-assistant/terms/accept', requireAssistantAuth, a
   return c.json({ ok: true, data: { terms_version: termsVersion, accepted: true } })
 })
 
+app.post('/api/v1/me/ai-profile-assistant/context/update', requireAssistantAuth, async (c: any) => {
+  const userId = c.get('userId') as string
+  const context = await ownerContext(c, userId)
+  if (!context) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  let consent
+  try {
+    consent = await termsAccepted(c, userId)
+  } catch {
+    return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503)
+  }
+
+  if (!consent.accepted) {
+    return c.json({
+      ok: false,
+      error: 'Debes aceptar las condiciones del Asistente IA antes de completar este contexto.',
+      code: 'consent_required',
+    }, 428)
+  }
+
+  let body: any
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ ok: false, error: 'Solicitud no válida.' }, 400)
+  }
+
+  const hasCategory = Object.prototype.hasOwnProperty.call(body || {}, 'category')
+  const hasSubcategory = Object.prototype.hasOwnProperty.call(body || {}, 'subcategory')
+  const hasProfessionalTitle = Object.prototype.hasOwnProperty.call(body || {}, 'professional_title')
+  const hasActivityContext = Object.prototype.hasOwnProperty.call(body || {}, 'activity_context')
+
+  const nextCategory = hasCategory ? text(body.category, 120) : context.category
+  const nextSubcategory = hasSubcategory ? text(body.subcategory, 120) : context.subcategory
+  const nextProfessionalTitle = hasProfessionalTitle
+    ? text(body.professional_title, 80)
+    : context.professionalTitle
+  const nextActivityContext = hasActivityContext
+    ? text(body.activity_context, 500)
+    : context.aiActivityContext
+
+  const nextTemplateData: Record<string, unknown> = {
+    ...context.templateData,
+    role: nextProfessionalTitle,
+    ai_activity_context: nextActivityContext,
+  }
+
+  delete nextTemplateData.ai_context_confirmed_hash
+  delete nextTemplateData.ai_context_confirmed_at
+
+  await c.env.DB.prepare(
+    `UPDATE profiles
+        SET category = ?,
+            subcategory = ?,
+            template_data = ?,
+            updated_at = datetime('now')
+      WHERE id = ? AND user_id = ?`,
+  ).bind(
+    nextCategory,
+    nextSubcategory,
+    JSON.stringify(nextTemplateData),
+    context.profileId,
+    userId,
+  ).run()
+
+  const updatedContext = await ownerContext(c, userId)
+  if (!updatedContext) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  return c.json({
+    ok: true,
+    data: {
+      context_readiness: aiContextReadiness(updatedContext),
+      context_confirmation: await aiContextConfirmation(updatedContext),
+    },
+  })
+})
+
+app.post('/api/v1/me/ai-profile-assistant/context/confirm', requireAssistantAuth, async (c: any) => {
+  const userId = c.get('userId') as string
+  const context = await ownerContext(c, userId)
+  if (!context) return c.json({ ok: false, error: 'Perfil no encontrado' }, 404)
+
+  let consent
+  try {
+    consent = await termsAccepted(c, userId)
+  } catch {
+    return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503)
+  }
+
+  if (!consent.accepted) {
+    return c.json({
+      ok: false,
+      error: 'Debes aceptar las condiciones del Asistente IA antes de confirmar tu contexto.',
+      code: 'consent_required',
+    }, 428)
+  }
+
+  const readiness = aiContextReadiness(context)
+
+  if (!readiness.ready) {
+    return c.json({
+      ok: false,
+      error: 'Completa primero los datos básicos de tu actividad.',
+      code: 'ai_context_incomplete',
+      context_readiness: readiness,
+    }, 422)
+  }
+
+  const contextHash = await aiContextHash(context)
+  const confirmedAt = new Date().toISOString()
+  const nextTemplateData = {
+    ...context.templateData,
+    ai_context_confirmed_hash: contextHash,
+    ai_context_confirmed_at: confirmedAt,
+  }
+
+  await c.env.DB.prepare(
+    `UPDATE profiles
+        SET template_data = ?, updated_at = datetime('now')
+      WHERE id = ? AND user_id = ?`,
+  ).bind(
+    JSON.stringify(nextTemplateData),
+    context.profileId,
+    userId,
+  ).run()
+
+  return c.json({
+    ok: true,
+    data: {
+      confirmed: true,
+      required: false,
+      confirmed_at: confirmedAt,
+    },
+  })
+})
+
 app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async (c: any) => {
   const userId = c.get('userId') as string
   const context = await ownerContext(c, userId)
@@ -423,6 +665,27 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
   let consent
   try { consent = await termsAccepted(c, userId) } catch { return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503) }
   if (!consent.accepted) return c.json({ ok: false, error: 'Para utilizar el Asistente IA de Kawvo debes aceptar sus condiciones de uso.', code: 'consent_required' }, 428)
+
+  const contextReadiness = aiContextReadiness(context)
+  if (!contextReadiness.ready) {
+    return c.json({
+      ok: false,
+      error: 'Antes de usar la IA necesitamos conocer un poco mejor tu actividad.',
+      code: 'ai_context_incomplete',
+      context_readiness: contextReadiness,
+    }, 422)
+  }
+
+  const contextConfirmation = await aiContextConfirmation(context)
+  if (!contextConfirmation.confirmed) {
+    return c.json({
+      ok: false,
+      error: 'Confirma que la información que Kawvo conoce de ti está correcta antes de continuar.',
+      code: 'ai_context_confirmation_required',
+      context_confirmation: contextConfirmation,
+    }, 428)
+  }
+
   if (!c.env.OPENAI_API_KEY) {
     await insertUsage(c, { userId, profileId: context.profileId, operation: 'generate', status: 'blocked', errorCode: 'missing_secret' })
     return c.json({ ok: false, error: 'La ayuda con IA todavía no está configurada.' }, 503)
@@ -450,12 +713,16 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
   if (totalLength < 8 && !hasExistingContent) return c.json({ ok: false, error: 'Cuéntanos un poco más para preparar una propuesta útil.' }, 400)
   if (totalLength > MAX_TOTAL_INPUT_LENGTH) return c.json({ ok: false, error: 'La información es demasiado extensa. Resume un poco tus respuestas.' }, 413)
 
-  let limit: any
-  try { limit = await generationLimit(c, userId, limits) } catch { return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503) }
-  if (!limit.allowed) {
-    await insertUsage(c, { userId, profileId: context.profileId, operation: 'generate', status: 'blocked', errorCode: limit.reason })
-    c.header('Retry-After', String(limit.retryAfter || 60))
-    return c.json({ ok: false, error: limit.reason === 'cooldown' ? 'Espera unos segundos antes de generar otra propuesta.' : 'Alcanzaste el límite disponible del Asistente IA por ahora.', code: limit.reason, retry_after_seconds: limit.retryAfter }, 429)
+  const unlimitedAi = await isSuperAdminUser(c, userId)
+
+  if (!unlimitedAi) {
+    let limit: any
+    try { limit = await generationLimit(c, userId, limits) } catch { return c.json({ ok: false, error: 'La función de IA requiere terminar su configuración de datos.' }, 503) }
+    if (!limit.allowed) {
+      await insertUsage(c, { userId, profileId: context.profileId, operation: 'generate', status: 'blocked', errorCode: limit.reason })
+      c.header('Retry-After', String(limit.retryAfter || 60))
+      return c.json({ ok: false, error: limit.reason === 'cooldown' ? 'Espera unos segundos antes de generar otra propuesta.' : 'Alcanzaste el límite disponible del Asistente IA por ahora.', code: limit.reason, retry_after_seconds: limit.retryAfter }, 429)
+    }
   }
 
   const model = text(c.env.OPENAI_MODEL || DEFAULT_MODEL, 80) || DEFAULT_MODEL
@@ -525,7 +792,8 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
 
   const effectiveIdentity = applyIdentity && (editingScope === 'full_profile' || !context.professionalTitle)
   const effectiveBio = applyBio && (editingScope === 'full_profile' || !context.bio)
-  const effectiveServices = applyServices && (editingScope === 'full_profile' || context.services.length === 0)
+  const effectiveServices = applyServices && editingScope === 'full_profile' && context.services.length > 0
+  const effectivePortfolio = applyPortfolio && editingScope === 'full_profile' && context.portfolio.length > 0
 
   const nextTemplateData = { ...context.templateData }
   if (effectiveIdentity) { nextTemplateData.role = proposal.professional_title; nextTemplateData.free_identity_confirmed = true }
@@ -538,23 +806,24 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
     statements.push(c.env.DB.prepare(`UPDATE profiles SET bio = CASE WHEN ? = 1 THEN ? ELSE bio END, template_data = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?`).bind(effectiveBio?1:0,proposal.bio,JSON.stringify(nextTemplateData),context.profileId,userId))
   }
   if (effectiveServices) {
-    for (let index=0; index<proposal.services.length && index<limits.max_services; index+=1) {
-      const service = proposal.services[index]
-      const existing = context.services[index]
-      if (existing) {
-        statements.push(c.env.DB.prepare(`UPDATE profile_products SET title = ?, description = ? WHERE id = ? AND profile_id = ?`).bind(service.title,service.description,existing.id,context.profileId))
-      } else {
-        statements.push(c.env.DB.prepare(`INSERT INTO profile_products (id,profile_id,title,description,price,image_url,whatsapp_text,is_featured,sort_order,created_at) VALUES (?,?,?,?,'','','',0,?,datetime('now'))`).bind(crypto.randomUUID(),context.profileId,service.title,service.description,index))
+    const servicesById = new Map(context.services.map((item: ExistingService) => [item.id, item]))
+    for (const service of proposal.services.slice(0, limits.max_services)) {
+      const existing = servicesById.get(service.id)
+      if (!existing) continue
+      const nextTitle = existing.title ? (service.title || existing.title) : existing.title
+      const nextDescription = existing.description ? (service.description || existing.description) : existing.description
+      if (nextTitle !== existing.title || nextDescription !== existing.description) {
+        statements.push(c.env.DB.prepare(`UPDATE profile_products SET title = ?, description = ? WHERE id = ? AND profile_id = ?`).bind(nextTitle,nextDescription,existing.id,context.profileId))
       }
     }
   }
-  if (applyPortfolio) {
+  if (effectivePortfolio) {
     const portfolioById = new Map(context.portfolio.map((item: ExistingPortfolio) => [item.id, item]))
     for (const item of proposal.portfolio.slice(0, limits.max_portfolio)) {
       const existing = portfolioById.get(item.id)
       if (!existing) continue
-      const nextTitle = editingScope === 'full_profile' || !existing.title ? item.title : existing.title
-      const nextDescription = editingScope === 'full_profile' || !existing.description ? item.description : existing.description
+      const nextTitle = existing.title ? (item.title || existing.title) : existing.title
+      const nextDescription = existing.description ? (item.description || existing.description) : existing.description
       if (nextTitle !== existing.title || nextDescription !== existing.description) {
         statements.push(c.env.DB.prepare(`UPDATE profile_gallery SET title = ?, description = ? WHERE id = ? AND profile_id = ?`).bind(nextTitle,nextDescription,existing.id,context.profileId))
       }
@@ -565,5 +834,5 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
     return c.json({ ok:false,error:'No pudimos aplicar los cambios. Tu perfil anterior se mantiene.' },500)
   }
   await insertUsage(c,{ userId,profileId:context.profileId,operation:'apply',status:'success' })
-  return c.json({ ok:true,data:{ applied:{ identity:effectiveIdentity,bio:effectiveBio,services_section:applyServicesSection,services:effectiveServices,portfolio:applyPortfolio }, editing_scope:editingScope, published:false, services_preserved:effectiveServices && context.services.length>0, note:'Aplicar modifica únicamente los campos seleccionados. No publica, no cambia plantilla, colores, orden de botones, orden de secciones ni canales.' } })
+  return c.json({ ok:true,data:{ applied:{ identity:effectiveIdentity,bio:effectiveBio,services_section:applyServicesSection,services:effectiveServices,portfolio:effectivePortfolio }, editing_scope:editingScope, published:false, services_preserved:effectiveServices && context.services.length>0, note:'Aplicar modifica únicamente los campos seleccionados. No publica, no cambia plantilla, colores, orden de botones, orden de secciones ni canales.' } })
 })

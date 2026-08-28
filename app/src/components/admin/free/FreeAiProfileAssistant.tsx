@@ -12,7 +12,7 @@ type Proposal = {
   bio: string
   services_section_title: string
   services_section_description: string
-  services: Array<{ title: string; description: string }>
+  services: Array<{ id: string; title: string; description: string }>
   portfolio: PortfolioItem[]
   cta: { label: string; goal: string }
   image_suggestions: ImageSuggestion[]
@@ -21,11 +21,32 @@ type Limits = { max_services: number; max_portfolio: number; ai_daily_generation
 type AssistantContext = {
   beta: boolean
   consent: { required: boolean; accepted: boolean; terms_version: string }
+  context_confirmation: {
+    confirmed: boolean
+    required: boolean
+    confirmed_at: string | null
+  }
+  context_readiness: {
+    ready: boolean
+    missing: string[]
+    summary: {
+      name: string
+      category: string
+      subcategory: string
+      professional_title: string
+      activity_context: string
+      services_count: number
+      portfolio_count: number
+      configured_channels: string[]
+    }
+  }
   profile: {
     slug: string
     name: string
     category: string
+    subcategory: string
     professional_title: string
+    activity_context: string
     bio: string
     services_section_title?: string
     services_section_description?: string
@@ -35,7 +56,7 @@ type AssistantContext = {
     configured_channels: string[]
   }
   plan: { code: string; limits: Limits; upgrade_available: boolean }
-  usage: { daily: number; monthly: number; remaining_today: number; remaining_month: number }
+  usage: { unlimited?: boolean; daily: number; monthly: number; remaining_today: number | null; remaining_month: number | null }
 }
 type Answers = {
   activity_details: string
@@ -130,30 +151,106 @@ export default function FreeAiProfileAssistant() {
   const [accepting,setAccepting] = useState(false)
   const [termsChecked,setTermsChecked] = useState(false)
   const [showFullTerms,setShowFullTerms] = useState(false)
+  const [confirmingContext,setConfirmingContext] = useState(false)
+  const [showContextEditor,setShowContextEditor] = useState(false)
+  const [contextEditorFullReview,setContextEditorFullReview] = useState(false)
+  const [savingContext,setSavingContext] = useState(false)
+  const [contextDraft,setContextDraft] = useState({
+    category: '',
+    subcategory: '',
+    professional_title: '',
+    activity_context: '',
+  })
   const [selection,setSelection] = useState<ApplySelection>({ identity:true,bio:true,services_section:true,services:true,portfolio:true })
   const [editingScope,setEditingScope] = useState<EditingScope>('missing_only')
   const [cooldownSeconds,setCooldownSeconds] = useState(0)
   const [replaceServices,setReplaceServices] = useState(false)
   const [error,setError] = useState('')
   const [success,setSuccess] = useState('')
-  const [portfolioTitles,setPortfolioTitles] = useState<Record<string,string>>({})
   const [remainingProfileItems,setRemainingProfileItems] = useState<string[]>([])
   const instructionRef = useRef('')
   const [instructionHasText,setInstructionHasText] = useState(false)
   const [instructionEnough,setInstructionEnough] = useState(false)
+
+  async function confirmCurrentContext() {
+    if (!context || confirmingContext) return
+
+    setConfirmingContext(true)
+    setError('')
+
+    try {
+      const json: any = await apiPost('/me/ai-profile-assistant/context/confirm', {})
+      if (!json?.ok) {
+        setError(json?.error || 'No pudimos confirmar estos datos.')
+        return
+      }
+
+      await loadContext()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {
+      setError('No pudimos confirmar estos datos. Intenta nuevamente.')
+    } finally {
+      setConfirmingContext(false)
+    }
+  }
+
+  function openContextEditor(forceFullReview = false) {
+    if (!context) return
+
+    setContextDraft({
+      category: context.profile.category || '',
+      subcategory: context.profile.subcategory || '',
+      professional_title: context.profile.professional_title || '',
+      activity_context: context.profile.activity_context || '',
+    })
+    setContextEditorFullReview(forceFullReview)
+    setShowContextEditor(true)
+    setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  async function saveContextEditor() {
+    if (!context || savingContext) return
+
+    const required = {
+      category: contextDraft.category.trim(),
+      subcategory: contextDraft.subcategory.trim(),
+      professional_title: contextDraft.professional_title.trim(),
+      activity_context: contextDraft.activity_context.trim(),
+    }
+
+    if (!required.category || !required.subcategory || !required.professional_title || !required.activity_context) {
+      setError('Completa los datos pendientes antes de continuar.')
+      return
+    }
+
+    setSavingContext(true)
+    setError('')
+
+    try {
+      const json: any = await apiPost('/me/ai-profile-assistant/context/update', required)
+
+      if (!json?.ok) {
+        setError(json?.error || 'No pudimos guardar estos datos.')
+        return
+      }
+
+      await loadContext()
+      setShowContextEditor(false)
+      setContextEditorFullReview(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {
+      setError('No pudimos guardar estos datos. Intenta nuevamente.')
+    } finally {
+      setSavingContext(false)
+    }
+  }
 
   async function loadContext() {
     const json:any = await apiGet('/me/ai-profile-assistant/context')
     if (!json?.ok) throw new Error(json?.error || 'No pudimos cargar la ayuda con IA.')
     const data = json.data as AssistantContext
     setContext(data)
-    setPortfolioTitles((current)=>{
-      const next: Record<string,string> = {}
-      for (const item of data.profile.portfolio || []) {
-        next[item.id] = current[item.id] || item.title || ''
-      }
-      return next
-    })
   }
   useEffect(()=>{ loadContext().catch((e)=>setError(e?.message || 'No pudimos cargar la ayuda con IA.')).finally(()=>setLoading(false)) },[])
 
@@ -164,22 +261,12 @@ export default function FreeAiProfileAssistant() {
   const hasExistingContent = Boolean(context?.profile.professional_title || context?.profile.bio || context?.profile.services?.length || context?.profile.portfolio?.some((x)=>x.title || x.description))
   const missingTitle = Boolean(context && !context.profile.professional_title.trim())
   const missingBio = Boolean(context && !context.profile.bio.trim())
-  const missingServices = Boolean(context && context.profile.services.length === 0)
   const missingServicesSectionTitle = Boolean(context && !(context.profile.services_section_title || '').trim())
   const missingServicesSectionDescription = Boolean(context && !(context.profile.services_section_description || '').trim())
   const missingServicesSectionCopy = missingServicesSectionTitle || missingServicesSectionDescription
-  const incompletePortfolio = context?.profile.portfolio?.filter((item)=>!item.title.trim() || !item.description.trim()) || []
-  const missingPortfolioTitleItems = context?.profile.portfolio?.filter((item)=>!item.title.trim()) || []
-  const missingPortfolioCopy = incompletePortfolio.length > 0
-  const hasMissingEditorialContent = missingTitle || missingBio || missingServices || missingServicesSectionCopy || missingPortfolioCopy
+  const hasMissingEditorialContent = missingTitle || missingBio || missingServicesSectionCopy
   const channels = context?.profile.configured_channels || []
   const totalAnswerLength = Object.values(answers).reduce((s,v)=>s+v.trim().length,0)
-  const missingOnlyAnswerLength = [
-    missingTitle ? answers.activity_details : '',
-    missingBio ? answers.clients : '',
-    (missingServices || missingServicesSectionCopy) ? answers.services_details : '',
-    missingPortfolioCopy ? answers.extra_context : '',
-  ].reduce((sum,value)=>sum+value.trim().length,0)
   const enoughInformation = hasExistingContent || totalAnswerLength >= 4 || instructionEnough
   const atServiceLimit = Boolean(context && context.profile.services.length >= context.plan.limits.max_services)
 
@@ -210,8 +297,8 @@ export default function FreeAiProfileAssistant() {
         identity:!context.profile.professional_title,
         bio:!context.profile.bio,
         services_section:!(context.profile.services_section_title && context.profile.services_section_description),
-        services:context.profile.services.length===0,
-        portfolio:context.profile.portfolio.some((item)=>!item.title || !item.description),
+        services:false,
+        portfolio:false,
       })
     }
   },[editingScope,context])
@@ -234,6 +321,14 @@ export default function FreeAiProfileAssistant() {
 
   async function generate(nextRound = round) {
     if (generating || !context) return
+    if (!context.context_readiness?.ready) {
+      setError('Completa primero los datos básicos para que Kawvo pueda entender bien tu actividad.')
+      return
+    }
+    if (!context.context_confirmation?.confirmed) {
+      setError('Confirma primero que la información que Kawvo usará como contexto está correcta.')
+      return
+    }
     setGenerating(true); setError(''); setSuccess(''); setRemainingProfileItems([])
     try {
       const currentAnswers: Answers = {
@@ -242,16 +337,7 @@ export default function FreeAiProfileAssistant() {
       }
       const answeredTurns: ConversationTurn[] = followUp.flatMap((item)=>item.answer.trim() ? [{ role:'assistant' as const, content:item.question }, { role:'user' as const, content:item.answer.trim() }] : [])
       const conversationPayload = [...conversation, ...answeredTurns]
-      const confirmedPortfolioTitles = missingPortfolioTitleItems
-        .map((item,index)=>({ index:context.profile.portfolio.findIndex((x)=>x.id===item.id)+1, id:item.id, title:(portfolioTitles[item.id] || '').trim().slice(0,80) }))
-        .filter((item)=>item.title)
-      const portfolioContext = confirmedPortfolioTitles.length
-        ? `Títulos de portafolio confirmados por el usuario: ${confirmedPortfolioTitles.map((item)=>`Foto ${item.index}: ${item.title}`).join(' | ')}`
-        : ''
-      const answersForModel = {
-        ...currentAnswers,
-        extra_context: [currentAnswers.extra_context.trim(), portfolioContext].filter(Boolean).join(' ').slice(0,700),
-      }
+      const answersForModel = currentAnswers
       const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers:answersForModel, follow_up_answers:followUp, conversation:conversationPayload, round:nextRound, editing_scope:editingScope })
       if (!json?.ok) {
         if (json?.code === 'cooldown') { setCooldownSeconds(Number(json.retry_after_seconds || 20)); setError(''); return }
@@ -355,6 +441,297 @@ export default function FreeAiProfileAssistant() {
     </section>
   </main>
 
+  if (context && showContextEditor) {
+    const missing = context.context_readiness?.missing || []
+
+    const shouldShow = (key: string) =>
+      contextEditorFullReview || missing.includes(key)
+
+    return <main className="min-h-screen bg-[#f7f9fc] px-4 py-6 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-[620px]">
+        <FreeBackButton onClick={()=>{setShowContextEditor(false);setError('')}} />
+
+        <div className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-sm sm:p-7">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-700">
+            Contexto para Kawvo
+          </p>
+
+          <h1 className="mt-2 text-[26px] font-black leading-tight tracking-[-0.03em]">
+            {contextEditorFullReview ? 'Revisa los datos que Kawvo utilizará' : 'Completa lo que falta'}
+          </h1>
+
+          <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
+            Kawvo reutiliza la información que ya existe en tu perfil y solo necesita completar estos datos para entender mejor tu actividad.
+          </p>
+
+          <div className="mt-5 space-y-5">
+            {shouldShow('category') && <label className="block">
+              <span className="text-sm font-black text-slate-800">Categoría de tu actividad</span>
+              <input
+                value={contextDraft.category}
+                onChange={(e)=>setContextDraft((current)=>({...current,category:e.target.value.slice(0,120)}))}
+                maxLength={120}
+                placeholder="Ej. Marketing y comunicación digital"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+            </label>}
+
+            {shouldShow('subcategory') && <label className="block">
+              <span className="text-sm font-black text-slate-800">Especialidad o subcategoría</span>
+              <input
+                value={contextDraft.subcategory}
+                onChange={(e)=>setContextDraft((current)=>({...current,subcategory:e.target.value.slice(0,120)}))}
+                maxLength={120}
+                placeholder="Ej. Publicidad digital"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+            </label>}
+
+            {shouldShow('professional_title') && <label className="block">
+              <span className="text-sm font-black text-slate-800">A qué te dedicas</span>
+              <input
+                value={contextDraft.professional_title}
+                onChange={(e)=>setContextDraft((current)=>({...current,professional_title:e.target.value.slice(0,80)}))}
+                maxLength={80}
+                placeholder="Ej. Asesor inmobiliario"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+            </label>}
+
+            {shouldShow('activity_context') && <label className="block">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-black text-slate-800">Contexto sobre tu actividad</span>
+                <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-cyan-700">
+                  Solo para Kawvo · no se publica
+                </span>
+              </div>
+
+              <p className="mt-2 text-sm font-medium leading-5 text-slate-500">
+                Explícalo como tú lo dirías: qué haces, qué ofreces, a quién ayudas o cualquier detalle que Kawvo deba conocer.
+              </p>
+
+              <textarea
+                value={contextDraft.activity_context}
+                onChange={(e)=>setContextDraft((current)=>({...current,activity_context:e.target.value.slice(0,500)}))}
+                maxLength={500}
+                rows={6}
+                placeholder="Ej. Creo perfiles digitales, trabajo con NFC y códigos QR, y ayudo a negocios y profesionales a compartir mejor su información..."
+                className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base leading-6 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+
+              <span className="mt-1 block text-right text-xs font-bold text-slate-400">
+                {contextDraft.activity_context.length}/500
+              </span>
+            </label>}
+          </div>
+
+          {error && <p className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
+
+          <button
+            type="button"
+            onClick={()=>void saveContextEditor()}
+            disabled={savingContext}
+            className="mt-6 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40"
+          >
+            {savingContext ? 'Guardando…' : 'Guardar y continuar'}
+          </button>
+
+          <button
+            type="button"
+            onClick={()=>{setShowContextEditor(false);setError('')}}
+            className="mt-2 w-full rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-700"
+          >
+            Volver
+          </button>
+        </div>
+      </section>
+    </main>
+  }
+
+  if (context && !context.context_readiness?.ready) {
+    const missing = context.context_readiness?.missing || []
+    const items = [
+      { key: 'category', label: 'Categoría de tu actividad', value: context.profile.category },
+      { key: 'subcategory', label: 'Especialidad o subcategoría', value: context.profile.subcategory },
+      { key: 'professional_title', label: 'A qué te dedicas', value: context.profile.professional_title },
+      { key: 'activity_context', label: 'Contexto sobre tu actividad para Kawvo', value: context.profile.activity_context },
+    ]
+
+    return <main className="min-h-screen bg-[#f7f9fc] px-4 py-6 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-[620px]">
+        <FreeBackButton onClick={()=>navigate('/admin/free')} />
+
+        <div className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-2xl">✦</div>
+
+          <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-cyan-700">
+            Antes de usar la IA
+          </p>
+
+          <h1 className="mt-2 text-[26px] font-black leading-tight tracking-[-0.03em]">
+            Revisemos la información de tu perfil
+          </h1>
+
+          <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
+            Mira qué datos ya completaste y cuáles todavía faltan.
+          </p>
+
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.1em] text-emerald-700">
+              Lo que ya completaste
+            </p>
+
+            <div className="space-y-2">
+              {items.filter((item)=>!missing.includes(item.key)).map((item)=>
+                <div key={item.key} className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white">
+                    ✓
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-emerald-900">{item.label}</p>
+                    {item.value && <p className="mt-0.5 truncate text-xs font-medium text-slate-500">{item.value}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+              Lo que te falta
+            </p>
+
+            <div className="space-y-2">
+              {items.filter((item)=>missing.includes(item.key)).map((item)=>
+                <div key={item.key} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-slate-400 ring-1 ring-slate-200">
+                    ○
+                  </span>
+                  <p className="text-sm font-black text-slate-800">{item.label}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <p className="mt-5 text-sm font-semibold leading-6 text-slate-600">
+            Completa estos datos para que Kawvo pueda darte sugerencias más precisas.
+          </p>
+
+          <button
+            type="button"
+            onClick={()=>openContextEditor(false)}
+            className="mt-6 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white"
+          >
+            Completar datos faltantes
+          </button>
+
+          <button
+            type="button"
+            onClick={()=>navigate('/admin/free')}
+            className="mt-2 w-full rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-700"
+          >
+            Ahora no
+          </button>
+
+          <p className="mt-4 text-center text-[11px] font-semibold leading-5 text-slate-400">
+            Estos datos ayudan a Kawvo a entender tu actividad antes de preparar sugerencias.
+          </p>
+        </div>
+      </section>
+    </main>
+  }
+
+  if (context && context.context_readiness?.ready && !context.context_confirmation?.confirmed) {
+    const summary = context.context_readiness.summary
+
+    return <main className="min-h-screen bg-[#f7f9fc] px-4 py-6 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-[620px]">
+        <FreeBackButton onClick={()=>navigate('/admin/free')} />
+
+        <div className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-sm sm:p-7">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-700">
+            Contexto para tu asistente
+          </p>
+
+          <h1 className="mt-2 text-[26px] font-black leading-tight tracking-[-0.03em]">
+            Esto es lo que Kawvo sabe de ti
+          </h1>
+
+          <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
+            Antes de preparar sugerencias, revisa que esta información represente correctamente lo que haces.
+          </p>
+
+          <div className="mt-5 space-y-3">
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Nombre o negocio</p>
+              <p className="mt-1 font-black text-slate-900">{summary.name || context.profile.name}</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Categoría</p>
+                <p className="mt-1 text-sm font-black text-slate-800">{summary.category}</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Especialidad</p>
+                <p className="mt-1 text-sm font-black text-slate-800">{summary.subcategory}</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">A qué te dedicas</p>
+              <p className="mt-1 text-sm font-black text-slate-800">{summary.professional_title}</p>
+            </div>
+
+            <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 px-4 py-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-cyan-700">Contexto para Kawvo</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-700">{summary.activity_context}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase text-slate-400">Servicios</p>
+                <p className="mt-1 text-lg font-black text-slate-800">{summary.services_count}</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase text-slate-400">Portafolio</p>
+                <p className="mt-1 text-lg font-black text-slate-800">{summary.portfolio_count}</p>
+              </div>
+            </div>
+
+            {summary.configured_channels?.length > 0 && <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Canales disponibles</p>
+              <p className="mt-1 text-sm font-bold text-slate-700">{summary.configured_channels.map(channelLabel).join(' · ')}</p>
+            </div>}
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-cyan-100 bg-white px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
+            Las sugerencias de Kawvo se basarán en esta información y en lo que respondas durante la conversación.
+          </div>
+
+          <button
+            type="button"
+            onClick={()=>void confirmCurrentContext()}
+            disabled={confirmingContext}
+            className="mt-6 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40"
+          >
+            {confirmingContext ? 'Confirmando…' : 'Sí, continuar con IA'}
+          </button>
+
+          <button
+            type="button"
+            onClick={()=>openContextEditor(true)}
+            className="mt-2 w-full rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-700"
+          >
+            Modificar mis datos
+          </button>
+        </div>
+      </section>
+    </main>
+  }
+
   return <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
     <section className="mx-auto w-full max-w-[760px] px-4 py-5 sm:px-5 sm:py-7">
       <FreeBackButton onClick={()=>navigate('/admin/free')} />
@@ -375,8 +752,12 @@ export default function FreeAiProfileAssistant() {
           <div className="rounded-xl bg-slate-50 px-3 py-2.5"><b>Servicios:</b> {context.profile.services.length}/{context.plan.limits.max_services}</div>
           {channels.length>0 && <div className="rounded-xl bg-slate-50 px-3 py-2.5"><b>Canales:</b> {channels.map(channelLabel).join(', ')}</div>}
         </div>
-        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">Disponibilidad IA hoy: {context.usage.remaining_today} · este mes: {context.usage.remaining_month}</p>
-        {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a elegir y redactar los más importantes. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Básico</a>}</div>}
+        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
+          {context.usage.unlimited
+            ? 'IA ilimitada · Super Admin'
+            : `Disponibilidad IA hoy: ${context.usage.remaining_today} · este mes: ${context.usage.remaining_month}`}
+        </p>
+        {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a mejorar el texto de los servicios que ya creaste. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Básico</a>}</div>}
       </section>}
 
       {hasExistingContent && !proposal && followUp.length===0 && context && <section className="mt-5 rounded-[24px] border border-cyan-200 bg-white p-5 shadow-sm">
@@ -396,22 +777,6 @@ export default function FreeAiProfileAssistant() {
         </div>
 
         {editingScope==='missing_only' && !hasMissingEditorialContent ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">No encontré campos de texto pendientes.</p><p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Si quieres que Kawvo proponga mejoras sobre lo que ya tienes, selecciona “Revisar y mejorar mi contenido”.</p></div> : <>
-          {missingPortfolioTitleItems.length>0 && <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-violet-700">Ayuda a Kawvo a identificar tus fotos</p>
-            <h3 className="mt-1 text-base font-black text-slate-900">Ponle un título breve a cada trabajo</h3>
-            <p className="mt-1 text-sm font-medium leading-6 text-slate-600">Kawvo no adivina lo que aparece en tus imágenes. Tú indicas qué muestra cada foto y la IA puede pulir el título y redactar una descripción corta a partir de ese dato y del contexto de tu perfil.</p>
-            <div className="mt-4 space-y-3">
-              {missingPortfolioTitleItems.map((item)=>{
-                const position=context.profile.portfolio.findIndex((x)=>x.id===item.id)+1
-                const value=portfolioTitles[item.id] || ''
-                return <label key={item.id} className="block rounded-xl bg-white p-3">
-                  <span className="text-sm font-black text-slate-800">Foto {position} · ¿Qué trabajo muestra?</span>
-                  <input value={value} onChange={(e)=>setPortfolioTitles((current)=>({...current,[item.id]:e.target.value.slice(0,80)}))} maxLength={80} placeholder="Ej. Identidad corporativa" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 font-semibold outline-none focus:border-violet-400" />
-                  <span className="mt-1 block text-right text-[11px] font-bold text-slate-400">{value.length}/80</span>
-                </label>
-              })}
-            </div>
-          </div>}
           <StableInstructionQuestion
             key={editingScope}
             label="¿Hay algo que quieras contarle a Kawvo antes de trabajar tu perfil?"
@@ -428,14 +793,20 @@ export default function FreeAiProfileAssistant() {
           <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">Kawvo ya conoce el contenido de tu perfil. Si tiene suficiente información, preparará la propuesta directamente. Si falta un hecho importante, te preguntará solo lo mínimo necesario.</div>
         </>}
 
-        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0 || missingPortfolioTitleItems.some((item)=>!(portfolioTitles[item.id] || '').trim())} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:instructionHasText?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
+        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:instructionHasText?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
         <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">La IA usa el perfil completo como contexto, interpreta tus respuestas y solo pregunta cuando realmente necesita confirmar un hecho.</p>
       </section>}
 
       {!proposal && followUp.length>0 && context && <section className="mt-5 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm sm:p-6">
         <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Kawvo necesita confirmar algo</p><h2 className="mt-2 text-xl font-black">Una aclaración antes de preparar tu propuesta</h2><p className="mt-2 text-sm font-medium leading-6 text-slate-600">La IA ya revisó tu perfil. Responde solo este dato y continuará con todo el contexto anterior.</p>
         <div className="mt-5 space-y-5">{followUp.map((item,index)=>{
-          const isChannelQuestion = /contact/i.test(item.question) && channels.length>1
+          const isChannelQuestion =
+            channels.length > 1 &&
+            (
+              /\b(canal|medio)\b.{0,50}\b(contacto|contactarte|contacten|comunicación|comunicacion)\b/i.test(item.question) ||
+              /\b(prefieres|preferido|preferida|preferencia)\b.{0,50}\b(contacto|contactarte|contacten|comunicación|comunicacion|whatsapp|correo|llamada)\b/i.test(item.question) ||
+              /\b(cómo|como)\b.{0,25}\b(prefieres)\b.{0,25}\b(contactarte|que te contacten|comunicarse)\b/i.test(item.question)
+            )
           return <div key={item.question}>{isChannelQuestion ? <><p className="text-[15px] font-black text-slate-800">{item.question}</p><div className="mt-3 flex flex-wrap gap-2">{channels.map((ch)=><button key={ch} type="button" onClick={()=>{
             setAnswers((a)=>({...a,preferred_contact:ch}))
             setFollowUp((items)=>items.map((x,i)=>i===index?{...x,answer:ch}:x))
@@ -459,7 +830,7 @@ export default function FreeAiProfileAssistant() {
         </div>
         {proposal.portfolio?.length>0 && <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Mis trabajos</p><h2 className="mt-1 text-xl font-black">Textos de tus fotos</h2></div><label className="text-xs font-black"><input type="checkbox" checked={selection.portfolio} onChange={(e)=>setSelection((s)=>({...s,portfolio:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div>
-          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Máximo 5 trabajos. Tú identificas cada foto; Kawvo puede pulir el título y redacta la descripción a partir de ese título y del contexto. Título máximo 80 caracteres y descripción máxima 90. Las imágenes no se reemplazan ni se reordenan.</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Máximo 5 trabajos. Kawvo solo puede mejorar títulos o descripciones que tú ya hayas escrito. Los campos vacíos permanecen vacíos y nunca intenta adivinar qué aparece en una foto. Las imágenes no se reemplazan ni se reordenan.</p>
           <div className="mt-4 space-y-3">{proposal.portfolio.map((item,index)=>{ const current=context.profile.portfolio.find((x)=>x.id===item.id); const lockTitle=editingScope==='missing_only'&&Boolean(current?.title); const lockDescription=editingScope==='missing_only'&&Boolean(current?.description); return <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Trabajo {index+1}</p><input value={lockTitle?(current?.title||''):item.title} disabled={lockTitle} onChange={(e)=>updatePortfolio(index,'title',e.target.value.slice(0,80))} maxLength={80} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-black disabled:bg-slate-100 disabled:text-slate-500"/>{lockTitle&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}<textarea value={lockDescription?(current?.description||''):item.description} disabled={lockDescription} onChange={(e)=>updatePortfolio(index,'description',e.target.value.slice(0,90))} maxLength={90} rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 disabled:bg-slate-100 disabled:text-slate-500"/>{lockDescription&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}</div>})}</div>
         </div>}
         <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase text-slate-400">Siguiente acción sugerida</p><p className="mt-2 text-lg font-black">“{proposal.cta.label}”</p><p className="mt-1 text-sm font-medium leading-6 text-slate-500">Es una recomendación de copy. No cambia ni reordena tus Botones rápidos.</p></div>
