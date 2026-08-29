@@ -145,6 +145,7 @@ export default function FreeLocation() {
         <div className="mt-5">
           <FreeUpgradeCard compact />
         </div>
+        <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
     </main>
   )

@@ -54,7 +54,7 @@ const freeItems: FreeItem[] = [
   {
     title: 'Completa tu presentación',
     text: 'Foto, portada, nombre y la información principal de tu perfil',
-    to: '/admin/free/onboarding/identity',
+    to: '/admin/free/onboarding/identity?from=panel',
     icon: '◉',
     help: 'Configura cómo te presentas: foto de perfil, portada cuando aplique, nombre o marca y a qué te dedicas.',
     readinessKey: 'identity',
@@ -68,8 +68,8 @@ const freeItems: FreeItem[] = [
     readinessKey: 'contact',
   },
   {
-    title: 'Selecciona tus botones de acceso',
-    text: 'Hasta 3 accesos directos para tu perfil',
+    title: 'Botones de contacto directo',
+    text: 'Hasta 3 botones para que te contacten o encuentren con un toque',
     to: '/admin/free/quick-actions',
     icon: '◉',
     help: 'Son los botones que aparecen primero en tu perfil. Elige las acciones más importantes para que una persona pueda contactarte o encontrarte con un solo toque.',
@@ -157,6 +157,25 @@ export default function FreeDashboard() {
         setLocationConfigured(Boolean(place && mapUrl))
       }
     }).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (loading) return
+    const raw = sessionStorage.getItem('kawvo_free_dashboard_scroll_y')
+    const top = Number(raw || 0)
+    if (Number.isFinite(top) && top > 0) {
+      window.requestAnimationFrame(() => window.scrollTo({ top, left: 0, behavior: 'auto' }))
+    }
+  }, [loading])
+
+  useEffect(() => {
+    const rememberScroll = () => sessionStorage.setItem('kawvo_free_dashboard_scroll_y', String(window.scrollY))
+    document.addEventListener('click', rememberScroll, true)
+    window.addEventListener('pagehide', rememberScroll)
+    return () => {
+      document.removeEventListener('click', rememberScroll, true)
+      window.removeEventListener('pagehide', rememberScroll)
+    }
   }, [])
 
   const handleLogout = async () => {

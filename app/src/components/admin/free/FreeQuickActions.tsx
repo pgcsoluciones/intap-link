@@ -71,7 +71,7 @@ export default function FreeQuickActions() {
 
   useEffect(() => {
     apiGet('/me/free/quick-actions').then((json: any) => {
-      if (!json?.ok) return setError(json?.error || 'No pudimos cargar tus accesos rápidos.')
+      if (!json?.ok) return setError(json?.error || 'No pudimos cargar tus botones de contacto.')
       const data = (json.data || {}) as QuickActionsPayload
       setSelected((data.selected || []).map((item) => item.type).slice(0, MAX_SELECTED))
       const nextValues: Partial<Record<QuickActionType, string>> = {}
@@ -116,7 +116,7 @@ export default function FreeQuickActions() {
       const normalizedValues = { ...values }
       items.forEach((item) => { normalizedValues[item.type] = displayValue(item.type, item.url) })
       setValues(normalizedValues)
-      setMessage('Accesos rápidos actualizados.')
+      setMessage('Botones de contacto actualizados.')
     } catch { setError('No se pudieron guardar tus accesos rápidos.') }
     finally { setSaving(false) }
   }
@@ -125,8 +125,8 @@ export default function FreeQuickActions() {
     <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950">
       <div className="mx-auto w-full max-w-[470px] px-5 pb-24 pt-5">
         <FreeBackButton onClick={() => navigate('/admin/free')} />
-        <div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-600">Plan Gratis</p><h1 className="mt-1 text-2xl font-black tracking-[-0.04em]">Accesos rápidos</h1></div><span className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-500 shadow-sm">{selected.length}/{MAX_SELECTED}</span></div>
-        <p className="mt-2 text-sm leading-6 text-slate-500">Selecciona hasta 3 botones para que tus visitantes puedan llamarte, encontrarte o abrir tus redes con un toque.</p>
+        <div className="flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-600">Plan Gratis</p><h1 className="mt-1 text-2xl font-black tracking-[-0.04em]">Botones de contacto directo</h1></div><span className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-500 shadow-sm">{selected.length}/{MAX_SELECTED}</span></div>
+        <p className="mt-2 text-sm leading-6 text-slate-500">Selecciona hasta 3 botones para que tus visitantes puedan contactarte, encontrarte o abrir tus redes con un toque.</p>
         <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-4"><p className="text-xs font-black text-slate-700">Cómo leer esta sección</p><p className="mt-1 text-xs leading-5 text-slate-500">El círculo azul indica un botón seleccionado. Puedes cambiar cualquiera de los tres cuando quieras.</p></div>
         {loading ? <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-5 text-sm text-slate-400">Cargando…</div> : <section className="mt-5 space-y-3">{OPTIONS.map((option) => {
           const active = selected.includes(option.type); const isLocation = option.type === 'location'; const locationConfigured = Boolean(values.location?.trim())
@@ -135,7 +135,7 @@ export default function FreeQuickActions() {
         {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{error}</p>}
         {message && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">{message}</p>}
         {(limitReached || selected.length >= MAX_SELECTED) && <FreeLimitUpgradeCard text="Ya usas los 3 accesos rápidos incluidos. Puedes sustituir cualquiera de ellos o ampliar tu perfil con un Plan Básico." />}
-        <button type="button" disabled={saving} onClick={() => void save()} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3.5 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar accesos rápidos'}</button>
+        <button type="button" disabled={saving} onClick={() => void save()} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3.5 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar botones de contacto'}</button>
         <div className="mt-5"><FreeUpgradeCard compact /></div>
         <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>

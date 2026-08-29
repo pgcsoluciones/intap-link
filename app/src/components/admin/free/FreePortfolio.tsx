@@ -267,7 +267,7 @@ export default function FreePortfolio() {
         <section className="mt-5 space-y-3">
           {loading ? <div className="rounded-3xl bg-white p-5 text-sm text-slate-400">Cargando…</div> : photos.map((photo) => (
             <article key={photo.id} className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
-              <div className="aspect-square overflow-hidden bg-slate-100"><img src={photoUrl(photo.image_key)} alt={photo.title || 'Portafolio'} loading="lazy" decoding="async" className="h-full w-full object-cover" /></div>
+              <button type="button" disabled={uploading} onClick={() => { setReplaceTargetId(photo.id); replaceInputRef.current?.click() }} className="relative block aspect-square w-full overflow-hidden bg-slate-100 disabled:opacity-50" aria-label="Cambiar imagen del portafolio"><img src={photoUrl(photo.image_key)} alt={photo.title || 'Portafolio'} loading="lazy" decoding="async" className="h-full w-full object-cover" /><span className="absolute bottom-2 right-2 rounded-full bg-slate-950/80 px-3 py-1.5 text-[10px] font-black text-white">Toca para cambiar</span></button>
               {editingId === photo.id ? (
                 <div className="p-4">
                   <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} maxLength={80} placeholder="Título de la imagen" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />

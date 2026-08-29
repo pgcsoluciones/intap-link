@@ -162,7 +162,7 @@ export default function PublicBankAccounts() {
 
   function shareBankSectionWhatsApp() {
     const url = bankSectionUrl()
-    const message = `Te comparto mis datos bancarios para transferencia: ${url}`
+    const message = `Te comparto mis datos bancarios para transferencias: ${url}`
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
   }
@@ -193,7 +193,7 @@ export default function PublicBankAccounts() {
             style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-soft-primary)', color: 'var(--ilx-primary)' }}
             aria-label="Compartir enlace de cuentas bancarias por WhatsApp"
           >
-            WhatsApp
+            Enviar por WhatsApp
           </button>
 
           <button

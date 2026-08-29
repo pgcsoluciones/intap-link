@@ -30,6 +30,7 @@ export default function FreeOnboardingIdentity() {
   const [error, setError] = useState('')
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropTarget, setCropTarget] = useState<CropTarget>('avatar')
+  const editingFromPanel = new URLSearchParams(window.location.search).get('from') === 'panel'
 
   useEffect(() => {
     apiGet('/me').then((json: any) => {
@@ -176,7 +177,7 @@ export default function FreeOnboardingIdentity() {
       }
       if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
       const result: any = await apiPut('/me/profile', body)
-      if (result.ok) navigate('/admin/free/onboarding/contact')
+      if (result.ok) navigate(editingFromPanel ? '/admin/free' : '/admin/free/onboarding/contact')
       else setError(result.error || 'No pudimos guardar tus datos.')
     } catch {
       setError('No pudimos conectar. Intenta nuevamente.')
@@ -201,16 +202,18 @@ export default function FreeOnboardingIdentity() {
       <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950 sm:px-5">
         <section className="mx-auto w-full max-w-[430px] py-1">
           <FreeBackButton onClick={() => navigate('/admin/free')} />
-          <div className="mb-8 flex gap-2" aria-label="Paso 3 de 4">
-            {[1, 2, 3, 4].map((step) => <span key={step} className={`h-1.5 flex-1 rounded-full ${step <= 3 ? 'bg-cyan-500' : 'bg-slate-200'}`} />)}
-          </div>
-          <p className="mb-2 text-sm font-extrabold uppercase tracking-[0.14em] text-cyan-700">Paso 3 de 4</p>
-          <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">Tu identidad</h1>
-          <p className="mt-3 text-base font-medium leading-7 text-slate-700">Agrega lo esencial para que te encuentren y sepan quién eres.</p>
+          {!editingFromPanel && (<>
+            <div className="mb-8 flex gap-2" aria-label="Paso 3 de 4">
+              {[1, 2, 3, 4].map((step) => <span key={step} className={`h-1.5 flex-1 rounded-full ${step <= 3 ? 'bg-cyan-500' : 'bg-slate-200'}`} />)}
+            </div>
+            <p className="mb-2 text-sm font-extrabold uppercase tracking-[0.14em] text-cyan-700">Paso 3 de 4</p>
+          </>)}
+          <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">{editingFromPanel ? 'Completa tu presentación' : 'Tu identidad'}</h1>
+          <p className="mt-3 text-base font-medium leading-7 text-slate-700">{editingFromPanel ? 'Actualiza tu foto, portada, nombre y la información principal de tu perfil.' : 'Agrega lo esencial para que te encuentren y sepan quién eres.'}</p>
 
           <form onSubmit={handleSubmit} className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
             <div className="flex items-center gap-4">
-              <div className="h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100">{avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-3xl text-slate-400">👤</div>}</div>
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading || !profileId} className="h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100 disabled:opacity-40" aria-label="Cambiar foto de perfil">{avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-3xl text-slate-400">👤</div>}</button>
               <div className="flex-1">
                 <p className="text-sm font-bold uppercase tracking-[0.08em] text-slate-700">Foto de perfil</p>
                 <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading || !profileId} className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-base font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40">{uploading && cropTarget === 'avatar' ? 'Subiendo…' : avatarUrl ? 'Cambiar foto' : 'Subir foto'}</button>
@@ -227,9 +230,10 @@ export default function FreeOnboardingIdentity() {
                   </div>
                   <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase text-cyan-700">Impacto</span>
                 </div>
-                <div className="mt-3 aspect-video overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <button type="button" onClick={() => heroFileRef.current?.click()} disabled={uploading || !profileId} className="relative mt-3 block aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 disabled:opacity-40" aria-label="Cambiar imagen de portada">
                   {(pendingHeroPreview || heroUrl) ? <img src={pendingHeroPreview || heroUrl} alt="Vista previa de portada" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm font-bold text-slate-400">Agrega una imagen de portada para completar el diseño Impacto.</div>}
-                </div>
+                  <span className="absolute bottom-2 right-2 rounded-full bg-slate-950/80 px-3 py-1.5 text-[10px] font-black text-white">Toca para cambiar</span>
+                </button>
                 <button type="button" onClick={() => heroFileRef.current?.click()} disabled={uploading || !profileId} className="mt-3 w-full rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-2.5 text-sm font-black text-cyan-700 hover:bg-cyan-100 disabled:opacity-40">{pendingHeroBlob ? 'Elegir otra imagen' : heroUrl ? 'Cambiar imagen de portada' : 'Subir imagen de portada'}</button>
                 <input ref={heroFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={chooseHero} />
 
@@ -261,7 +265,7 @@ export default function FreeOnboardingIdentity() {
             </div>
 
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700">{error}</p>}
-            <button type="submit" disabled={saving || uploading} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : 'Continuar'}</button>
+            <button type="submit" disabled={saving || uploading} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : editingFromPanel ? 'Guardar cambios' : 'Continuar'}</button>
           </form>
           <div className="mt-5"><FreeUpgradeCard compact /></div>
           <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
