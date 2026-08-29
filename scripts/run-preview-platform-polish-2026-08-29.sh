@@ -37,6 +37,7 @@ run git pull --ff-only github "$BRANCH"
 # Aplicación determinista de cambios auditados.
 run python3 scripts/apply-platform-polish-batch-2026-08-29.py
 run python3 scripts/apply-platform-polish-followup-2026-08-29.py
+run python3 scripts/apply-ai-apply-resilience-2026-08-29.py
 run git diff --check
 
 # Validación estática y builds Preview.
@@ -122,7 +123,6 @@ WORKER_LOG="$LOG_DIR/worker-$(date +%Y%m%d-%H%M%S).log"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Worker Preview"
 WORKER_VERSION="$(grep -E 'Current Version ID:' "$WORKER_LOG" | tail -1 | sed -E 's/.*Current Version ID:[[:space:]]*//')"
 
-# Resumen verificable.
 echo ""
 echo "============================================================"
 echo "✓ LOTE PREVIEW COMPLETADO"
