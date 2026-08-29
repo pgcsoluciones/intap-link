@@ -172,10 +172,19 @@ function validateAssistantResult(raw: unknown, maxServices: number, maxPortfolio
   const value = objectValue(raw)
   if (value.status === 'needs_more_info') {
     if (value.proposal !== null) return null
-    const questions = Array.isArray(value.questions)
-      ? value.questions.map((q: unknown) => text(q, 180)).filter(Boolean).slice(0, 3)
-      : []
-    return questions.length ? { status: 'needs_more_info', questions } : null
+    const rawQuestions = Array.isArray(value.questions) ? value.questions.slice(0, 3) : []
+    if (!rawQuestions.length) return null
+
+    const questions = rawQuestions
+      .map((item: unknown) => objectValue(item))
+      .filter((item) => item.kind === 'user_fact')
+      .map((item) => text(item.question, 180))
+      .filter(Boolean)
+
+    // An empty array here is intentional: the model asked something, but it was
+    // not a fact that only this user can confirm. The generate route will retry
+    // internally instead of exposing that question to the user.
+    return { status: 'needs_more_info', questions }
   }
   if (value.status === 'ready') {
     if (value.questions !== null) return null
@@ -186,24 +195,6 @@ function validateAssistantResult(raw: unknown, maxServices: number, maxPortfolio
 }
 
 
-function isBlockedKawvoDefinitionQuestion(question: string): boolean {
-  const normalized = String(question || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[“”"'¿?¡!]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  if (!normalized) return false
-
-  const mentionsKawvo = /\bkawvo\b/.test(normalized)
-  const mentionsKawvoProfile = /\bperfil digital\b/.test(normalized) && /\b(kawvo|plataforma|solucion)\b/.test(normalized)
-  const mentionsKawvoPresentation = /\bpresentacion digital\b/.test(normalized) && /\b(kawvo|ofrece kawvo|de kawvo)\b/.test(normalized)
-  const asksDefinition = /\b(que es|que incluye|que comprende|que abarca|que significa|en que consiste|que elementos|que funcionalidades|cuales son sus elementos|cuales son sus funcionalidades)\b/.test(normalized)
-
-  return asksDefinition && (mentionsKawvo || mentionsKawvoProfile || mentionsKawvoPresentation)
-}
 
 async function ownerContext(c: any, userId: string) {
   const profile = await c.env.DB.prepare(
@@ -439,7 +430,18 @@ const responseSchema = {
   properties: {
     status: { type: 'string', enum: ['ready','needs_more_info'] },
     proposal: { anyOf: [proposalSchema, { type: 'null' }] },
-    questions: { anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }] },
+    questions: { anyOf: [{
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          question: { type: 'string' },
+          kind: { type: 'string', enum: ['user_fact','general_knowledge','platform_knowledge','already_available','strategy'] },
+        },
+        required: ['question','kind'],
+      },
+    }, { type: 'null' }] },
   },
   required: ['status','proposal','questions'],
 }
@@ -450,6 +452,7 @@ const EDITORIAL_INSTRUCTIONS = [
   'SUFICIENCIA Y AUTONOMÍA: analiza primero todo el perfil, respuestas y conversación. Si puedes producir una propuesta útil, específica y creíble, hazlo sin pedir permiso adicional. No preguntes para completar una plantilla mental. Solo devuelve needs_more_info cuando avanzar obligaría a inventar un hecho importante o cuando una aclaración pueda cambiar materialmente la propuesta. Normalmente haz una sola pregunta; usa hasta tres solo si son realmente imprescindibles. Nunca repitas algo ya guardado, ya respondido o inferible de forma razonable.',
   'CONOCIMIENTO GENERAL: puedes usar libremente tu conocimiento general sobre profesiones, industrias, servicios, marketing, comportamiento del cliente, comunicación y buenas prácticas de copy para comprender el contexto, escoger vocabulario natural del sector, identificar beneficios razonablemente derivados y mejorar la presentación. Ese conocimiento sirve para interpretar y redactar; nunca lo conviertas en un hecho particular del usuario sin respaldo.',
   'PREGUNTAS SOLO POR HECHOS DEL USUARIO: una pregunta de seguimiento solo se justifica cuando falta un hecho personal, comercial u operativo que únicamente el usuario puede confirmar y cuya ausencia impide redactar de forma segura. No preguntes al usuario qué significa un concepto general, una categoría comercial, una expresión de marketing, una profesión, un tipo de solución o una funcionalidad que puedas comprender razonablemente usando el perfil, el contexto disponible y conocimiento general.',
+  'CLASIFICACIÓN OBLIGATORIA DE PREGUNTAS: si status=needs_more_info, cada elemento de questions debe incluir question y kind. Usa user_fact únicamente si la respuesta es un hecho particular de esta persona o negocio que solo ese usuario puede confirmar y que sea realmente necesario para evitar inventar. Usa general_knowledge para conceptos o conocimiento general; platform_knowledge para información sobre Kawvo o la plataforma; already_available si ya está en profile, answers, follow_up_answers o conversation; strategy si estás intentando delegar al usuario una decisión de copy, posicionamiento o jerarquía que debes resolver tú. Solo las preguntas user_fact pueden mostrarse al usuario.',
   'EXPRESIONES AMPLIAS: si el usuario usa una expresión como presentación digital completa, solución integral, servicio completo, atención personalizada o similar, no le pidas que defina la expresión solo para poder redactar. Interprétala como una idea general y escribe únicamente con los hechos concretos ya respaldados. Si no conoces componentes específicos, no los enumeres ni los inventes; redacta a un nivel de generalidad seguro.',
   'NO PREGUNTES POR LA PROPIA SOLUCIÓN KAWVO: no delegues al usuario la tarea de explicarte conceptos, estructura, beneficios genéricos o lógica de un Perfil Digital Kawvo cuando puedan resolverse con las instrucciones del sistema y el contexto disponible. Pregunta únicamente por información particular de su negocio, actividad, cliente, servicio, preferencia o situación que no puedas conocer de otro modo.',
   'NO DELEGUES LA ESTRATEGIA: no preguntes al usuario qué valor quiere reflejar, qué beneficio quiere comunicar, cómo quiere posicionarse, qué mensaje debería transmitir ni qué lo hace diferente cuando eso pueda deducirse razonablemente del perfil y de sus respuestas. El usuario aporta hechos, contexto y preferencias básicas; tú haces el trabajo de análisis, posicionamiento, jerarquía y copy.',
@@ -752,7 +755,7 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
   try {
     const callAssistant = async (forceFinalize: boolean, internalRetry = false) => {
       const retryInstruction = internalRetry
-        ? '\nBARRERA SERVER-SIDE: una aclaración anterior intentó pedir al usuario que definiera Kawvo o su propia solución. Esa pregunta fue descartada. No vuelvas a pedir definiciones, componentes, estructura ni funcionalidades de Kawvo. Produce la mejor propuesta posible con los hechos disponibles. Solo devuelve needs_more_info si falta un hecho particular del usuario que únicamente él puede confirmar y que sea esencial para no inventar.'
+        ? '\nBARRERA SERVER-SIDE GLOBAL: una aclaración anterior fue descartada porque no pedía un hecho particular que solo este usuario pudiera confirmar. No repitas esa clase de pregunta. Usa el perfil, las respuestas, la conversación y conocimiento general para resolver conceptos, estrategia, jerarquía y contexto de plataforma. Produce la mejor propuesta posible. Solo devuelve needs_more_info si falta un user_fact esencial para no inventar.'
         : ''
 
       const response = await fetch('https://api.openai.com/v1/responses', {
@@ -800,10 +803,10 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
       return c.json({ ok:false,error:'La respuesta de IA llegó incompleta. Tu perfil sigue sin cambios.' },502)
     }
 
-    const blockedDefinitionQuestion = result.status === 'needs_more_info'
-      && result.questions.some(isBlockedKawvoDefinitionQuestion)
+    const blockedNonUserFollowUp = result.status === 'needs_more_info'
+      && result.questions.length === 0
 
-    if (blockedDefinitionQuestion) {
+    if (blockedNonUserFollowUp) {
       ;({ response, payload } = await callAssistant(true, true))
       usage = payload?.usage || {}
       totalInputTokens += Number(usage.input_tokens || 0)
@@ -828,9 +831,9 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
         return c.json({ ok:false,error:'No pudimos terminar la propuesta con la información disponible. Tu perfil no fue modificado.' },502)
       }
 
-      if (result.status === 'needs_more_info' && result.questions.some(isBlockedKawvoDefinitionQuestion)) {
-        await insertUsage(c,{ userId,profileId:context.profileId,operation:'generate',status:'error',model,inputTokens:totalInputTokens,outputTokens:totalOutputTokens,errorCode:'blocked_kawvo_definition_question' })
-        return c.json({ ok:false,error:'Kawvo no necesita que definas su propia solución. Intenta preparar la propuesta nuevamente.' },502)
+      if (result.status === 'needs_more_info' && result.questions.length === 0) {
+        await insertUsage(c,{ userId,profileId:context.profileId,operation:'generate',status:'error',model,inputTokens:totalInputTokens,outputTokens:totalOutputTokens,errorCode:'blocked_non_user_follow_up' })
+        return c.json({ ok:false,error:'No pudimos completar la propuesta sin una aclaración válida. Intenta nuevamente; tu perfil no fue modificado.' },502)
       }
     }
 
