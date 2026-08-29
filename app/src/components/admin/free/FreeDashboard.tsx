@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPost, apiPut } from '../../../lib/api'
+import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
+import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
 import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
@@ -118,6 +119,10 @@ const freeItems: FreeItem[] = [
 
 export default function FreeDashboard() {
   const navigate = useNavigate()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
   const [me, setMe] = useState<MeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
@@ -172,6 +177,7 @@ export default function FreeDashboard() {
       const result: any = await apiPut('/me/profile', { is_published: next === 1 })
       if (result.ok) {
         setMe({ ...me, is_published: next })
+        if (next === 1) void apiPost('/me/notifications/profile-published', {}).catch(() => undefined)
       } else if (result.error === 'profile_incomplete') {
         setPublishError(result.message || 'Completa los pasos mínimos antes de publicar.')
         setMe({ ...me, freeReadiness: result.readiness || me.freeReadiness })
@@ -180,6 +186,35 @@ export default function FreeDashboard() {
       }
     } finally {
       setPublishing(false)
+    }
+  }
+
+  const chooseAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null
+    if (avatarInputRef.current) avatarInputRef.current.value = ''
+    if (!file || avatarUploading) return
+    setAvatarError('')
+    setAvatarFile(file)
+  }
+
+  const uploadAvatar = async (blob: Blob) => {
+    if (avatarUploading) return
+    setAvatarFile(null)
+    setAvatarUploading(true)
+    setAvatarError('')
+    try {
+      const form = new FormData()
+      form.append('file', blob, 'avatar.jpg')
+      const result: any = await apiUpload('/me/profile/avatar', form)
+      if (!result?.ok || !result?.avatar_url) {
+        setAvatarError(result?.error || 'No pudimos cambiar tu foto.')
+        return
+      }
+      setMe((current) => current ? { ...current, avatar_url: result.avatar_url } : current)
+    } catch {
+      setAvatarError('No pudimos cambiar tu foto.')
+    } finally {
+      setAvatarUploading(false)
     }
   }
 
@@ -215,7 +250,7 @@ export default function FreeDashboard() {
   const readiness = me?.freeReadiness
   const previewReady = Boolean(readiness?.steps?.identifier && readiness?.steps?.identity && readiness?.steps?.contact)
   const previewMissing = [
-    !readiness?.steps?.identifier ? 'tu identificador' : '',
+    !readiness?.steps?.identifier ? 'tu usuario' : '',
     !readiness?.steps?.identity ? 'tu información principal' : '',
     !readiness?.steps?.contact ? 'al menos un medio de contacto' : '',
   ].filter(Boolean)
@@ -226,6 +261,8 @@ export default function FreeDashboard() {
   ].filter(Boolean)
 
   return (
+    <>
+      {avatarFile && <ImageCropModal file={avatarFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setAvatarFile(null)} />}
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[430px] items-center justify-between gap-3">
@@ -246,9 +283,13 @@ export default function FreeDashboard() {
       <section className="mx-auto w-full max-w-[430px] space-y-4 px-5 pt-5">
         <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-4">
-            <button type="button" onClick={() => navigate('/admin/free/onboarding/identity')} aria-label="Cambiar foto de perfil" className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 ring-offset-2 transition hover:ring-2 hover:ring-cyan-300">
-              {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">👤</div>}
-            </button>
+            <div className="relative shrink-0">
+              <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} aria-label="Cambiar foto de perfil" className="relative h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100 ring-offset-2 transition hover:ring-2 hover:ring-cyan-300 disabled:opacity-60">
+                {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">👤</div>}
+                <span className="absolute inset-x-0 bottom-0 bg-slate-950/75 py-1 text-center text-[9px] font-black text-white">{avatarUploading ? 'Subiendo…' : 'Cambiar'}</span>
+              </button>
+              <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={avatarUploading} onChange={chooseAvatar} />
+            </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="truncate text-base font-black">{me?.name || me?.email || 'Mi perfil'}</p>
@@ -258,10 +299,11 @@ export default function FreeDashboard() {
               {me?.category && <p className="mt-1 text-xs font-bold text-cyan-600">{me.category}</p>}
             </div>
           </div>
+          {avatarError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{avatarError}</p>}
           <button type="button" onClick={() => navigate('/admin/free/editor')} className="mt-5 flex w-full items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-left text-white shadow-sm">
             <span>
-              <span className="block text-base font-black">Personaliza el diseño de tu perfil</span>
-              <span className="mt-1 block text-xs font-medium text-slate-300">Plantilla, colores y apariencia visual de tu perfil.</span>
+              <span className="block text-base font-black" style={{ color: '#FFFFFF' }}>Personaliza el diseño de tu perfil</span>
+              <span className="mt-1 block text-xs font-medium" style={{ color: '#E2E8F0' }}>Plantilla, colores y apariencia visual de tu perfil.</span>
             </span>
             <span className="text-xl text-slate-400">›</span>
           </button>
@@ -453,5 +495,6 @@ export default function FreeDashboard() {
         {me?.slug && <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />}
       </section>
     </main>
+    </>
   )
 }

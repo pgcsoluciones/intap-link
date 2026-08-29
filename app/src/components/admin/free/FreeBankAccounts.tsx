@@ -223,7 +223,7 @@ export default function FreeBankAccounts() {
     return (
       <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950">
         <section className="mx-auto w-full max-w-[620px]">
-          <FreeBackButton onClick={() => navigate('/admin/free/editor')} />
+          <FreeBackButton onClick={() => navigate('/admin/free')} />
           <div className="mt-5 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-950 text-2xl text-white">$</div>
             <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-violet-700">Función premium</p>
@@ -241,7 +241,7 @@ export default function FreeBankAccounts() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
       <section className="mx-auto w-full max-w-[760px] px-4 py-5 sm:px-5">
-        <FreeBackButton onClick={() => navigate('/admin/free/editor')} />
+        <FreeBackButton onClick={() => navigate('/admin/free')} />
 
         <div className="mt-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">KAWVO LINK</p>
@@ -301,6 +301,7 @@ export default function FreeBankAccounts() {
           ))}
           {accounts.length === 0 && <div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-8 text-center"><p className="text-base font-black text-slate-700">Todavía no has agregado cuentas</p><p className="mt-2 text-sm text-slate-500">Cuando agregues una, aparecerá aquí y en tu perfil si la sección está activa.</p></div>}
         </section>
+        <div className="mt-6"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </section>
     </main>
   )

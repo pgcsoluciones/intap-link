@@ -41,7 +41,7 @@ export default function FreeFirstRunGuide({ readiness }: { readiness: FreePublic
           </h2>
           <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
             {readiness.ready
-              ? 'Completaste los datos mínimos de publicación.'
+              ? 'Cumples los requisitos necesarios para publicar tu perfil.'
               : 'Completa los apartados marcados en amarillo más abajo. Son los datos mínimos necesarios para habilitar Publicar.'}
           </p>
         </div>
@@ -52,9 +52,9 @@ export default function FreeFirstRunGuide({ readiness }: { readiness: FreePublic
         <div className={`h-full rounded-full transition-all ${readiness.ready ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${percent}%` }} />
       </div>
 
-      <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
-        No repetimos aquí cada sección: usa las tarjetas del panel para completar o editar tus datos. Los apartados opcionales no afectan este progreso.
-      </p>
+      {!readiness.ready && <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
+        Completa los apartados pendientes para habilitar la publicación.
+      </p>}
     </section>
   )
 }

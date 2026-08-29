@@ -6380,4 +6380,89 @@ app.post('/api/v1/agents/workspaces', agentsDisabledResponse)
 app.post('/api/v1/agents/chat/sessions', agentsDisabledResponse)
 app.post('/api/v1/agents/chat/messages', agentsDisabledResponse)
 
+
+// ─── User notifications ───────────────────────────────────────────────────
+
+app.get('/api/v1/me/notifications', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const rawLimit = Number(c.req.query('limit') || 30)
+  const limit = Math.max(1, Math.min(50, Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 30))
+  const [itemsResult, unreadRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT id, type, title, message, source_type, source_id, action_label, action_url, read_at, created_at
+         FROM user_notifications
+        WHERE user_id = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?`,
+    ).bind(userId, limit).all(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS count FROM user_notifications WHERE user_id = ? AND read_at IS NULL`,
+    ).bind(userId).first(),
+  ])
+  return c.json({ ok: true, data: { items: itemsResult.results || [], unread_count: Number((unreadRow as any)?.count || 0) } })
+})
+
+app.patch('/api/v1/me/notifications/read-all', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  await c.env.DB.prepare(
+    `UPDATE user_notifications SET read_at = COALESCE(read_at, datetime('now')) WHERE user_id = ? AND read_at IS NULL`,
+  ).bind(userId).run()
+  return c.json({ ok: true })
+})
+
+app.patch('/api/v1/me/notifications/:id/read', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const id = String(c.req.param('id') || '')
+  await c.env.DB.prepare(
+    `UPDATE user_notifications SET read_at = COALESCE(read_at, datetime('now')) WHERE id = ? AND user_id = ?`,
+  ).bind(id, userId).run()
+  return c.json({ ok: true })
+})
+
+async function createLifecycleNotification(c: any, input: {
+  type: 'profile_welcome' | 'profile_first_published'
+  title: string
+  message: string
+  actionLabel: string
+  actionUrl: string
+}) {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(`SELECT id FROM profiles WHERE user_id = ? LIMIT 1`).bind(userId).first()
+  const profileId = profile ? String((profile as any).id || '') || null : null
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(
+    `INSERT INTO user_notifications (id, user_id, profile_id, type, title, message, source_type, action_label, action_url, created_at)
+     SELECT ?, ?, ?, ?, ?, ?, 'lifecycle', ?, ?, datetime('now')
+      WHERE NOT EXISTS (
+        SELECT 1 FROM user_notifications WHERE user_id = ? AND type = ?
+      )`,
+  ).bind(id, userId, profileId, input.type, input.title, input.message, input.actionLabel, input.actionUrl, userId, input.type).run()
+  return c.json({ ok: true })
+}
+
+app.post('/api/v1/me/notifications/welcome', requireAuth, async (c) => {
+  return createLifecycleNotification(c, {
+    type: 'profile_welcome',
+    title: '¡Bienvenido a Kawvo Link!',
+    message: 'Tu perfil está listo para completar. Elige tu usuario, agrega tu presentación, tus datos de contacto, botones, trabajos y servicios. Si quieres avanzar más rápido, usa la IA de Kawvo para ayudarte a mejorar tus textos.',
+    actionLabel: 'Completar mi perfil',
+    actionUrl: '/admin/free',
+  })
+})
+
+app.post('/api/v1/me/notifications/profile-published', requireAuth, async (c) => {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(`SELECT id, is_published FROM profiles WHERE user_id = ? LIMIT 1`).bind(userId).first()
+  if (!profile || Number((profile as any).is_published || 0) !== 1) {
+    return c.json({ ok: false, error: 'El perfil todavía no está publicado.' }, 409)
+  }
+  return createLifecycleNotification(c, {
+    type: 'profile_first_published',
+    title: '¡Tu perfil ya está publicado!',
+    message: 'Tu perfil digital se publicó con éxito. Ya puedes enviar tu enlace, agregarlo a la bio de tus redes o a tu firma de correo, compartirlo por WhatsApp y descargar el código QR de tu perfil para usarlo también de forma impresa.',
+    actionLabel: 'Ir a mi perfil',
+    actionUrl: '/admin/free',
+  })
+})
+
 export default app

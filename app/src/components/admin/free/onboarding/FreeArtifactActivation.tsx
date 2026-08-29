@@ -120,6 +120,7 @@ export default function FreeArtifactActivation() {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       sessionStorage.setItem('kawvo_free_artifact_activated', activatedCode)
+      await apiPost('/me/notifications/welcome', {}).catch(() => undefined)
       navigate('/admin/free', { replace: true })
       return
     }
@@ -143,6 +144,7 @@ export default function FreeArtifactActivation() {
 
     sessionStorage.removeItem(PENDING_PUBLIC_CODE)
     sessionStorage.setItem('kawvo_free_artifact_activated', result.data?.public_code || product.public_code)
+    await apiPost('/me/notifications/welcome', {}).catch(() => undefined)
     navigate('/admin/free/onboarding/intro', { replace: true })
   }
 
