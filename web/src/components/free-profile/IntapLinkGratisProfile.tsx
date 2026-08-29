@@ -234,17 +234,39 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     '--ilx-soft-accent': softAccent,
   } as CSSProperties
 
-  function downloadVCard() {
-    const content = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${profile.name}`, `TITLE:${profile.role}`, profile.phone ? `TEL:${profile.phone}` : '', `URL:${window.location.href}`, 'END:VCARD'].filter(Boolean).join('\n')
+  async function downloadVCard() {
+    const canonicalUrl = `${window.location.origin}${window.location.pathname}`
+    const escapeVCard = (value: string) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
+    const content = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${escapeVCard(profile.name)}`,
+      `N:;${escapeVCard(profile.name)};;;`,
+      profile.role ? `TITLE:${escapeVCard(profile.role)}` : '',
+      profile.phone ? `TEL;TYPE=CELL:${profile.phone}` : '',
+      `URL:${canonicalUrl}`,
+      'END:VCARD',
+      '',
+    ].filter((line) => line !== '').join('\r\n')
     const blob = new Blob([content], { type: 'text/vcard;charset=utf-8' })
+    const file = new File([blob], profile.vcardFileName || `${profile.slug || 'contacto'}.vcf`, { type: 'text/vcard' })
+    try {
+      if (navigator.share && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Guardar contacto de ${profile.name}` })
+        return
+      }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return
+    }
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = profile.vcardFileName
+    anchor.download = file.name
+    anchor.rel = 'noopener'
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500)
   }
 
   async function copyProfileLink() {

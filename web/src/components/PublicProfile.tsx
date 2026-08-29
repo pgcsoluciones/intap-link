@@ -1197,7 +1197,6 @@ function ClassicLayout({
           <div style={{ marginTop: 8 }}>
             <a
               href={`${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/api/v1/public/vcard/${data.profileId}`}
-              download
               className="classic-pill"
               style={{ borderColor: '#94a3b8', color: '#475569' }}
               onClick={() => onTrack('vcard')}

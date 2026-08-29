@@ -407,9 +407,20 @@ export default function FreeAiProfileAssistant() {
     if (selection.services && hasExistingServices && !replaceServices) { setError('Confirma que deseas actualizar el texto de tus servicios actuales.'); return }
     setApplying(true); setError(''); setSuccess('')
     try {
-      const json:any = await apiPost('/me/ai-profile-assistant/apply',{ proposal,apply:selection,replace_existing_services:replaceServices,editing_scope:editingScope })
+      const payload = { proposal,apply:selection,replace_existing_services:replaceServices,editing_scope:editingScope }
+      let json:any
+      try {
+        json = await apiPost('/me/ai-profile-assistant/apply', payload)
+      } catch {
+        await new Promise((resolve)=>window.setTimeout(resolve,350))
+        json = await apiPost('/me/ai-profile-assistant/apply', payload)
+      }
+      if (!json?.ok && json?.code === 'db_write_failed') {
+        await new Promise((resolve)=>window.setTimeout(resolve,350))
+        json = await apiPost('/me/ai-profile-assistant/apply', payload)
+      }
       if (!json?.ok) { setError(json?.error || 'No pudimos aplicar los cambios. Tu perfil anterior se mantiene.'); return }
-      setSuccess('Cambios aplicados correctamente')
+      setSuccess(json.data?.no_changes ? 'Tu perfil ya estaba actualizado; no había cambios nuevos que aplicar.' : 'Cambios aplicados correctamente')
       await Promise.all([loadContext(), loadRemainingProfileItems()])
     } catch { setError('No pudimos aplicar los cambios. Tu perfil anterior se mantiene.') } finally { setApplying(false) }
   }
@@ -755,8 +766,17 @@ export default function FreeAiProfileAssistant() {
         <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
           {context.usage.unlimited
             ? 'IA ilimitada · Super Admin'
-            : `Disponibilidad IA hoy: ${context.usage.remaining_today} · este mes: ${context.usage.remaining_month}`}
+            : `Usos de IA disponibles: ${context.usage.remaining_today} hoy · ${context.usage.remaining_month} este mes`}
         </p>
+        {!context.usage.unlimited && (Number(context.usage.remaining_today) <= 1 || Number(context.usage.remaining_month) <= 3) && (
+          <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-xs font-semibold leading-5 text-violet-800">
+            {Number(context.usage.remaining_today) <= 0 || Number(context.usage.remaining_month) <= 0
+              ? 'Ya utilizaste la cuota de IA disponible por ahora.'
+              : 'Te queda poca cuota de IA disponible.'}{' '}
+            El Plan Básico incluye una cuota mayor para seguir optimizando tu perfil.
+            {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Conocer Plan Básico</a>}
+          </div>
+        )}
         {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a mejorar el texto de los servicios que ya creaste. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Básico</a>}</div>}
       </section>}
 

@@ -264,6 +264,7 @@ export default function FreeOnboardingIdentity() {
             <button type="submit" disabled={saving || uploading} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : 'Continuar'}</button>
           </form>
           <div className="mt-5"><FreeUpgradeCard compact /></div>
+          <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
         </section>
       </main>
     </>

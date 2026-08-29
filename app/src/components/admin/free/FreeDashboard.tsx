@@ -43,24 +43,32 @@ type FreeItem = {
 
 const freeItems: FreeItem[] = [
   {
-    title: 'Reservar mi identificador',
-    text: 'Elige tu enlace corto /usuario',
+    title: 'Elige tu usuario',
+    text: 'Ej.: @tuusuario',
     to: '/admin/free/identifier',
     icon: '@',
     help: 'Este será tu nombre único en el enlace público. Conviene elegir uno corto, fácil de recordar y relacionado contigo o tu negocio.',
     readinessKey: 'identifier',
   },
   {
-    title: 'Datos de contacto',
-    text: 'WhatsApp, teléfono y correo',
+    title: 'Completa tu presentación',
+    text: 'Foto, portada, nombre y la información principal de tu perfil',
+    to: '/admin/free/onboarding/identity',
+    icon: '◉',
+    help: 'Configura cómo te presentas: foto de perfil, portada cuando aplique, nombre o marca y a qué te dedicas.',
+    readinessKey: 'identity',
+  },
+  {
+    title: 'Agrega tus datos de contacto',
+    text: 'WhatsApp, teléfono, correo y otras formas de contactarte',
     to: '/admin/free/onboarding/contact',
     icon: '☎',
     help: 'Coloca los medios reales por los que quieres que tus clientes te contacten. Necesitas al menos uno para habilitar la vista previa.',
     readinessKey: 'contact',
   },
   {
-    title: 'Botones rápidos',
-    text: 'Hasta 3: Llamar, Instagram, Ubicación, Email o TikTok',
+    title: 'Selecciona tus botones de acceso',
+    text: 'Hasta 3 accesos directos para tu perfil',
     to: '/admin/free/quick-actions',
     icon: '◉',
     help: 'Son los botones que aparecen primero en tu perfil. Elige las acciones más importantes para que una persona pueda contactarte o encontrarte con un solo toque.',
@@ -83,16 +91,16 @@ const freeItems: FreeItem[] = [
     available: true,
   },
   {
-    title: 'Mis trabajos (portafolio)',
-    text: 'Hasta 5 imágenes de tu trabajo',
+    title: 'Muestra tus trabajos realizados',
+    text: 'Máx. 5 fotos · mínimo 3 para publicar tu perfil',
     to: '/admin/free/portfolio',
     icon: '▧',
     help: 'Muestra ejemplos reales de lo que haces. Para publicar debes completar al menos 3 imágenes reales.',
     readinessKey: 'portfolio',
   },
   {
-    title: 'Servicios',
-    text: 'Hasta 3 servicios con imagen y descripción',
+    title: 'Agrega tus servicios',
+    text: 'Describe brevemente qué ofreces · mínimo 2 para publicar',
     to: '/admin/free/services',
     icon: '◇',
     help: 'Explica claramente qué ofreces. Para publicar debes completar al menos 2 servicios con título, descripción e imagen.',
@@ -117,6 +125,7 @@ export default function FreeDashboard() {
   const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [linkCopied, setLinkCopied] = useState(false)
+  const [shareMessage, setShareMessage] = useState('')
   const [locationConfigured, setLocationConfigured] = useState(false)
   const [bankSummary, setBankSummary] = useState<BankSummary>({ allowed: false, source: null, enabled: false, count: 0 })
 
@@ -184,6 +193,21 @@ export default function FreeDashboard() {
     }
   }
 
+  const sharePublicUrl = async (url: string) => {
+    setShareMessage('')
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: me?.name || 'Mi perfil', url })
+        setShareMessage('Perfil listo para compartir.')
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setShareMessage('Enlace copiado para compartir.')
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') setShareMessage('No pudimos abrir el menú para compartir.')
+    }
+  }
+
   if (loading) return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
@@ -222,9 +246,9 @@ export default function FreeDashboard() {
       <section className="mx-auto w-full max-w-[430px] space-y-4 px-5 pt-5">
         <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+            <button type="button" onClick={() => navigate('/admin/free/onboarding/identity')} aria-label="Cambiar foto de perfil" className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 ring-offset-2 transition hover:ring-2 hover:ring-cyan-300">
               {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">👤</div>}
-            </div>
+            </button>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="truncate text-base font-black">{me?.name || me?.email || 'Mi perfil'}</p>
@@ -237,14 +261,14 @@ export default function FreeDashboard() {
           <button type="button" onClick={() => navigate('/admin/free/editor')} className="mt-5 flex w-full items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-left text-white shadow-sm">
             <span>
               <span className="block text-base font-black">Personaliza el diseño de tu perfil</span>
-              <span className="mt-1 block text-xs font-medium text-slate-300">Plantilla, colores, identidad y vista previa en vivo.</span>
+              <span className="mt-1 block text-xs font-medium text-slate-300">Plantilla, colores y apariencia visual de tu perfil.</span>
             </span>
             <span className="text-xl text-slate-400">›</span>
           </button>
           {previewReady && me?.slug ? (
-            <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(me.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">Ver mi perfil</a>
+            <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(me.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">Ver como cliente</a>
           ) : (
-            <button type="button" disabled className="mt-2 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-black text-slate-400">Ver mi perfil</button>
+            <button type="button" disabled className="mt-2 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-black text-slate-400">Ver como cliente</button>
           )}
         </article>
 
@@ -295,17 +319,17 @@ export default function FreeDashboard() {
           <article className="rounded-[24px] border border-slate-200 bg-white p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Enlace de tu perfil</p>
                 <p className="mt-2 truncate text-sm font-black text-cyan-700">{publicUrl.replace(/^https?:\/\//, '')}</p>
               </div>
               <FreeHelpTip title="Vista previa" text="La vista previa se habilita cuando completas tu identificador, información principal y al menos un medio de contacto. Así nunca tendrás que revisar un perfil vacío." />
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {previewReady ? (
-                <a href={`${publicUrl}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Vista previa</a>
+                <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(me?.slug || '')}?full=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Ver como cliente</a>
               ) : (
-                <button type="button" disabled className="min-h-10 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Vista previa</button>
+                <button type="button" disabled className="min-h-10 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Ver como cliente</button>
               )}
               <button
                 type="button"
@@ -316,7 +340,9 @@ export default function FreeDashboard() {
               >
                 {linkCopied ? '✓ Enlace copiado' : 'Copiar enlace'}
               </button>
+              <button type="button" onClick={() => void sharePublicUrl(publicUrl)} disabled={!me?.is_published} className="min-h-10 rounded-xl border border-slate-200 bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400">Compartir perfil</button>
             </div>
+            {shareMessage && <p className="mt-2 text-xs font-semibold text-slate-500">{shareMessage}</p>}
 
             {!previewReady && (
               <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-5 text-amber-800">
@@ -372,7 +398,7 @@ export default function FreeDashboard() {
         <div className="pt-2">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Accesos directos</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Edita un bloque específico</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Verde significa completado, ámbar indica que aún falta y gris identifica funciones disponibles que no forman parte de los requisitos de publicación. Solo NFC/QR se marca como opcional.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Verde significa completado, amarillo indica un requisito pendiente y gris identifica funciones disponibles u opcionales.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">

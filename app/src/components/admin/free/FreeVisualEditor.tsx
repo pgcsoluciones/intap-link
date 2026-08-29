@@ -69,9 +69,6 @@ export default function FreeVisualEditor() {
   const [previewVersion, setPreviewVersion] = useState(1)
   const [mobileMode, setMobileMode] = useState<'edit' | 'preview'>('edit')
 
-  const isPreviewEnvironment = import.meta.env.VITE_ENVIRONMENT === 'preview' || window.location.hostname.includes('preview.intaprd.com')
-  const configuredWebUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
-  const webUrl = isPreviewEnvironment ? 'https://preview.intaprd.com' : configuredWebUrl
   const previewUrl = useMemo(
     () => slug ? `/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}?v=${previewVersion}` : '',
     [slug, previewVersion],
@@ -189,7 +186,7 @@ export default function FreeVisualEditor() {
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-[520px] gap-2 rounded-2xl bg-slate-100 p-1">
           <button type="button" onClick={() => setMobileMode('edit')} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-black ${mobileMode === 'edit' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Editar</button>
-          <button type="button" onClick={() => setMobileMode('preview')} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-black ${mobileMode === 'preview' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Vista previa</button>
+          <button type="button" onClick={() => setMobileMode('preview')} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-black ${mobileMode === 'preview' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Vista pública</button>
         </div>
       </header>
 
@@ -270,12 +267,13 @@ export default function FreeVisualEditor() {
                 })}
               </div>
             </section>
+            <div className="pt-2"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
           </div>
 
           <aside className={`${mobileMode === 'edit' ? 'hidden' : 'block'} lg:sticky lg:top-5 lg:block`}>
             <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Vista previa en vivo</p><p className="mt-1 text-sm font-bold text-slate-700">Así lo verá tu cliente</p></div>
+                <div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Vista pública en vivo</p><p className="mt-1 text-sm font-bold text-slate-700">Así lo verá tu cliente, sin controles de edición</p></div>
                 <button type="button" onClick={() => void saveAndRefreshPreview()} disabled={saving} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar y actualizar'}</button>
               </div>
               {slug ? (
@@ -285,7 +283,7 @@ export default function FreeVisualEditor() {
               ) : (
                 <div className="grid h-[520px] place-items-center rounded-[24px] bg-slate-50 p-8 text-center text-sm font-bold text-slate-500">Reserva tu identificador para ver la vista previa.</div>
               )}
-              {slug && <a href={`${webUrl}/${encodeURIComponent(slug)}?preview=1`} target="_blank" rel="noopener noreferrer" className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Abrir perfil completo</a>}
+              {slug && <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Ver como cliente</a>}
             </div>
           </aside>
         </div>

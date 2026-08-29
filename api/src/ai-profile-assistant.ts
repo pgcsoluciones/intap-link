@@ -905,10 +905,17 @@ app.post('/api/v1/me/ai-profile-assistant/apply', requireAssistantAuth, async (c
       }
     }
   }
-  try { if (statements.length) await c.env.DB.batch(statements) } catch {
+  if (!statements.length) {
+    await insertUsage(c,{ userId,profileId:context.profileId,operation:'apply',status:'success' })
+    return c.json({ ok:true,data:{ no_changes:true, applied:{ identity:false,bio:false,services_section:false,services:false,portfolio:false }, editing_scope:editingScope, published:false, note:'La propuesta no contenía cambios aplicables para los campos seleccionados. Tu perfil se mantiene igual.' } })
+  }
+  try {
+    await c.env.DB.batch(statements)
+  } catch (error) {
+    console.error('[ai-profile-assistant] apply db_write_failed', { profileId: context.profileId, userId, statementCount: statements.length, error: String((error as any)?.message || error) })
     await insertUsage(c,{ userId,profileId:context.profileId,operation:'apply',status:'error',errorCode:'db_write_failed' })
-    return c.json({ ok:false,error:'No pudimos aplicar los cambios. Tu perfil anterior se mantiene.' },500)
+    return c.json({ ok:false,error:'No pudimos guardar la propuesta en este momento. Tu perfil anterior se mantiene.',code:'db_write_failed' },500)
   }
   await insertUsage(c,{ userId,profileId:context.profileId,operation:'apply',status:'success' })
-  return c.json({ ok:true,data:{ applied:{ identity:effectiveIdentity,bio:effectiveBio,services_section:applyServicesSection,services:effectiveServices,portfolio:effectivePortfolio }, editing_scope:editingScope, published:false, services_preserved:effectiveServices && context.services.length>0, note:'Aplicar modifica únicamente los campos seleccionados. No publica, no cambia plantilla, colores, orden de botones, orden de secciones ni canales.' } })
+  return c.json({ ok:true,data:{ no_changes:false, applied:{ identity:effectiveIdentity,bio:effectiveBio,services_section:applyServicesSection,services:effectiveServices,portfolio:effectivePortfolio }, editing_scope:editingScope, published:false, services_preserved:effectiveServices && context.services.length>0, note:'Aplicar modifica únicamente los campos seleccionados. No publica, no cambia plantilla, colores, orden de botones, orden de secciones ni canales.' } })
 })

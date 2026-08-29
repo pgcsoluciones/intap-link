@@ -91,9 +91,11 @@ export default function FreePortfolio() {
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const replaceInputRef = useRef<HTMLInputElement>(null)
+  const uploadLockRef = useRef(false)
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadStage, setUploadStage] = useState<'idle' | 'processing' | 'uploading'>('idle')
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -174,7 +176,8 @@ export default function FreePortfolio() {
   }
 
   const saveCroppedImage = async (blob: Blob) => {
-    if (!cropFile || !cropMode) return
+    if (!cropFile || !cropMode || uploadLockRef.current) return
+    uploadLockRef.current = true
     const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'portfolio'
     const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
     const path = cropMode !== 'new' && replaceTargetId
@@ -182,8 +185,10 @@ export default function FreePortfolio() {
       : '/profile/gallery/upload'
 
     setUploading(true)
+    setUploadStage('processing')
     setError('')
     try {
+      setUploadStage('uploading')
       const json = await sendOptimizedImage(croppedFile, path)
       if (!json.ok) {
         setError(json.error || (cropMode === 'new' ? 'No se pudo subir la imagen.' : 'No se pudo actualizar la imagen.'))
@@ -194,7 +199,9 @@ export default function FreePortfolio() {
     } catch {
       setError(cropMode === 'new' ? 'No pudimos subir la imagen.' : 'No pudimos actualizar la imagen.')
     } finally {
+      uploadLockRef.current = false
       setUploading(false)
+      setUploadStage('idle')
     }
   }
 
@@ -280,12 +287,13 @@ export default function FreePortfolio() {
           ))}
         </section>
 
-        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseNewImage} className="hidden" />
-        <input ref={replaceInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseReplacementImage} className="hidden" />
-        <button onClick={() => inputRef.current?.click()} disabled={uploading || photos.length >= MAX_PHOTOS} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{uploading ? 'Procesando…' : photos.length >= MAX_PHOTOS ? 'Límite completado' : 'Agregar imagen'}</button>
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseNewImage} disabled={uploading} className="hidden" />
+        <input ref={replaceInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseReplacementImage} disabled={uploading} className="hidden" />
+        <button onClick={() => inputRef.current?.click()} disabled={uploading || photos.length >= MAX_PHOTOS} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{uploading ? (uploadStage === 'uploading' ? 'Subiendo imagen…' : 'Procesando imagen…') : photos.length >= MAX_PHOTOS ? 'Límite completado' : 'Agregar imagen'}</button>
         {error && <p className="mt-3 text-xs font-semibold text-red-500">{error}</p>}
         {photos.length >= MAX_PHOTOS && <FreeLimitUpgradeCard text="Ya utilizas las 5 imágenes disponibles. Puedes seguir gestionándolas o pasar al Plan Básico para ampliar tu alcance." />}
         <div className="mt-5"><FreeUpgradeCard compact /></div>
+        <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
 
       {cropFile && cropMode && (

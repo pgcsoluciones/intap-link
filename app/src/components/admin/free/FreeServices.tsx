@@ -59,10 +59,12 @@ async function imageUrlToFile(url: string, name: string): Promise<File> {
 export default function FreeServices() {
   const navigate = useNavigate()
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const imageUploadLockRef = useRef(false)
   const [items, setItems] = useState<Service[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [imageUploadStage, setImageUploadStage] = useState<'idle' | 'processing' | 'uploading'>('idle')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -196,14 +198,17 @@ export default function FreeServices() {
   }
 
   const saveCroppedServiceImage = async (blob: Blob) => {
-    if (!cropFile || !imageTargetId) return
+    if (!cropFile || !imageTargetId || imageUploadLockRef.current) return
+    imageUploadLockRef.current = true
     const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'servicio'
     const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
 
     setSaving(true)
+    setImageUploadStage('processing')
     setError('')
     try {
       const optimized = await optimizeServiceImage(croppedFile)
+      setImageUploadStage('uploading')
       const fd = new FormData()
       fd.append('file', optimized, optimized.name)
       const json: any = await apiUpload(`/me/products/${imageTargetId}/image`, fd)
@@ -216,6 +221,8 @@ export default function FreeServices() {
     } catch {
       setError('No pudimos procesar la imagen del servicio.')
     } finally {
+      imageUploadLockRef.current = false
+      setImageUploadStage('idle')
       setSaving(false)
     }
   }
@@ -320,7 +327,7 @@ export default function FreeServices() {
           ))}
         </section>
 
-        <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseServiceImage} className="hidden" />
+        <input ref={imageInputRef} type="file" disabled={saving} accept="image/jpeg,image/png,image/webp" onChange={chooseServiceImage} className="hidden" />
 
         <form onSubmit={add} className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-black">Agregar servicio</h2>
@@ -333,6 +340,7 @@ export default function FreeServices() {
 
         {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Básico para ampliar tu perfil." />}
         <div className="mt-5"><FreeUpgradeCard compact /></div>
+        <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
 
       {cropFile && imageTargetId && (
