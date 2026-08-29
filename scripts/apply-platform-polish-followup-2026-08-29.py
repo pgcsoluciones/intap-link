@@ -87,7 +87,6 @@ def public_profile(s):
       s = s.replace(old, new, 1)
     return s
 
-# Don't fail if the active free profile is the only vCard surface.
 p = Path('web/src/components/PublicProfile.tsx')
 if p.exists():
     before = p.read_text(); after = public_profile(before)
@@ -133,10 +132,32 @@ def identity(s):
 
 patch('app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx', identity)
 
+# Dashboard: keep design and identity as separate concepts while ensuring every publish
+# requirement appears exactly once in the actionable card list.
+def dashboard(s):
+    marker = """  {
+    title: 'Agrega tus datos de contacto',
+"""
+    identity_item = """  {
+    title: 'Completa tu presentación',
+    text: 'Foto, portada, nombre y la información principal de tu perfil',
+    to: '/admin/free/onboarding/identity',
+    icon: '◉',
+    help: 'Configura cómo te presentas: foto de perfil, portada cuando aplique, nombre o marca y a qué te dedicas.',
+    readinessKey: 'identity',
+  },
+"""
+    if marker not in s:
+        raise SystemExit('No encontré punto de inserción para identidad en dashboard')
+    s = s.replace(marker, identity_item + marker, 1)
+    s = s.replace('Plantilla, colores, identidad y vista previa en vivo.', 'Plantilla, colores y apariencia visual de tu perfil.', 1)
+    return s
+
+patch('app/src/components/admin/free/FreeDashboard.tsx', dashboard)
+
 # Visual editor cleanup after switching full-view link to authenticated public preview.
 def editor(s):
     s2 = s.replace("  const isPreviewEnvironment = import.meta.env.VITE_ENVIRONMENT === 'preview' || window.location.hostname.includes('preview.intaprd.com')\n  const configuredWebUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\\/$/, '')\n  const webUrl = isPreviewEnvironment ? 'https://preview.intaprd.com' : configuredWebUrl\n", "")
-    # Add bottom return button to edit column if a stable footer location exists.
     marker = """          </div>
 
           <aside className={`${mobileMode === 'edit' ? 'hidden' : 'block'} lg:sticky lg:top-5 lg:block`}>
