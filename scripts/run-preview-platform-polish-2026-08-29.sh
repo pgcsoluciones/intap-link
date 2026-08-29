@@ -39,6 +39,7 @@ run python3 scripts/apply-platform-polish-batch-2026-08-29.py
 run python3 scripts/apply-platform-polish-followup-2026-08-29.py
 run python3 scripts/apply-ai-apply-resilience-2026-08-29.py
 run python3 scripts/fix-dashboard-preview-nullability-2026-08-29.py
+run python3 scripts/fix-vcard-escaping-2026-08-29.py
 run git diff --check
 
 # Validación estática y builds Preview.
