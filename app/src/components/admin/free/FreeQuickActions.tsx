@@ -136,7 +136,7 @@ export default function FreeQuickActions() {
         {message && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">{message}</p>}
         {(limitReached || selected.length >= MAX_SELECTED) && <FreeLimitUpgradeCard text="Ya usas los 3 accesos rápidos incluidos. Puedes sustituir cualquiera de ellos o ampliar tu perfil con un Plan Básico." />}
         <button type="button" disabled={saving} onClick={() => void save()} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3.5 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar botones de contacto'}</button>
-        <div className="mt-5"><FreeUpgradeCard compact /></div>
+        {selected.length < MAX_SELECTED && <div className="mt-5"><FreeUpgradeCard compact /></div>}
         <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
     </main>

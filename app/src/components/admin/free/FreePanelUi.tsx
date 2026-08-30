@@ -39,9 +39,14 @@ export function FreeUpgradeCard({
       className={`rounded-[24px] border border-sky-200 bg-sky-50/90 ${compact ? 'p-4' : 'p-5'}`}
     >
       <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-xl" aria-hidden="true">🏅</span>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-500" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3.5 8.5 7.5 12l4.5-7 4.5 7 4-3.5-1.5 9H5z" />
+            <path d="M6 20h12" />
+          </svg>
+        </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2"><p className="text-base font-black text-slate-900">Amplía tu alcance</p><span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-800">Premium</span></div>
+          <p className="text-base font-black text-slate-900">Amplía tu alcance</p>
           <p className="mt-1 text-sm font-medium leading-6 text-slate-700">Logra mayor impacto con más herramientas en tu perfil. Pásate a un Plan Básico.</p>
           <a
             href={basicPlanWhatsAppUrl()}

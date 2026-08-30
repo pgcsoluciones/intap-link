@@ -28,6 +28,7 @@ export default function FreeOnboardingIdentity() {
   const [uploading, setUploading] = useState(false)
   const [heroSaved, setHeroSaved] = useState(false)
   const [error, setError] = useState('')
+  const [savedMessage, setSavedMessage] = useState('')
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropTarget, setCropTarget] = useState<CropTarget>('avatar')
   const editingFromPanel = new URLSearchParams(window.location.search).get('from') === 'panel'
@@ -164,6 +165,7 @@ export default function FreeOnboardingIdentity() {
 
     setSaving(true)
     setError('')
+    setSavedMessage('')
     try {
       const body: Record<string, unknown> = {
         name: name.trim(),
@@ -177,8 +179,10 @@ export default function FreeOnboardingIdentity() {
       }
       if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
       const result: any = await apiPut('/me/profile', body)
-      if (result.ok) navigate(editingFromPanel ? '/admin/free' : '/admin/free/onboarding/contact')
-      else setError(result.error || 'No pudimos guardar tus datos.')
+      if (result.ok) {
+        if (editingFromPanel) setSavedMessage('✓ Cambios guardados correctamente.')
+        else navigate('/admin/free/onboarding/contact')
+      } else setError(result.error || 'No pudimos guardar tus datos.')
     } catch {
       setError('No pudimos conectar. Intenta nuevamente.')
     } finally {
@@ -264,6 +268,7 @@ export default function FreeOnboardingIdentity() {
               <div className="mt-3 grid grid-cols-3 gap-2">{ABOUT_TITLES.map((option) => <button key={option} type="button" onClick={() => setAboutTitle(option)} className={`rounded-xl px-2 py-3 text-sm font-black ${aboutTitle === option ? 'bg-cyan-600 text-white' : 'bg-slate-50 text-slate-700'}`}>{option}</button>)}</div>
             </div>
 
+            {savedMessage && <p className="mt-4 rounded-xl bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-700">{savedMessage}</p>}
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700">{error}</p>}
             <button type="submit" disabled={saving || uploading} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : editingFromPanel ? 'Guardar cambios' : 'Continuar'}</button>
           </form>

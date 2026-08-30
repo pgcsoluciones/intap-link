@@ -147,7 +147,7 @@ export default function FreeLinks() {
         </form>
 
         {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 enlaces disponibles. Puedes administrarlos libremente o pasar al Plan Básico para ampliar tu alcance." />}
-        <div className="mt-5"><FreeUpgradeCard compact /></div>
+        {canAdd && <div className="mt-5"><FreeUpgradeCard compact /></div>}
       </div>
     </main>
   )

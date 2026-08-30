@@ -339,7 +339,7 @@ export default function FreeServices() {
         </form>
 
         {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Básico para ampliar tu perfil." />}
-        <div className="mt-5"><FreeUpgradeCard compact /></div>
+        {items.length < MAX_SERVICES && <div className="mt-5"><FreeUpgradeCard compact /></div>}
         <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
 

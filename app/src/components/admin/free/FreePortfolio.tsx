@@ -292,7 +292,7 @@ export default function FreePortfolio() {
         <button onClick={() => inputRef.current?.click()} disabled={uploading || photos.length >= MAX_PHOTOS} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{uploading ? (uploadStage === 'uploading' ? 'Subiendo imagen…' : 'Procesando imagen…') : photos.length >= MAX_PHOTOS ? 'Límite completado' : 'Agregar imagen'}</button>
         {error && <p className="mt-3 text-xs font-semibold text-red-500">{error}</p>}
         {photos.length >= MAX_PHOTOS && <FreeLimitUpgradeCard text="Ya utilizas las 5 imágenes disponibles. Puedes seguir gestionándolas o pasar al Plan Básico para ampliar tu alcance." />}
-        <div className="mt-5"><FreeUpgradeCard compact /></div>
+        {photos.length < MAX_PHOTOS && <div className="mt-5"><FreeUpgradeCard compact /></div>}
         <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
 
