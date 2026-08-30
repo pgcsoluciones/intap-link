@@ -1,21 +1,23 @@
 name = "intap-api"
-main = "src/preview-free-entry.ts"
+main = "src/production-frontdoor-entry.ts"
 compatibility_date = "2024-02-08"
 
-# Rutas de producción — el Worker maneja /api/* en ambos dominios.
-# La zona (zone_name) debe existir en la cuenta Cloudflare; si no,
-# también se puede configurar desde el dashboard (Workers → Triggers → Routes).
+# Producción usa el Worker como front door de App + Web y mantiene /api/*
+# en el mismo Worker. Los origins de Pages se fijan a deployments inmutables
+# durante el release para evitar mezclar HTML y assets de versiones distintas.
 [[routes]]
-pattern = "intaprd.com/api/*"
+pattern = "intaprd.com/*"
 zone_name = "intaprd.com"
 
 [[routes]]
-pattern = "app.intaprd.com/api/*"
+pattern = "www.intaprd.com/*"
+zone_name = "intaprd.com"
+
+[[routes]]
+pattern = "app.intaprd.com/*"
 zone_name = "intaprd.com"
 
 # Custom Domain interno/público del Worker API.
-# Permite llamadas Worker → Worker sin depender
-# de un Worker Route same-zone.
 [[routes]]
 pattern = "api.intaprd.com"
 custom_domain = true
@@ -23,6 +25,8 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production"
 APP_URL = "https://app.intaprd.com"
+APP_PAGES_ORIGIN = ""
+WEB_PAGES_ORIGIN = ""
 API_URL = "https://intaprd.com"
 WEB_URL = "https://intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
@@ -34,9 +38,6 @@ AI_PROFILE_MONTHLY_LIMIT = "100"
 AI_PROFILE_MAX_ROUNDS = "2"
 AI_PROFILE_COOLDOWN_SECONDS = "20"
 FREE_MAX_SERVICES = "3"
-# Remitente del magic link. Debe ser un dominio verificado en Resend.
-# Mientras no esté verificado, Resend solo entrega a la cuenta del owner (plan free).
-# Pasos: 1) Verificar intaprd.com en resend.com/domains  2) Hacer deploy
 RESEND_FROM = "noreply@intaprd.com"
 ADMIN_EMAILS = "fliaprince@gmail.com"
 
