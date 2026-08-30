@@ -157,7 +157,7 @@ export default function PublicBankAccounts() {
   }
 
   function bankSectionUrl() {
-    return `${window.location.origin}/${encodeURIComponent(slug)}#bancos`
+    return `${window.location.origin}/${encodeURIComponent(slug)}?share=bancos#bancos`
   }
 
   function shareBankSectionWhatsApp() {

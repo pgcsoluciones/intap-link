@@ -178,28 +178,37 @@ export default function FreePortfolio() {
   const saveCroppedImage = async (blob: Blob) => {
     if (!cropFile || !cropMode || uploadLockRef.current) return
     uploadLockRef.current = true
-    const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'portfolio'
+    const sourceFile = cropFile
+    const mode = cropMode
+    const targetId = replaceTargetId
+    const baseName = sourceFile.name.replace(/\.[^.]+$/, '') || 'portfolio'
     const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
-    const path = cropMode !== 'new' && replaceTargetId
-      ? `/me/gallery/${replaceTargetId}/replace`
+    const path = mode !== 'new' && targetId
+      ? `/me/gallery/${targetId}/replace`
       : '/profile/gallery/upload'
 
+    // Cierra inmediatamente el editor de encuadre y muestra el estado real en Portafolio.
+    setCropFile(null)
     setUploading(true)
     setUploadStage('processing')
     setError('')
     try {
+      const optimized = await optimizeImageForUpload(croppedFile)
       setUploadStage('uploading')
-      const json = await sendOptimizedImage(croppedFile, path)
+      const fd = new FormData()
+      fd.append('file', optimized, optimized.name)
+      const json: any = await apiUpload(path, fd)
       if (!json.ok) {
-        setError(json.error || (cropMode === 'new' ? 'No se pudo subir la imagen.' : 'No se pudo actualizar la imagen.'))
+        setError(json.error || (mode === 'new' ? 'No se pudo subir la imagen.' : 'No se pudo actualizar la imagen.'))
         return
       }
       await load()
-      cancelCrop()
     } catch {
-      setError(cropMode === 'new' ? 'No pudimos subir la imagen.' : 'No pudimos actualizar la imagen.')
+      setError(mode === 'new' ? 'No pudimos subir la imagen.' : 'No pudimos actualizar la imagen.')
     } finally {
       uploadLockRef.current = false
+      setCropMode(null)
+      setReplaceTargetId(null)
       setUploading(false)
       setUploadStage('idle')
     }
@@ -245,6 +254,11 @@ export default function FreePortfolio() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950">
       <div className="mx-auto w-full max-w-[430px] px-5 pb-24 pt-5">
+        {uploading && uploadStage !== 'idle' && (
+          <div className="fixed inset-x-4 top-4 z-40 mx-auto max-w-[398px] rounded-2xl border border-cyan-200 bg-white px-4 py-3 shadow-xl" role="status" aria-live="polite">
+            <div className="flex items-center gap-3"><span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" /><p className="text-sm font-black text-slate-800">{uploadStage === 'processing' ? 'Procesando imagen…' : 'Subiendo imagen…'}</p></div>
+          </div>
+        )}
         <FreeBackButton onClick={() => navigate('/admin/free')} />
         <div className="flex items-end justify-between">
           <div>
@@ -301,7 +315,7 @@ export default function FreePortfolio() {
           file={cropFile}
           aspectRatio={1}
           outputWidth={1200}
-          onSave={(blob) => { void saveCroppedImage(blob) }}
+          onSave={saveCroppedImage}
           onCancel={cancelCrop}
         />
       )}

@@ -200,9 +200,13 @@ export default function FreeServices() {
   const saveCroppedServiceImage = async (blob: Blob) => {
     if (!cropFile || !imageTargetId || imageUploadLockRef.current) return
     imageUploadLockRef.current = true
-    const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'servicio'
+    const sourceFile = cropFile
+    const targetId = imageTargetId
+    const baseName = sourceFile.name.replace(/\.[^.]+$/, '') || 'servicio'
     const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
 
+    // Cierra inmediatamente el editor y deja visible el progreso dentro de Servicios.
+    setCropFile(null)
     setSaving(true)
     setImageUploadStage('processing')
     setError('')
@@ -211,17 +215,17 @@ export default function FreeServices() {
       setImageUploadStage('uploading')
       const fd = new FormData()
       fd.append('file', optimized, optimized.name)
-      const json: any = await apiUpload(`/me/products/${imageTargetId}/image`, fd)
+      const json: any = await apiUpload(`/me/products/${targetId}/image`, fd)
       if (!json.ok) {
         setError(json.error || 'No se pudo cargar la imagen del servicio.')
         return
       }
       await load()
-      cancelCrop()
     } catch {
       setError('No pudimos procesar la imagen del servicio.')
     } finally {
       imageUploadLockRef.current = false
+      setImageTargetId(null)
       setImageUploadStage('idle')
       setSaving(false)
     }
@@ -257,6 +261,11 @@ export default function FreeServices() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950">
       <div className="mx-auto w-full max-w-[430px] px-5 pb-24 pt-5">
+        {saving && imageUploadStage !== 'idle' && (
+          <div className="fixed inset-x-4 top-4 z-40 mx-auto max-w-[398px] rounded-2xl border border-cyan-200 bg-white px-4 py-3 shadow-xl" role="status" aria-live="polite">
+            <div className="flex items-center gap-3"><span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" /><p className="text-sm font-black text-slate-800">{imageUploadStage === 'processing' ? 'Procesando imagen…' : 'Subiendo imagen…'}</p></div>
+          </div>
+        )}
         <FreeBackButton onClick={() => navigate('/admin/free')} />
         <div className="flex items-end justify-between">
           <div>
@@ -348,7 +357,7 @@ export default function FreeServices() {
           file={cropFile}
           aspectRatio={1}
           outputWidth={1200}
-          onSave={(blob) => { void saveCroppedServiceImage(blob) }}
+          onSave={saveCroppedServiceImage}
           onCancel={cancelCrop}
         />
       )}

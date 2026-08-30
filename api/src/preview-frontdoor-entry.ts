@@ -87,8 +87,7 @@ async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
   const response = await proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
   const url = new URL(request.url)
   const slug = slugFromPath(url.pathname)
-  const accept = request.headers.get('Accept') || ''
-  if (!slug || slug.includes('.') || request.method.toUpperCase() !== 'GET' || !accept.includes('text/html') || response.status !== 200) return response
+  if (!slug || slug.includes('.') || request.method.toUpperCase() !== 'GET' || response.status !== 200) return response
 
   const row = await env.DB.prepare(
     `SELECT name, bio, avatar_url FROM profiles WHERE lower(slug) = lower(?) AND is_published = 1 LIMIT 1`,
@@ -100,10 +99,19 @@ async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
 
   const name = String((row as any).name || slug).trim() || slug
   const bio = String((row as any).bio || '').trim()
-  const image = String((row as any).avatar_url || '').trim()
-  const canonical = `${url.origin}/${encodeURIComponent(slug)}`
-  const title = `${name} | Kawvo Link`
-  const description = bio || `Perfil digital de ${name}. Contacto, servicios y formas de conectar en un solo lugar.`
+  const imageRaw = String((row as any).avatar_url || '').trim()
+  let image = ''
+  if (imageRaw) {
+    try { image = new URL(imageRaw, url.origin).toString() } catch { image = imageRaw }
+  }
+  const bankShare = url.searchParams.get('share') === 'bancos'
+  const canonical = bankShare
+    ? `${url.origin}/${encodeURIComponent(slug)}?share=bancos`
+    : `${url.origin}/${encodeURIComponent(slug)}`
+  const title = bankShare ? name : `${name} | Kawvo Link`
+  const description = bankShare
+    ? `Te comparto mis datos bancarios para transferencias.`
+    : (bio || `Perfil digital de ${name}. Contacto, servicios y formas de conectar en un solo lugar.`)
   const meta = [
     `<title>${escapeHtml(title)}</title>`,
     `<meta name="description" content="${escapeHtml(description)}">`,
@@ -112,6 +120,7 @@ async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
     `<meta property="og:description" content="${escapeHtml(description)}">`,
     `<meta property="og:url" content="${escapeHtml(canonical)}">`,
     image ? `<meta property="og:image" content="${escapeHtml(image)}">` : '',
+    image ? `<meta property="og:image:alt" content="Foto de ${escapeHtml(name)}">` : '',
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
