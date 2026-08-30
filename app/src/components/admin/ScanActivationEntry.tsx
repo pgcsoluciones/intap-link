@@ -153,6 +153,24 @@ export default function ScanActivationEntry() {
     }
 
     clearCode()
+    await apiPost('/me/notifications/welcome', {}).catch(() => undefined)
+
+    const meAfterActivation: any = await apiGet('/me').catch(() => ({ ok: false }))
+    const hasActivity = Boolean(
+      meAfterActivation?.ok &&
+      String(meAfterActivation.data?.category || '').trim() &&
+      String(meAfterActivation.data?.subcategory || '').trim()
+    )
+
+    // En la primera activación el perfil base recién creado todavía no tiene
+    // actividad/subcategoría. Ese caso debe entrar al onboarding guiado.
+    if (!hasActivity) {
+      navigate('/admin/free/onboarding/intro', { replace: true })
+      return
+    }
+
+    // Si el usuario ya tenía un perfil configurado y solo agregó otro producto,
+    // respetamos el destino normal sin obligarlo a repetir onboarding.
     const nextUrl = String(result.data?.next_url || '')
     if (nextUrl) {
       window.location.assign(nextUrl)
