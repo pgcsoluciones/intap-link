@@ -20,12 +20,16 @@ assert.match(services, /const SERVICE_TITLE_LIMIT = 60/)
 assert.match(services, /const SECTION_DESCRIPTION_LIMIT = 240/)
 
 assert.match(assistant, /FREE_MAX_SERVICES = 3/)
-assert.match(assistant, /professional_title: text\(value\.professional_title, 80\)/)
-assert.match(assistant, /bio: text\(value\.bio, 300\)/)
-assert.match(assistant, /services_section_title: text\(value\.services_section_title, 60\)/)
-assert.match(assistant, /services_section_description: text\(value\.services_section_description, 240\)/)
+assert.match(assistant, /strictText\(value\.professional_title, 80\)/)
+assert.match(assistant, /strictText\(value\.bio, 300\)/)
+assert.match(assistant, /strictText\(value\.services_section_title, 60\)/)
+assert.match(assistant, /strictText\(value\.services_section_description, 240\)/)
+assert.match(assistant, /strictText\(cta\.label, 45\)/)
 
-// The AI server must never allow service descriptions longer than the actual editor.
-assert.match(assistant, /description: text\(item\?\.description, 90\)/)
+// Strict validation must reject model output that exceeds canonical editor limits;
+// it must not silently truncate an overlong proposal before apply.
+assert.match(assistant, /description: strictText\(item\?\.description, 90\)/)
+assert.match(assistant, /title: strictText\(item\?\.title, 60\)/)
+assert.match(assistant, /title: strictText\(item\?\.title, 80\)/)
 
 console.log('AI profile canonical field/limit checks: OK')
