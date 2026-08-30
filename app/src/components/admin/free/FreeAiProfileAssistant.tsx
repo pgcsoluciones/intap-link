@@ -749,8 +749,7 @@ export default function FreeAiProfileAssistant() {
       <header className="rounded-[28px] border border-cyan-100 bg-gradient-to-br from-white to-cyan-50 p-5 shadow-sm sm:p-7">
         <p className="text-xs font-black uppercase tracking-[0.15em] text-cyan-700">Kawvo · Asistente IA · Beta</p>
         <h1 className="mt-2 text-[28px] font-black leading-tight tracking-[-0.04em]">Haz que tu perfil te presente mejor</h1>
-        <p className="mt-2 text-base font-medium leading-7 text-slate-600">Kawvo usa lo que ya sabe de tu perfil y solo te pide lo necesario. <strong className="text-slate-800">Tú revisas y decides qué aplicar.</strong></p>
-        <div className="mt-4 rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold leading-6 text-slate-600 ring-1 ring-cyan-100">La IA no publica, no cambia tu diseño, plantilla, colores, botones ni orden de secciones.</div>
+        <p className="mt-2 text-base font-medium leading-7 text-slate-600">✨ Kawvo prepara una propuesta con la información de tu perfil. <strong className="text-slate-800">Tú decides qué aplicar.</strong></p>
       </header>
 
       {error && <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold leading-6 text-rose-700">{error}</div>}
@@ -810,15 +809,15 @@ export default function FreeAiProfileAssistant() {
               setInstructionEnough((current)=>current === enough ? current : enough)
             }}
           />
-          <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">Kawvo ya conoce el contenido de tu perfil. Si tiene suficiente información, preparará la propuesta directamente. Si falta un hecho importante, te preguntará solo lo mínimo necesario.</div>
+          <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">✨ Usaremos lo que ya completaste.</div>
         </>}
 
         {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:instructionHasText?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
-        <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">La IA usa el perfil completo como contexto, interpreta tus respuestas y solo pregunta cuando realmente necesita confirmar un hecho.</p>
+        {generating && <div className="flex items-center justify-center gap-2 rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-800"><span className="animate-pulse">✨</span><span>Preparando tu propuesta…</span></div>}
       </section>}
 
       {!proposal && followUp.length>0 && context && <section className="mt-5 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Kawvo necesita confirmar algo</p><h2 className="mt-2 text-xl font-black">Una aclaración antes de preparar tu propuesta</h2><p className="mt-2 text-sm font-medium leading-6 text-slate-600">La IA ya revisó tu perfil. Responde solo este dato y continuará con todo el contexto anterior.</p>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">❓ Falta un dato</p><h2 className="mt-2 text-xl font-black">Confirma esto para continuar</h2>
         <div className="mt-5 space-y-5">{followUp.map((item,index)=>{
           const isChannelQuestion =
             channels.length > 1 &&
@@ -835,7 +834,7 @@ export default function FreeAiProfileAssistant() {
       </section>}
 
       {proposal && context && <section className="mt-5 space-y-5">
-        <div className="rounded-[24px] border border-cyan-200 bg-cyan-50 p-4"><p className="font-black text-cyan-900">Propuesta lista para revisar</p><p className="mt-1 text-sm font-semibold leading-6 text-cyan-800">Revisa la propuesta antes de aplicarla. Tú decides qué contenido utilizar. Nada se aplicará hasta que pulses <strong>Aplicar a mi perfil</strong>.</p></div>
+        <div className="rounded-[24px] border border-cyan-200 bg-cyan-50 p-4"><p className="font-black text-cyan-900">✓ Propuesta lista</p><p className="mt-1 text-sm font-semibold leading-6 text-cyan-800">Revísala y aplica solo lo que quieras.</p></div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Identidad</p><h2 className="mt-1 text-xl font-black">Cómo te presentas</h2></div>
           {editingScope==='full_profile' && context.profile.professional_title ? <div className="mt-4 space-y-3"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Tu texto actual</p><p className="mt-2 font-bold text-slate-700">{context.profile.professional_title}</p></div><div className="rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4"><p className="text-[11px] font-black uppercase text-cyan-700">Sugerencia de Kawvo</p><input value={proposal.professional_title} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-2 w-full rounded-xl border border-cyan-200 bg-white px-3 py-3 font-black"/></div><div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>{updateProposal('professional_title',context.profile.professional_title);setSelection((s)=>({...s,identity:false}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${!selection.identity?'bg-slate-900 text-white':'bg-slate-100 text-slate-700'}`}>Mantener mi texto</button><button type="button" onClick={()=>{if(suggestedProposal)updateProposal('professional_title',suggestedProposal.professional_title);setSelection((s)=>({...s,identity:true}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${selection.identity?'bg-cyan-700 text-white':'bg-cyan-50 text-cyan-800'}`}>Usar texto sugerido</button></div></div> : <input value={editingScope==='missing_only'&&context.profile.professional_title?context.profile.professional_title:proposal.professional_title} disabled={editingScope==='missing_only'&&Boolean(context.profile.professional_title)} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-black" />}

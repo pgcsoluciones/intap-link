@@ -234,6 +234,10 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     '--ilx-soft-accent': softAccent,
   } as CSSProperties
 
+  function canonicalProfileUrl() {
+    return `${window.location.origin}${window.location.pathname}`
+  }
+
   async function downloadVCard() {
     const canonicalUrl = `${window.location.origin}${window.location.pathname}`
     const escapeVCard = (value: string) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
@@ -271,7 +275,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   async function copyProfileLink() {
     try {
-      await navigator.clipboard.writeText(window.location.href)
+      await navigator.clipboard.writeText(canonicalProfileUrl())
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1800)
     } catch { setCopied(false) }
@@ -280,7 +284,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   async function openQrModal() {
     try {
       const QRCode = await import('qrcode')
-      setQrDataUrl(await QRCode.toDataURL(window.location.href, { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
+      setQrDataUrl(await QRCode.toDataURL(canonicalProfileUrl(), { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
       setQrOpen(true)
     } catch (error) { console.error('No se pudo generar el QR', error) }
   }
@@ -296,13 +300,13 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   function shareProfileQrWhatsApp() {
-    const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${window.location.href}`
+    const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${canonicalProfileUrl()}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
   async function shareProfile() {
     try {
-      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: window.location.href })
+      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: canonicalProfileUrl() })
       else await copyProfileLink()
     } catch { /* cancelar compartir no es error */ }
   }

@@ -11,7 +11,7 @@ const MAX_ROUNDS_PER_SESSION = 2
 const FREE_MAX_SERVICES = 3
 const FREE_MAX_PORTFOLIO = 5
 const COOLDOWN_SECONDS = 20
-const MAX_OUTPUT_TOKENS = 1800
+const MAX_OUTPUT_TOKENS = 2400
 const INPUT_USD_PER_MILLION = 0.20
 const OUTPUT_USD_PER_MILLION = 1.20
 
@@ -797,16 +797,33 @@ app.post('/api/v1/me/ai-profile-assistant/generate', requireAssistantAuth, async
     let parsed: any = null
     try { parsed = JSON.parse(responseText(payload)) } catch {}
     let result = validateAssistantResult(parsed, limits.max_services, limits.max_portfolio)
+    let internalRetryUsed = false
 
     if (!result) {
-      await insertUsage(c,{ userId,profileId:context.profileId,operation:'generate',status:'error',model,inputTokens:totalInputTokens,outputTokens:totalOutputTokens,errorCode:'invalid_structured_output' })
-      return c.json({ ok:false,error:'La respuesta de IA llegó incompleta. Tu perfil sigue sin cambios.' },502)
+      internalRetryUsed = true
+      ;({ response, payload } = await callAssistant(true, true))
+      usage = payload?.usage || {}
+      totalInputTokens += Number(usage.input_tokens || 0)
+      totalOutputTokens += Number(usage.output_tokens || 0)
+      parsed = null
+      try { parsed = JSON.parse(responseText(payload)) } catch {}
+      result = validateAssistantResult(parsed, limits.max_services, limits.max_portfolio)
+
+      if (!result) {
+        await insertUsage(c,{ userId,profileId:context.profileId,operation:'generate',status:'error',model,inputTokens:totalInputTokens,outputTokens:totalOutputTokens,errorCode:'invalid_structured_output_after_retry' })
+        return c.json({ ok:false,code:'ai_incomplete_after_retry',error:'No pudimos completar la propuesta ahora. Inténtalo más tarde.' },502)
+      }
     }
 
     const blockedNonUserFollowUp = result.status === 'needs_more_info'
       && result.questions.length === 0
 
     if (blockedNonUserFollowUp) {
+      if (internalRetryUsed) {
+        await insertUsage(c,{ userId,profileId:context.profileId,operation:'generate',status:'error',model,inputTokens:totalInputTokens,outputTokens:totalOutputTokens,errorCode:'blocked_non_user_follow_up_after_retry' })
+        return c.json({ ok:false,code:'ai_incomplete_after_retry',error:'No pudimos completar la propuesta ahora. Inténtalo más tarde.' },502)
+      }
+      internalRetryUsed = true
       ;({ response, payload } = await callAssistant(true, true))
       usage = payload?.usage || {}
       totalInputTokens += Number(usage.input_tokens || 0)
