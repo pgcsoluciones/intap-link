@@ -11,6 +11,7 @@ interface Props {
 }
 
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+const POST_AUTH_PATH_KEY = 'kawvo_post_auth_path'
 
 function readScanCode(): string {
   const raw = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
@@ -33,15 +34,14 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
 
     apiGet('/me').then(async (json: any) => {
       if (!json.ok) {
+        if (location.pathname === '/admin/free/home') {
+          sessionStorage.setItem(POST_AUTH_PATH_KEY, `${location.pathname}${location.search}`)
+        }
         navigate('/admin/login', { replace: true })
         return
       }
 
       if (location.pathname !== '/admin/artifacts/activate') {
-        // Scan-to-claim continuity only needs to run when this browser actually
-        // remembers a scanned product. Avoid probing /scan/pending on every
-        // normal panel reload: a 404 is the expected "nothing pending" state
-        // and was delaying the guard while showing the dark loading screen.
         const scanCode = readScanCode()
         if (scanCode) {
           let scanPending: any = await apiGet('/me/artifacts/scan/pending')
@@ -57,8 +57,6 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
             } else if (start.ok && start.state === 'activated') {
               clearScanCode()
             } else if (!start.ok) {
-              // A stale/invalid remembered code must not penalize every future
-              // reload. Visiting /l/:code again will recreate continuity.
               clearScanCode()
             }
           }
@@ -93,9 +91,12 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
 
       setReady(true)
     }).catch(() => {
+      if (location.pathname === '/admin/free/home') {
+        sessionStorage.setItem(POST_AUTH_PATH_KEY, `${location.pathname}${location.search}`)
+      }
       navigate('/admin/login', { replace: true })
     })
-  }, [location.pathname, navigate, planScope, requireProfile])
+  }, [location.pathname, location.search, navigate, planScope, requireProfile])
 
   if (!ready) {
     return (
