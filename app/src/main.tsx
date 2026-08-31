@@ -9,6 +9,9 @@ document.body.classList.toggle(
   initialPath.startsWith('/admin/free') || initialPath.startsWith('/admin/artifacts'),
 )
 
+const standalone = window.matchMedia('(display-mode: standalone)').matches || Boolean((window.navigator as any).standalone)
+if (standalone) localStorage.setItem('kawvo_pwa_installed', '1')
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => undefined)
@@ -18,5 +21,5 @@ if ('serviceWorker' in navigator) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>
+  </React.StrictMode>,
 )
