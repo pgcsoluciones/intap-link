@@ -11,16 +11,16 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/kawvo-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/kawvo-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
       "src": "/kawvo-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [
