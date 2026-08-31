@@ -9,6 +9,12 @@ document.body.classList.toggle(
   initialPath.startsWith('/admin/free') || initialPath.startsWith('/admin/artifacts'),
 )
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => undefined)
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
