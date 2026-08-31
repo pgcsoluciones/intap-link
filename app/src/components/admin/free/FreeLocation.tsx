@@ -90,6 +90,23 @@ export default function FreeLocation() {
     )
   }
 
+  const syncSelectedLocationButton = async (nextMapUrl: string) => {
+    const quickJson: any = await apiGet('/me/free/quick-actions')
+    if (!quickJson?.ok) throw new Error('quick-actions-load')
+
+    const currentItems = Array.isArray(quickJson.data?.selected) ? quickJson.data.selected : []
+    const hasLocationButton = currentItems.some((item: any) => item?.type === 'location')
+    if (!hasLocationButton) return
+
+    const items = currentItems.map((item: any) => ({
+      type: item.type,
+      url: item.type === 'location' ? nextMapUrl : item.url,
+    }))
+
+    const updateJson: any = await apiPut('/me/free/quick-actions', { items })
+    if (!updateJson?.ok) throw new Error('quick-actions-update')
+  }
+
   const save = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!address.trim()) {
@@ -111,11 +128,19 @@ export default function FreeLocation() {
         place_name: address.trim(),
         map_url: mapUrl,
       })
-      if (json.ok) {
-        setSaved(true)
-      } else {
+      if (!json.ok) {
         setError(json.error || 'No pudimos guardar la ubicación.')
+        return
       }
+
+      try {
+        await syncSelectedLocationButton(mapUrl)
+      } catch {
+        setError('La ubicación se guardó, pero no pudimos actualizar el botón de Ubicación. Intenta guardar de nuevo.')
+        return
+      }
+
+      setSaved(true)
     } catch {
       setError('No pudimos guardar la ubicación.')
     } finally {
@@ -210,7 +235,7 @@ export default function FreeLocation() {
             </div>
           )}
 
-          {saved && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">Ubicación guardada en tu perfil.</p>}
+          {saved && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">Ubicación guardada y botón de contacto actualizado.</p>}
           {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{error}</p>}
 
           <button
@@ -219,6 +244,16 @@ export default function FreeLocation() {
           >
             {saving ? 'Guardando…' : 'Guardar ubicación'}
           </button>
+
+          {saved && (
+            <button
+              type="button"
+              onClick={() => navigate('/admin/free/quick-actions')}
+              className="mt-3 w-full rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700"
+            >
+              Ir a botones de contacto
+            </button>
+          )}
         </form>
 
         <div className="mt-5">
