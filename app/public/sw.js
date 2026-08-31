@@ -1,5 +1,5 @@
-const CACHE_NAME = 'kawvo-shell-v1'
-const SHELL = ['/admin/free/home?source=pwa', '/manifest.webmanifest', '/logo.png']
+const CACHE_NAME = 'kawvo-shell-v2'
+const SHELL = ['/admin/free/home?source=pwa', '/manifest.webmanifest', '/kawvo-icon.svg']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)).catch(() => undefined))
