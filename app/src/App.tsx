@@ -36,6 +36,7 @@ import FreeVisualEditor from './components/admin/free/FreeVisualEditor'
 import FreeBankAccounts from './components/admin/free/FreeBankAccounts'
 import FreeContextHelp from './components/admin/free/FreeContextHelp'
 import FreeRouteUx from './components/admin/free/FreeRouteUx'
+import FreePwaHome from './components/admin/free/FreePwaHome'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
 import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
 import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
@@ -99,6 +100,7 @@ function App() {
         <Route path="/admin/free/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingContact /></AdminGuard>} />
         <Route path="/admin/free/onboarding/done" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingDone /></AdminGuard>} />
 
+        <Route path="/admin/free/home" element={<AdminGuard planScope="free"><FreePwaHome /></AdminGuard>} />
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
         <Route path="/admin/free/editor" element={<AdminGuard planScope="free"><FreeVisualEditor /></AdminGuard>} />
         <Route path="/admin/free/ai-profile" element={<AdminGuard planScope="free"><Suspense fallback={<AiRouteFallback />}><FreeAiProfileAssistant /></Suspense></AdminGuard>} />
