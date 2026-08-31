@@ -70,13 +70,16 @@ export default function FreeQuickActions() {
   const [limitReached, setLimitReached] = useState(false)
 
   useEffect(() => {
-    apiGet('/me/free/quick-actions').then((json: any) => {
+    Promise.all([apiGet('/me/free/quick-actions'), apiGet('/me/contact')]).then(([json, contactJson]: any[]) => {
       if (!json?.ok) return setError(json?.error || 'No pudimos cargar tus botones de contacto.')
       const data = (json.data || {}) as QuickActionsPayload
+      const canonicalMapUrl = contactJson?.ok ? String(contactJson.data?.map_url || '').trim() : ''
       setSelected((data.selected || []).map((item) => item.type).slice(0, MAX_SELECTED))
       const nextValues: Partial<Record<QuickActionType, string>> = {}
       OPTIONS.forEach((option) => {
-        const stored = data.values?.[option.type] || data.selected?.find((item) => item.type === option.type)?.url || ''
+        const stored = option.type === 'location' && canonicalMapUrl
+          ? canonicalMapUrl
+          : data.values?.[option.type] || data.selected?.find((item) => item.type === option.type)?.url || ''
         nextValues[option.type] = displayValue(option.type, stored)
       })
       setValues(nextValues)
@@ -108,9 +111,14 @@ export default function FreeQuickActions() {
       const label = OPTIONS.find((option) => option.type === invalid)?.label || 'seleccionado'
       return setError(`Revisa el dato de ${label} antes de guardar.`)
     }
-    const items = selected.map((type) => ({ type, url: normalizeActionUrl(type, values[type] || '') }))
     setSaving(true)
     try {
+      const contactJson: any = selected.includes('location') ? await apiGet('/me/contact') : null
+      const canonicalMapUrl = contactJson?.ok ? String(contactJson.data?.map_url || '').trim() : ''
+      const items = selected.map((type) => ({
+        type,
+        url: normalizeActionUrl(type, type === 'location' && canonicalMapUrl ? canonicalMapUrl : values[type] || ''),
+      }))
       const json: any = await apiPut('/me/free/quick-actions', { items })
       if (!json?.ok) return setError(json?.error || 'No se pudieron guardar tus accesos rápidos.')
       const normalizedValues = { ...values }

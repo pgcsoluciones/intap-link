@@ -144,7 +144,8 @@ function resolveQuickActions(data: UnknownRecord, phone: string, instagram: stri
     const rawType = normalizeText(readString(link, 'type')).replace(/^free_/, '')
     if (!QUICK_ACTION_TYPES.has(rawType as FreeProfileQuickActionType)) return null
     const type = rawType as FreeProfileQuickActionType
-    const url = readString(link, 'url')
+    const storedUrl = readString(link, 'url')
+    const url = type === 'location' && location ? location : storedUrl
     if (!url) return null
     return { type, label: QUICK_ACTION_LABELS[type], url, sortOrder: Number(link.sort_order ?? link.sortOrder ?? 999) }
   }).filter((item): item is FreeProfileQuickAction & { sortOrder: number } => Boolean(item)).sort((a, b) => a.sortOrder - b.sortOrder).slice(0, 3).map(({ sortOrder: _sortOrder, ...item }) => item)
@@ -236,7 +237,9 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
   const phone = normalizePhone(realPhoneSource) || (starterGenerated ? STARTER_PHONE : '')
   const realInstagram = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
   const instagram = realInstagram || (starterGenerated ? STARTER_INSTAGRAM : '')
-  const realLocation = findSocialUrl(socialLinks, 'free_location') || readString(contact, 'map_url') || mapLink
+  // La ubicación configurada en profile_contact es la fuente canónica.
+  // Los social_links solo conservan la selección/orden del botón, no una coordenada paralela.
+  const realLocation = readString(contact, 'map_url') || findSocialUrl(socialLinks, 'location') || findSocialUrl(socialLinks, 'free_location') || mapLink
   const location = realLocation || (starterGenerated ? STARTER_LOCATION : '')
   const role = readString(templateData, 'role', 'title') || readString(data, 'subcategory', 'category') || starter.role
   const greetingName = readString(templateData, 'whatsapp_greeting_name') || name.split(/\s+/)[0] || name
