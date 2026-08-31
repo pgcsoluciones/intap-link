@@ -9,10 +9,16 @@ type MeData = {
   avatar_url?: string | null
 }
 
+function isIos() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent)
+}
+
 export default function FreePwaHome() {
   const navigate = useNavigate()
   const [me, setMe] = useState<MeData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showCloseHelp, setShowCloseHelp] = useState(false)
+  const [confirmLogout, setConfirmLogout] = useState(false)
 
   useEffect(() => {
     apiGet('/me')
@@ -27,6 +33,12 @@ export default function FreePwaHome() {
     window.location.replace('/admin/login')
   }
 
+  const closeKawvo = () => {
+    setShowCloseHelp(false)
+    window.close()
+    window.setTimeout(() => setShowCloseHelp(true), 180)
+  }
+
   if (loading) return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
@@ -39,35 +51,58 @@ export default function FreePwaHome() {
         <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
           <div className="flex items-center gap-4">
             <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-[20px] border border-cyan-100 bg-cyan-50">
-              {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <img src="/logo.png" alt="Kawvo" className="h-full w-full object-contain p-2" />}
+              {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <img src="/kawvo-icon-192.png" alt="Kawvo" className="h-full w-full object-contain" />}
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-700">KAWVO</p>
+              <p className="text-[12px] font-black uppercase tracking-[0.16em] text-cyan-700">KAWVO</p>
               <h1 className="mt-1 text-2xl font-black tracking-[-0.04em]">Hola, {displayName} 👋</h1>
             </div>
           </div>
 
-          <p className="mt-5 text-base font-medium leading-7 text-slate-600">¿Qué quieres hacer?</p>
+          <p className="mt-5 text-base font-semibold leading-7 text-slate-600">¿Qué quieres hacer?</p>
 
           <div className="mt-5 space-y-3">
             <button type="button" onClick={() => navigate('/admin/free')} className="w-full rounded-[22px] border border-cyan-200 bg-cyan-50 p-4 text-left transition active:scale-[0.99]">
               <div className="flex items-center gap-3">
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-700 text-xl text-white">⚙</span>
-                <div><p className="font-black text-slate-950">Administrar mi perfil</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Edita tu información, servicios, imágenes y configuración.</p></div>
+                <div><p className="text-base font-black text-slate-950">Administrar mi perfil</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Edita tu información, servicios, imágenes y configuración.</p></div>
               </div>
             </button>
 
             <button type="button" disabled={!publicUrl} onClick={() => publicUrl && window.location.assign(publicUrl)} className="w-full rounded-[22px] border border-slate-200 bg-white p-4 text-left transition active:scale-[0.99] disabled:opacity-45">
               <div className="flex items-center gap-3">
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-950 text-xl text-white">👁</span>
-                <div><p className="font-black text-slate-950">Ver mi perfil</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Mira tu presentación como la ven tus clientes.</p></div>
+                <div><p className="text-base font-black text-slate-950">Ver mi perfil</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Mira tu presentación como la ven tus clientes.</p></div>
               </div>
             </button>
           </div>
 
           {!publicUrl && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold leading-5 text-amber-900">Completa tu usuario para habilitar el acceso directo a tu perfil público.</p>}
 
-          <button type="button" onClick={() => void logout()} className="mt-5 w-full rounded-2xl bg-slate-100 px-4 py-3 text-sm font-black text-slate-600">Cerrar sesión</button>
+          <button type="button" onClick={closeKawvo} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-black text-white">Cerrar Kawvo</button>
+
+          {showCloseHelp && (
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-700">
+              {isIos()
+                ? 'Para cerrar Kawvo en iPhone, desliza hacia arriba desde el borde inferior de la pantalla. Tu sesión seguirá abierta para la próxima vez.'
+                : 'Si Kawvo no se cerró automáticamente, ciérralo como cualquier otra app desde tu dispositivo. Tu sesión seguirá abierta.'}
+            </div>
+          )}
+
+          <div className="mt-5 border-t border-slate-100 pt-4 text-center">
+            {!confirmLogout ? (
+              <button type="button" onClick={() => setConfirmLogout(true)} className="text-sm font-bold text-slate-500">Cerrar sesión</button>
+            ) : (
+              <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-left">
+                <p className="text-sm font-black text-slate-950">¿Cerrar tu sesión?</p>
+                <p className="mt-1 text-sm font-medium leading-5 text-slate-600">Hazlo solo si quieres desconectar tu cuenta de este dispositivo.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setConfirmLogout(false)} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700">Cancelar</button>
+                  <button type="button" onClick={() => void logout()} className="rounded-xl bg-rose-600 px-3 py-2.5 text-sm font-black text-white">Sí, cerrar sesión</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
     </main>
