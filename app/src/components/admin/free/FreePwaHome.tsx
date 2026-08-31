@@ -79,23 +79,27 @@ export default function FreePwaHome() {
 
           {!publicUrl && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold leading-5 text-amber-900">Completa tu usuario para habilitar el acceso directo a tu perfil público.</p>}
 
-          <button type="button" onClick={closeKawvo} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-black text-white">Cerrar Kawvo</button>
+          <button type="button" onClick={closeKawvo} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-3.5 text-base font-black text-white">Salir de la app</button>
+          <p className="mt-2 text-center text-xs font-semibold leading-5 text-slate-500">Esta acción no cierra tu sesión.</p>
 
           {showCloseHelp && (
             <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-700">
               {isIos()
-                ? 'Para cerrar Kawvo en iPhone, desliza hacia arriba desde el borde inferior de la pantalla. Tu sesión seguirá abierta para la próxima vez.'
-                : 'Si Kawvo no se cerró automáticamente, ciérralo como cualquier otra app desde tu dispositivo. Tu sesión seguirá abierta.'}
+                ? 'Para salir de Kawvo en iPhone, desliza hacia arriba desde el borde inferior de la pantalla. Tu sesión seguirá abierta.'
+                : 'Si Kawvo no se cerró automáticamente, ciérralo como cualquier otra app. Tu sesión seguirá abierta.'}
             </div>
           )}
 
           <div className="mt-5 border-t border-slate-100 pt-4 text-center">
             {!confirmLogout ? (
-              <button type="button" onClick={() => setConfirmLogout(true)} className="text-sm font-bold text-slate-500">Cerrar sesión</button>
+              <>
+                <button type="button" onClick={() => setConfirmLogout(true)} className="text-sm font-bold text-slate-500">Cerrar sesión</button>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">Esta acción no elimina tu cuenta.</p>
+              </>
             ) : (
               <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-left">
                 <p className="text-sm font-black text-slate-950">¿Cerrar tu sesión?</p>
-                <p className="mt-1 text-sm font-medium leading-5 text-slate-600">Hazlo solo si quieres desconectar tu cuenta de este dispositivo.</p>
+                <p className="mt-1 text-sm font-medium leading-5 text-slate-600">Cerrarás tu sesión en este dispositivo. Esta acción no elimina tu cuenta.</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setConfirmLogout(false)} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-700">Cancelar</button>
                   <button type="button" onClick={() => void logout()} className="rounded-xl bg-rose-600 px-3 py-2.5 text-sm font-black text-white">Sí, cerrar sesión</button>
