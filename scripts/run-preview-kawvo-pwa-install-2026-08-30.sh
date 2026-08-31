@@ -27,7 +27,15 @@ if [ "$(git branch --show-current)" != "$BRANCH" ]; then
   run git checkout -B "$BRANCH" "github/$BRANCH"
 fi
 run git pull --ff-only github "$BRANCH"
-[ -z "$(git status --porcelain)" ] || fail "Working tree no está limpio"
+
+# Solo bloqueamos cambios TRACKED. Archivos generados/no versionados locales
+# (logs, dist, .wrangler, etc.) no deben impedir un QA de Preview.
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo ""
+  echo "=== CAMBIOS TRACKED DETECTADOS ==="
+  git status --short
+  fail "Hay cambios versionados locales; no los sobreescribiremos"
+fi
 
 run git diff --check
 
@@ -35,7 +43,7 @@ echo ""
 echo "▶ Validando App Preview"
 (cd app && npx tsc && npx vite build --mode preview) || fail "Build Preview de App"
 
-for file in app/dist/manifest.webmanifest app/dist/sw.js app/dist/logo.png; do
+for file in app/dist/manifest.webmanifest app/dist/sw.js app/dist/kawvo-icon.svg; do
   [ -f "$file" ] || fail "Falta asset PWA: $file"
 done
 
@@ -77,6 +85,7 @@ WORKER_VERSION="$(grep -E 'Current Version ID:' "$WORKER_LOG" | tail -1 | sed -E
 for url in \
   "https://app.preview.intaprd.com/manifest.webmanifest" \
   "https://app.preview.intaprd.com/sw.js" \
+  "https://app.preview.intaprd.com/kawvo-icon.svg" \
   "https://app.preview.intaprd.com/admin/free/home?source=pwa"; do
   code="$(curl -sS -o /dev/null -w '%{http_code}' "$url")"
   [ "$code" = "200" ] || [ "$code" = "302" ] || fail "Smoke PWA $url -> HTTP $code"
