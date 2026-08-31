@@ -20,6 +20,11 @@ function isAndroid() {
   return /android/i.test(window.navigator.userAgent)
 }
 
+function isSafari() {
+  const ua = window.navigator.userAgent
+  return /safari/i.test(ua) && !/crios|fxios|edgios|chrome|chromium|android/i.test(ua)
+}
+
 function markInstalled() {
   localStorage.setItem(INSTALLED_KEY, '1')
 }
@@ -28,9 +33,11 @@ export default function FreePwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(() => isStandalone() || localStorage.getItem(INSTALLED_KEY) === '1')
   const [showHelp, setShowHelp] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
   const ios = useMemo(() => isIos(), [])
   const android = useMemo(() => isAndroid(), [])
+  const safari = useMemo(() => isSafari(), [])
 
   useEffect(() => {
     if (isStandalone()) {
@@ -110,15 +117,25 @@ export default function FreePwaInstallPrompt() {
 
   const installUrl = `${window.location.origin}/admin/free/home?source=install`
 
+  const copyInstallUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(installUrl)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopied(false)
+    }
+  }
+
   const content = (
     <section className="rounded-[22px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 font-['Inter'] shadow-sm" aria-label="Acceso rápido a Kawvo">
       <div className="flex items-start gap-3">
-        <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#0E5CF5] p-1.5" aria-hidden="true">
+        <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#0F5FF7] p-1.5" aria-hidden="true">
           <img src="/kawvo-icon.svg" alt="" className="h-full w-full" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-cyan-700">Lleva Kawvo contigo</p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">{installed ? 'Kawvo está listo en tu dispositivo' : 'Ten Kawvo siempre a mano'}</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-cyan-700">Acceso rápido a Kawvo</p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">{installed ? 'Kawvo está listo en tu dispositivo' : 'Lleva Kawvo contigo'}</h2>
           <p className="mt-1 text-sm font-medium leading-5 text-slate-600">
             {installed
               ? 'Entra a tu perfil y a tu panel cuando quieras desde el icono de Kawvo.'
@@ -128,48 +145,64 @@ export default function FreePwaInstallPrompt() {
       </div>
 
       {installed ? (
-        <a href="/admin/free/home?source=pwa" className="mt-4 flex w-full items-center justify-center rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-black text-white">Abrir inicio Kawvo</a>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <a href="/admin/free/home?source=pwa" className="flex items-center justify-center rounded-2xl bg-cyan-700 px-3 py-3 text-center text-xs font-black text-white">Abrir Kawvo</a>
+          <button type="button" onClick={() => setShowHelp((value) => !value)} className="rounded-2xl border border-cyan-200 bg-white px-3 py-3 text-xs font-black text-cyan-700">{showHelp ? 'Ocultar ayuda' : 'Ver instalación'}</button>
+        </div>
       ) : (
-        <>
-          <button type="button" onClick={() => void install()} className="mt-4 w-full rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-black text-white">{deferredPrompt ? 'Instalar Kawvo' : 'Cómo instalar Kawvo'}</button>
+        <button type="button" onClick={() => void install()} className="mt-4 w-full rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-black text-white">{deferredPrompt ? 'Instalar Kawvo' : 'Cómo instalar Kawvo'}</button>
+      )}
 
-          {showHelp && ios && (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p className="font-black text-slate-950">Cómo agregar Kawvo en iPhone</p>
-              <ol className="mt-3 space-y-3 font-medium leading-5">
-                <li><b>1.</b> Toca <b>Abrir página para instalar</b> aquí debajo. Haz los siguientes pasos en Safari.</li>
-                <li><b>2.</b> En Safari, mira la barra inferior y toca <b>Compartir</b>: es el icono de un cuadro con una flecha hacia arriba.</li>
-                <li><b>3.</b> Desliza el menú hasta encontrar <b>Agregar a pantalla de inicio</b>.</li>
-                <li><b>4.</b> Toca <b>Agregar</b> en la esquina superior derecha.</li>
-                <li><b>5.</b> Verás el icono azul de Kawvo en tu pantalla. Tócalo para entrar.</li>
-              </ol>
-              <a href={installUrl} className="mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs font-black text-cyan-700">Abrir página para instalar</a>
+      {showHelp && ios && (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          <p className="font-black text-slate-950">Instalar Kawvo en iPhone</p>
+          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">Usa este acceso de Kawvo para que iPhone guarde el icono azul con la K blanca, no el icono de tu perfil.</p>
+
+          {!safari && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold leading-5 text-amber-900">
+              Estás usando otro navegador. Para agregar Kawvo correctamente, abre <b>Safari</b>, el icono azul con una brújula.
             </div>
           )}
 
-          {showHelp && android && (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p className="font-black text-slate-950">Cómo instalar Kawvo en Android</p>
-              <ol className="mt-3 space-y-3 font-medium leading-5">
-                <li><b>1.</b> Abre esta página en <b>Chrome</b>.</li>
-                <li><b>2.</b> Toca el menú de <b>tres puntos</b> de Chrome.</li>
-                <li><b>3.</b> Elige <b>Instalar aplicación</b> o <b>Agregar a pantalla principal</b>.</li>
-                <li><b>4.</b> Confirma. El icono de Kawvo aparecerá en tu dispositivo.</li>
-              </ol>
-            </div>
-          )}
+          <ol className="mt-3 space-y-3 font-medium leading-5">
+            <li><b>1.</b> Abre el enlace de Kawvo en <b>Safari</b>. Si ya estás en Safari, toca <b>Abrir Kawvo para instalar</b>.</li>
+            <li><b>2.</b> En Safari, busca abajo el botón <b>Compartir</b>: es un cuadro con una flecha apuntando hacia arriba.</li>
+            <li><b>3.</b> Toca <b>Compartir</b> y desliza la lista de opciones hacia arriba.</li>
+            <li><b>4.</b> Toca <b>Agregar a pantalla de inicio</b>.</li>
+            <li><b>5.</b> Verifica que diga <b>Kawvo</b> y toca <b>Agregar</b> arriba a la derecha.</li>
+            <li><b>6.</b> En tu pantalla aparecerá el icono azul de Kawvo con la <b>K blanca</b>. Ábrelo una vez para confirmar la instalación.</li>
+          </ol>
 
-          {showHelp && !ios && !android && (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p className="font-black text-slate-950">Cómo instalar Kawvo en este equipo</p>
-              <ol className="mt-3 space-y-3 font-medium leading-5">
-                <li><b>1.</b> Usa Chrome o Edge.</li>
-                <li><b>2.</b> Busca el icono de instalación en la barra de direcciones o abre el menú del navegador.</li>
-                <li><b>3.</b> Elige <b>Instalar Kawvo</b> o <b>Instalar aplicación</b> y confirma.</li>
-              </ol>
-            </div>
-          )}
-        </>
+          <div className="mt-4 grid gap-2">
+            <a href={installUrl} className="flex w-full items-center justify-center rounded-xl bg-cyan-700 px-3 py-3 text-xs font-black text-white">Abrir Kawvo para instalar</a>
+            <button type="button" onClick={() => void copyInstallUrl()} className="w-full rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs font-black text-cyan-700">{copied ? '✓ Enlace copiado' : 'Copiar enlace para abrir en Safari'}</button>
+          </div>
+        </div>
+      )}
+
+      {showHelp && android && (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          <p className="font-black text-slate-950">Instalar Kawvo en Android</p>
+          <ol className="mt-3 space-y-3 font-medium leading-5">
+            <li><b>1.</b> Abre Kawvo en <b>Chrome</b>.</li>
+            <li><b>2.</b> Toca el menú de <b>tres puntos</b> de Chrome.</li>
+            <li><b>3.</b> Elige <b>Instalar aplicación</b> o <b>Agregar a pantalla principal</b>.</li>
+            <li><b>4.</b> Confirma. Verás el icono azul de Kawvo con la K blanca.</li>
+          </ol>
+          <a href={installUrl} className="mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs font-black text-cyan-700">Abrir Kawvo para instalar</a>
+        </div>
+      )}
+
+      {showHelp && !ios && !android && (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          <p className="font-black text-slate-950">Instalar Kawvo en este equipo</p>
+          <ol className="mt-3 space-y-3 font-medium leading-5">
+            <li><b>1.</b> Usa Chrome o Edge.</li>
+            <li><b>2.</b> Busca el icono de instalación en la barra de direcciones o abre el menú del navegador.</li>
+            <li><b>3.</b> Elige <b>Instalar Kawvo</b> o <b>Instalar aplicación</b> y confirma.</li>
+          </ol>
+          <a href={installUrl} className="mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs font-black text-cyan-700">Abrir página de Kawvo</a>
+        </div>
       )}
     </section>
   )
