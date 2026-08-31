@@ -25,8 +25,8 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production"
 APP_URL = "https://app.intaprd.com"
-APP_PAGES_ORIGIN = "https://c5f8bddc.intap-link.pages.dev"
-WEB_PAGES_ORIGIN = "https://f7752379.intap-web2.pages.dev"
+APP_PAGES_ORIGIN = "https://c65272fc.intap-link.pages.dev"
+WEB_PAGES_ORIGIN = "https://46811bfa.intap-web2.pages.dev"
 API_URL = "https://intaprd.com"
 WEB_URL = "https://intaprd.com"
 GOOGLE_CLIENT_ID = "564629181337-v7gtpr6tcnbhp2i3opcj89t520sdg0mh.apps.googleusercontent.com"
