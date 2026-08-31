@@ -41,7 +41,12 @@ echo ""
 echo "▶ Validando App Preview"
 (cd app && npx tsc && npx vite build --mode preview) || fail "Build Preview de App"
 
-for file in app/dist/manifest.webmanifest app/dist/sw.js app/dist/kawvo-icon.svg app/dist/kawvo-apple-touch-icon.svg; do
+for file in \
+  app/dist/manifest.webmanifest \
+  app/dist/sw.js \
+  app/dist/kawvo-icon.svg \
+  app/dist/kawvo-icon-192.png \
+  app/dist/kawvo-apple-touch-icon.png; do
   [ -f "$file" ] || fail "Falta asset PWA: $file"
 done
 
@@ -84,7 +89,8 @@ for url in \
   "https://app.preview.intaprd.com/manifest.webmanifest" \
   "https://app.preview.intaprd.com/sw.js" \
   "https://app.preview.intaprd.com/kawvo-icon.svg" \
-  "https://app.preview.intaprd.com/kawvo-apple-touch-icon.svg" \
+  "https://app.preview.intaprd.com/kawvo-icon-192.png" \
+  "https://app.preview.intaprd.com/kawvo-apple-touch-icon.png" \
   "https://app.preview.intaprd.com/admin/free/home?source=pwa"; do
   code="$(curl -sS -o /dev/null -w '%{http_code}' "$url")"
   [ "$code" = "200" ] || [ "$code" = "302" ] || fail "Smoke PWA $url -> HTTP $code"
