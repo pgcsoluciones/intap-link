@@ -253,24 +253,27 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
       '',
     ].filter((line) => line !== '').join('\r\n')
     const blob = new Blob([content], { type: 'text/vcard;charset=utf-8' })
-    const file = new File([blob], profile.vcardFileName || `${profile.slug || 'contacto'}.vcf`, { type: 'text/vcard' })
-    try {
-      if (navigator.share && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Guardar contacto de ${profile.name}` })
-        return
-      }
-    } catch (error: any) {
-      if (error?.name === 'AbortError') return
-    }
+    const fileName = profile.vcardFileName || `${profile.slug || 'contacto'}.vcf`
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
+    const isMobileContactFlow = /iphone|ipad|ipod|android/i.test(window.navigator.userAgent)
+
     anchor.href = url
-    anchor.download = file.name
     anchor.rel = 'noopener'
+
+    if (isMobileContactFlow) {
+      // En móvil dejamos que el sistema operativo abra/interprete el vCard.
+      // iOS presenta la ficha del contacto; Android usa su manejador de VCF cuando está disponible.
+      anchor.target = '_self'
+    } else {
+      // En escritorio conservamos la descarga tradicional como respaldo.
+      anchor.download = fileName
+    }
+
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500)
+    window.setTimeout(() => URL.revokeObjectURL(url), isMobileContactFlow ? 60000 : 1500)
   }
 
   async function copyProfileLink() {
