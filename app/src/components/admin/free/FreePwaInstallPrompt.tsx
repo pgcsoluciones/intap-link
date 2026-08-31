@@ -92,7 +92,7 @@ export default function FreePwaInstallPrompt() {
     }
   }, [])
 
-  if (installed || !portalHost) return null
+  if (!portalHost) return null
 
   const install = async () => {
     if (deferredPrompt) {
@@ -108,34 +108,47 @@ export default function FreePwaInstallPrompt() {
     setShowHelp(true)
   }
 
+  const installUrl = `${window.location.origin}/admin/free/home?source=install`
+
   const content = (
-    <section className="rounded-[22px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 font-['Inter'] shadow-sm" aria-label="Instalar Kawvo">
+    <section className="rounded-[22px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 font-['Inter'] shadow-sm" aria-label="Acceso rápido a Kawvo">
       <div className="flex items-start gap-3">
         <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#0E5CF5] p-1.5" aria-hidden="true">
           <img src="/kawvo-icon.svg" alt="" className="h-full w-full" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black uppercase tracking-[0.12em] text-cyan-700">Lleva Kawvo contigo</p>
-          <h2 className="mt-1 text-lg font-black text-slate-950">Acceso rápido a Kawvo</h2>
-          <p className="mt-1 text-sm font-medium leading-5 text-slate-600">Ten acceso a tu perfil y a tu panel en cualquier momento, con un solo toque.</p>
+          <h2 className="mt-1 text-lg font-black text-slate-950">{installed ? 'Kawvo está listo en tu dispositivo' : 'Ten Kawvo siempre a mano'}</h2>
+          <p className="mt-1 text-sm font-medium leading-5 text-slate-600">
+            {installed
+              ? 'Entra a tu perfil y a tu panel cuando quieras desde el icono de Kawvo.'
+              : 'Ten acceso a tu perfil y a tu panel en cualquier momento, con un solo toque.'}
+          </p>
         </div>
       </div>
 
-      {showHelp && (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          {ios ? (
-            <>
+      {installed ? (
+        <a href="/admin/free/home?source=pwa" className="mt-4 flex w-full items-center justify-center rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-black text-white">Abrir inicio Kawvo</a>
+      ) : (
+        <>
+          <button type="button" onClick={() => void install()} className="mt-4 w-full rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-black text-white">{deferredPrompt ? 'Instalar Kawvo' : 'Cómo instalar Kawvo'}</button>
+
+          {showHelp && ios && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
               <p className="font-black text-slate-950">Cómo agregar Kawvo en iPhone</p>
               <ol className="mt-3 space-y-3 font-medium leading-5">
-                <li><b>1.</b> Abre esta página en <b>Safari</b>.</li>
-                <li><b>2.</b> Mira la barra inferior de Safari y toca el icono <b>Compartir</b>: es un cuadro con una flecha apuntando hacia arriba.</li>
-                <li><b>3.</b> Desliza el menú hacia abajo hasta encontrar <b>Agregar a pantalla de inicio</b>.</li>
+                <li><b>1.</b> Toca <b>Abrir página para instalar</b> aquí debajo. Haz los siguientes pasos en Safari.</li>
+                <li><b>2.</b> En Safari, mira la barra inferior y toca <b>Compartir</b>: es el icono de un cuadro con una flecha hacia arriba.</li>
+                <li><b>3.</b> Desliza el menú hasta encontrar <b>Agregar a pantalla de inicio</b>.</li>
                 <li><b>4.</b> Toca <b>Agregar</b> en la esquina superior derecha.</li>
-                <li><b>5.</b> Verás el icono de Kawvo en tu pantalla de inicio. Tócalo para entrar.</li>
+                <li><b>5.</b> Verás el icono azul de Kawvo en tu pantalla. Tócalo para entrar.</li>
               </ol>
-            </>
-          ) : android ? (
-            <>
+              <a href={installUrl} className="mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs font-black text-cyan-700">Abrir página para instalar</a>
+            </div>
+          )}
+
+          {showHelp && android && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
               <p className="font-black text-slate-950">Cómo instalar Kawvo en Android</p>
               <ol className="mt-3 space-y-3 font-medium leading-5">
                 <li><b>1.</b> Abre esta página en <b>Chrome</b>.</li>
@@ -143,26 +156,21 @@ export default function FreePwaInstallPrompt() {
                 <li><b>3.</b> Elige <b>Instalar aplicación</b> o <b>Agregar a pantalla principal</b>.</li>
                 <li><b>4.</b> Confirma. El icono de Kawvo aparecerá en tu dispositivo.</li>
               </ol>
-            </>
-          ) : (
-            <>
+            </div>
+          )}
+
+          {showHelp && !ios && !android && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
               <p className="font-black text-slate-950">Cómo instalar Kawvo en este equipo</p>
               <ol className="mt-3 space-y-3 font-medium leading-5">
                 <li><b>1.</b> Usa Chrome o Edge.</li>
                 <li><b>2.</b> Busca el icono de instalación en la barra de direcciones o abre el menú del navegador.</li>
                 <li><b>3.</b> Elige <b>Instalar Kawvo</b> o <b>Instalar aplicación</b> y confirma.</li>
               </ol>
-            </>
+            </div>
           )}
-        </div>
+        </>
       )}
-
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <button type="button" onClick={() => void install()} className="w-full rounded-2xl bg-cyan-700 px-4 py-3 text-sm font-black text-white">{deferredPrompt ? 'Instalar Kawvo' : 'Cómo instalar Kawvo'}</button>
-        {!deferredPrompt && (
-          <button type="button" onClick={() => setShowHelp((current) => !current)} className="w-full rounded-2xl border border-cyan-200 bg-white px-4 py-3 text-sm font-black text-cyan-700">{showHelp ? 'Ocultar pasos' : 'Ver pasos'}</button>
-        )}
-      </div>
     </section>
   )
 
