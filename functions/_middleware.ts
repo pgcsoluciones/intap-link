@@ -14,6 +14,9 @@ import {
 export async function onRequest(context: {
   request: Request;
   next: () => Promise<Response>;
+  env: {
+    ASSETS: { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
+  };
 }): Promise<Response> {
   const withSecurityHeaders = (response: Response): Response => {
     const headers = new Headers(response.headers);
@@ -262,6 +265,20 @@ ${seoHeadHtml}
     }
   }
 
+  const fetchSpaShell = async (): Promise<Response> => {
+    const shellUrl = new URL('/index.html', context.request.url);
+    return context.env.ASSETS.fetch(shellUrl);
+  };
+
+  const isHtmlNavigation = (): boolean => {
+    if (!['GET', 'HEAD'].includes(context.request.method.toUpperCase())) return false;
+    const accept = context.request.headers.get('accept') || '';
+    if (accept && !accept.includes('text/html') && !accept.includes('*/*')) return false;
+    const pathname = new URL(context.request.url).pathname;
+    const lastSegment = pathname.split('/').filter(Boolean).pop() || '';
+    return !lastSegment.includes('.');
+  };
+
   const injectSimpleSocialCard = async (metadata: {
     title: string;
     description: string;
@@ -269,7 +286,7 @@ ${seoHeadHtml}
     canonicalUrl?: string;
     noIndex?: boolean;
   }): Promise<Response> => {
-    const response = await context.next();
+    const response = await fetchSpaShell();
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('text/html')) return withSecurityHeaders(response);
 
@@ -368,7 +385,7 @@ ${seoHeadHtml}
   const staticProfile = getStaticProfileDiscovery(slug, discoveryRuntime);
 
   if (staticProfile) {
-    const response = await context.next();
+    const response = await fetchSpaShell();
     const contentType = response.headers.get('content-type') || '';
 
     if (!contentType.includes('text/html')) {
@@ -451,6 +468,13 @@ ${seoHeadHtml}
         headers,
       }));
     }
+  }
+
+  // Root Pages middleware intercepts browser routes before Pages can apply
+  // its SPA fallback. Serve index.html explicitly for HTML navigations while
+  // leaving real assets/files to Pages' normal resolver.
+  if (isHtmlNavigation()) {
+    return withSecurityHeaders(await fetchSpaShell());
   }
 
   return withSecurityHeaders(await context.next());
