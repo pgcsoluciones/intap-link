@@ -22,6 +22,7 @@ run git reset --hard "github/$BRANCH"
 
 run python3 scripts/apply-demo-ai-integration-v1.py
 run python3 scripts/apply-demo-ai-integration-v1_1.py
+run python3 scripts/apply-demo-ai-integration-v1_2.py
 run git diff --check
 
 run node scripts/test-demo-ai-contract.mjs
@@ -60,6 +61,7 @@ run git add \
   functions/_middleware.ts \
   scripts/apply-demo-ai-integration-v1.py \
   scripts/apply-demo-ai-integration-v1_1.py \
+  scripts/apply-demo-ai-integration-v1_2.py \
   scripts/test-demo-ai-contract.mjs \
   scripts/qa-demo-ai-preview.mjs \
   scripts/run-preview-demo-ai-v1-2026-09-01.sh
@@ -158,7 +160,7 @@ Validado automáticamente:
 - Técnico ambiguo -> una aclaración.
 - Nombre obligatorio.
 - límites de copy y máximo 3 servicios.
-- cooldown/rate-limit 429 con fallback.
+- cooldown, límite por sesión/IP y presupuesto diario con fallback.
 - OpenAI solo server-side, store:false y Structured Outputs.
 - WhatsApp CTA y teléfono de llamadas separados correctamente.
 - sin ubicación ficticia en Demo IA.
