@@ -15,18 +15,17 @@ if marker not in text:
     raise SystemExit('injectSimpleSocialCard marker not found')
 text = text.replace(marker, helper + marker, 1)
 
-# Metadata-producing HTML routes in the current middleware are exactly the
-# generic social-card shell plus static/dynamic profile shells. The first one
-# is replaced here together with the remaining two profile reads.
+# Current middleware has two exact HTML shell reads with this formatting.
+# Replace both; the final generic context.next() remains untouched for files/assets.
 needle = """    const response = await context.next();\n    const contentType = response.headers.get('content-type') || '';\n"""
 replacement = """    const response = await fetchSpaShell();\n    const contentType = response.headers.get('content-type') || '';\n"""
 count = text.count(needle)
-if count != 3:
-    raise SystemExit(f'expected exactly 3 metadata shell reads, found {count}')
+if count != 2:
+    raise SystemExit(f'expected exactly 2 metadata shell reads, found {count}')
 text = text.replace(needle, replacement)
 
 old_tail = """  return withSecurityHeaders(await context.next());\n}\n"""
-new_tail = """  // A root Pages middleware intercepts browser routes before Pages can apply\n  // its implicit SPA fallback. Reproduce that behavior explicitly for HTML\n  // navigations while leaving real assets/files to Pages' normal resolver.\n  if (isHtmlNavigation()) {\n    return withSecurityHeaders(await fetchSpaShell());\n  }\n\n  return withSecurityHeaders(await context.next());\n}\n"""
+new_tail = """  // Root Pages middleware intercepts browser routes before Pages can apply\n  // its SPA fallback. Serve index.html explicitly for HTML navigations while\n  // leaving real assets/files to Pages' normal resolver.\n  if (isHtmlNavigation()) {\n    return withSecurityHeaders(await fetchSpaShell());\n  }\n\n  return withSecurityHeaders(await context.next());\n}\n"""
 if old_tail not in text:
     raise SystemExit('tail marker not found')
 text = text.replace(old_tail, new_tail, 1)
