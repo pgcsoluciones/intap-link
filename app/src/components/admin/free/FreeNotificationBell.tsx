@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiGet, apiPatch } from '../../../lib/api'
+import { apiDelete, apiGet, apiPatch } from '../../../lib/api'
 
 type NotificationItem = {
   id: string
@@ -27,6 +27,7 @@ export default function FreeNotificationBell() {
   const [unread, setUnread] = useState(0)
   const [selected, setSelected] = useState<NotificationItem | null>(null)
   const [loading, setLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -44,10 +45,17 @@ export default function FreeNotificationBell() {
     void load()
     const timer = window.setInterval(() => void load(), 30000)
     const onFocus = () => void load()
+    const onOpenNotifications = () => {
+      setSelected(null)
+      setOpen(true)
+      void load()
+    }
     window.addEventListener('focus', onFocus)
+    window.addEventListener('kawvo:open-notifications', onOpenNotifications)
     return () => {
       window.clearInterval(timer)
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('kawvo:open-notifications', onOpenNotifications)
     }
   }, [])
 
@@ -73,10 +81,11 @@ export default function FreeNotificationBell() {
   }, [open])
 
   const openItem = async (item: NotificationItem) => {
-    setSelected(item)
+    const nextItem = item.read_at ? item : { ...item, read_at: new Date().toISOString() }
+    setSelected(nextItem)
     setOpen(false)
     if (!item.read_at) {
-      setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry))
+      setItems((current) => current.map((entry) => entry.id === item.id ? nextItem : entry))
       setUnread((value) => Math.max(0, value - 1))
       try { await apiPatch(`/me/notifications/${item.id}/read`, {}) } catch { /* optimistic read */ }
     }
@@ -86,6 +95,20 @@ export default function FreeNotificationBell() {
     setItems((current) => current.map((item) => ({ ...item, read_at: item.read_at || new Date().toISOString() })))
     setUnread(0)
     try { await apiPatch('/me/notifications/read-all', {}) } catch { /* optimistic read */ }
+  }
+
+  const deleteSelected = async () => {
+    if (!selected || deleting) return
+    setDeleting(true)
+    try {
+      const json: any = await apiDelete(`/me/notifications/${selected.id}`)
+      if (json?.ok) {
+        setSelected(null)
+        await load()
+      }
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const act = () => {
@@ -166,6 +189,9 @@ export default function FreeNotificationBell() {
                 {selected.action_label || (selected.source_type === 'support_ticket' ? 'Abrir solicitud' : 'Ver más')}
               </button>
             )}
+            <button type="button" disabled={deleting} onClick={() => void deleteSelected()} className="mt-3 w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-black text-rose-700 disabled:opacity-40">
+              {deleting ? 'Eliminando…' : 'Eliminar notificación'}
+            </button>
           </article>
         </div>
       )}
