@@ -234,22 +234,51 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     '--ilx-soft-accent': softAccent,
   } as CSSProperties
 
-  function downloadVCard() {
-    const content = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${profile.name}`, `TITLE:${profile.role}`, profile.phone ? `TEL:${profile.phone}` : '', `URL:${window.location.href}`, 'END:VCARD'].filter(Boolean).join('\n')
+  function canonicalProfileUrl() {
+    return `${window.location.origin}${window.location.pathname}`
+  }
+
+  async function downloadVCard() {
+    const canonicalUrl = `${window.location.origin}${window.location.pathname}`
+    const escapeVCard = (value: string) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
+    const content = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `FN:${escapeVCard(profile.name)}`,
+      `N:;${escapeVCard(profile.name)};;;`,
+      profile.role ? `TITLE:${escapeVCard(profile.role)}` : '',
+      profile.phone ? `TEL;TYPE=CELL:${profile.phone}` : '',
+      `URL:${canonicalUrl}`,
+      'END:VCARD',
+      '',
+    ].filter((line) => line !== '').join('\r\n')
     const blob = new Blob([content], { type: 'text/vcard;charset=utf-8' })
+    const fileName = profile.vcardFileName || `${profile.slug || 'contacto'}.vcf`
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
+    const isMobileContactFlow = /iphone|ipad|ipod|android/i.test(window.navigator.userAgent)
+
     anchor.href = url
-    anchor.download = profile.vcardFileName
+    anchor.rel = 'noopener'
+
+    if (isMobileContactFlow) {
+      // En móvil dejamos que el sistema operativo abra/interprete el vCard.
+      // iOS presenta la ficha del contacto; Android usa su manejador de VCF cuando está disponible.
+      anchor.target = '_self'
+    } else {
+      // En escritorio conservamos la descarga tradicional como respaldo.
+      anchor.download = fileName
+    }
+
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    window.setTimeout(() => URL.revokeObjectURL(url), isMobileContactFlow ? 60000 : 1500)
   }
 
   async function copyProfileLink() {
     try {
-      await navigator.clipboard.writeText(window.location.href)
+      await navigator.clipboard.writeText(canonicalProfileUrl())
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1800)
     } catch { setCopied(false) }
@@ -258,7 +287,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   async function openQrModal() {
     try {
       const QRCode = await import('qrcode')
-      setQrDataUrl(await QRCode.toDataURL(window.location.href, { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
+      setQrDataUrl(await QRCode.toDataURL(canonicalProfileUrl(), { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
       setQrOpen(true)
     } catch (error) { console.error('No se pudo generar el QR', error) }
   }
@@ -274,13 +303,13 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   function shareProfileQrWhatsApp() {
-    const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${window.location.href}`
+    const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${canonicalProfileUrl()}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
   async function shareProfile() {
     try {
-      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: window.location.href })
+      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: canonicalProfileUrl() })
       else await copyProfileLink()
     } catch { /* cancelar compartir no es error */ }
   }
