@@ -208,11 +208,12 @@ async function insertAiEvent(c: any, eventType: string, sessionKey: string, meta
   ).bind(crypto.randomUUID(), eventType, sessionKey, JSON.stringify(metadata)).run()
 }
 
-async function rateLimit(c: any, sessionKey: string, ipHash: string) {
+async function rateLimit(c: any, sessionKey: string, ipHash: string, round: number) {
   const sessionLimit = numberEnv(c.env.DEMO_AI_SESSION_LIMIT, DEFAULT_SESSION_LIMIT, 1, 20)
-  const ipLimit = numberEnv(c.env.DEMO_AI_IP_LIMIT, DEFAULT_IP_LIMIT, 2, 200)
+  const ipLimit = numberEnv(c.env.DEMO_AI_IP_LIMIT, DEFAULT_IP_LIMIT, 2, 500)
+  const dailyLimit = numberEnv(c.env.DEMO_AI_DAILY_LIMIT, 500, 10, 10000)
   const cooldown = numberEnv(c.env.DEMO_AI_COOLDOWN_SECONDS, DEFAULT_COOLDOWN_SECONDS, 1, 120)
-  const [sessionRow, ipRow] = await Promise.all([
+  const [sessionRow, ipRow, globalRow] = await Promise.all([
     c.env.DB.prepare(
       `SELECT COUNT(*) AS total, MAX(created_at) AS last_at FROM demo_events
        WHERE source='demo_ai_api' AND event_type='demo_ai_started' AND session_key=? AND created_at >= datetime('now','-24 hours')`
@@ -222,13 +223,19 @@ async function rateLimit(c: any, sessionKey: string, ipHash: string) {
        WHERE source='demo_ai_api' AND event_type='demo_ai_started'
          AND json_extract(metadata_json,'$.ip_hash')=? AND created_at >= datetime('now','-1 hour')`
     ).bind(ipHash).first(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) AS total FROM demo_events
+       WHERE source='demo_ai_api' AND event_type='demo_ai_started' AND created_at >= datetime('now','-24 hours')`
+    ).first(),
   ])
   const sessionTotal = Number((sessionRow as any)?.total || 0)
   const ipTotal = Number((ipRow as any)?.total || 0)
+  const globalTotal = Number((globalRow as any)?.total || 0)
+  if (globalTotal >= dailyLimit) return { allowed: false, code: 'daily_budget', retryAfter: 3600 }
   if (sessionTotal >= sessionLimit) return { allowed: false, code: 'session_limit', retryAfter: 3600 }
   if (ipTotal >= ipLimit) return { allowed: false, code: 'rate_limit', retryAfter: 900 }
   const last = String((sessionRow as any)?.last_at || '')
-  if (last) {
+  if (last && round <= 1) {
     const elapsed = Math.floor((Date.now() - Date.parse(`${last.replace(' ', 'T')}Z`)) / 1000)
     if (Number.isFinite(elapsed) && elapsed < cooldown) return { allowed: false, code: 'cooldown', retryAfter: cooldown - elapsed }
   }
@@ -266,7 +273,7 @@ export function registerDemoAiRoutes(app: any) {
 
     const ip = clean(c.req.header('CF-Connecting-IP') || 'unknown', 80)
     const ipHash = (await sha256Hex(`kawvo-demo-ai:${ip}`)).slice(0, 64)
-    const limit = await rateLimit(c, sessionKey, ipHash).catch(() => ({ allowed: false, code: 'rate_unavailable', retryAfter: 60 }))
+    const limit = await rateLimit(c, sessionKey, ipHash, round).catch(() => ({ allowed: false, code: 'rate_unavailable', retryAfter: 60 }))
     if (!limit.allowed) {
       c.header('Retry-After', String(limit.retryAfter || 60))
       return c.json({ ok: false, error: limit.code === 'cooldown' ? 'Espera unos segundos antes de volver a generar.' : 'Ya utilizaste las generaciones disponibles por ahora.', code: limit.code, fallback: true }, 429)
@@ -274,8 +281,7 @@ export function registerDemoAiRoutes(app: any) {
 
     const deterministic = classifyDemoActivity(activity, `${workDescription} ${clarification}`)
     if (deterministic.ambiguous && !clarification && round === 1) {
-      await insertAiEvent(c, 'demo_ai_started', sessionKey, { ip_hash: ipHash, consent_version: consentVersion, preflight: true })
-      await insertAiEvent(c, 'demo_ai_needs_more_info', sessionKey, { reason: 'deterministic_ambiguity' })
+      await insertAiEvent(c, 'demo_ai_needs_more_info', sessionKey, { reason: 'deterministic_ambiguity', consent_version: consentVersion })
       return c.json({ ok: true, data: { status: 'needs_more_info', questions: [deterministic.question] } })
     }
 
@@ -325,6 +331,10 @@ export function registerDemoAiRoutes(app: any) {
     if (!result) {
       await insertAiEvent(c, 'demo_ai_failed', sessionKey, { code: 'invalid_output' })
       return c.json({ ok: false, error: 'No pudimos terminar la propuesta. Puedes continuar sin IA.', code: 'invalid_output', fallback: true }, 502)
+    }
+
+    if (result.status === 'ready' && deterministic.category) {
+      result.demo.asset_category = deterministic.category
     }
 
     if (result.status === 'needs_more_info') {

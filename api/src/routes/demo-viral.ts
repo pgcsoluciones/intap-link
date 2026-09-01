@@ -14,6 +14,12 @@ const PUBLIC_EVENT_TYPES = new Set([
   'preview_opened',
   'recipient_demo_started',
   'recipient_demo_completed',
+  'demo_ai_started',
+  'demo_ai_generated',
+  'demo_ai_needs_more_info',
+  'demo_ai_failed',
+  'demo_ai_completed',
+  'demo_ai_fallback',
 ])
 
 function randomToken(bytes = 24): string {

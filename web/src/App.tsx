@@ -36,6 +36,10 @@ const KawvoLinkDemo = lazy(
   () => import('./components/demo/KawvoLinkDemo'),
 )
 
+const KawvoLinkDemoAi = lazy(
+  () => import('./components/demo/KawvoLinkDemoAi'),
+)
+
 const KawvoLinkDemoShared = lazy(
   () => import('./components/demo/KawvoLinkDemoShared'),
 )
@@ -121,6 +125,11 @@ function App() {
           <Route
             path="/demo"
             element={<KawvoLinkDemo />}
+          />
+
+          <Route
+            path="/demo/ia"
+            element={<KawvoLinkDemoAi />}
           />
 
           <Route

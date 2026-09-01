@@ -33,6 +33,12 @@ AI_PROFILE_DAILY_LIMIT = "8"
 AI_PROFILE_MONTHLY_LIMIT = "100"
 AI_PROFILE_MAX_ROUNDS = "2"
 AI_PROFILE_COOLDOWN_SECONDS = "20"
+DEMO_AI_ENABLED = "1"
+DEMO_AI_SESSION_LIMIT = "3"
+DEMO_AI_IP_LIMIT = "20"
+DEMO_AI_DAILY_LIMIT = "500"
+DEMO_AI_COOLDOWN_SECONDS = "12"
+DEMO_AI_TIMEOUT_MS = "20000"
 FREE_MAX_SERVICES = "3"
 # Remitente del magic link. Debe ser un dominio verificado en Resend.
 # Mientras no esté verificado, Resend solo entrega a la cuenta del owner (plan free).

@@ -149,7 +149,6 @@ export default function KawvoLinkDemoAi() {
     if (!normalizePhone(contact.whatsapp)) return setError('Agrega un número de WhatsApp para completar tu Demo.')
     setBusy(true)
     setError('')
-    postEvent('demo_ai_started', sessionKey)
     try {
       const response = await fetch('/api/v1/public/demo/ai/generate', {
         method: 'POST',
@@ -177,12 +176,10 @@ export default function KawvoLinkDemoAi() {
         setClarification('')
         setRound(2)
         setStep(5)
-        postEvent('demo_ai_needs_more_info', sessionKey, { questions: data.questions.length })
         return
       }
       const draft = buildDraft(data.demo, { name, activity, role, contact })
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-      postEvent('demo_ai_generated', sessionKey, { asset_category: data.demo.asset_category })
       window.location.assign('/demo?ai=1')
     } catch {
       setError('No pudimos preparar tu Demo con IA en este momento.')

@@ -17,7 +17,12 @@ type DemoForm = {
   role: string
   bio: string
   whatsapp: string
+  phone?: string
+  samePhoneAsWhatsapp?: boolean
   instagram: string
+  email?: string
+  servicesTitle?: string
+  servicesDescription?: string
   layout: FreeProfileLayoutId
   palette: keyof typeof PALETTES
   services: FreeProfileService[]
@@ -220,13 +225,14 @@ function postDemoEvent(body: Record<string, unknown>) {
 
 export default function KawvoLinkDemo() {
   const [stage, setStage] = useState<DemoStage>('sector')
+  const [isAiGenerated, setIsAiGenerated] = useState(false)
   const [form, setForm] = useState<DemoForm>(DEFAULT_PRESET.form)
   const [portrait, setPortrait] = useState(DEFAULT_PRESET.portrait)
   const [hero, setHero] = useState(DEFAULT_PRESET.hero)
   const [uploadedPortrait, setUploadedPortrait] = useState<string | null>(null)
   const [serviceUploads, setServiceUploads] = useState<Record<string, string>>({})
   const [portfolioUploads, setPortfolioUploads] = useState<Record<string, string>>({})
-  const [currentSector, setCurrentSector] = useState<DemoSectorKey | null>(null)
+  const [currentSector, setCurrentSector] = useState<string | null>(null)
   const [shareStatus, setShareStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const fileRef = useRef<HTMLInputElement>(null)
   const serviceFileRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -240,6 +246,21 @@ export default function KawvoLinkDemo() {
     document.body.classList.add('kawvo-demo-body')
     sessionKeyRef.current = getSessionKey()
     fromTokenRef.current = new URLSearchParams(window.location.search).get('from')
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('ai') === '1') {
+      try {
+        const raw = window.sessionStorage.getItem('kawvo_demo_ai_draft_v1')
+        const draft = raw ? JSON.parse(raw) : null
+        if (draft?.form && draft?.portrait && draft?.hero) {
+          setForm(draft.form)
+          setPortrait(draft.portrait)
+          setHero(draft.hero)
+          setCurrentSector(String(draft.assetCategory || 'demo-ai'))
+          setIsAiGenerated(true)
+          setStage('welcome')
+        }
+      } catch { /* fallback to the manual demo */ }
+    }
     postDemoEvent({
       event_type: 'demo_started',
       session_key: sessionKeyRef.current,
@@ -251,24 +272,30 @@ export default function KawvoLinkDemo() {
 
   const profile = useMemo<FreeProfileData>(() => {
     const instagram = normalizeInstagram(form.instagram)
-    const phone = normalizePhone(form.whatsapp)
+    const whatsapp = normalizePhone(form.whatsapp)
+    const callPhone = isAiGenerated
+      ? normalizePhone(form.samePhoneAsWhatsapp === false ? (form.phone || '') : form.whatsapp)
+      : normalizePhone(form.whatsapp)
+    const email = String(form.email || '').trim().slice(0, 120)
+    const quickActions = [
+      ...(callPhone ? [{ type: 'call' as const, label: 'Llamar', url: `tel:+${callPhone}` }] : []),
+      ...(instagram ? [{ type: 'instagram' as const, label: 'Instagram', url: `https://instagram.com/${instagram}` }] : []),
+      ...(email ? [{ type: 'email' as const, label: 'Correo', url: `mailto:${email}` }] : []),
+      ...(!isAiGenerated ? [{ type: 'location' as const, label: 'Ubicación', url: DEFAULT_MAP_URL }] : []),
+    ].slice(0, 3)
     return {
       id: 'demo-local-only', slug: 'demo',
       name: form.name.trim() || 'Tu nombre', role: form.role.trim() || 'Tu puesto / cargo',
       personalBadge: 'Demo Kawvo Link', aboutTitle: 'Sobre mí', portfolioTitle: 'Mis trabajos',
-      servicesTitle: 'Mis servicios', servicesDescription: 'Una muestra de lo que puedo hacer por ti.',
-      bio: form.bio.trim() || 'Aquí aparecerá una descripción breve sobre ti o tu negocio.', phone,
+      servicesTitle: form.servicesTitle?.trim() || 'Mis servicios', servicesDescription: form.servicesDescription?.trim() || 'Una muestra de lo que puedo hacer por ti.',
+      bio: form.bio.trim() || 'Aquí aparecerá una descripción breve sobre ti o tu negocio.', phone: whatsapp,
       whatsappGreetingName: form.name.trim() || 'Hola', whatsappCtaLabel: 'Hablar por WhatsApp', instagram,
-      location: DEFAULT_LOCATION, portrait, hero, heroPositionX: 50, heroPositionY: 50, heroZoom: 1,
-      category: 'Demo', vcardFileName: 'kawvo-demo.vcf',
-      quickActions: [
-        ...(phone ? [{ type: 'call' as const, label: 'Llamar', url: `tel:+${phone}` }] : []),
-        ...(instagram ? [{ type: 'instagram' as const, label: 'Instagram', url: `https://instagram.com/${instagram}` }] : []),
-        { type: 'location' as const, label: 'Ubicación', url: DEFAULT_MAP_URL },
-      ],
+      location: isAiGenerated ? '' : DEFAULT_LOCATION, portrait, hero, heroPositionX: 50, heroPositionY: 50, heroZoom: 1,
+      category: isAiGenerated ? (currentSector || 'Demo') : 'Demo', vcardFileName: 'kawvo-demo.vcf',
+      quickActions,
       services: form.services, portfolio: form.portfolio, customLinks: [],
     }
-  }, [form, portrait, hero])
+  }, [form, portrait, hero, isAiGenerated, currentSector])
 
   function update<K extends keyof DemoForm>(key: K, value: DemoForm[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -374,6 +401,8 @@ export default function KawvoLinkDemo() {
     setHero(DEFAULT_PRESET.hero)
     setForm(DEFAULT_PRESET.form)
     setCurrentSector(null)
+    setIsAiGenerated(false)
+    try { window.sessionStorage.removeItem('kawvo_demo_ai_draft_v1') } catch {}
     setShareStatus('idle')
     completionTrackedRef.current = false
     setStage('sector')
@@ -398,6 +427,7 @@ export default function KawvoLinkDemo() {
         source: fromTokenRef.current ? 'shared_preview' : 'demo',
       }
       postDemoEvent({ event_type: 'demo_completed', ...baseEvent })
+      if (isAiGenerated) postDemoEvent({ event_type: 'demo_ai_completed', ...baseEvent })
       if (fromTokenRef.current) postDemoEvent({ event_type: 'recipient_demo_completed', ...baseEvent })
     }
     setStage('result')
@@ -496,7 +526,7 @@ export default function KawvoLinkDemo() {
         </section>
         {preview}
         <div className="kawvo-demo-sticky-cta">
-          <button type="button" onClick={() => setStage('edit')}>Pruébalo con tus datos</button>
+          <button type="button" onClick={() => setStage('edit')}>{isAiGenerated ? 'Ajustar mi demo' : 'Pruébalo con tus datos'}</button>
           <small>Lo que cambies existe solamente en este dispositivo mientras mantengas abierta la demo.</small>
         </div>
       </main>
@@ -507,7 +537,8 @@ export default function KawvoLinkDemo() {
     return (
       <main className="kawvo-demo-page kawvo-demo-sector-page">
         <section className="kawvo-demo-sector-shell">
-          <span className="kawvo-demo-pill">ELIGE UN EJEMPLO</span>
+          <a href="/demo/ia" className="kawvo-demo-ai-entry">✨ Crear mi demo con IA</a>
+          <span className="kawvo-demo-pill">O ELIGE UN EJEMPLO</span>
           <h1>¿Cuál se parece más a ti o a tu negocio?</h1>
           <p>Elige una opción y cargaremos un ejemplo para que puedas personalizarlo en segundos.</p>
           <div className="kawvo-demo-sector-grid">
@@ -591,7 +622,10 @@ export default function KawvoLinkDemo() {
           <label><span>Puesto / Cargo</span><input maxLength={60} value={form.role} onChange={(event) => update('role', event.target.value)} /></label>
           <label><span>Descripción breve</span><textarea rows={4} maxLength={240} value={form.bio} onChange={(event) => update('bio', event.target.value)} /></label>
           <label><span>WhatsApp</span><input inputMode="tel" maxLength={20} value={form.whatsapp} onChange={(event) => update('whatsapp', event.target.value)} /></label>
+          {isAiGenerated && <label className="kawvo-demo-inline-check"><input type="checkbox" checked={form.samePhoneAsWhatsapp !== false} onChange={(event) => update('samePhoneAsWhatsapp', event.target.checked)} /><span>Usar este mismo número para llamadas</span></label>}
+          {isAiGenerated && form.samePhoneAsWhatsapp === false && <label><span>Teléfono para llamadas</span><input inputMode="tel" maxLength={20} value={form.phone || ''} onChange={(event) => update('phone', event.target.value)} /></label>}
           <label><span>Instagram</span><input maxLength={50} value={form.instagram} onChange={(event) => update('instagram', event.target.value)} /></label>
+          {isAiGenerated && <label><span>Correo</span><input type="email" maxLength={120} value={form.email || ''} onChange={(event) => update('email', event.target.value)} /></label>}
 
           <fieldset>
             <legend>Plantilla</legend>

@@ -8,6 +8,7 @@ import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { registerDemoViralRoutes } from './routes/demo-viral'
+import { registerDemoAiRoutes } from './routes/demo-ai'
 import {
   ARTIFACT_PRODUCT_TYPES,
   generateHumanCode,
@@ -81,6 +82,7 @@ app.use('*', cors({
 app.options('*', (c) => c.body(null, 204))
 
 registerDemoViralRoutes(app)
+registerDemoAiRoutes(app)
 
 
 app.use('/api/*', async (c, next) => {

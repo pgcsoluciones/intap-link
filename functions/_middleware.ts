@@ -310,6 +310,15 @@ ${seoHeadHtml}
     });
   }
 
+  if (url.pathname === '/demo/ia' || url.pathname === '/demo/ia/') {
+    return injectSimpleSocialCard({
+      title: 'Crea una Demo personalizada con IA | Kawvo Link',
+      description: 'Dinos a qué te dedicas y Kawvo prepara en segundos una propuesta de cómo podría verse tu Perfil Digital.',
+      image: `${url.origin}/assets/og/kawvo-link-og.png`,
+      canonicalUrl: `${url.origin}/demo/ia`,
+    })
+  }
+
   // Card específica de la demo interactiva.
   if (url.pathname === '/demo' || url.pathname === '/demo/') {
     return injectSimpleSocialCard({
