@@ -82,7 +82,6 @@ replace_once(
     "          setCurrentSector(String(draft.assetCategory || 'demo-ai'))\n          setIsAiGenerated(true)\n",
     "          setCurrentSector(String(draft.assetCategory || 'demo-ai'))\n          setShowBankDemo(draft.bankDemo === true)\n          setIsAiGenerated(true)\n",
 )
-# Current branch already includes the AI reset line, so anchor on the actual sequence.
 replace_once(
     'web/src/components/demo/KawvoLinkDemo.tsx',
     "    setCurrentSector(null)\n    setIsAiGenerated(false)\n    try { window.sessionStorage.removeItem('kawvo_demo_ai_draft_v1') } catch {}\n    setShareStatus('idle')",
@@ -132,7 +131,7 @@ replace_once(
 replace_once(
     'web/src/components/demo/KawvoLinkDemoShared.tsx',
     "        <IntapLinkGratisProfile\n          profile={profile}\n          layout={data.snapshot.layout}\n          colors={data.snapshot.colors}\n        />",
-    "        <IntapLinkGratisProfile\n          profile={profile}\n          layout={data.snapshot.layout}\n          colors={data.snapshot.colors}\n        />\n        {data.snapshot.bankDemo && <DemoBankAccounts holderName={profile.name || 'Perfil Demo'} />} ",
+    "        <IntapLinkGratisProfile\n          profile={profile}\n          layout={data.snapshot.layout}\n          colors={data.snapshot.colors}\n        />\n        {data.snapshot.bankDemo && <DemoBankAccounts holderName={profile.name || 'Perfil Demo'} />}",
 )
 replace_once(
     'web/src/components/demo/KawvoLinkDemoShared.tsx',
