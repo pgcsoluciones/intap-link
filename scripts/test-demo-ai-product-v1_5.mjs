@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+
+const api = await readFile('api/src/routes/demo-ai.ts', 'utf8')
+const wizard = await readFile('web/src/components/demo/KawvoLinkDemoAi.tsx', 'utf8')
+const demo = await readFile('web/src/components/demo/KawvoLinkDemo.tsx', 'utf8')
+const shared = await readFile('web/src/components/demo/KawvoLinkDemoShared.tsx', 'utf8')
+const bank = await readFile('web/src/components/demo/DemoBankAccounts.tsx', 'utf8')
+
+assert.match(api, /no uses display_name ni el nombre/i, 'Bio no debe usar nombre del usuario')
+assert.match(api, /Devuelve exactamente 3 servicios/, 'IA debe devolver 3 servicios')
+assert.match(api, /services\.length !== 3/, 'Validador debe exigir exactamente 3 servicios')
+assert.match(wizard, /useState\(true\)/, 'Banco demo debe quedar seleccionado por defecto')
+assert.match(wizard, /Mostrar cómo se verían tus datos bancarios/, 'CTA bancario debe explicar de qué trata')
+assert.match(wizard, /Puedes quitarla si no quieres mostrar el ejemplo/, 'Debe ser claro que el usuario puede retirar el ejemplo')
+assert.match(demo, /Personalizar mi demo/, 'No debe quedar Ajustar mi demo')
+assert.doesNotMatch(demo, /Ajustar mi demo/, 'No debe quedar copy Ajustar mi demo')
+assert.match(demo, /Me interesa quiero mi Perfil/, 'CTA comercial solicitado')
+assert.match(bank, /DEMO_MASKED/, 'Banco demo debe enmascarar valores visibles')
+assert.match(bank, /slice\(-4\)/, 'Solo últimos cuatro dígitos visibles')
+assert.doesNotMatch(bank, /Por razones de seguridad, esta sección no es editable/, 'Aviso no debe aparecer en perfil Demo final')
+assert.match(shared, />Crear mi demo<\/button>/, 'CTA compartido debe ser neutro')
+assert.doesNotMatch(shared, /Crear mi demo con IA|Hacerla sin IA/, 'Demo compartida no debe presentar elección IA/no IA')
+assert.match(shared, /navigate\(`\/demo\/ia\?from=/, 'CTA compartido entra directo a flujo IA')
+assert.match(wizard, /Probar sin IA/, 'Landing IA conserva alternativa manual discreta')
+console.log('✓ Demo IA V1.5 contract: banco, copy, masking, 3 servicios y flujo compartido aprobados')
