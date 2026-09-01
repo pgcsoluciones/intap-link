@@ -96,6 +96,12 @@ app.post('/api/v1/me/profile/delete', requirePreviewAuth, async (c: any) => {
       WHERE profile_id = ?`,
   ).bind(profileId).run()
 
+  // profile_products was created without ON DELETE CASCADE in the historical schema.
+  // Delete these rows explicitly so any profile with services/products can be removed.
+  await c.env.DB.prepare(
+    `DELETE FROM profile_products WHERE profile_id = ?`,
+  ).bind(profileId).run()
+
   await c.env.DB.prepare(
     `DELETE FROM profiles WHERE id = ? AND user_id = ?`,
   ).bind(profileId, userId).run()
