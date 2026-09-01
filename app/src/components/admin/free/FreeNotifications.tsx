@@ -2,6 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPatch } from '../../../lib/api'
 
+type SupportTicketDetail = {
+  id: string
+  subject?: string | null
+  message?: string | null
+  status?: string | null
+  admin_note?: string | null
+  response_channel?: string | null
+  events?: Array<{ id: string; status_key?: string | null; message?: string | null; created_at?: string | null }>
+}
+
 type NotificationItem = {
   id: string
   type: string
@@ -29,6 +39,8 @@ export default function FreeNotifications() {
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [ticketDetail, setTicketDetail] = useState<SupportTicketDetail | null>(null)
+  const [ticketLoading, setTicketLoading] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -50,6 +62,7 @@ export default function FreeNotifications() {
   const unread = items.filter((item) => !item.read_at).length
 
   const openItem = async (item: NotificationItem) => {
+    setTicketDetail(null)
     setSelected(item)
     if (!item.read_at) {
       const readAt = new Date().toISOString()
@@ -85,10 +98,16 @@ export default function FreeNotifications() {
     } finally { setDeleting(false) }
   }
 
-  const act = () => {
+  const act = async () => {
     if (!selected) return
     if (selected.source_type === 'support_ticket' && selected.source_id) {
-      navigate(`/admin/free/account?ticket=${encodeURIComponent(selected.source_id)}`)
+      setTicketLoading(true)
+      try {
+        const json: any = await apiGet(`/me/support-tickets/${selected.source_id}`)
+        if (json?.ok) setTicketDetail(json.data || null)
+      } finally {
+        setTicketLoading(false)
+      }
       return
     }
     if (!selected.action_url) return
@@ -138,7 +157,30 @@ export default function FreeNotifications() {
               <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Kawvo</p><h2 className="mt-1 text-xl font-black text-slate-950">{selected.title}</h2></div><button type="button" onClick={() => setSelected(null)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
               <p className="mt-4 whitespace-pre-wrap text-[15px] leading-7 text-slate-700">{selected.message}</p>
               {selected.created_at && <p className="mt-3 text-[11px] font-semibold text-slate-400">{formatDate(selected.created_at)}</p>}
-              {(selected.action_url || (selected.source_type === 'support_ticket' && selected.source_id)) && <button type="button" onClick={act} className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">{selected.action_label || (selected.source_type === 'support_ticket' ? 'Abrir ticket' : 'Ver más')}</button>}
+              {(selected.action_url || (selected.source_type === 'support_ticket' && selected.source_id)) && <button type="button" onClick={() => void act()} className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">{selected.action_label || (selected.source_type === 'support_ticket' ? 'Abrir ticket' : 'Ver más')}</button>}
+              {ticketLoading && <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500">Cargando respuesta…</p>}
+              {ticketDetail && (
+                <section className="mt-4 overflow-hidden rounded-[20px] border border-slate-200 bg-slate-50">
+                  <div className="border-b border-slate-200 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-700">Respuesta de soporte</p>
+                    <p className="mt-1 text-sm font-black text-slate-900">{ticketDetail.subject || 'Tu solicitud'}</p>
+                  </div>
+                  <div className="p-4">
+                    {ticketDetail.admin_note ? (
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{ticketDetail.admin_note}</p>
+                    ) : (
+                      <p className="text-sm leading-6 text-slate-500">Abre el seguimiento para ver las últimas novedades de tu solicitud.</p>
+                    )}
+                    {(ticketDetail.events || []).filter((event) => event.message).slice(-3).map((event) => (
+                      <div key={event.id} className="mt-3 border-t border-slate-200 pt-3">
+                        <p className="whitespace-pre-wrap text-xs leading-5 text-slate-600">{event.message}</p>
+                        {event.created_at && <p className="mt-1 text-[10px] font-semibold text-slate-400">{formatDate(event.created_at)}</p>}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => navigate(`/admin/free/account?ticket=${encodeURIComponent(ticketDetail.id)}`)} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700">Ir al Centro de ayuda y tickets</button>
+                  </div>
+                </section>
+              )}
               {!selected.read_at && <button type="button" onClick={() => void markSelectedRead()} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Marcar como leída</button>}
               <button type="button" disabled={deleting} onClick={() => void removeSelected()} className="mt-3 w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-black text-rose-700 disabled:opacity-40">{deleting ? 'Eliminando…' : 'Eliminar notificación'}</button>
             </div>

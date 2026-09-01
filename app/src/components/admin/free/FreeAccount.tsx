@@ -196,8 +196,11 @@ export default function FreeAccount() {
     setShareFeedback('QR descargado.')
   }
 
+  const inviteSenderName = String(me?.name || '').trim().split(/\s+/)[0] || 'un amigo'
+  const invitationUrl = `https://nfc.kawvoia.com/invitacion?de=${encodeURIComponent(inviteSenderName)}`
+
   const sendInvite = async () => {
-    const url = `${webUrl}/invitacion`
+    const url = invitationUrl
     const text = 'Me he creado un perfil en Kawvo Link para presentar lo que hago y compartir mis datos en un solo lugar. Crea tú también tu presentación digital; te lo recomiendo.'
     setShareFeedback('')
     try {
