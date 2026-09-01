@@ -154,3 +154,6 @@
 }
 
 .kawvo-demo-shared-cta .kawvo-demo-shared-secondary{margin-top:8px;background:#fff;color:#334155;border:1px solid #cbd5e1}
+
+/* Demo V1.6: controles de compartir visibles solo como demostración */
+.kawvo-demo-shared-preview .ilx-share button{pointer-events:none!important;cursor:default!important;opacity:var(--demo-share-opacity,.58)!important}

@@ -250,7 +250,7 @@ export default function KawvoLinkDemoAi() {
           <label><span>Instagram <small>Opcional</small></span><input maxLength={50} value={contact.instagram} onChange={(event) => setContact({ ...contact, instagram: event.target.value })} placeholder="@usuario" /></label>
           <label><span>Correo <small>Opcional</small></span><input type="email" maxLength={120} value={contact.email} onChange={(event) => setContact({ ...contact, email: event.target.value })} placeholder="correo@dominio.com" /></label>
 
-          <label className="kawvo-demo-ai-check kawvo-demo-ai-bank-option"><input type="checkbox" checked={includeBankDemo} onChange={(event) => setIncludeBankDemo(event.target.checked)} /><span><strong>Mostrar cómo se verían tus datos bancarios</strong><small>Incluiremos una cuenta ficticia para que veas este beneficio del Perfil Digital. Puedes quitarla si no quieres mostrar el ejemplo.</small></span></label>
+          <label className="kawvo-demo-ai-check kawvo-demo-ai-bank-option"><input type="checkbox" checked={includeBankDemo} onChange={(event) => setIncludeBankDemo(event.target.checked)} /><span><strong>Mostrar cómo se verían tus datos para recibir transferencias</strong><small>Incluiremos un ejemplo ficticio de cuenta bancaria y cédula/RNC para que veas cómo tus clientes podrían consultar los datos necesarios para pagarte. Puedes quitar este ejemplo si no quieres mostrarlo.</small></span></label>
 
           <div className="kawvo-demo-ai-consent">
             <strong>Antes de crear tu Demo</strong>

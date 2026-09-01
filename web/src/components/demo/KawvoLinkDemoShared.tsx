@@ -115,10 +115,16 @@ export default function KawvoLinkDemoShared() {
         <span>Vista previa de demostración · válida por 24 horas</span>
       </header>
 
-      <div className="kawvo-demo-shared-preview" onClickCapture={(event) => {
+      <div className="kawvo-demo-shared-preview" style={{ ['--demo-share-opacity' as string]: .58 }} onClickCapture={(event) => {
         const target = event.target as HTMLElement
-        const anchor = target.closest('a[href]') as HTMLAnchorElement | null
+        const shareButton = target.closest('.ilx-share button')
+        if (shareButton) {
+          event.preventDefault()
+          event.stopPropagation()
+          return
+        }
 
+        const anchor = target.closest('a[href]') as HTMLAnchorElement | null
         if (!anchor) return
 
         const href = (anchor.getAttribute('href') || '').trim()

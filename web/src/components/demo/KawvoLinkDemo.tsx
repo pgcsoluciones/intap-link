@@ -420,7 +420,7 @@ export default function KawvoLinkDemo() {
 
   function blockDemoFooterNavigation(event: React.MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement
-    if (target.closest('.ilx-footer a')) {
+    if (target.closest('.ilx-footer a') || target.closest('.ilx-share button')) {
       event.preventDefault()
       event.stopPropagation()
     }
@@ -503,7 +503,7 @@ export default function KawvoLinkDemo() {
 
   const preview = (
     <div className="kawvo-demo-preview" aria-label="Vista previa del perfil demo" onClickCapture={blockDemoFooterNavigation}>
-      <style>{`.kawvo-demo-preview .ilx-footer a { pointer-events: none; cursor: default; opacity: .72; }`}</style>
+      <style>{`.kawvo-demo-preview .ilx-footer a { pointer-events: none; cursor: default; opacity: .72; } .kawvo-demo-preview .ilx-share button { pointer-events: none; cursor: default; opacity: .58; }`}</style>
       <IntapLinkGratisProfile profile={profile} layout={form.layout} colors={PALETTES[form.palette]} />
       {showBankDemo && <DemoBankAccounts holderName={form.name.trim() || 'Tu nombre'} />}
     </div>
