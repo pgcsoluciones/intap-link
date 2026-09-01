@@ -35,6 +35,7 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
   const [acknowledged, setAcknowledged] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteStage, setDeleteStage] = useState('')
+  const [deletedSuccessfully, setDeletedSuccessfully] = useState(false)
   const [error, setError] = useState('')
   const [reason, setReason] = useState('')
   const [improvementOne, setImprovementOne] = useState('')
@@ -136,16 +137,18 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
       }
 
       ONBOARDING_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key))
-
-      // A full navigation avoids stale React/PWA state after a destructive action,
-      // especially on iOS standalone mode and mobile browsers with restored views.
-      window.location.replace('/admin/free/onboarding/welcome?profile_deleted=1')
+      setOpen(false)
+      setDeletedSuccessfully(true)
     } catch {
       setError('No pudimos completar la eliminación. Intenta nuevamente.')
     } finally {
       setDeleting(false)
       setDeleteStage('')
     }
+  }
+
+  const continueAfterDeletion = () => {
+    window.location.replace('/admin/free/onboarding/welcome?profile_deleted=1')
   }
 
   return (
@@ -158,6 +161,25 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
       <button type="button" onClick={() => void openDialog()} className="mt-4 w-full rounded-xl border border-rose-300 bg-white px-4 py-3 text-xs font-black text-rose-700">
         Eliminar mi perfil
       </button>
+
+      {deletedSuccessfully && (
+        <div className="fixed inset-0 z-[120] flex min-h-[100dvh] items-center justify-center bg-slate-950/60 p-5" role="status" aria-live="polite">
+          <div className="w-full max-w-[420px] rounded-[30px] bg-white px-6 py-8 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-3xl font-black text-emerald-600">✓</div>
+            <p className="mt-5 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">Eliminación completada</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950">Tu perfil fue eliminado correctamente</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Gracias por haber formado parte de Kawvo Link. Esperamos verte de nuevo muy pronto.
+            </p>
+            <p className="mt-3 text-xs leading-5 text-slate-500">
+              Tu cuenta de acceso permanece activa por si decides crear un nuevo perfil más adelante.
+            </p>
+            <button type="button" onClick={continueAfterDeletion} className="mt-6 w-full rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white">
+              Continuar
+            </button>
+          </div>
+        </div>
+      )}
 
       {open && (
         <div
