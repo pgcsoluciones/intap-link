@@ -15,7 +15,7 @@ assert.match(api, /services\.length !== 3/, 'Validador debe exigir exactamente 3
 assert.match(wizard, /digits\.length === 10.*`1\$\{digits\}`/s, 'Se mantiene normalización +1')
 assert.match(wizard, /useState\(true\)/, 'Banco demo debe quedar seleccionado por defecto')
 assert.match(wizard, /Mostrar cómo se verían tus datos para recibir transferencias/, 'CTA bancario debe explicar de qué trata')
-assert.match(wizard, /Puedes quitarla si no quieres mostrar el ejemplo/, 'Debe ser claro que el usuario puede retirar el ejemplo')
+assert.match(wizard, /Puedes quitar este ejemplo si no quieres mostrarlo/, 'Debe ser claro que el usuario puede retirar el ejemplo')
 assert.match(wizard, /bankDemo: input\.includeBankDemo/, 'Banco demo debe persistir al borrador')
 assert.match(demo, /window\.location\.replace\(`\/demo\/ia/, 'IA sigue siendo experiencia predeterminada')
 assert.match(demo, /Personalizar con mis datos/, 'Se mantiene CTA de personalización manual')
