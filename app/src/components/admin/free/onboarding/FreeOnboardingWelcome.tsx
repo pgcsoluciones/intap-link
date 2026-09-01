@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../../lib/api'
 
-const NFC_INTEREST_URL = 'https://nfc.kawvoia.com'
+const PRODUCTS_PRICING_URL = 'https://nfc.kawvoia.com/precios'
 
 type AccessState = 'checking' | 'guest' | 'account-without-profile'
 
@@ -70,9 +70,11 @@ export default function FreeOnboardingWelcome() {
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Bienvenido de nuevo</h1>
-          <p className="mt-3 text-[15px] leading-6 text-slate-500">¿Qué deseas hacer?</p>
+          <div className="text-center">
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
+            <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Bienvenido de nuevo</h1>
+            <p className="mt-3 text-[18px] font-semibold leading-7 text-slate-500">¿Qué deseas hacer?</p>
+          </div>
 
           <div className="mt-6 grid gap-3">
             <button
@@ -85,13 +87,13 @@ export default function FreeOnboardingWelcome() {
 
             {showProductHelp && (
               <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
-                <p className="text-sm font-extrabold text-slate-900">Para registrar tu producto:</p>
+                <p className="text-center text-base font-extrabold text-slate-900">Para registrar tu producto</p>
                 <ol className="mt-3 space-y-2 text-sm leading-5 text-slate-600">
                   <li>1. Escanea el QR de tu artículo Kawvo o acerca tu celular al NFC.</li>
                   <li>2. Toca <strong>Activarlo ahora</strong>.</li>
                   <li>3. Si se solicita, inicia sesión o crea tu cuenta.</li>
                 </ol>
-                <p className="mt-3 text-xs leading-5 text-slate-500">Luego continúa siguiendo las indicaciones en pantalla.</p>
+                <p className="mt-3 text-center text-sm leading-5 text-slate-500">Luego continúa siguiendo las indicaciones en pantalla.</p>
               </div>
             )}
 
@@ -116,7 +118,7 @@ export default function FreeOnboardingWelcome() {
             )}
           </div>
 
-          <a href={NFC_INTEREST_URL} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center px-4 py-2 text-sm font-extrabold text-cyan-700">
+          <a href={PRODUCTS_PRICING_URL} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center px-4 py-2 text-sm font-extrabold text-cyan-700">
             Conocer productos Kawvo
           </a>
         </div>
