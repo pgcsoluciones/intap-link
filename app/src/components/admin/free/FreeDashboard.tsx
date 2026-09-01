@@ -332,7 +332,7 @@ export default function FreeDashboard() {
           <button type="button" onClick={() => setWatermarkUpsellOpen((current) => !current)} className="flex w-full items-center justify-between gap-4 p-4 text-left" aria-expanded={watermarkUpsellOpen}>
             <span className="min-w-0">
               <span className="block text-sm font-black text-slate-900">Quitar marca de agua</span>
-              <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Básico</span>
+              <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Plus</span>
             </span>
             <span aria-hidden="true" className={`relative h-7 w-12 shrink-0 rounded-full transition ${watermarkUpsellOpen ? 'bg-violet-600' : 'bg-slate-200'}`}>
               <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${watermarkUpsellOpen ? 'left-6' : 'left-1'}`} />
@@ -342,8 +342,8 @@ export default function FreeDashboard() {
           {watermarkUpsellOpen && (
             <div className="border-t border-violet-100 bg-violet-50/70 p-4">
               <p className="text-sm font-black text-slate-900">Personaliza aún más tu perfil</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Básico.</p>
-              <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Plan Básico</a>
+              <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Plus.</p>
+              <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Plan Plus</a>
             </div>
           )}
         </section>
@@ -430,7 +430,7 @@ export default function FreeDashboard() {
               {bankSummary.allowed ? (
                 <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes los copien fácilmente al momento de hacer una transferencia. {bankSummary.enabled ? 'Sección activa' : 'Sección desactivada'} · {bankSummary.count}/3 cuentas configuradas{bankSummary.source === 'fair' ? ' · Promoción de feria' : ''}.</p>
               ) : (
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes puedan copiarlos fácilmente. Disponible en Plan Básico y para perfiles Free durante promociones vigentes.</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes puedan copiarlos fácilmente. Disponible en Plan Plus y para perfiles Free durante promociones vigentes.</p>
               )}
             </div>
             <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${bankSummary.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{bankSummary.allowed ? 'Disponible' : 'Bloqueado'}</span>

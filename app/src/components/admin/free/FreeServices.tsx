@@ -347,7 +347,7 @@ export default function FreeServices() {
           <button disabled={!canAdd || saving} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : canAdd ? 'Agregar servicio' : 'Límite completado'}</button>
         </form>
 
-        {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Básico para ampliar tu perfil." />}
+        {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Plus para ampliar tu perfil." />}
         {items.length < MAX_SERVICES && <div className="mt-5"><FreeUpgradeCard compact /></div>}
         <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>

@@ -192,9 +192,9 @@ export default function FreeSupportPanel() {
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-lg">?</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">¿Necesitas ayuda?</span>
-          <span className="mt-1 block text-base font-black text-slate-950">Soporte Kawvo</span>
-          <span className="mt-1 block text-xs leading-5 text-slate-600">Envía una duda y revisa el seguimiento de tus solicitudes.</span>
+          <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">Centro de ayuda</span>
+          <span className="mt-1 block text-base font-black text-slate-950">Ayuda y tickets</span>
+          <span className="mt-1 block text-xs leading-5 text-slate-600">Haz una consulta y revisa aquí tus tickets y respuestas.</span>
         </span>
         <span aria-hidden="true" className={`shrink-0 text-xl font-black text-cyan-700 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>⌄</span>
       </button>

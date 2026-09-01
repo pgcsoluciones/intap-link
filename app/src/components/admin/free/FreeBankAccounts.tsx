@@ -229,8 +229,8 @@ export default function FreeBankAccounts() {
             <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-violet-700">Función premium</p>
             <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Cuentas bancarias</h1>
             <p className="mt-3 text-base font-medium leading-7 text-slate-600">Agrega hasta 3 cuentas a tu perfil y permite que tus clientes copien los datos necesarios para hacer una transferencia.</p>
-            <div className="mt-5 rounded-2xl bg-violet-50 p-4 text-sm font-semibold leading-6 text-violet-900">Disponible en Plan Básico. Los perfiles Free activados durante la promoción de feria conservan esta función permanentemente.</div>
-            <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-4 text-base font-black text-white">Conocer Plan Básico</a>
+            <div className="mt-5 rounded-2xl bg-violet-50 p-4 text-sm font-semibold leading-6 text-violet-900">Disponible en Plan Plus. Los perfiles Free activados durante la promoción de feria conservan esta función permanentemente.</div>
+            <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-4 text-base font-black text-white">Conocer Plan Plus</a>
             <button type="button" disabled className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400">Tengo un código promocional · Próximamente</button>
           </div>
         </section>

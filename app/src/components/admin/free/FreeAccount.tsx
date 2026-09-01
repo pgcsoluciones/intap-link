@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPost, apiUpload } from '../../../lib/api'
 import ImageCropModal from '../ImageCropModal'
-import { basicPlanWhatsAppUrl } from './FreePanelUi'
+import { UpgradeCrownIcon, basicPlanWhatsAppUrl } from './FreePanelUi'
 import FreeNotificationBell from './FreeNotificationBell'
 import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeSupportPanel from './FreeSupportPanel'
@@ -24,14 +24,6 @@ type ResourceItem = {
   category?: string | null
 }
 
-type SessionItem = {
-  id: string
-  label: string
-  created_at?: string | null
-  expires_at?: string | null
-  is_current?: boolean
-}
-
 type AiUsage = {
   remaining_today?: number
   remaining_month?: number
@@ -51,7 +43,7 @@ type RowProps = {
 
 function planLabel(me: MeData | null) {
   const plan = String(me?.plan_code || me?.plan_id || 'free').toLowerCase()
-  if (plan === 'basic') return 'BÁSICO'
+  if (plan === 'basic') return 'PLUS'
   if (plan === 'pro') return 'PRO'
   return 'FREE'
 }
@@ -66,7 +58,7 @@ function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center text-[24px] ${danger ? 'text-rose-500' : 'text-slate-500'}`}>{icon}</span>
       <span className="min-w-0 flex-1">
         <span className={`block text-[17px] font-medium leading-6 ${danger ? 'text-rose-600' : 'text-slate-800'}`}>{label}</span>
-        {detail && <span className="mt-0.5 block text-[12px] leading-5 text-slate-400">{detail}</span>}
+        {detail && <span className="mt-0.5 block text-[13px] leading-5 text-slate-500">{detail}</span>}
       </span>
       {badge && <span className="mr-1 rounded-lg bg-slate-500 px-2.5 py-1 text-[12px] font-bold text-white">{badge}</span>}
       <span className="text-[28px] font-light leading-none text-slate-400">›</span>
@@ -85,27 +77,23 @@ export default function FreeAccount() {
   const [loading, setLoading] = useState(true)
   const [bankActive, setBankActive] = useState(false)
   const [resources, setResources] = useState<ResourceItem[]>([])
-  const [sessions, setSessions] = useState<SessionItem[]>([])
   const [aiUsage, setAiUsage] = useState<AiUsage | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
-  const [sessionBusy, setSessionBusy] = useState('')
   const [shareFeedback, setShareFeedback] = useState('')
   const [qrBusy, setQrBusy] = useState(false)
+  const [qrPreview, setQrPreview] = useState('')
+  const [showQrPreview, setShowQrPreview] = useState(false)
+  const [showInvitePreview, setShowInvitePreview] = useState(false)
+  const [pwaInstalled, setPwaInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || Boolean((window.navigator as any).standalone) || localStorage.getItem('kawvo_pwa_installed') === '1')
+  const [pwaInstallReady, setPwaInstallReady] = useState(() => Boolean((window as any).__kawvoInstallPrompt))
+  const [showPwaHelp, setShowPwaHelp] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [avatarError, setAvatarError] = useState('')
   const [showAi, setShowAi] = useState(false)
-  const [showDevices, setShowDevices] = useState(false)
 
   const webUrl = useMemo(() => (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, ''), [])
   const publicUrl = me?.slug ? `${webUrl}/${me.slug}` : ''
-
-  const loadSessions = async () => {
-    try {
-      const json: any = await apiGet('/me/account/sessions')
-      if (json?.ok) setSessions(Array.isArray(json.data?.items) ? json.data.items : [])
-    } catch { /* account remains usable */ }
-  }
 
   useEffect(() => {
     Promise.all([
@@ -113,16 +101,31 @@ export default function FreeAccount() {
       apiGet('/me/bank-accounts').catch(() => ({ ok: false })),
       apiGet('/me/ai-profile-assistant/context').catch(() => ({ ok: false })),
       apiGet('/me/account/resources').catch(() => ({ ok: false })),
-      apiGet('/me/account/sessions').catch(() => ({ ok: false })),
       apiGet('/me/notifications?limit=1').catch(() => ({ ok: false })),
-    ]).then(([meJson, bankJson, aiJson, resourcesJson, sessionsJson, notificationsJson]: any[]) => {
+    ]).then(([meJson, bankJson, aiJson, resourcesJson, notificationsJson]: any[]) => {
       if (meJson?.ok) setMe(meJson.data || null)
       if (bankJson?.ok) setBankActive(Boolean(bankJson.data?.access?.allowed && bankJson.data?.enabled !== false))
       if (aiJson?.ok) setAiUsage(aiJson.data?.usage || null)
       if (resourcesJson?.ok) setResources(Array.isArray(resourcesJson.data?.items) ? resourcesJson.data.items : [])
-      if (sessionsJson?.ok) setSessions(Array.isArray(sessionsJson.data?.items) ? sessionsJson.data.items : [])
       if (notificationsJson?.ok) setUnreadCount(Number(notificationsJson.data?.unread_count || 0))
     }).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    const onReady = () => setPwaInstallReady(Boolean((window as any).__kawvoInstallPrompt))
+    const onInstalled = () => {
+      localStorage.setItem('kawvo_pwa_installed', '1')
+      setPwaInstalled(true)
+      setPwaInstallReady(false)
+      setShowPwaHelp(false)
+    }
+    window.addEventListener('kawvo:pwa-install-ready', onReady)
+    window.addEventListener('appinstalled', onInstalled)
+    onReady()
+    return () => {
+      window.removeEventListener('kawvo:pwa-install-ready', onReady)
+      window.removeEventListener('appinstalled', onInstalled)
+    }
   }, [])
 
   useEffect(() => {
@@ -169,20 +172,15 @@ export default function FreeAccount() {
     setUnreadCount(0)
   }
 
-  const downloadQr = async () => {
+  const previewQr = async () => {
     if (!publicUrl || qrBusy) return
     setQrBusy(true)
     setShareFeedback('')
     try {
       const QRCode = await import('qrcode')
       const dataUrl = await QRCode.toDataURL(publicUrl, { width: 1400, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } })
-      const link = document.createElement('a')
-      link.href = dataUrl
-      link.download = `kawvo-${me?.slug || 'perfil'}-qr.png`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      setShareFeedback('QR descargado.')
+      setQrPreview(dataUrl)
+      setShowQrPreview(true)
     } catch {
       setShareFeedback('No pudimos generar el QR en este momento.')
     } finally {
@@ -190,7 +188,18 @@ export default function FreeAccount() {
     }
   }
 
-  const inviteFriend = async () => {
+  const downloadQr = () => {
+    if (!qrPreview) return
+    const link = document.createElement('a')
+    link.href = qrPreview
+    link.download = `kawvo-${me?.slug || 'perfil'}-qr.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setShareFeedback('QR descargado.')
+  }
+
+  const sendInvite = async () => {
     const url = 'https://nfc.kawvoia.com'
     const text = 'Conoce Kawvo Link y crea una presentación digital para compartir tus datos y servicios.'
     setShareFeedback('')
@@ -223,14 +232,24 @@ export default function FreeAccount() {
     }
   }
 
-  const revokeSession = async (session: SessionItem) => {
-    if (session.is_current || sessionBusy) return
-    setSessionBusy(session.id)
+  const installPwa = async () => {
+    if (pwaInstalled) return
+    const prompt = (window as any).__kawvoInstallPrompt
+    if (!prompt) {
+      setShowPwaHelp(true)
+      return
+    }
     try {
-      const json: any = await apiDelete(`/me/account/sessions/${session.id}`)
-      if (json?.ok) await loadSessions()
-    } finally {
-      setSessionBusy('')
+      await prompt.prompt()
+      const choice = await prompt.userChoice
+      ;(window as any).__kawvoInstallPrompt = null
+      setPwaInstallReady(false)
+      if (choice?.outcome === 'accepted') {
+        localStorage.setItem('kawvo_pwa_installed', '1')
+        setPwaInstalled(true)
+      }
+    } catch {
+      setShowPwaHelp(true)
     }
   }
 
@@ -246,6 +265,35 @@ export default function FreeAccount() {
   return (
     <>
       {avatarFile && <ImageCropModal file={avatarFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setAvatarFile(null)} />}
+      {showQrPreview && qrPreview && (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Vista previa del código QR" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowQrPreview(false) }}>
+          <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between"><h2 className="text-lg font-black">Tu código QR</h2><button type="button" onClick={() => setShowQrPreview(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
+            <div className="mt-5 flex justify-center"><img src={qrPreview} alt="Vista previa del código QR de tu perfil" className="h-56 w-56 rounded-2xl border border-slate-200" /></div>
+            <p className="mt-4 text-center text-sm leading-6 text-slate-500">Este QR abre directamente tu perfil Kawvo.</p>
+            <button type="button" onClick={downloadQr} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Descargar código QR</button>
+          </article>
+        </div>
+      )}
+      {showPwaHelp && (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Cómo instalar Kawvo" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPwaHelp(false) }}>
+          <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between"><h2 className="text-lg font-black">Instalar app Kawvo</h2><button type="button" onClick={() => setShowPwaHelp(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
+            <p className="mt-4 text-sm leading-6 text-slate-600">En iPhone o iPad, abre el menú Compartir del navegador y elige <strong>Agregar a pantalla de inicio</strong>.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-500">En Android, abre el menú del navegador y selecciona <strong>Instalar aplicación</strong> o <strong>Agregar a pantalla principal</strong>.</p>
+          </article>
+        </div>
+      )}
+      {showInvitePreview && (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Vista previa de invitación" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowInvitePreview(false) }}>
+          <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between"><h2 className="text-lg font-black">Invitar a un amigo</h2><button type="button" onClick={() => setShowInvitePreview(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
+            <p className="mt-4 text-sm font-semibold text-slate-500">Mensaje que vas a compartir</p>
+            <div className="mt-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">Conoce Kawvo Link y crea una presentación digital para compartir tus datos y servicios.<br/><span className="mt-2 block font-semibold text-cyan-700">https://nfc.kawvoia.com</span></div>
+            <button type="button" onClick={() => void sendInvite()} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Compartir invitación</button>
+          </article>
+        </div>
+      )}
       <FreeNotificationBell hideTrigger />
 
       <main className="min-h-screen bg-white pb-24 font-['Inter'] text-slate-900">
@@ -271,8 +319,8 @@ export default function FreeAccount() {
               <span className="text-[28px] font-light text-slate-400">›</span>
             </div>
 
-            <SettingsRow icon="✦" label="Mejora tu plan" href={basicPlanWhatsAppUrl()} />
-            <SettingsRow icon="♧" label="Notificaciones" detail={unreadCount > 0 ? `${unreadCount} sin leer` : undefined} onClick={openNotifications} />
+            <SettingsRow icon={<span className="text-amber-500"><UpgradeCrownIcon className="h-6 w-6" /></span>} label="Mejora tu plan" detail="Conoce el Plan Plus" href={basicPlanWhatsAppUrl()} />
+            <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>} label="Notificaciones" detail={unreadCount > 0 ? `${unreadCount} sin leer` : undefined} onClick={openNotifications} />
             <SettingsRow icon="✧" label="Cuotas de IA" detail={aiUsage ? `${aiUsage.remaining_today ?? '—'} hoy · ${aiUsage.remaining_month ?? '—'} este mes` : undefined} onClick={() => setShowAi((value) => !value)} />
             {showAi && (
               <div className="border-b border-slate-200 bg-white/70 px-5 py-4 text-sm text-slate-600">
@@ -281,27 +329,17 @@ export default function FreeAccount() {
                 <button type="button" onClick={() => navigate('/admin/free/ai-profile')} className="mt-3 font-bold text-cyan-700">Abrir asistente IA</button>
               </div>
             )}
-            <SettingsRow icon="▣" label="Dispositivos vinculados" detail={`${sessions.length} sesión${sessions.length === 1 ? '' : 'es'} activa${sessions.length === 1 ? '' : 's'}`} onClick={() => setShowDevices((value) => !value)} />
-            {showDevices && (
-              <div className="border-b border-slate-200 bg-white/70 px-4 py-3">
-                {sessions.length === 0 ? <p className="text-sm text-slate-400">No encontramos sesiones activas.</p> : sessions.map((session) => (
-                  <div key={session.id} className="flex items-center justify-between gap-3 border-b border-slate-100 py-3 last:border-b-0">
-                    <div className="min-w-0"><p className="text-sm font-semibold text-slate-700">{session.label}{session.is_current ? ' · Este dispositivo' : ''}</p></div>
-                    {!session.is_current && <button type="button" disabled={sessionBusy === session.id} onClick={() => void revokeSession(session)} className="text-xs font-bold text-rose-600">{sessionBusy === session.id ? 'Cerrando…' : 'Cerrar'}</button>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                      </div>
           {avatarError && <p className="mt-2 text-xs font-semibold text-rose-600">{avatarError}</p>}
 
           <div className="mt-8">
             <SectionTitle>MI KAWVO</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-              <SettingsRow icon="⌁" label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts')} />
-              <SettingsRow icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void downloadQr()} />
-              {bankActive && <SettingsRow icon="$" label="Enviar cuentas bancarias" detail="Comparte el enlace directo a tus datos bancarios" onClick={() => void shareBankAccounts()} />}
-              <SettingsRow icon="↗" label="Invitar a un amigo" onClick={() => void inviteFriend()} />
+              {!pwaInstalled && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label="Instalar app Kawvo" detail={pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app"} onClick={() => void installPwa()} />}
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts')} />
+              <SettingsRow icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void previewQr()} />
+              {bankActive && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18M12 3 3 8h18L12 3Z"/></svg>} label="Enviar enlace de cuentas" detail="Comparte con tus clientes el enlace directo a tus cuentas bancarias" onClick={() => void shareBankAccounts()} />}
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3.5 19c.5-3.5 2.6-5.5 5.5-5.5s5 2 5.5 5.5M14 14c2.8-.3 5 1.4 5.5 4.5"/></svg>} label="Invitar a un amigo" onClick={() => setShowInvitePreview(true)} />
             </div>
           </div>
           {shareFeedback && <p className="mt-3 text-center text-xs font-semibold text-slate-500">{shareFeedback}</p>}
@@ -317,7 +355,7 @@ export default function FreeAccount() {
           <div className="mt-8">
             <SectionTitle>CUENTA Y SEGURIDAD</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-              <SettingsRow icon="↪" label="Cerrar sesión" onClick={() => void handleLogout()} />
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 4H5v16h5"/><path d="M13 8l4 4-4 4M8 12h9"/></svg>} label="Cerrar sesión" onClick={() => void handleLogout()} />
             </div>
           </div>
 
