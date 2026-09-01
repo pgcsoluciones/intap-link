@@ -93,6 +93,16 @@ export default function FreeAccount() {
     }).finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    const ticketId = new URLSearchParams(window.location.search).get('ticket')
+    if (!ticketId) return
+    const timer = window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('kawvo:open-support-ticket', { detail: { ticketId } }))
+      document.getElementById('kawvo-support-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   const openNotifications = () => {
     window.dispatchEvent(new Event('kawvo:open-notifications'))
     setUnreadCount(0)

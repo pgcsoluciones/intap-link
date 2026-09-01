@@ -114,10 +114,15 @@ export default function FreeNotificationBell() {
   const act = () => {
     if (!selected) return
     if (selected.source_type === 'support_ticket' && selected.source_id) {
-      window.dispatchEvent(new CustomEvent('kawvo:open-support-ticket', { detail: { ticketId: selected.source_id } }))
+      const ticketId = encodeURIComponent(selected.source_id)
       setSelected(null)
       setOpen(false)
-      window.setTimeout(() => document.getElementById('kawvo-support-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+      if (window.location.pathname === '/admin/free/account') {
+        window.dispatchEvent(new CustomEvent('kawvo:open-support-ticket', { detail: { ticketId: selected.source_id } }))
+        window.setTimeout(() => document.getElementById('kawvo-support-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60)
+      } else {
+        window.location.href = `/admin/free/account?ticket=${ticketId}`
+      }
       return
     }
     if (selected.action_url) {

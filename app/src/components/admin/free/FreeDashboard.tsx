@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
 import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
-import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
 import FreeHelpTip from './FreeHelpTip'
-import FreeSupportPanel from './FreeSupportPanel'
 import FreeNotificationBell from './FreeNotificationBell'
 
 interface MeData {
@@ -108,11 +106,11 @@ const freeItems: FreeItem[] = [
     readinessKey: 'services',
   },
   {
-    title: 'Mis productos Kawvo (NFC/QR)',
-    text: 'Activa y administra tus productos físicos',
-    to: '/admin/artifacts',
-    icon: '⌁',
-    help: 'Aquí administras las tarjetas, etiquetas u otros productos Kawvo vinculados a tu cuenta y al perfil digital.',
+    title: 'Mi cuenta',
+    text: 'Plan, notificaciones, soporte, productos y seguridad',
+    to: '/admin/free/account',
+    icon: '◎',
+    help: 'Administra tu plan, notificaciones, productos Kawvo, ayuda, recursos y sesiones activas desde un solo lugar.',
     optional: true,
   },
 ]
@@ -509,9 +507,6 @@ export default function FreeDashboard() {
         </div>
 
         <FreeUpgradeCard />
-        <FreeSupportPanel />
-
-        {me?.slug && <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />}
       </section>
     </main>
     </>
