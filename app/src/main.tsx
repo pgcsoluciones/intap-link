@@ -10,6 +10,17 @@ document.body.classList.toggle(
 )
 
 const standalone = window.matchMedia('(display-mode: standalone)').matches || Boolean((window.navigator as any).standalone)
+
+window.addEventListener('beforeinstallprompt', (event: Event) => {
+  event.preventDefault()
+  ;(window as any).__kawvoInstallPrompt = event
+  window.dispatchEvent(new Event('kawvo:pwa-install-ready'))
+})
+
+window.addEventListener('appinstalled', () => {
+  localStorage.setItem('kawvo_pwa_installed', '1')
+  ;(window as any).__kawvoInstallPrompt = null
+})
 if (standalone) localStorage.setItem('kawvo_pwa_installed', '1')
 
 if ('serviceWorker' in navigator) {

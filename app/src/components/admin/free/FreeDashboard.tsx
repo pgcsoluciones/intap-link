@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
 import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
-import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
 import FreeHelpTip from './FreeHelpTip'
-import FreeSupportPanel from './FreeSupportPanel'
 import FreeNotificationBell from './FreeNotificationBell'
 
 interface MeData {
@@ -107,14 +105,6 @@ const freeItems: FreeItem[] = [
     help: 'Explica claramente qué ofreces. Para publicar debes completar al menos 2 servicios con título, descripción e imagen.',
     readinessKey: 'services',
   },
-  {
-    title: 'Mis productos Kawvo (NFC/QR)',
-    text: 'Activa y administra tus productos físicos',
-    to: '/admin/artifacts',
-    icon: '⌁',
-    help: 'Aquí administras las tarjetas, etiquetas u otros productos Kawvo vinculados a tu cuenta y al perfil digital.',
-    optional: true,
-  },
 ]
 
 export default function FreeDashboard() {
@@ -177,11 +167,6 @@ export default function FreeDashboard() {
       window.removeEventListener('pagehide', rememberScroll)
     }
   }, [])
-
-  const handleLogout = async () => {
-    try { await apiPost('/auth/logout', {}) } catch { /* ignore */ }
-    window.location.replace('/admin/login')
-  }
 
   const togglePublished = async () => {
     if (!me || publishing) return
@@ -294,7 +279,7 @@ export default function FreeDashboard() {
             {hasSuperAdminAccess && (
               <button type="button" onClick={() => navigate('/superadmin')} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white">Super Admin</button>
             )}
-            <button onClick={handleLogout} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">Salir</button>
+            <button type="button" onClick={() => navigate('/admin/free/account')} aria-label="Mi cuenta" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:bg-slate-50">Mi cuenta</button>
           </div>
         </div>
       </header>
@@ -347,7 +332,7 @@ export default function FreeDashboard() {
           <button type="button" onClick={() => setWatermarkUpsellOpen((current) => !current)} className="flex w-full items-center justify-between gap-4 p-4 text-left" aria-expanded={watermarkUpsellOpen}>
             <span className="min-w-0">
               <span className="block text-sm font-black text-slate-900">Quitar marca de agua</span>
-              <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Básico</span>
+              <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Plus</span>
             </span>
             <span aria-hidden="true" className={`relative h-7 w-12 shrink-0 rounded-full transition ${watermarkUpsellOpen ? 'bg-violet-600' : 'bg-slate-200'}`}>
               <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${watermarkUpsellOpen ? 'left-6' : 'left-1'}`} />
@@ -357,8 +342,8 @@ export default function FreeDashboard() {
           {watermarkUpsellOpen && (
             <div className="border-t border-violet-100 bg-violet-50/70 p-4">
               <p className="text-sm font-black text-slate-900">Personaliza aún más tu perfil</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Básico.</p>
-              <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Plan Básico</a>
+              <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Plus.</p>
+              <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Plan Plus</a>
             </div>
           )}
         </section>
@@ -445,7 +430,7 @@ export default function FreeDashboard() {
               {bankSummary.allowed ? (
                 <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes los copien fácilmente al momento de hacer una transferencia. {bankSummary.enabled ? 'Sección activa' : 'Sección desactivada'} · {bankSummary.count}/3 cuentas configuradas{bankSummary.source === 'fair' ? ' · Promoción de feria' : ''}.</p>
               ) : (
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes puedan copiarlos fácilmente. Disponible en Plan Básico y para perfiles Free durante promociones vigentes.</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes puedan copiarlos fácilmente. Disponible en Plan Plus y para perfiles Free durante promociones vigentes.</p>
               )}
             </div>
             <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${bankSummary.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{bankSummary.allowed ? 'Disponible' : 'Bloqueado'}</span>
@@ -509,9 +494,6 @@ export default function FreeDashboard() {
         </div>
 
         <FreeUpgradeCard />
-        <FreeSupportPanel />
-
-        {me?.slug && <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />}
       </section>
     </main>
     </>

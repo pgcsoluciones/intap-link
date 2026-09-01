@@ -228,7 +228,7 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
 
             {!checkingOptions && trialEligible && (
               <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 p-4">
-                <p className="text-sm font-black text-violet-950">Antes de eliminarlo, puedes probar el Plan Básico 7 días gratis</p>
+                <p className="text-sm font-black text-violet-950">Antes de eliminarlo, puedes probar el Plan Plus 7 días gratis</p>
                 <p className="mt-1 text-xs leading-5 text-violet-800">Esta invitación aparece porque tu cuenta no está registrada como una cuenta que ya utilizó la prueba gratuita.</p>
                 <a href={basicTrialWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-3 text-xs font-black text-violet-700 shadow-sm">Probar Básico 7 días gratis</a>
               </div>

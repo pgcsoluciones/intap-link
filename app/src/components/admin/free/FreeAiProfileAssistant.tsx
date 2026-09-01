@@ -785,11 +785,11 @@ export default function FreeAiProfileAssistant() {
             {Number(context.usage.remaining_today) <= 0 || Number(context.usage.remaining_month) <= 0
               ? 'Ya utilizaste la cuota de IA disponible por ahora.'
               : 'Te queda poca cuota de IA disponible.'}{' '}
-            El Plan Básico incluye una cuota mayor para seguir optimizando tu perfil.
-            {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Conocer Plan Básico</a>}
+            El Plan Plus incluye una cuota mayor para seguir optimizando tu perfil.
+            {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Conocer Plan Plus</a>}
           </div>
         )}
-        {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a mejorar el texto de los servicios que ya creaste. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Básico</a>}</div>}
+        {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a mejorar el texto de los servicios que ya creaste. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Plus</a>}</div>}
       </section>}
 
       {hasExistingContent && !proposal && followUp.length===0 && context && <section className="mt-5 rounded-[24px] border border-cyan-200 bg-white p-5 shadow-sm">

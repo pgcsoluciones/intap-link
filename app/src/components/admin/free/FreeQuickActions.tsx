@@ -92,7 +92,7 @@ export default function FreeQuickActions() {
       if (current.includes(type)) { setLimitReached(false); return current.filter((item) => item !== type) }
       if (current.length >= MAX_SELECTED) {
         setLimitReached(true)
-        setError('Ya elegiste 3 accesos rápidos. Quita uno para cambiarlo o pasa al Plan Básico para ampliar tus opciones.')
+        setError('Ya elegiste 3 accesos rápidos. Quita uno para cambiarlo o pasa al Plan Plus para ampliar tus opciones.')
         return current
       }
       const next = [...current, type]
@@ -142,7 +142,7 @@ export default function FreeQuickActions() {
         })}</section>}
         {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{error}</p>}
         {message && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700">{message}</p>}
-        {(limitReached || selected.length >= MAX_SELECTED) && <FreeLimitUpgradeCard text="Ya usas los 3 accesos rápidos incluidos. Puedes sustituir cualquiera de ellos o ampliar tu perfil con un Plan Básico." />}
+        {(limitReached || selected.length >= MAX_SELECTED) && <FreeLimitUpgradeCard text="Ya usas los 3 accesos rápidos incluidos. Puedes sustituir cualquiera de ellos o ampliar tu perfil con un Plan Plus." />}
         <button type="button" disabled={saving} onClick={() => void save()} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3.5 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : 'Guardar botones de contacto'}</button>
         {selected.length < MAX_SELECTED && <div className="mt-5"><FreeUpgradeCard compact /></div>}
         <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
