@@ -172,7 +172,7 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
               Gracias por haber formado parte de Kawvo Link. Esperamos verte de nuevo muy pronto.
             </p>
             <p className="mt-3 text-xs leading-5 text-slate-500">
-              Tu cuenta de acceso permanece activa por si decides crear un nuevo perfil más adelante.
+              Si en algún momento decides regresar, podrás crear un nuevo perfil con tu mismo acceso.
             </p>
             <button type="button" onClick={continueAfterDeletion} className="mt-6 w-full rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white">
               Continuar
