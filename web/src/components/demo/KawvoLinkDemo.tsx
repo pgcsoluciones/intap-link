@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import IntapLinkGratisProfile from '../free-profile/IntapLinkGratisProfile'
+import DemoBankAccounts from './DemoBankAccounts'
 import type {
   FreeProfileAppearanceColors,
   FreeProfileData,
@@ -226,6 +227,7 @@ function postDemoEvent(body: Record<string, unknown>) {
 export default function KawvoLinkDemo() {
   const [stage, setStage] = useState<DemoStage>('sector')
   const [isAiGenerated, setIsAiGenerated] = useState(false)
+  const [showBankDemo, setShowBankDemo] = useState(false)
   const [form, setForm] = useState<DemoForm>(DEFAULT_PRESET.form)
   const [portrait, setPortrait] = useState(DEFAULT_PRESET.portrait)
   const [hero, setHero] = useState(DEFAULT_PRESET.hero)
@@ -247,6 +249,11 @@ export default function KawvoLinkDemo() {
     sessionKeyRef.current = getSessionKey()
     fromTokenRef.current = new URLSearchParams(window.location.search).get('from')
     const params = new URLSearchParams(window.location.search)
+    if (params.get('ai') !== '1' && params.get('manual') !== '1') {
+      const from = params.get('from')
+      window.location.replace(`/demo/ia${from ? `?from=${encodeURIComponent(from)}` : ''}`)
+      return
+    }
     if (params.get('ai') === '1') {
       try {
         const raw = window.sessionStorage.getItem('kawvo_demo_ai_draft_v1')
@@ -256,6 +263,7 @@ export default function KawvoLinkDemo() {
           setPortrait(draft.portrait)
           setHero(draft.hero)
           setCurrentSector(String(draft.assetCategory || 'demo-ai'))
+          setShowBankDemo(draft.bankDemo === true)
           setIsAiGenerated(true)
           setStage('welcome')
         }
@@ -402,6 +410,7 @@ export default function KawvoLinkDemo() {
     setForm(DEFAULT_PRESET.form)
     setCurrentSector(null)
     setIsAiGenerated(false)
+    setShowBankDemo(false)
     try { window.sessionStorage.removeItem('kawvo_demo_ai_draft_v1') } catch {}
     setShareStatus('idle')
     completionTrackedRef.current = false
@@ -450,6 +459,7 @@ export default function KawvoLinkDemo() {
         profile,
         layout: form.layout,
         colors: PALETTES[form.palette],
+        bankDemo: showBankDemo,
       }
       const body = new FormData()
       body.set('snapshot', JSON.stringify(payload))
@@ -495,6 +505,7 @@ export default function KawvoLinkDemo() {
     <div className="kawvo-demo-preview" aria-label="Vista previa del perfil demo" onClickCapture={blockDemoFooterNavigation}>
       <style>{`.kawvo-demo-preview .ilx-footer a { pointer-events: none; cursor: default; opacity: .72; }`}</style>
       <IntapLinkGratisProfile profile={profile} layout={form.layout} colors={PALETTES[form.palette]} />
+      {showBankDemo && <DemoBankAccounts holderName={form.name.trim() || 'Tu nombre'} />}
     </div>
   )
 
@@ -526,7 +537,7 @@ export default function KawvoLinkDemo() {
         </section>
         {preview}
         <div className="kawvo-demo-sticky-cta">
-          <button type="button" onClick={() => setStage('edit')}>{isAiGenerated ? 'Ajustar mi demo' : 'Pruébalo con tus datos'}</button>
+          <button type="button" onClick={() => setStage('edit')}>{isAiGenerated ? 'Ajustar mi demo' : 'Personalizar con mis datos'}</button>
           <small>Lo que cambies existe solamente en este dispositivo mientras mantengas abierta la demo.</small>
         </div>
       </main>
@@ -591,7 +602,7 @@ export default function KawvoLinkDemo() {
             <span>Esta demo compartida desaparece en 24 horas.</span>
             {shareStatus === 'error' && <strong>No pudimos crear el enlace. Inténtalo nuevamente.</strong>}
           </div>
-          <button type="button" onClick={() => setStage('edit')}>Seguir probando</button>
+          <button type="button" onClick={() => setStage('edit')}>Personalizar mi demo</button>
           <button type="button" className="kawvo-demo-reset" onClick={resetDemo}>Reiniciar demo</button>
         </section>
       </main>
@@ -601,7 +612,7 @@ export default function KawvoLinkDemo() {
   return (
     <main className="kawvo-demo-editor-page">
       <header className="kawvo-demo-editor-header">
-        <div><span>DEMO KAWVO LINK</span><strong>Personalízalo en vivo</strong></div>
+        <div><span>DEMO KAWVO LINK</span><strong>Edita tu Perfil Demo</strong></div>
         <button type="button" onClick={resetDemo} aria-label="Cerrar demostración">×</button>
       </header>
 
@@ -690,7 +701,7 @@ export default function KawvoLinkDemo() {
             </div>
           </fieldset>
 
-          <button type="button" className="kawvo-demo-finish" onClick={finishDemo}>Ver cómo quedó</button>
+          <button type="button" className="kawvo-demo-finish kawvo-demo-finish-floating" onClick={finishDemo}>Ver cómo quedó</button>
         </section>
 
         <aside className="kawvo-demo-live">

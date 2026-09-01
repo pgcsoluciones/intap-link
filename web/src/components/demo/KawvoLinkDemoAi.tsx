@@ -42,7 +42,10 @@ function getSessionKey() {
 }
 
 function normalizePhone(value: string) {
-  return value.replace(/\D/g, '').slice(0, 15)
+  const digits = value.replace(/\D/g, '').slice(0, 15)
+  if (digits.length === 10) return `1${digits}`
+  if (digits.length === 11 && digits.startsWith('1')) return digits
+  return digits
 }
 
 function normalizeInstagram(value: string) {
@@ -61,6 +64,7 @@ function buildDraft(data: AiReady['demo'], input: {
   activity: string
   role: string
   contact: ContactForm
+  includeBankDemo: boolean
 }) {
   const assets = [...((FREE_PROFILE_STARTER_ASSETS as Record<string, readonly string[]>)[data.asset_category] || [])]
   const fallbackAssets = [...((FREE_PROFILE_STARTER_ASSETS as Record<string, readonly string[]>)['Servicios generales'] || [])]
@@ -90,6 +94,7 @@ function buildDraft(data: AiReady['demo'], input: {
     version: 1,
     createdAt: Date.now(),
     assetCategory: data.asset_category,
+    bankDemo: input.includeBankDemo,
     portrait: imageAt(1),
     hero: imageAt(0),
     form: {
@@ -129,6 +134,7 @@ export default function KawvoLinkDemoAi() {
   const [workDescription, setWorkDescription] = useState('')
   const [contact, setContact] = useState<ContactForm>({ whatsapp: '', samePhoneAsWhatsapp: true, phone: '', instagram: '', email: '' })
   const [consent, setConsent] = useState(false)
+  const [includeBankDemo, setIncludeBankDemo] = useState(false)
   const [questions, setQuestions] = useState<string[]>([])
   const [clarification, setClarification] = useState('')
   const [round, setRound] = useState(1)
@@ -178,9 +184,10 @@ export default function KawvoLinkDemoAi() {
         setStep(5)
         return
       }
-      const draft = buildDraft(data.demo, { name, activity, role, contact })
+      const draft = buildDraft(data.demo, { name, activity, role, contact, includeBankDemo })
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
-      window.location.assign('/demo?ai=1')
+      const from = new URLSearchParams(window.location.search).get('from')
+      window.location.assign(`/demo?ai=1${from ? `&from=${encodeURIComponent(from)}` : ''}`)
     } catch {
       setError('No pudimos preparar tu Demo con IA en este momento.')
       postEvent('demo_ai_fallback', sessionKey, { code: 'network' })
@@ -196,7 +203,8 @@ export default function KawvoLinkDemoAi() {
 
   const fallback = () => {
     postEvent('demo_ai_fallback', sessionKey, { reason: 'user_continue_manual' })
-    window.location.assign('/demo?manual=1')
+    const from = new URLSearchParams(window.location.search).get('from')
+    window.location.assign(`/demo?manual=1${from ? `&from=${encodeURIComponent(from)}` : ''}`)
   }
 
   return (
@@ -236,11 +244,13 @@ export default function KawvoLinkDemoAi() {
         {step === 4 && <>
           <p className="kawvo-demo-ai-kicker">PARA QUE PUEDAN CONTACTARTE</p>
           <h1>Tus datos esenciales</h1>
-          <label><span>WhatsApp</span><input inputMode="tel" maxLength={20} value={contact.whatsapp} onChange={(event) => setContact({ ...contact, whatsapp: event.target.value })} placeholder="809-000-0000" /></label>
+          <label><span>WhatsApp</span><input inputMode="tel" maxLength={20} value={contact.whatsapp} onChange={(event) => setContact({ ...contact, whatsapp: event.target.value })} placeholder="809-000-0000" /><small>Lo mostraremos con el código +1.</small></label>
           <label className="kawvo-demo-ai-check"><input type="checkbox" checked={contact.samePhoneAsWhatsapp} onChange={(event) => setContact({ ...contact, samePhoneAsWhatsapp: event.target.checked })} /><span>Usar este mismo número para llamadas</span></label>
           {!contact.samePhoneAsWhatsapp && <label><span>Teléfono para llamadas</span><input inputMode="tel" maxLength={20} value={contact.phone} onChange={(event) => setContact({ ...contact, phone: event.target.value })} /></label>}
           <label><span>Instagram <small>Opcional</small></span><input maxLength={50} value={contact.instagram} onChange={(event) => setContact({ ...contact, instagram: event.target.value })} placeholder="@usuario" /></label>
           <label><span>Correo <small>Opcional</small></span><input type="email" maxLength={120} value={contact.email} onChange={(event) => setContact({ ...contact, email: event.target.value })} placeholder="correo@dominio.com" /></label>
+
+          <label className="kawvo-demo-ai-check kawvo-demo-ai-bank-option"><input type="checkbox" checked={includeBankDemo} onChange={(event) => setIncludeBankDemo(event.target.checked)} /><span><strong>Incluir ejemplo de cuentas bancarias</strong><small>Mostraremos una cuenta ficticia para que veas cómo luce esta sección.</small></span></label>
 
           <div className="kawvo-demo-ai-consent">
             <strong>Antes de crear tu Demo</strong>

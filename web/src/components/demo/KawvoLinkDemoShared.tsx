@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import IntapLinkGratisProfile from '../free-profile/IntapLinkGratisProfile'
+import DemoBankAccounts from './DemoBankAccounts'
 import type {
   FreeProfileAppearanceColors,
   FreeProfileData,
@@ -14,6 +15,7 @@ type SharedResponse = {
     profile?: FreeProfileData
     layout?: FreeProfileLayoutId
     colors?: FreeProfileAppearanceColors
+    bankDemo?: boolean
   }
   sector_key?: string | null
   expires_at?: string
@@ -88,7 +90,7 @@ export default function KawvoLinkDemoShared() {
       sector_key: data?.sector_key || null,
       source: 'shared_preview',
     })
-    navigate(`/demo?from=${encodeURIComponent(token)}`)
+    navigate(`/demo/ia?from=${encodeURIComponent(token)}`)
   }
 
   if (loading) {
@@ -101,7 +103,7 @@ export default function KawvoLinkDemoShared() {
         <span className="kawvo-demo-shared-mark">KAWVO LINK</span>
         <h1>{data?.expired ? 'Esta vista previa ya expiró.' : 'Esta vista previa no está disponible.'}</h1>
         <p>Las demostraciones compartidas duran 24 horas. Puedes crear una nueva con tu propia profesión.</p>
-        <button type="button" onClick={() => navigate('/demo')}>Probar con mi profesión</button>
+        <button type="button" onClick={() => navigate('/demo/ia')}>Crear mi demo con IA</button>
       </main>
     )
   }
@@ -131,14 +133,16 @@ export default function KawvoLinkDemoShared() {
           layout={data.snapshot.layout}
           colors={data.snapshot.colors}
         />
+        {data.snapshot.bankDemo && <DemoBankAccounts holderName={profile.name || 'Perfil Demo'} />}
       </div>
 
       <section className="kawvo-demo-shared-cta">
         <span>DEMO KAWVO LINK</span>
         <h2>¿Quieres ver cómo se vería tu propio Perfil Digital?</h2>
         <p>Personalízalo con tu foto, tus servicios y tus redes. Mira en segundos cómo podría verse hecho para ti.</p>
-        <button type="button" onClick={startOwnDemo}>Haz tu propia demo</button>
-        <small>Sin registro. Elige tu profesión, personalízalo y mira el resultado al instante.</small>
+        <button type="button" onClick={startOwnDemo}>Crear mi demo con IA</button>
+        <button type="button" className="kawvo-demo-shared-secondary" onClick={() => navigate(`/demo?manual=1&from=${encodeURIComponent(token)}`)}>Hacerla sin IA</button>
+        <small>Sin registro. Cuéntanos lo esencial y Kawvo prepara una propuesta para ti.</small>
       </section>
     </main>
   )

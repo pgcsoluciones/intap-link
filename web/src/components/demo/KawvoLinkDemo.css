@@ -616,3 +616,7 @@
 
 .kawvo-demo-ai-entry{display:block;text-decoration:none;text-align:center;background:linear-gradient(135deg,#0f172a,#155e75);color:#fff;border-radius:18px;padding:16px 18px;margin:0 0 18px;font-weight:900;font-size:16px;box-shadow:0 14px 30px rgba(15,23,42,.16)}
 .kawvo-demo-inline-check{display:flex!important;align-items:center;gap:9px}.kawvo-demo-inline-check input{width:18px!important;height:18px}.kawvo-demo-inline-check span{margin:0!important}
+
+/* Demo IA V1.4 */
+.kawvo-demo-finish-floating{position:fixed!important;right:18px;bottom:18px;z-index:80;box-shadow:0 16px 36px rgba(15,23,42,.22);width:auto!important;min-width:170px}
+@media(max-width:720px){.kawvo-demo-finish-floating{left:16px;right:16px;bottom:14px;width:calc(100% - 32px)!important}}
