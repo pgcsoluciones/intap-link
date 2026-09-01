@@ -279,7 +279,7 @@ export default function FreeDashboard() {
             {hasSuperAdminAccess && (
               <button type="button" onClick={() => navigate('/superadmin')} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white">Super Admin</button>
             )}
-            <button type="button" onClick={() => navigate('/admin/free/account')} aria-label="Mi cuenta" title="Mi cuenta" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-black text-slate-600 shadow-sm transition hover:bg-slate-50">◎</button>
+            <button type="button" onClick={() => navigate('/admin/free/account')} aria-label="Mi cuenta" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:bg-slate-50">Mi cuenta</button>
           </div>
         </div>
       </header>
