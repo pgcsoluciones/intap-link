@@ -211,7 +211,6 @@ export default function KawvoLinkDemoAi() {
     <main className="kawvo-demo-ai-page">
       <section className="kawvo-demo-ai-shell">
         <div className="kawvo-demo-ai-top">
-          <a href="/demo?manual=1" className="kawvo-demo-ai-manual-link">Probar sin IA</a>
           <span>Demo con IA · Beta</span>
           <small>{step <= 4 ? `${step}/4` : 'Casi listo'}</small>
         </div>
@@ -272,6 +271,7 @@ export default function KawvoLinkDemoAi() {
 
         {error && <div className="kawvo-demo-ai-error" role="alert">{error}</div>}
         <p className="kawvo-demo-ai-foot">No crea una cuenta ni publica un perfil.</p>
+        <button type="button" className="kawvo-demo-ai-secondary kawvo-demo-ai-manual-bottom" onClick={fallback}>Probar sin IA</button>
       </section>
     </main>
   )

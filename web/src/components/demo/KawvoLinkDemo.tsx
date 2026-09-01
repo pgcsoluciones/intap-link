@@ -592,7 +592,7 @@ export default function KawvoLinkDemo() {
               source: fromTokenRef.current ? 'shared_preview' : 'demo',
             })}
           >
-            Me interesa quiero mi Perfil
+            Me interesa, quiero mi Perfil
           </a>
           <div className="kawvo-demo-share-block">
             <small>¿Te gustó cómo quedó?</small>
