@@ -336,6 +336,16 @@ ${seoHeadHtml}
     })
   }
 
+  // Card social para invitaciones compartidas desde Mi cuenta.
+  if (url.pathname === '/invitacion' || url.pathname === '/invitacion/') {
+    return injectSimpleSocialCard({
+      title: 'Te recomiendo Kawvo Link | Crea tu presentación digital',
+      description: 'Crea tu presentación digital para mostrar quién eres, qué haces y cómo contactarte, todo en un solo lugar.',
+      image: `${url.origin}/assets/og/kawvo-link-og.png`,
+      canonicalUrl: `${url.origin}/invitacion`,
+    });
+  }
+
   // Card específica de la demo interactiva.
   if (url.pathname === '/demo' || url.pathname === '/demo/') {
     return injectSimpleSocialCard({
@@ -382,6 +392,36 @@ ${seoHeadHtml}
   }
 
   const slug = url.pathname.replace(/^\/+|\/+$/g, '');
+  // share=bancos: social card bancaria aprobada para WhatsApp y redes.
+  if (url.searchParams.get('share') === 'bancos' && /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) {
+    const bankMeta = await getDynamicProfileSeoBundle(slug, discoveryRuntime);
+    if (bankMeta) {
+      const response = await context.next();
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        const html = await response.text();
+        const cleanName = bankMeta.title.split('|')[0].trim();
+        const pageUrl = `${url.origin}/${encodeURIComponent(slug)}?share=bancos`;
+        const updatedHtml = injectHeadMetadata(html, {
+          title: `Datos bancarios de ${cleanName} | Kawvo Link`,
+          description: 'Consulta los datos bancarios compartidos desde su presentación digital Kawvo Link.',
+          url: pageUrl,
+          image: bankMeta.image,
+          imageType: bankMeta.imageType,
+          siteName: 'Kawvo Link',
+          ogType: 'website',
+          twitterCard: 'summary_large_image',
+          language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
+        });
+        const headers = new Headers(response.headers);
+        headers.set('content-type', 'text/html; charset=UTF-8');
+        headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
+        return withSecurityHeaders(new Response(updatedHtml, { status: response.status, statusText: response.statusText, headers }));
+      }
+      return withSecurityHeaders(response);
+    }
+  }
+
   const staticProfile = getStaticProfileDiscovery(slug, discoveryRuntime);
 
   if (staticProfile) {
