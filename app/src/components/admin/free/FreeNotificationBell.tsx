@@ -14,13 +14,17 @@ type NotificationItem = {
   created_at?: string | null
 }
 
+type FreeNotificationBellProps = {
+  hideTrigger?: boolean
+}
+
 function formatDate(value?: string | null) {
   if (!value) return ''
   const date = new Date(value.endsWith('Z') || value.includes('+') ? value : `${value.replace(' ', 'T')}Z`)
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('es-DO')
 }
 
-export default function FreeNotificationBell() {
+export default function FreeNotificationBell({ hideTrigger = false }: FreeNotificationBellProps) {
   const bellRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<NotificationItem[]>([])
@@ -37,7 +41,7 @@ export default function FreeNotificationBell() {
         setItems(Array.isArray(json.data?.items) ? json.data.items : [])
         setUnread(Number(json.data?.unread_count || 0))
       }
-    } catch { /* bell stays usable */ }
+    } catch { /* notifications stay usable */ }
     finally { setLoading(false) }
   }
 
@@ -61,15 +65,13 @@ export default function FreeNotificationBell() {
 
   useEffect(() => {
     if (!open) return
-
     const onPointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node | null
-      if (target && bellRef.current && !bellRef.current.contains(target)) setOpen(false)
+      if (!hideTrigger && target && bellRef.current && !bellRef.current.contains(target)) setOpen(false)
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
     }
-
     document.addEventListener('mousedown', onPointerDown)
     document.addEventListener('touchstart', onPointerDown, { passive: true })
     document.addEventListener('keydown', onKeyDown)
@@ -78,7 +80,7 @@ export default function FreeNotificationBell() {
       document.removeEventListener('touchstart', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [open])
+  }, [open, hideTrigger])
 
   const openItem = (item: NotificationItem) => {
     setSelected(item)
@@ -136,23 +138,25 @@ export default function FreeNotificationBell() {
   }
 
   return (
-    <div ref={bellRef} className="relative">
-      <button
-        type="button"
-        onClick={() => { setOpen((value) => !value); if (!open) void load() }}
-        aria-label={unread ? `Notificaciones, ${unread} sin leer` : 'Notificaciones'}
-        className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-lg shadow-sm transition hover:bg-slate-50"
-      >
-        <span aria-hidden="true">🔔</span>
-        {unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white ring-2 ring-white">
-            {unread > 9 ? '9+' : unread}
-          </span>
-        )}
-      </button>
+    <div ref={bellRef} className={hideTrigger ? '' : 'relative'}>
+      {!hideTrigger && (
+        <button
+          type="button"
+          onClick={() => { setOpen((value) => !value); if (!open) void load() }}
+          aria-label={unread ? `Notificaciones, ${unread} sin leer` : 'Notificaciones'}
+          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-lg shadow-sm transition hover:bg-slate-50"
+        >
+          <span aria-hidden="true">🔔</span>
+          {unread > 0 && (
+            <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white ring-2 ring-white">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
+        </button>
+      )}
 
       {open && (
-        <div className="fixed inset-x-3 top-[76px] z-[90] mx-auto max-h-[72vh] w-auto max-w-[430px] overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-[380px]">
+        <div className="fixed inset-x-3 top-[76px] z-[90] mx-auto max-h-[72vh] w-auto max-w-[430px] overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-2xl sm:right-4 sm:left-auto sm:w-[380px]">
           <div className="flex items-center justify-between border-b border-slate-100 p-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Bandeja de entrada</p>
