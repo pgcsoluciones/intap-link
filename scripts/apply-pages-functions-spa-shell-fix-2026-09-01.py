@@ -15,16 +15,16 @@ if marker not in text:
     raise SystemExit('injectSimpleSocialCard marker not found')
 text = text.replace(marker, helper + marker, 1)
 
-# Social-card and profile metadata routes need the SPA HTML shell explicitly.
-text = text.replace('    const response = await context.next();\n    const contentType = response.headers.get(\'content-type\') || \'\';\n',
-                    '    const response = await fetchSpaShell();\n    const contentType = response.headers.get(\'content-type\') || \'\';\n', 1)
-
-# Replace the next two profile-shell reads (static + dynamic).
+# Every metadata-producing route must start from the real SPA shell rather than
+# context.next(), because root Pages Functions can otherwise receive a 404 for
+# client-side routes such as /demo/ia. Replace only the response+content-type
+# pattern, leaving the final generic context.next() untouched for actual files.
 needle = """    const response = await context.next();\n    const contentType = response.headers.get('content-type') || '';\n"""
-for _ in range(2):
-    if needle not in text:
-        raise SystemExit('profile context.next marker not found')
-    text = text.replace(needle, """    const response = await fetchSpaShell();\n    const contentType = response.headers.get('content-type') || '';\n""", 1)
+replacement = """    const response = await fetchSpaShell();\n    const contentType = response.headers.get('content-type') || '';\n"""
+count = text.count(needle)
+if count < 3:
+    raise SystemExit(f'expected at least 3 metadata shell reads, found {count}')
+text = text.replace(needle, replacement)
 
 old_tail = """  return withSecurityHeaders(await context.next());\n}\n"""
 new_tail = """  // A root Pages middleware intercepts browser routes before Pages can apply\n  // its implicit SPA fallback. Reproduce that behavior explicitly for HTML\n  // navigations while leaving real assets/files to Pages' normal resolver.\n  if (isHtmlNavigation()) {\n    return withSecurityHeaders(await fetchSpaShell());\n  }\n\n  return withSecurityHeaders(await context.next());\n}\n"""
@@ -33,4 +33,4 @@ if old_tail not in text:
 text = text.replace(old_tail, new_tail, 1)
 
 path.write_text(text, encoding='utf-8')
-print('✓ Pages Functions: SPA shell explícito mediante ASSETS para rutas HTML')
+print(f'✓ Pages Functions: SPA shell explícito mediante ASSETS ({count} rutas metadata)')
