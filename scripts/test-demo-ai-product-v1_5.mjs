@@ -22,7 +22,7 @@ assert.match(demo, /Personalizar con mis datos/, 'Se mantiene CTA de personaliza
 assert.match(demo, /Personalizar mi demo/, 'No debe quedar Ajustar mi demo')
 assert.doesNotMatch(demo, /Ajustar mi demo/, 'No debe quedar copy Ajustar mi demo')
 assert.match(demo, /kawvo-demo-finish-floating/, 'Ver cómo quedó sigue flotante')
-assert.match(demo, /Me interesa quiero mi Perfil/, 'CTA comercial solicitado')
+assert.match(demo, /Me interesa, quiero mi Perfil/, 'CTA comercial solicitado')
 assert.match(demo, /bankDemo: showBankDemo/, 'Banco demo debe persistir en snapshot')
 assert.match(bank, /DEMO_MASKED/, 'Banco demo debe enmascarar valores visibles')
 assert.match(bank, /slice\(-4\)/, 'Solo últimos cuatro dígitos visibles')
