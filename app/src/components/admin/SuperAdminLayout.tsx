@@ -13,13 +13,14 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'resources' | 'resources'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
   { key: 'demo', label: 'Resultados Demo' },
   { key: 'support', label: 'Soporte / tickets' },
+  { key: 'resources', label: 'Recursos de usuarios' },
   { key: 'feedback', label: 'Onboarding / bajas' },
   { key: 'billing', label: 'Billing / Pagos' },
   { key: 'paymentLinks', label: 'Enlaces de pago' },
@@ -64,6 +65,10 @@ export default function SuperAdminLayout({
     }
     if (section === 'support') {
       if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/support') window.location.href = '/superadmin/support'
+      return
+    }
+    if (section === 'resources') {
+      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/resources') window.location.href = '/superadmin/resources'
       return
     }
     if (section === 'feedback') {

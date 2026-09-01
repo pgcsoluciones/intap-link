@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiGet, apiPost } from '../../../lib/api'
 import { FreeBackButton, basicPlanWhatsAppUrl } from './FreePanelUi'
 import { useNavigate } from 'react-router-dom'
@@ -12,7 +12,7 @@ type Proposal = {
   bio: string
   services_section_title: string
   services_section_description: string
-  services: Array<{ title: string; description: string }>
+  services: Array<{ id: string; title: string; description: string }>
   portfolio: PortfolioItem[]
   cta: { label: string; goal: string }
   image_suggestions: ImageSuggestion[]
@@ -21,11 +21,32 @@ type Limits = { max_services: number; max_portfolio: number; ai_daily_generation
 type AssistantContext = {
   beta: boolean
   consent: { required: boolean; accepted: boolean; terms_version: string }
+  context_confirmation: {
+    confirmed: boolean
+    required: boolean
+    confirmed_at: string | null
+  }
+  context_readiness: {
+    ready: boolean
+    missing: string[]
+    summary: {
+      name: string
+      category: string
+      subcategory: string
+      professional_title: string
+      activity_context: string
+      services_count: number
+      portfolio_count: number
+      configured_channels: string[]
+    }
+  }
   profile: {
     slug: string
     name: string
     category: string
+    subcategory: string
     professional_title: string
+    activity_context: string
     bio: string
     services_section_title?: string
     services_section_description?: string
@@ -35,7 +56,7 @@ type AssistantContext = {
     configured_channels: string[]
   }
   plan: { code: string; limits: Limits; upgrade_available: boolean }
-  usage: { daily: number; monthly: number; remaining_today: number; remaining_month: number }
+  usage: { unlimited?: boolean; daily: number; monthly: number; remaining_today: number | null; remaining_month: number | null }
 }
 type Answers = {
   activity_details: string
@@ -84,6 +105,37 @@ function Question({ label, hint, value, onChange, rows = 3 }: { label: string; h
   </label>
 }
 
+function StableInstructionQuestion({
+  label,
+  hint,
+  onDraft,
+  rows = 4,
+}: {
+  label: string
+  hint?: string
+  onDraft: (value: string) => void
+  rows?: number
+}) {
+  const [value, setValue] = useState('')
+
+  return <label className="block">
+    <span className="text-[15px] font-black text-slate-800">{label}</span>
+    {hint && <span className="mt-1 block text-sm font-medium leading-5 text-slate-500">{hint}</span>}
+    <textarea
+      value={value}
+      onChange={(event) => {
+        const next = event.target.value.slice(0, 700)
+        setValue(next)
+        onDraft(next)
+      }}
+      maxLength={700}
+      rows={rows}
+      className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base leading-6 outline-none focus:border-cyan-400 focus:bg-white focus:ring-4 focus:ring-cyan-100"
+    />
+    <span className="mt-1 block text-right text-[11px] font-bold text-slate-400">{value.length}/700</span>
+  </label>
+}
+
 export default function FreeAiProfileAssistant() {
   const navigate = useNavigate()
   const [loading,setLoading] = useState(true)
@@ -99,27 +151,106 @@ export default function FreeAiProfileAssistant() {
   const [accepting,setAccepting] = useState(false)
   const [termsChecked,setTermsChecked] = useState(false)
   const [showFullTerms,setShowFullTerms] = useState(false)
+  const [confirmingContext,setConfirmingContext] = useState(false)
+  const [showContextEditor,setShowContextEditor] = useState(false)
+  const [contextEditorFullReview,setContextEditorFullReview] = useState(false)
+  const [savingContext,setSavingContext] = useState(false)
+  const [contextDraft,setContextDraft] = useState({
+    category: '',
+    subcategory: '',
+    professional_title: '',
+    activity_context: '',
+  })
   const [selection,setSelection] = useState<ApplySelection>({ identity:true,bio:true,services_section:true,services:true,portfolio:true })
   const [editingScope,setEditingScope] = useState<EditingScope>('missing_only')
   const [cooldownSeconds,setCooldownSeconds] = useState(0)
   const [replaceServices,setReplaceServices] = useState(false)
   const [error,setError] = useState('')
   const [success,setSuccess] = useState('')
-  const [portfolioTitles,setPortfolioTitles] = useState<Record<string,string>>({})
   const [remainingProfileItems,setRemainingProfileItems] = useState<string[]>([])
+  const instructionRef = useRef('')
+  const [instructionHasText,setInstructionHasText] = useState(false)
+  const [instructionEnough,setInstructionEnough] = useState(false)
+
+  async function confirmCurrentContext() {
+    if (!context || confirmingContext) return
+
+    setConfirmingContext(true)
+    setError('')
+
+    try {
+      const json: any = await apiPost('/me/ai-profile-assistant/context/confirm', {})
+      if (!json?.ok) {
+        setError(json?.error || 'No pudimos confirmar estos datos.')
+        return
+      }
+
+      await loadContext()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {
+      setError('No pudimos confirmar estos datos. Intenta nuevamente.')
+    } finally {
+      setConfirmingContext(false)
+    }
+  }
+
+  function openContextEditor(forceFullReview = false) {
+    if (!context) return
+
+    setContextDraft({
+      category: context.profile.category || '',
+      subcategory: context.profile.subcategory || '',
+      professional_title: context.profile.professional_title || '',
+      activity_context: context.profile.activity_context || '',
+    })
+    setContextEditorFullReview(forceFullReview)
+    setShowContextEditor(true)
+    setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  async function saveContextEditor() {
+    if (!context || savingContext) return
+
+    const required = {
+      category: contextDraft.category.trim(),
+      subcategory: contextDraft.subcategory.trim(),
+      professional_title: contextDraft.professional_title.trim(),
+      activity_context: contextDraft.activity_context.trim(),
+    }
+
+    if (!required.category || !required.subcategory || !required.professional_title || !required.activity_context) {
+      setError('Completa los datos pendientes antes de continuar.')
+      return
+    }
+
+    setSavingContext(true)
+    setError('')
+
+    try {
+      const json: any = await apiPost('/me/ai-profile-assistant/context/update', required)
+
+      if (!json?.ok) {
+        setError(json?.error || 'No pudimos guardar estos datos.')
+        return
+      }
+
+      await loadContext()
+      setShowContextEditor(false)
+      setContextEditorFullReview(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {
+      setError('No pudimos guardar estos datos. Intenta nuevamente.')
+    } finally {
+      setSavingContext(false)
+    }
+  }
 
   async function loadContext() {
     const json:any = await apiGet('/me/ai-profile-assistant/context')
     if (!json?.ok) throw new Error(json?.error || 'No pudimos cargar la ayuda con IA.')
     const data = json.data as AssistantContext
     setContext(data)
-    setPortfolioTitles((current)=>{
-      const next: Record<string,string> = {}
-      for (const item of data.profile.portfolio || []) {
-        next[item.id] = current[item.id] || item.title || ''
-      }
-      return next
-    })
   }
   useEffect(()=>{ loadContext().catch((e)=>setError(e?.message || 'No pudimos cargar la ayuda con IA.')).finally(()=>setLoading(false)) },[])
 
@@ -130,23 +261,13 @@ export default function FreeAiProfileAssistant() {
   const hasExistingContent = Boolean(context?.profile.professional_title || context?.profile.bio || context?.profile.services?.length || context?.profile.portfolio?.some((x)=>x.title || x.description))
   const missingTitle = Boolean(context && !context.profile.professional_title.trim())
   const missingBio = Boolean(context && !context.profile.bio.trim())
-  const missingServices = Boolean(context && context.profile.services.length === 0)
   const missingServicesSectionTitle = Boolean(context && !(context.profile.services_section_title || '').trim())
   const missingServicesSectionDescription = Boolean(context && !(context.profile.services_section_description || '').trim())
   const missingServicesSectionCopy = missingServicesSectionTitle || missingServicesSectionDescription
-  const incompletePortfolio = context?.profile.portfolio?.filter((item)=>!item.title.trim() || !item.description.trim()) || []
-  const missingPortfolioTitleItems = context?.profile.portfolio?.filter((item)=>!item.title.trim()) || []
-  const missingPortfolioCopy = incompletePortfolio.length > 0
-  const hasMissingEditorialContent = missingTitle || missingBio || missingServices || missingServicesSectionCopy || missingPortfolioCopy
+  const hasMissingEditorialContent = missingTitle || missingBio || missingServicesSectionCopy
   const channels = context?.profile.configured_channels || []
   const totalAnswerLength = Object.values(answers).reduce((s,v)=>s+v.trim().length,0)
-  const missingOnlyAnswerLength = [
-    missingTitle ? answers.activity_details : '',
-    missingBio ? answers.clients : '',
-    (missingServices || missingServicesSectionCopy) ? answers.services_details : '',
-    missingPortfolioCopy ? answers.extra_context : '',
-  ].reduce((sum,value)=>sum+value.trim().length,0)
-  const enoughInformation = hasExistingContent || totalAnswerLength >= 4
+  const enoughInformation = hasExistingContent || totalAnswerLength >= 4 || instructionEnough
   const atServiceLimit = Boolean(context && context.profile.services.length >= context.plan.limits.max_services)
 
   function chooseEditingScope(next: EditingScope) {
@@ -162,6 +283,9 @@ export default function FreeAiProfileAssistant() {
     setError('')
     setSuccess('')
     setRemainingProfileItems([])
+    instructionRef.current = ''
+    setInstructionHasText(false)
+    setInstructionEnough(false)
   }
 
   useEffect(()=>{
@@ -173,8 +297,8 @@ export default function FreeAiProfileAssistant() {
         identity:!context.profile.professional_title,
         bio:!context.profile.bio,
         services_section:!(context.profile.services_section_title && context.profile.services_section_description),
-        services:context.profile.services.length===0,
-        portfolio:context.profile.portfolio.some((item)=>!item.title || !item.description),
+        services:false,
+        portfolio:false,
       })
     }
   },[editingScope,context])
@@ -197,20 +321,23 @@ export default function FreeAiProfileAssistant() {
 
   async function generate(nextRound = round) {
     if (generating || !context) return
+    if (!context.context_readiness?.ready) {
+      setError('Completa primero los datos básicos para que Kawvo pueda entender bien tu actividad.')
+      return
+    }
+    if (!context.context_confirmation?.confirmed) {
+      setError('Confirma primero que la información que Kawvo usará como contexto está correcta.')
+      return
+    }
     setGenerating(true); setError(''); setSuccess(''); setRemainingProfileItems([])
     try {
+      const currentAnswers: Answers = {
+        ...answers,
+        extra_context: instructionRef.current,
+      }
       const answeredTurns: ConversationTurn[] = followUp.flatMap((item)=>item.answer.trim() ? [{ role:'assistant' as const, content:item.question }, { role:'user' as const, content:item.answer.trim() }] : [])
       const conversationPayload = [...conversation, ...answeredTurns]
-      const confirmedPortfolioTitles = missingPortfolioTitleItems
-        .map((item,index)=>({ index:context.profile.portfolio.findIndex((x)=>x.id===item.id)+1, id:item.id, title:(portfolioTitles[item.id] || '').trim().slice(0,80) }))
-        .filter((item)=>item.title)
-      const portfolioContext = confirmedPortfolioTitles.length
-        ? `Títulos de portafolio confirmados por el usuario: ${confirmedPortfolioTitles.map((item)=>`Foto ${item.index}: ${item.title}`).join(' | ')}`
-        : ''
-      const answersForModel = {
-        ...answers,
-        extra_context: [answers.extra_context.trim(), portfolioContext].filter(Boolean).join(' ').slice(0,700),
-      }
+      const answersForModel = currentAnswers
       const json:any = await apiPost('/me/ai-profile-assistant/generate',{ answers:answersForModel, follow_up_answers:followUp, conversation:conversationPayload, round:nextRound, editing_scope:editingScope })
       if (!json?.ok) {
         if (json?.code === 'cooldown') { setCooldownSeconds(Number(json.retry_after_seconds || 20)); setError(''); return }
@@ -277,15 +404,39 @@ export default function FreeAiProfileAssistant() {
   async function applyProposal() {
     if (!proposal || applying) return
     if (!Object.values(selection).some(Boolean)) { setError('Selecciona al menos un cambio para aplicar.'); return }
-    if (selection.services && hasExistingServices && !replaceServices) { setError('Confirma que deseas actualizar el texto de tus servicios actuales.'); return }
+    if (selection.services && hasExistingServices && !replaceServices) { setError('Confirma el cambio de tus servicios para poder aplicarlo.'); return }
     setApplying(true); setError(''); setSuccess('')
     try {
-      const json:any = await apiPost('/me/ai-profile-assistant/apply',{ proposal,apply:selection,replace_existing_services:replaceServices,editing_scope:editingScope })
+      const payload = { proposal,apply:selection,replace_existing_services:replaceServices,editing_scope:editingScope }
+      let json:any
+      try {
+        json = await apiPost('/me/ai-profile-assistant/apply', payload)
+      } catch {
+        await new Promise((resolve)=>window.setTimeout(resolve,350))
+        json = await apiPost('/me/ai-profile-assistant/apply', payload)
+      }
+      if (!json?.ok && json?.code === 'db_write_failed') {
+        await new Promise((resolve)=>window.setTimeout(resolve,350))
+        json = await apiPost('/me/ai-profile-assistant/apply', payload)
+      }
       if (!json?.ok) { setError(json?.error || 'No pudimos aplicar los cambios. Tu perfil anterior se mantiene.'); return }
-      setSuccess('Cambios aplicados correctamente')
+      setSuccess(json.data?.no_changes ? 'Tu perfil ya estaba actualizado; no había cambios nuevos que aplicar.' : 'Cambios aplicados correctamente')
       await Promise.all([loadContext(), loadRemainingProfileItems()])
     } catch { setError('No pudimos aplicar los cambios. Tu perfil anterior se mantiene.') } finally { setApplying(false) }
   }
+
+  if (success && context) return <main className="min-h-screen bg-[#f7f9fc] px-4 py-8 font-['Inter'] text-slate-950">
+    <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[520px] flex-col justify-center">
+      <div className="rounded-[30px] border border-emerald-200 bg-white p-6 text-center shadow-sm sm:p-8">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-50 text-3xl">✓</div>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Listo</p>
+        <h1 className="mt-2 text-2xl font-black tracking-[-0.03em]">Cambios confirmados y aplicados</h1>
+        <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">Tu perfil ya fue actualizado.</p>
+        <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(context.profile.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-6 flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white">Ver mi perfil</a>
+        <button type="button" onClick={()=>navigate('/admin/free')} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-black text-slate-700">Volver al panel</button>
+      </div>
+    </section>
+  </main>
 
   if (loading) return <main className="min-h-screen bg-[#f7f9fc] grid place-items-center"><div className="loading-spinner" /></main>
 
@@ -314,19 +465,309 @@ export default function FreeAiProfileAssistant() {
     </section>
   </main>
 
+  if (context && showContextEditor) {
+    const missing = context.context_readiness?.missing || []
+
+    const shouldShow = (key: string) =>
+      contextEditorFullReview || missing.includes(key)
+
+    return <main className="min-h-screen bg-[#f7f9fc] px-4 py-6 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-[620px]">
+        <FreeBackButton onClick={()=>{setShowContextEditor(false);setError('')}} />
+
+        <div className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-sm sm:p-7">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-700">
+            Contexto para Kawvo
+          </p>
+
+          <h1 className="mt-2 text-[26px] font-black leading-tight tracking-[-0.03em]">
+            {contextEditorFullReview ? 'Revisa los datos que Kawvo utilizará' : 'Completa lo que falta'}
+          </h1>
+
+          <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
+            Kawvo reutiliza la información que ya existe en tu perfil y solo necesita completar estos datos para entender mejor tu actividad.
+          </p>
+
+          <div className="mt-5 space-y-5">
+            {shouldShow('category') && <label className="block">
+              <span className="text-sm font-black text-slate-800">Categoría de tu actividad</span>
+              <input
+                value={contextDraft.category}
+                onChange={(e)=>setContextDraft((current)=>({...current,category:e.target.value.slice(0,120)}))}
+                maxLength={120}
+                placeholder="Ej. Marketing y comunicación digital"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+            </label>}
+
+            {shouldShow('subcategory') && <label className="block">
+              <span className="text-sm font-black text-slate-800">Especialidad o subcategoría</span>
+              <input
+                value={contextDraft.subcategory}
+                onChange={(e)=>setContextDraft((current)=>({...current,subcategory:e.target.value.slice(0,120)}))}
+                maxLength={120}
+                placeholder="Ej. Publicidad digital"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+            </label>}
+
+            {shouldShow('professional_title') && <label className="block">
+              <span className="text-sm font-black text-slate-800">A qué te dedicas</span>
+              <input
+                value={contextDraft.professional_title}
+                onChange={(e)=>setContextDraft((current)=>({...current,professional_title:e.target.value.slice(0,80)}))}
+                maxLength={80}
+                placeholder="Ej. Asesor inmobiliario"
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+            </label>}
+
+            {shouldShow('activity_context') && <label className="block">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-black text-slate-800">Contexto sobre tu actividad</span>
+                <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-cyan-700">
+                  Solo para Kawvo · no se publica
+                </span>
+              </div>
+
+              <p className="mt-2 text-sm font-medium leading-5 text-slate-500">
+                Explícalo como tú lo dirías: qué haces, qué ofreces, a quién ayudas o cualquier detalle que Kawvo deba conocer.
+              </p>
+
+              <textarea
+                value={contextDraft.activity_context}
+                onChange={(e)=>setContextDraft((current)=>({...current,activity_context:e.target.value.slice(0,500)}))}
+                maxLength={500}
+                rows={6}
+                placeholder="Ej. Creo perfiles digitales, trabajo con NFC y códigos QR, y ayudo a negocios y profesionales a compartir mejor su información..."
+                className="mt-3 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base leading-6 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+              />
+
+              <span className="mt-1 block text-right text-xs font-bold text-slate-400">
+                {contextDraft.activity_context.length}/500
+              </span>
+            </label>}
+          </div>
+
+          {error && <p className="mt-5 rounded-xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
+
+          <button
+            type="button"
+            onClick={()=>void saveContextEditor()}
+            disabled={savingContext}
+            className="mt-6 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40"
+          >
+            {savingContext ? 'Guardando…' : 'Guardar y continuar'}
+          </button>
+
+          <button
+            type="button"
+            onClick={()=>{setShowContextEditor(false);setError('')}}
+            className="mt-2 w-full rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-700"
+          >
+            Volver
+          </button>
+        </div>
+      </section>
+    </main>
+  }
+
+  if (context && !context.context_readiness?.ready) {
+    const missing = context.context_readiness?.missing || []
+    const items = [
+      { key: 'category', label: 'Categoría de tu actividad', value: context.profile.category },
+      { key: 'subcategory', label: 'Especialidad o subcategoría', value: context.profile.subcategory },
+      { key: 'professional_title', label: 'A qué te dedicas', value: context.profile.professional_title },
+      { key: 'activity_context', label: 'Contexto sobre tu actividad para Kawvo', value: context.profile.activity_context },
+    ]
+
+    return <main className="min-h-screen bg-[#f7f9fc] px-4 py-6 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-[620px]">
+        <FreeBackButton onClick={()=>navigate('/admin/free')} />
+
+        <div className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-2xl">✦</div>
+
+          <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-cyan-700">
+            Antes de usar la IA
+          </p>
+
+          <h1 className="mt-2 text-[26px] font-black leading-tight tracking-[-0.03em]">
+            Revisemos la información de tu perfil
+          </h1>
+
+          <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
+            Mira qué datos ya completaste y cuáles todavía faltan.
+          </p>
+
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.1em] text-emerald-700">
+              Lo que ya completaste
+            </p>
+
+            <div className="space-y-2">
+              {items.filter((item)=>!missing.includes(item.key)).map((item)=>
+                <div key={item.key} className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white">
+                    ✓
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-emerald-900">{item.label}</p>
+                    {item.value && <p className="mt-0.5 truncate text-xs font-medium text-slate-500">{item.value}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <p className="mb-2 text-xs font-black uppercase tracking-[0.1em] text-slate-500">
+              Lo que te falta
+            </p>
+
+            <div className="space-y-2">
+              {items.filter((item)=>missing.includes(item.key)).map((item)=>
+                <div key={item.key} className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-slate-400 ring-1 ring-slate-200">
+                    ○
+                  </span>
+                  <p className="text-sm font-black text-slate-800">{item.label}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <p className="mt-5 text-sm font-semibold leading-6 text-slate-600">
+            Completa estos datos para que Kawvo pueda darte sugerencias más precisas.
+          </p>
+
+          <button
+            type="button"
+            onClick={()=>openContextEditor(false)}
+            className="mt-6 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white"
+          >
+            Completar datos faltantes
+          </button>
+
+          <button
+            type="button"
+            onClick={()=>navigate('/admin/free')}
+            className="mt-2 w-full rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-700"
+          >
+            Ahora no
+          </button>
+
+          <p className="mt-4 text-center text-[11px] font-semibold leading-5 text-slate-400">
+            Estos datos ayudan a Kawvo a entender tu actividad antes de preparar sugerencias.
+          </p>
+        </div>
+      </section>
+    </main>
+  }
+
+  if (context && context.context_readiness?.ready && !context.context_confirmation?.confirmed) {
+    const summary = context.context_readiness.summary
+
+    return <main className="min-h-screen bg-[#f7f9fc] px-4 py-6 font-['Inter'] text-slate-950">
+      <section className="mx-auto w-full max-w-[620px]">
+        <FreeBackButton onClick={()=>navigate('/admin/free')} />
+
+        <div className="rounded-[28px] border border-cyan-100 bg-white p-5 shadow-sm sm:p-7">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-700">
+            Contexto para tu asistente
+          </p>
+
+          <h1 className="mt-2 text-[26px] font-black leading-tight tracking-[-0.03em]">
+            Esto es lo que Kawvo sabe de ti
+          </h1>
+
+          <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
+            Antes de preparar sugerencias, revisa que esta información represente correctamente lo que haces.
+          </p>
+
+          <div className="mt-5 space-y-3">
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Nombre o negocio</p>
+              <p className="mt-1 font-black text-slate-900">{summary.name || context.profile.name}</p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Categoría</p>
+                <p className="mt-1 text-sm font-black text-slate-800">{summary.category}</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Especialidad</p>
+                <p className="mt-1 text-sm font-black text-slate-800">{summary.subcategory}</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">A qué te dedicas</p>
+              <p className="mt-1 text-sm font-black text-slate-800">{summary.professional_title}</p>
+            </div>
+
+            <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 px-4 py-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-cyan-700">Contexto para Kawvo</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-700">{summary.activity_context}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase text-slate-400">Servicios</p>
+                <p className="mt-1 text-lg font-black text-slate-800">{summary.services_count}</p>
+              </div>
+
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                <p className="text-[11px] font-black uppercase text-slate-400">Portafolio</p>
+                <p className="mt-1 text-lg font-black text-slate-800">{summary.portfolio_count}</p>
+              </div>
+            </div>
+
+            {summary.configured_channels?.length > 0 && <div className="rounded-2xl bg-slate-50 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">Canales disponibles</p>
+              <p className="mt-1 text-sm font-bold text-slate-700">{summary.configured_channels.map(channelLabel).join(' · ')}</p>
+            </div>}
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-cyan-100 bg-white px-4 py-3 text-sm font-semibold leading-6 text-slate-600">
+            Las sugerencias de Kawvo se basarán en esta información y en lo que respondas durante la conversación.
+          </div>
+
+          <button
+            type="button"
+            onClick={()=>void confirmCurrentContext()}
+            disabled={confirmingContext}
+            className="mt-6 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-base font-black text-white disabled:opacity-40"
+          >
+            {confirmingContext ? 'Confirmando…' : 'Sí, continuar con IA'}
+          </button>
+
+          <button
+            type="button"
+            onClick={()=>openContextEditor(true)}
+            className="mt-2 w-full rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-700"
+          >
+            Modificar mis datos
+          </button>
+        </div>
+      </section>
+    </main>
+  }
+
   return <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
     <section className="mx-auto w-full max-w-[760px] px-4 py-5 sm:px-5 sm:py-7">
       <FreeBackButton onClick={()=>navigate('/admin/free')} />
       <header className="rounded-[28px] border border-cyan-100 bg-gradient-to-br from-white to-cyan-50 p-5 shadow-sm sm:p-7">
         <p className="text-xs font-black uppercase tracking-[0.15em] text-cyan-700">Kawvo · Asistente IA · Beta</p>
         <h1 className="mt-2 text-[28px] font-black leading-tight tracking-[-0.04em]">Haz que tu perfil te presente mejor</h1>
-        <p className="mt-2 text-base font-medium leading-7 text-slate-600">Kawvo usa lo que ya sabe de tu perfil y solo te pide lo necesario. <strong className="text-slate-800">Tú revisas y decides qué aplicar.</strong></p>
-        <div className="mt-4 rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold leading-6 text-slate-600 ring-1 ring-cyan-100">La IA no publica, no cambia tu diseño, plantilla, colores, botones ni orden de secciones.</div>
+        <p className="mt-2 text-base font-medium leading-7 text-slate-600">✨ Kawvo prepara una propuesta con la información de tu perfil. <strong className="text-slate-800">Tú decides qué aplicar.</strong></p>
       </header>
 
       {error && <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold leading-6 text-rose-700">{error}</div>}
       {cooldownSeconds>0 && <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">Puedes generar otra propuesta en {cooldownSeconds} s.</div>}
-      {context && <section className="mt-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+      {context && !proposal && followUp.length===0 && !success && <section className="mt-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Contexto que Kawvo ya conoce</p><span className="rounded-full bg-cyan-50 px-3 py-1 text-[11px] font-black text-cyan-700">Plan {context.plan.code}</span></div>
         <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
           {context.profile.category && <div className="rounded-xl bg-slate-50 px-3 py-2.5"><b>Actividad:</b> {context.profile.category}</div>}
@@ -334,55 +775,70 @@ export default function FreeAiProfileAssistant() {
           <div className="rounded-xl bg-slate-50 px-3 py-2.5"><b>Servicios:</b> {context.profile.services.length}/{context.plan.limits.max_services}</div>
           {channels.length>0 && <div className="rounded-xl bg-slate-50 px-3 py-2.5"><b>Canales:</b> {channels.map(channelLabel).join(', ')}</div>}
         </div>
-        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">Disponibilidad IA hoy: {context.usage.remaining_today} · este mes: {context.usage.remaining_month}</p>
-        {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a elegir y redactar los más importantes. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Básico</a>}</div>}
+        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
+          {context.usage.unlimited
+            ? 'IA ilimitada · Super Admin'
+            : `Usos de IA disponibles: ${context.usage.remaining_today} hoy · ${context.usage.remaining_month} este mes`}
+        </p>
+        {!context.usage.unlimited && (Number(context.usage.remaining_today) <= 1 || Number(context.usage.remaining_month) <= 3) && (
+          <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3 text-xs font-semibold leading-5 text-violet-800">
+            {Number(context.usage.remaining_today) <= 0 || Number(context.usage.remaining_month) <= 0
+              ? 'Ya utilizaste la cuota de IA disponible por ahora.'
+              : 'Te queda poca cuota de IA disponible.'}{' '}
+            El Plan Plus incluye una cuota mayor para seguir optimizando tu perfil.
+            {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Conocer Plan Plus</a>}
+          </div>
+        )}
+        {atServiceLimit && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">Tu Plan Gratis permite hasta {context.plan.limits.max_services} servicios. La IA puede ayudarte a mejorar el texto de los servicios que ya creaste. {context.plan.upgrade_available && <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noreferrer" className="ml-1 font-black underline">Solicitar Plan Plus</a>}</div>}
       </section>}
 
       {hasExistingContent && !proposal && followUp.length===0 && context && <section className="mt-5 rounded-[24px] border border-cyan-200 bg-white p-5 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Contenido existente</p>
-        <h2 className="mt-1 text-xl font-black">¿Cómo quieres que te ayude la IA?</h2>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">✨ Elige cómo ayudarte</p>
+        <h2 className="mt-1 text-xl font-black">¿Qué quieres hacer?</h2>
         <div className="mt-4 grid gap-3">
-          <button type="button" onClick={()=>chooseEditingScope('missing_only')} className={`rounded-2xl border p-4 text-left ${editingScope==='missing_only'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Completar solo lo que falta · Recomendado</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Conserva intactos los campos que ya completaste. La IA los usa como contexto y trabaja solo sobre lo pendiente.</p></button>
-          <button type="button" onClick={()=>chooseEditingScope('full_profile')} className={`rounded-2xl border p-4 text-left ${editingScope==='full_profile'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">Revisar y mejorar mi contenido</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Puede proponerte mejoras de texto en título, presentación, trabajos y servicios. Tú revisas todo antes de aplicar.</p></button>
+          <button type="button" onClick={()=>chooseEditingScope('missing_only')} className={`rounded-2xl border p-4 text-left ${editingScope==='missing_only'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">🧩 Completar lo que falta</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Conserva lo que ya completaste.</p></button>
+          <button type="button" onClick={()=>chooseEditingScope('full_profile')} className={`rounded-2xl border p-4 text-left ${editingScope==='full_profile'?'border-cyan-500 bg-cyan-50':'border-slate-200 bg-white'}`}><p className="font-black">✨ Mejorar mi contenido</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Recibe una propuesta y decide qué aplicar.</p></button>
         </div>
-        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">Nunca modifica imágenes, enlaces, cuentas bancarias, diseño, plantilla, colores ni orden.</p>
       </section>}
 
       {!proposal && followUp.length===0 && context && <section className="mt-5 space-y-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="rounded-2xl bg-slate-50 px-4 py-3">
-          <p className="text-sm font-black text-slate-800">{editingScope==='missing_only'?'Voy a preguntarte solo por lo que falta.':'Voy a revisar tu perfil completo para entender qué conviene mejorar.'}</p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Las preguntas cambian según lo que ya tienes y la opción que elegiste.</p>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-2xl bg-slate-50 p-3 text-center"><div className="text-xl">✍️</div><p className="mt-1 text-[11px] font-black text-slate-700">Cuéntanos</p></div>
+          <div className="rounded-2xl bg-cyan-50 p-3 text-center"><div className="text-xl">✨</div><p className="mt-1 text-[11px] font-black text-cyan-800">Kawvo prepara</p></div>
+          <div className="rounded-2xl bg-emerald-50 p-3 text-center"><div className="text-xl">✓</div><p className="mt-1 text-[11px] font-black text-emerald-800">Tú aplicas</p></div>
         </div>
 
         {editingScope==='missing_only' && !hasMissingEditorialContent ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-black text-emerald-800">No encontré campos de texto pendientes.</p><p className="mt-1 text-sm font-semibold leading-6 text-emerald-700">Si quieres que Kawvo proponga mejoras sobre lo que ya tienes, selecciona “Revisar y mejorar mi contenido”.</p></div> : <>
-          {missingPortfolioTitleItems.length>0 && <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-violet-700">Ayuda a Kawvo a identificar tus fotos</p>
-            <h3 className="mt-1 text-base font-black text-slate-900">Ponle un título breve a cada trabajo</h3>
-            <p className="mt-1 text-sm font-medium leading-6 text-slate-600">Kawvo no adivina lo que aparece en tus imágenes. Tú indicas qué muestra cada foto y la IA puede pulir el título y redactar una descripción corta a partir de ese dato y del contexto de tu perfil.</p>
-            <div className="mt-4 space-y-3">
-              {missingPortfolioTitleItems.map((item)=>{
-                const position=context.profile.portfolio.findIndex((x)=>x.id===item.id)+1
-                const value=portfolioTitles[item.id] || ''
-                return <label key={item.id} className="block rounded-xl bg-white p-3">
-                  <span className="text-sm font-black text-slate-800">Foto {position} · ¿Qué trabajo muestra?</span>
-                  <input value={value} onChange={(e)=>setPortfolioTitles((current)=>({...current,[item.id]:e.target.value.slice(0,80)}))} maxLength={80} placeholder="Ej. Identidad corporativa" className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 font-semibold outline-none focus:border-violet-400" />
-                  <span className="mt-1 block text-right text-[11px] font-bold text-slate-400">{value.length}/80</span>
-                </label>
-              })}
-            </div>
-          </div>}
-          <Question label="¿Hay algo que quieras contarle a Kawvo antes de trabajar tu perfil?" hint="Opcional. Puedes escribirlo como se lo explicarías a una persona. No tienes que definir tu propuesta de valor ni saber de marketing: Kawvo hará ese análisis usando tu perfil y su conocimiento general." value={answers.extra_context} onChange={(v)=>setAnswers((a)=>({...a,extra_context:v}))} rows={4} />
-          <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">Kawvo ya conoce el contenido de tu perfil. Si tiene suficiente información, preparará la propuesta directamente. Si falta un hecho importante, te preguntará solo lo mínimo necesario.</div>
+          <StableInstructionQuestion
+            key={editingScope}
+            label="¿Hay algo que quieras contarle a Kawvo antes de trabajar tu perfil?"
+            hint="Opcional. Escríbelo con tus propias palabras."
+            rows={4}
+            onDraft={(value)=>{
+              instructionRef.current = value
+              const hasText = Boolean(value.trim())
+              const enough = value.trim().length >= 4
+              setInstructionHasText((current)=>current === hasText ? current : hasText)
+              setInstructionEnough((current)=>current === enough ? current : enough)
+            }}
+          />
+          <div className="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4 text-sm font-semibold leading-6 text-cyan-900">✨ Usaremos lo que ya completaste.</div>
         </>}
 
-        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0 || missingPortfolioTitleItems.some((item)=>!(portfolioTitles[item.id] || '').trim())} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:answers.extra_context.trim()?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
-        <p className="text-center text-[11px] font-semibold leading-5 text-slate-400">La IA usa el perfil completo como contexto, interpreta tus respuestas y solo pregunta cuando realmente necesita confirmar un hecho.</p>
+        {hasMissingEditorialContent || editingScope==='full_profile' ? <button type="button" onClick={()=>void generate(1)} disabled={!enoughInformation || generating || cooldownSeconds>0} className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white disabled:opacity-35">{generating?'Analizando tu perfil…':cooldownSeconds>0?`Disponible en ${cooldownSeconds} s`:instructionHasText?'✦ Preparar mi propuesta':'✦ Mejorar con lo que ya sabes'}</button> : null}
+        {generating && <div className="flex items-center justify-center gap-2 rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-800"><span className="animate-pulse">✨</span><span>Preparando tu propuesta…</span></div>}
       </section>}
 
       {!proposal && followUp.length>0 && context && <section className="mt-5 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Kawvo necesita confirmar algo</p><h2 className="mt-2 text-xl font-black">Una aclaración antes de preparar tu propuesta</h2><p className="mt-2 text-sm font-medium leading-6 text-slate-600">La IA ya revisó tu perfil. Responde solo este dato y continuará con todo el contexto anterior.</p>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">❓ Falta un dato</p><h2 className="mt-2 text-xl font-black">Confirma esto para continuar</h2>
         <div className="mt-5 space-y-5">{followUp.map((item,index)=>{
-          const isChannelQuestion = /contact/i.test(item.question) && channels.length>1
+          const isChannelQuestion =
+            channels.length > 1 &&
+            (
+              /\b(canal|medio)\b.{0,50}\b(contacto|contactarte|contacten|comunicación|comunicacion)\b/i.test(item.question) ||
+              /\b(prefieres|preferido|preferida|preferencia)\b.{0,50}\b(contacto|contactarte|contacten|comunicación|comunicacion|whatsapp|correo|llamada)\b/i.test(item.question) ||
+              /\b(cómo|como)\b.{0,25}\b(prefieres)\b.{0,25}\b(contactarte|que te contacten|comunicarse)\b/i.test(item.question)
+            )
           return <div key={item.question}>{isChannelQuestion ? <><p className="text-[15px] font-black text-slate-800">{item.question}</p><div className="mt-3 flex flex-wrap gap-2">{channels.map((ch)=><button key={ch} type="button" onClick={()=>{
             setAnswers((a)=>({...a,preferred_contact:ch}))
             setFollowUp((items)=>items.map((x,i)=>i===index?{...x,answer:ch}:x))
@@ -391,7 +847,7 @@ export default function FreeAiProfileAssistant() {
       </section>}
 
       {proposal && context && <section className="mt-5 space-y-5">
-        <div className="rounded-[24px] border border-cyan-200 bg-cyan-50 p-4"><p className="font-black text-cyan-900">Propuesta lista para revisar</p><p className="mt-1 text-sm font-semibold leading-6 text-cyan-800">Revisa la propuesta antes de aplicarla. Tú decides qué contenido utilizar. Nada se aplicará hasta que pulses <strong>Aplicar a mi perfil</strong>.</p></div>
+        <div className="rounded-[24px] border border-cyan-200 bg-cyan-50 p-4"><p className="font-black text-cyan-900">✓ Propuesta lista</p><p className="mt-1 text-sm font-semibold leading-6 text-cyan-800">Revísala y aplica solo lo que quieras.</p></div>
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Identidad</p><h2 className="mt-1 text-xl font-black">Cómo te presentas</h2></div>
           {editingScope==='full_profile' && context.profile.professional_title ? <div className="mt-4 space-y-3"><div className="rounded-2xl bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Tu texto actual</p><p className="mt-2 font-bold text-slate-700">{context.profile.professional_title}</p></div><div className="rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4"><p className="text-[11px] font-black uppercase text-cyan-700">Sugerencia de Kawvo</p><input value={proposal.professional_title} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-2 w-full rounded-xl border border-cyan-200 bg-white px-3 py-3 font-black"/></div><div className="grid grid-cols-2 gap-2"><button type="button" onClick={()=>{updateProposal('professional_title',context.profile.professional_title);setSelection((s)=>({...s,identity:false}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${!selection.identity?'bg-slate-900 text-white':'bg-slate-100 text-slate-700'}`}>Mantener mi texto</button><button type="button" onClick={()=>{if(suggestedProposal)updateProposal('professional_title',suggestedProposal.professional_title);setSelection((s)=>({...s,identity:true}))}} className={`rounded-xl px-3 py-3 text-sm font-black ${selection.identity?'bg-cyan-700 text-white':'bg-cyan-50 text-cyan-800'}`}>Usar texto sugerido</button></div></div> : <input value={editingScope==='missing_only'&&context.profile.professional_title?context.profile.professional_title:proposal.professional_title} disabled={editingScope==='missing_only'&&Boolean(context.profile.professional_title)} onChange={(e)=>updateProposal('professional_title',e.target.value.slice(0,80))} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 font-black" />}
@@ -402,15 +858,15 @@ export default function FreeAiProfileAssistant() {
           <input value={proposal.services_section_title} onChange={(e)=>updateProposal('services_section_title',e.target.value.slice(0,60))} className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 font-black" />
           <textarea value={proposal.services_section_description} onChange={(e)=>updateProposal('services_section_description',e.target.value.slice(0,240))} rows={3} className="mt-3 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 leading-6" />
           <div className="mt-4 space-y-3">{proposal.services.map((s,index)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Servicio {index+1}</p><input value={s.title} onChange={(e)=>updateService(index,'title',e.target.value.slice(0,60))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-black"/><textarea value={s.description} onChange={(e)=>updateService(index,'description',e.target.value.slice(0,90))} rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5"/></div>)}</div>
-          {hasExistingServices && selection.services && <label className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold leading-5 text-amber-900"><input type="checkbox" checked={replaceServices} onChange={(e)=>setReplaceServices(e.target.checked)} className="mt-0.5 accent-amber-700"/><span>Confirmo que quiero actualizar el texto de los servicios propuestos. Kawvo conservará los servicios existentes, sus IDs, imágenes, precios, texto de WhatsApp y estado destacado; no se eliminarán automáticamente.</span></label>}
+          {hasExistingServices && selection.services && <label className={`mt-4 flex items-start gap-3 rounded-2xl border p-4 text-sm font-bold leading-5 ${replaceServices?'border-emerald-200 bg-emerald-50 text-emerald-900':'border-amber-200 bg-amber-50 text-amber-900'}`}><input type="checkbox" checked={replaceServices} onChange={(e)=>setReplaceServices(e.target.checked)} className="mt-0.5 accent-emerald-700"/><span>{replaceServices?'✓ Confirmado. Ya puedes aplicar los cambios.':'Confirma este cambio para poder aplicarlo.'}</span></label>}
         </div>
         {proposal.portfolio?.length>0 && <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">Mis trabajos</p><h2 className="mt-1 text-xl font-black">Textos de tus fotos</h2></div><label className="text-xs font-black"><input type="checkbox" checked={selection.portfolio} onChange={(e)=>setSelection((s)=>({...s,portfolio:e.target.checked}))} className="mr-2 accent-cyan-700"/>Aplicar</label></div>
-          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Máximo 5 trabajos. Tú identificas cada foto; Kawvo puede pulir el título y redacta la descripción a partir de ese título y del contexto. Título máximo 80 caracteres y descripción máxima 90. Las imágenes no se reemplazan ni se reordenan.</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-slate-500">🖼️ Revisa los textos sugeridos para tus trabajos.</p>
           <div className="mt-4 space-y-3">{proposal.portfolio.map((item,index)=>{ const current=context.profile.portfolio.find((x)=>x.id===item.id); const lockTitle=editingScope==='missing_only'&&Boolean(current?.title); const lockDescription=editingScope==='missing_only'&&Boolean(current?.description); return <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase text-slate-400">Trabajo {index+1}</p><input value={lockTitle?(current?.title||''):item.title} disabled={lockTitle} onChange={(e)=>updatePortfolio(index,'title',e.target.value.slice(0,80))} maxLength={80} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-black disabled:bg-slate-100 disabled:text-slate-500"/>{lockTitle&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}<textarea value={lockDescription?(current?.description||''):item.description} disabled={lockDescription} onChange={(e)=>updatePortfolio(index,'description',e.target.value.slice(0,90))} maxLength={90} rows={2} className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 disabled:bg-slate-100 disabled:text-slate-500"/>{lockDescription&&<p className="mt-1 text-[11px] font-bold text-emerald-700">✓ Ya completado · se conservará</p>}</div>})}</div>
         </div>}
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase text-slate-400">Siguiente acción sugerida</p><p className="mt-2 text-lg font-black">“{proposal.cta.label}”</p><p className="mt-1 text-sm font-medium leading-6 text-slate-500">Es una recomendación de copy. No cambia ni reordena tus Botones rápidos.</p></div>
-        {proposal.image_suggestions?.length>0 && <div className="rounded-[24px] border border-violet-200 bg-violet-50 p-5"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet-700">Ideas de imágenes</p><p className="mt-2 text-sm font-semibold leading-6 text-violet-900">Son recomendaciones, no imágenes generadas.</p><div className="mt-3 space-y-2">{proposal.image_suggestions.map((x)=><div key={x.purpose} className="rounded-xl bg-white p-3"><p className="text-sm font-black">{x.purpose}</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">{x.suggestion}</p></div>)}</div></div>}
+        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase text-slate-400">👉 Acción sugerida</p><p className="mt-2 text-lg font-black">“{proposal.cta.label}”</p></div>
+        {proposal.image_suggestions?.length>0 && <div className="rounded-[24px] border border-violet-200 bg-violet-50 p-5"><p className="text-xs font-black uppercase tracking-[0.12em] text-violet-700">Ideas de imágenes</p><p className="mt-2 text-sm font-semibold leading-6 text-violet-900">💡 Referencias para tus imágenes.</p><div className="mt-3 space-y-2">{proposal.image_suggestions.map((x)=><div key={x.purpose} className="rounded-xl bg-white p-3"><p className="text-sm font-black">{x.purpose}</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">{x.suggestion}</p></div>)}</div></div>}
         <div className="sticky bottom-3 z-30 rounded-[24px] border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur">
           {success ? <>
             <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
@@ -437,6 +893,7 @@ export default function FreeAiProfileAssistant() {
           </>}
         </div>
       </section>}
+      {!success && <div className="mt-6"><FreeBackButton onClick={()=>navigate('/admin/free')} /></div>}
     </section>
   </main>
 }

@@ -91,9 +91,11 @@ export default function FreePortfolio() {
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const replaceInputRef = useRef<HTMLInputElement>(null)
+  const uploadLockRef = useRef(false)
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadStage, setUploadStage] = useState<'idle' | 'processing' | 'uploading'>('idle')
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -174,27 +176,41 @@ export default function FreePortfolio() {
   }
 
   const saveCroppedImage = async (blob: Blob) => {
-    if (!cropFile || !cropMode) return
-    const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'portfolio'
+    if (!cropFile || !cropMode || uploadLockRef.current) return
+    uploadLockRef.current = true
+    const sourceFile = cropFile
+    const mode = cropMode
+    const targetId = replaceTargetId
+    const baseName = sourceFile.name.replace(/\.[^.]+$/, '') || 'portfolio'
     const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
-    const path = cropMode !== 'new' && replaceTargetId
-      ? `/me/gallery/${replaceTargetId}/replace`
+    const path = mode !== 'new' && targetId
+      ? `/me/gallery/${targetId}/replace`
       : '/profile/gallery/upload'
 
+    // Cierra inmediatamente el editor de encuadre y muestra el estado real en Portafolio.
+    setCropFile(null)
     setUploading(true)
+    setUploadStage('processing')
     setError('')
     try {
-      const json = await sendOptimizedImage(croppedFile, path)
+      const optimized = await optimizeImageForUpload(croppedFile)
+      setUploadStage('uploading')
+      const fd = new FormData()
+      fd.append('file', optimized, optimized.name)
+      const json: any = await apiUpload(path, fd)
       if (!json.ok) {
-        setError(json.error || (cropMode === 'new' ? 'No se pudo subir la imagen.' : 'No se pudo actualizar la imagen.'))
+        setError(json.error || (mode === 'new' ? 'No se pudo subir la imagen.' : 'No se pudo actualizar la imagen.'))
         return
       }
       await load()
-      cancelCrop()
     } catch {
-      setError(cropMode === 'new' ? 'No pudimos subir la imagen.' : 'No pudimos actualizar la imagen.')
+      setError(mode === 'new' ? 'No pudimos subir la imagen.' : 'No pudimos actualizar la imagen.')
     } finally {
+      uploadLockRef.current = false
+      setCropMode(null)
+      setReplaceTargetId(null)
       setUploading(false)
+      setUploadStage('idle')
     }
   }
 
@@ -238,6 +254,11 @@ export default function FreePortfolio() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950">
       <div className="mx-auto w-full max-w-[430px] px-5 pb-24 pt-5">
+        {uploading && uploadStage !== 'idle' && (
+          <div className="fixed inset-x-4 top-4 z-40 mx-auto max-w-[398px] rounded-2xl border border-cyan-200 bg-white px-4 py-3 shadow-xl" role="status" aria-live="polite">
+            <div className="flex items-center gap-3"><span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" /><p className="text-sm font-black text-slate-800">{uploadStage === 'processing' ? 'Procesando imagen…' : 'Subiendo imagen…'}</p></div>
+          </div>
+        )}
         <FreeBackButton onClick={() => navigate('/admin/free')} />
         <div className="flex items-end justify-between">
           <div>
@@ -260,7 +281,7 @@ export default function FreePortfolio() {
         <section className="mt-5 space-y-3">
           {loading ? <div className="rounded-3xl bg-white p-5 text-sm text-slate-400">Cargando…</div> : photos.map((photo) => (
             <article key={photo.id} className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
-              <div className="aspect-square overflow-hidden bg-slate-100"><img src={photoUrl(photo.image_key)} alt={photo.title || 'Portafolio'} loading="lazy" decoding="async" className="h-full w-full object-cover" /></div>
+              <button type="button" disabled={uploading} onClick={() => { setReplaceTargetId(photo.id); replaceInputRef.current?.click() }} className="relative block aspect-square w-full overflow-hidden bg-slate-100 disabled:opacity-50" aria-label="Cambiar imagen del portafolio"><img src={photoUrl(photo.image_key)} alt={photo.title || 'Portafolio'} loading="lazy" decoding="async" className="h-full w-full object-cover" /><span className="absolute bottom-2 right-2 rounded-full bg-slate-950/80 px-3 py-1.5 text-[10px] font-black text-white">Toca para cambiar</span></button>
               {editingId === photo.id ? (
                 <div className="p-4">
                   <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} maxLength={80} placeholder="Título de la imagen" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
@@ -273,19 +294,20 @@ export default function FreePortfolio() {
                 <div className="p-4">
                   <p className="text-sm font-black text-slate-900">{photo.title || 'Sin título'}</p>
                   <p className="mt-1 line-clamp-2 min-h-10 text-xs leading-5 text-slate-400">{photo.description || 'Agrega una descripción breve para el modal de tu perfil.'}</p>
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3"><button type="button" onClick={() => startEdit(photo)} className="rounded-xl bg-cyan-50 px-2 py-2 text-[11px] font-black text-cyan-700">Editar</button><button type="button" disabled={uploading} onClick={() => { setReplaceTargetId(photo.id); replaceInputRef.current?.click() }} className="rounded-xl bg-slate-50 px-2 py-2 text-[11px] font-black text-slate-600 disabled:opacity-40">Reemplazar</button><button type="button" disabled={uploading} onClick={() => void remove(photo)} className="rounded-xl bg-red-50 px-2 py-2 text-[11px] font-black text-red-600 disabled:opacity-40">Eliminar</button></div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3"><button type="button" onClick={() => startEdit(photo)} className="rounded-xl bg-cyan-50 px-2 py-2 text-[11px] font-black text-cyan-700">Editar textos</button><button type="button" disabled={uploading} onClick={() => { setReplaceTargetId(photo.id); replaceInputRef.current?.click() }} className="rounded-xl bg-slate-50 px-2 py-2 text-[11px] font-black text-slate-600 disabled:opacity-40">Reemplazar</button><button type="button" disabled={uploading} onClick={() => void remove(photo)} className="rounded-xl bg-red-50 px-2 py-2 text-[11px] font-black text-red-600 disabled:opacity-40">Eliminar</button></div>
                 </div>
               )}
             </article>
           ))}
         </section>
 
-        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseNewImage} className="hidden" />
-        <input ref={replaceInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseReplacementImage} className="hidden" />
-        <button onClick={() => inputRef.current?.click()} disabled={uploading || photos.length >= MAX_PHOTOS} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{uploading ? 'Procesando…' : photos.length >= MAX_PHOTOS ? 'Límite completado' : 'Agregar imagen'}</button>
+        <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseNewImage} disabled={uploading} className="hidden" />
+        <input ref={replaceInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseReplacementImage} disabled={uploading} className="hidden" />
+        <button onClick={() => inputRef.current?.click()} disabled={uploading || photos.length >= MAX_PHOTOS} className="mt-5 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{uploading ? (uploadStage === 'uploading' ? 'Subiendo imagen…' : 'Procesando imagen…') : photos.length >= MAX_PHOTOS ? 'Límite completado' : 'Agregar imagen'}</button>
         {error && <p className="mt-3 text-xs font-semibold text-red-500">{error}</p>}
-        {photos.length >= MAX_PHOTOS && <FreeLimitUpgradeCard text="Ya utilizas las 5 imágenes disponibles. Puedes seguir gestionándolas o pasar al Plan Básico para ampliar tu alcance." />}
-        <div className="mt-5"><FreeUpgradeCard compact /></div>
+        {photos.length >= MAX_PHOTOS && <FreeLimitUpgradeCard text="Ya utilizas las 5 imágenes disponibles. Puedes seguir gestionándolas o pasar al Plan Plus para ampliar tu alcance." />}
+        {photos.length < MAX_PHOTOS && <div className="mt-5"><FreeUpgradeCard compact /></div>}
+        <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
 
       {cropFile && cropMode && (
@@ -293,7 +315,7 @@ export default function FreePortfolio() {
           file={cropFile}
           aspectRatio={1}
           outputWidth={1200}
-          onSave={(blob) => { void saveCroppedImage(blob) }}
+          onSave={saveCroppedImage}
           onCancel={cancelCrop}
         />
       )}

@@ -59,10 +59,12 @@ async function imageUrlToFile(url: string, name: string): Promise<File> {
 export default function FreeServices() {
   const navigate = useNavigate()
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const imageUploadLockRef = useRef(false)
   const [items, setItems] = useState<Service[]>([])
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [imageUploadStage, setImageUploadStage] = useState<'idle' | 'processing' | 'uploading'>('idle')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -196,26 +198,35 @@ export default function FreeServices() {
   }
 
   const saveCroppedServiceImage = async (blob: Blob) => {
-    if (!cropFile || !imageTargetId) return
-    const baseName = cropFile.name.replace(/\.[^.]+$/, '') || 'servicio'
+    if (!cropFile || !imageTargetId || imageUploadLockRef.current) return
+    imageUploadLockRef.current = true
+    const sourceFile = cropFile
+    const targetId = imageTargetId
+    const baseName = sourceFile.name.replace(/\.[^.]+$/, '') || 'servicio'
     const croppedFile = new File([blob], `${baseName}-crop.jpg`, { type: blob.type || 'image/jpeg', lastModified: Date.now() })
 
+    // Cierra inmediatamente el editor y deja visible el progreso dentro de Servicios.
+    setCropFile(null)
     setSaving(true)
+    setImageUploadStage('processing')
     setError('')
     try {
       const optimized = await optimizeServiceImage(croppedFile)
+      setImageUploadStage('uploading')
       const fd = new FormData()
       fd.append('file', optimized, optimized.name)
-      const json: any = await apiUpload(`/me/products/${imageTargetId}/image`, fd)
+      const json: any = await apiUpload(`/me/products/${targetId}/image`, fd)
       if (!json.ok) {
         setError(json.error || 'No se pudo cargar la imagen del servicio.')
         return
       }
       await load()
-      cancelCrop()
     } catch {
       setError('No pudimos procesar la imagen del servicio.')
     } finally {
+      imageUploadLockRef.current = false
+      setImageTargetId(null)
+      setImageUploadStage('idle')
       setSaving(false)
     }
   }
@@ -250,6 +261,11 @@ export default function FreeServices() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950">
       <div className="mx-auto w-full max-w-[430px] px-5 pb-24 pt-5">
+        {saving && imageUploadStage !== 'idle' && (
+          <div className="fixed inset-x-4 top-4 z-40 mx-auto max-w-[398px] rounded-2xl border border-cyan-200 bg-white px-4 py-3 shadow-xl" role="status" aria-live="polite">
+            <div className="flex items-center gap-3"><span className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-200 border-t-cyan-600" /><p className="text-sm font-black text-slate-800">{imageUploadStage === 'processing' ? 'Procesando imagen…' : 'Subiendo imagen…'}</p></div>
+          </div>
+        )}
         <FreeBackButton onClick={() => navigate('/admin/free')} />
         <div className="flex items-end justify-between">
           <div>
@@ -299,7 +315,7 @@ export default function FreeServices() {
         <section className="mt-5 space-y-3">
           {loading ? <div className="rounded-3xl bg-white p-5 text-sm text-slate-400">Cargando…</div> : items.map((item) => (
             <article key={item.id} className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
-              {item.image_url ? <div className="aspect-square overflow-hidden bg-slate-100"><img src={item.image_url} alt={item.title} loading="lazy" decoding="async" className="h-full w-full object-cover" /></div> : <div className="flex aspect-square items-center justify-center bg-cyan-50 text-4xl text-cyan-700">◇</div>}
+              {item.image_url ? <button type="button" disabled={saving} onClick={() => { setImageTargetId(item.id); imageInputRef.current?.click() }} className="relative block aspect-square w-full overflow-hidden bg-slate-100 disabled:opacity-50" aria-label="Cambiar imagen del servicio"><img src={item.image_url} alt={item.title} loading="lazy" decoding="async" className="h-full w-full object-cover" /><span className="absolute bottom-2 right-2 rounded-full bg-slate-950/80 px-3 py-1.5 text-[10px] font-black text-white">Toca para cambiar</span></button> : <button type="button" disabled={saving} onClick={() => { setImageTargetId(item.id); imageInputRef.current?.click() }} className="relative flex aspect-square w-full items-center justify-center bg-cyan-50 text-4xl text-cyan-700 disabled:opacity-50" aria-label="Agregar imagen al servicio">◇<span className="absolute bottom-2 right-2 rounded-full bg-slate-950/80 px-3 py-1.5 text-[10px] font-black text-white">Agregar imagen</span></button>}
               {editingId === item.id ? (
                 <div className="p-4">
                   <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} maxLength={80} placeholder="Nombre del servicio" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-400" />
@@ -312,7 +328,7 @@ export default function FreeServices() {
                 <div className="p-4">
                   <p className="text-sm font-black">{item.title}</p>
                   {item.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{item.description}</p>}
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3"><button type="button" onClick={() => startEdit(item)} className="rounded-xl bg-cyan-50 px-2 py-2 text-[11px] font-black text-cyan-700">Editar</button><button type="button" disabled={saving} onClick={() => { setImageTargetId(item.id); imageInputRef.current?.click() }} className="rounded-xl bg-slate-50 px-2 py-2 text-[11px] font-black text-slate-600 disabled:opacity-40">{item.image_url ? 'Reemplazar' : 'Imagen'}</button><button type="button" disabled={saving} onClick={() => void remove(item.id)} className="rounded-xl bg-red-50 px-2 py-2 text-[11px] font-black text-red-600 disabled:opacity-40">Eliminar</button></div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3"><button type="button" onClick={() => startEdit(item)} className="rounded-xl bg-cyan-50 px-2 py-2 text-[11px] font-black text-cyan-700">Editar textos</button><button type="button" disabled={saving} onClick={() => { setImageTargetId(item.id); imageInputRef.current?.click() }} className="rounded-xl bg-slate-50 px-2 py-2 text-[11px] font-black text-slate-600 disabled:opacity-40">{item.image_url ? 'Reemplazar' : 'Imagen'}</button><button type="button" disabled={saving} onClick={() => void remove(item.id)} className="rounded-xl bg-red-50 px-2 py-2 text-[11px] font-black text-red-600 disabled:opacity-40">Eliminar</button></div>
                   {item.image_url && <button type="button" disabled={saving} onClick={() => void removeImage(item)} className="mt-2 w-full rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-500 disabled:opacity-40">Quitar imagen</button>}
                 </div>
               )}
@@ -320,7 +336,7 @@ export default function FreeServices() {
           ))}
         </section>
 
-        <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={chooseServiceImage} className="hidden" />
+        <input ref={imageInputRef} type="file" disabled={saving} accept="image/jpeg,image/png,image/webp" onChange={chooseServiceImage} className="hidden" />
 
         <form onSubmit={add} className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5">
           <h2 className="text-sm font-black">Agregar servicio</h2>
@@ -331,8 +347,9 @@ export default function FreeServices() {
           <button disabled={!canAdd || saving} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : canAdd ? 'Agregar servicio' : 'Límite completado'}</button>
         </form>
 
-        {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Básico para ampliar tu perfil." />}
-        <div className="mt-5"><FreeUpgradeCard compact /></div>
+        {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 servicios incluidos. Puedes editar, cambiar imágenes o eliminar cualquiera, o pasar al Plan Plus para ampliar tu perfil." />}
+        {items.length < MAX_SERVICES && <div className="mt-5"><FreeUpgradeCard compact /></div>}
+        <div className="mt-4"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </div>
 
       {cropFile && imageTargetId && (
@@ -340,7 +357,7 @@ export default function FreeServices() {
           file={cropFile}
           aspectRatio={1}
           outputWidth={1200}
-          onSave={(blob) => { void saveCroppedServiceImage(blob) }}
+          onSave={saveCroppedServiceImage}
           onCancel={cancelCrop}
         />
       )}

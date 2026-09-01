@@ -146,8 +146,8 @@ export default function FreeLinks() {
           <button disabled={!canAdd || !label.trim() || !url.trim() || saving} className="mt-4 w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-violet-600 py-3 text-sm font-black text-white disabled:opacity-40">{saving ? 'Guardando…' : canAdd ? 'Agregar enlace' : 'Límite completado'}</button>
         </form>
 
-        {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 enlaces disponibles. Puedes administrarlos libremente o pasar al Plan Básico para ampliar tu alcance." />}
-        <div className="mt-5"><FreeUpgradeCard compact /></div>
+        {!canAdd && <FreeLimitUpgradeCard text="Ya utilizas los 3 enlaces disponibles. Puedes administrarlos libremente o pasar al Plan Plus para ampliar tu alcance." />}
+        {canAdd && <div className="mt-5"><FreeUpgradeCard compact /></div>}
       </div>
     </main>
   )
