@@ -39,6 +39,7 @@ import FreeContextHelp from './components/admin/free/FreeContextHelp'
 import FreeRouteUx from './components/admin/free/FreeRouteUx'
 import FreePwaHome from './components/admin/free/FreePwaHome'
 import FreeAccount from './components/admin/free/FreeAccount'
+import FreeNotifications from './components/admin/free/FreeNotifications'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
 import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
 import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
@@ -102,6 +103,7 @@ function App() {
 
         <Route path="/admin/free/home" element={<AdminGuard planScope="free"><FreePwaHome /></AdminGuard>} />
         <Route path="/admin/free/account" element={<AdminGuard planScope="free"><FreeAccount /></AdminGuard>} />
+        <Route path="/admin/free/notifications" element={<AdminGuard planScope="free"><FreeNotifications /></AdminGuard>} />
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
         <Route path="/admin/free/editor" element={<AdminGuard planScope="free"><FreeVisualEditor /></AdminGuard>} />
         <Route path="/admin/free/ai-profile" element={<AdminGuard planScope="free"><Suspense fallback={<AiRouteFallback />}><FreeAiProfileAssistant /></Suspense></AdminGuard>} />

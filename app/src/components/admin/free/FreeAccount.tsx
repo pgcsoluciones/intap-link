@@ -167,10 +167,7 @@ export default function FreeAccount() {
     }
   }
 
-  const openNotifications = () => {
-    window.dispatchEvent(new Event('kawvo:open-notifications'))
-    setUnreadCount(0)
-  }
+  const openNotifications = () => navigate('/admin/free/notifications?from=account')
 
   const previewQr = async () => {
     if (!publicUrl || qrBusy) return
@@ -200,8 +197,8 @@ export default function FreeAccount() {
   }
 
   const sendInvite = async () => {
-    const url = 'https://nfc.kawvoia.com'
-    const text = 'Conoce Kawvo Link y crea una presentación digital para compartir tus datos y servicios.'
+    const url = `${webUrl}/invitacion`
+    const text = 'Me he creado un perfil en Kawvo Link para presentar lo que hago y compartir mis datos en un solo lugar. Crea tú también tu presentación digital; te lo recomiendo.'
     setShareFeedback('')
     try {
       if (navigator.share) {
@@ -289,12 +286,11 @@ export default function FreeAccount() {
           <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between"><h2 className="text-lg font-black">Invitar a un amigo</h2><button type="button" onClick={() => setShowInvitePreview(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
             <p className="mt-4 text-sm font-semibold text-slate-500">Mensaje que vas a compartir</p>
-            <div className="mt-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">Conoce Kawvo Link y crea una presentación digital para compartir tus datos y servicios.<br/><span className="mt-2 block font-semibold text-cyan-700">https://nfc.kawvoia.com</span></div>
+            <div className="mt-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">Me he creado un perfil en Kawvo Link para presentar lo que hago y compartir mis datos en un solo lugar. Crea tú también tu presentación digital; te lo recomiendo.<br/><span className="mt-2 block font-semibold text-cyan-700">{webUrl}/invitacion</span></div>
             <button type="button" onClick={() => void sendInvite()} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Compartir invitación</button>
           </article>
         </div>
       )}
-      <FreeNotificationBell hideTrigger />
 
       <main className="min-h-screen bg-white pb-24 font-['Inter'] text-slate-900">
         <section className="mx-auto w-full max-w-[430px] px-5 pt-6">
@@ -336,7 +332,7 @@ export default function FreeAccount() {
             <SectionTitle>MI KAWVO</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
               {!pwaInstalled && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label="Instalar app Kawvo" detail={pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app"} onClick={() => void installPwa()} />}
-              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts')} />
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts?from=account')} />
               <SettingsRow icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void previewQr()} />
               {bankActive && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18M12 3 3 8h18L12 3Z"/></svg>} label="Enviar enlace de cuentas" detail="Comparte con tus clientes el enlace directo a tus cuentas bancarias" onClick={() => void shareBankAccounts()} />}
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3.5 19c.5-3.5 2.6-5.5 5.5-5.5s5 2 5.5 5.5M14 14c2.8-.3 5 1.4 5.5 4.5"/></svg>} label="Invitar a un amigo" onClick={() => setShowInvitePreview(true)} />
@@ -347,7 +343,6 @@ export default function FreeAccount() {
           <div className="mt-8">
             <SectionTitle>AYUDA Y RECURSOS</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-              <SettingsRow icon="◎" label="Centro de ayuda y tickets" onClick={() => document.getElementById('kawvo-support-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
               {resources.map((resource) => <SettingsRow key={resource.id} icon="□" label={resource.title} detail={resource.description || undefined} href={resource.url} />)}
             </div>
           </div>

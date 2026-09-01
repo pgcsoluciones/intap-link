@@ -182,7 +182,7 @@ export default function FreeSupportPanel() {
   }
 
   return (
-    <section ref={panelRef} id="kawvo-support-panel" className="overflow-hidden rounded-[22px] border border-cyan-100 bg-cyan-50/55 transition-all duration-200">
+    <section ref={panelRef} id="kawvo-support-panel" className="overflow-hidden rounded-[22px] bg-[#f5f5f5] transition-all duration-200">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
@@ -190,17 +190,17 @@ export default function FreeSupportPanel() {
         aria-controls="kawvo-support-content"
         className="flex w-full items-center gap-3 p-4 text-left"
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-lg">?</span>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center text-[24px] text-slate-500">?</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700">Centro de ayuda</span>
-          <span className="mt-1 block text-base font-black text-slate-950">Ayuda y tickets</span>
+          <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">KAWVO</span>
+          <span className="mt-1 block text-base font-black text-slate-950">Centro de ayuda y tickets</span>
           <span className="mt-1 block text-xs leading-5 text-slate-600">Haz una consulta y revisa aquí tus tickets y respuestas.</span>
         </span>
         <span aria-hidden="true" className={`shrink-0 text-xl font-black text-cyan-700 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>⌄</span>
       </button>
 
       {open && (
-        <div id="kawvo-support-content" className="border-t border-cyan-100 px-4 pb-4 pt-4">
+        <div id="kawvo-support-content" className="border-t border-slate-200 px-4 pb-4 pt-4">
           <p className="mb-4 rounded-xl bg-white/75 px-3 py-2 text-[11px] font-semibold leading-5 text-slate-500">Antes de hacer un cambio importante o eliminar tu perfil, cuéntanos tu duda. Nuestro equipo de soporte podrá darle seguimiento.</p>
 
           <div className="space-y-3">
@@ -225,7 +225,7 @@ export default function FreeSupportPanel() {
           </div>
 
           {tickets.length > 0 && (
-            <div className="mt-4 border-t border-cyan-100 pt-4">
+            <div className="mt-4 border-t border-slate-200 pt-4">
               <p className="text-xs font-black text-slate-700">Tus solicitudes recientes</p>
               <div className="mt-2 space-y-2">
                 {tickets.slice(0, 3).map((ticket) => (
