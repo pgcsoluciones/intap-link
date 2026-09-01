@@ -80,15 +80,19 @@ export default function FreeNotificationBell() {
     }
   }, [open])
 
-  const openItem = async (item: NotificationItem) => {
-    const nextItem = item.read_at ? item : { ...item, read_at: new Date().toISOString() }
-    setSelected(nextItem)
+  const openItem = (item: NotificationItem) => {
+    setSelected(item)
     setOpen(false)
-    if (!item.read_at) {
-      setItems((current) => current.map((entry) => entry.id === item.id ? nextItem : entry))
-      setUnread((value) => Math.max(0, value - 1))
-      try { await apiPatch(`/me/notifications/${item.id}/read`, {}) } catch { /* optimistic read */ }
-    }
+  }
+
+  const markSelectedRead = async () => {
+    if (!selected || selected.read_at) return
+    const readAt = new Date().toISOString()
+    const nextItem = { ...selected, read_at: readAt }
+    setSelected(nextItem)
+    setItems((current) => current.map((entry) => entry.id === selected.id ? nextItem : entry))
+    setUnread((value) => Math.max(0, value - 1))
+    try { await apiPatch(`/me/notifications/${selected.id}/read`, {}) } catch { /* optimistic read */ }
   }
 
   const markAllRead = async () => {
@@ -162,7 +166,7 @@ export default function FreeNotificationBell() {
             ) : items.length === 0 ? (
               <p className="p-4 text-sm leading-6 text-slate-500">No tienes notificaciones todavía.</p>
             ) : items.map((item) => (
-              <button key={item.id} type="button" onClick={() => void openItem(item)} className={`mb-1 block w-full rounded-2xl p-3 text-left transition hover:bg-slate-50 ${item.read_at ? 'bg-white' : 'bg-cyan-50/70'}`}>
+              <button key={item.id} type="button" onClick={() => openItem(item)} className={`mb-1 block w-full rounded-2xl p-3 text-left transition hover:bg-slate-50 ${item.read_at ? 'bg-white' : 'bg-cyan-50/70'}`}>
                 <div className="flex items-start gap-3">
                   <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${item.read_at ? 'bg-slate-200' : 'bg-cyan-500'}`} />
                   <span className="min-w-0 flex-1">
@@ -193,6 +197,9 @@ export default function FreeNotificationBell() {
               <button type="button" onClick={act} className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
                 {selected.action_label || (selected.source_type === 'support_ticket' ? 'Abrir solicitud' : 'Ver más')}
               </button>
+            )}
+            {!selected.read_at && (
+              <button type="button" onClick={() => void markSelectedRead()} className="mt-3 w-full rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">Marcar como leída</button>
             )}
             <button type="button" disabled={deleting} onClick={() => void deleteSelected()} className="mt-3 w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-black text-rose-700 disabled:opacity-40">
               {deleting ? 'Eliminando…' : 'Eliminar notificación'}

@@ -13,7 +13,7 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'resources'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'resources' | 'resources'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },

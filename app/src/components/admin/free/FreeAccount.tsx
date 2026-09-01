@@ -150,6 +150,23 @@ export default function FreeAccount() {
     }
   }
 
+  const shareBankAccounts = async () => {
+    if (!publicUrl) return
+    const url = `${publicUrl}?share=bancos#bancos`
+    const text = 'Te comparto mis datos bancarios para transferencias.'
+    setShareFeedback('')
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'Cuentas bancarias', text, url })
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setShareFeedback('Enlace de cuentas bancarias copiado para compartir.')
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') setShareFeedback('No pudimos abrir el menú para compartir.')
+    }
+  }
+
   const revokeSession = async (session: SessionItem) => {
     if (session.is_current || sessionBusy) return
     setSessionBusy(session.id)
@@ -178,7 +195,6 @@ export default function FreeAccount() {
           </div>
           <div className="flex items-center gap-2">
             <FreeNotificationBell />
-            <button type="button" onClick={() => void handleLogout()} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">Salir</button>
           </div>
         </div>
       </header>
@@ -241,9 +257,9 @@ export default function FreeAccount() {
         {shareFeedback && <p className="rounded-xl bg-white px-3 py-2 text-center text-xs font-semibold text-slate-500">{shareFeedback}</p>}
 
         {bankActive && (
-          <button type="button" onClick={() => navigate('/admin/free/bank-accounts')} className="flex w-full items-center gap-3 rounded-[22px] border border-emerald-100 bg-emerald-50 p-4 text-left">
+          <button type="button" onClick={() => void shareBankAccounts()} className="flex w-full items-center gap-3 rounded-[22px] border border-emerald-100 bg-emerald-50 p-4 text-left">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl">▤</span>
-            <span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">Cuentas bancarias</span><span className="mt-1 block text-xs leading-5 text-slate-500">Administrar tus datos bancarios</span></span>
+            <span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">Enviar cuentas bancarias</span><span className="mt-1 block text-xs leading-5 text-slate-500">Compartir enlace directo a tus datos bancarios</span></span>
             <span className="font-black text-emerald-700">›</span>
           </button>
         )}
@@ -283,6 +299,12 @@ export default function FreeAccount() {
         )}
 
         <FreeSupportPanel />
+
+        <button type="button" onClick={() => void handleLogout()} className="flex w-full items-center gap-3 rounded-[22px] border border-slate-200 bg-white p-4 text-left">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-lg">↪</span>
+          <span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">Cerrar sesión</span><span className="mt-1 block text-xs leading-5 text-slate-500">Salir de Kawvo en este dispositivo</span></span>
+          <span className="font-black text-slate-400">›</span>
+        </button>
 
         {me?.slug && <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />}
       </section>

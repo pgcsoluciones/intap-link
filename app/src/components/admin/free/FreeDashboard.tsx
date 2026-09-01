@@ -105,14 +105,6 @@ const freeItems: FreeItem[] = [
     help: 'Explica claramente qué ofreces. Para publicar debes completar al menos 2 servicios con título, descripción e imagen.',
     readinessKey: 'services',
   },
-  {
-    title: 'Mi cuenta',
-    text: 'Plan, notificaciones, soporte, productos y seguridad',
-    to: '/admin/free/account',
-    icon: '◎',
-    help: 'Administra tu plan, notificaciones, productos Kawvo, ayuda, recursos y sesiones activas desde un solo lugar.',
-    optional: true,
-  },
 ]
 
 export default function FreeDashboard() {
@@ -175,11 +167,6 @@ export default function FreeDashboard() {
       window.removeEventListener('pagehide', rememberScroll)
     }
   }, [])
-
-  const handleLogout = async () => {
-    try { await apiPost('/auth/logout', {}) } catch { /* ignore */ }
-    window.location.replace('/admin/login')
-  }
 
   const togglePublished = async () => {
     if (!me || publishing) return
@@ -292,7 +279,7 @@ export default function FreeDashboard() {
             {hasSuperAdminAccess && (
               <button type="button" onClick={() => navigate('/superadmin')} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white">Super Admin</button>
             )}
-            <button onClick={handleLogout} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">Salir</button>
+            <button type="button" onClick={() => navigate('/admin/free/account')} aria-label="Mi cuenta" title="Mi cuenta" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-lg font-black text-slate-600 shadow-sm transition hover:bg-slate-50">◎</button>
           </div>
         </div>
       </header>
