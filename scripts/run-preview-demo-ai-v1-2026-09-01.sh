@@ -21,6 +21,7 @@ run git reset --hard "github/$BRANCH"
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Working tree no está limpio antes de aplicar Demo IA"; }
 
 run python3 scripts/apply-demo-ai-integration-v1.py
+run python3 scripts/apply-demo-ai-integration-v1_1.py
 run git diff --check
 
 run node scripts/test-demo-ai-contract.mjs
@@ -58,6 +59,7 @@ run git add \
   web/src/components/demo/KawvoLinkDemoAi.css \
   functions/_middleware.ts \
   scripts/apply-demo-ai-integration-v1.py \
+  scripts/apply-demo-ai-integration-v1_1.py \
   scripts/test-demo-ai-contract.mjs \
   scripts/qa-demo-ai-preview.mjs \
   scripts/run-preview-demo-ai-v1-2026-09-01.sh
@@ -158,6 +160,7 @@ Validado automáticamente:
 - límites de copy y máximo 3 servicios.
 - cooldown/rate-limit 429 con fallback.
 - OpenAI solo server-side, store:false y Structured Outputs.
+- WhatsApp CTA y teléfono de llamadas separados correctamente.
 - sin ubicación ficticia en Demo IA.
 - renderer/editor Demo existente reutilizado.
 - compartir WhatsApp/snapshot existente preservado.
