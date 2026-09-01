@@ -15,6 +15,11 @@ export default function AdminLogin() {
 
   const scanCode = String(searchParams.get('public_code') || '').trim().toUpperCase()
   const isScanFlow = searchParams.get('activation') === 'scan' && /^[A-Z2-9]{8,24}$/.test(scanCode)
+  const requestedMode: Mode | null = searchParams.get('mode') === 'register'
+    ? 'register'
+    : searchParams.get('mode') === 'login'
+      ? 'login'
+      : null
 
   useEffect(() => {
     if (!isScanFlow) {
@@ -24,6 +29,7 @@ export default function AdminLogin() {
       // product code remained in browser storage from a previous test/scan.
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      if (requestedMode) setMode(requestedMode)
       return
     }
 
@@ -32,7 +38,7 @@ export default function AdminLogin() {
     // A customer arriving from a physical product can create an account if
     // needed; existing users can switch back to Acceder without losing the scan.
     setMode('register')
-  }, [isScanFlow, scanCode])
+  }, [isScanFlow, requestedMode, scanCode])
 
   const persistAuthMode = (nextMode: Mode) => {
     sessionStorage.setItem('kawvo_auth_mode', nextMode)
@@ -79,7 +85,7 @@ export default function AdminLogin() {
             {isScanFlow
               ? 'Tu producto ya fue reconocido. Valida tu correo para continuar con la activación, sin escribir códigos.'
               : isRegister
-                ? 'Valida tu correo y luego te guiaremos para activar tu artículo NFC o QR y preparar tu Perfil Digital Gratis.'
+                ? 'Valida tu correo para crear tu acceso a Kawvo Link. Si llegaste desde un artículo Kawvo, retomaremos su activación automáticamente.'
                 : 'Accede para administrar tu perfil y tus productos Kawvo.'}
           </p>
         </div>
@@ -109,7 +115,7 @@ export default function AdminLogin() {
           </div>
         </div>
 
-        {isRegister && !isScanFlow && <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4 text-center"><p className="text-sm font-extrabold text-slate-900">Perfil Digital Gratis con tu artículo Kawvo</p><p className="mt-1 text-xs leading-5 text-slate-500">Para completar el registro necesitarás un artículo NFC o QR y sus códigos de compra/activación.</p></div>}
+        {isRegister && !isScanFlow && <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4 text-center"><p className="text-sm font-extrabold text-slate-900">Tu Perfil Digital empieza desde tu artículo Kawvo</p><p className="mt-1 text-xs leading-5 text-slate-500">Escanea el QR o acerca el NFC de un artículo válido. Kawvo reconocerá la activación internamente; no tendrás que escribir códigos de compra ni de activación.</p></div>}
       </section>
     </main>
   )

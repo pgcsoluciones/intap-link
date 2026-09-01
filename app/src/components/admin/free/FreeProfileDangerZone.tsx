@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { apiDelete, apiGet, apiPost } from '../../../lib/api'
+import { apiGet, apiPost } from '../../../lib/api'
 import { basicTrialWhatsAppUrl } from './FreePanelUi'
 
 type Props = {
@@ -30,12 +29,13 @@ function normalizePhrase(value: string) {
 }
 
 export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
-  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [phrase, setPhrase] = useState('')
   const [emailConfirm, setEmailConfirm] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteStage, setDeleteStage] = useState('')
+  const [deletedSuccessfully, setDeletedSuccessfully] = useState(false)
   const [error, setError] = useState('')
   const [reason, setReason] = useState('')
   const [improvementOne, setImprovementOne] = useState('')
@@ -74,49 +74,81 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
     setImprovementOne('')
     setImprovementTwo('')
     setTrialEligible(false)
+    setDeleteStage('')
     setError('')
   }
 
   useEffect(() => {
     if (!open) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close()
     }
+
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
   }, [open, deleting])
 
   const destroy = async () => {
     if (!ready || deleting) return
     setDeleting(true)
     setError('')
+
     try {
+      setDeleteStage('Guardando tus respuestas…')
       const feedback: any = await apiPost('/me/profile/exit-feedback', {
         reason,
         improvement_one: improvementOne.trim(),
         improvement_two: improvementTwo.trim(),
       })
+
       if (!feedback?.ok) {
         setError(feedback?.error || 'No pudimos guardar tu respuesta antes de eliminar el perfil.')
         return
       }
 
-      const result: any = await apiDelete('/me/profile', {
+      setDeleteStage('Eliminando el perfil…')
+      const result: any = await apiPost('/me/profile/delete', {
         confirm_slug: expectedPhrase,
         confirm_email: emailConfirm.trim(),
       })
-      if (!result.ok) {
-        setError(result.error || 'No se pudo eliminar el perfil.')
+
+      if (!result?.ok) {
+        setError(result?.error || 'No se pudo eliminar el perfil.')
+        return
+      }
+
+      setDeleteStage('Verificando la eliminación…')
+      const verification: any = await apiGet('/me').catch(() => null)
+      if (!verification?.ok) {
+        setError('El perfil respondió como eliminado, pero no pudimos verificar el estado final. Recarga e inténtalo nuevamente antes de repetir la eliminación.')
+        return
+      }
+
+      if (verification.data?.profile_id) {
+        setError('La verificación todavía detecta un perfil activo. No repetiremos la eliminación automáticamente.')
         return
       }
 
       ONBOARDING_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key))
-      navigate('/admin/free/onboarding/welcome', { replace: true })
+      setOpen(false)
+      setDeletedSuccessfully(true)
     } catch {
       setError('No pudimos completar la eliminación. Intenta nuevamente.')
     } finally {
       setDeleting(false)
+      setDeleteStage('')
     }
+  }
+
+  const continueAfterDeletion = () => {
+    window.location.replace('/admin/free/onboarding/welcome?profile_deleted=1')
   }
 
   return (
@@ -130,17 +162,33 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
         Eliminar mi perfil
       </button>
 
+      {deletedSuccessfully && (
+        <div className="fixed inset-0 z-[120] flex min-h-[100dvh] items-center justify-center bg-slate-950/60 p-5" role="status" aria-live="polite">
+          <div className="w-full max-w-[420px] rounded-[30px] bg-white px-6 py-8 text-center shadow-2xl">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-3xl font-black text-emerald-600">✓</div>
+            <p className="mt-5 text-[11px] font-black uppercase tracking-[0.16em] text-emerald-600">Eliminación completada</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950">Tu perfil fue eliminado correctamente</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Gracias por haber formado parte de Kawvo Link. Esperamos verte de nuevo muy pronto.
+            </p>
+            <p className="mt-3 text-xs leading-5 text-slate-500">
+              Si en algún momento decides regresar, podrás crear un nuevo perfil con tu mismo acceso.
+            </p>
+            <button type="button" onClick={continueAfterDeletion} className="mt-6 w-full rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white">
+              Continuar
+            </button>
+          </div>
+        </div>
+      )}
+
       {open && (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center"
+          className="fixed inset-0 z-[100] flex items-stretch justify-center bg-slate-950/55 p-0 sm:items-center sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-profile-title"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) close()
-          }}
         >
-          <div className="relative max-h-[92vh] w-full max-w-[430px] overflow-y-auto rounded-[28px] bg-white p-5 shadow-2xl">
+          <div className="relative h-[100dvh] max-h-[100dvh] w-full max-w-[430px] overflow-y-auto overscroll-contain rounded-none bg-white p-5 shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-[28px]">
             <button
               type="button"
               onClick={close}
@@ -192,13 +240,13 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
 
             <label className="mt-5 block text-xs font-black text-slate-700">
               Escribe <span className="font-mono text-rose-700">{expectedPhrase}</span>
-              <input value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" spellCheck={false} className={`mt-2 w-full rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-rose-100 ${phrase && !phraseMatches ? 'border-rose-300' : 'border-slate-200 focus:border-rose-400'}`} />
+              <input value={phrase} onChange={(event) => setPhrase(event.target.value)} autoComplete="off" autoCapitalize="characters" spellCheck={false} className={`mt-2 w-full rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-rose-100 ${phrase && !phraseMatches ? 'border-rose-300' : 'border-slate-200 focus:border-rose-400'}`} />
               {phrase && !phraseMatches && <span className="mt-1 block text-xs text-rose-600">La frase todavía no coincide.</span>}
             </label>
 
             <label className="mt-4 block text-xs font-black text-slate-700">
               Confirma tu correo de acceso
-              <input type="email" value={emailConfirm} onChange={(event) => setEmailConfirm(event.target.value)} placeholder={email || 'tu-correo@ejemplo.com'} autoComplete="email" className={`mt-2 w-full rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:ring-4 focus:ring-rose-100 ${emailConfirm && !emailMatches ? 'border-rose-300' : 'border-slate-200 focus:border-rose-400'}`} />
+              <input type="email" value={emailConfirm} onChange={(event) => setEmailConfirm(event.target.value)} placeholder={email || 'tu-correo@ejemplo.com'} autoComplete="email" autoCapitalize="none" inputMode="email" className={`mt-2 w-full rounded-2xl border bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:ring-4 focus:ring-rose-100 ${emailConfirm && !emailMatches ? 'border-rose-300' : 'border-slate-200 focus:border-rose-400'}`} />
               {emailConfirm && !emailMatches && <span className="mt-1 block text-xs text-rose-600">El correo debe coincidir con tu correo de acceso.</span>}
             </label>
 
@@ -213,12 +261,13 @@ export default function FreeProfileDangerZone({ slug, email = '' }: Props) {
               </div>
             )}
 
+            {deleteStage && <p className="mt-4 rounded-xl bg-slate-50 px-3 py-2 text-center text-xs font-semibold text-slate-600">{deleteStage}</p>}
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</p>}
 
-            <div className="mt-5 grid grid-cols-2 gap-2">
+            <div className="sticky bottom-0 -mx-5 mt-5 grid grid-cols-2 gap-2 border-t border-slate-100 bg-white/95 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur">
               <button type="button" onClick={close} disabled={deleting} className="rounded-xl bg-slate-100 px-4 py-3 text-xs font-black text-slate-700">Cancelar</button>
               <button type="button" onClick={() => void destroy()} disabled={!ready || deleting} className="rounded-xl bg-rose-600 px-4 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">
-                {deleting ? 'Eliminando…' : 'Eliminar definitivamente'}
+                {deleting ? 'Procesando…' : 'Eliminar definitivamente'}
               </button>
             </div>
           </div>

@@ -1,11 +1,11 @@
 import type { MouseEventHandler } from 'react'
 
+const BASIC_PLAN_URL = 'https://nfc.kawvoia.com/plan-basico'
 const BASIC_PLAN_PHONE = '18097059802'
-const BASIC_PLAN_MESSAGE = 'Tengo un perfil Digital Gratis y me gustaría pasarme al Plan Básico.'
 const BASIC_TRIAL_MESSAGE = 'Tengo un perfil Digital Gratis y quiero probar el Plan Básico por 7 días gratis.'
 
 export function basicPlanWhatsAppUrl() {
-  return `https://wa.me/${BASIC_PLAN_PHONE}?text=${encodeURIComponent(BASIC_PLAN_MESSAGE)}`
+  return BASIC_PLAN_URL
 }
 
 export function basicTrialWhatsAppUrl() {
