@@ -136,6 +136,43 @@ async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
   return new Response(updated, { status: response.status, statusText: response.statusText, headers })
 }
 
+async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
+  const response = await proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
+  if (request.method.toUpperCase() !== 'GET' || response.status !== 200) return response
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('text/html')) return response
+
+  const url = new URL(request.url)
+  const canonical = `${url.origin}/invitacion`
+  const title = 'Te recomiendo Kawvo Link'
+  const description = 'Crea tu presentación digital con Kawvo Link y comparte quién eres, qué haces y cómo contactarte en un solo lugar.'
+  const image = `${url.origin}/assets/og/kawvo-link-og.png`
+  const meta = [
+    `<title>${escapeHtml(title)}</title>`,
+    `<meta name="description" content="${escapeHtml(description)}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Kawvo Link">`,
+    `<meta property="og:title" content="${escapeHtml(title)}">`,
+    `<meta property="og:description" content="${escapeHtml(description)}">`,
+    `<meta property="og:url" content="${escapeHtml(canonical)}">`,
+    `<meta property="og:image" content="${escapeHtml(image)}">`,
+    `<meta property="og:image:alt" content="Kawvo Link">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${escapeHtml(title)}">`,
+    `<meta name="twitter:description" content="${escapeHtml(description)}">`,
+    `<meta name="twitter:image" content="${escapeHtml(image)}">`,
+  ].join('\n')
+
+  const html = await response.text()
+  const updated = html.replace(/<title>[\s\S]*?<\/title>/i, '').replace('</head>', `${meta}\n</head>`)
+  const headers = new Headers(response.headers)
+  headers.delete('content-length')
+  headers.delete('content-encoding')
+  headers.set('cache-control', 'no-store')
+  headers.set('x-robots-tag', 'noindex, nofollow, noarchive')
+  return new Response(updated, { status: response.status, statusText: response.statusText, headers })
+}
+
 function renewPreviewRedirect(slug: string, embedded: boolean) {
   const mode = embedded ? '' : '?full=1'
   const target = `https://app.preview.intaprd.com/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}${mode}`
@@ -187,6 +224,9 @@ export default {
     // falling through to Hono for React routes such as /activate-product/:code.
     if (!url.pathname.startsWith('/api/')) {
       if (url.hostname === 'preview.intaprd.com') {
+        if (url.pathname === '/invitacion' || url.pathname === '/invitacion/') {
+          return proxyInvitationWithMeta(request, env)
+        }
         return proxyPublicProfileWithMeta(request, env)
       }
       if (url.hostname === 'app.preview.intaprd.com') {
