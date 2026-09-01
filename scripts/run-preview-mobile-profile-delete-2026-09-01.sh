@@ -38,6 +38,12 @@ fi
 run git diff --check
 
 echo ""
+echo "▶ Validando contrato de borrado con servicios/productos"
+grep -Fq 'DELETE FROM profile_products WHERE profile_id = ?' api/src/preview-profile-delete-mobile.ts \
+  || fail "El endpoint móvil no limpia profile_products antes de profiles"
+echo "✓ profile_products se elimina explícitamente antes del perfil"
+
+echo ""
 echo "▶ Validando App Preview"
 (cd app && npx tsc && npx vite build --mode preview) || fail "Build Preview de App"
 
