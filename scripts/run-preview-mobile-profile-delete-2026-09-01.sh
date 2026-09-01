@@ -44,6 +44,22 @@ grep -Fq 'DELETE FROM profile_products WHERE profile_id = ?' api/src/preview-pro
 echo "✓ profile_products se elimina explícitamente antes del perfil"
 
 echo ""
+echo "▶ Validando retiro del onboarding legacy bloqueante"
+! grep -Fq 'Tengo mi artículo y mis códigos' app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx \
+  || fail "La welcome todavía contiene el CTA legacy de códigos manuales"
+grep -Fq 'Crear una cuenta' app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx \
+  || fail "La welcome no ofrece Crear una cuenta"
+grep -Fq 'Iniciar sesión' app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx \
+  || fail "La welcome no ofrece Iniciar sesión"
+grep -Fq 'path="/admin/free/onboarding/product" element={<Navigate to="/admin/free/onboarding/welcome" replace />}' app/src/App.tsx \
+  || fail "La ruta legacy product sigue activa"
+grep -Fq 'path="/admin/free/onboarding/bootstrap" element={<Navigate to="/admin/free/onboarding/welcome" replace />}' app/src/App.tsx \
+  || fail "La ruta legacy bootstrap sigue activa"
+! grep -Fq 'sus códigos de compra/activación' app/src/components/admin/AdminLogin.tsx \
+  || fail "El login todavía muestra copy legacy de códigos manuales"
+echo "✓ welcome/auth alineados con Scan-to-Claim y sin entrada manual de códigos"
+
+echo ""
 echo "▶ Validando App Preview"
 (cd app && npx tsc && npx vite build --mode preview) || fail "Build Preview de App"
 
@@ -97,10 +113,15 @@ WORKER_LOG="$LOG_DIR/worker-$(date +%Y%m%d-%H%M%S).log"
 WORKER_VERSION="$(grep -E 'Current Version ID:' "$WORKER_LOG" | tail -1 | sed -E 's/.*Current Version ID:[[:space:]]*//')"
 
 echo ""
-echo "▶ Smoke del panel Preview"
+echo "▶ Smoke de rutas Preview"
 for url in \
   "https://app.preview.intaprd.com/admin/free" \
-  "https://app.preview.intaprd.com/admin/free/home?source=pwa"; do
+  "https://app.preview.intaprd.com/admin/free/home?source=pwa" \
+  "https://app.preview.intaprd.com/admin/free/onboarding/welcome" \
+  "https://app.preview.intaprd.com/admin/login?mode=register" \
+  "https://app.preview.intaprd.com/admin/login?mode=login" \
+  "https://app.preview.intaprd.com/admin/free/onboarding/product" \
+  "https://app.preview.intaprd.com/admin/free/onboarding/bootstrap"; do
   code="$(curl -sS -o /dev/null -w '%{http_code}' "$url")"
   [ "$code" = "200" ] || [ "$code" = "302" ] || fail "Smoke $url -> HTTP $code"
   echo "✓ $url -> HTTP $code"
@@ -119,20 +140,21 @@ echo "✓ POST /api/v1/me/profile/delete expuesto y protegido -> HTTP 401 sin se
 
 echo ""
 echo "============================================================"
-echo "✓ MOBILE PROFILE DELETE PREVIEW LISTO PARA QA FÍSICO"
+echo "✓ PREVIEW LISTO PARA QA FÍSICO"
 echo "============================================================"
 echo "Branch:          $BRANCH"
 echo "Commit:          $(git rev-parse HEAD)"
 echo "App Pages:       $APP_ORIGIN"
 echo "Worker Version:  ${WORKER_VERSION:-ver salida Wrangler}"
+echo "Welcome QA:      https://app.preview.intaprd.com/admin/free/onboarding/welcome"
+echo "Login QA:        https://app.preview.intaprd.com/admin/login"
 echo "Panel QA:        https://app.preview.intaprd.com/admin/free"
 echo "Producción:      NO TOCADA"
 echo "Logs:            $LOG_DIR"
 echo ""
-echo "SIGUIENTE PRUEBA: usar una cuenta de prueba con perfil y ejecutar"
-echo "Eliminar mi perfil desde el móvil real. El modal debe mostrar:"
-echo "1) Guardando tus respuestas…"
-echo "2) Eliminando el perfil…"
-echo "3) Verificando la eliminación…"
-echo "y terminar en el onboarding sin perfil."
+echo "SIGUIENTE QA FÍSICO:"
+echo "1) Eliminación -> pantalla de confirmación -> Continuar."
+echo "2) Debe terminar en la entrada Crear una cuenta / Iniciar sesión."
+echo "3) No debe aparecer ningún formulario de códigos manuales."
+echo "4) Con una sesión válida sin perfil, welcome debe mostrar opciones sin bloquear."
 echo "============================================================"
