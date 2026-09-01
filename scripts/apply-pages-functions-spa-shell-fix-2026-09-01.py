@@ -15,15 +15,14 @@ if marker not in text:
     raise SystemExit('injectSimpleSocialCard marker not found')
 text = text.replace(marker, helper + marker, 1)
 
-# Every metadata-producing route must start from the real SPA shell rather than
-# context.next(), because root Pages Functions can otherwise receive a 404 for
-# client-side routes such as /demo/ia. Replace only the response+content-type
-# pattern, leaving the final generic context.next() untouched for actual files.
+# Metadata-producing HTML routes in the current middleware are exactly the
+# generic social-card shell plus static/dynamic profile shells. The first one
+# is replaced here together with the remaining two profile reads.
 needle = """    const response = await context.next();\n    const contentType = response.headers.get('content-type') || '';\n"""
 replacement = """    const response = await fetchSpaShell();\n    const contentType = response.headers.get('content-type') || '';\n"""
 count = text.count(needle)
-if count < 3:
-    raise SystemExit(f'expected at least 3 metadata shell reads, found {count}')
+if count != 3:
+    raise SystemExit(f'expected exactly 3 metadata shell reads, found {count}')
 text = text.replace(needle, replacement)
 
 old_tail = """  return withSecurityHeaders(await context.next());\n}\n"""
