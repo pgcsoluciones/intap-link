@@ -80,31 +80,30 @@ app.post('/api/v1/me/profile/delete', requirePreviewAuth, async (c: any) => {
     }, 400)
   }
 
-  await c.env.DB.prepare(
-    `UPDATE profiles SET is_published = 0 WHERE id = ? AND user_id = ?`,
-  ).bind(profileId, userId).run()
-
-  await c.env.DB.prepare(
-    `UPDATE intap_artifacts
-        SET profile_id = NULL, updated_at = datetime('now')
-      WHERE profile_id = ?`,
-  ).bind(profileId).run()
-
-  await c.env.DB.prepare(
-    `UPDATE artifact_activation_claims
-        SET profile_id = NULL
-      WHERE profile_id = ?`,
-  ).bind(profileId).run()
-
-  // profile_products was created without ON DELETE CASCADE in the historical schema.
-  // Delete these rows explicitly so any profile with services/products can be removed.
-  await c.env.DB.prepare(
-    `DELETE FROM profile_products WHERE profile_id = ?`,
-  ).bind(profileId).run()
-
-  await c.env.DB.prepare(
-    `DELETE FROM profiles WHERE id = ? AND user_id = ?`,
-  ).bind(profileId, userId).run()
+  // Keep the destructive relational work atomic. If any FK blocks deletion,
+  // D1 rolls the batch back instead of leaving the profile partially detached/unpublished.
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `UPDATE profiles SET is_published = 0 WHERE id = ? AND user_id = ?`,
+    ).bind(profileId, userId),
+    c.env.DB.prepare(
+      `UPDATE intap_artifacts
+          SET profile_id = NULL, updated_at = datetime('now')
+        WHERE profile_id = ?`,
+    ).bind(profileId),
+    c.env.DB.prepare(
+      `UPDATE artifact_activation_claims
+          SET profile_id = NULL
+        WHERE profile_id = ?`,
+    ).bind(profileId),
+    // profile_products was created without ON DELETE CASCADE in the historical schema.
+    c.env.DB.prepare(
+      `DELETE FROM profile_products WHERE profile_id = ?`,
+    ).bind(profileId),
+    c.env.DB.prepare(
+      `DELETE FROM profiles WHERE id = ? AND user_id = ?`,
+    ).bind(profileId, userId),
+  ])
 
   const stillExists = await c.env.DB.prepare(
     `SELECT id FROM profiles WHERE id = ? LIMIT 1`,
