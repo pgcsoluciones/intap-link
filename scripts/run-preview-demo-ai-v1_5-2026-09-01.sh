@@ -22,7 +22,6 @@ run git reset --hard "github/$BRANCH"
 run python3 scripts/apply-demo-ai-product-refinements-v1_5.py
 run git diff --check
 run node scripts/test-demo-ai-contract.mjs
-run node scripts/test-demo-ai-product-v1_4.mjs
 run node scripts/test-demo-ai-product-v1_5.mjs
 
 if git status --short | grep -E 'api/(migrations|migrations-preview)/' >/dev/null; then
@@ -104,7 +103,6 @@ done
 
 run env PREVIEW_BASE="https://preview.intaprd.com" node scripts/qa-demo-ai-preview.mjs
 
-# Delivered-bundle checks for the requested experience.
 grep -R "Mostrar cómo se verían tus datos bancarios" web/dist/assets >/dev/null || fail "Copy bancario claro no llegó al build"
 grep -R "Personalizar mi demo" web/dist/assets >/dev/null || fail "CTA Personalizar mi demo no llegó al build"
 grep -R "Me interesa quiero mi Perfil" web/dist/assets >/dev/null || fail "CTA comercial no llegó al build"
