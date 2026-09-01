@@ -134,7 +134,7 @@ export default function KawvoLinkDemoAi() {
   const [workDescription, setWorkDescription] = useState('')
   const [contact, setContact] = useState<ContactForm>({ whatsapp: '', samePhoneAsWhatsapp: true, phone: '', instagram: '', email: '' })
   const [consent, setConsent] = useState(false)
-  const [includeBankDemo, setIncludeBankDemo] = useState(false)
+  const [includeBankDemo, setIncludeBankDemo] = useState(true)
   const [questions, setQuestions] = useState<string[]>([])
   const [clarification, setClarification] = useState('')
   const [round, setRound] = useState(1)
@@ -211,7 +211,7 @@ export default function KawvoLinkDemoAi() {
     <main className="kawvo-demo-ai-page">
       <section className="kawvo-demo-ai-shell">
         <div className="kawvo-demo-ai-top">
-          <a href="/demo?manual=1" aria-label="Volver a la Demo tradicional">←</a>
+          <a href="/demo?manual=1" className="kawvo-demo-ai-manual-link">Probar sin IA</a>
           <span>Demo con IA · Beta</span>
           <small>{step <= 4 ? `${step}/4` : 'Casi listo'}</small>
         </div>
@@ -250,7 +250,7 @@ export default function KawvoLinkDemoAi() {
           <label><span>Instagram <small>Opcional</small></span><input maxLength={50} value={contact.instagram} onChange={(event) => setContact({ ...contact, instagram: event.target.value })} placeholder="@usuario" /></label>
           <label><span>Correo <small>Opcional</small></span><input type="email" maxLength={120} value={contact.email} onChange={(event) => setContact({ ...contact, email: event.target.value })} placeholder="correo@dominio.com" /></label>
 
-          <label className="kawvo-demo-ai-check kawvo-demo-ai-bank-option"><input type="checkbox" checked={includeBankDemo} onChange={(event) => setIncludeBankDemo(event.target.checked)} /><span><strong>Incluir ejemplo de cuentas bancarias</strong><small>Mostraremos una cuenta ficticia para que veas cómo luce esta sección.</small></span></label>
+          <label className="kawvo-demo-ai-check kawvo-demo-ai-bank-option"><input type="checkbox" checked={includeBankDemo} onChange={(event) => setIncludeBankDemo(event.target.checked)} /><span><strong>Mostrar cómo se verían tus datos bancarios</strong><small>Incluiremos una cuenta ficticia para que veas este beneficio del Perfil Digital. Puedes quitarla si no quieres mostrar el ejemplo.</small></span></label>
 
           <div className="kawvo-demo-ai-consent">
             <strong>Antes de crear tu Demo</strong>
@@ -258,7 +258,7 @@ export default function KawvoLinkDemoAi() {
             <label className="kawvo-demo-ai-check"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} /><span>Acepto las condiciones de la Demo con IA</span></label>
           </div>
           <button onClick={() => void generate()} disabled={busy}>{busy ? '✨ Estamos preparando tu Perfil Digital…' : 'Crear mi Demo'}</button>
-          <button className="kawvo-demo-ai-secondary" onClick={fallback}>Continuar sin IA</button>
+          <button className="kawvo-demo-ai-secondary" onClick={fallback}>Probar sin IA</button>
         </>}
 
         {step === 5 && <>
@@ -267,7 +267,7 @@ export default function KawvoLinkDemoAi() {
           {questions.length > 1 && <div className="kawvo-demo-ai-extra-questions">{questions.slice(1).map((question) => <p key={question}>{question}</p>)}</div>}
           <textarea autoFocus rows={5} maxLength={700} value={clarification} onChange={(event) => setClarification(event.target.value)} placeholder="Respuesta breve" />
           <button onClick={() => void submitClarification()} disabled={busy}>{busy ? '✨ Terminando tu Perfil Digital…' : 'Terminar mi Demo'}</button>
-          <button className="kawvo-demo-ai-secondary" onClick={fallback}>Continuar sin IA</button>
+          <button className="kawvo-demo-ai-secondary" onClick={fallback}>Probar sin IA</button>
         </>}
 
         {error && <div className="kawvo-demo-ai-error" role="alert">{error}</div>}

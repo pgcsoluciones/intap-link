@@ -537,7 +537,7 @@ export default function KawvoLinkDemo() {
         </section>
         {preview}
         <div className="kawvo-demo-sticky-cta">
-          <button type="button" onClick={() => setStage('edit')}>{isAiGenerated ? 'Ajustar mi demo' : 'Personalizar con mis datos'}</button>
+          <button type="button" onClick={() => setStage('edit')}>{isAiGenerated ? 'Personalizar mi demo' : 'Personalizar con mis datos'}</button>
           <small>Lo que cambies existe solamente en este dispositivo mientras mantengas abierta la demo.</small>
         </div>
       </main>
@@ -592,7 +592,7 @@ export default function KawvoLinkDemo() {
               source: fromTokenRef.current ? 'shared_preview' : 'demo',
             })}
           >
-            Quiero mi Perfil Digital
+            Me interesa quiero mi Perfil
           </a>
           <div className="kawvo-demo-share-block">
             <small>¿Te gustó cómo quedó?</small>

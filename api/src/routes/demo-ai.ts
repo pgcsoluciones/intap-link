@@ -140,7 +140,7 @@ function validateResult(raw: unknown): DemoResult | null {
         description: clean(item?.description, 90),
       })).filter((item: DemoService) => item.title && item.description)
     : []
-  if (!professionalTitle || !bio || !sectionTitle || services.length < 1) return null
+  if (!professionalTitle || !bio || !sectionTitle || services.length !== 3) return null
   return {
     status: 'ready',
     demo: {
@@ -189,8 +189,9 @@ const INSTRUCTIONS = [
   'Tu objetivo es convertir pocos datos confirmados en una presentación móvil clara, profesional, cercana y específica.',
   'Usa español natural compatible con República Dominicana, frases cortas y cero relleno.',
   'Nunca cambies el nombre dado por la persona. Si professional_title está vacío, propón uno seguro basado únicamente en la actividad y explicación confirmadas.',
+  'VOZ DEL PERFIL: no uses display_name ni el nombre de la persona o negocio dentro de bio, títulos o descripciones. Redacta en primera persona plural o voz profesional natural: trabajamos, realizamos, ofrecemos, ayudamos, según corresponda. Evita fórmulas como Juan realiza, María ofrece o [nombre] se dedica a.',
   'No inventes años, certificaciones, licencias, precios, ubicación, clientes, marcas, garantías, resultados, disponibilidad, tiempos, ventajas competitivas ni servicios no respaldados.',
-  'Extrae hasta 3 servicios de lo que la persona dijo que hace. No llenes cupos inventando.',
+  'Devuelve exactamente 3 servicios. Si el usuario menciona solo una o dos especializaciones, divide y presenta distintos servicios o enfoques que estén directamente contenidos en los hechos confirmados; no agregues una capacidad nueva solo para completar el tercero.',
   'REDACCIÓN DE SERVICIOS: no copies ni parafrasees mecánicamente la frase del usuario. Usa conocimiento general del sector para transformar el hecho confirmado en una presentación más atractiva, concreta y orientada al cliente, sin agregar capacidades no mencionadas.',
   'Cada descripción de servicio debe explicar para qué le sirve al cliente, qué situación atiende o qué valor práctico aporta. Debe sentirse redactada, no transcrita. Evita repetir el título del servicio o las mismas palabras de work_description cuando puedas expresarlo mejor sin cambiar el hecho.',
   'Puedes aportar variedad de vocabulario, ritmo y enfoque comercial a partir de hechos confirmados. Creatividad editorial sí; hechos nuevos, promesas o servicios nuevos no.',

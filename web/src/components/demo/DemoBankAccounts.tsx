@@ -4,6 +4,7 @@ import './DemoBankAccounts.css'
 type Props = { holderName: string }
 
 const DEMO_NUMBER = '123456789'
+const DEMO_MASKED = `•••• ${DEMO_NUMBER.slice(-4)}`
 
 export default function DemoBankAccounts({ holderName }: Props) {
   const [copied, setCopied] = useState<'account' | 'id' | null>(null)
@@ -32,8 +33,8 @@ export default function DemoBankAccounts({ holderName }: Props) {
             <h3>Banco de ejemplo</h3>
             <b>Cuenta de ahorros · DOP</b>
             <strong>{holderName}</strong>
-            <code>{DEMO_NUMBER}</code>
-            <small>Cédula/RNC de ejemplo · {DEMO_NUMBER}</small>
+            <code>{DEMO_MASKED}</code>
+            <small>Cédula/RNC de ejemplo · {DEMO_MASKED}</small>
           </div>
         </div>
         <div className="kawvo-demo-bank-actions">
@@ -46,10 +47,6 @@ export default function DemoBankAccounts({ holderName }: Props) {
         </div>
       </article>
 
-      <div className="kawvo-demo-bank-note">
-        <strong>Solo es un ejemplo.</strong>
-        <span>Por razones de seguridad, esta sección no es editable dentro de la Demo.</span>
-      </div>
     </section>
   )
 }
