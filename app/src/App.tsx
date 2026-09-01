@@ -43,8 +43,6 @@ import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboa
 import FreeOnboardingContact from './components/admin/free/onboarding/FreeOnboardingContact'
 import FreeOnboardingDone from './components/admin/free/onboarding/FreeOnboardingDone'
 import FreeOnboardingWelcome from './components/admin/free/onboarding/FreeOnboardingWelcome'
-import FreeOnboardingProduct from './components/admin/free/onboarding/FreeOnboardingProduct'
-import FreeOnboardingBootstrap from './components/admin/free/onboarding/FreeOnboardingBootstrap'
 import FreeOnboardingIntro from './components/admin/free/onboarding/FreeOnboardingIntro'
 import FreeOnboardingSource from './components/admin/free/onboarding/FreeOnboardingSource'
 import FreeOnboardingBuilder from './components/admin/free/onboarding/FreeOnboardingBuilder'
@@ -86,9 +84,9 @@ function App() {
         <Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingIdentity /></AdminGuard>} />
         <Route path="/admin/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingContact /></AdminGuard>} />
 
-        <Route path="/admin/free/onboarding/welcome" element={<AdminGuard requireProfile={false}><FreeOnboardingWelcome /></AdminGuard>} />
-        <Route path="/admin/free/onboarding/product" element={<AdminGuard requireProfile={false}><FreeOnboardingProduct /></AdminGuard>} />
-        <Route path="/admin/free/onboarding/bootstrap" element={<AdminGuard requireProfile={false}><FreeOnboardingBootstrap /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/welcome" element={<FreeOnboardingWelcome />} />
+        <Route path="/admin/free/onboarding/product" element={<Navigate to="/admin/free/onboarding/welcome" replace />} />
+        <Route path="/admin/free/onboarding/bootstrap" element={<Navigate to="/admin/free/onboarding/welcome" replace />} />
         <Route path="/admin/free/onboarding/intro" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingIntro /></AdminGuard>} />
         <Route path="/admin/free/onboarding/category" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingCategory /></AdminGuard>} />
         <Route path="/admin/free/onboarding/source" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSource /></AdminGuard>} />
