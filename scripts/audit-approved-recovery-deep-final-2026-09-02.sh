@@ -3,7 +3,7 @@ set -euo pipefail
 fail(){ echo "✗ $1"; exit 1; }
 check(){ grep -Fq "$2" "$1" || fail "$3"; }
 
-APP='app/src/App.tsx'; ACCOUNT='app/src/components/admin/free/FreeAccount.tsx'; NOTIFS='app/src/components/admin/free/FreeNotifications.tsx'; EDITOR='app/src/components/admin/free/FreeVisualEditor.tsx'; IDENTITY='app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'; BUILDER='app/src/components/admin/free/onboarding/FreeOnboardingBuilder.tsx'; STARTER='app/src/components/admin/free/onboarding/FreeStarterNativePreview.tsx'; LOCATION='app/src/components/admin/free/FreeLocation.tsx'; QUICK='app/src/components/admin/free/FreeQuickActions.tsx'; DANGER='app/src/components/admin/free/FreeProfileDangerZone.tsx'; ACTIVATION='app/src/components/admin/free/onboarding/FreeArtifactActivation.tsx'; GUARD='app/src/components/admin/AdminGuard.tsx'; AI='app/src/components/admin/free/FreeAiProfileAssistant.tsx'; AIAPI='api/src/ai-profile-assistant.ts'; PROFILE='web/src/components/free-profile/IntapLinkGratisProfile.tsx'; ADAPTER='web/src/components/free-profile/IntapLinkGratis.adapter.ts'; BANK='web/src/components/free-profile/PublicBankAccounts.tsx'; MW='functions/_middleware.ts'; DISC='functions/profile-discovery.ts'; REG='web/src/components/profile-templates/registry.tsx'
+APP='app/src/App.tsx'; ACCOUNT='app/src/components/admin/free/FreeAccount.tsx'; NOTIFS='app/src/components/admin/free/FreeNotifications.tsx'; EDITOR='app/src/components/admin/free/FreeVisualEditor.tsx'; IDENTITY='app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'; BUILDER='app/src/components/admin/free/onboarding/FreeOnboardingBuilder.tsx'; STARTER='app/src/components/admin/free/onboarding/FreeStarterNativePreview.tsx'; LOCATION='app/src/components/admin/free/FreeLocation.tsx'; QUICK='app/src/components/admin/free/FreeQuickActions.tsx'; DANGER='app/src/components/admin/free/FreeProfileDangerZone.tsx'; ACTIVATION='app/src/components/admin/free/onboarding/FreeArtifactActivation.tsx'; GUARD='app/src/components/admin/AdminGuard.tsx'; AI='app/src/components/admin/free/FreeAiProfileAssistant.tsx'; AIAPI='api/src/ai-profile-assistant.ts'; APIINDEX='api/src/index.ts'; PROFILE='web/src/components/free-profile/IntapLinkGratisProfile.tsx'; ADAPTER='web/src/components/free-profile/IntapLinkGratis.adapter.ts'; BANK='web/src/components/free-profile/PublicBankAccounts.tsx'; MW='functions/_middleware.ts'; DISC='functions/profile-discovery.ts'; REG='web/src/components/profile-templates/registry.tsx'
 
 for r in '/admin/free/home' '/admin/free/account' '/admin/free/notifications' '/superadmin/resources' '/admin/free/editor' '/admin/free/ai-profile'; do check "$APP" "path=\"$r\"" "Falta ruta $r"; done
 
@@ -41,7 +41,9 @@ check "$DISC" "resource: 'ai.md' | 'facts.json'" 'Faltan recursos ai.md/facts.js
 check "$DISC" 'getDynamicProfileSeoBundle' 'Falta SEO dinámico de perfiles'
 
 for id in automotive_jason_v3 real_estate_novi_v4 events_1a_v1 car_rental_rentao_v1 industrial_aycdom_v1; do check "$REG" "$id" "Falta plantilla $id"; done
-check api/src/preview-free-entry.ts '/api/v1/public/assets/' 'Falta assets R2'
+# El endpoint público R2 pertenece al API principal; Preview/Producción lo ensamblan desde index.ts.
+check "$APIINDEX" "app.get('/api/v1/public/assets/*'" 'Falta endpoint público de assets R2'
+check "$APIINDEX" 'c.env.BUCKET.get(key)' 'Endpoint assets R2 no lee del bucket'
 
 [ -f api/migrations/0041_free_portfolio_limit_5.sql ] || fail 'Falta límite portafolio 5'; check "$QUICK" 'const MAX_SELECTED = 3' 'Quick actions no limita 3'; check api/wrangler.toml 'FREE_MAX_SERVICES = "3"' 'Servicios Free no limita 3'
 check scripts/run-preview-reconcile-approved-releases-2026-09-01.sh 'APP_PROJECT="intap-web2"' 'App Preview proyecto incorrecto'; check scripts/run-preview-reconcile-approved-releases-2026-09-01.sh 'WEB_PROJECT="intap-link"' 'Web Preview proyecto incorrecto'
