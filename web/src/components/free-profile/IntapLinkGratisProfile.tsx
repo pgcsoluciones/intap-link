@@ -238,6 +238,10 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     return `${window.location.origin}${window.location.pathname}`
   }
 
+  function socialShareProfileUrl() {
+    return `${canonicalProfileUrl()}?share=perfil&card=3`
+  }
+
   async function downloadVCard() {
     const canonicalUrl = `${window.location.origin}${window.location.pathname}`
     const escapeVCard = (value: string) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
@@ -262,11 +266,8 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     anchor.rel = 'noopener'
 
     if (isMobileContactFlow) {
-      // En móvil dejamos que el sistema operativo abra/interprete el vCard.
-      // iOS presenta la ficha del contacto; Android usa su manejador de VCF cuando está disponible.
       anchor.target = '_self'
     } else {
-      // En escritorio conservamos la descarga tradicional como respaldo.
       anchor.download = fileName
     }
 
@@ -303,13 +304,13 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   function shareProfileQrWhatsApp() {
-    const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${canonicalProfileUrl()}`
+    const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${socialShareProfileUrl()}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
   async function shareProfile() {
     try {
-      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: canonicalProfileUrl() })
+      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: socialShareProfileUrl() })
       else await copyProfileLink()
     } catch { /* cancelar compartir no es error */ }
   }
