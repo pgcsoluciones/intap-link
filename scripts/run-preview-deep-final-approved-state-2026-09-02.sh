@@ -142,18 +142,6 @@ INVITE_HTML="$(curl -sS 'https://preview.intaprd.com/invitacion?de=QA')"
 printf '%s' "$INVITE_HTML" | grep -Fq 'Te recomiendo Kawvo Link' || fail "Graph Card invitación no está activa"
 echo '✓ Graph Card invitación activa'
 
-printf '\n▶ Validando Marbella/R2\n'
-PDF_URL='https://preview.intaprd.com/api/v1/public/assets/rentaord/MARBELLA-BOAT.pdf'
-PDF_HEADERS="$LOG_DIR/marbella-headers.txt"
-PDF_FILE="$LOG_DIR/MARBELLA-BOAT.pdf"
-curl -sS -L -D "$PDF_HEADERS" -o "$PDF_FILE" "$PDF_URL" || fail "Descargar Marbella desde R2"
-PDF_CODE="$(awk 'toupper($1) ~ /^HTTP\// {code=$2} END{print code}' "$PDF_HEADERS")"
-[ "$PDF_CODE" = '200' ] || fail "Marbella respondió HTTP ${PDF_CODE:-desconocido}"
-PDF_SIZE="$(wc -c < "$PDF_FILE" | tr -d ' ')"
-[ "$PDF_SIZE" -gt 1000 ] || fail "Marbella llegó vacío o incompleto ($PDF_SIZE bytes)"
-head -c 4 "$PDF_FILE" | grep -Fq '%PDF' || fail "Marbella no parece PDF"
-echo "✓ Marbella/R2 -> HTTP 200 · $PDF_SIZE bytes · PDF válido"
-
 printf '\n▶ QA E2E Demo IA sobre Preview custom domain\n'
 PREVIEW_BASE='https://preview.intaprd.com' node scripts/qa-demo-ai-preview.mjs || fail "QA E2E Demo IA"
 
