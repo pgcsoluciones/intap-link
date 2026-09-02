@@ -84,7 +84,7 @@ export default function FreeAccount() {
   const [qrPreview, setQrPreview] = useState('')
   const [showQrPreview, setShowQrPreview] = useState(false)
   const [showInvitePreview, setShowInvitePreview] = useState(false)
-  const [pwaInstalled, setPwaInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || Boolean((window.navigator as any).standalone) || localStorage.getItem('kawvo_pwa_installed') === '1')
+  const [pwaInstalled, setPwaInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || Boolean((window.navigator as any).standalone))
   const [pwaInstallReady, setPwaInstallReady] = useState(() => Boolean((window as any).__kawvoInstallPrompt))
   const [showPwaHelp, setShowPwaHelp] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -334,7 +334,7 @@ export default function FreeAccount() {
           <div className="mt-8">
             <SectionTitle>MI KAWVO</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-              {!pwaInstalled && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label="Instalar app Kawvo" detail={pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app"} onClick={() => void installPwa()} />}
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label={pwaInstalled ? "Kawvo está instalada" : "Instalar app Kawvo"} detail={pwaInstalled ? "La estás usando como app en este dispositivo" : (pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app")} onClick={() => pwaInstalled ? undefined : void installPwa()} />
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts?from=account')} />
               <SettingsRow icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void previewQr()} />
               {bankActive && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18M12 3 3 8h18L12 3Z"/></svg>} label="Enviar enlace de cuentas" detail="Comparte con tus clientes el enlace directo a tus cuentas bancarias" onClick={() => void shareBankAccounts()} />}
