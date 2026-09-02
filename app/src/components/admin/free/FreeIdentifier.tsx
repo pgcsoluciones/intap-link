@@ -14,6 +14,7 @@ export default function FreeIdentifier() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
 
   useEffect(() => {
     apiGet('/me').then((json: any) => {
@@ -59,7 +60,7 @@ export default function FreeIdentifier() {
             </div>
           </label>
           <p className="mt-2 text-xs leading-5 text-slate-400">Usa letras, números, guion o guion bajo. Ejemplo: <strong>/cafedemaria</strong></p>
-          {slug && <p className="mt-4 rounded-2xl bg-cyan-50 p-3 text-sm font-bold text-cyan-800">Tu perfil quedará como: <strong>/{slug}</strong></p>}
+          {slug && <p className="mt-4 break-all rounded-2xl bg-cyan-50 p-3 text-sm font-bold text-cyan-800">Tu perfil quedará como: <strong>{webUrl}/{slug}</strong></p>}
           {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-xs font-semibold text-rose-700">{error}</p>}
           <button disabled={saving || normalizeSlug(slug).length < 2} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-35">{saving ? 'Guardando…' : 'Guardar mi usuario'}</button>
         </form>
