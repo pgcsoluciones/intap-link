@@ -35,4 +35,13 @@ for path in (
         f'{path}: origin Preview canónico',
     )
 
-print('✓ Recuperación final editor/origins preparada')
+# La vista previa de Invitación debe mostrar exactamente el mismo enlace
+# personalizado que la acción Compartir enviará al contacto.
+replace_once(
+    'app/src/components/admin/free/FreeAccount.tsx',
+    "{webUrl}/invitacion</span>",
+    "{invitationUrl}</span>",
+    'Vista previa de invitación usa URL personalizada real',
+)
+
+print('✓ Recuperación final editor/origins/invitación preparada')
