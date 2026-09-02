@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
 import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
-import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
+import type { FreePublicationReadiness } from './FreeFirstRunGuide'
 import FreeHelpTip from './FreeHelpTip'
 import FreeNotificationBell from './FreeNotificationBell'
 
@@ -358,8 +358,6 @@ export default function FreeDashboard() {
             <span className="text-xl text-slate-400">›</span>
           </button>
         )}
-
-        {me?.freeReadiness && <FreeFirstRunGuide readiness={me.freeReadiness} />}
 
         {publicUrl && (
           <article className="rounded-[24px] border border-slate-200 bg-white p-5">
