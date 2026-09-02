@@ -2,19 +2,50 @@ import assert from 'node:assert/strict'
 
 const { default: app } = await import('file:///tmp/kawvo-ai-api.mjs')
 
+const PROFILE = {
+  id: 'profile-1',
+  slug: 'electricista-demo',
+  plan_id: 'free',
+  name: 'Juan Demo',
+  bio: 'Electricista para hogares y pequeños negocios.',
+  category: 'Mantenimiento e instalaciones técnicas',
+  subcategory: 'Electricidad',
+  professional_title: 'Electricista residencial y comercial',
+  activity_context: 'Instalo luminarias, abanicos, tomas, cableado y corrijo averías eléctricas.',
+}
+
+async function sha256Hex(input) {
+  const bytes = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(hash)).map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
+const CONFIRMED_HASH = await sha256Hex(JSON.stringify({
+  name: PROFILE.name,
+  category: PROFILE.category,
+  subcategory: PROFILE.subcategory,
+  professional_title: PROFILE.professional_title,
+  activity_context: PROFILE.activity_context,
+}))
+
+const DEFAULT_SERVICES = [
+  { id: 'service-1', title: 'Instalaciones', description: 'Instalaciones eléctricas residenciales.', image_url: 'profiles/p1/s1.jpg', sort_order: 0 },
+  { id: 'service-2', title: 'Reparaciones', description: 'Corrección de averías eléctricas.', image_url: 'profiles/p1/s2.jpg', sort_order: 1 },
+]
+
 const BASE_PROPOSAL = {
   professional_title: 'Electricista residencial y comercial',
-  bio: 'Resuelve instalaciones, averías y mejoras eléctricas en hogares y pequeños negocios. Presenta cada trabajo con claridad para que el cliente sepa qué necesita y cómo solicitarlo.',
+  bio: 'Resuelve instalaciones, averías y mejoras eléctricas en hogares y pequeños negocios.',
   services_section_title: 'Soluciones eléctricas',
-  services_section_description: 'Trabajos eléctricos pensados para resolver necesidades concretas de instalación, reparación y mejora.',
+  services_section_description: 'Trabajos eléctricos para instalación, reparación y mejora.',
   services: [
-    { title: 'Instalaciones eléctricas', description: 'Instalación de luminarias, abanicos, tomas y cableado para hogares o negocios.' },
-    { title: 'Reparación de averías', description: 'Diagnóstico y corrección de cortos y fallas para recuperar el funcionamiento.' },
+    { id: 'service-1', title: 'Instalaciones eléctricas', description: 'Instalación de luminarias, abanicos, tomas y cableado.' },
+    { id: 'service-2', title: 'Reparación de averías', description: 'Diagnóstico y corrección de cortos y fallas eléctricas.' },
   ],
   portfolio: [],
   cta: { label: 'Solicita una cotización', goal: 'quote' },
   image_suggestions: [
-    { purpose: 'Mostrar experiencia real', suggestion: 'Foto trabajando en una instalación o del resultado terminado.' },
+    { purpose: 'Mostrar experiencia real', suggestion: 'Usa una foto real de un trabajo terminado.' },
   ],
 }
 
@@ -23,106 +54,202 @@ class Statement {
   bind(...args) { this.args = args; return this }
   async first() { return this.db.first(this.sql, this.args) }
   async all() { return this.db.all(this.sql, this.args) }
-  async run() { this.db.runs.push({ sql: this.sql, args: this.args }); this.db.onRun(this.sql, this.args); return { success: true } }
+  async run() {
+    this.db.runs.push({ sql: this.sql, args: this.args })
+    this.db.onRun(this.sql, this.args)
+    return { success: true, meta: { changes: 1 } }
+  }
 }
 
 class FakeDB {
-  constructor({ services = [], channels = ['whatsapp'], acceptedTerms = ['ai-assistant-v1.0'], daily = 0, monthly = 0 } = {}) {
-    this.services = services
+  constructor({
+    services = DEFAULT_SERVICES,
+    channels = ['whatsapp'],
+    acceptedTerms = ['ai-assistant-v1.0'],
+    daily = 0,
+    monthly = 0,
+    readyContext = true,
+    confirmed = true,
+  } = {}) {
+    this.services = services.map((item) => ({ ...item }))
     this.channels = channels
     this.acceptedTerms = new Set(acceptedTerms)
     this.daily = daily
     this.monthly = monthly
+    this.readyContext = readyContext
+    this.confirmed = confirmed
     this.runs = []
     this.batches = []
     this.queries = []
   }
+
   prepare(sql) { return new Statement(this, sql) }
+
   async first(sql, args = []) {
     this.queries.push({ sql, args })
     if (sql.includes('FROM auth_sessions')) return { user_id: 'user-1' }
-    if (sql.includes('FROM profiles')) return { id: 'profile-1', slug: 'electricista-demo', plan_id: 'free', name: 'Juan Demo', bio: '', category: 'Mantenimiento e instalaciones técnicas', template_data: '{}' }
+    if (sql.includes('FROM admin_users')) return null
+    if (sql.includes('FROM users')) return { email: 'demo@example.com' }
+    if (sql.includes('FROM profiles')) {
+      const templateData = this.readyContext ? {
+        role: PROFILE.professional_title,
+        ai_activity_context: PROFILE.activity_context,
+        ...(this.confirmed ? {
+          ai_context_confirmed_hash: CONFIRMED_HASH,
+          ai_context_confirmed_at: '2026-09-02T12:00:00.000Z',
+        } : {}),
+      } : {}
+      return {
+        id: PROFILE.id,
+        slug: PROFILE.slug,
+        plan_id: PROFILE.plan_id,
+        name: PROFILE.name,
+        bio: PROFILE.bio,
+        category: this.readyContext ? PROFILE.category : '',
+        subcategory: this.readyContext ? PROFILE.subcategory : '',
+        template_data: JSON.stringify(templateData),
+      }
+    }
     if (sql.includes('FROM profile_contact')) return {
       whatsapp: this.channels.includes('whatsapp') ? '18095550000' : '',
       email: this.channels.includes('email') ? 'demo@example.com' : '',
       phone: this.channels.includes('phone') ? '8095550000' : '',
       address: this.channels.includes('visit') ? 'Santo Domingo' : '',
     }
-    if (sql.includes('FROM ai_assistant_terms_acceptances')) return this.acceptedTerms.has(String(args[1])) ? { id: 'accept-1' } : null
-    if (sql.includes('FROM ai_profile_assistant_usage')) return { daily_count: this.daily, monthly_count: this.monthly, last_created_at: null, input_tokens: 0, output_tokens: 0, estimated_cost_usd: 0 }
+    if (sql.includes('FROM ai_assistant_terms_acceptances')) {
+      return this.acceptedTerms.has(String(args[1])) ? { id: 'accept-1' } : null
+    }
+    if (sql.includes('FROM ai_profile_assistant_usage')) {
+      return {
+        daily_count: this.daily,
+        monthly_count: this.monthly,
+        last_created_at: null,
+        input_tokens: 0,
+        output_tokens: 0,
+        estimated_cost_usd: 0,
+      }
+    }
     return null
   }
-  async all(sql) { if (sql.includes('FROM profile_products')) return { results: this.services }; return { results: [] } }
-  async batch(statements) { this.batches.push(statements.map((s) => ({ sql: s.sql, args: s.args }))); return statements.map(() => ({ success: true })) }
-  onRun(sql, args) { if (sql.includes('INSERT INTO ai_assistant_terms_acceptances')) this.acceptedTerms.add(String(args[1])) }
+
+  async all(sql) {
+    if (sql.includes('FROM profile_products')) return { results: this.services }
+    if (sql.includes('FROM profile_gallery')) return { results: [] }
+    return { results: [] }
+  }
+
+  async batch(statements) {
+    const batch = statements.map((s) => ({ sql: s.sql, args: s.args }))
+    this.batches.push(batch)
+    return batch.map(() => ({ success: true }))
+  }
+
+  onRun(sql, args) {
+    if (sql.includes('INSERT INTO ai_assistant_terms_acceptances')) this.acceptedTerms.add(String(args[1]))
+  }
 }
 
 function env(db, overrides = {}) {
   return {
-    ENVIRONMENT: 'preview', DB: db, OPENAI_API_KEY: 'test-key-not-real', OPENAI_MODEL: 'gpt-5.6-luna',
-    AI_TERMS_VERSION: 'ai-assistant-v1.0', AI_PROFILE_DAILY_LIMIT: '8', AI_PROFILE_MONTHLY_LIMIT: '100',
-    AI_PROFILE_MAX_ROUNDS: '2', AI_PROFILE_COOLDOWN_SECONDS: '20', FREE_MAX_SERVICES: '3', ...overrides,
+    ENVIRONMENT: 'preview',
+    DB: db,
+    OPENAI_API_KEY: 'test-key-not-real',
+    OPENAI_MODEL: 'gpt-5.6-luna',
+    AI_TERMS_VERSION: 'ai-assistant-v1.0',
+    AI_PROFILE_DAILY_LIMIT: '8',
+    AI_PROFILE_MONTHLY_LIMIT: '100',
+    AI_PROFILE_MAX_ROUNDS: '2',
+    AI_PROFILE_COOLDOWN_SECONDS: '20',
+    FREE_MAX_SERVICES: '3',
+    FREE_MAX_PORTFOLIO: '5',
+    ADMIN_EMAILS: '',
+    ...overrides,
   }
 }
+
 function request(path, body, { cookie = true, method = 'POST' } = {}) {
   const headers = new Headers({ 'Content-Type': 'application/json' })
   if (cookie) headers.set('Cookie', 'intap_preview_session_id=test-session')
-  return new Request(`https://app.preview.intaprd.com${path}`, { method, headers, body: method === 'GET' ? undefined : JSON.stringify(body ?? {}) })
+  return new Request(`https://app.preview.intaprd.com${path}`, {
+    method,
+    headers,
+    body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
+  })
 }
+
 async function call(path, body, options = {}, db = new FakeDB(), envOverrides = {}) {
   const response = await app.fetch(request(path, body, options), env(db, envOverrides))
-  let parsed = null; try { parsed = await response.json() } catch {}
+  let parsed = null
+  try { parsed = await response.json() } catch {}
   return { status: response.status, body: parsed, db }
 }
 
+function completedReady(proposal = BASE_PROPOSAL) {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({
+      status: 'completed',
+      output_text: JSON.stringify({ status: 'ready', proposal, questions: null }),
+      usage: { input_tokens: 500, output_tokens: 240 },
+    }),
+  }
+}
+
 const originalFetch = globalThis.fetch
-const originalSetTimeout = globalThis.setTimeout
 
 try {
-  // P: authentication is mandatory; the endpoint never accepts a target profile id from the client.
+  // Authentication is mandatory.
   {
     const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' } }, { cookie: false })
     assert.equal(result.status, 401)
   }
 
-  // G: no accepted terms => no model call.
+  // Consent is mandatory and blocks model use.
   {
     let upstreamCalled = false
     globalThis.fetch = async () => { upstreamCalled = true; throw new Error('must not run') }
     const db = new FakeDB({ acceptedTerms: [] })
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista residencial.' }, round: 1 }, {}, db)
+    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' }, round: 1 }, {}, db)
     assert.equal(result.status, 428)
     assert.equal(result.body.code, 'consent_required')
     assert.equal(upstreamCalled, false)
   }
 
-  // H: an old accepted version does not satisfy a new required version.
+  // The hardened assistant requires enough factual context before generation.
   {
-    const db = new FakeDB({ acceptedTerms: ['ai-assistant-v1.0'] })
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista residencial.' }, round: 1 }, {}, db, { AI_TERMS_VERSION: 'ai-assistant-v1.1' })
+    const db = new FakeDB({ readyContext: false })
+    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' }, round: 1 }, {}, db)
+    assert.equal(result.status, 422)
+    assert.equal(result.body.code, 'ai_context_incomplete')
+  }
+
+  // Ready context must also be explicitly confirmed.
+  {
+    const db = new FakeDB({ confirmed: false })
+    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' }, round: 1 }, {}, db)
     assert.equal(result.status, 428)
+    assert.equal(result.body.code, 'ai_context_confirmation_required')
   }
 
-  // Explicit versioned consent can be recorded.
-  {
-    const db = new FakeDB({ acceptedTerms: [] })
-    const result = await call('/api/v1/me/ai-profile-assistant/terms/accept', { accepted: true, locale: 'es-DO' }, {}, db)
-    assert.equal(result.status, 200)
-    assert.equal(result.body.data.terms_version, 'ai-assistant-v1.0')
-    assert.ok(db.runs.some((x) => /ai_assistant_terms_acceptances/.test(x.sql)))
-  }
-
-  // C: multiple configured channels are context for the model, not a deterministic preflight.
+  // A valid generation uses confirmed profile context, strict schema and does not mutate profile data.
   {
     let upstreamCalled = false
     globalThis.fetch = async (_url, init) => {
       upstreamCalled = true
       const payload = JSON.parse(init.body)
-      assert.match(payload.input, /"configured_channels":\["whatsapp","phone","email"\]/)
-      assert.match(payload.instructions, /no obliga a elegir uno|Pregunta por preferencia de canal solo si/i)
-      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL, questions: null }), usage: {} }) }
+      assert.equal(payload.store, false)
+      assert.equal(payload.text.format.type, 'json_schema')
+      assert.equal(payload.text.format.strict, true)
+      assert.match(payload.input, /"subcategory":"Electricidad"/)
+      assert.match(payload.input, /"activity_context_in_user_words":/)
+      assert.match(payload.input, /"existing_services":/)
+      assert.match(payload.input, /"id":"service-1"/)
+      assert.match(payload.instructions, /NO DELEGUES LA ESTRATEGIA/i)
+      assert.match(payload.instructions, /Nunca generes título o descripción desde cero/i)
+      return completedReady()
     }
-    const db = new FakeDB({ channels: ['whatsapp','phone','email'] })
+    const db = new FakeDB({ channels: ['whatsapp', 'phone', 'email'] })
     const result = await call('/api/v1/me/ai-profile-assistant/generate', {
       answers: { extra_context: 'Haz que mi perfil se presente mejor.' },
       round: 1,
@@ -130,175 +257,121 @@ try {
     }, {}, db)
     assert.equal(result.status, 200)
     assert.equal(result.body.data.status, 'ready')
+    assert.equal(result.body.data.proposal.services[0].id, 'service-1')
     assert.equal(upstreamCalled, true)
+    assert.equal(db.batches.length, 0)
   }
 
-  // C2: missing-only completion must not be blocked by contact preference.
+  // Only user_fact follow-ups are exposed to the user.
   {
-    let upstreamCalled = false
-    globalThis.fetch = async (_url, init) => {
-      upstreamCalled = true
-      const payload = JSON.parse(init.body)
-      assert.match(payload.input, /"editing_scope":"missing_only"/)
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
-          status: 'completed',
-          output_text: JSON.stringify({
-            status: 'ready',
-            proposal: BASE_PROPOSAL,
-            questions: null,
-          }),
-          usage: {},
+    globalThis.fetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        status: 'completed',
+        output_text: JSON.stringify({
+          status: 'needs_more_info',
+          proposal: null,
+          questions: [{ question: '¿Atiendes fuera de Santo Domingo?', kind: 'user_fact' }],
         }),
-      }
-    }
-    const db = new FakeDB({ channels: ['whatsapp','phone','email'] })
+        usage: {},
+      }),
+    })
     const result = await call('/api/v1/me/ai-profile-assistant/generate', {
-      answers: { activity_details: 'Soy electricista.', clients: 'hogares' },
+      answers: { activity_details: 'Hago instalaciones eléctricas.' },
       round: 1,
+    })
+    assert.equal(result.status, 200)
+    assert.equal(result.body.data.status, 'needs_more_info')
+    assert.deepEqual(result.body.data.questions, ['¿Atiendes fuera de Santo Domingo?'])
+  }
+
+  // Strategy/general-knowledge questions are blocked server-side and trigger one internal retry.
+  {
+    let calls = 0
+    globalThis.fetch = async () => {
+      calls += 1
+      if (calls === 1) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: 'completed',
+            output_text: JSON.stringify({
+              status: 'needs_more_info',
+              proposal: null,
+              questions: [{ question: '¿Qué propuesta de valor quieres comunicar?', kind: 'strategy' }],
+            }),
+            usage: {},
+          }),
+        }
+      }
+      return completedReady()
+    }
+    const result = await call('/api/v1/me/ai-profile-assistant/generate', {
+      answers: { activity_details: 'Hago trabajos eléctricos.' },
+      round: 1,
+    })
+    assert.equal(result.status, 200)
+    assert.equal(result.body.data.status, 'ready')
+    assert.equal(calls, 2)
+  }
+
+  // Daily quota and round limits are enforced before model use.
+  {
+    const quota = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' }, round: 1 }, {}, new FakeDB({ daily: 8 }))
+    assert.equal(quota.status, 429)
+    assert.equal(quota.body.code, 'daily_limit')
+
+    const round = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' }, round: 3 })
+    assert.equal(round.status, 429)
+    assert.equal(round.body.code, 'round_limit')
+  }
+
+  // Missing-only never rewrites existing services.
+  {
+    const db = new FakeDB()
+    const result = await call('/api/v1/me/ai-profile-assistant/apply', {
+      proposal: BASE_PROPOSAL,
+      apply: { services: true },
+      replace_existing_services: false,
       editing_scope: 'missing_only',
     }, {}, db)
     assert.equal(result.status, 200)
-    assert.equal(result.body.data.status, 'ready')
-    assert.equal(upstreamCalled, true)
-  }
-
-  // D + A + K + N: one channel does not trigger needless question; ready proposal is textual and generation never mutates profile.
-  {
-    globalThis.fetch = async (_url, init) => {
-      const payload = JSON.parse(init.body)
-      assert.equal(payload.store, false)
-      assert.equal(payload.text.verbosity, 'medium')
-      assert.equal(payload.text.format.type, 'json_schema')
-      assert.match(payload.instructions, /carta de presentación digital|primera impresión/i)
-      assert.match(payload.instructions, /editing_scope|ALCANCE DE EDICIÓN/i)
-      assert.match(payload.instructions, /portafolio/i)
-      assert.match(payload.input, /"editing_scope":"missing_only"/)
-      assert.match(payload.input, /"conversation":/)
-      assert.match(payload.input, /"must_finalize":/)
-      assert.match(payload.instructions, /nunca inventes/i)
-      assert.match(payload.instructions, /NO DELEGUES LA ESTRATEGIA/i)
-      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL, questions: null }), usage: { input_tokens: 500, output_tokens: 240 } }) }
-    }
-    const db = new FakeDB({ channels: ['whatsapp'] })
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'soy electricista pongo abanico lampara inversore y arreglo corto 😅', clients: 'casas y negocios', next_action: 'que me escriban pa cotizar' }, round: 1 }, {}, db)
-    assert.equal(result.status, 200)
-    assert.equal(result.body.data.status, 'ready')
-    assert.equal(result.body.data.proposal.professional_title, BASE_PROPOSAL.professional_title)
-    assert.equal(result.body.data.proposal.image_suggestions.length, 1)
+    assert.equal(result.body.data.published, false)
+    assert.equal(result.body.data.applied.services, false)
     assert.equal(db.batches.length, 0)
   }
 
-  // Editing scope is explicit and defaults to safe missing_only.
-  {
-    globalThis.fetch = async (_url, init) => {
-      const payload = JSON.parse(init.body)
-      assert.match(payload.input, /\"editing_scope\":\"full_profile\"/)
-      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal: BASE_PROPOSAL, questions: null }), usage: {} }) }
-    }
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.', preferred_contact: 'whatsapp' }, round: 1, editing_scope: 'full_profile' })
-    assert.equal(result.status, 200)
-    assert.equal(result.body.data.status, 'ready')
-  }
-
-  // B: the model can request only high-value missing information.
-  {
-    globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'needs_more_info', proposal: null, questions: ['¿Atiendes hogares, negocios o ambos?'] }), usage: {} }) })
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Hago instalaciones eléctricas.' }, preferred_contact: 'whatsapp', round: 1 })
-    assert.equal(result.status, 200)
-    assert.equal(result.body.data.status, 'needs_more_info')
-    assert.equal(result.body.data.questions.length, 1)
-  }
-
-  // E: backend normalizes excessive model questions to at most three.
-  {
-    globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'needs_more_info', proposal: null, questions: ['Q1','Q2','Q3','Q4'] }), usage: {} }) })
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Hago instalaciones eléctricas.' }, preferred_contact: 'whatsapp', round: 1 })
-    assert.equal(result.status, 200)
-    assert.equal(result.body.data.questions.length, 3)
-  }
-
-  // F/O: prompt forbids invented services and server caps Free services to configured max even if model returns more.
-  {
-    const proposal = { ...BASE_PROPOSAL, services: Array.from({ length: 5 }, (_, i) => ({ title: `Servicio ${i+1}`, description: `Descripción ${i+1}` })) }
-    globalThis.fetch = async (_url, init) => {
-      assert.match(JSON.parse(init.body).instructions, /Nunca inventes/i)
-      return { ok: true, status: 200, json: async () => ({ status: 'completed', output_text: JSON.stringify({ status: 'ready', proposal, questions: null }), usage: {} }) }
-    }
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Hago trabajos eléctricos.', preferred_contact: 'whatsapp' }, round: 1 })
-    assert.equal(result.status, 200)
-    assert.equal(result.body.data.proposal.services.length, 3)
-  }
-
-  // I: quota exhaustion is a normal 429, separate from abuse/suspension.
-  {
-    const db = new FakeDB({ daily: 8 })
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' }, preferred_contact: 'whatsapp', round: 1 }, {}, db)
-    assert.equal(result.status, 429)
-    assert.equal(result.body.code, 'daily_limit')
-  }
-
-  // Round limit is enforced in backend.
-  {
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers: { activity_details: 'Soy electricista.' }, preferred_contact: 'whatsapp', round: 3 })
-    assert.equal(result.status, 429)
-    assert.equal(result.body.code, 'round_limit')
-  }
-
-  // L/M: apply is explicit, non-destructive and never publishes.
-  {
-    const db = new FakeDB({ services: [{ id:'service-1', title:'Viejo', description:'Viejo', image_url:'profiles/p1/service.jpg', sort_order:0 }] })
-    const safeMissingOnly = await call('/api/v1/me/ai-profile-assistant/apply', {
-      proposal: BASE_PROPOSAL,
-      apply: { services:true },
-      replace_existing_services:false,
-      editing_scope:'missing_only',
-    }, {}, db)
-    assert.equal(safeMissingOnly.status, 200)
-
-    const withoutConfirmation = await call('/api/v1/me/ai-profile-assistant/apply', {
-      proposal: BASE_PROPOSAL,
-      apply: { services:true },
-      replace_existing_services:false,
-      editing_scope:'full_profile',
-    }, {}, db)
-    assert.equal(withoutConfirmation.status, 409)
-
-    const withConfirmation = await call('/api/v1/me/ai-profile-assistant/apply', {
-      proposal: BASE_PROPOSAL,
-      apply: { identity:true,bio:true,services_section:true,services:true },
-      replace_existing_services:true,
-      editing_scope:'full_profile',
-    }, {}, db)
-    assert.equal(withConfirmation.status, 200)
-    assert.equal(withConfirmation.body.data.published, false)
-    const statements = db.batches.at(-1)
-    assert.ok(statements.some((x) => /UPDATE profiles/.test(x.sql)))
-    assert.ok(statements.some((x) => /UPDATE profile_products/.test(x.sql)))
-    assert.ok(statements.every((x) => !/DELETE\s+FROM\s+profile_products/i.test(x.sql)))
-  }
-
-  // Invalid proposal is rejected server-side.
+  // Full-profile service copy updates require confirmation and preserve IDs/order fields.
   {
     const db = new FakeDB()
-    const result = await call('/api/v1/me/ai-profile-assistant/apply', { proposal: { professional_title:'x' }, apply:{ bio:true } }, {}, db)
-    assert.equal(result.status, 400)
-    assert.equal(db.batches.length, 0)
+    const blocked = await call('/api/v1/me/ai-profile-assistant/apply', {
+      proposal: BASE_PROPOSAL,
+      apply: { services: true },
+      replace_existing_services: false,
+      editing_scope: 'full_profile',
+    }, {}, db)
+    assert.equal(blocked.status, 409)
+    assert.equal(blocked.body.code, 'replace_services_confirmation_required')
+
+    const applied = await call('/api/v1/me/ai-profile-assistant/apply', {
+      proposal: BASE_PROPOSAL,
+      apply: { services: true },
+      replace_existing_services: true,
+      editing_scope: 'full_profile',
+    }, {}, db)
+    assert.equal(applied.status, 200)
+    assert.equal(applied.body.data.published, false)
+    assert.equal(applied.body.data.applied.services, true)
+    assert.equal(db.batches.length, 1)
+    const sql = db.batches[0].map((entry) => entry.sql).join('\n')
+    assert.match(sql, /UPDATE profile_products SET title = \?, description = \? WHERE id = \? AND profile_id = \?/)
+    assert.doesNotMatch(sql, /sort_order/)
+    assert.doesNotMatch(sql, /DELETE FROM profile_products/i)
   }
 
-  // Timeout remains recoverable.
-  {
-    globalThis.setTimeout = (fn, _ms, ...args) => originalSetTimeout(fn, 5, ...args)
-    globalThis.fetch = async (_url, init) => await new Promise((_resolve,reject) => init.signal.addEventListener('abort',()=>{ const e = new Error('aborted'); e.name='AbortError'; reject(e) },{ once:true }))
-    const result = await call('/api/v1/me/ai-profile-assistant/generate', { answers:{ activity_details:'Soy electricista.' }, preferred_contact:'whatsapp', round:1 })
-    assert.equal(result.status, 504)
-    globalThis.setTimeout = originalSetTimeout
-  }
-
-  console.log('AI profile assistant endpoint integration checks: OK')
+  console.log('AI profile assistant integration checks: OK')
 } finally {
   globalThis.fetch = originalFetch
-  globalThis.setTimeout = originalSetTimeout
 }
