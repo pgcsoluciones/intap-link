@@ -10,6 +10,7 @@ type CropTarget = 'avatar' | 'hero'
 
 export default function FreeOnboardingIdentity() {
   const navigate = useNavigate()
+  const editingFromPanel = new URLSearchParams(window.location.search).get('from') === 'panel'
   const fileRef = useRef<HTMLInputElement>(null)
   const heroFileRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
@@ -171,7 +172,7 @@ export default function FreeOnboardingIdentity() {
       }
       if (avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
       const result: any = await apiPut('/me/profile', body)
-      if (result.ok) navigate('/admin/free/onboarding/contact')
+      if (result.ok) navigate(editingFromPanel ? '/admin/free' : '/admin/free/onboarding/contact')
       else setError(result.error || 'No pudimos guardar tus datos.')
     } catch {
       setError('No pudimos conectar. Intenta nuevamente.')
@@ -196,12 +197,14 @@ export default function FreeOnboardingIdentity() {
       <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950 sm:px-5">
         <section className="mx-auto w-full max-w-[430px] py-1">
           <FreeBackButton onClick={() => navigate('/admin/free')} />
-          <div className="mb-8 flex gap-2" aria-label="Paso 3 de 4">
-            {[1, 2, 3, 4].map((step) => <span key={step} className={`h-1.5 flex-1 rounded-full ${step <= 3 ? 'bg-cyan-500' : 'bg-slate-200'}`} />)}
-          </div>
-          <p className="mb-2 text-sm font-extrabold uppercase tracking-[0.14em] text-cyan-700">Paso 3 de 4</p>
-          <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">Tu identidad</h1>
-          <p className="mt-3 text-base font-medium leading-7 text-slate-700">Agrega lo esencial para que te encuentren y sepan quién eres.</p>
+          {!editingFromPanel && <>
+            <div className="mb-8 flex gap-2" aria-label="Paso 3 de 4">
+              {[1, 2, 3, 4].map((step) => <span key={step} className={`h-1.5 flex-1 rounded-full ${step <= 3 ? 'bg-cyan-500' : 'bg-slate-200'}`} />)}
+            </div>
+            <p className="mb-2 text-sm font-extrabold uppercase tracking-[0.14em] text-cyan-700">Paso 3 de 4</p>
+          </>}
+          <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">{editingFromPanel ? 'Edita tu presentación' : 'Tu identidad'}</h1>
+          <p className="mt-3 text-base font-medium leading-7 text-slate-700">{editingFromPanel ? 'Actualiza tu foto, portada y la información principal de tu perfil.' : 'Agrega lo esencial para que te encuentren y sepan quién eres.'}</p>
 
           <form onSubmit={handleSubmit} className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
             <div className="flex items-center gap-4">
@@ -251,7 +254,7 @@ export default function FreeOnboardingIdentity() {
             </div>
 
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700">{error}</p>}
-            <button type="submit" disabled={saving || uploading} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : 'Continuar'}</button>
+            <button type="submit" disabled={saving || uploading} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-35">{saving ? 'Guardando…' : editingFromPanel ? 'Guardar cambios' : 'Continuar'}</button>
           </form>
           <div className="mt-5"><FreeUpgradeCard compact /></div>
         </section>

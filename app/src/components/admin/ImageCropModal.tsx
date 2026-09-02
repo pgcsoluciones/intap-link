@@ -5,7 +5,7 @@ interface Props {
   aspectRatio?: number
   outputWidth?: number
   maxInputDimension?: number
-  onSave: (blob: Blob) => void
+  onSave: (blob: Blob) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -95,6 +95,7 @@ export default function ImageCropModal({
   const [working, setWorking] = useState<WorkingImage | null>(null)
   const [frame, setFrame] = useState<Frame>({ zoom: 1, fx: 0.5, fy: 0.5 })
   const [dragging, setDragging] = useState(false)
+  const [saveStage, setSaveStage] = useState<'idle' | 'processing' | 'uploading'>('idle')
 
   const crop = useMemo(() => {
     if (!working) return null
@@ -196,13 +197,14 @@ export default function ImageCropModal({
 
   function handleConfirm() {
     const image = imageRef.current
-    if (!image || !crop) return
+    if (!image || !crop || saveStage !== 'idle') return
 
+    setSaveStage('processing')
     const canvas = document.createElement('canvas')
     canvas.width = outputWidth
     canvas.height = outputHeight
     const context = canvas.getContext('2d')
-    if (!context) return
+    if (!context) { setSaveStage('idle'); return }
 
     context.drawImage(
       image,
@@ -216,8 +218,14 @@ export default function ImageCropModal({
       outputHeight,
     )
 
-    canvas.toBlob((blob) => {
-      if (blob) onSave(blob)
+    canvas.toBlob(async (blob) => {
+      if (!blob) { setSaveStage('idle'); return }
+      setSaveStage('uploading')
+      try {
+        await Promise.resolve(onSave(blob))
+      } finally {
+        setSaveStage('idle')
+      }
     }, 'image/jpeg', JPEG_Q)
   }
 
@@ -226,7 +234,7 @@ export default function ImageCropModal({
       <div className="flex w-full max-w-sm flex-col gap-5 rounded-2xl bg-[#111827] p-5 shadow-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-white">Encuadrar imagen</h2>
-          <button type="button" onClick={onCancel} className="text-lg leading-none text-slate-400 hover:text-white">✕</button>
+          <button type="button" onClick={onCancel} disabled={saveStage !== 'idle'} className="text-lg leading-none text-slate-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-35">✕</button>
         </div>
 
         <div
@@ -267,11 +275,11 @@ export default function ImageCropModal({
         </div>
 
         <div className="flex gap-3">
-          <button type="button" onClick={onCancel} className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5">
+          <button type="button" onClick={onCancel} disabled={saveStage !== 'idle'} className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-35">
             Cancelar
           </button>
-          <button type="button" onClick={handleConfirm} disabled={!working} className="flex-1 rounded-xl bg-gradient-to-r from-[#3b82f6] to-purple-600 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40">
-            Usar imagen
+          <button type="button" onClick={handleConfirm} disabled={!working || saveStage !== 'idle'} className="flex-1 rounded-xl bg-gradient-to-r from-[#3b82f6] to-purple-600 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
+            {saveStage === 'processing' ? 'Procesando imagen…' : saveStage === 'uploading' ? 'Subiendo imagen…' : 'Usar imagen'}
           </button>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPatch, apiPut } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
@@ -43,7 +43,7 @@ const palettes: Array<{ id: PaletteId; name: string; colors: string[] }> = [
 ]
 
 const sectionLinks: SectionLink[] = [
-  { title: 'Foto y portada', text: 'Cambia tu foto de perfil y, en Impacto, la imagen Hero.', to: '/admin/free/onboarding/identity', icon: '◉', readinessKey: 'identity' },
+  { title: 'Foto y portada', text: 'Cambia tu foto de perfil y, en Impacto, la imagen Hero.', to: '/admin/free/onboarding/identity?from=panel', icon: '◉', readinessKey: 'identity' },
   { title: 'Contacto', text: 'WhatsApp, teléfono y correo.', to: '/admin/free/onboarding/contact', icon: '☎', readinessKey: 'contact' },
   { title: 'Botones rápidos', text: 'Llamar, Instagram, ubicación, email o TikTok.', to: '/admin/free/quick-actions', icon: '↗', readinessKey: 'quick_actions' },
   { title: 'Portafolio', text: 'Agrega o reemplaza imágenes de tus trabajos.', to: '/admin/free/portfolio', icon: '▧', readinessKey: 'portfolio' },
@@ -54,6 +54,7 @@ const sectionLinks: SectionLink[] = [
 
 export default function FreeVisualEditor() {
   const navigate = useNavigate()
+  const editScrollRef = useRef(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -106,6 +107,19 @@ export default function FreeVisualEditor() {
   }, [])
 
   const refreshPreview = () => setPreviewVersion((value) => value + 1)
+
+  function showPreview() {
+    editScrollRef.current = window.scrollY
+    setMobileMode('preview')
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  function showEdit() {
+    setMobileMode('edit')
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.scrollTo({ top: editScrollRef.current, behavior: 'auto' }))
+    })
+  }
 
   async function saveIdentity() {
     if (!name.trim() || !role.trim()) {
@@ -188,8 +202,8 @@ export default function FreeVisualEditor() {
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-[520px] gap-2 rounded-2xl bg-slate-100 p-1">
-          <button type="button" onClick={() => setMobileMode('edit')} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-black ${mobileMode === 'edit' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Editar</button>
-          <button type="button" onClick={() => setMobileMode('preview')} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-black ${mobileMode === 'preview' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Vista previa</button>
+          <button type="button" onClick={showEdit} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-black ${mobileMode === 'edit' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Editar</button>
+          <button type="button" onClick={showPreview} className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-black ${mobileMode === 'preview' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Vista previa</button>
         </div>
       </header>
 

@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
-BRANCH="reconcile/approved-releases-2026-09-01"
-APP_PROJECT="intap-link"
-WEB_PROJECT="intap-web2"
-LOG_DIR="$ROOT/.preview-reconcile-approved-2026-09-01-logs"
+BRANCH="fix/restore-approved-location-ux-2026-09-02"
+APP_PROJECT="intap-web2"
+WEB_PROJECT="intap-link"
+LOG_DIR="$ROOT/.preview-reconcile-approved-2026-09-02-logs"
 WRANGLER_BACKUP=""
 
 fail() { echo ""; echo "✗ ERROR: $1"; echo "Producción NO fue tocada."; exit 1; }
@@ -24,15 +24,6 @@ mkdir -p "$LOG_DIR"
 run git fetch github "$BRANCH"
 run git checkout -B "$BRANCH" "github/$BRANCH"
 run git reset --hard "github/$BRANCH"
-
-run python3 scripts/apply-reconcile-approved-social-cards-2026-09-01.py
-run git diff --check
-
-if ! git diff --quiet -- functions/_middleware.ts; then
-  run git add functions/_middleware.ts
-  run git commit -m "reconcile: restore approved invitation and bank social cards"
-  run git push github "HEAD:$BRANCH"
-fi
 
 run git diff --check
 
@@ -53,9 +44,16 @@ grep -Fq 'isMobileContactFlow' web/src/components/free-profile/IntapLinkGratisPr
 grep -Fq "const realLocation = readString(contact, 'map_url')" web/src/components/free-profile/IntapLinkGratis.adapter.ts || fail "Ubicación no usa mapa canónico"
 grep -Fq "apiGet('/me/contact')" app/src/components/admin/free/FreeQuickActions.tsx || fail "Panel no sincroniza ubicación canónica"
 grep -Fq "url.pathname === '/invitacion'" functions/_middleware.ts || fail "Falta Graph Card de invitación"
-grep -Fq 'share=bancos: social card bancaria' functions/_middleware.ts || fail "Falta Graph Card bancaria"
+grep -Fq 'share=bancos: social card bancaria' functions/_middleware.ts || fail "Falta Graph Card bancaria server-side"
+grep -Fq '?share=bancos#bancos' web/src/components/free-profile/PublicBankAccounts.tsx || fail "El perfil público no activa la Graph Card bancaria al compartir"
+grep -Fq 'Enviar por WhatsApp' web/src/components/free-profile/PublicBankAccounts.tsx || fail "Falta compartir cuentas por WhatsApp"
+grep -Fq 'Copiar enlace' web/src/components/free-profile/PublicBankAccounts.tsx || fail "Falta copiar enlace de cuentas"
+grep -Fq '?share=bancos#bancos' app/src/components/admin/free/FreeAccount.tsx || fail "Mi cuenta no comparte la URL bancaria canónica"
+grep -Fq 'getDynamicProfileSeoBundle' functions/_middleware.ts || fail "Falta metadata dinámica de perfiles"
 grep -Fq 'path="/demo/ia"' web/src/App.tsx || fail "Demo IA desapareció durante reconciliación"
 grep -Fq 'registerDemoAiRoutes(app)' api/src/preview-free-entry.ts || fail "Demo IA API desapareció durante reconciliación"
+[ -f app/public/manifest.webmanifest ] || fail "Falta manifest PWA"
+[ -f app/public/sw.js ] || fail "Falta service worker PWA"
 echo "✓ Contratos de reconciliación presentes"
 
 printf '\n▶ Build App Preview\n'
@@ -73,19 +71,19 @@ printf '\n▶ Migraciones D1 SOLO Preview\n'
 printf '\n▶ Dry-run Worker Preview\n'
 (cd api && npx wrangler deploy --config wrangler.preview.toml --dry-run) || fail "Dry-run Worker Preview"
 
-printf '\n▶ Deploy App SOLO Preview\n'
+printf '\n▶ Deploy App SOLO Preview → intap-web2\n'
 APP_LOG="$LOG_DIR/app-pages-$(date +%Y%m%d-%H%M%S).log"
 (cd api && npx wrangler pages deploy ../app/dist --project-name "$APP_PROJECT" --branch "$BRANCH") 2>&1 | tee "$APP_LOG"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Preview"
-APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$APP_LOG" | tail -1)"
+APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$APP_LOG" | tail -1)"
 [ -n "$APP_ORIGIN" ] || fail "No pude identificar APP_PAGES_ORIGIN"
 echo "✓ APP_PAGES_ORIGIN=$APP_ORIGIN"
 
-printf '\n▶ Deploy Web SOLO Preview\n'
+printf '\n▶ Deploy Web SOLO Preview → intap-link\n'
 WEB_LOG="$LOG_DIR/web-pages-$(date +%Y%m%d-%H%M%S).log"
 (cd web && npx wrangler pages deploy dist --project-name "$WEB_PROJECT" --branch "$BRANCH") 2>&1 | tee "$WEB_LOG"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Web Preview"
-WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$WEB_LOG" | tail -1)"
+WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$WEB_LOG" | tail -1)"
 [ -n "$WEB_ORIGIN" ] || fail "No pude identificar WEB_PAGES_ORIGIN"
 echo "✓ WEB_PAGES_ORIGIN=$WEB_ORIGIN"
 
@@ -118,7 +116,10 @@ for url in \
   "https://app.preview.intaprd.com/admin/artifacts?from=account" \
   "https://preview.intaprd.com/demo" \
   "https://preview.intaprd.com/demo/ia" \
-  "https://preview.intaprd.com/invitacion"; do
+  "https://preview.intaprd.com/invitacion" \
+  "https://preview.intaprd.com/robots.txt" \
+  "https://preview.intaprd.com/sitemap.xml" \
+  "https://preview.intaprd.com/llms.txt"; do
   code="$(curl -sS -L -o /dev/null -w '%{http_code}' "$url")"
   [ "$code" = "200" ] || fail "$url respondió HTTP $code"
   echo "✓ $url -> HTTP 200"
@@ -137,7 +138,7 @@ WRANGLER_BACKUP=""
 run git status --short
 
 printf '\n============================================================\n'
-printf '✓ RECONCILIACIÓN APROBADA · PREVIEW DESPLEGADO\n'
+printf '✓ AUDITORÍA INTEGRAL · PREVIEW DESPLEGADO\n'
 printf '============================================================\n'
 echo "Commit rama:    $(git rev-parse HEAD)"
 echo "App Pages:      $APP_ORIGIN"
@@ -147,9 +148,15 @@ echo "Producción:     NO TOCADA"
 echo ""
 echo "QA VISUAL/FUNCIONAL PENDIENTE:"
 echo "1) Mi cuenta: avatar, plan, QR preview, invitación, bancos, productos, soporte y cerrar sesión."
-echo "2) Notificaciones: lista, sin leer, detalle, imagen, ticket inline, marcar y eliminar."
-echo "3) Eliminación: SOLO con cuenta/perfil desechable; verificar pantalla final y bienvenida."
-echo "4) Ubicación: cambiar Mapa y confirmar que el botón Ubicación usa el mismo destino."
-echo "5) Guardar contacto: probar iPhone/Android y escritorio."
-echo "6) Demo IA: confirmar visualmente que sigue completa y funcional."
+echo "2) Perfil: compartir perfil y confirmar Graph Card."
+echo "3) Bancos: desde perfil y Mi cuenta, compartir por WhatsApp y confirmar Graph Card bancaria."
+echo "4) Notificaciones: lista, sin leer, detalle, imagen, ticket inline, marcar y eliminar."
+echo "5) Eliminación: SOLO con cuenta/perfil desechable; verificar pantalla final y bienvenida."
+echo "6) Ubicación: cambiar Mapa y confirmar que el botón Ubicación usa el mismo destino."
+echo "7) Guardar contacto: probar iPhone/Android y escritorio."
+echo "8) Scan-to-Claim/onboarding: activar producto de prueba y confirmar continuidad."
+echo "9) Editor visual, bancos, servicios, portafolio, imágenes y límites Free."
+echo "10) Asistente IA: generar, revisar y aplicar sin publicar ni alterar estructura."
+echo "11) Demo IA completa y compartir snapshot."
+echo "12) GEO/SEO: robots, sitemap, llms, ai.md/facts.json y perfiles especiales."
 echo "============================================================"

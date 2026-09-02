@@ -153,6 +153,22 @@ export default function ScanActivationEntry() {
     }
 
     clearCode()
+    await apiPost('/me/notifications/welcome', {}).catch(() => undefined)
+
+    const meAfterActivation: any = await apiGet('/me').catch(() => ({ ok: false }))
+    const hasActivity = Boolean(
+      meAfterActivation?.ok &&
+      String(meAfterActivation.data?.category || '').trim() &&
+      String(meAfterActivation.data?.subcategory || '').trim()
+    )
+
+    // Primera activación: el perfil base todavía necesita completar su presentación.
+    if (!hasActivity) {
+      navigate('/admin/free/onboarding/intro', { replace: true })
+      return
+    }
+
+    // Producto adicional: conserva el destino normal y no repite onboarding.
     const nextUrl = String(result.data?.next_url || '')
     if (nextUrl) {
       window.location.assign(nextUrl)
@@ -192,7 +208,7 @@ export default function ScanActivationEntry() {
               <button type="button" onClick={confirmActivation} disabled={busy} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-40">
                 {busy ? 'Activando…' : 'Confirmar y empezar'}
               </button>
-              <p className="mt-4 text-center text-xs leading-5 text-slate-400">Al confirmar, este producto quedará vinculado a tu cuenta y Kawvo conservará el comprobante interno de activación.</p>
+              <p className="mt-4 text-center text-xs leading-5 text-slate-400">Al confirmar, este producto quedará vinculado a tu cuenta.</p>
             </>
           )}
 

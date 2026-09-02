@@ -20,7 +20,7 @@ const PALETTES: Record<string, { primary: string; accent: string; background: st
 
 function externalAssetUrl(path: string) {
   const webBase = import.meta.env.VITE_ENVIRONMENT === 'preview'
-    ? 'https://feature-intap-link-approved-v9ix.intap-link.pages.dev'
+    ? 'https://preview.intaprd.com'
     : (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   return `${webBase}${path}`
 }

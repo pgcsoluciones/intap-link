@@ -31,7 +31,7 @@ export default function FreeOnboardingBuilder() {
   const [error, setError] = useState('')
   const webBase = useMemo(() => (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, ''), [])
   const builderMediaBase = useMemo(() => import.meta.env.VITE_ENVIRONMENT === 'preview'
-    ? 'https://feature-intap-link-approved-v9ix.intap-link.pages.dev'
+    ? 'https://preview.intaprd.com'
     : webBase, [webBase])
   const variant = Number(sessionStorage.getItem('kawvo_free_starter_variant') || '1') === 2 ? 2 : 1
   const buildDuration = variant === 2 ? SECOND_BUILD_MS : FIRST_BUILD_MS

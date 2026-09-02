@@ -131,7 +131,7 @@ Variables actuales configurables:
 - `AI_TERMS_VERSION`
 - `OPENAI_MODEL`
 
-Para Free, `FREE_MAX_SERVICES` refleja el límite real actual de 3 servicios y la UI reutiliza `basicPlanWhatsAppUrl()` existente para `Solicitar Plan Básico` cuando corresponde. La recomendación es informativa, no agresiva.
+Para Free, `FREE_MAX_SERVICES` refleja el límite real actual de 3 servicios y la UI reutiliza `basicPlanWhatsAppUrl()` existente para `Solicitar Plan Plus` cuando corresponde. La recomendación es informativa, no agresiva.
 
 Cuota agotada y abuso son estados distintos. Una cuota agotada devuelve HTTP 429 con un código de límite; no etiqueta al usuario como infractor.
 

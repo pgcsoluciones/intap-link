@@ -26,7 +26,7 @@ async function readyCase(label, activity, work, expected) {
   assert.equal(result.json?.data?.demo?.asset_category, expected, `${label}: categoría`)
   assert.ok(result.json.data.demo.professional_title.length <= 80, `${label}: cargo <=80`)
   assert.ok(result.json.data.demo.bio.length <= 300, `${label}: bio <=300`)
-  assert.ok(result.json.data.demo.services.length >= 1 && result.json.data.demo.services.length <= 3, `${label}: 1..3 servicios`)
+  assert.equal(result.json.data.demo.services.length, 3, `${label}: exactamente 3 servicios`)
   for (const service of result.json.data.demo.services) {
     assert.ok(service.title.length <= 60, `${label}: service title <=60`)
     assert.ok(service.description.length <= 90, `${label}: service desc <=90`)

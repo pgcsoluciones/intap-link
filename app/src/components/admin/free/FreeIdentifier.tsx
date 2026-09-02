@@ -14,6 +14,7 @@ export default function FreeIdentifier() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
 
   useEffect(() => {
     apiGet('/me').then((json: any) => {
@@ -30,10 +31,10 @@ export default function FreeIdentifier() {
     if (next.length < 2 || saving) return
     setSaving(true)
     setError('')
-    const result: any = await apiPut('/me/profile/slug', { slug: next }).catch(() => ({ ok: false, error: 'No pudimos reservar ese identificador.' }))
+    const result: any = await apiPut('/me/profile/slug', { slug: next }).catch(() => ({ ok: false, error: 'No pudimos guardar ese usuario.' }))
     setSaving(false)
     if (!result.ok) {
-      setError(result.error === 'Slug no disponible' ? 'Ese identificador ya está siendo usado. Prueba con otro.' : result.error || 'No pudimos reservar ese identificador.')
+      setError(result.error === 'Slug no disponible' ? 'Ese usuario ya está siendo usado por otro perfil. Prueba con otro.' : result.error || 'No pudimos guardar ese usuario.')
       return
     }
     navigate('/admin/free', { replace: true })
@@ -46,22 +47,22 @@ export default function FreeIdentifier() {
       <section className="mx-auto w-full max-w-[430px]">
         <FreeBackButton onClick={() => navigate('/admin/free')} />
         <p className="mt-6 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">Primer paso recomendado</p>
-        <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.04em]">Reserva tu identificador</h1>
+        <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.04em]">Elige tu usuario</h1>
         <p className="mt-2 text-[15px] leading-6 text-slate-500">Es la dirección corta que compartirás con otras personas. Elige algo fácil de recordar.</p>
 
         <form onSubmit={save} className="mt-7 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.07)] ring-4 ring-cyan-50">
-          {currentSlug.startsWith('kawvo-') && <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">El identificador que ves ahora es temporal. Nadie espera que memorices ese código; cámbialo por uno tuyo.</div>}
+          {currentSlug.startsWith('kawvo-') && <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">El usuario que ves ahora es temporal. Cámbialo por uno tuyo, corto y fácil de recordar.</div>}
           <label className="block text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-            Tu identificador
+            Tu usuario
             <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 focus-within:border-cyan-400 focus-within:ring-4 focus-within:ring-cyan-100">
               <span className="text-sm font-bold text-slate-400">/</span>
               <input value={slug} onChange={(event) => setSlug(normalizeSlug(event.target.value))} placeholder="tu-negocio" maxLength={32} autoCapitalize="none" autoCorrect="off" spellCheck={false} className="min-w-0 flex-1 bg-transparent px-1 py-4 text-sm font-black text-slate-900 outline-none" />
             </div>
           </label>
           <p className="mt-2 text-xs leading-5 text-slate-400">Usa letras, números, guion o guion bajo. Ejemplo: <strong>/cafedemaria</strong></p>
-          {slug && <p className="mt-4 rounded-2xl bg-cyan-50 p-3 text-sm font-bold text-cyan-800">Tu perfil quedará como: <strong>/{slug}</strong></p>}
+          {slug && <p className="mt-4 break-all rounded-2xl bg-cyan-50 p-3 text-sm font-bold text-cyan-800">Tu perfil quedará como: <strong>{webUrl}/{slug}</strong></p>}
           {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-xs font-semibold text-rose-700">{error}</p>}
-          <button disabled={saving || normalizeSlug(slug).length < 2} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-35">{saving ? 'Reservando…' : 'Reservar mi identificador'}</button>
+          <button disabled={saving || normalizeSlug(slug).length < 2} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-35">{saving ? 'Guardando…' : 'Guardar mi usuario'}</button>
         </form>
       </section>
     </main>
