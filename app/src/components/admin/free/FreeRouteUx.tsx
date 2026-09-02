@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
+const CURRENT_FREE_ROUTE_KEY = 'kawvo_current_free_route'
+const PREVIOUS_FREE_ROUTE_KEY = 'kawvo_previous_free_route'
+const EDITOR_SCROLL_KEY = 'kawvo_visual_editor_scroll_y'
+
 export default function FreeRouteUx() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -14,6 +18,40 @@ export default function FreeRouteUx() {
     document.body.classList.toggle('kawvo-free-mobile', enabled)
 
     return () => document.body.classList.remove('kawvo-free-mobile')
+  }, [location.pathname])
+
+  useEffect(() => {
+    const nextRoute = `${location.pathname}${location.search}`
+    const currentRoute = sessionStorage.getItem(CURRENT_FREE_ROUTE_KEY) || ''
+    if (currentRoute !== nextRoute) {
+      sessionStorage.setItem(PREVIOUS_FREE_ROUTE_KEY, currentRoute)
+      sessionStorage.setItem(CURRENT_FREE_ROUTE_KEY, nextRoute)
+    }
+  }, [location.pathname, location.search])
+
+  useEffect(() => {
+    if (location.pathname !== '/admin/free/editor') return
+
+    const saveScroll = () => {
+      sessionStorage.setItem(EDITOR_SCROLL_KEY, String(Math.max(0, window.scrollY || 0)))
+    }
+    window.addEventListener('scroll', saveScroll, { passive: true })
+
+    const previousRoute = sessionStorage.getItem(PREVIOUS_FREE_ROUTE_KEY) || ''
+    const shouldRestore = previousRoute.startsWith('/admin/free/') && previousRoute !== '/admin/free/editor'
+    const stored = Number(sessionStorage.getItem(EDITOR_SCROLL_KEY) || 0)
+
+    if (shouldRestore && Number.isFinite(stored) && stored > 0) {
+      const restore = () => window.scrollTo({ top: stored, behavior: 'auto' })
+      window.requestAnimationFrame(() => window.requestAnimationFrame(restore))
+      const timers = [150, 450, 900].map((delay) => window.setTimeout(restore, delay))
+      return () => {
+        window.removeEventListener('scroll', saveScroll)
+        timers.forEach((timer) => window.clearTimeout(timer))
+      }
+    }
+
+    return () => window.removeEventListener('scroll', saveScroll)
   }, [location.pathname])
 
   useEffect(() => {
