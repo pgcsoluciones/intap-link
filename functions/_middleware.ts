@@ -156,6 +156,150 @@ ${seoHeadHtml}
 
   const url = new URL(context.request.url);
   const discoveryRuntime = createDiscoveryRuntime(url);
+
+  const normalizeSocialImage = (value: unknown): string => {
+    const raw = typeof value === 'string' ? value.trim() : '';
+    if (!raw || raw.startsWith('data:') || raw.startsWith('blob:')) return '';
+    if (/^https?:\/\//i.test(raw)) return raw;
+    if (raw.startsWith('/')) return new URL(raw, url.origin).toString();
+    const encodedKey = raw.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    return encodedKey ? `${discoveryRuntime.apiBase}/assets/${encodedKey}` : '';
+  };
+
+  const imageTypeFor = (image: string): string => {
+    const clean = image.toLowerCase().split('?')[0];
+    if (clean.endsWith('.png')) return 'image/png';
+    if (clean.endsWith('.webp')) return 'image/webp';
+    if (clean.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  };
+
+  const fetchPublicProfileForShare = async (slug: string): Promise<any | null> => {
+    try {
+      const response = await fetch(
+        `${discoveryRuntime.apiBase}/profiles/${encodeURIComponent(slug)}`,
+        { headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } } as RequestInit,
+      );
+      if (!response.ok) return null;
+      const payload = await response.json() as any;
+      return payload?.ok === true && payload?.data ? payload.data : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const profileShareImage = (profile: any): string => {
+    const templateData = profile?.templateData && typeof profile.templateData === 'object'
+      ? profile.templateData
+      : {};
+    const gallery = Array.isArray(profile?.gallery) ? profile.gallery : [];
+    const galleryImage = gallery
+      .map((item: any) => item?.imageUrl || item?.image_url || '')
+      .map(normalizeSocialImage)
+      .find(Boolean) || '';
+    const candidates = [
+      profile?.avatarUrl,
+      profile?.avatar_url,
+      profile?.heroUrl,
+      profile?.hero_url,
+      templateData?.heroUrl,
+      templateData?.hero_url,
+      galleryImage,
+    ];
+    return candidates.map(normalizeSocialImage).find(Boolean)
+      || `${url.origin}/assets/og/kawvo-link-og.png`;
+  };
+
+  const dynamicDiscoveryEnhancement = (profile: any, canonicalUrl: string, image: string) => {
+    if (!profile) return { seoHeadHtml: '', semanticFallbackHtml: '' };
+    const clean = (value: unknown) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+    const templateData = profile?.templateData && typeof profile.templateData === 'object' ? profile.templateData : {};
+    const name = clean(profile?.name) || clean(profile?.slug) || 'Perfil Digital';
+    const description = clean(profile?.bio) || clean(templateData?.shortDescription) || `Perfil digital de ${name}`;
+    const role = clean(templateData?.role) || clean(templateData?.jobTitle) || '';
+    const companyName = clean(templateData?.companyName) || '';
+    const category = clean(profile?.category);
+    const subcategory = clean(profile?.subcategory);
+    const services = (Array.isArray(profile?.products) ? profile.products : [])
+      .map((item: any) => ({ name: clean(item?.title), description: clean(item?.description) }))
+      .filter((item: any) => item.name)
+      .slice(0, 12);
+    const phones = Array.from(new Set([
+      clean(profile?.contact?.phone),
+      clean(profile?.contact?.whatsapp),
+      clean(profile?.whatsapp_number),
+    ].filter(Boolean)));
+    const email = clean(profile?.contact?.email);
+    const address = clean(profile?.contact?.address);
+    const mapUrl = clean(profile?.contact?.map_url);
+    const hours = clean(profile?.contact?.hours);
+    const sameAs = [
+      ...(Array.isArray(profile?.social_links) ? profile.social_links.map((item: any) => clean(item?.url)) : []),
+      ...(Array.isArray(profile?.links) ? profile.links.map((item: any) => clean(item?.url)) : []),
+    ].filter((item: string) => /^https?:\/\//i.test(item));
+    const entityType = role ? 'Person' : 'Organization';
+    const keywords = Array.from(new Set([
+      category,
+      subcategory,
+      role,
+      companyName,
+      ...services.map((item: any) => item.name),
+    ].filter(Boolean)));
+    const schema: any = {
+      '@context': 'https://schema.org',
+      '@type': entityType,
+      '@id': `${canonicalUrl}#profile`,
+      name,
+      description,
+      url: canonicalUrl,
+      image,
+      sameAs,
+    };
+    if (role) schema.jobTitle = role;
+    if (companyName && entityType === 'Person') schema.worksFor = { '@type': 'Organization', name: companyName };
+    if (category || subcategory) schema.knowsAbout = [category, subcategory, ...services.map((item: any) => item.name)].filter(Boolean);
+    if (phones.length) schema.telephone = phones[0];
+    if (email) schema.email = email;
+    if (address) schema.address = { '@type': 'PostalAddress', streetAddress: address };
+    if (mapUrl || address) schema.location = { '@type': 'Place', name: address || name, ...(mapUrl ? { hasMap: mapUrl } : {}) };
+    if (hours) schema.openingHours = hours;
+    if (services.length) {
+      schema.hasOfferCatalog = {
+        '@type': 'OfferCatalog',
+        name: `Servicios de ${name}`,
+        itemListElement: services.map((service: any) => ({
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'Service',
+            name: service.name,
+            ...(service.description ? { description: service.description } : {}),
+          },
+        })),
+      };
+    }
+    const seoHeadHtml = `
+  <meta name="keywords" content="${escapeHtml(keywords.join(', '))}" />
+  <link rel="alternate" type="text/markdown" href="${escapeHtml(`${canonicalUrl}/ai.md`)}" title="Información del perfil para asistentes de IA" />
+  <link rel="alternate" type="application/json" href="${escapeHtml(`${canonicalUrl}/facts.json`)}" title="Datos estructurados verificables del perfil" />
+  <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>`;
+    const serviceList = services.length
+      ? `<h2>Servicios</h2><ul>${services.map((service: any) => `<li><strong>${escapeHtml(service.name)}</strong>${service.description ? `: ${escapeHtml(service.description)}` : ''}</li>`).join('')}</ul>`
+      : '';
+    const semanticFallbackHtml = `
+  <noscript data-kawvo-profile-discovery="dynamic">
+    <main>
+      <h1>${escapeHtml(name)}</h1>
+      ${role ? `<p>${escapeHtml(role)}</p>` : ''}
+      ${category || subcategory ? `<p>${escapeHtml([category, subcategory].filter(Boolean).join(' · '))}</p>` : ''}
+      <p>${escapeHtml(description)}</p>
+      ${serviceList}
+      ${address ? `<h2>Ubicación</h2><p>${escapeHtml(address)}</p>` : ''}
+      ${phones.length || email ? `<h2>Contacto</h2><p>${escapeHtml([...phones, email].filter(Boolean).join(' · '))}</p>` : ''}
+    </main>
+  </noscript>`;
+    return { seoHeadHtml, semanticFallbackHtml };
+  };
+
   const discoveryResponse = await handleDiscoveryRequest(url, discoveryRuntime);
 
   if (discoveryResponse) {
@@ -297,7 +441,7 @@ ${seoHeadHtml}
       url: metadata.canonicalUrl || url.toString(),
       image: metadata.image,
       siteName: 'Kawvo Link',
-      imageType: metadata.image.toLowerCase().includes('.webp') ? 'image/webp' : metadata.image.toLowerCase().includes('.png') ? 'image/png' : 'image/jpeg',
+      imageType: imageTypeFor(metadata.image),
       ogType: 'website',
       twitterCard: 'summary_large_image',
       language: 'es-DO',
@@ -371,10 +515,9 @@ ${seoHeadHtml}
         const profile = share?.snapshot?.profile || {};
         const name = String(profile?.name || 'Perfil Digital').trim().slice(0, 80);
         const role = String(profile?.role || '').trim().slice(0, 120);
-        const portraitAsset = share?.assets?.portrait ? String(share.assets.portrait) : '';
-        const hero = String(profile?.hero || '').trim();
-        const image = portraitAsset
-          || (hero.startsWith('http') ? hero : hero.startsWith('/') ? `${url.origin}${hero}` : '')
+        const image = normalizeSocialImage(share?.assets?.portrait)
+          || normalizeSocialImage(profile?.portrait)
+          || normalizeSocialImage(profile?.hero)
           || `${url.origin}/assets/og/kawvo-link-og.png`;
         return injectSimpleSocialCard({
           title: `Así se vería el Perfil Digital de ${name} | Kawvo Link`,
@@ -392,23 +535,28 @@ ${seoHeadHtml}
   }
 
   const slug = url.pathname.replace(/^\/+|\/+$/g, '');
+
   // share=bancos: social card bancaria aprobada para WhatsApp y redes.
   if (url.searchParams.get('share') === 'bancos' && /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) {
-    const bankMeta = await getDynamicProfileSeoBundle(slug, discoveryRuntime);
+    const [bankMeta, profile] = await Promise.all([
+      getDynamicProfileSeoBundle(slug, discoveryRuntime),
+      fetchPublicProfileForShare(slug),
+    ]);
     if (bankMeta) {
-      const response = await context.next();
+      const response = await fetchSpaShell();
       const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('text/html')) {
         const html = await response.text();
         const cleanName = bankMeta.title.split('|')[0].trim();
         const pageUrl = `${url.origin}/${encodeURIComponent(slug)}?share=bancos`;
+        const image = profile ? profileShareImage(profile) : bankMeta.image;
         const updatedHtml = injectHeadMetadata(html, {
           title: `Datos bancarios de ${cleanName} | Kawvo Link`,
           description: 'Consulta los datos bancarios compartidos desde su presentación digital Kawvo Link.',
           url: pageUrl,
-          image: bankMeta.image,
-          imageType: bankMeta.imageType,
-          siteName: 'Kawvo Link',
+          image,
+          imageType: imageTypeFor(image),
+          siteName: bankMeta.siteName || 'Kawvo Link',
           ogType: 'website',
           twitterCard: 'summary_large_image',
           language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
@@ -468,10 +616,13 @@ ${seoHeadHtml}
   const dynamicSlugEligible = /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug);
 
   if (!staticProfile && dynamicSlugEligible) {
-    const dynamicMeta = await getDynamicProfileSeoBundle(slug, discoveryRuntime);
+    const [dynamicMeta, profile] = await Promise.all([
+      getDynamicProfileSeoBundle(slug, discoveryRuntime),
+      fetchPublicProfileForShare(slug),
+    ]);
 
     if (dynamicMeta) {
-      const response = await context.next();
+      const response = await fetchSpaShell();
       const contentType = response.headers.get('content-type') || '';
 
       if (!contentType.includes('text/html')) {
@@ -479,18 +630,20 @@ ${seoHeadHtml}
       }
 
       const html = await response.text();
+      const image = profile ? profileShareImage(profile) : dynamicMeta.image;
+      const enhancement = dynamicDiscoveryEnhancement(profile, dynamicMeta.url, image);
       const updatedHtml = injectHeadMetadata(html, {
         title: dynamicMeta.title,
         description: dynamicMeta.description,
         url: dynamicMeta.url,
-        image: dynamicMeta.image,
-        imageType: dynamicMeta.imageType,
+        image,
+        imageType: imageTypeFor(image),
         siteName: dynamicMeta.siteName,
         ogType: 'profile',
-        twitterCard: dynamicMeta.twitterCard,
+        twitterCard: image.includes('/assets/og/kawvo-link-og.png') ? 'summary' : 'summary_large_image',
         language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
-        seoHeadHtml: dynamicMeta.seoHeadHtml,
-        semanticFallbackHtml: dynamicMeta.semanticFallbackHtml,
+        seoHeadHtml: `${dynamicMeta.seoHeadHtml || ''}${enhancement.seoHeadHtml}`,
+        semanticFallbackHtml: `${dynamicMeta.semanticFallbackHtml || ''}${enhancement.semanticFallbackHtml}`,
       });
 
       const headers = new Headers(response.headers);
