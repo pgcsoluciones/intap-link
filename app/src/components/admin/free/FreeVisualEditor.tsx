@@ -43,7 +43,7 @@ const palettes: Array<{ id: PaletteId; name: string; colors: string[] }> = [
 ]
 
 const sectionLinks: SectionLink[] = [
-  { title: 'Foto y portada', text: 'Cambia tu foto de perfil y, en Impacto, la imagen Hero.', to: '/admin/free/onboarding/identity', icon: '◉', readinessKey: 'identity' },
+  { title: 'Foto y portada', text: 'Cambia tu foto de perfil y, en Impacto, la imagen Hero.', to: '/admin/free/onboarding/identity?from=panel', icon: '◉', readinessKey: 'identity' },
   { title: 'Contacto', text: 'WhatsApp, teléfono y correo.', to: '/admin/free/onboarding/contact', icon: '☎', readinessKey: 'contact' },
   { title: 'Botones rápidos', text: 'Llamar, Instagram, ubicación, email o TikTok.', to: '/admin/free/quick-actions', icon: '↗', readinessKey: 'quick_actions' },
   { title: 'Portafolio', text: 'Agrega o reemplaza imágenes de tus trabajos.', to: '/admin/free/portfolio', icon: '▧', readinessKey: 'portfolio' },

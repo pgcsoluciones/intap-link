@@ -304,7 +304,7 @@ export default function FreeAccount() {
           <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between"><h2 className="text-lg font-black">Invitar a un amigo</h2><button type="button" onClick={() => setShowInvitePreview(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
             <p className="mt-4 text-sm font-semibold text-slate-500">Mensaje que vas a compartir</p>
-            <div className="mt-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">Me he creado un perfil en Kawvo Link para presentar lo que hago y compartir mis datos en un solo lugar. Crea tú también tu presentación digital; te lo recomiendo.<br/><span className="mt-2 block font-semibold text-cyan-700">{webUrl}/invitacion</span></div>
+            <div className="mt-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">Me he creado un perfil en Kawvo Link para presentar lo que hago y compartir mis datos en un solo lugar. Crea tú también tu presentación digital; te lo recomiendo.<br/><span className="mt-2 block font-semibold text-cyan-700">{invitationUrl}</span></div>
             <button type="button" onClick={() => void sendInvite()} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Compartir invitación</button>
           </article>
         </div>
