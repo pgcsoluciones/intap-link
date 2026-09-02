@@ -30,7 +30,7 @@ check "$PROFILE" 'function canonicalProfileUrl()' 'Compartir perfil no usa URL c
 
 check "$AIAPI" 'const MAX_OUTPUT_TOKENS = 2400' 'IA perdió output aprobado'; check "$AIAPI" 'internalRetryUsed' 'IA perdió retry'; check "$AIAPI" 'ai_incomplete_after_retry' 'IA perdió fail-safe'; check "$AI" '✨ Kawvo prepara una propuesta con la información de tu perfil.' 'IA UI final no está'; check "$AI" '🧩 Completar lo que falta' 'IA perdió completar faltantes'; check "$AI" '✨ Mejorar mi contenido' 'IA perdió mejorar contenido'; check "$AI" 'Cambios confirmados y aplicados' 'IA perdió confirmación final'
 
-check web/src/App.tsx 'path="/demo/ia"' 'Falta Demo IA'; check api/src/preview-free-entry.ts 'registerDemoAiRoutes(app)' 'Demo IA API no ensamblada'; check scripts/qa-demo-ai-preview.mjs 'services.length !== 3' 'QA Demo IA no exige 3 servicios'; check api/src/routes/demo-viral.ts 'demo/s/' 'Falta snapshot viral'
+check web/src/App.tsx 'path="/demo/ia"' 'Falta Demo IA'; check api/src/preview-free-entry.ts 'registerDemoAiRoutes(app)' 'Demo IA API no ensamblada'; check scripts/qa-demo-ai-preview.mjs 'assert.equal(result.json.data.demo.services.length, 3' 'QA Demo IA no exige exactamente 3 servicios'; check api/src/routes/demo-viral.ts 'demo/s/' 'Falta snapshot viral'
 
 for t in '/llms.txt' '/ai.md' '/facts.json' '/sitemap.xml' '/robots.txt'; do check "$MW" "$t" "Falta discovery $t"; done
 for id in automotive_jason_v3 real_estate_novi_v4 events_1a_v1 car_rental_rentao_v1 industrial_aycdom_v1; do check "$REG" "$id" "Falta plantilla $id"; done
