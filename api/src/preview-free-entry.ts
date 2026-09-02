@@ -1,6 +1,8 @@
 import './preview-starter-apply'
 import './preview-support-tickets'
 import './preview-exit-feedback'
+import './preview-profile-delete-mobile'
+import './account-center'
 import './free-profile-preview'
 import './free-feedback'
 import './bank-accounts'

@@ -181,7 +181,7 @@ app.get('/api/v1/me/notifications', requirePreviewAuth, async (c: any) => {
   const limit = Math.min(50, Math.max(1, Number(c.req.query('limit') || 30)))
   const [rows, unread] = await Promise.all([
     c.env.DB.prepare(
-      `SELECT id, type, title, message, source_type, source_id, action_label, action_url, read_at, created_at
+      `SELECT id, type, title, message, image_url, source_type, source_id, action_label, action_url, read_at, created_at
          FROM user_notifications
         WHERE user_id = ?
         ORDER BY created_at DESC

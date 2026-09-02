@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPost, apiPut } from '../../../lib/api'
+import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
+import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
-import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeFirstRunGuide, { type FreePublicationReadiness } from './FreeFirstRunGuide'
 import FreeHelpTip from './FreeHelpTip'
-import FreeSupportPanel from './FreeSupportPanel'
 import FreeNotificationBell from './FreeNotificationBell'
 
 interface MeData {
@@ -43,24 +42,32 @@ type FreeItem = {
 
 const freeItems: FreeItem[] = [
   {
-    title: 'Reservar mi identificador',
-    text: 'Elige tu enlace corto /usuario',
+    title: 'Elige tu usuario',
+    text: 'Ej.: @tuusuario',
     to: '/admin/free/identifier',
     icon: '@',
     help: 'Este será tu nombre único en el enlace público. Conviene elegir uno corto, fácil de recordar y relacionado contigo o tu negocio.',
     readinessKey: 'identifier',
   },
   {
-    title: 'Datos de contacto',
-    text: 'WhatsApp, teléfono y correo',
+    title: 'Completa tu presentación',
+    text: 'Foto, portada, nombre y la información principal de tu perfil',
+    to: '/admin/free/onboarding/identity?from=panel',
+    icon: '◉',
+    help: 'Configura cómo te presentas: foto de perfil, portada cuando aplique, nombre o marca y a qué te dedicas.',
+    readinessKey: 'identity',
+  },
+  {
+    title: 'Agrega tus datos de contacto',
+    text: 'WhatsApp, teléfono, correo y otras formas de contactarte',
     to: '/admin/free/onboarding/contact',
     icon: '☎',
     help: 'Coloca los medios reales por los que quieres que tus clientes te contacten. Necesitas al menos uno para habilitar la vista previa.',
     readinessKey: 'contact',
   },
   {
-    title: 'Botones rápidos',
-    text: 'Hasta 3: Llamar, Instagram, Ubicación, Email o TikTok',
+    title: 'Botones de contacto directo',
+    text: 'Hasta 3 botones para que te contacten o encuentren con un toque',
     to: '/admin/free/quick-actions',
     icon: '◉',
     help: 'Son los botones que aparecen primero en tu perfil. Elige las acciones más importantes para que una persona pueda contactarte o encontrarte con un solo toque.',
@@ -83,33 +90,29 @@ const freeItems: FreeItem[] = [
     available: true,
   },
   {
-    title: 'Mis trabajos (portafolio)',
-    text: 'Hasta 5 imágenes de tu trabajo',
+    title: 'Muestra tus trabajos realizados',
+    text: 'Máx. 5 fotos · mínimo 3 para publicar tu perfil',
     to: '/admin/free/portfolio',
     icon: '▧',
     help: 'Muestra ejemplos reales de lo que haces. Para publicar debes completar al menos 3 imágenes reales.',
     readinessKey: 'portfolio',
   },
   {
-    title: 'Servicios',
-    text: 'Hasta 3 servicios con imagen y descripción',
+    title: 'Agrega tus servicios',
+    text: 'Describe brevemente qué ofreces · mínimo 2 para publicar',
     to: '/admin/free/services',
     icon: '◇',
     help: 'Explica claramente qué ofreces. Para publicar debes completar al menos 2 servicios con título, descripción e imagen.',
     readinessKey: 'services',
   },
-  {
-    title: 'Mis productos Kawvo (NFC/QR)',
-    text: 'Activa y administra tus productos físicos',
-    to: '/admin/artifacts',
-    icon: '⌁',
-    help: 'Aquí administras las tarjetas, etiquetas u otros productos Kawvo vinculados a tu cuenta y al perfil digital.',
-    optional: true,
-  },
 ]
 
 export default function FreeDashboard() {
   const navigate = useNavigate()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
   const [me, setMe] = useState<MeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
@@ -117,6 +120,7 @@ export default function FreeDashboard() {
   const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
   const [publishError, setPublishError] = useState('')
   const [linkCopied, setLinkCopied] = useState(false)
+  const [shareMessage, setShareMessage] = useState('')
   const [locationConfigured, setLocationConfigured] = useState(false)
   const [bankSummary, setBankSummary] = useState<BankSummary>({ allowed: false, source: null, enabled: false, count: 0 })
 
@@ -145,10 +149,24 @@ export default function FreeDashboard() {
     }).finally(() => setLoading(false))
   }, [])
 
-  const handleLogout = async () => {
-    try { await apiPost('/auth/logout', {}) } catch { /* ignore */ }
-    window.location.replace('/admin/login')
-  }
+  useEffect(() => {
+    if (loading) return
+    const raw = sessionStorage.getItem('kawvo_free_dashboard_scroll_y')
+    const top = Number(raw || 0)
+    if (Number.isFinite(top) && top > 0) {
+      window.requestAnimationFrame(() => window.scrollTo({ top, left: 0, behavior: 'auto' }))
+    }
+  }, [loading])
+
+  useEffect(() => {
+    const rememberScroll = () => sessionStorage.setItem('kawvo_free_dashboard_scroll_y', String(window.scrollY))
+    document.addEventListener('click', rememberScroll, true)
+    window.addEventListener('pagehide', rememberScroll)
+    return () => {
+      document.removeEventListener('click', rememberScroll, true)
+      window.removeEventListener('pagehide', rememberScroll)
+    }
+  }, [])
 
   const togglePublished = async () => {
     if (!me || publishing) return
@@ -163,6 +181,7 @@ export default function FreeDashboard() {
       const result: any = await apiPut('/me/profile', { is_published: next === 1 })
       if (result.ok) {
         setMe({ ...me, is_published: next })
+        if (next === 1) void apiPost('/me/notifications/profile-published', {}).catch(() => undefined)
       } else if (result.error === 'profile_incomplete') {
         setPublishError(result.message || 'Completa los pasos mínimos antes de publicar.')
         setMe({ ...me, freeReadiness: result.readiness || me.freeReadiness })
@@ -171,6 +190,35 @@ export default function FreeDashboard() {
       }
     } finally {
       setPublishing(false)
+    }
+  }
+
+  const chooseAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null
+    if (avatarInputRef.current) avatarInputRef.current.value = ''
+    if (!file || avatarUploading) return
+    setAvatarError('')
+    setAvatarFile(file)
+  }
+
+  const uploadAvatar = async (blob: Blob) => {
+    if (avatarUploading) return
+    setAvatarFile(null)
+    setAvatarUploading(true)
+    setAvatarError('')
+    try {
+      const form = new FormData()
+      form.append('file', blob, 'avatar.jpg')
+      const result: any = await apiUpload('/me/profile/avatar', form)
+      if (!result?.ok || !result?.avatar_url) {
+        setAvatarError(result?.error || 'No pudimos cambiar tu foto.')
+        return
+      }
+      setMe((current) => current ? { ...current, avatar_url: result.avatar_url } : current)
+    } catch {
+      setAvatarError('No pudimos cambiar tu foto.')
+    } finally {
+      setAvatarUploading(false)
     }
   }
 
@@ -184,6 +232,21 @@ export default function FreeDashboard() {
     }
   }
 
+  const sharePublicUrl = async (url: string) => {
+    setShareMessage('')
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: me?.name || 'Mi perfil', url })
+        setShareMessage('Perfil listo para compartir.')
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      setShareMessage('Enlace copiado para compartir.')
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') setShareMessage('No pudimos abrir el menú para compartir.')
+    }
+  }
+
   if (loading) return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
@@ -191,7 +254,7 @@ export default function FreeDashboard() {
   const readiness = me?.freeReadiness
   const previewReady = Boolean(readiness?.steps?.identifier && readiness?.steps?.identity && readiness?.steps?.contact)
   const previewMissing = [
-    !readiness?.steps?.identifier ? 'tu identificador' : '',
+    !readiness?.steps?.identifier ? 'tu usuario' : '',
     !readiness?.steps?.identity ? 'tu información principal' : '',
     !readiness?.steps?.contact ? 'al menos un medio de contacto' : '',
   ].filter(Boolean)
@@ -202,6 +265,8 @@ export default function FreeDashboard() {
   ].filter(Boolean)
 
   return (
+    <>
+      {avatarFile && <ImageCropModal file={avatarFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setAvatarFile(null)} />}
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[430px] items-center justify-between gap-3">
@@ -214,7 +279,7 @@ export default function FreeDashboard() {
             {hasSuperAdminAccess && (
               <button type="button" onClick={() => navigate('/superadmin')} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white">Super Admin</button>
             )}
-            <button onClick={handleLogout} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500">Salir</button>
+            <button type="button" onClick={() => navigate('/admin/free/account')} aria-label="Mi cuenta" className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:bg-slate-50">Mi cuenta</button>
           </div>
         </div>
       </header>
@@ -222,8 +287,12 @@ export default function FreeDashboard() {
       <section className="mx-auto w-full max-w-[430px] space-y-4 px-5 pt-5">
         <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-              {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">👤</div>}
+            <div className="relative shrink-0">
+              <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} aria-label="Cambiar foto de perfil" className="relative h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100 ring-offset-2 transition hover:ring-2 hover:ring-cyan-300 disabled:opacity-60">
+                {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">👤</div>}
+                <span className="absolute inset-x-0 bottom-0 bg-slate-950/75 py-1 text-center text-[9px] font-black text-white">{avatarUploading ? 'Subiendo…' : 'Cambiar'}</span>
+              </button>
+              <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={avatarUploading} onChange={chooseAvatar} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -234,17 +303,18 @@ export default function FreeDashboard() {
               {me?.category && <p className="mt-1 text-xs font-bold text-cyan-600">{me.category}</p>}
             </div>
           </div>
+          {avatarError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{avatarError}</p>}
           <button type="button" onClick={() => navigate('/admin/free/editor')} className="mt-5 flex w-full items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-left text-white shadow-sm">
             <span>
-              <span className="block text-base font-black">Personaliza el diseño de tu perfil</span>
-              <span className="mt-1 block text-xs font-medium text-slate-300">Plantilla, colores, identidad y vista previa en vivo.</span>
+              <span className="block text-base font-black" style={{ color: '#FFFFFF' }}>Personaliza el diseño de tu perfil</span>
+              <span className="mt-1 block text-xs font-medium" style={{ color: '#E2E8F0' }}>Plantilla, colores y apariencia visual de tu perfil.</span>
             </span>
             <span className="text-xl text-slate-400">›</span>
           </button>
           {previewReady && me?.slug ? (
-            <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(me.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">Ver mi perfil</a>
+            <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(me.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-2 flex w-full items-center justify-center rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">Ver como cliente</a>
           ) : (
-            <button type="button" disabled className="mt-2 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-black text-slate-400">Ver mi perfil</button>
+            <button type="button" disabled className="mt-2 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-black text-slate-400">Ver como cliente</button>
           )}
         </article>
 
@@ -262,7 +332,7 @@ export default function FreeDashboard() {
           <button type="button" onClick={() => setWatermarkUpsellOpen((current) => !current)} className="flex w-full items-center justify-between gap-4 p-4 text-left" aria-expanded={watermarkUpsellOpen}>
             <span className="min-w-0">
               <span className="block text-sm font-black text-slate-900">Quitar marca de agua</span>
-              <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Básico</span>
+              <span className="mt-0.5 block text-xs font-semibold text-slate-400">Disponible en Plan Plus</span>
             </span>
             <span aria-hidden="true" className={`relative h-7 w-12 shrink-0 rounded-full transition ${watermarkUpsellOpen ? 'bg-violet-600' : 'bg-slate-200'}`}>
               <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${watermarkUpsellOpen ? 'left-6' : 'left-1'}`} />
@@ -272,8 +342,8 @@ export default function FreeDashboard() {
           {watermarkUpsellOpen && (
             <div className="border-t border-violet-100 bg-violet-50/70 p-4">
               <p className="text-sm font-black text-slate-900">Personaliza aún más tu perfil</p>
-              <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Básico.</p>
-              <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Plan Básico</a>
+              <p className="mt-1 text-xs leading-5 text-slate-600">Puedes quitar la marca de agua y disfrutar otros beneficios. Pásate al Plan Plus.</p>
+              <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex min-h-10 items-center justify-center rounded-xl bg-white px-3.5 py-2 text-xs font-black text-violet-700 shadow-sm">Conocer Plan Plus</a>
             </div>
           )}
         </section>
@@ -295,17 +365,17 @@ export default function FreeDashboard() {
           <article className="rounded-[24px] border border-slate-200 bg-white p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Tu enlace público</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Enlace de tu perfil</p>
                 <p className="mt-2 truncate text-sm font-black text-cyan-700">{publicUrl.replace(/^https?:\/\//, '')}</p>
               </div>
               <FreeHelpTip title="Vista previa" text="La vista previa se habilita cuando completas tu identificador, información principal y al menos un medio de contacto. Así nunca tendrás que revisar un perfil vacío." />
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {previewReady ? (
-                <a href={`${publicUrl}?preview=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Vista previa</a>
+                <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(me?.slug || '')}?full=1`} target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Ver como cliente</a>
               ) : (
-                <button type="button" disabled className="min-h-10 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Vista previa</button>
+                <button type="button" disabled className="min-h-10 cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-black text-slate-400">Ver como cliente</button>
               )}
               <button
                 type="button"
@@ -316,7 +386,9 @@ export default function FreeDashboard() {
               >
                 {linkCopied ? '✓ Enlace copiado' : 'Copiar enlace'}
               </button>
+              <button type="button" onClick={() => void sharePublicUrl(publicUrl)} disabled={!me?.is_published} className="min-h-10 rounded-xl border border-slate-200 bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400">Compartir perfil</button>
             </div>
+            {shareMessage && <p className="mt-2 text-xs font-semibold text-slate-500">{shareMessage}</p>}
 
             {!previewReady && (
               <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold leading-5 text-amber-800">
@@ -358,7 +430,7 @@ export default function FreeDashboard() {
               {bankSummary.allowed ? (
                 <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes los copien fácilmente al momento de hacer una transferencia. {bankSummary.enabled ? 'Sección activa' : 'Sección desactivada'} · {bankSummary.count}/3 cuentas configuradas{bankSummary.source === 'fair' ? ' · Promoción de feria' : ''}.</p>
               ) : (
-                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes puedan copiarlos fácilmente. Disponible en Plan Básico y para perfiles Free durante promociones vigentes.</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">Agrega tus datos bancarios para que tus clientes puedan copiarlos fácilmente. Disponible en Plan Plus y para perfiles Free durante promociones vigentes.</p>
               )}
             </div>
             <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${bankSummary.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{bankSummary.allowed ? 'Disponible' : 'Bloqueado'}</span>
@@ -372,7 +444,7 @@ export default function FreeDashboard() {
         <div className="pt-2">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Accesos directos</p>
           <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Edita un bloque específico</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Verde significa completado, ámbar indica que aún falta y gris identifica funciones disponibles que no forman parte de los requisitos de publicación. Solo NFC/QR se marca como opcional.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Verde significa completado, amarillo indica un requisito pendiente y gris identifica funciones disponibles u opcionales.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -422,10 +494,8 @@ export default function FreeDashboard() {
         </div>
 
         <FreeUpgradeCard />
-        <FreeSupportPanel />
-
-        {me?.slug && <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />}
       </section>
     </main>
+    </>
   )
 }

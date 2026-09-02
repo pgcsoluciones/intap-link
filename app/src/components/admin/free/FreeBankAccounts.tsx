@@ -223,14 +223,14 @@ export default function FreeBankAccounts() {
     return (
       <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950">
         <section className="mx-auto w-full max-w-[620px]">
-          <FreeBackButton onClick={() => navigate('/admin/free/editor')} />
+          <FreeBackButton onClick={() => navigate('/admin/free')} />
           <div className="mt-5 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-950 text-2xl text-white">$</div>
             <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-violet-700">Función premium</p>
             <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Cuentas bancarias</h1>
             <p className="mt-3 text-base font-medium leading-7 text-slate-600">Agrega hasta 3 cuentas a tu perfil y permite que tus clientes copien los datos necesarios para hacer una transferencia.</p>
-            <div className="mt-5 rounded-2xl bg-violet-50 p-4 text-sm font-semibold leading-6 text-violet-900">Disponible en Plan Básico. Los perfiles Free activados durante la promoción de feria conservan esta función permanentemente.</div>
-            <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-4 text-base font-black text-white">Conocer Plan Básico</a>
+            <div className="mt-5 rounded-2xl bg-violet-50 p-4 text-sm font-semibold leading-6 text-violet-900">Disponible en Plan Plus. Los perfiles Free activados durante la promoción de feria conservan esta función permanentemente.</div>
+            <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-4 text-base font-black text-white">Conocer Plan Plus</a>
             <button type="button" disabled className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400">Tengo un código promocional · Próximamente</button>
           </div>
         </section>
@@ -241,7 +241,7 @@ export default function FreeBankAccounts() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
       <section className="mx-auto w-full max-w-[760px] px-4 py-5 sm:px-5">
-        <FreeBackButton onClick={() => navigate('/admin/free/editor')} />
+        <FreeBackButton onClick={() => navigate('/admin/free')} />
 
         <div className="mt-5">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">KAWVO LINK</p>
@@ -301,6 +301,7 @@ export default function FreeBankAccounts() {
           ))}
           {accounts.length === 0 && <div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-8 text-center"><p className="text-base font-black text-slate-700">Todavía no has agregado cuentas</p><p className="mt-2 text-sm text-slate-500">Cuando agregues una, aparecerá aquí y en tu perfil si la sección está activa.</p></div>}
         </section>
+        <div className="mt-6"><FreeBackButton onClick={() => navigate('/admin/free')} /></div>
       </section>
     </main>
   )

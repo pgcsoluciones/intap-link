@@ -35,10 +35,10 @@ export default function MarketingLanding() {
           <a href="#como-funciona" onClick={() => setMenuOpen(false)}>Cómo funciona</a>
           <a href="#usos" onClick={() => setMenuOpen(false)}>Usos</a>
           <a href="#clientes" onClick={() => setMenuOpen(false)}>Clientes</a>
-          <a href="#demo" onClick={() => setMenuOpen(false)}>Demo</a>
+          <a href="/demo/ia" onClick={() => setMenuOpen(false)}>Demo</a>
         </nav>
 
-        <a className="intap-header-cta" href={whatsappUrl} target="_blank" rel="noreferrer">
+        <a className="intap-header-cta" href="/demo/ia">
           Solicitar demo
         </a>
       </header>
@@ -57,7 +57,7 @@ export default function MarketingLanding() {
           </p>
 
           <div className="hero-actions">
-            <a className="btn-primary" href="#demo">
+            <a className="btn-primary" href="/demo/ia">
               Solicita una demo gratis
             </a>
             <a className="btn-secondary" href={whatsappUrl} target="_blank" rel="noreferrer">
@@ -295,7 +295,7 @@ export default function MarketingLanding() {
 
         <div className="intap-compare-images-cta">
           <p>Deja de repartir tarjetas que se pierden. Comparte una presentación que conecta al instante.</p>
-          <a className="btn-primary" href="#demo">Solicitar demo</a>
+          <a className="btn-primary" href="/demo/ia">Solicitar demo</a>
         </div>
       </section>
 
@@ -502,8 +502,8 @@ export default function MarketingLanding() {
             <textarea placeholder="Servicios, redes, ubicación, catálogo, portafolio..." />
           </label>
 
-          <a className="btn-primary full" href={whatsappUrl} target="_blank" rel="noreferrer">
-            Solicitar demo por WhatsApp
+          <a className="btn-primary full" href="/demo/ia">
+            Crear mi demo con IA
           </a>
         </form>
       </section>
@@ -540,7 +540,7 @@ export default function MarketingLanding() {
           Reúne tu información, facilita el contacto y dale a cada cliente una forma clara
           de encontrarte.
         </p>
-        <a className="btn-primary light" href="#demo">
+        <a className="btn-primary light" href="/demo/ia">
           Quiero mi demo
         </a>
       </section>
