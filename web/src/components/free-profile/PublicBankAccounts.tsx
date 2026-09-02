@@ -57,7 +57,6 @@ export default function PublicBankAccounts() {
   const [items, setItems] = useState<PublicBankAccount[]>([])
   const [enabled, setEnabled] = useState(false)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
-  const [shareCopied, setShareCopied] = useState(false)
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
   const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
 
@@ -157,21 +156,19 @@ export default function PublicBankAccounts() {
     }
   }
 
-  async function shareBankSection() {
-    const url = `${window.location.origin}/${encodeURIComponent(slug)}#bancos`
-    const title = `Datos bancarios de ${items[0]?.holder_name || slug}`
-    const text = 'Datos para realizar una transferencia.'
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, text, url })
-        return
-      }
-      await navigator.clipboard.writeText(url)
-      setShareCopied(true)
-      window.setTimeout(() => setShareCopied(false), 1800)
-    } catch {
-      // Cancelar el panel nativo de compartir no es un error.
-    }
+  function bankSectionUrl() {
+    return `${window.location.origin}/${encodeURIComponent(slug)}?share=bancos#bancos`
+  }
+
+  function shareBankSectionWhatsApp() {
+    const url = bankSectionUrl()
+    const message = `Te comparto mis datos bancarios para transferencias: ${url}`
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  async function copyBankSectionLink() {
+    await copyText(bankSectionUrl(), 'bank-link')
   }
 
   if (!enabled || items.length === 0 || !portalHost) return null
@@ -183,21 +180,33 @@ export default function PublicBankAccounts() {
       aria-labelledby="ilx-bank-title"
       style={{ borderTop: '1px solid var(--ilx-border)', paddingTop: 22, marginTop: 22 }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--ilx-primary)' }}>Datos para transferencias</p>
-          <h2 id="ilx-bank-title" className="mt-1 text-xl font-black tracking-[-0.03em]" style={{ color: 'var(--ilx-text)' }}>Cuentas bancarias</h2>
-          <p className="mt-1 max-w-[280px] text-sm font-medium leading-5" style={{ color: 'var(--ilx-muted)' }}>Elige una cuenta y copia los datos que necesitas para transferir.</p>
+      <div>
+        <p className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: 'var(--ilx-primary)' }}>Datos para transferencias</p>
+        <h2 id="ilx-bank-title" className="mt-1 text-xl font-black tracking-[-0.03em]" style={{ color: 'var(--ilx-text)' }}>Cuentas bancarias</h2>
+        <p className="mt-1 max-w-[320px] text-sm font-medium leading-5" style={{ color: 'var(--ilx-muted)' }}>Elige una cuenta y copia los datos que necesitas para transferir.</p>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={shareBankSectionWhatsApp}
+            className="rounded-xl border px-3 py-2.5 text-xs font-black transition active:scale-[0.98]"
+            style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-soft-primary)', color: 'var(--ilx-primary)' }}
+            aria-label="Compartir enlace de cuentas bancarias por WhatsApp"
+          >
+            Enviar por WhatsApp
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void copyBankSectionLink()}
+            className="rounded-xl border px-3 py-2.5 text-xs font-black transition active:scale-[0.98]"
+            style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-surface)', color: 'var(--ilx-text)' }}
+            aria-label="Copiar enlace directo a cuentas bancarias"
+            aria-live="polite"
+          >
+            {copiedKey === 'bank-link' ? '✓ Enlace copiado' : 'Copiar enlace'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => void shareBankSection()}
-          className="shrink-0 rounded-full border px-3 py-2 text-xs font-black transition active:scale-[0.98]"
-          style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-soft-primary)', color: 'var(--ilx-primary)' }}
-          aria-label="Compartir enlace directo a los datos bancarios"
-        >
-          {shareCopied ? '✓ Enlace copiado' : '↗ Compartir datos'}
-        </button>
       </div>
 
       <div className="mt-4 space-y-3">
