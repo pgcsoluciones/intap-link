@@ -25,9 +25,12 @@ export default function FreeOnboardingCategory() {
 
   useEffect(() => {
     apiGet('/me').then((json: any) => {
-      if (json.ok && !category) setCategory(json.data?.category || '')
+      if (json.ok) {
+        if (!category) setCategory(json.data?.category || '')
+        if (!subcategory) setSubcategory(json.data?.subcategory || '')
+      }
     }).finally(() => setLoading(false))
-  }, [category])
+  }, [category, subcategory])
 
   const chooseCategory = (value: string) => {
     setCategory(value)
@@ -41,7 +44,10 @@ export default function FreeOnboardingCategory() {
     setSaving(true)
     setError('')
     try {
-      const json: any = await apiPut('/me/profile', { category })
+      const json: any = await apiPut('/me/profile', {
+        category,
+        subcategory,
+      })
       if (json.ok) {
         sessionStorage.setItem('kawvo_free_category', category)
         sessionStorage.setItem('kawvo_free_subcategory', subcategory)
