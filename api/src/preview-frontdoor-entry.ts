@@ -83,57 +83,19 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   })
 }
 
-async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
-  const response = await proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
-  const url = new URL(request.url)
-  const slug = slugFromPath(url.pathname)
-  if (!slug || slug.includes('.') || request.method.toUpperCase() !== 'GET' || response.status !== 200) return response
-
-  const row = await env.DB.prepare(
-    `SELECT name, bio, avatar_url FROM profiles WHERE lower(slug) = lower(?) AND is_published = 1 LIMIT 1`,
-  ).bind(slug).first()
-  if (!row) return response
-
-  const contentType = response.headers.get('content-type') || ''
-  if (!contentType.includes('text/html')) return response
-
-  const name = String((row as any).name || slug).trim() || slug
-  const bio = String((row as any).bio || '').trim()
-  const imageRaw = String((row as any).avatar_url || '').trim()
-  let image = ''
-  if (imageRaw) {
-    try { image = new URL(imageRaw, url.origin).toString() } catch { image = imageRaw }
-  }
-  const bankShare = url.searchParams.get('share') === 'bancos'
-  const canonical = bankShare
-    ? `${url.origin}/${encodeURIComponent(slug)}?share=bancos`
-    : `${url.origin}/${encodeURIComponent(slug)}`
-  const title = bankShare ? name : `${name} | Kawvo Link`
-  const description = bankShare
-    ? `Te comparto mis datos bancarios para transferencias.`
-    : (bio || `Perfil digital de ${name}. Contacto, servicios y formas de conectar en un solo lugar.`)
-  const meta = [
-    `<title>${escapeHtml(title)}</title>`,
-    `<meta name="description" content="${escapeHtml(description)}">`,
-    `<meta property="og:type" content="profile">`,
-    `<meta property="og:title" content="${escapeHtml(title)}">`,
-    `<meta property="og:description" content="${escapeHtml(description)}">`,
-    `<meta property="og:url" content="${escapeHtml(canonical)}">`,
-    image ? `<meta property="og:image" content="${escapeHtml(image)}">` : '',
-    image ? `<meta property="og:image:alt" content="Foto de ${escapeHtml(name)}">` : '',
-    `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${escapeHtml(title)}">`,
-    `<meta name="twitter:description" content="${escapeHtml(description)}">`,
-    image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : '',
-  ].filter(Boolean).join('\n')
-
-  const html = await response.text()
-  const updated = html.replace(/<title>[\s\S]*?<\/title>/i, '').replace('</head>', `${meta}\n</head>`)
-  const headers = new Headers(response.headers)
-  headers.delete('content-length')
-  headers.delete('content-encoding')
-  headers.set('cache-control', 'no-store')
-  return new Response(updated, { status: response.status, statusText: response.statusText, headers })
+async function proxyPublicProfileWithMeta(
+  request: Request,
+  env: PreviewEnv,
+) {
+  // Pages Functions es la fuente canónica de metadata para perfiles públicos.
+  // El front door Preview solo debe transportar ese HTML sin volver a
+  // inyectar title/Open Graph/Twitter, porque produciría tags duplicados
+  // y potencialmente contradictorios.
+  return proxyPagesPreview(
+    request,
+    env.WEB_PAGES_ORIGIN,
+    'web-custom-domain',
+  )
 }
 
 async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
