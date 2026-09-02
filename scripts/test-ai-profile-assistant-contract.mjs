@@ -87,7 +87,7 @@ assert.match(appSource, /needs_more_info/, 'UI must render guided follow-up stat
 assert.match(appSource, /Aplicar a mi perfil/, 'Review must require explicit apply')
 assert.match(appSource, /Tú decides qué aplicar|Revísala y aplica solo lo que quieras/i, 'UI must make explicit that AI changes are user-controlled')
 assert.match(appSource, /(no fue publicado automáticamente|no se publicó automáticamente)/i, 'Apply success must distinguish apply from publish')
-assert.match(appSource, /Solicitar Plan Básico/, 'Free-plan limit notice must reuse existing Basic upgrade path')
+assert.match(appSource, /Solicitar Plan Plus/, 'Free-plan limit notice must reuse the approved Plan Plus upgrade path')
 assert.match(appSource, /Ideas de imágenes|Referencias para tus imágenes/i, 'Image suggestions must remain clearly presented as references')
 assert.match(apiSource, /editing_scope=full_profile permite proponer mejoras de texto, pero nunca modifica imágenes, URLs, canales, cuentas bancarias, diseño ni orden/i, 'AI guidance must not mutate visual structure or contact actions')
 assert.match(appSource, /Confirma este cambio para poder aplicarlo|Confirmado\. Ya puedes aplicar los cambios/i, 'Existing service copy update must require a clear explicit confirmation in UI')
