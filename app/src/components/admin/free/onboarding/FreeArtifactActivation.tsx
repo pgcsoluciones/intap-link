@@ -98,6 +98,17 @@ export default function FreeArtifactActivation() {
     return () => { active = false }
   }, [navigate])
 
+  const routeAfterActivation = async () => {
+    await apiPost('/me/notifications/welcome', {}).catch(() => undefined)
+    const meAfterActivation: any = await apiGet('/me').catch(() => ({ ok: false }))
+    const hasActivity = Boolean(
+      meAfterActivation?.ok &&
+      String(meAfterActivation.data?.category || '').trim() &&
+      String(meAfterActivation.data?.subcategory || '').trim()
+    )
+    navigate(hasActivity ? '/admin/free' : '/admin/free/onboarding/intro', { replace: true })
+  }
+
   const activate = async (event: React.FormEvent) => {
     event.preventDefault()
     if (saving) return
@@ -120,7 +131,7 @@ export default function FreeArtifactActivation() {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       sessionStorage.setItem('kawvo_free_artifact_activated', activatedCode)
-      navigate('/admin/free', { replace: true })
+      await routeAfterActivation()
       return
     }
 
@@ -143,7 +154,7 @@ export default function FreeArtifactActivation() {
 
     sessionStorage.removeItem(PENDING_PUBLIC_CODE)
     sessionStorage.setItem('kawvo_free_artifact_activated', result.data?.public_code || product.public_code)
-    navigate('/admin/free/onboarding/intro', { replace: true })
+    await routeAfterActivation()
   }
 
   if (loading) {
@@ -170,15 +181,11 @@ export default function FreeArtifactActivation() {
           <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
             <h1 className="mt-3 text-[28px] font-black leading-tight tracking-[-0.04em]">Producto confirmado</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-500">Kawvo encontró y validó automáticamente los datos de activación asociados a este artículo. No necesitas escribir ningún código.</p>
+            <p className="mt-3 text-sm leading-6 text-slate-500">Todo está listo. Confirma para vincular este producto a tu cuenta.</p>
 
             <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
               <p className="text-base font-extrabold text-slate-900">{product?.label || PRODUCT_LABELS[product?.product_type] || PRODUCT_LABELS.other}</p>
-              <div className="mt-3 space-y-2 text-sm font-bold text-emerald-800">
-                <p>✓ Producto confirmado</p>
-                <p>✓ Código de compra verificado</p>
-                <p>✓ Código de activación verificado</p>
-              </div>
+              <p className="mt-3 text-sm font-bold text-emerald-800">✓ Producto listo para activar</p>
               <p className="mt-3 text-xs text-slate-500">Cuenta: {me?.email || product?.email}</p>
             </div>
 
@@ -188,8 +195,6 @@ export default function FreeArtifactActivation() {
                 {saving ? 'Activando…' : 'Confirmar y empezar'}
               </button>
             </form>
-
-            <p className="mt-4 text-center text-xs leading-5 text-slate-400">Al confirmar, Kawvo vinculará este producto a tu cuenta, conservará el comprobante interno y abrirá tu Perfil Digital para comenzar a editarlo.</p>
           </div>
         </section>
       </main>
@@ -200,14 +205,12 @@ export default function FreeArtifactActivation() {
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK · activación manual</p>
-          <h1 className="mt-2 text-2xl font-black">Confirma tu artículo</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Este es el método de respaldo para productos anteriores. Introduce el código de activación.</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
+          <h1 className="mt-2 text-2xl font-black">Completa la activación</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Esta opción se usa únicamente para productos anteriores.</p>
 
           <div className="mt-4 rounded-2xl bg-cyan-50 p-4">
             <p className="text-sm font-black">{PRODUCT_LABELS[product?.product_type] || PRODUCT_LABELS.other}</p>
-            <p className="mt-1 text-[11px] font-black uppercase tracking-[0.1em] text-slate-400">Código de compra</p>
-            <p className="mt-1 font-mono text-xs font-bold text-slate-500">{product?.public_code}</p>
             <p className="mt-2 text-xs text-slate-500">Cuenta: {me?.email}</p>
           </div>
 
