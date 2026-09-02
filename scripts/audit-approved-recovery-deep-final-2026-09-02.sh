@@ -3,7 +3,7 @@ set -euo pipefail
 fail(){ echo "✗ $1"; exit 1; }
 check(){ grep -Fq "$2" "$1" || fail "$3"; }
 
-APP='app/src/App.tsx'; ACCOUNT='app/src/components/admin/free/FreeAccount.tsx'; NOTIFS='app/src/components/admin/free/FreeNotifications.tsx'; EDITOR='app/src/components/admin/free/FreeVisualEditor.tsx'; IDENTITY='app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'; BUILDER='app/src/components/admin/free/onboarding/FreeOnboardingBuilder.tsx'; STARTER='app/src/components/admin/free/onboarding/FreeStarterNativePreview.tsx'; LOCATION='app/src/components/admin/free/FreeLocation.tsx'; QUICK='app/src/components/admin/free/FreeQuickActions.tsx'; DANGER='app/src/components/admin/free/FreeProfileDangerZone.tsx'; ACTIVATION='app/src/components/admin/free/onboarding/FreeArtifactActivation.tsx'; GUARD='app/src/components/admin/AdminGuard.tsx'; AI='app/src/components/admin/free/FreeAiProfileAssistant.tsx'; AIAPI='api/src/ai-profile-assistant.ts'; PROFILE='web/src/components/free-profile/IntapLinkGratisProfile.tsx'; ADAPTER='web/src/components/free-profile/IntapLinkGratis.adapter.ts'; BANK='web/src/components/free-profile/PublicBankAccounts.tsx'; MW='functions/_middleware.ts'; REG='web/src/components/profile-templates/registry.tsx'
+APP='app/src/App.tsx'; ACCOUNT='app/src/components/admin/free/FreeAccount.tsx'; NOTIFS='app/src/components/admin/free/FreeNotifications.tsx'; EDITOR='app/src/components/admin/free/FreeVisualEditor.tsx'; IDENTITY='app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'; BUILDER='app/src/components/admin/free/onboarding/FreeOnboardingBuilder.tsx'; STARTER='app/src/components/admin/free/onboarding/FreeStarterNativePreview.tsx'; LOCATION='app/src/components/admin/free/FreeLocation.tsx'; QUICK='app/src/components/admin/free/FreeQuickActions.tsx'; DANGER='app/src/components/admin/free/FreeProfileDangerZone.tsx'; ACTIVATION='app/src/components/admin/free/onboarding/FreeArtifactActivation.tsx'; GUARD='app/src/components/admin/AdminGuard.tsx'; AI='app/src/components/admin/free/FreeAiProfileAssistant.tsx'; AIAPI='api/src/ai-profile-assistant.ts'; PROFILE='web/src/components/free-profile/IntapLinkGratisProfile.tsx'; ADAPTER='web/src/components/free-profile/IntapLinkGratis.adapter.ts'; BANK='web/src/components/free-profile/PublicBankAccounts.tsx'; MW='functions/_middleware.ts'; DISC='functions/profile-discovery.ts'; REG='web/src/components/profile-templates/registry.tsx'
 
 for r in '/admin/free/home' '/admin/free/account' '/admin/free/notifications' '/superadmin/resources' '/admin/free/editor' '/admin/free/ai-profile'; do check "$APP" "path=\"$r\"" "Falta ruta $r"; done
 
@@ -32,7 +32,14 @@ check "$AIAPI" 'const MAX_OUTPUT_TOKENS = 2400' 'IA perdió output aprobado'; ch
 
 check web/src/App.tsx 'path="/demo/ia"' 'Falta Demo IA'; check api/src/preview-free-entry.ts 'registerDemoAiRoutes(app)' 'Demo IA API no ensamblada'; check scripts/qa-demo-ai-preview.mjs 'assert.equal(result.json.data.demo.services.length, 3' 'QA Demo IA no exige exactamente 3 servicios'; check api/src/routes/demo-viral.ts 'demo/s/' 'Falta snapshot viral'
 
-for t in '/llms.txt' '/ai.md' '/facts.json' '/sitemap.xml' '/robots.txt'; do check "$MW" "$t" "Falta discovery $t"; done
+# GEO/SEO/LLM discovery vive en profile-discovery.ts y _middleware solo delega a handleDiscoveryRequest.
+check "$MW" 'handleDiscoveryRequest' 'Middleware no delega discovery'
+check "$DISC" "normalized === '/llms.txt'" 'Falta discovery /llms.txt'
+check "$DISC" "normalized === '/robots.txt'" 'Falta discovery /robots.txt'
+check "$DISC" "sitemap.xml" 'Falta discovery /sitemap.xml'
+check "$DISC" "resource: 'ai.md' | 'facts.json'" 'Faltan recursos ai.md/facts.json'
+check "$DISC" 'getDynamicProfileSeoBundle' 'Falta SEO dinámico de perfiles'
+
 for id in automotive_jason_v3 real_estate_novi_v4 events_1a_v1 car_rental_rentao_v1 industrial_aycdom_v1; do check "$REG" "$id" "Falta plantilla $id"; done
 check "$REG" 'MARBELLA-BOAT.pdf' 'Falta Marbella'; check api/src/preview-free-entry.ts '/api/v1/public/assets/' 'Falta assets R2'
 
