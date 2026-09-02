@@ -1,0 +1,38 @@
+{
+  "name": "Kawvo",
+  "short_name": "Kawvo",
+  "description": "Accede a tu panel Kawvo y a tu perfil público desde un solo lugar.",
+  "id": "/admin/free/home",
+  "start_url": "/admin/free/home?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0F5FF7",
+  "theme_color": "#0F5FF7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/kawvo-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/kawvo-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mi panel",
+      "short_name": "Panel",
+      "url": "/admin/free"
+    },
+    {
+      "name": "Inicio Kawvo",
+      "short_name": "Inicio",
+      "url": "/admin/free/home?source=pwa"
+    }
+  ]
+}

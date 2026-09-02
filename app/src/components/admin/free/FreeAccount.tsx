@@ -94,6 +94,7 @@ export default function FreeAccount() {
 
   const webUrl = useMemo(() => (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, ''), [])
   const publicUrl = me?.slug ? `${webUrl}/${me.slug}` : ''
+  const pwaInstallUrl = `${window.location.origin}/admin/free/home`
 
   useEffect(() => {
     Promise.all([
@@ -279,8 +280,22 @@ export default function FreeAccount() {
         <div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Cómo instalar Kawvo" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowPwaHelp(false) }}>
           <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between"><h2 className="text-lg font-black">Instalar app Kawvo</h2><button type="button" onClick={() => setShowPwaHelp(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
-            <p className="mt-4 text-sm leading-6 text-slate-600">En iPhone o iPad, abre el menú Compartir del navegador y elige <strong>Agregar a pantalla de inicio</strong>.</p>
-            <p className="mt-3 text-sm leading-6 text-slate-500">En Android, abre el menú del navegador y selecciona <strong>Instalar aplicación</strong> o <strong>Agregar a pantalla principal</strong>.</p>
+            <p className="mt-4 text-sm leading-6 text-slate-600">Abre esta dirección en el navegador del dispositivo donde quieres instalar Kawvo:</p>
+            <a href={pwaInstallUrl} className="mt-2 block break-all rounded-xl bg-slate-50 px-3 py-3 text-sm font-bold text-cyan-700 underline">{pwaInstallUrl}</a>
+            <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              <p><strong>iPhone o iPad · Safari</strong></p>
+              <p>1. Abre el enlace de arriba en Safari.</p>
+              <p>2. Toca el botón <strong>Compartir</strong>: es el icono de un cuadrado con una flecha hacia arriba, normalmente en la barra inferior o superior de Safari.</p>
+              <p>3. Desliza las opciones y toca <strong>Agregar a pantalla de inicio</strong>.</p>
+              <p>4. Confirma tocando <strong>Agregar</strong>.</p>
+            </div>
+            <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              <p><strong>Android · Chrome</strong></p>
+              <p>1. Abre el enlace de arriba en Chrome.</p>
+              <p>2. Toca el menú de <strong>tres puntos (⋮)</strong>, normalmente arriba a la derecha.</p>
+              <p>3. Toca <strong>Instalar aplicación</strong> o <strong>Agregar a pantalla principal</strong>.</p>
+              <p>4. Confirma la instalación.</p>
+            </div>
           </article>
         </div>
       )}
