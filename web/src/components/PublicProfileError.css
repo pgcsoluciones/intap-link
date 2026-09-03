@@ -1,0 +1,137 @@
+.public-profile.error-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(29, 94, 239, 0.08), transparent 30%),
+    radial-gradient(circle at 100% 100%, rgba(8, 145, 178, 0.06), transparent 28%),
+    linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+  color: #0f172a;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.public-profile.error-page .profile-card {
+  position: relative;
+  width: min(100%, 430px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+  padding: 76px 28px 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 22px 65px rgba(15, 23, 42, 0.10);
+}
+
+.public-profile.error-page .profile-card::after {
+  content: "KAWVO LINK";
+  position: absolute;
+  top: 28px;
+  left: 0;
+  right: 0;
+  color: #0891b2;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+}
+
+.public-profile.error-page .profile-card::before {
+  content: "🙁";
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 10px auto 18px;
+  border-radius: 50%;
+  background: #fff7ed;
+  box-shadow: inset 0 0 0 1px #ffedd5;
+  font-size: 30px;
+  line-height: 1;
+  filter: saturate(0.78);
+}
+
+.public-profile.error-page .profile-card h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.public-profile.error-page .profile-card h1::before {
+  content: "Perfil no disponible";
+  display: block;
+  font-size: clamp(26px, 7vw, 30px);
+  line-height: 1.12;
+}
+
+.public-profile.error-page .profile-card p {
+  max-width: 340px;
+  margin: 12px auto 0;
+  color: #64748b;
+  font-size: 0;
+  line-height: 1.65;
+}
+
+.public-profile.error-page .profile-card p::after {
+  content: "Este perfil no existe, aún no está publicado o no está disponible en este momento.";
+  display: block;
+  font-size: 15px;
+}
+
+.public-profile.error-page .btn-primary {
+  width: 100%;
+  max-width: 330px;
+  box-sizing: border-box;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin-top: 24px !important;
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 16px;
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  font-size: 0;
+  font-weight: 800;
+  text-decoration: none !important;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.public-profile.error-page .btn-primary::after {
+  content: "Conocer Kawvo Link";
+  font-size: 14px;
+}
+
+.public-profile.error-page .btn-primary:hover {
+  background: #1e293b;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+  transform: translateY(-1px);
+}
+
+.public-profile.error-page .btn-primary:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.public-profile.error-page .btn-primary:focus-visible {
+  outline: 3px solid rgba(8, 145, 178, 0.28);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .public-profile.error-page {
+    padding: 18px;
+  }
+
+  .public-profile.error-page .profile-card {
+    padding: 72px 22px 24px;
+    border-radius: 24px;
+  }
+}
