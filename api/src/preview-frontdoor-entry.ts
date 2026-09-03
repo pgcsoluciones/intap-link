@@ -84,11 +84,15 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   })
 }
 
-function canonicalizePreviewDiscoveryHtml(html: string, publicOrigin: string): string {
-  let output = html.replace(
+function canonicalizePagesUrls(value: string, publicOrigin: string): string {
+  return value.replace(
     /https:\/\/(?:[a-z0-9-]+\.)?(?:intap-link|intap-web2)\.pages\.dev/gi,
     publicOrigin,
   )
+}
+
+function canonicalizePreviewDiscoveryHtml(html: string, publicOrigin: string): string {
+  let output = canonicalizePagesUrls(html, publicOrigin)
 
   const seenAlternates = new Set<string>()
   output = output.replace(
@@ -148,18 +152,34 @@ function canonicalizePreviewDiscoveryHtml(html: string, publicOrigin: string): s
 async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
   const response = await proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
   if (request.method.toUpperCase() !== 'GET' || response.status !== 200) return response
-  const contentType = response.headers.get('content-type') || ''
-  if (!contentType.includes('text/html')) return response
 
   const requestUrl = new URL(request.url)
-  const html = await response.text()
-  const updated = canonicalizePreviewDiscoveryHtml(html, requestUrl.origin)
+  const contentType = response.headers.get('content-type') || ''
   const headers = new Headers(response.headers)
-  headers.delete('content-length')
-  headers.delete('content-encoding')
-  headers.set('cache-control', 'no-store')
-  headers.set('x-robots-tag', 'noindex, nofollow, noarchive')
-  return new Response(updated, { status: response.status, statusText: response.statusText, headers })
+
+  if (contentType.includes('text/html')) {
+    const html = await response.text()
+    const updated = canonicalizePreviewDiscoveryHtml(html, requestUrl.origin)
+    headers.delete('content-length')
+    headers.delete('content-encoding')
+    headers.set('cache-control', 'no-store')
+    headers.set('x-robots-tag', 'noindex, nofollow, noarchive')
+    return new Response(updated, { status: response.status, statusText: response.statusText, headers })
+  }
+
+  const isAiMarkdown = /\/ai\.md$/i.test(requestUrl.pathname) && /text\/markdown|text\/plain/i.test(contentType)
+  const isFactsJson = /\/facts\.json$/i.test(requestUrl.pathname) && /application\/json/i.test(contentType)
+
+  if (isAiMarkdown || isFactsJson) {
+    const body = await response.text()
+    const updated = canonicalizePagesUrls(body, requestUrl.origin)
+    headers.delete('content-length')
+    headers.delete('content-encoding')
+    headers.set('cache-control', 'no-store')
+    return new Response(updated, { status: response.status, statusText: response.statusText, headers })
+  }
+
+  return response
 }
 
 async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
