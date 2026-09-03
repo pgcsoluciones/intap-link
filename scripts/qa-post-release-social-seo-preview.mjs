@@ -46,7 +46,12 @@ async function assertRealImage(image, label) {
   assert.match(html, new RegExp(`/${slug}/ai\\.md`, 'i'), 'perfil: falta enlace ai.md')
   assert.match(html, new RegExp(`/${slug}/facts\\.json`, 'i'), 'perfil: falta enlace facts.json')
   assert.match(html, /data-kawvo-profile-discovery="dynamic"/i, 'perfil: falta fallback semántico dinámico')
-  console.log(`✓ Perfil Graph Card dinámico usa imagen real: ${image}`)
+  assert.match(html, /data-kawvo-server-profile="1"/i, 'perfil: falta HTML semántico server-side')
+  assert.match(html, /<div id="root">[\s\S]*data-kawvo-server-profile="1"/i, 'perfil: la semántica no está dentro del HTML inicial del root')
+  assert.doesNotMatch(html, /<noscript[^>]+data-kawvo-profile-discovery="dynamic"/i, 'perfil: la semántica sigue encerrada en noscript')
+  assert.match(html, /<h1>[^<]+<\/h1>/i, 'perfil: falta nombre legible en HTML inicial')
+  assert.match(html, /<h2>Servicios<\/h2>/i, 'perfil: faltan servicios legibles en HTML inicial')
+  console.log(`✓ Perfil Graph Card + HTML semántico dinámico: ${image}`)
 }
 
 {
@@ -78,4 +83,4 @@ async function assertRealImage(image, label) {
   console.log('✓ facts.json dinámico disponible')
 }
 
-console.log('✓ QA post-release social + SEO/GEO Preview aprobado')
+console.log('✓ QA post-release social + SEO/GEO/LLM Preview aprobado')
