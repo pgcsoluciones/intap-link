@@ -1,7 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import { installKawvoBranding } from './kawvo-brand'
 import './index.css'
+import './kawvo-brand.css'
 
 const initialPath = window.location.pathname
 document.body.classList.toggle(
@@ -28,6 +30,8 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => undefined)
   })
 }
+
+installKawvoBranding()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
