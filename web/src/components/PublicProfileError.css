@@ -13,115 +13,118 @@
 }
 
 .public-profile.error-page .profile-card {
-  position: relative;
   width: min(100%, 430px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  overflow: hidden;
-  padding: 76px 28px 28px;
+  padding: 30px 28px 28px;
   border: 1px solid #e2e8f0;
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 22px 65px rgba(15, 23, 42, 0.10);
 }
 
-.public-profile.error-page .profile-card::after {
-  content: "KAWVO LINK";
-  position: absolute;
-  top: 28px;
-  left: 0;
-  right: 0;
-  color: #0891b2;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.22em;
+.public-profile.error-page .kawvo-error-logo {
+  display: block;
+  width: min(190px, 58%);
+  max-height: 54px;
+  object-fit: contain;
+  margin: 0 auto 24px;
 }
 
-.public-profile.error-page .profile-card::before {
-  content: "🙁";
+.public-profile.error-page .kawvo-error-face {
   display: grid;
   place-items: center;
   width: 64px;
   height: 64px;
-  margin: 10px auto 18px;
+  margin: 0 auto 18px;
   border-radius: 50%;
-  background: #fff7ed;
-  box-shadow: inset 0 0 0 1px #ffedd5;
-  font-size: 30px;
-  line-height: 1;
-  filter: saturate(0.78);
+  background: linear-gradient(180deg, #fffaf5 0%, #fff4ea 100%);
+  color: #c56a2d;
+  box-shadow: inset 0 0 0 1px #f7dfca;
 }
 
-.public-profile.error-page .profile-card h1 {
+.public-profile.error-page .kawvo-error-face svg {
+  width: 48px;
+  height: 48px;
+}
+
+.public-profile.error-page .kawvo-error-title {
   margin: 0;
   color: #0f172a;
-  font-size: 0;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.public-profile.error-page .profile-card h1::before {
-  content: "Perfil no disponible";
-  display: block;
   font-size: clamp(26px, 7vw, 30px);
   line-height: 1.12;
+  font-weight: 850;
+  letter-spacing: -0.035em;
 }
 
-.public-profile.error-page .profile-card p {
+.public-profile.error-page .kawvo-error-copy {
   max-width: 340px;
-  margin: 12px auto 0;
+  margin: 13px auto 0;
   color: #64748b;
-  font-size: 0;
+  font-size: 15px;
   line-height: 1.65;
 }
 
-.public-profile.error-page .profile-card p::after {
-  content: "Este perfil no existe, aún no está publicado o no está disponible en este momento.";
-  display: block;
-  font-size: 15px;
-}
-
-.public-profile.error-page .btn-primary {
+.public-profile.error-page .kawvo-error-actions {
   width: 100%;
   max-width: 330px;
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.public-profile.error-page .kawvo-error-primary,
+.public-profile.error-page .kawvo-error-secondary {
+  width: 100%;
   box-sizing: border-box;
-  display: flex !important;
+  display: flex;
   align-items: center;
   justify-content: center;
   min-height: 52px;
-  margin-top: 24px !important;
   padding: 15px 18px;
-  border: 0;
   border-radius: 16px;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.public-profile.error-page .kawvo-error-primary {
+  border: 1px solid #0f172a;
   background: #0f172a;
   color: #ffffff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
-  font-size: 0;
-  font-weight: 800;
-  text-decoration: none !important;
-  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-.public-profile.error-page .btn-primary::after {
-  content: "Conocer Kawvo Link";
-  font-size: 14px;
+.public-profile.error-page .kawvo-error-secondary {
+  border: 1px solid #d7e0ea;
+  background: #ffffff;
+  color: #475569;
 }
 
-.public-profile.error-page .btn-primary:hover {
+.public-profile.error-page .kawvo-error-primary:hover {
   background: #1e293b;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
   transform: translateY(-1px);
 }
 
-.public-profile.error-page .btn-primary:active {
+.public-profile.error-page .kawvo-error-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.public-profile.error-page .kawvo-error-primary:active,
+.public-profile.error-page .kawvo-error-secondary:active {
   transform: translateY(0) scale(0.99);
 }
 
-.public-profile.error-page .btn-primary:focus-visible {
-  outline: 3px solid rgba(8, 145, 178, 0.28);
+.public-profile.error-page .kawvo-error-primary:focus-visible,
+.public-profile.error-page .kawvo-error-secondary:focus-visible {
+  outline: 3px solid rgba(8, 145, 178, 0.24);
   outline-offset: 3px;
 }
 
@@ -131,7 +134,12 @@
   }
 
   .public-profile.error-page .profile-card {
-    padding: 72px 22px 24px;
+    padding: 26px 22px 24px;
     border-radius: 24px;
+  }
+
+  .public-profile.error-page .kawvo-error-logo {
+    width: min(176px, 62%);
+    margin-bottom: 22px;
   }
 }
