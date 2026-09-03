@@ -61,6 +61,10 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   const headers = new Headers(request.headers)
   headers.delete('host')
   headers.set('x-intap-preview-proxy', marker)
+  // Pages Functions ejecuta sobre el origin inmutable .pages.dev. Conservamos
+  // explícitamente el origin que vio el visitante para que canonical, og:url,
+  // JSON-LD y recursos AI usen el dominio público estable de Preview.
+  headers.set('x-kawvo-public-origin', requestUrl.origin)
 
   const upstream = await fetch(target.toString(), {
     method,
