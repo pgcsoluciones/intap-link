@@ -4,25 +4,48 @@
   vertical-align: middle;
 }
 
-.kawvo-brand-logo-full {
-  width: auto;
-  max-width: 176px;
-  height: 24px;
+/*
+ * Branding de interfaz: el wordmark oficial debe leerse como marca,
+ * no como un icono diminuto. !important neutraliza tamaños heredados
+ * de antiguos iconos (h-6/w-6, atributos width/height, etc.).
+ */
+.kawvo-brand-logo-screen {
+  width: min(132px, 38vw) !important;
+  max-width: 132px !important;
+  height: auto !important;
+  max-height: 44px !important;
 }
 
-body.kawvo-free-mobile header .kawvo-brand-logo-full {
-  height: 22px;
-  max-width: 164px;
+/* Encabezados compactos de Mi panel / administración. */
+body.kawvo-free-mobile header .kawvo-brand-logo-screen {
+  width: min(112px, 32vw) !important;
+  max-width: 112px !important;
+  max-height: 36px !important;
 }
 
-main .kawvo-brand-logo-full {
-  height: 26px;
-  max-width: 184px;
+/* Login, autenticación y pantallas con espacio vertical disponible. */
+main .kawvo-brand-logo-screen {
+  width: min(142px, 42vw) !important;
+  max-width: 142px !important;
+  max-height: 46px !important;
 }
 
 @media (max-width: 480px) {
-  .kawvo-brand-logo-full {
-    height: 22px;
-    max-width: 160px;
+  .kawvo-brand-logo-screen {
+    width: min(120px, 40vw) !important;
+    max-width: 120px !important;
+    max-height: 40px !important;
+  }
+
+  body.kawvo-free-mobile header .kawvo-brand-logo-screen {
+    width: min(106px, 34vw) !important;
+    max-width: 106px !important;
+    max-height: 34px !important;
+  }
+
+  main .kawvo-brand-logo-screen {
+    width: min(132px, 44vw) !important;
+    max-width: 132px !important;
+    max-height: 44px !important;
   }
 }
