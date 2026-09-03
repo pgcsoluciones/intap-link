@@ -1,4 +1,3 @@
-const FULL_LOGO_PATH = '/assets/free-starter/branding/logo-completo.png'
 const MARK_LOGO_PATH = '/assets/free-starter/branding/logo-solo.png'
 
 function webBase() {
@@ -10,6 +9,14 @@ function logoUrl(path: string) {
   return `${webBase()}${path}`
 }
 
+function applyScreenLogoSizing(image: HTMLImageElement) {
+  image.classList.add('kawvo-brand-logo', 'kawvo-brand-logo-screen')
+  image.removeAttribute('width')
+  image.removeAttribute('height')
+  image.style.width = ''
+  image.style.height = ''
+}
+
 function replaceBrandLabel(element: HTMLElement) {
   if (element.dataset.kawvoBrandLogo === '1') return
   if (element.children.length > 0) return
@@ -18,9 +25,9 @@ function replaceBrandLabel(element: HTMLElement) {
   if (text !== 'KAWVO' && text !== 'KAWVO LINK') return
 
   const logo = document.createElement('img')
-  logo.src = logoUrl(FULL_LOGO_PATH)
+  logo.src = logoUrl(MARK_LOGO_PATH)
   logo.alt = 'Kawvo'
-  logo.className = 'kawvo-brand-logo kawvo-brand-logo-full'
+  applyScreenLogoSizing(logo)
 
   element.textContent = ''
   element.appendChild(logo)
@@ -33,6 +40,7 @@ function replaceLegacyMarks() {
     .forEach((image) => {
       if (image.dataset.kawvoBrandMark === '1') return
       image.src = logoUrl(MARK_LOGO_PATH)
+      applyScreenLogoSizing(image)
       image.dataset.kawvoBrandMark = '1'
     })
 }
