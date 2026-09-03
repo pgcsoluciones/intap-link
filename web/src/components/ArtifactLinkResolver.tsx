@@ -182,7 +182,7 @@ export default function ArtifactLinkResolver() {
                 <button type="button" onClick={() => window.location.assign(loginUrl)} style={primaryButton}>
                   Soy el propietario · Iniciar sesión
                 </button>
-                <button type="button" onClick={() => window.location.assign(`${window.location.origin}/`)} style={secondaryButton}>
+                <button type="button" onClick={() => window.location.assign('https://nfc.kawvoia.com')} style={secondaryButton}>
                   Conocer Kawvo Link
                 </button>
               </>
