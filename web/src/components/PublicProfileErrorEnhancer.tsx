@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 
 const KAWVO_LINK_HOME = 'https://nfc.kawvoia.com'
 const KAWVO_LOGO_FULL = '/assets/free-starter/branding/logo-completo.png'
+const KAWVO_404_AVATAR = '/assets/free-starter/branding/avatar-404.png'
 
 function makeAction(label: string, className: string) {
   const link = document.createElement('a')
@@ -26,17 +27,12 @@ function enhanceCard(card: HTMLElement) {
   logo.className = 'kawvo-error-logo'
   card.appendChild(logo)
 
-  const face = document.createElement('div')
-  face.className = 'kawvo-error-face'
-  face.setAttribute('aria-hidden', 'true')
-  face.innerHTML = `
-    <svg viewBox="0 0 64 64" role="presentation" focusable="false">
-      <circle cx="32" cy="32" r="23" fill="none" stroke="currentColor" stroke-width="2.4" />
-      <circle cx="24" cy="27" r="2.2" fill="currentColor" />
-      <circle cx="40" cy="27" r="2.2" fill="currentColor" />
-      <path d="M22 43c2.8-5 7-7.4 10-7.4s7.2 2.4 10 7.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
-    </svg>`
-  card.appendChild(face)
+  const avatar = document.createElement('img')
+  avatar.src = KAWVO_404_AVATAR
+  avatar.alt = ''
+  avatar.className = 'kawvo-error-avatar'
+  avatar.setAttribute('aria-hidden', 'true')
+  card.appendChild(avatar)
 
   const title = document.createElement('h1')
   title.className = 'kawvo-error-title'
@@ -63,35 +59,11 @@ function enhanceVisibleErrors() {
     .forEach(enhanceCard)
 }
 
-function enhanceScanBranding() {
-  if (!window.location.pathname.startsWith('/l/')) return
-
-  document.querySelectorAll<HTMLElement>('main p').forEach((label) => {
-    if (label.dataset.kawvoBrandLogo === '1') return
-    if (label.children.length > 0) return
-    if ((label.textContent || '').trim().toUpperCase() !== 'KAWVO LINK') return
-
-    const logo = document.createElement('img')
-    logo.src = KAWVO_LOGO_FULL
-    logo.alt = 'Kawvo'
-    logo.className = 'kawvo-system-logo'
-
-    label.textContent = ''
-    label.appendChild(logo)
-    label.dataset.kawvoBrandLogo = '1'
-  })
-}
-
-function enhanceSystemUi() {
-  enhanceVisibleErrors()
-  enhanceScanBranding()
-}
-
 export default function PublicProfileErrorEnhancer() {
   useEffect(() => {
-    enhanceSystemUi()
+    enhanceVisibleErrors()
 
-    const observer = new MutationObserver(enhanceSystemUi)
+    const observer = new MutationObserver(enhanceVisibleErrors)
     observer.observe(document.body, { childList: true, subtree: true })
 
     return () => observer.disconnect()
