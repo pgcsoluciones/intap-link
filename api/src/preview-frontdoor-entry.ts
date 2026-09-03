@@ -86,7 +86,7 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
 
 function canonicalizePreviewDiscoveryHtml(html: string, publicOrigin: string): string {
   let output = html.replace(
-    /https:\/\/[a-z0-9-]+\.intap-link\.pages\.dev/gi,
+    /https:\/\/(?:[a-z0-9-]+\.)?(?:intap-link|intap-web2)\.pages\.dev/gi,
     publicOrigin,
   )
 
@@ -112,7 +112,7 @@ function canonicalizePreviewDiscoveryHtml(html: string, publicOrigin: string): s
       if (parsed && parsed['@context'] === 'https://schema.org' && parsed['@type'] && !parsed['@graph']) {
         const entity = { ...parsed }
         delete entity['@context']
-        const entityId = entity['@id'] || `${publicOrigin}${new URL(publicOrigin).pathname}#entity`
+        const entityId = entity['@id'] || `${publicOrigin}#entity`
         entity['@id'] = entityId
         const canonical = String(entity.url || publicOrigin)
         const page = {
