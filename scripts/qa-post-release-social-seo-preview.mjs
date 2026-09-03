@@ -58,7 +58,7 @@ async function assertRealImage(image, label) {
   await assertRealImage(image, 'perfil')
   assert.equal(canonicalUrl, expectedCanonical, `perfil: canonical incorrecto: ${canonicalUrl}`)
   assert.equal(ogUrl, expectedCanonical, `perfil: og:url incorrecto: ${ogUrl}`)
-  assert.doesNotMatch(html, /https:\/\/[a-z0-9-]+\.intap-link\.pages\.dev/i, 'perfil: metadata todavía expone origin .pages.dev')
+  assert.doesNotMatch(html, /https:\/\/[a-z0-9-]+\.(?:intap-link|intap-web2)\.pages\.dev/i, 'perfil: metadata todavía expone origin .pages.dev')
   assert.match(response.headers.get('x-robots-tag') || '', /noindex/i, 'Preview debe seguir siendo noindex')
   assert.equal(count(html, /<script\s+type=["']application\/ld\+json["']>/gi), 1, 'perfil: debe existir un solo JSON-LD consolidado')
   assert.match(html, /"@type":"ProfilePage"/i, 'perfil: JSON-LD debe usar ProfilePage')
@@ -89,7 +89,9 @@ async function assertRealImage(image, label) {
   assert.ok(text.length > 100, 'ai.md demasiado corto')
   assert.match(text, /Servicios o productos/i, 'ai.md debe exponer servicios')
   assert.match(text, /Contacto/i, 'ai.md debe exponer contacto')
-  console.log('✓ ai.md dinámico disponible')
+  assert.match(text, new RegExp(`${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${slug}`, 'i'), 'ai.md debe usar URL pública de Preview')
+  assert.doesNotMatch(text, /\.pages\.dev/i, 'ai.md no debe exponer origin .pages.dev')
+  console.log('✓ ai.md dinámico disponible y canónico')
 }
 
 {
@@ -99,6 +101,7 @@ async function assertRealImage(image, label) {
   assert.ok(json?.entity?.name, 'facts.json: falta entidad')
   assert.ok(Array.isArray(json?.services), 'facts.json: services debe ser array')
   assert.equal(json?.canonicalUrl, `${base}/${encodeURIComponent(slug)}`, `facts.json: canonical incorrecto: ${json?.canonicalUrl}`)
+  assert.doesNotMatch(JSON.stringify(json), /\.pages\.dev/i, 'facts.json no debe exponer origin .pages.dev')
   console.log('✓ facts.json dinámico disponible y canónico')
 }
 
