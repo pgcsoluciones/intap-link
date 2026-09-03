@@ -1,6 +1,7 @@
 import {
   lazy,
   Suspense,
+  useEffect,
 } from 'react'
 
 import {
@@ -13,6 +14,8 @@ import {
 } from 'react-router-dom'
 
 import PublicBankAccounts from './components/free-profile/PublicBankAccounts'
+import PublicProfileErrorEnhancer from './components/PublicProfileErrorEnhancer'
+import './components/PublicProfileError.css'
 
 /*
  * IMPORTANTE
@@ -26,10 +29,6 @@ import PublicBankAccounts from './components/free-profile/PublicBankAccounts'
 
 const PublicProfile = lazy(
   () => import('./components/PublicProfile'),
-)
-
-const MarketingLanding = lazy(
-  () => import('./components/marketing/MarketingLanding'),
 )
 
 const KawvoLinkDemo = lazy(
@@ -62,6 +61,8 @@ const IntapProfileBioPestsOperations = lazy(
     ),
 )
 
+const KAWVO_LINK_HOME = 'https://nfc.kawvoia.com'
+
 function RouteLoader() {
   return (
     <div
@@ -81,6 +82,12 @@ function RootRoute() {
       location.search,
     ).get('slug')
 
+  useEffect(() => {
+    if (!slug) {
+      window.location.replace(KAWVO_LINK_HOME)
+    }
+  }, [slug])
+
   if (slug) {
     return (
       <Navigate
@@ -90,7 +97,7 @@ function RootRoute() {
     )
   }
 
-  return <MarketingLanding />
+  return <RouteLoader />
 }
 
 function PublicProfileRoute() {
@@ -110,6 +117,7 @@ function LegacyBankRoute() {
 function App() {
   return (
     <BrowserRouter>
+      <PublicProfileErrorEnhancer />
       <Suspense fallback={<RouteLoader />}>
         <Routes>
           <Route

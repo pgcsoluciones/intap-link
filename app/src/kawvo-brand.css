@@ -1,0 +1,28 @@
+.kawvo-brand-logo {
+  display: inline-block;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.kawvo-brand-logo-full {
+  width: auto;
+  max-width: 176px;
+  height: 24px;
+}
+
+body.kawvo-free-mobile header .kawvo-brand-logo-full {
+  height: 22px;
+  max-width: 164px;
+}
+
+main .kawvo-brand-logo-full {
+  height: 26px;
+  max-width: 184px;
+}
+
+@media (max-width: 480px) {
+  .kawvo-brand-logo-full {
+    height: 22px;
+    max-width: 160px;
+  }
+}

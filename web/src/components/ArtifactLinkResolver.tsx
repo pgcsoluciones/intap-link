@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+const KAWVO_COMPACT_LOGO = '/assets/free-starter/branding/logo-solo.png'
+
 function appOrigin() {
   // Canonical public hosts must always hand off to the admin APP host.
   // Resolve them at runtime before considering build-time env values so a
@@ -19,7 +21,7 @@ function appOrigin() {
     : 'https://app.intaprd.com'
 }
 
-type ProductState = 'loading' | 'pending_activation' | 'activated' | 'blocked' | 'unavailable' | 'not_ready' | 'later' | 'error'
+type ProductState = 'loading' | 'pending_activation' | 'activated' | 'profile_draft' | 'profile_draft_owner' | 'blocked' | 'unavailable' | 'not_ready' | 'later' | 'error'
 
 type ArtifactInfo = {
   public_code?: string
@@ -32,6 +34,7 @@ export default function ArtifactLinkResolver() {
   const [state, setState] = useState<ProductState>('loading')
   const [artifact, setArtifact] = useState<ArtifactInfo | null>(null)
   const [profileUrl, setProfileUrl] = useState('')
+  const [loginUrl, setLoginUrl] = useState('')
   const [message, setMessage] = useState('')
   const [starting, setStarting] = useState(false)
 
@@ -65,6 +68,7 @@ export default function ArtifactLinkResolver() {
 
         setArtifact(json.artifact || null)
         setProfileUrl(String(json.next_url || ''))
+        setLoginUrl(String(json.login_url || ''))
         setMessage(String(json.message || ''))
         setState(String(json.state || 'error') as ProductState)
       } catch {
@@ -121,7 +125,11 @@ export default function ArtifactLinkResolver() {
   return (
     <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: '#f7f9fc', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <section style={cardStyle}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 900, letterSpacing: '.22em', color: '#0891b2' }}>KAWVO LINK</p>
+        <img
+          src={KAWVO_COMPACT_LOGO}
+          alt="Kawvo"
+          style={{ display: 'block', width: 124, maxWidth: '48%', height: 36, objectFit: 'contain', margin: '0 auto' }}
+        />
 
         {state === 'loading' && (
           <>
@@ -156,6 +164,35 @@ export default function ArtifactLinkResolver() {
             <h1 style={{ margin: '16px 0 8px', fontSize: 25 }}>Puedes activarlo cuando quieras</h1>
             <p style={{ margin: 0, lineHeight: 1.6, color: '#64748b' }}>Tu producto sigue pendiente y disponible. Cuando estés listo, vuelve a escanear su QR o NFC.</p>
             <button type="button" onClick={() => setState('pending_activation')} style={{ ...secondaryButton, marginTop: 20 }}>Volver</button>
+          </>
+        )}
+
+        {(state === 'profile_draft' || state === 'profile_draft_owner') && (
+          <>
+            <div style={{ width: 48, height: 48, margin: '20px auto 0', display: 'grid', placeItems: 'center', borderRadius: '50%', background: '#fff7ed', color: '#c2410c', fontSize: 22, fontWeight: 900 }}>…</div>
+            <h1 style={{ margin: '16px 0 8px', fontSize: 26 }}>Perfil en construcción</h1>
+            <p style={{ margin: '0 0 20px', lineHeight: 1.6, color: '#64748b' }}>
+              {state === 'profile_draft_owner'
+                ? (message || 'Tu Perfil Digital todavía está en construcción.')
+                : 'Este Perfil Digital todavía está en construcción. Su propietario está preparando su presentación en Kawvo Link.'}
+            </p>
+
+            {state === 'profile_draft_owner' && profileUrl && (
+              <button type="button" onClick={() => window.location.assign(profileUrl)} style={primaryButton}>
+                Continuar configurando mi perfil
+              </button>
+            )}
+
+            {state === 'profile_draft' && loginUrl && (
+              <>
+                <button type="button" onClick={() => window.location.assign(loginUrl)} style={primaryButton}>
+                  Soy el propietario · Iniciar sesión
+                </button>
+                <button type="button" onClick={() => window.location.assign('https://nfc.kawvoia.com')} style={secondaryButton}>
+                  Conocer Kawvo Link
+                </button>
+              </>
+            )}
           </>
         )}
 
