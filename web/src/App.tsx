@@ -14,6 +14,7 @@ import {
 } from 'react-router-dom'
 
 import PublicBankAccounts from './components/free-profile/PublicBankAccounts'
+import './components/PublicProfileError.css'
 
 /*
  * IMPORTANTE
