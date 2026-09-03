@@ -4,7 +4,7 @@ import { apiGet, apiPost } from '../../lib/api'
 
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 
-type Phase = 'loading' | 'verified' | 'activated' | 'blocked' | 'error'
+type Phase = 'loading' | 'verified' | 'activated' | 'profile_draft' | 'profile_draft_owner' | 'blocked' | 'error'
 
 type ProductInfo = {
   public_code?: string
@@ -102,6 +102,18 @@ export default function ScanActivationEntry() {
 
       if (status.state === 'activated') {
         setPhase('activated')
+        return
+      }
+
+      if (status.state === 'profile_draft_owner') {
+        setMessage(status.message || 'Tu Perfil Digital todavía está en construcción.')
+        setPhase('profile_draft_owner')
+        return
+      }
+
+      if (status.state === 'profile_draft') {
+        setMessage(status.message || 'Este Perfil Digital todavía está en construcción.')
+        setPhase('profile_draft')
         return
       }
 
@@ -210,6 +222,26 @@ export default function ScanActivationEntry() {
               </button>
               <p className="mt-4 text-center text-xs leading-5 text-slate-400">Al confirmar, este producto quedará vinculado a tu cuenta.</p>
             </>
+          )}
+
+          {(phase === 'profile_draft' || phase === 'profile_draft_owner') && (
+            <div className="py-4 text-center">
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-amber-50 text-xl font-black text-amber-700">…</div>
+              <h1 className="mt-4 text-2xl font-black">Perfil en construcción</h1>
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                {message || 'Este Perfil Digital todavía está en construcción.'}
+              </p>
+
+              {phase === 'profile_draft_owner' && (
+                <button
+                  type="button"
+                  onClick={() => window.location.assign(profileUrl || '/admin/free')}
+                  className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white"
+                >
+                  Continuar configurando mi perfil
+                </button>
+              )}
+            </div>
           )}
 
           {phase === 'activated' && (
