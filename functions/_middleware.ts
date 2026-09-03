@@ -222,6 +222,17 @@ ${seoHeadHtml}
       || `${url.origin}/assets/og/kawvo-link-og.png`;
   };
 
+  const publicPortfolio = (profile: any) => (
+    Array.isArray(profile?.gallery) ? profile.gallery : []
+  )
+    .map((item: any) => ({
+      name: typeof item?.title === 'string' ? item.title.replace(/\s+/g, ' ').trim() : '',
+      description: typeof item?.description === 'string' ? item.description.replace(/\s+/g, ' ').trim() : '',
+      image: normalizeSocialImage(item?.imageUrl || item?.image_url || ''),
+    }))
+    .filter((item: any) => item.name)
+    .slice(0, 24);
+
   const dynamicDiscoveryEnhancement = (profile: any, canonicalUrl: string, image: string) => {
     if (!profile) return { seoHeadHtml: '', semanticFallbackHtml: '' };
     const clean = (value: unknown) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
@@ -236,6 +247,8 @@ ${seoHeadHtml}
       .map((item: any) => ({ name: clean(item?.title), description: clean(item?.description) }))
       .filter((item: any) => item.name)
       .slice(0, 12);
+    const portfolio = publicPortfolio(profile);
+    const portfolioTitle = clean(templateData?.portfolio_section_title) || 'Portafolio';
     const phones = Array.from(new Set([
       clean(profile?.contact?.phone),
       clean(profile?.contact?.whatsapp),
@@ -256,6 +269,7 @@ ${seoHeadHtml}
       role,
       companyName,
       ...services.map((item: any) => item.name),
+      ...portfolio.map((item: any) => item.name),
     ].filter(Boolean)));
     const schema: any = {
       '@context': 'https://schema.org',
@@ -269,7 +283,14 @@ ${seoHeadHtml}
     };
     if (role) schema.jobTitle = role;
     if (companyName && entityType === 'Person') schema.worksFor = { '@type': 'Organization', name: companyName };
-    if (category || subcategory) schema.knowsAbout = [category, subcategory, ...services.map((item: any) => item.name)].filter(Boolean);
+    if (category || subcategory || services.length || portfolio.length) {
+      schema.knowsAbout = [
+        category,
+        subcategory,
+        ...services.map((item: any) => item.name),
+        ...portfolio.map((item: any) => item.name),
+      ].filter(Boolean);
+    }
     if (phones.length) schema.telephone = phones[0];
     if (email) schema.email = email;
     if (address) schema.address = { '@type': 'PostalAddress', streetAddress: address };
@@ -289,6 +310,14 @@ ${seoHeadHtml}
         })),
       };
     }
+    if (portfolio.length) {
+      schema.subjectOf = portfolio.map((item: any) => ({
+        '@type': 'CreativeWork',
+        name: item.name,
+        ...(item.description ? { description: item.description } : {}),
+        ...(item.image ? { image: item.image } : {}),
+      }));
+    }
     const seoHeadHtml = `
   <meta name=\"keywords\" content=\"${escapeHtml(keywords.join(', '))}\" />
   <link rel=\"alternate\" type=\"text/markdown\" href=\"${escapeHtml(`${canonicalUrl}/ai.md`)}\" title=\"Información del perfil para asistentes de IA\" />
@@ -296,6 +325,9 @@ ${seoHeadHtml}
   <script type=\"application/ld+json\">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>`;
     const serviceList = services.length
       ? `<h2>Servicios</h2><ul>${services.map((service: any) => `<li><strong>${escapeHtml(service.name)}</strong>${service.description ? `: ${escapeHtml(service.description)}` : ''}</li>`).join('')}</ul>`
+      : '';
+    const portfolioList = portfolio.length
+      ? `<h2>${escapeHtml(portfolioTitle)}</h2><ul>${portfolio.map((item: any) => `<li><strong>${escapeHtml(item.name)}</strong>${item.description ? `: ${escapeHtml(item.description)}` : ''}</li>`).join('')}</ul>`
       : '';
     const semanticFallbackHtml = `
   <noscript data-kawvo-profile-discovery=\"dynamic\">
@@ -305,6 +337,7 @@ ${seoHeadHtml}
       ${category || subcategory ? `<p>${escapeHtml([category, subcategory].filter(Boolean).join(' · '))}</p>` : ''}
       <p>${escapeHtml(description)}</p>
       ${serviceList}
+      ${portfolioList}
       ${address ? `<h2>Ubicación</h2><p>${escapeHtml(address)}</p>` : ''}
       ${phones.length || email ? `<h2>Contacto</h2><p>${escapeHtml([...phones, email].filter(Boolean).join(' · '))}</p>` : ''}
     </main>
@@ -312,10 +345,62 @@ ${seoHeadHtml}
     return { seoHeadHtml, semanticFallbackHtml };
   };
 
+  const enrichDiscoveryResourceWithPortfolio = async (response: Response): Promise<Response> => {
+    if (response.status !== 200 || context.request.method.toUpperCase() !== 'GET') return response;
+    const match = url.pathname.match(/^\/([^/]+)\/(ai\.md|facts\.json)\/?$/i);
+    if (!match) return response;
+
+    const slug = decodeURIComponent(match[1] || '').trim();
+    if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) return response;
+    const profile = await fetchPublicProfileForShare(slug);
+    if (!profile) return response;
+    const portfolio = publicPortfolio(profile);
+    if (!portfolio.length) return response;
+
+    const headers = new Headers(response.headers);
+    headers.delete('content-length');
+    headers.delete('content-encoding');
+
+    if (match[2].toLowerCase() === 'facts.json') {
+      try {
+        const json = await response.json() as any;
+        json.portfolio = portfolio.map((item: any) => ({
+          name: item.name,
+          description: item.description || null,
+          image: item.image || null,
+        }));
+        return new Response(JSON.stringify(json, null, 2), {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      } catch {
+        return response;
+      }
+    }
+
+    const text = await response.text();
+    const lines = portfolio.map((item: any) =>
+      item.description
+        ? `- **${item.name}:** ${item.description}`
+        : `- ${item.name}`
+    ).join('\n');
+    const section = `\n## Portafolio / proyectos\n\n${lines}\n`;
+    const marker = '\n## Contacto\n';
+    const updated = text.includes(marker)
+      ? text.replace(marker, `${section}${marker}`)
+      : `${text.trimEnd()}\n${section}`;
+    return new Response(updated, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  };
+
   const discoveryResponse = await handleDiscoveryRequest(url, discoveryRuntime);
 
   if (discoveryResponse) {
-    return withSecurityHeaders(discoveryResponse);
+    return withSecurityHeaders(await enrichDiscoveryResourceWithPortfolio(discoveryResponse));
   }
 
   // Physical artifact URLs are operational redirects, not profile pages.
