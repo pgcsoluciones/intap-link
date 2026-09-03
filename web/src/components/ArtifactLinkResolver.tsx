@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
+const KAWVO_COMPACT_LOGO = '/assets/free-starter/branding/logo-solo.png'
+
 function appOrigin() {
   // Canonical public hosts must always hand off to the admin APP host.
   // Resolve them at runtime before considering build-time env values so a
@@ -123,7 +125,11 @@ export default function ArtifactLinkResolver() {
   return (
     <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: '#f7f9fc', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <section style={cardStyle}>
-        <p style={{ margin: 0, fontSize: 11, fontWeight: 900, letterSpacing: '.22em', color: '#0891b2' }}>KAWVO LINK</p>
+        <img
+          src={KAWVO_COMPACT_LOGO}
+          alt="Kawvo"
+          style={{ display: 'block', width: 124, maxWidth: '48%', height: 36, objectFit: 'contain', margin: '0 auto' }}
+        />
 
         {state === 'loading' && (
           <>
