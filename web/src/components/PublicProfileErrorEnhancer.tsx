@@ -63,11 +63,35 @@ function enhanceVisibleErrors() {
     .forEach(enhanceCard)
 }
 
+function enhanceScanBranding() {
+  if (!window.location.pathname.startsWith('/l/')) return
+
+  document.querySelectorAll<HTMLElement>('main p').forEach((label) => {
+    if (label.dataset.kawvoBrandLogo === '1') return
+    if (label.children.length > 0) return
+    if ((label.textContent || '').trim().toUpperCase() !== 'KAWVO LINK') return
+
+    const logo = document.createElement('img')
+    logo.src = KAWVO_LOGO_FULL
+    logo.alt = 'Kawvo'
+    logo.className = 'kawvo-system-logo'
+
+    label.textContent = ''
+    label.appendChild(logo)
+    label.dataset.kawvoBrandLogo = '1'
+  })
+}
+
+function enhanceSystemUi() {
+  enhanceVisibleErrors()
+  enhanceScanBranding()
+}
+
 export default function PublicProfileErrorEnhancer() {
   useEffect(() => {
-    enhanceVisibleErrors()
+    enhanceSystemUi()
 
-    const observer = new MutationObserver(enhanceVisibleErrors)
+    const observer = new MutationObserver(enhanceSystemUi)
     observer.observe(document.body, { childList: true, subtree: true })
 
     return () => observer.disconnect()
