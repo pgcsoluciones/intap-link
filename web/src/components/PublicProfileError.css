@@ -40,15 +40,20 @@
   width: min(190px, 58%);
   max-height: 54px;
   object-fit: contain;
-  margin: 0 auto 24px;
+  margin: 0 auto 18px;
 }
 
 .public-profile.error-page .kawvo-error-avatar {
   display: block;
-  width: 78px;
-  height: 78px;
-  margin: 0 auto 18px;
+  width: 148px;
+  height: 148px;
+  margin: 0 auto 12px;
   object-fit: contain;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  filter: none;
 }
 
 .public-profile.error-page .kawvo-error-title {
@@ -145,11 +150,12 @@
 
   .public-profile.error-page .kawvo-error-logo {
     width: min(176px, 62%);
-    margin-bottom: 22px;
+    margin-bottom: 16px;
   }
 
   .public-profile.error-page .kawvo-error-avatar {
-    width: 72px;
-    height: 72px;
+    width: 132px;
+    height: 132px;
+    margin-bottom: 10px;
   }
 }
