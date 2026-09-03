@@ -28,7 +28,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 30px 28px 28px;
+  padding: 28px 28px 26px;
   border: 1px solid #e2e8f0;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.97);
@@ -37,17 +37,18 @@
 
 .public-profile.error-page .kawvo-error-logo {
   display: block;
-  width: min(190px, 58%);
-  max-height: 54px;
+  width: min(154px, 48%);
+  max-height: 48px;
   object-fit: contain;
-  margin: 0 auto 18px;
+  margin: 0 auto 4px;
 }
 
 .public-profile.error-page .kawvo-error-avatar {
   display: block;
-  width: 148px;
-  height: 148px;
-  margin: 0 auto 12px;
+  width: min(292px, 82%);
+  height: auto;
+  max-height: 292px;
+  margin: 0 auto -2px;
   object-fit: contain;
   background: transparent;
   border: 0;
@@ -67,10 +68,10 @@
 
 .public-profile.error-page .kawvo-error-copy {
   max-width: 340px;
-  margin: 13px auto 0;
+  margin: 12px auto 0;
   color: #64748b;
   font-size: 15px;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 
 .public-profile.error-page .kawvo-error-actions {
@@ -78,7 +79,7 @@
   max-width: 330px;
   display: grid;
   gap: 10px;
-  margin-top: 26px;
+  margin-top: 24px;
 }
 
 .public-profile.error-page .kawvo-error-primary,
@@ -144,18 +145,26 @@
   }
 
   .public-profile.error-page .profile-card {
-    padding: 26px 22px 24px;
+    padding: 24px 22px 22px;
     border-radius: 24px;
   }
 
   .public-profile.error-page .kawvo-error-logo {
-    width: min(176px, 62%);
-    margin-bottom: 16px;
+    width: min(142px, 46%);
+    margin-bottom: 2px;
   }
 
   .public-profile.error-page .kawvo-error-avatar {
-    width: 132px;
-    height: 132px;
-    margin-bottom: 10px;
+    width: min(276px, 86%);
+    max-height: 276px;
+    margin-bottom: -2px;
+  }
+
+  .public-profile.error-page .kawvo-error-copy {
+    font-size: 14px;
+  }
+
+  .public-profile.error-page .kawvo-error-actions {
+    margin-top: 22px;
   }
 }
