@@ -14,6 +14,7 @@ import {
 } from 'react-router-dom'
 
 import PublicBankAccounts from './components/free-profile/PublicBankAccounts'
+import PublicProfileErrorEnhancer from './components/PublicProfileErrorEnhancer'
 import './components/PublicProfileError.css'
 
 /*
@@ -116,6 +117,7 @@ function LegacyBankRoute() {
 function App() {
   return (
     <BrowserRouter>
+      <PublicProfileErrorEnhancer />
       <Suspense fallback={<RouteLoader />}>
         <Routes>
           <Route
