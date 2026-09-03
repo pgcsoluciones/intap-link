@@ -61,9 +61,6 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   const headers = new Headers(request.headers)
   headers.delete('host')
   headers.set('x-intap-preview-proxy', marker)
-  // Pages Functions ejecuta sobre el origin inmutable .pages.dev. Conservamos
-  // explícitamente el origin que vio el visitante para que canonical, og:url,
-  // JSON-LD y recursos AI usen el dominio público estable de Preview.
   headers.set('x-kawvo-public-origin', requestUrl.origin)
 
   const upstream = await fetch(target.toString(), {
@@ -87,19 +84,82 @@ async function proxyPagesPreview(request: Request, origin: string | undefined, m
   })
 }
 
-async function proxyPublicProfileWithMeta(
-  request: Request,
-  env: PreviewEnv,
-) {
-  // Pages Functions es la fuente canónica de metadata para perfiles públicos.
-  // El front door Preview solo debe transportar ese HTML sin volver a
-  // inyectar title/Open Graph/Twitter, porque produciría tags duplicados
-  // y potencialmente contradictorios.
-  return proxyPagesPreview(
-    request,
-    env.WEB_PAGES_ORIGIN,
-    'web-custom-domain',
+function canonicalizePreviewDiscoveryHtml(html: string, publicOrigin: string): string {
+  let output = html.replace(
+    /https:\/\/[a-z0-9-]+\.intap-link\.pages\.dev/gi,
+    publicOrigin,
   )
+
+  const seenAlternates = new Set<string>()
+  output = output.replace(
+    /<link\s+rel=["']alternate["'][^>]*>/gi,
+    (tag) => {
+      const type = tag.match(/type=["']([^"']+)["']/i)?.[1] || ''
+      const href = tag.match(/href=["']([^"']+)["']/i)?.[1] || ''
+      const key = `${type}|${href}`
+      if (!type || !href || seenAlternates.has(key)) return ''
+      seenAlternates.add(key)
+      return tag
+    },
+  )
+
+  const scripts = Array.from(output.matchAll(/<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/gi))
+  if (scripts.length > 1) {
+    const keep = scripts[scripts.length - 1]
+    let consolidated = keep[0]
+    try {
+      const parsed = JSON.parse(keep[1])
+      if (parsed && parsed['@context'] === 'https://schema.org' && parsed['@type'] && !parsed['@graph']) {
+        const entity = { ...parsed }
+        delete entity['@context']
+        const entityId = entity['@id'] || `${publicOrigin}${new URL(publicOrigin).pathname}#entity`
+        entity['@id'] = entityId
+        const canonical = String(entity.url || publicOrigin)
+        const page = {
+          '@type': 'ProfilePage',
+          '@id': `${canonical}#webpage`,
+          url: canonical,
+          name: entity.name,
+          description: entity.description,
+          mainEntity: { '@id': entityId },
+        }
+        consolidated = `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': [page, entity] }).replace(/</g, '\\u003c')}</script>`
+      } else if (parsed?.['@graph']) {
+        parsed['@graph'] = parsed['@graph'].map((node: any) => node?.['@type'] === 'WebPage' ? { ...node, '@type': 'ProfilePage' } : node)
+        consolidated = `<script type="application/ld+json">${JSON.stringify(parsed).replace(/</g, '\\u003c')}</script>`
+      }
+    } catch {
+      // Si un bloque no parsea, conservamos el último sin alterar.
+    }
+
+    let kept = false
+    output = output.replace(/<script\s+type=["']application\/ld\+json["']>[\s\S]*?<\/script>/gi, () => {
+      if (kept) return ''
+      kept = true
+      return consolidated
+    })
+  } else if (scripts.length === 1) {
+    output = output.replace(/"@type":"WebPage"/g, '"@type":"ProfilePage"')
+  }
+
+  return output
+}
+
+async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
+  const response = await proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
+  if (request.method.toUpperCase() !== 'GET' || response.status !== 200) return response
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('text/html')) return response
+
+  const requestUrl = new URL(request.url)
+  const html = await response.text()
+  const updated = canonicalizePreviewDiscoveryHtml(html, requestUrl.origin)
+  const headers = new Headers(response.headers)
+  headers.delete('content-length')
+  headers.delete('content-encoding')
+  headers.set('cache-control', 'no-store')
+  headers.set('x-robots-tag', 'noindex, nofollow, noarchive')
+  return new Response(updated, { status: response.status, statusText: response.statusText, headers })
 }
 
 async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
@@ -185,9 +245,6 @@ export default {
       }
     }
 
-    // API stays on the Worker. Every other browser route is served from the
-    // matching Pages application. This prevents app.preview.intaprd.com from
-    // falling through to Hono for React routes such as /activate-product/:code.
     if (!url.pathname.startsWith('/api/')) {
       if (url.hostname === 'preview.intaprd.com') {
         if (url.pathname === '/invitacion' || url.pathname === '/invitacion/') {
