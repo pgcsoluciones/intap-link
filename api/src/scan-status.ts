@@ -1,5 +1,5 @@
 import app from './index'
-import { isPreviewEnvironment } from './lib/cookies'
+import { cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { isPublicCodeShape } from './artifacts'
 
 function configuredWebUrl(c: any): string {
@@ -7,6 +7,47 @@ function configuredWebUrl(c: any): string {
     ? 'https://preview.intaprd.com'
     : 'https://intaprd.com'
   return String(c.env.WEB_URL || fallback).replace(/\/$/, '')
+}
+
+function configuredAppUrl(c: any): string {
+  const fallback = isPreviewEnvironment(c.env)
+    ? 'https://app.preview.intaprd.com'
+    : 'https://app.intaprd.com'
+  return String(c.env.APP_URL || fallback).replace(/\/$/, '')
+}
+
+function parseCookie(header: string, name: string): string | null {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+async function sessionUserId(c: any): Promise<string | null> {
+  const rawSession = parseCookie(
+    c.req.header('Cookie') || '',
+    cookieNames(c.env).session,
+  )
+  if (!rawSession) return null
+
+  const sessionHash = await sha256Hex(rawSession)
+  const session = await c.env.DB.prepare(
+    `SELECT user_id
+       FROM auth_sessions
+      WHERE session_hash = ?
+        AND expires_at > datetime('now')
+        AND revoked_at IS NULL
+      LIMIT 1`,
+  ).bind(sessionHash).first()
+
+  return session ? String((session as any).user_id) : null
 }
 
 function productLabel(type: string): string {
@@ -40,7 +81,11 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
 
   const artifact = await c.env.DB.prepare(
     `SELECT a.id, a.public_code, a.product_type, a.status,
-            a.owner_user_id, a.profile_id, p.slug AS profile_slug
+            a.owner_user_id, a.profile_id,
+            p.slug AS profile_slug,
+            p.user_id AS profile_user_id,
+            p.is_active AS profile_is_active,
+            p.is_published AS profile_is_published
        FROM intap_artifacts a
        LEFT JOIN profiles p ON p.id = a.profile_id
       WHERE a.public_code = ?
@@ -62,13 +107,48 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
   }
 
   if (status === 'activated') {
+    const profileIsActive = Number((artifact as any).profile_is_active) === 1
+    const profileIsPublished = Number((artifact as any).profile_is_published) === 1
+
+    if (profileSlug && profileIsActive && profileIsPublished) {
+      return c.json({
+        ok: true,
+        state: 'activated',
+        artifact: base,
+        next_url: `${configuredWebUrl(c)}/${encodeURIComponent(profileSlug)}`,
+      })
+    }
+
+    if (profileSlug && profileIsActive && !profileIsPublished) {
+      const currentUserId = await sessionUserId(c)
+      const ownerUserId = String((artifact as any).owner_user_id || '')
+      const profileUserId = String((artifact as any).profile_user_id || '')
+      const isOwner = Boolean(
+        currentUserId &&
+        (currentUserId === ownerUserId || currentUserId === profileUserId)
+      )
+
+      return c.json({
+        ok: true,
+        state: isOwner ? 'profile_draft_owner' : 'profile_draft',
+        artifact: base,
+        message: isOwner
+          ? 'Tu producto está activo, pero tu Perfil Digital todavía está en construcción.'
+          : 'Este Perfil Digital todavía está en construcción.',
+        next_url: isOwner
+          ? `${configuredAppUrl(c)}/admin/free`
+          : null,
+        login_url: isOwner
+          ? null
+          : `${configuredAppUrl(c)}/admin/login?resume_profile=1&public_code=${encodeURIComponent(publicCode)}`,
+      })
+    }
+
     return c.json({
       ok: true,
-      state: 'activated',
+      state: 'unavailable',
       artifact: base,
-      next_url: profileSlug
-        ? `${configuredWebUrl(c)}/${encodeURIComponent(profileSlug)}`
-        : null,
+      message: 'El Perfil Digital vinculado a este producto no está disponible actualmente.',
     })
   }
 
