@@ -67,7 +67,7 @@ export async function onRequest(context: {
   const escapeHtml = (value: string): string =>
     value
       .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
+      .replace(/\"/g, '&quot;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
@@ -93,10 +93,10 @@ export async function onRequest(context: {
     const siteName = escapeHtml(metadata.siteName);
     const imageType = escapeHtml(metadata.imageType);
     const imageWidthTag = metadata.imageWidth
-      ? `<meta property="og:image:width" content="${String(metadata.imageWidth)}" />`
+      ? `<meta property=\"og:image:width\" content=\"${String(metadata.imageWidth)}\" />`
       : '';
     const imageHeightTag = metadata.imageHeight
-      ? `<meta property="og:image:height" content="${String(metadata.imageHeight)}" />`
+      ? `<meta property=\"og:image:height\" content=\"${String(metadata.imageHeight)}\" />`
       : '';
     const ogType = escapeHtml(metadata.ogType || 'website');
     const twitterCard = escapeHtml(metadata.twitterCard || 'summary_large_image');
@@ -104,30 +104,39 @@ export async function onRequest(context: {
     const alternateOgLocale = metadata.language === 'en-US' ? 'es_DO' : 'en_US';
     const seoHeadHtml = metadata.seoHeadHtml || '';
     const semanticFallbackHtml = metadata.semanticFallbackHtml || '';
+    const serverSemanticHtml = semanticFallbackHtml
+      .replace(/<noscript\b([^>]*)>/gi, '<section$1 data-kawvo-server-profile=\"1\">')
+      .replace(/<\/noscript>/gi, '</section>');
 
     const metaBlock = `
   <!-- INTAP LINK: Open Graph + SEO + GEO metadata -->
   <title>${title}</title>
-  <link rel="canonical" href="${pageUrl}" />
-  <meta name="description" content="${description}" />
-  <meta property="og:type" content="${ogType}" />
-  <meta property="og:site_name" content="${siteName}" />
-  <meta property="og:locale" content="${ogLocale}" />
-  <meta property="og:locale:alternate" content="${alternateOgLocale}" />
-  <meta property="og:title" content="${title}" />
-  <meta property="og:description" content="${description}" />
-  <meta property="og:url" content="${pageUrl}" />
-  <meta property="og:image" content="${imageUrl}" />
-  <meta property="og:image:secure_url" content="${imageUrl}" />
-  <meta property="og:image:type" content="${imageType}" />
+  <link rel=\"canonical\" href=\"${pageUrl}\" />
+  <meta name=\"description\" content=\"${description}\" />
+  <meta property=\"og:type\" content=\"${ogType}\" />
+  <meta property=\"og:site_name\" content=\"${siteName}\" />
+  <meta property=\"og:locale\" content=\"${ogLocale}\" />
+  <meta property=\"og:locale:alternate\" content=\"${alternateOgLocale}\" />
+  <meta property=\"og:title\" content=\"${title}\" />
+  <meta property=\"og:description\" content=\"${description}\" />
+  <meta property=\"og:url\" content=\"${pageUrl}\" />
+  <meta property=\"og:image\" content=\"${imageUrl}\" />
+  <meta property=\"og:image:secure_url\" content=\"${imageUrl}\" />
+  <meta property=\"og:image:type\" content=\"${imageType}\" />
 ${imageWidthTag}
 ${imageHeightTag}
-  <meta property="og:image:alt" content="${title}" />
-  <meta name="twitter:card" content="${twitterCard}" />
-  <meta name="twitter:title" content="${title}" />
-  <meta name="twitter:description" content="${description}" />
-  <meta name="twitter:image" content="${imageUrl}" />
-  <meta name="twitter:image:alt" content="${title}" />
+  <meta property=\"og:image:alt\" content=\"${title}\" />
+  <meta name=\"twitter:card\" content=\"${twitterCard}\" />
+  <meta name=\"twitter:title\" content=\"${title}\" />
+  <meta name=\"twitter:description\" content=\"${description}\" />
+  <meta name=\"twitter:image\" content=\"${imageUrl}\" />
+  <meta name=\"twitter:image:alt\" content=\"${title}\" />
+  <style data-kawvo-semantic-shell>
+    [data-kawvo-server-profile=\"1\"] { box-sizing: border-box; max-width: 720px; margin: 0 auto; padding: 32px 24px; color: #0f172a; font-family: Inter, ui-sans-serif, system-ui, sans-serif; line-height: 1.55; }
+    [data-kawvo-server-profile=\"1\"] h1 { margin: 0 0 12px; font-size: 30px; line-height: 1.15; }
+    [data-kawvo-server-profile=\"1\"] h2 { margin: 24px 0 10px; font-size: 20px; }
+    [data-kawvo-server-profile=\"1\"] p, [data-kawvo-server-profile=\"1\"] ul, [data-kawvo-server-profile=\"1\"] address { margin: 10px 0; }
+  </style>
 ${seoHeadHtml}
 `;
 
@@ -136,18 +145,21 @@ ${seoHeadHtml}
     output = output.replace(
       /<html\b([^>]*)>/i,
       (_match, attributes: string) =>
-        `<html${attributes.replace(/\s+lang=(?:"[^"]*"|'[^']*'|[^\s>]+)/i, '')} lang="${language}">`,
+        `<html${attributes.replace(/\s+lang=(?:\"[^\"]*\"|'[^']*'|[^\s>]+)/i, '')} lang=\"${language}\">`,
     );
 
     if (output.includes('</head>')) {
       output = output.replace('</head>', `${metaBlock}\n</head>`);
     }
 
-    if (semanticFallbackHtml) {
-      if (output.includes('</body>')) {
-        output = output.replace('</body>', `${semanticFallbackHtml}\n</body>`);
+    if (serverSemanticHtml) {
+      const emptyRoot = '<div id=\"root\"></div>';
+      if (output.includes(emptyRoot)) {
+        output = output.replace(emptyRoot, `<div id=\"root\">${serverSemanticHtml}\n</div>`);
+      } else if (output.includes('</body>')) {
+        output = output.replace('</body>', `${serverSemanticHtml}\n</body>`);
       } else {
-        output += semanticFallbackHtml;
+        output += serverSemanticHtml;
       }
     }
 
@@ -278,15 +290,15 @@ ${seoHeadHtml}
       };
     }
     const seoHeadHtml = `
-  <meta name="keywords" content="${escapeHtml(keywords.join(', '))}" />
-  <link rel="alternate" type="text/markdown" href="${escapeHtml(`${canonicalUrl}/ai.md`)}" title="Información del perfil para asistentes de IA" />
-  <link rel="alternate" type="application/json" href="${escapeHtml(`${canonicalUrl}/facts.json`)}" title="Datos estructurados verificables del perfil" />
-  <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>`;
+  <meta name=\"keywords\" content=\"${escapeHtml(keywords.join(', '))}\" />
+  <link rel=\"alternate\" type=\"text/markdown\" href=\"${escapeHtml(`${canonicalUrl}/ai.md`)}\" title=\"Información del perfil para asistentes de IA\" />
+  <link rel=\"alternate\" type=\"application/json\" href=\"${escapeHtml(`${canonicalUrl}/facts.json`)}\" title=\"Datos estructurados verificables del perfil\" />
+  <script type=\"application/ld+json\">${JSON.stringify(schema).replace(/</g, '\\u003c')}</script>`;
     const serviceList = services.length
       ? `<h2>Servicios</h2><ul>${services.map((service: any) => `<li><strong>${escapeHtml(service.name)}</strong>${service.description ? `: ${escapeHtml(service.description)}` : ''}</li>`).join('')}</ul>`
       : '';
     const semanticFallbackHtml = `
-  <noscript data-kawvo-profile-discovery="dynamic">
+  <noscript data-kawvo-profile-discovery=\"dynamic\">
     <main>
       <h1>${escapeHtml(name)}</h1>
       ${role ? `<p>${escapeHtml(role)}</p>` : ''}
@@ -643,7 +655,7 @@ ${seoHeadHtml}
         twitterCard: image.includes('/assets/og/kawvo-link-og.png') ? 'summary' : 'summary_large_image',
         language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
         seoHeadHtml: `${dynamicMeta.seoHeadHtml || ''}${enhancement.seoHeadHtml}`,
-        semanticFallbackHtml: `${dynamicMeta.semanticFallbackHtml || ''}${enhancement.semanticFallbackHtml}`,
+        semanticFallbackHtml: enhancement.semanticFallbackHtml || dynamicMeta.semanticFallbackHtml || '',
       });
 
       const headers = new Headers(response.headers);
