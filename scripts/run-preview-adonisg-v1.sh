@@ -55,6 +55,9 @@ if [ ! -x "$VENV_DIR/bin/python" ]; then run python3 -m venv "$VENV_DIR"; fi
 if ! "$VENV_DIR/bin/python" -c 'import PIL' >/dev/null 2>&1; then run "$VENV_DIR/bin/python" -m pip install --disable-pip-version-check --no-input Pillow; fi
 "$VENV_DIR/bin/python" -c 'from PIL import Image; print("✓ Pillow disponible en venv:", Image.__version__)' || fail "Pillow no quedó disponible en venv"
 
+printf '\n▶ Preflight de identidad negra transparente\n'
+run "$VENV_DIR/bin/python" scripts/ensure-adonisg-black-logo.py
+
 printf '\n▶ Preparar y optimizar recursos reales de Argenis\n'
 run "$VENV_DIR/bin/python" scripts/prepare-adonisg-assets.py
 
