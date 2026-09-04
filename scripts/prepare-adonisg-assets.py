@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import shutil
-import subprocess
-import sys
 import tempfile
 import zipfile
 from pathlib import Path
@@ -17,17 +15,26 @@ ZIP_NAMES = {
     "certs": "certificaciones.zip",
     "brand": "identidad linea grafica.zip",
     "work": "trabajos argenis.zip",
+    "videos": "videos.zip",
 }
 
-SEARCH_DIRS = [ROOT, ROOT / "assets-source", Path.home() / "Downloads", Path.home() / "Desktop"]
+ARGENIS_BACKUP_DIR = Path("/Volumes/backup JL/11977/!Recuperados 2024/recuperados/diseños/argenis grullon")
+SEARCH_DIRS = [
+    ARGENIS_BACKUP_DIR,
+    ROOT,
+    ROOT / "assets-source",
+    Path.home() / "Downloads",
+    Path.home() / "Desktop",
+]
 
 
 def ensure_pillow():
     try:
         from PIL import Image, ImageOps  # noqa
-    except Exception:
-        print("▶ Instalando Pillow para optimización local de imágenes...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "--user", "Pillow"], check=True)
+    except Exception as exc:
+        raise RuntimeError(
+            "Pillow no está disponible. Ejecuta este script mediante scripts/run-preview-adonisg-v1.sh, que crea un venv aislado."
+        ) from exc
 
 
 def find_zip(name: str) -> Path:
@@ -40,7 +47,7 @@ def find_zip(name: str) -> Path:
         for candidate in base.glob(f"**/{name}"):
             if candidate.is_file():
                 return candidate
-    raise FileNotFoundError(f"No encontré {name}. Debe estar en Downloads, Desktop o {ROOT}/assets-source.")
+    raise FileNotFoundError(f"No encontré {name}. También se buscó en {ARGENIS_BACKUP_DIR}.")
 
 
 def by_fragment(root: Path, fragment: str, suffixes=(".jpg", ".jpeg", ".png")) -> Path:
@@ -164,6 +171,13 @@ def main():
 
         save_jpeg(hero, OUT / "og" / "adonisg-og.jpg")
 
+        video_files = sorted([
+            p for p in roots["videos"].rglob("*") if p.is_file()
+            and p.suffix.lower() in {".mp4", ".mov", ".m4v"}
+            and not p.name.startswith("._")
+        ])
+        print(f"▶ Videos fuente localizados: {len(video_files)} (se reservan para carga bajo demanda; no se añaden al bundle inicial)")
+
     required = sorted([
         p.relative_to(OUT).as_posix() for p in OUT.rglob("*")
         if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}
@@ -185,6 +199,7 @@ def main():
         p = OUT / rel
         print(f"  ✓ {rel} · {p.stat().st_size/1024:.1f} KiB · sha {sha(p)}")
     print("✓ Logos originales copiados sin alteración de píxeles.")
+
 
 if __name__ == "__main__":
     main()
