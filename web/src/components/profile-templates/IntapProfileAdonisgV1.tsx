@@ -14,11 +14,11 @@ type TestimonialItem = { quote: Localized; by: Localized; image: string; note?: 
 
 const COPY = {
   es: {
-    role: 'Asesor de Imagen · Estilista de Moda\nEstratega de Marca Personal', request: 'Solicitar asesoría', manifesto: 'Tu imagen habla antes que tú', about: 'Sobre mí',
+    role: 'Asesor de Imagen · Estilista de Moda\nEstratega de Marca Personal', request: 'Solicitar asesoría', manifesto: 'Tu imagen habla\nantes que tú', about: 'Sobre mí',
     aboutA: 'Mi trabajo va mucho más allá de elegir prendas. Construyo una presencia capaz de comunicar seguridad, credibilidad y propósito antes de pronunciar una sola palabra.',
     aboutB: 'Soy asesor de imagen certificado por IBA, estilista de moda, creador digital y estratega de marca personal. Mi propósito es ayudar a personas, profesionales, artistas y empresas a convertir su imagen en una herramienta de comunicación, presencia y posicionamiento.',
     aboutC: 'Mi enfoque une moda, imagen, comunicación y negocios para construir una presencia auténtica, estratégica y alineada con la esencia y los objetivos de cada cliente.',
-    portfolio: 'Portafolio', allProjects: 'Ver todos los proyectos', projectPortal: 'Todos los proyectos', viewDetails: 'Ver detalles', workWithMe: 'Trabaja conmigo',
+    portfolio: 'Portafolio', allProjects: 'Ver todos los proyectos', projectPortal: 'Todos los proyectos', viewDetails: 'Ver detalles', workWithMe: 'Necesito el estilo de Argenis',
     testimonials: 'Testimonios', portraits: 'Detrás del estilo: Argenis', portraitsCopy: 'Una mirada a la persona detrás de cada concepto, producción y transformación de imagen.', gallery: 'Galería',
     media: 'Me has visto en', mediaDetail: 'Ver aparición', collaborations: 'He trabajado con', expertise: 'Imagen, marca y creatividad',
     certification: 'Formación y certificaciones', certificationCopy: 'Certificado por IBA · Image & Business Academy', viewCredentials: 'Ver credenciales',
@@ -30,14 +30,14 @@ const COPY = {
     name: 'Nombre y apellido', whatsapp: 'WhatsApp', email: 'Correo electrónico', service: 'Servicio', goal: '¿Qué deseas lograr?', send: 'Enviar solicitud', viaWhatsapp: 'Escribir por WhatsApp', close: 'Cerrar',
     services: ['Asesoría de imagen personal', 'Imagen profesional / ejecutiva', 'Estilismo de moda', 'Marca personal', 'Producción / campaña', 'Evento', 'Otro'],
     runner: ['Imagen personal', 'Marca personal', 'Producciones fotográficas', 'Campañas', 'Editorial', 'Colorimetría', 'Estilismo', 'Contenido'],
-    contact: 'Contacto'
+    contact: 'Contacto', shareProfile: 'Compartir perfil', shareDirect: 'directo por WhatsApp', copyLink: 'Copiar enlace', copied: 'Enlace copiado'
   },
   en: {
-    role: 'Image Consultant · Fashion Stylist\nPersonal Brand Strategist', request: 'Request a consultation', manifesto: 'Your image speaks before you do', about: 'About me',
+    role: 'Image Consultant · Fashion Stylist\nPersonal Brand Strategist', request: 'Request a consultation', manifesto: 'Your image speaks\nbefore you do', about: 'About me',
     aboutA: 'My work goes far beyond choosing clothes. I build a presence capable of communicating confidence, credibility and purpose before you say a single word.',
     aboutB: 'I am an IBA-certified image consultant, fashion stylist, digital creator and personal brand strategist. I help people, professionals, artists and companies turn image into a tool for communication, presence and positioning.',
     aboutC: 'My approach combines fashion, image, communication and business to build an authentic, strategic presence aligned with each client’s essence and goals.',
-    portfolio: 'Portfolio', allProjects: 'View all projects', projectPortal: 'All projects', viewDetails: 'View details', workWithMe: 'Work with me',
+    portfolio: 'Portfolio', allProjects: 'View all projects', projectPortal: 'All projects', viewDetails: 'View details', workWithMe: 'I want Argenis’s style',
     testimonials: 'Testimonials', portraits: 'Behind the style: Argenis', portraitsCopy: 'A look at the person behind each concept, production and image transformation.', gallery: 'Gallery',
     media: 'As seen in', mediaDetail: 'View appearance', collaborations: 'I have worked with', expertise: 'Image, brand and creativity',
     certification: 'Training and certifications', certificationCopy: 'Certified by IBA · Image & Business Academy', viewCredentials: 'View credentials',
@@ -49,7 +49,7 @@ const COPY = {
     name: 'Full name', whatsapp: 'WhatsApp', email: 'Email', service: 'Service', goal: 'What would you like to achieve?', send: 'Send request', viaWhatsapp: 'Write on WhatsApp', close: 'Close',
     services: ['Personal image consulting', 'Professional / executive image', 'Fashion styling', 'Personal branding', 'Production / campaign', 'Event', 'Other'],
     runner: ['Personal image', 'Personal brand', 'Photo productions', 'Campaigns', 'Editorial', 'Color analysis', 'Styling', 'Content'],
-    contact: 'Contact'
+    contact: 'Contact', shareProfile: 'Share profile', shareDirect: 'direct via WhatsApp', copyLink: 'Copy link', copied: 'Link copied'
   }
 } as const
 
@@ -129,6 +129,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
   const [playingVideo, setPlayingVideo] = useState<number | null>(null)
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [feedReady, setFeedReady] = useState(false)
+  const [copied, setCopied] = useState(false)
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
 
   const displayName = profile.name || 'Argenis Grullón'
@@ -169,6 +170,9 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
   const downloadVcard = () => { const card = ['BEGIN:VCARD','VERSION:3.0','FN:Argenis Grullón','ORG:Al Estilo de Argenis','TITLE:Asesor de Imagen · Fashion Stylist',`TEL;TYPE=CELL:+${cleanPhone(whatsapp)}`,email ? `EMAIL:${email}` : '',`URL:${instagram}`,'END:VCARD'].filter(Boolean).join('\r\n'); const url = URL.createObjectURL(new Blob([card], { type: 'text/vcard;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = 'Argenis-Grullon.vcf'; a.click(); URL.revokeObjectURL(url) }
   const playVideo = (index: number) => { videoRefs.current.forEach((video, i) => { if (video && i !== index) { video.pause(); video.currentTime = 0 } }); setSelectedVideo(index); setPlayingVideo(index); setTimeout(() => videoRefs.current[index]?.play(), 0) }
   const finishVideo = (index: number) => { setPlayingVideo(null); if (index !== 0) setSelectedVideo(0) }
+  const profileUrl = typeof window === 'undefined' ? 'https://nfc.kawvoia.com/adonisg' : window.location.href
+  const shareProfile = () => openWhatsApp(language === 'en' ? `Argenis Grullón profile: ${profileUrl}` : `Perfil de Argenis Grullón: ${profileUrl}`)
+  const copyProfileLink = async () => { try { await navigator.clipboard.writeText(profileUrl); setCopied(true); window.setTimeout(() => setCopied(false), 2200) } catch { const input = document.createElement('textarea'); input.value = profileUrl; document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove(); setCopied(true); window.setTimeout(() => setCopied(false), 2200) } }
 
   const featuredProject = PROJECTS[portfolioSlide]
   const featuredMedia = MEDIA[mediaSlide]
@@ -177,7 +181,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
     <header className="adonis-hero">
       <div className="adonis-hero-slides">{HERO_SLIDES.map((src, i) => <img key={src} className={i === heroSlide ? 'is-active' : ''} src={src} alt={`${displayName} ${i + 1}`} fetchPriority={i === 0 ? 'high' : undefined} />)}</div>
       <div className="adonis-hero-shade" />
-      <nav className="adonis-topbar"><span className="adonis-top-logo-wrap"><img src="/assets/adonisg/brand/logo-black-transparent.png" alt="Al Estilo de Argenis" /></span><button className="adonis-language" onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}><FaGlobeAmericas /> {language === 'es' ? 'English' : 'Español'}</button></nav>
+      <nav className="adonis-topbar"><span className="adonis-top-logo-wrap"><img src="/assets/adonisg/brand/logo-white.png" alt="Al Estilo de Argenis" /></span><button className="adonis-language" onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}><FaGlobeAmericas /> {language === 'es' ? 'English' : 'Español'}</button></nav>
       <div className="adonis-hero-content"><h1>ARGENIS<br />GRULLÓN</h1><p className="adonis-role">{t.role}</p><button className="adonis-btn adonis-btn-light" onClick={() => setContactOpen(true)}>{t.request}</button></div>
       <div className="adonis-hero-dots">{HERO_SLIDES.map((_, i) => <button key={i} className={i === heroSlide ? 'is-active' : ''} onClick={() => setHeroSlide(i)} aria-label={`Slide ${i + 1}`} />)}</div>
     </header>
@@ -193,7 +197,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
       <article className="adonis-featured-project">
         <button className="adonis-featured-project-button" onClick={() => openProject(featuredProject)} aria-label={`${t.viewDetails}: ${featuredProject.title[language]}`}>
           <FixedMedia src={featuredProject.cover} alt={featuredProject.title[language]} />
-          <div className="adonis-project-caption"><small>{featuredProject.category[language]}</small><h3>{featuredProject.title[language]}</h3></div>
+          <div className="adonis-project-caption"><small>{featuredProject.category[language]}</small><h3>{featuredProject.title[language]}</h3><p>{featuredProject.description[language]}</p></div>
         </button>
       </article>
       <div className="adonis-slider-dots">{PROJECTS.map((_, i) => <button key={i} className={i === portfolioSlide ? 'is-active' : ''} onClick={() => setPortfolioSlide(i)} aria-label={`${t.portfolio} ${i + 1}`} />)}</div>
@@ -223,11 +227,12 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
     <section className="adonis-quote"><div className="adonis-quote-bg" /><div className="adonis-quote-overlay" /><div><p>{t.quoteA}</p><strong>{t.quoteB}</strong><span>— ARGENIS GRULLÓN</span></div></section>
 
     <section className="adonis-contact-icons"><button onClick={() => openWhatsApp(language === 'en' ? 'Hello Argenis, I would like information about an image consultation.' : 'Hola Argenis, me interesa una asesoría de imagen.')}><FaWhatsapp /><span>WhatsApp</span></button><a href={instagram} target="_blank" rel="noopener noreferrer"><FaInstagram /><span>Instagram</span></a><button onClick={downloadVcard}><FaAddressCard /><span>{t.contact}</span></button></section>
+    <section className="adonis-share-actions"><button onClick={shareProfile}><strong>{t.shareProfile}</strong><small>{t.shareDirect}</small></button><button onClick={copyProfileLink}><strong>{t.copyLink}</strong></button>{copied && <span className="adonis-copy-toast">{t.copied}</span>}</section>
     <section className="adonis-brand-footer"><img src="/assets/adonisg/brand/linkedin-banner.jpg" alt="Al Estilo de Argenis" /></section>
-    <footer className="adonis-credit"><span>ARGENIS GRULLÓN · REPÚBLICA DOMINICANA</span><a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">Creado por Kawvo Link · nfc.kawvoia.com</a></footer>
+    <footer className="adonis-credit"><span>ARGENIS GRULLÓN · REPÚBLICA DOMINICANA · 2026</span><a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">Creado por Kawvo Link · nfc.kawvoia.com</a></footer>
 
     {projectPortalOpen && <ModalShell label={t.projectPortal} onClose={() => setProjectPortalOpen(false)} wide><div className="adonis-project-portal"><h2>{t.projectPortal}</h2><div>{PROJECTS.map(project => <button key={project.id} onClick={() => openProject(project)}><div className="adonis-portal-image"><img src={project.cover} alt={project.title[language]} /></div><strong>{project.title[language]}</strong><span>{t.viewDetails}</span></button>)}</div></div></ModalShell>}
-    {activeProject && <ModalShell label={activeProject.title[language]} onClose={() => setActiveProject(null)}><div className="adonis-project-modal"><div className="adonis-gallery-frame"><FixedMedia src={activeProject.images[galleryIndex]} alt={activeProject.title[language]} /><button className="prev" onClick={() => setGalleryIndex(v => (v - 1 + activeProject.images.length) % activeProject.images.length)}><FaArrowLeft /></button><button className="next" onClick={() => setGalleryIndex(v => (v + 1) % activeProject.images.length)}><FaArrowRight /></button></div><div className="adonis-gallery-dots">{activeProject.images.map((_, i) => <button key={i} className={i === galleryIndex ? 'is-active' : ''} onClick={() => setGalleryIndex(i)} />)}</div><small>{activeProject.category[language]}</small><h2>{activeProject.title[language]}</h2><p>{activeProject.description[language]}</p><button className="adonis-btn adonis-btn-dark" onClick={() => projectWhatsApp(activeProject)}>{t.workWithMe} <FaWhatsapp /></button></div></ModalShell>}
+    {activeProject && <ModalShell label={activeProject.title[language]} onClose={() => setActiveProject(null)}><div className="adonis-project-modal"><div className="adonis-gallery-frame"><FixedMedia src={activeProject.images[galleryIndex]} alt={activeProject.title[language]} /><button className="prev" onClick={() => setGalleryIndex(v => (v - 1 + activeProject.images.length) % activeProject.images.length)}><FaArrowLeft /></button><button className="next" onClick={() => setGalleryIndex(v => (v + 1) % activeProject.images.length)}><FaArrowRight /></button></div><div className="adonis-gallery-dots">{activeProject.images.map((_, i) => <button key={i} className={i === galleryIndex ? 'is-active' : ''} onClick={() => setGalleryIndex(i)} />)}</div><small>{activeProject.category[language]}</small><h2>{activeProject.title[language]}</h2><p>{activeProject.description[language]}</p><button className="adonis-btn adonis-btn-dark" onClick={() => projectWhatsApp(activeProject)}>{t.workWithMe}</button></div></ModalShell>}
     {portraitOpen && <ModalShell label={t.portraits} onClose={() => setPortraitOpen(false)}><div className="adonis-portrait-modal"><div className="adonis-gallery-frame"><FixedMedia src={PORTRAITS[portraitIndex]} alt={`${displayName} ${portraitIndex + 1}`} /><button className="prev" onClick={() => setPortraitIndex(v => (v - 1 + PORTRAITS.length) % PORTRAITS.length)}><FaArrowLeft /></button><button className="next" onClick={() => setPortraitIndex(v => (v + 1) % PORTRAITS.length)}><FaArrowRight /></button></div><div className="adonis-gallery-dots">{PORTRAITS.map((_, i) => <button key={i} className={i === portraitIndex ? 'is-active' : ''} onClick={() => setPortraitIndex(i)} />)}</div><h2>{t.portraits}</h2><p>{t.portraitsCopy}</p><button className="adonis-btn adonis-btn-dark" onClick={() => setContactOpen(true)}>{t.request}</button></div></ModalShell>}
     {activeMedia && <ModalShell label={activeMedia.name} onClose={() => setActiveMedia(null)}><div className="adonis-media-modal"><img src={activeMedia.image} alt={activeMedia.name} /><small>{activeMedia.name}</small><h2>{activeMedia.title[language]}</h2></div></ModalShell>}
     {testimonialOpen && <ModalShell label={testimonialOpen.by[language]} onClose={() => setTestimonialOpen(null)}><div className="adonis-testimonial-modal"><img src={testimonialOpen.image} alt={testimonialOpen.by[language]} /><div><span>“</span><blockquote>{testimonialOpen.quote[language]}</blockquote><strong>{testimonialOpen.by[language]}</strong>{testimonialOpen.note && <small>{testimonialOpen.note[language]}</small>}</div></div></ModalShell>}
