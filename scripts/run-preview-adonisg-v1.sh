@@ -8,6 +8,7 @@ PREVIEW_DB="intap_db_preview"
 PREVIEW_CONFIG="wrangler.preview.toml"
 SEED_FILE="migrations-preview/0044_seed_adonisg_special_profile.sql"
 LOG_DIR="$ROOT/.preview-adonisg-v1-logs"
+VENV_DIR="$ROOT/.venv-adonisg-assets"
 
 fail(){ echo; echo "✗ ERROR: $1"; echo "Producción NO fue tocada."; exit 1; }
 run(){ echo; echo "▶ $*"; "$@" || fail "$*"; }
@@ -41,8 +42,17 @@ echo "✓ Rama segura: $(git branch --show-current)"
 echo "✓ HEAD: $(git rev-parse HEAD)"
 echo "✓ Config Preview aislada comprobada"
 
+printf '\n▶ Preparar entorno Python aislado para optimización de assets\n'
+if [ ! -x "$VENV_DIR/bin/python" ]; then
+  run python3 -m venv "$VENV_DIR"
+fi
+if ! "$VENV_DIR/bin/python" -c 'import PIL' >/dev/null 2>&1; then
+  run "$VENV_DIR/bin/python" -m pip install --disable-pip-version-check --no-input Pillow
+fi
+"$VENV_DIR/bin/python" -c 'from PIL import Image; print("✓ Pillow disponible en venv:", Image.__version__)' || fail "Pillow no quedó disponible en venv"
+
 printf '\n▶ Preparar y optimizar recursos reales de Argenis\n'
-run python3 scripts/prepare-adonisg-assets.py
+run "$VENV_DIR/bin/python" scripts/prepare-adonisg-assets.py
 
 printf '\n▶ Validar TypeScript y build Web\n'
 (cd web && npm run build) || fail "Build Web"
