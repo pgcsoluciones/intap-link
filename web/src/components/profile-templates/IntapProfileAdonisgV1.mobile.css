@@ -1,353 +1,38 @@
 .adonis-profile{
-  --ink:#0a0a0a;
-  --paper:#f7f5f0;
-  --paper-2:#ece8e1;
-  --line:rgba(10,10,10,.13);
-  --muted:#6c6862;
-  --serif:"Bodoni 72",Didot,"Times New Roman",Georgia,serif;
-  width:min(100%,590px);
-  margin:0 auto;
-  min-height:100vh;
-  overflow-x:hidden;
-  background:var(--paper);
-  color:var(--ink);
-  font-family:"Avenir Next",Avenir,"Helvetica Neue",Arial,sans-serif;
-  box-shadow:0 0 42px rgba(0,0,0,.08);
-  display:flex;
-  flex-direction:column;
+  --ink:#090909;--paper:#f7f5f0;--paper2:#ece8e1;--line:rgba(8,8,8,.14);--muted:#6b6761;--serif:"Bodoni 72",Didot,"Times New Roman",Georgia,serif;
+  width:min(100%,590px);margin:0 auto;min-height:100vh;overflow-x:hidden;background:var(--paper);color:var(--ink);font-family:"Avenir Next",Avenir,"Helvetica Neue",Arial,sans-serif;box-shadow:0 0 42px rgba(0,0,0,.08)
 }
-.adonis-profile *{box-sizing:border-box}
-.adonis-profile img,.adonis-profile video{max-width:100%}
-.adonis-profile a,.adonis-profile a:visited,.adonis-profile a:hover,.adonis-profile a:active{color:inherit;text-decoration:none}
-.adonis-profile button,.adonis-profile input,.adonis-profile select,.adonis-profile textarea{font:inherit}
-.adonis-profile button{color:inherit}
-.adonis-profile :focus-visible{outline:2px solid currentColor;outline-offset:3px}
-.adonis-profile h1,.adonis-profile h2,.adonis-profile h3{font-family:var(--serif);font-weight:400;letter-spacing:-.04em}
-.adonis-section-kicker{display:none}
-.adonis-eyebrow{font-size:8px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+.adonis-profile *{box-sizing:border-box}.adonis-profile img,.adonis-profile video{max-width:100%}.adonis-profile a,.adonis-profile a:visited,.adonis-profile a:hover,.adonis-profile a:active{color:inherit;text-decoration:none}.adonis-profile button,.adonis-profile input,.adonis-profile select,.adonis-profile textarea{font:inherit}.adonis-profile button{color:inherit}.adonis-profile h1,.adonis-profile h2,.adonis-profile h3{font-family:var(--serif);font-weight:400;letter-spacing:-.04em}.adonis-profile :focus-visible{outline:2px solid currentColor;outline-offset:3px}
 
-/* Narrative order: who/what -> work -> proof -> personal style -> expertise -> motion -> close */
-.adonis-hero{order:0}
-.adonis-manifesto{order:1}
-.adonis-about{order:2}
-.adonis-work{order:3}
-.adonis-full-portfolio{order:4}
-.adonis-testimonials{order:5}
-.adonis-personal-feature{order:6}
-.adonis-media-section{order:7}
-.adonis-collab{order:8}
-.adonis-expertise{order:9}
-.adonis-cert{order:10}
-.adonis-platform{order:11}
-.adonis-videos{order:12}
-.adonis-instagram{order:13}
-.adonis-faq{order:14}
-.adonis-quote{order:15}
-.adonis-contact-cta{order:16}
-.adonis-brand-footer{order:17}
+.adonis-hero{position:relative;height:min(100svh,940px);min-height:720px;overflow:hidden;background:#111;color:#fff}.adonis-hero-slides{position:absolute;inset:0;background:#111}.adonis-hero-slides img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 28%;opacity:0;transform:scale(1.015);transition:opacity .9s ease,transform 4.7s ease}.adonis-hero-slides img:nth-child(2){object-position:center 24%}.adonis-hero-slides img:nth-child(3){object-position:center 34%}.adonis-hero-slides img:nth-child(4){object-position:center 35%}.adonis-hero-slides img:nth-child(5){object-position:center 31%}.adonis-hero-slides img.is-active{opacity:1;transform:scale(1)}.adonis-hero-shade{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.03) 0%,rgba(0,0,0,.03) 53%,rgba(0,0,0,.28) 72%,rgba(0,0,0,.9) 100%)}.adonis-topbar{position:absolute;z-index:4;left:0;right:0;top:0;padding:max(16px,env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:flex-start}.adonis-top-logo-wrap{width:78px;min-height:48px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.93);padding:5px}.adonis-top-logo-wrap img{display:block;width:100%;height:auto}.adonis-language{border:1px solid rgba(255,255,255,.62);background:rgba(15,15,15,.28);color:#fff!important;border-radius:999px;min-height:38px;padding:0 12px;display:flex;align-items:center;gap:7px;font-size:11px;backdrop-filter:blur(8px)}.adonis-hero-content{position:absolute;z-index:3;left:26px;right:26px;bottom:max(46px,env(safe-area-inset-bottom));max-width:480px}.adonis-hero h1{font-size:clamp(50px,14vw,72px);line-height:.86;margin:0 0 15px;max-width:440px}.adonis-role{white-space:pre-line;font-size:12px;line-height:1.55;letter-spacing:.06em;text-transform:uppercase;max-width:410px;margin:0 0 17px}.adonis-btn{appearance:none;border:1px solid transparent;min-height:46px;padding:0 18px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.055em;cursor:pointer}.adonis-btn-light{background:#fff;color:#111!important}.adonis-btn-dark{background:#0c0c0c;color:#fff!important}.adonis-btn-outline{background:transparent;border-color:#111;color:#111!important}.adonis-hero-dots{position:absolute;z-index:4;right:24px;bottom:17px;display:flex;gap:5px}.adonis-hero-dots button,.adonis-slider-dots button,.adonis-gallery-dots button{border:0;padding:0;background:rgba(0,0,0,.23);width:24px;height:3px}.adonis-hero-dots button{background:rgba(255,255,255,.3)}.adonis-hero-dots button.is-active,.adonis-slider-dots button.is-active,.adonis-gallery-dots button.is-active{background:#111}.adonis-hero-dots button.is-active,.adonis-slider-dots-light button.is-active{background:#fff}
 
-/* HERO: image always fills the visual area. No letterbox / blank band. */
-.adonis-hero{
-  position:relative;
-  height:min(100svh,940px);
-  min-height:720px;
-  overflow:hidden;
-  background:#111;
-  color:#fff;
-}
-.adonis-hero-slides{position:absolute;inset:0;background:#111}
-.adonis-hero-slides img{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  object-position:center 30%;
-  opacity:0;
-  transform:scale(1.015);
-  transition:opacity .85s ease,transform 4.6s ease;
-  background:#111;
-}
-.adonis-hero-slides img:nth-child(1){object-position:center 28%}
-.adonis-hero-slides img:nth-child(2){object-position:center 25%}
-.adonis-hero-slides img:nth-child(3){object-position:center 35%}
-.adonis-hero-slides img:nth-child(4){object-position:center 35%}
-.adonis-hero-slides img:nth-child(5){object-position:center 30%}
-.adonis-hero-slides img.is-active{opacity:1;transform:scale(1)}
-.adonis-hero-shade{
-  position:absolute;
-  inset:0;
-  z-index:1;
-  background:linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.03) 44%,rgba(0,0,0,.30) 66%,rgba(0,0,0,.92) 100%);
-}
-.adonis-topbar{
-  position:absolute;
-  z-index:4;
-  left:0;right:0;top:0;
-  padding:max(16px,env(safe-area-inset-top)) 18px 0;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-}
-.adonis-top-logo-wrap{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:82px;
-  min-height:52px;
-  padding:6px;
-  background:rgba(255,255,255,.88);
-  border-radius:2px;
-  backdrop-filter:blur(8px);
-}
-.adonis-mark{display:block;width:100%;height:auto;max-height:62px;object-fit:contain}
-.adonis-language{
-  border:1px solid rgba(255,255,255,.62);
-  background:rgba(18,18,18,.26);
-  color:#fff!important;
-  border-radius:999px;
-  min-height:38px;
-  padding:0 12px;
-  display:flex;
-  align-items:center;
-  gap:7px;
-  font-size:11px;
-  letter-spacing:.03em;
-  backdrop-filter:blur(9px);
-}
-.adonis-hero-content{
-  position:absolute;
-  z-index:3;
-  left:24px;
-  right:24px;
-  bottom:max(38px,env(safe-area-inset-bottom));
-  max-width:470px;
-}
-.adonis-hero h1{
-  font-size:clamp(48px,14vw,70px);
-  line-height:.86;
-  margin:10px 0 12px;
-  max-width:430px;
-}
-.adonis-role{font-size:8.5px;line-height:1.5;letter-spacing:.09em;text-transform:uppercase;max-width:390px;margin:0}
-.adonis-hero-line{font-size:14px;line-height:1.45;max-width:390px;margin:11px 0 16px}
-.adonis-hero-actions{display:flex;gap:8px;flex-wrap:wrap}
-.adonis-btn{
-  appearance:none;
-  border:1px solid transparent;
-  min-height:44px;
-  padding:0 16px;
-  border-radius:999px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  font-size:10px;
-  font-weight:800;
-  text-transform:uppercase;
-  letter-spacing:.06em;
-  cursor:pointer;
-}
-.adonis-btn-light{background:#fff;color:#111!important}
-.adonis-btn-ghost{border-color:rgba(255,255,255,.58);background:rgba(0,0,0,.18);color:#fff!important}
-.adonis-btn-dark{width:100%;background:#0b0b0b;color:#fff!important}
-.adonis-hero-dots{position:absolute;z-index:4;right:22px;bottom:16px;display:flex;gap:5px}
-.adonis-hero-dots button{width:24px;height:3px;border:0;padding:0;background:rgba(255,255,255,.32)}
-.adonis-hero-dots button.is-active{background:#fff}
+.adonis-brand-strip{padding:38px 24px;background:#fff;display:flex;align-items:center;justify-content:center}.adonis-brand-strip img{display:block;width:min(78%,390px);height:auto}.adonis-manifesto{padding:54px 28px;background:#090909;color:#fff;text-align:center}.adonis-manifesto h2{font-size:clamp(42px,11.5vw,58px);line-height:.98;margin:0}.adonis-about{padding:58px 28px 66px;background:#fff}.adonis-about h2{font-size:clamp(40px,10vw,52px);line-height:1;margin:0 0 24px;text-align:center}.adonis-about p{font-size:16px;line-height:1.72;color:#312e2a;margin:0;text-align:justify;text-justify:inter-word}.adonis-about p+p{margin-top:18px}
 
-/* Shared editorial rhythm */
-.adonis-section,.adonis-full-portfolio,.adonis-personal-feature,.adonis-collab,.adonis-expertise,.adonis-testimonials,.adonis-faq,.adonis-about{padding:58px 24px}
-.adonis-section h2,.adonis-full-portfolio h2,.adonis-personal-feature h2,.adonis-collab h2,.adonis-expertise h2,.adonis-testimonials h2,.adonis-faq h2,.adonis-about h2{
-  font-size:clamp(38px,10.8vw,52px);
-  line-height:.96;
-  margin:0 0 24px;
-}
-.adonis-section-intro{font-size:13px;line-height:1.6;color:var(--muted);margin:-8px 0 22px}
+.adonis-portfolio,.adonis-testimonials,.adonis-personal,.adonis-media,.adonis-collab,.adonis-expertise,.adonis-cert,.adonis-platform,.adonis-videos,.adonis-instagram,.adonis-faq{padding:60px 24px}.adonis-portfolio h2,.adonis-testimonials h2,.adonis-personal h2,.adonis-media h2,.adonis-collab h2,.adonis-expertise h2,.adonis-cert h2,.adonis-platform h2,.adonis-videos h2,.adonis-instagram h2,.adonis-faq h2{font-size:clamp(40px,10.6vw,54px);line-height:.96;margin:0 0 26px}.adonis-portfolio{background:#f8f6f1}.adonis-featured-project{margin:0}.adonis-featured-project>button:first-child{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}.adonis-featured-project img{display:block;width:100%;height:auto;object-fit:contain;background:transparent}.adonis-featured-project>button:first-child>div{padding:14px 0 13px}.adonis-featured-project small{display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.adonis-featured-project h3{font-size:33px;line-height:1;margin:6px 0 0}.adonis-featured-project>.adonis-btn{width:100%}.adonis-slider-dots{display:flex;justify-content:center;gap:5px;padding:14px 0 18px}.adonis-portfolio>.adonis-btn-outline{width:100%}
 
-.adonis-manifesto{padding:64px 24px;background:#0b0b0b;color:#fff}
-.adonis-manifesto h2{font-size:clamp(43px,11.5vw,56px);line-height:.95;margin:0 0 20px;max-width:470px}
-.adonis-manifesto>div>p:not(.adonis-section-kicker){font-size:14px;line-height:1.65;color:#d8d4ce;max-width:440px;margin:0}
-.adonis-disciplines{margin-top:26px;padding-top:14px;border-top:1px solid rgba(255,255,255,.16);display:flex;flex-wrap:wrap;gap:7px 12px}
-.adonis-disciplines span{font-size:9px;color:#cac6c0;padding:4px 0;border:0}
+.adonis-testimonials{background:#111;color:#fff}.adonis-testimonial-card{display:block;width:100%;padding:0;border:0;background:transparent;cursor:pointer;position:relative;overflow:hidden}.adonis-testimonial-card img{display:block;width:100%;height:auto;max-height:72svh;object-fit:cover}.adonis-testimonial-card span{position:absolute;left:16px;bottom:14px;background:rgba(0,0,0,.66);color:#fff;padding:7px 10px;font-size:10px;letter-spacing:.08em;text-transform:uppercase}.adonis-slider-dots-light button{background:rgba(255,255,255,.26)}.adonis-testimonial-overlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:20px}.adonis-testimonial-overlay article{position:relative;width:min(100%,520px);max-height:88svh;overflow:auto;background:#0a0a0a;color:#fff}.adonis-testimonial-overlay article>button{position:absolute;right:12px;top:12px;z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.6);background:#000;color:#fff!important;display:grid;place-items:center}.adonis-testimonial-overlay img{display:block;width:100%;height:auto;filter:grayscale(1) brightness(.48)}.adonis-testimonial-overlay article>div{position:absolute;inset:auto 18px 18px;z-index:2}.adonis-testimonial-overlay article>div>span{font-family:var(--serif);font-size:70px;line-height:.6}.adonis-testimonial-overlay blockquote{font-family:var(--serif);font-size:28px;line-height:1.2;margin:25px 0 18px}.adonis-testimonial-overlay strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.1em}.adonis-testimonial-overlay small{display:block;margin-top:6px;color:#bbb}
 
-/* About is now short, breathable and directly after the manifesto. */
-.adonis-about{background:#fff}
-.adonis-about h2{margin-bottom:16px}
-.adonis-about>div>p:not(.adonis-section-kicker){font-family:var(--serif);font-size:19px;line-height:1.5;color:#302d2a;margin:0}
-.adonis-about>div>p:not(.adonis-section-kicker)+p{margin-top:12px;font-family:inherit;font-size:13px;line-height:1.65;color:var(--muted)}
-.adonis-about-facts{display:flex;gap:7px;flex-wrap:wrap;margin-top:22px}
-.adonis-about-facts span{padding:7px 10px;border:1px solid var(--line);border-radius:999px;font-size:8px;letter-spacing:.06em;text-transform:uppercase}
+.adonis-personal{background:#fff}.adonis-personal-card{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}.adonis-personal-card img{display:block;width:100%;height:auto;object-fit:contain}.adonis-personal-card p{font-family:var(--serif);font-size:21px;line-height:1.4;margin:15px 0 15px;color:#2f2c28}.adonis-personal-card .adonis-btn{width:100%}
 
-/* Selected work: always one project per row; natural image height, no crop, no empty frame. */
-.adonis-work{background:#f8f6f1}
-.adonis-featured-projects{display:grid;grid-template-columns:1fr;gap:48px}
-.adonis-project-card button,.adonis-full-card button,.adonis-personal-card,.adonis-media-card button{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
-.adonis-project-media{position:relative;background:transparent;overflow:hidden}
-.adonis-project-media img{display:block;width:100%;height:auto;margin:0;object-fit:contain}
-.adonis-project-number{position:absolute;right:12px;top:12px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.94);color:#111;display:grid;place-items:center;font-size:9px}
-.adonis-project-copy{padding:16px 0 0;border-top:0}
-.adonis-project-copy>p:first-child,.adonis-full-card small{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0}
-.adonis-project-copy h3{font-size:34px;line-height:1;margin:6px 0 9px}
-.adonis-project-description{font-size:13px;line-height:1.55;color:#4f4b47;margin:0 0 13px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
-.adonis-project-copy>span,.adonis-full-card span,.adonis-personal-card span,.adonis-media-card span,.adonis-text-btn{display:inline-flex;align-items:center;gap:7px;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.adonis-media{background:#0d0d0d;color:#fff}.adonis-media-card{display:block;width:100%;padding:0;border:0;background:#181818;color:#fff!important;text-align:left;cursor:pointer}.adonis-media-card img{display:block;width:100%;height:auto;object-fit:contain;background:#050505}.adonis-media-card div{padding:16px}.adonis-media-card small{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#aaa}.adonis-media-card h3{font-size:30px;line-height:1.05;margin:8px 0 13px}.adonis-media-card span{font-size:10px;text-transform:uppercase;letter-spacing:.09em;display:inline-flex;align-items:center;gap:7px}
 
-/* Full portfolio: one full card visible at a time; no second card peeking. */
-.adonis-full-portfolio{background:#111;color:#fff}
-.adonis-full-track,.adonis-media-track,.adonis-expertise-track,.adonis-testimonial-track,.adonis-video-track{
-  display:grid;
-  grid-auto-flow:column;
-  grid-auto-columns:100%;
-  gap:14px;
-  overflow-x:auto;
-  overscroll-behavior-inline:contain;
-  scroll-snap-type:x mandatory;
-  scrollbar-width:none;
-  padding:2px 0 8px;
-}
-.adonis-full-track::-webkit-scrollbar,.adonis-media-track::-webkit-scrollbar,.adonis-expertise-track::-webkit-scrollbar,.adonis-testimonial-track::-webkit-scrollbar,.adonis-video-track::-webkit-scrollbar{display:none}
-.adonis-full-card{scroll-snap-align:center;background:#191919;overflow:hidden}
-.adonis-full-card img{display:block;width:100%;height:auto;object-fit:contain;background:#090909}
-.adonis-full-card div{padding:18px 16px 20px}
-.adonis-full-card h3{font-size:31px;line-height:1;margin:7px 0 9px}
-.adonis-full-card p{font-size:12px;line-height:1.55;color:#c9c5bf;margin:0 0 13px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
-.adonis-full-portfolio .adonis-section-intro{display:none}
+.adonis-collab{background:#fff}.adonis-collab>div{border-top:1px solid #111}.adonis-collab p{font-family:var(--serif);font-size:25px;line-height:1.25;margin:0;padding:14px 0;border-bottom:1px solid var(--line)}
 
-/* Testimonials immediately follow the work as social proof. */
-.adonis-testimonials{background:#f3efe8}
-.adonis-testimonial-track article{scroll-snap-align:center;min-height:300px;padding:28px 24px;background:#fff;border:1px solid rgba(0,0,0,.09);display:flex;flex-direction:column;justify-content:flex-start}
-.adonis-testimonial-track article:nth-child(2){background:#111;color:#fff}
-.adonis-quote-mark{font-family:var(--serif);font-size:62px;line-height:.65}
-.adonis-testimonial-track blockquote{font-family:var(--serif);font-size:25px;line-height:1.24;margin:38px 0 24px}
-.adonis-testimonial-track strong{font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-top:auto}
-.adonis-testimonial-track small{font-size:9px;color:var(--muted);margin-top:7px}
-.adonis-testimonial-track article:nth-child(2) small{color:#aaa}
+.adonis-expertise{background:#ded9d0;overflow:hidden}.adonis-expertise h2{text-align:center}.adonis-marquee{position:relative;overflow:hidden;margin:8px -24px 0;padding:18px 0;border-top:1px solid rgba(0,0,0,.2);border-bottom:1px solid rgba(0,0,0,.2)}.adonis-marquee>div{display:flex;width:max-content;gap:30px;animation:adonis-marquee 34s linear infinite}.adonis-marquee span{font-family:var(--serif);font-size:25px;white-space:nowrap;display:inline-flex;align-items:center;gap:30px}.adonis-marquee span::after{content:'•';font-family:Arial,sans-serif;font-size:10px}@keyframes adonis-marquee{to{transform:translateX(-50%)}}
 
-/* Personal style: one editorial cover opens the moving gallery modal. */
-.adonis-personal-feature{background:#fff}
-.adonis-personal-card{border:0!important}
-.adonis-personal-card img{display:block;width:100%;height:auto;object-fit:contain;background:transparent}
-.adonis-personal-card div{padding:16px 0 0}
-.adonis-personal-card p{font-family:var(--serif);font-size:20px;line-height:1.4;margin:0 0 12px;color:#2e2b27}
+.adonis-cert{background:#0b0b0b;color:#fff;text-align:center}.adonis-cert p{font-size:16px;line-height:1.6;color:#d2cec7;margin:0 0 20px}.adonis-cert button{border:0;border-bottom:1px solid #fff;background:transparent;color:#fff!important;padding:8px 0;font-size:12px;text-transform:uppercase;letter-spacing:.1em}.adonis-platform{background:#000;color:#fff;text-align:center;padding-top:68px;padding-bottom:68px}.adonis-platform>img{display:block;width:min(72%,360px);height:auto;margin:0 auto 30px}.adonis-platform h2{margin-bottom:17px}.adonis-platform p{font-family:var(--serif);font-size:21px;line-height:1.5;max-width:480px;margin:0 auto}
 
-/* Press: one clean card at a time, internal modal only. */
-.adonis-media-section{background:#0d0d0d;color:#fff}
-.adonis-media-card{scroll-snap-align:center;background:#191919;overflow:hidden}
-.adonis-media-card img{display:block;width:100%;height:auto;object-fit:contain;background:#050505}
-.adonis-media-card div{padding:16px}
-.adonis-media-card div p{margin:0;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:#aaa}
-.adonis-media-card h3{font-size:27px;line-height:1.08;margin:8px 0 13px}
+.adonis-videos{background:#eeeae3;text-align:center}.adonis-videos>p{font-size:16px;line-height:1.6;color:#5f5a54;margin:-8px auto 22px;max-width:470px}.adonis-video-feature{background:#000;overflow:hidden}.adonis-video-feature video{display:block;width:100%;height:auto;max-height:72svh;object-fit:contain;background:#000}.adonis-video-thumbs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.adonis-video-thumbs button{position:relative;border:0;padding:0;background:#000;overflow:hidden;aspect-ratio:4/5}.adonis-video-thumbs video{width:100%;height:100%;object-fit:cover;display:block}.adonis-video-thumbs span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.58);border:1px solid rgba(255,255,255,.7);color:#fff;display:grid;place-items:center}.adonis-video-cta{width:100%;margin-top:18px}
 
-.adonis-collab{background:#fff}
-.adonis-collab-list{border-top:1px solid #111}
-.adonis-collab-item{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}
-.adonis-collab-item span{font-size:8px;color:var(--muted)}
-.adonis-collab-item strong{font-family:var(--serif);font-size:24px;font-weight:400}
-.adonis-collab-fallback{font-family:var(--serif);font-size:26px;line-height:1.3;color:#3b3835}
+.adonis-instagram{background:#fff;text-align:center}.adonis-instagram>p{font-size:16px;color:var(--muted);margin:-10px 0 20px}.adonis-feed-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 0 16px}.adonis-feed-grid a{aspect-ratio:1;overflow:hidden;background:#ddd}.adonis-feed-grid img{width:100%;height:100%;object-fit:cover}.adonis-feed-empty{height:140px;border:1px solid var(--line);display:grid;place-items:center;font-size:28px;margin-bottom:15px}.adonis-instagram>a{display:inline-flex;align-items:center;gap:7px;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
 
-/* Expertise: no narrow peeking card. Every slide occupies the full mobile width. */
-.adonis-expertise{background:#ded9d0}
-.adonis-expertise-track article{scroll-snap-align:center;min-height:330px;padding:28px 22px;background:#f8f5ef;border:1px solid rgba(0,0,0,.08)}
-.adonis-expertise-track article:nth-child(2){background:#131313;color:#fff}
-.adonis-expertise-track article>span{font-size:8px;letter-spacing:.16em;color:var(--muted)}
-.adonis-expertise-track h3{font-size:42px;line-height:.95;margin:32px 0 22px}
-.adonis-expertise-track ul{list-style:none;margin:0;padding:0}
-.adonis-expertise-track li{padding:9px 0;border-top:1px solid currentColor;font-size:12px;opacity:.83}
+.adonis-faq{background:#ebe7df}.adonis-faq article{border-top:1px solid rgba(0,0,0,.18)}.adonis-faq article:last-child{border-bottom:1px solid rgba(0,0,0,.18)}.adonis-faq article>button{width:100%;padding:17px 0;border:0;background:transparent;display:flex;justify-content:space-between;gap:16px;text-align:left;font-family:var(--serif);font-size:22px;line-height:1.25;cursor:pointer}.adonis-faq article>button b{font-family:Arial,sans-serif;font-weight:400}.adonis-faq article p{font-size:16px;line-height:1.65;color:#4a4641;margin:0;padding:0 0 20px}
 
-.adonis-cert{padding:58px 24px;background:#0c0c0c;color:#fff}
-.adonis-cert h2{font-size:45px;line-height:.96;margin:0 0 14px;font-family:var(--serif);font-weight:400;letter-spacing:-.04em}
-.adonis-cert>div>p:not(.adonis-section-kicker){color:#c9c6c0;font-size:13px;line-height:1.6}
-.adonis-text-btn{appearance:none;border:0;border-bottom:1px solid currentColor;background:none;padding:8px 0;cursor:pointer}
+.adonis-quote{position:relative;min-height:74svh;background:#000;color:#fff;overflow:hidden;display:flex;align-items:flex-end;padding:0 26px 58px}.adonis-quote-bg{position:absolute;inset:0;background:url('/assets/adonisg/hero/quote-bg.webp') center 28%/cover no-repeat;opacity:.36}.adonis-quote-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.46) 0%,rgba(0,0,0,.68) 48%,rgba(0,0,0,.94) 100%),linear-gradient(90deg,rgba(0,0,0,.72),rgba(0,0,0,.58))}.adonis-quote>div:last-child{position:relative;z-index:2;width:100%;max-width:500px}.adonis-quote p,.adonis-quote strong{font-family:var(--serif);font-weight:400;font-size:clamp(34px,9vw,48px);line-height:1.02;margin:0;display:block}.adonis-quote strong{margin-top:4px}.adonis-quote span{display:block;margin-top:22px;font-size:9px;letter-spacing:.16em;text-transform:uppercase}
 
-.adonis-platform{padding:60px 24px;background:#000;color:#fff;text-align:center}
-.adonis-platform-logo{display:block;width:min(100%,360px);height:auto;margin:0 auto 24px}
-.adonis-platform h2{font-size:38px;line-height:1;margin:0 0 14px}
-.adonis-platform>div>p{font-family:var(--serif);font-size:19px;line-height:1.45;margin:0}
+.adonis-contact-icons{background:#111;color:#fff;padding:26px 22px;display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.adonis-contact-icons button,.adonis-contact-icons a{min-height:88px;border:1px solid #fff;background:#111;color:#fff!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;font-size:11px}.adonis-contact-icons svg{font-size:22px}.adonis-brand-footer{background:#000}.adonis-brand-footer img{display:block;width:100%;height:auto}
 
-/* Motion: one video at a time, full mobile card, play button clearly separate from photography. */
-.adonis-videos{background:#eeeae3}
-.adonis-videos>div:first-child>p:last-child{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 20px}
-.adonis-video-track article{scroll-snap-align:center}
-.adonis-video-shell{position:relative;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden}
-.adonis-video-shell video{display:block;width:100%;height:auto;max-height:76svh;object-fit:contain;background:#000}
-.adonis-video-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:74px;height:74px;border:1px solid rgba(255,255,255,.72);border-radius:50%;background:rgba(0,0,0,.50);color:#fff!important;display:grid;place-items:center;font-size:23px;backdrop-filter:blur(6px)}
-.adonis-video-play svg{margin-left:4px}
-.adonis-video-count{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.72);color:#fff;padding:6px 9px;border-radius:999px;font-size:8px}
+.adonis-modal-backdrop{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.78);display:flex;align-items:flex-end;justify-content:center;padding:0}.adonis-modal{position:relative;width:min(100%,590px);max-height:94svh;overflow:auto;background:#fff;color:#111;border-radius:24px 24px 0 0;padding:24px}.adonis-modal-close{position:sticky;float:right;right:0;top:0;z-index:4;width:42px;height:42px;border-radius:50%;border:1px solid #111;background:#fff;display:grid;place-items:center}.adonis-project-modal>small,.adonis-media-modal>small{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.adonis-project-modal h2,.adonis-project-portal h2,.adonis-media-modal h2,.adonis-cert-modal h2,.adonis-contact-form h2{font-size:clamp(38px,10vw,52px);line-height:.96;margin:10px 0 14px}.adonis-project-modal>p{font-size:16px;line-height:1.6;color:#504b46}.adonis-gallery-stage{position:relative;background:#0a0a0a;margin:18px -24px 0}.adonis-gallery-stage img{display:block;width:100%;height:auto;max-height:68svh;object-fit:contain;margin:0 auto}.adonis-gallery-stage .prev,.adonis-gallery-stage .next{position:absolute;top:50%;transform:translateY(-50%);width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.72);background:rgba(0,0,0,.46);color:#fff!important;display:grid;place-items:center}.adonis-gallery-stage .prev{left:12px}.adonis-gallery-stage .next{right:12px}.adonis-gallery-stage>span{position:absolute;right:12px;bottom:10px;background:rgba(0,0,0,.7);color:#fff;padding:5px 8px;font-size:10px}.adonis-gallery-dots{display:flex;justify-content:center;gap:5px;padding:14px 0 18px}.adonis-project-modal>.adonis-btn{width:100%}.adonis-project-portal>div{display:grid;grid-template-columns:1fr 1fr;gap:12px}.adonis-project-portal>div>button{border:1px solid var(--line);background:#fff;padding:0;text-align:left;overflow:hidden}.adonis-project-portal img{display:block;width:100%;height:170px;object-fit:contain;background:#f2efe9}.adonis-project-portal h3{font-size:20px;line-height:1.05;margin:10px 10px 6px}.adonis-project-portal span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.08em;padding:0 10px 12px}.adonis-media-modal img{display:block;width:100%;height:auto;object-fit:contain;margin-bottom:16px}.adonis-cert-modal>div{display:grid;gap:10px}.adonis-cert-modal img{width:100%;height:auto}.adonis-contact-form{display:grid;gap:14px}.adonis-contact-form>p{font-size:15px;line-height:1.6;color:var(--muted)}.adonis-contact-form label{display:grid;gap:6px;font-size:11px;text-transform:uppercase;letter-spacing:.07em}.adonis-contact-form input,.adonis-contact-form select,.adonis-contact-form textarea{width:100%;border:1px solid #ccc;background:#fff;padding:12px;border-radius:0;font-size:16px}.adonis-whatsapp-btn{min-height:46px;border:1px solid #111;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px}.adonis-contact-form>a{font-size:12px;display:flex;align-items:center;gap:7px}
 
-.adonis-instagram{background:#f8f6f1}
-.adonis-feed-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:20px 0}
-.adonis-feed-grid a{aspect-ratio:1;overflow:hidden;background:#ddd}
-.adonis-feed-grid a.is-featured{grid-column:span 2;aspect-ratio:4/5}
-.adonis-feed-grid img{width:100%;height:100%;object-fit:cover}
-.adonis-feed-empty{border:1px solid var(--line);padding:28px 20px;text-align:center;margin:20px 0;color:var(--muted)}
-
-.adonis-faq{background:#ebe7df}
-.adonis-faq-list{border-top:1px solid #111}
-.adonis-faq details{border-bottom:1px solid var(--line)}
-.adonis-faq summary{list-style:none;display:flex;justify-content:space-between;gap:14px;padding:18px 0;font-family:var(--serif);font-size:20px;line-height:1.2;cursor:pointer}
-.adonis-faq summary::-webkit-details-marker{display:none}
-.adonis-faq summary span{font-family:Arial,sans-serif;font-size:18px;transition:transform .2s}
-.adonis-faq details[open] summary span{transform:rotate(45deg)}
-.adonis-faq details p{font-size:13px;line-height:1.65;color:#494540;margin:0 0 18px}
-
-.adonis-quote{position:relative;min-height:66svh;padding:68px 26px;display:flex;align-items:center;overflow:hidden;background:#000;color:#fff}
-.adonis-quote-bg{position:absolute;inset:0;background:url('/assets/adonisg/hero/quote-bg.webp') center/cover no-repeat;background-color:#000;opacity:.66}
-.adonis-quote-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.62) 52%,rgba(0,0,0,.40) 100%),linear-gradient(180deg,rgba(0,0,0,.10),rgba(0,0,0,.72))}
-.adonis-quote>.adonis-reveal{position:relative;z-index:2;width:100%;max-width:470px}
-.adonis-quote p,.adonis-quote strong{display:block;font-family:var(--serif);font-size:clamp(35px,9.5vw,50px);line-height:1.04;letter-spacing:-.04em;margin:0}
-.adonis-quote strong{font-weight:400;color:#d8d4ce;margin-top:8px}
-.adonis-quote span{display:block;margin-top:25px;font-size:8px;letter-spacing:.17em;text-transform:uppercase}
-
-.adonis-contact-cta{padding:62px 24px 54px;background:#151515;color:#fff;text-align:center}
-.adonis-contact-cta>p{font-size:8px;letter-spacing:.18em;margin:0 0 14px;color:#bcb8b2}
-.adonis-contact-cta h2{font-family:var(--serif);font-size:clamp(38px,10vw,50px);font-weight:400;line-height:.98;letter-spacing:-.04em;margin:0 auto 26px;max-width:440px}
-.adonis-contact-cta .adonis-btn{margin:0 auto 10px}
-.adonis-contact-whatsapp{display:flex;align-items:center;justify-content:center;gap:8px;width:min(100%,290px);min-height:44px;margin:0 auto 16px;border:1px solid rgba(255,255,255,.6);border-radius:999px;background:transparent;color:#fff!important}
-.adonis-contact-cta>a{display:inline-flex;align-items:center;gap:7px;font-size:10px;color:#c9c6c0!important}
-
-.adonis-brand-footer{background:#000;overflow:hidden}
-.adonis-brand-footer img{display:block;width:100%;height:auto;margin:0}
-
-/* Mobile-first modal: information first, natural gallery height, no forced empty area. */
-.adonis-modal-backdrop{position:fixed;z-index:9999;inset:0;background:rgba(0,0,0,.76);display:flex;align-items:flex-end;justify-content:center;padding:0}
-.adonis-modal{position:relative;width:min(100%,590px);max-height:94svh;overflow-y:auto;background:#fff;color:#111;border-radius:22px 22px 0 0;box-shadow:0 -18px 50px rgba(0,0,0,.3)}
-.adonis-modal-close{position:sticky;z-index:10;top:12px;float:right;margin:12px 12px 0 0;width:40px;height:40px;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.82);color:#fff!important;cursor:pointer}
-.adonis-project-modal,.adonis-media-modal,.adonis-cert-modal,.adonis-contact-form{padding:22px 20px 28px;clear:both}
-.adonis-project-modal h2,.adonis-media-modal h2,.adonis-cert-modal h2,.adonis-contact-form h2{font-family:var(--serif);font-size:38px;line-height:1;letter-spacing:-.04em;font-weight:400;margin:4px 0 10px}
-.adonis-project-modal>p,.adonis-media-modal>p,.adonis-contact-form>p{font-size:13px;line-height:1.6;color:#5e5953;margin:0 0 18px}
-.adonis-gallery-stage{position:relative;width:100%;background:#090909;overflow:hidden}
-.adonis-gallery-stage>img{display:block;width:100%;height:auto;max-height:none;object-fit:contain;margin:0 auto}
-.adonis-gallery-prev,.adonis-gallery-next{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:40px;height:40px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff!important;display:grid;place-items:center}
-.adonis-gallery-prev{left:10px}.adonis-gallery-next{right:10px}
-.adonis-gallery-stage>span{position:absolute;right:10px;bottom:10px;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.65);color:#fff;font-size:9px}
-.adonis-gallery-thumbs{display:flex;gap:6px;overflow-x:auto;padding:9px 0 14px;scrollbar-width:none}
-.adonis-gallery-thumbs::-webkit-scrollbar{display:none}
-.adonis-gallery-thumbs button{flex:0 0 64px;width:64px;height:74px;padding:0;border:2px solid transparent;background:#eee;overflow:hidden}
-.adonis-gallery-thumbs button.is-active{border-color:#111}
-.adonis-gallery-thumbs img{width:100%;height:100%;object-fit:cover;display:block}
-.adonis-media-modal>img{display:block;width:100%;height:auto;margin:0 0 20px}
-.adonis-cert-modal>div{display:grid;grid-template-columns:1fr;gap:10px}
-.adonis-cert-modal img{display:block;width:100%;height:auto}
-.adonis-contact-form{display:grid;gap:13px}
-.adonis-contact-form label{display:grid;gap:6px;font-size:10px;letter-spacing:.04em;text-transform:uppercase}
-.adonis-contact-form input,.adonis-contact-form select,.adonis-contact-form textarea{width:100%;border:1px solid #d5d0c9;background:#faf9f6;padding:12px;border-radius:0;color:#111}
-.adonis-form-row{display:grid;grid-template-columns:1fr;gap:13px}
-.adonis-form-success{color:#1d6b3c!important}
-.adonis-whatsapp-btn{min-height:44px;border:1px solid #111;border-radius:999px;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px}
-.adonis-email-link{display:flex;align-items:center;justify-content:center;gap:7px;font-size:11px}
-
-.adonis-reveal{opacity:0;transform:translateY(18px);transition:opacity .65s ease,transform .65s ease}
-.adonis-reveal.is-visible{opacity:1;transform:none}
-
-@media (max-width:420px){
-  .adonis-profile{width:100%;box-shadow:none}
-  .adonis-hero-content{left:20px;right:20px}
-  .adonis-section,.adonis-full-portfolio,.adonis-personal-feature,.adonis-collab,.adonis-expertise,.adonis-testimonials,.adonis-faq,.adonis-about{padding-left:20px;padding-right:20px}
-  .adonis-manifesto,.adonis-cert,.adonis-platform,.adonis-contact-cta{padding-left:20px;padding-right:20px}
-  .adonis-hero h1{font-size:clamp(46px,14.5vw,62px)}
-}
-
-@media (prefers-reduced-motion:reduce){
-  .adonis-reveal{opacity:1;transform:none;transition:none}
-  .adonis-hero-slides img{transition:opacity .2s ease;transform:none}
-  .adonis-faq summary span{transition:none}
-}
+@media (max-width:420px){.adonis-hero-content{left:20px;right:20px}.adonis-portfolio,.adonis-testimonials,.adonis-personal,.adonis-media,.adonis-collab,.adonis-expertise,.adonis-cert,.adonis-platform,.adonis-videos,.adonis-instagram,.adonis-faq{padding-left:20px;padding-right:20px}.adonis-brand-strip{padding-left:20px;padding-right:20px}.adonis-about{padding-left:22px;padding-right:22px}.adonis-project-portal img{height:145px}}
+@media (prefers-reduced-motion:reduce){.adonis-hero-slides img{transition:none;transform:none}.adonis-marquee>div{animation:none}}
