@@ -9,19 +9,26 @@
   justify-content:flex-end;
 }
 
-/* Identity strip directly below hero: preserve the transparent PNG presentation. */
+/* Identity strip directly below hero.
+   Use the original WHITE transparent PNG and invert only at render time so
+   the source asset stays untouched and the result is black lettering on white. */
 .adonis-profile .adonis-brand-strip{
+  position:relative;
   background:#fff;
   padding:32px 24px 36px;
   min-height:150px;
 }
 .adonis-profile .adonis-brand-strip img{
+  display:none !important;
+}
+.adonis-profile .adonis-brand-strip::before{
+  content:'';
   display:block;
   width:min(82%,430px);
-  height:auto;
-  object-fit:contain;
-  background:transparent !important;
-  filter:none !important;
+  aspect-ratio:3/1;
+  margin:0 auto;
+  background:url('/assets/adonisg/brand/logo-white.png') center/contain no-repeat;
+  filter:invert(1);
 }
 
 /* Manifesto must read as exactly two deliberate lines. */
@@ -137,34 +144,65 @@
   letter-spacing:.035em;
 }
 
-/* Sharing actions: larger, cleaner labels. No WhatsApp explanatory sub-label. */
+/* Sharing actions: make "Compartir perfil" impossible to miss.
+   Both actions live directly below the social cards, full width and readable. */
 .adonis-profile .adonis-share-actions{
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr;
   background:#050505;
-  padding:20px 22px 34px;
-  gap:12px;
+  padding:4px 22px 38px;
+  gap:11px;
 }
 .adonis-profile .adonis-share-actions button{
-  min-height:64px;
-  border-radius:16px;
+  width:100%;
+  min-height:62px;
+  border:1px solid rgba(255,255,255,.94);
+  border-radius:18px;
+  background:#101010;
+  color:#fff !important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 9px 22px rgba(0,0,0,.32);
+}
+.adonis-profile .adonis-share-actions button:first-child{
+  background:#fff;
+  color:#090909 !important;
+  border-color:#fff;
 }
 .adonis-profile .adonis-share-actions strong{
-  font-size:15px;
+  font-size:16px;
   line-height:1.15;
-  font-weight:800;
+  font-weight:850;
   letter-spacing:.01em;
 }
 .adonis-profile .adonis-share-actions small{
   display:none !important;
 }
 .adonis-profile .adonis-copy-toast{
+  position:absolute;
+  left:50%;
+  bottom:5px;
+  transform:translate(-50%,50%);
+  z-index:4;
+  background:#fff;
+  color:#111;
+  border-radius:999px;
+  padding:8px 14px;
   font-size:12px;
   font-weight:700;
+  white-space:nowrap;
+  box-shadow:0 10px 28px rgba(0,0,0,.35);
 }
 
 @media (max-width:420px){
   .adonis-profile .adonis-brand-strip{
     min-height:132px;
     padding:28px 20px 31px;
+  }
+  .adonis-profile .adonis-brand-strip::before{
+    width:min(88%,380px);
   }
   .adonis-profile .adonis-featured-project{
     padding:14px;
@@ -174,7 +212,11 @@
   .adonis-profile .adonis-project-modal .adonis-fixed-media{
     width:100%;
   }
+  .adonis-profile .adonis-share-actions{
+    padding-left:18px;
+    padding-right:18px;
+  }
   .adonis-profile .adonis-share-actions strong{
-    font-size:14px;
+    font-size:15.5px;
   }
 }
