@@ -103,6 +103,8 @@ def main():
 
         copy_exact(by_fragment(roots["brand"], "LOGO BLANCO@2x"), OUT / "brand" / "logo-white.png")
         copy_exact(by_fragment(roots["brand"], "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png")
+        # Franja de cierre original de la línea gráfica. Se conserva sin redibujar ni recolorear.
+        copy_exact(by_fragment(roots["brand"], "Linkedin Banner"), OUT / "brand" / "linkedin-banner.jpg")
 
         photos, work, certs = roots["photos"], roots["work"], roots["certs"]
         hero = by_fragment(photos, "PHOTO-2026-07-27-11-34-00 (2)")
@@ -131,12 +133,9 @@ def main():
 
         save_webp(by_fragment(photos, "1.39.34"), OUT / "media" / "dlb-dmh-exito.webp", 1200, 78)
         save_webp(by_fragment(photos, "1.46.11"), OUT / "media" / "bazar-emprendedores.webp", 1200, 78)
-        # Compatibilidad con el template de medios: visual neutral de Argenis para tarjetas externas.
         save_webp(by_fragment(photos, "PHOTO-2026-07-27-11-34-00 (4)"), OUT / "media" / "la-vitrina.webp", 1200, 78)
-        # Portada EL JANIS suministrada por el usuario.
         save_webp(by_fragment(work, "1.34.19"), OUT / "media" / "el-janis.webp", 1200, 78)
 
-        # Captura correcta del testimonio (foto + texto de Instagram).
         save_webp(by_fragment(work, "1.34.53"), OUT / "testimonials" / "dr-hugo-maria.webp", 1400, 80)
 
         cert_files = sorted([p for p in certs.rglob("*") if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"} and not p.name.startswith("._") and p.name != ".DS_Store"])
@@ -151,7 +150,7 @@ def main():
         print(f"▶ Videos fuente localizados: {len(video_files)} · integrados bajo demanda: {min(3,len(video_files))}")
 
     required = sorted([p.relative_to(OUT).as_posix() for p in OUT.rglob("*") if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}])
-    must_have = {"brand/logo-white.png","brand/mark-white.png","hero/argenis-hero.webp","hero/argenis-manifesto.webp","portraits/argenis-01.webp","portraits/argenis-06.webp","portfolio/beauty-fragrance/beauty-cover.webp","portfolio/red-statement/red-cover.webp","portfolio/noir/noir-cover.webp","portfolio/couple-lifestyle/couple-cover.webp","portfolio/evening/evening-cover.webp","portfolio/mens-brand/mens-cover.webp","media/dlb-dmh-exito.webp","media/la-vitrina.webp","media/el-janis.webp","testimonials/dr-hugo-maria.webp","certifications/cert-01.webp","og/adonisg-og.jpg","videos/video-01.mp4"}
+    must_have = {"brand/logo-white.png","brand/mark-white.png","brand/linkedin-banner.jpg","hero/argenis-hero.webp","hero/argenis-manifesto.webp","portraits/argenis-01.webp","portraits/argenis-06.webp","portfolio/beauty-fragrance/beauty-cover.webp","portfolio/red-statement/red-cover.webp","portfolio/noir/noir-cover.webp","portfolio/couple-lifestyle/couple-cover.webp","portfolio/evening/evening-cover.webp","portfolio/mens-brand/mens-cover.webp","media/dlb-dmh-exito.webp","media/la-vitrina.webp","media/el-janis.webp","testimonials/dr-hugo-maria.webp","certifications/cert-01.webp","og/adonisg-og.jpg","videos/video-01.mp4"}
     missing = sorted(must_have.difference(required))
     if missing: raise RuntimeError("Assets faltantes: " + ", ".join(missing))
 
@@ -159,7 +158,7 @@ def main():
     print(f"✓ {len(required)} assets finales preparados · {total/1024/1024:.2f} MiB")
     for rel in required:
         p = OUT / rel; print(f"  ✓ {rel} · {p.stat().st_size/1024:.1f} KiB · sha {sha(p)}")
-    print("✓ Logos originales copiados sin alteración de píxeles.")
+    print("✓ Logos y banner original copiados sin alteración de píxeles.")
 
 
 if __name__ == "__main__": main()
