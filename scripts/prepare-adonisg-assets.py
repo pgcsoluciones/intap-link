@@ -101,24 +101,25 @@ def main():
                 if child.name not in {"README.md", "asset-manifest.json"}:
                     shutil.rmtree(child) if child.is_dir() else child.unlink()
 
+        # Identidad gráfica: copia exacta, sin redibujo, recorte ni recolor.
         copy_exact(by_fragment(roots["brand"], "LOGO BLANCO@2x"), OUT / "brand" / "logo-white.png")
         copy_exact(by_fragment(roots["brand"], "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png")
 
         photos, work, certs = roots["photos"], roots["work"], roots["certs"]
         hero = by_fragment(photos, "PHOTO-2026-07-27-11-34-00 (2)")
-        cowboy = by_fragment(photos, "1.40.00")
+        cowboy = by_fragment(photos, "1.42.56")
         save_webp(hero, OUT / "hero" / "argenis-hero.webp", 1440, 80)
         save_webp(cowboy, OUT / "hero" / "argenis-manifesto.webp", 1280, 78)
         save_webp(cowboy, OUT / "hero" / "argenis-cowboy.webp", 1280, 78)
 
-        # Galería propia de Argenis + slider inmersivo.
+        # Galería propia de Argenis: retratos y estilos realmente distintos.
         portrait_items = [
             ("PHOTO-2026-07-27-11-34-00 (1)", "argenis-01.webp"),
             ("PHOTO-2026-07-27-11-34-00 (2)", "argenis-02.webp"),
             ("PHOTO-2026-07-27-11-34-00 (3)", "argenis-03.webp"),
             ("PHOTO-2026-07-27-11-34-00 (4)", "argenis-04.webp"),
-            ("1.28.47", "argenis-05.webp"),
-            ("1.40.10", "argenis-06.webp"),
+            ("1.26.51", "argenis-05.webp"),
+            ("1.42.56", "argenis-06.webp"),
         ]
         for fragment, name in portrait_items:
             save_webp(by_fragment(photos, fragment), OUT / "portraits" / name, 1280, 78)
@@ -130,14 +131,13 @@ def main():
         write_series(work, "evening", [("10-48-44.jpg","evening-cover.webp"),("10-48-44 (1)","evening-02.webp"),("10-48-44 (2)","evening-03.webp"),("10-48-44 (4)","evening-04.webp"),("10-48-44 (6)","evening-05.webp")])
         write_series(work, "mens-brand", [("08-20-01 (1)","mens-cover.webp"),("08-20-01 (2)","mens-02.webp"),("08-20-01.jpg","mens-03.webp"),("08-20-02","mens-04.webp")])
 
-        # Prensa / apariciones verificables y materiales recibidos.
+        # Material propio de prensa/eventos recibido.
         save_webp(by_fragment(photos, "1.39.34"), OUT / "media" / "dlb-dmh-exito.webp", 1200, 78)
         save_webp(by_fragment(photos, "1.46.11"), OUT / "media" / "bazar-emprendedores.webp", 1200, 78)
-        save_webp(by_fragment(work, "1.23.17"), OUT / "media" / "la-vitrina.webp", 1200, 78)
-        save_webp(by_fragment(work, "1.41.47"), OUT / "media" / "el-janis.webp", 1200, 78)
+        save_webp(by_fragment(work, "1.34.19"), OUT / "media" / "el-janis.webp", 1200, 78)
 
-        # Testimonio real recibido como captura de Instagram.
-        save_webp(by_fragment(work, "1.37.50"), OUT / "testimonials" / "dr-hugo-maria.webp", 1400, 80)
+        # Testimonio real: captura de publicación con texto + retrato del cliente.
+        save_webp(by_fragment(work, "1.34.53"), OUT / "testimonials" / "dr-hugo-maria.webp", 1400, 80)
 
         cert_files = sorted([p for p in certs.rglob("*") if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"} and not p.name.startswith("._") and p.name != ".DS_Store"])
         if len(cert_files) < 5: raise RuntimeError(f"Esperaba 5 certificaciones y encontré {len(cert_files)}")
@@ -151,7 +151,7 @@ def main():
         print(f"▶ Videos fuente localizados: {len(video_files)} · integrados bajo demanda: {min(3,len(video_files))}")
 
     required = sorted([p.relative_to(OUT).as_posix() for p in OUT.rglob("*") if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}])
-    must_have = {"brand/logo-white.png","brand/mark-white.png","hero/argenis-hero.webp","portraits/argenis-01.webp","portraits/argenis-06.webp","portfolio/beauty-fragrance/beauty-cover.webp","portfolio/red-statement/red-cover.webp","portfolio/noir/noir-cover.webp","portfolio/couple-lifestyle/couple-cover.webp","portfolio/evening/evening-cover.webp","portfolio/mens-brand/mens-cover.webp","media/dlb-dmh-exito.webp","media/la-vitrina.webp","testimonials/dr-hugo-maria.webp","certifications/cert-01.webp","og/adonisg-og.jpg","videos/video-01.mp4"}
+    must_have = {"brand/logo-white.png","brand/mark-white.png","hero/argenis-hero.webp","hero/argenis-manifesto.webp","portraits/argenis-01.webp","portraits/argenis-06.webp","portfolio/beauty-fragrance/beauty-cover.webp","portfolio/red-statement/red-cover.webp","portfolio/noir/noir-cover.webp","portfolio/couple-lifestyle/couple-cover.webp","portfolio/evening/evening-cover.webp","portfolio/mens-brand/mens-cover.webp","media/dlb-dmh-exito.webp","media/el-janis.webp","testimonials/dr-hugo-maria.webp","certifications/cert-01.webp","og/adonisg-og.jpg","videos/video-01.mp4"}
     missing = sorted(must_have.difference(required))
     if missing: raise RuntimeError("Assets faltantes: " + ", ".join(missing))
 
