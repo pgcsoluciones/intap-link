@@ -59,13 +59,18 @@ Los logos de `Al Estilo de Argenis` se copian desde los PNG originales recibidos
 
 Los ZIP fuente se mantienen fuera del bundle de Git. El runner local:
 
-- localiza los ZIP en `Downloads`, `Desktop`, `assets-source` o el root del proyecto;
+- localiza los ZIP en la ruta real del backup suministrada por el propietario, además de `Downloads`, `Desktop`, `assets-source` o el root del proyecto;
 - extrae temporalmente;
 - elimina duplicación visual mediante curaduría predefinida;
 - genera WebP de tamaño móvil/web;
 - genera OG 1200×630;
 - copia los logos originales sin transformación;
+- detecta `videos.zip` como fuente, pero no incorpora los videos pesados al bundle inicial;
 - elimina los assets temporales del worktree al terminar el deploy.
+
+Ruta real registrada para los recursos:
+
+`/Volumes/backup JL/11977/!Recuperados 2024/recuperados/diseños/argenis grullon`
 
 Script: `scripts/prepare-adonisg-assets.py`.
 
@@ -167,6 +172,8 @@ El runner `scripts/run-preview-adonisg-v1.sh`:
 - comprueba rama y `git diff --check`;
 - bloquea `main`;
 - inspecciona `wrangler.preview.toml` buscando bindings productivos;
+- crea un entorno Python virtual aislado `.venv-adonisg-assets`;
+- instala Pillow únicamente dentro de ese venv, evitando modificar Homebrew/Python global;
 - prepara assets;
 - ejecuta build;
 - aplica **solo** el seed idempotente de `/adonisg` a `intap_db_preview`;
@@ -177,7 +184,25 @@ El runner `scripts/run-preview-adonisg-v1.sh`:
 - valida metadata crawler y recursos IA;
 - no ejecuta deploy de Worker productivo ni D1/R2 de Producción.
 
-## 12. Estado de cierre de implementación
+## 12. Incidente de Preview local y corrección
+
+Primer intento local bloqueado antes de cualquier operación remota por Python Homebrew 3.14 / PEP 668:
+
+- `ModuleNotFoundError: No module named 'PIL'`.
+- `pip install --user Pillow` rechazado por `externally-managed-environment`.
+- Producción no fue tocada.
+- D1 Preview tampoco llegó a modificarse porque el fallo ocurrió en preparación de assets.
+
+Corrección aplicada en repo:
+
+1. Se eliminó la instalación `pip --user` desde el preparador.
+2. El runner crea/reutiliza `.venv-adonisg-assets` con `python3 -m venv`.
+3. Pillow se instala solo dentro de ese venv.
+4. El preparador se ejecuta con el Python del venv.
+5. Se añadió como primera ruta de búsqueda la ubicación exacta de los ZIP en el volumen externo.
+6. `videos.zip` se localiza y audita como fuente, pero permanece fuera del bundle inicial por rendimiento.
+
+## 13. Estado de cierre de implementación
 
 ### Completado en repo
 
@@ -195,6 +220,8 @@ El runner `scripts/run-preview-adonisg-v1.sh`:
 - Seed D1 Preview.
 - Preparador/optimizador de assets.
 - Runner de Preview + smoke + SEO/GEO/LLM.
+- Corrección PEP 668 mediante venv aislado.
+- Ruta real de ZIPs registrada.
 - PR en Draft y Producción intacta.
 
 ### Requiere entorno local/Cloudflare del propietario
