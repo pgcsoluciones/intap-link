@@ -14,7 +14,7 @@ VALUES (
   'profile-qa-adonisg','user-qa-adonisg','adonisg','pro','light','Argenis Grullón',
   'Asesor de imagen certificado por IBA, estilista de moda, creador digital y estratega de marca personal en Santiago, República Dominicana.',
   'Servicios profesionales','Asesoría de imagen y estilismo de moda',1,1,'personal_brand_adonisg_v1',
-  '{"role":"Asesor de Imagen · Estilista de Moda · Estratega de Marca","role_en":"Image Consultant · Fashion Stylist · Personal Brand Strategist","languages":{"default":"es","enabled":["es","en"]},"instagram_url":"https://www.instagram.com/argenisgrullonrd/","media_mentions_json":"[]","collaborations_json":"[{\"name\":\"Raquel Moreta\"},{\"name\":\"Lily Payamps\"},{\"name\":\"Lilibeth Durán\"},{\"name\":\"Todo Abrigos\"},{\"name\":\"Black Photos\"},{\"name\":\"Jeisly Blossom\"}]"}',
+  '{"role":"Asesor de Imagen · Estilista de Moda · Estratega de Marca","role_en":"Image Consultant · Fashion Stylist · Personal Brand Strategist","whatsapp":"18293024095","languages":{"default":"es","enabled":["es","en"]},"instagram_url":"https://www.instagram.com/argenisgrullonrd/","media_mentions_json":"[]","collaborations_json":"[{\"name\":\"Raquel Moreta\"},{\"name\":\"Lily Payamps\"},{\"name\":\"Lilibeth Durán\"},{\"name\":\"Todo Abrigos\"},{\"name\":\"Black Photos\"},{\"name\":\"Jeisly Blossom\"}]"}',
   'esencial'
 );
 
@@ -25,7 +25,7 @@ SET
   category='Servicios profesionales',
   subcategory='Asesoría de imagen y estilismo de moda',
   template_id='personal_brand_adonisg_v1',
-  template_data='{"role":"Asesor de Imagen · Estilista de Moda · Estratega de Marca","role_en":"Image Consultant · Fashion Stylist · Personal Brand Strategist","languages":{"default":"es","enabled":["es","en"]},"instagram_url":"https://www.instagram.com/argenisgrullonrd/","media_mentions_json":"[]","collaborations_json":"[{\"name\":\"Raquel Moreta\"},{\"name\":\"Lily Payamps\"},{\"name\":\"Lilibeth Durán\"},{\"name\":\"Todo Abrigos\"},{\"name\":\"Black Photos\"},{\"name\":\"Jeisly Blossom\"}]"}',
+  template_data='{"role":"Asesor de Imagen · Estilista de Moda · Estratega de Marca","role_en":"Image Consultant · Fashion Stylist · Personal Brand Strategist","whatsapp":"18293024095","languages":{"default":"es","enabled":["es","en"]},"instagram_url":"https://www.instagram.com/argenisgrullonrd/","media_mentions_json":"[]","collaborations_json":"[{\"name\":\"Raquel Moreta\"},{\"name\":\"Lily Payamps\"},{\"name\":\"Lilibeth Durán\"},{\"name\":\"Todo Abrigos\"},{\"name\":\"Black Photos\"},{\"name\":\"Jeisly Blossom\"}]"}',
   is_published=1,
   is_active=1,
   updated_at=datetime('now')
