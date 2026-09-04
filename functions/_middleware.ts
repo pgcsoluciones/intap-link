@@ -6,6 +6,7 @@ import {
   getDynamicProfileSeoBundle,
   handleDiscoveryRequest,
 } from './profile-discovery';
+import { handlePublicProfileDirectory } from './public-profile-directory';
 
 /**
  * Cloudflare Pages Functions middleware.
@@ -112,6 +113,9 @@ export async function onRequest(context: {
   <!-- INTAP LINK: Open Graph + SEO + GEO metadata -->
   <title>${title}</title>
   <link rel=\"canonical\" href=\"${pageUrl}\" />
+  <link rel=\"sitemap\" type=\"application/xml\" href=\"/sitemap.xml\" />
+  <link rel=\"alternate\" type=\"text/plain\" href=\"/llms.txt\" title=\"Directorio para asistentes de IA\" />
+  <link rel=\"alternate\" type=\"text/html\" href=\"/perfiles\" title=\"Directorio de perfiles públicos\" />
   <meta name=\"description\" content=\"${description}\" />
   <meta property=\"og:type\" content=\"${ogType}\" />
   <meta property=\"og:site_name\" content=\"${siteName}\" />
@@ -340,6 +344,7 @@ ${seoHeadHtml}
       ${portfolioList}
       ${address ? `<h2>Ubicación</h2><p>${escapeHtml(address)}</p>` : ''}
       ${phones.length || email ? `<h2>Contacto</h2><p>${escapeHtml([...phones, email].filter(Boolean).join(' · '))}</p>` : ''}
+      <p><a href=\"${escapeHtml(`${discoveryRuntime.baseUrl}/perfiles`)}\">Directorio de perfiles públicos</a></p>
     </main>
   </noscript>`;
     return { seoHeadHtml, semanticFallbackHtml };
@@ -396,6 +401,11 @@ ${seoHeadHtml}
       headers,
     });
   };
+
+  const directoryResponse = await handlePublicProfileDirectory(url, discoveryRuntime);
+  if (directoryResponse) {
+    return withSecurityHeaders(directoryResponse);
+  }
 
   const discoveryResponse = await handleDiscoveryRequest(url, discoveryRuntime);
 
