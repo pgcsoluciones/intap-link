@@ -44,11 +44,7 @@ def find_zip(name: str) -> Path:
 
 def by_fragment(root: Path, fragment: str, suffixes=(".jpg", ".jpeg", ".png")) -> Path:
     frag = fragment.lower()
-    matches = [
-        p for p in root.rglob("*")
-        if p.is_file() and p.suffix.lower() in suffixes and frag in p.name.lower()
-        and not p.name.startswith("._") and p.name != ".DS_Store"
-    ]
+    matches = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in suffixes and frag in p.name.lower() and not p.name.startswith("._") and p.name != ".DS_Store"]
     if not matches:
         raise FileNotFoundError(f"No encontré recurso con fragmento: {fragment}")
     return sorted(matches)[0]
@@ -129,7 +125,9 @@ def main():
         copy_exact(by_fragment(brand, "LOGO BLANCO@2x"), OUT / "brand" / "logo-white.png")
         save_inverted_png(by_fragment(brand, "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png", 420)
         copy_exact(by_fragment(brand, "Linkedin Banner"), OUT / "brand" / "linkedin-banner.jpg")
-        copy_exact(by_fragment(brand, "PHOTO-2026-06-25-07-29-40"), OUT / "brand" / "top-logo.jpg")
+        top_logo = by_fragment(brand, "PHOTO-2026-06-25-07-29-40")
+        copy_exact(top_logo, OUT / "brand" / "top-logo.jpg")
+        save_webp(top_logo, OUT / "brand" / "top-logo.webp", 520, 88)
 
         hero_items = [
             ("PHOTO-2026-07-27-11-34-00 (2)", "slide-01.webp"),
@@ -141,7 +139,6 @@ def main():
         for fragment, name in hero_items:
             save_webp(by_fragment(photos, fragment), OUT / "hero" / name, 1600, 82)
         copy_exact(OUT / "hero" / "slide-01.webp", OUT / "hero" / "argenis-hero.webp")
-
         save_webp(by_fragment(photos, "1.40.18"), OUT / "hero" / "quote-bg.webp", 1600, 82)
         save_webp(by_fragment(photos, "1.40.00"), OUT / "hero" / "argenis-cowboy.webp", 1400, 80)
 
@@ -156,33 +153,12 @@ def main():
         for fragment, name in portrait_items:
             save_webp(by_fragment(photos, fragment), OUT / "portraits" / name, 1400, 80)
 
-        write_series(work, "beauty-fragrance", [
-            ("13-28-42", "beauty-cover.webp"), ("13-28-32", "beauty-02.webp"),
-            ("13-28-58", "beauty-03.webp"), ("13-29-21", "beauty-04.webp"),
-            ("13-33-22 (1)", "beauty-05.webp")
-        ])
-        write_series(work, "red-statement", [
-            ("1.21.51", "red-cover.webp"), ("1.21.22", "red-02.webp"),
-            ("1.21.29", "red-03.webp"), ("1.21.37", "red-04.webp"),
-            ("1.22.14", "red-05.webp")
-        ])
-        write_series(work, "noir", [
-            ("1.16.29", "noir-cover.webp"), ("1.16.44", "noir-02.webp"),
-            ("1.16.53", "noir-03.webp"), ("1.17.00", "noir-04.webp")
-        ])
-        write_series(work, "couple-lifestyle", [
-            ("10-29-36 (2)", "couple-cover.webp"), ("10-29-36 (3)", "couple-02.webp"),
-            ("10-29-36 (4)", "couple-03.webp"), ("10-29-36 (7)", "couple-04.webp")
-        ])
-        write_series(work, "evening", [
-            ("10-48-44.jpg", "evening-cover.webp"), ("10-48-44 (1)", "evening-02.webp"),
-            ("10-48-44 (2)", "evening-03.webp"), ("10-48-44 (4)", "evening-04.webp"),
-            ("10-48-44 (6)", "evening-05.webp")
-        ])
-        write_series(work, "mens-brand", [
-            ("08-20-01 (1)", "mens-cover.webp"), ("08-20-01 (2)", "mens-02.webp"),
-            ("08-20-01.jpg", "mens-03.webp"), ("08-20-02", "mens-04.webp")
-        ])
+        write_series(work, "beauty-fragrance", [("13-28-42", "beauty-cover.webp"), ("13-28-32", "beauty-02.webp"), ("13-28-58", "beauty-03.webp"), ("13-29-21", "beauty-04.webp"), ("13-33-22 (1)", "beauty-05.webp")])
+        write_series(work, "red-statement", [("1.21.51", "red-cover.webp"), ("1.21.22", "red-02.webp"), ("1.21.29", "red-03.webp"), ("1.21.37", "red-04.webp"), ("1.22.14", "red-05.webp")])
+        write_series(work, "noir", [("1.16.29", "noir-cover.webp"), ("1.16.44", "noir-02.webp"), ("1.16.53", "noir-03.webp"), ("1.17.00", "noir-04.webp")])
+        write_series(work, "couple-lifestyle", [("10-29-36 (2)", "couple-cover.webp"), ("10-29-36 (3)", "couple-02.webp"), ("10-29-36 (4)", "couple-03.webp"), ("10-29-36 (7)", "couple-04.webp")])
+        write_series(work, "evening", [("10-48-44.jpg", "evening-cover.webp"), ("10-48-44 (1)", "evening-02.webp"), ("10-48-44 (2)", "evening-03.webp"), ("10-48-44 (4)", "evening-04.webp"), ("10-48-44 (6)", "evening-05.webp")])
+        write_series(work, "mens-brand", [("08-20-01 (1)", "mens-cover.webp"), ("08-20-01 (2)", "mens-02.webp"), ("08-20-01.jpg", "mens-03.webp"), ("08-20-02", "mens-04.webp")])
 
         save_webp(by_fragment(photos, "1.39.34"), OUT / "media" / "dlb-dmh-exito.webp", 1200, 78)
         save_webp(by_fragment(photos, "1.46.11"), OUT / "media" / "bazar-emprendedores.webp", 1200, 78)
@@ -190,11 +166,7 @@ def main():
         save_webp(by_fragment(work, "1.34.19"), OUT / "media" / "el-janis.webp", 1200, 78)
         save_webp(by_fragment(work, "1.34.53"), OUT / "testimonials" / "dr-hugo-maria.webp", 1400, 80)
 
-        cert_files = sorted([
-            p for p in certs.rglob("*")
-            if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"}
-            and not p.name.startswith("._") and p.name != ".DS_Store"
-        ])
+        cert_files = sorted([p for p in certs.rglob("*") if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"} and not p.name.startswith("._") and p.name != ".DS_Store"])
         if len(cert_files) < 5:
             raise RuntimeError(f"Esperaba 5 certificaciones y encontré {len(cert_files)}")
         for idx, src in enumerate(cert_files[:5], start=1):
@@ -202,28 +174,16 @@ def main():
 
         save_jpeg(by_fragment(photos, "PHOTO-2026-07-27-11-34-00 (2)"), OUT / "og" / "adonisg-og.jpg")
 
-        video_files = sorted([
-            p for p in roots["videos"].rglob("*")
-            if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".m4v"}
-            and not p.name.startswith("._")
-        ])
+        video_files = sorted([p for p in roots["videos"].rglob("*") if p.is_file() and p.suffix.lower() in {".mp4", ".mov", ".m4v"} and not p.name.startswith("._")])
         for idx, src in enumerate(video_files[:3], start=1):
             copy_exact(src, OUT / "videos" / f"video-{idx:02d}{src.suffix.lower()}")
         print(f"▶ Videos fuente localizados: {len(video_files)} · integrados bajo demanda: {min(3, len(video_files))}")
 
-    required = sorted([
-        p.relative_to(OUT).as_posix() for p in OUT.rglob("*")
-        if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}
-    ])
+    required = sorted([p.relative_to(OUT).as_posix() for p in OUT.rglob("*") if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}])
     must_have = {
-        "brand/logo-white.png", "brand/mark-white.png", "brand/linkedin-banner.jpg", "brand/top-logo.jpg",
-        "hero/slide-01.webp", "hero/slide-02.webp", "hero/slide-03.webp", "hero/slide-04.webp", "hero/slide-05.webp",
-        "hero/quote-bg.webp", "portraits/argenis-01.webp", "portraits/argenis-06.webp",
-        "portfolio/beauty-fragrance/beauty-cover.webp", "portfolio/red-statement/red-cover.webp",
-        "portfolio/noir/noir-cover.webp", "portfolio/couple-lifestyle/couple-cover.webp",
-        "portfolio/evening/evening-cover.webp", "portfolio/mens-brand/mens-cover.webp",
-        "media/dlb-dmh-exito.webp", "media/la-vitrina.webp", "media/el-janis.webp",
-        "certifications/cert-01.webp", "og/adonisg-og.jpg", "videos/video-01.mp4"
+        "brand/logo-white.png", "brand/mark-white.png", "brand/linkedin-banner.jpg", "brand/top-logo.jpg", "brand/top-logo.webp",
+        "hero/slide-01.webp", "hero/slide-02.webp", "hero/slide-03.webp", "hero/slide-04.webp", "hero/slide-05.webp", "hero/quote-bg.webp",
+        "portraits/argenis-01.webp", "portraits/argenis-06.webp", "portfolio/beauty-fragrance/beauty-cover.webp", "portfolio/red-statement/red-cover.webp", "portfolio/noir/noir-cover.webp", "portfolio/couple-lifestyle/couple-cover.webp", "portfolio/evening/evening-cover.webp", "portfolio/mens-brand/mens-cover.webp", "media/dlb-dmh-exito.webp", "media/la-vitrina.webp", "media/el-janis.webp", "certifications/cert-01.webp", "og/adonisg-og.jpg", "videos/video-01.mp4"
     }
     missing = sorted(must_have.difference(required))
     if missing:
