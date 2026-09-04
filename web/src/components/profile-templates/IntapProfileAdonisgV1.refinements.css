@@ -1,0 +1,180 @@
+/* /adonisg · QA refinements · 2026-09-04
+   Scope: only the corrections requested after Preview 4e40c982. */
+
+/* Hero: no logo over the portrait. Keep only language control. */
+.adonis-profile .adonis-top-logo-wrap{
+  display:none !important;
+}
+.adonis-profile .adonis-topbar{
+  justify-content:flex-end;
+}
+
+/* Identity strip directly below hero: preserve the transparent PNG presentation. */
+.adonis-profile .adonis-brand-strip{
+  background:#fff;
+  padding:32px 24px 36px;
+  min-height:150px;
+}
+.adonis-profile .adonis-brand-strip img{
+  display:block;
+  width:min(82%,430px);
+  height:auto;
+  object-fit:contain;
+  background:transparent !important;
+  filter:none !important;
+}
+
+/* Manifesto must read as exactly two deliberate lines. */
+.adonis-profile .adonis-manifesto h2{
+  white-space:pre-line;
+  line-height:1.02;
+}
+
+/* Portfolio: fixed black stage, image forced to the 9:16 rectangle.
+   No blurred/ghost background behind the artwork. */
+.adonis-profile .adonis-portfolio{
+  text-align:center;
+}
+.adonis-profile .adonis-portfolio h2{
+  text-align:center;
+}
+.adonis-profile .adonis-featured-project{
+  background:#050505;
+  border-radius:22px;
+  padding:20px;
+  overflow:hidden;
+}
+.adonis-profile .adonis-featured-project-button{
+  text-align:center;
+}
+.adonis-profile .adonis-portfolio .adonis-fixed-media{
+  width:min(100%,390px);
+  aspect-ratio:9/16;
+  margin:0 auto;
+  padding:5px;
+  background:#050505;
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:
+    inset 0 0 0 4px #050505,
+    inset 0 0 0 5px rgba(255,255,255,.48);
+}
+.adonis-profile .adonis-portfolio .adonis-fixed-media::before,
+.adonis-profile .adonis-portfolio .adonis-fixed-media::after{
+  content:none !important;
+  display:none !important;
+}
+.adonis-profile .adonis-portfolio .adonis-fixed-media > img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  border-radius:12px;
+  background:#050505;
+}
+.adonis-profile .adonis-project-caption{
+  text-align:center;
+  padding:18px 10px 2px;
+}
+.adonis-profile .adonis-project-caption small{
+  text-align:center;
+}
+.adonis-profile .adonis-project-caption h3{
+  text-align:center;
+  margin-top:7px;
+}
+.adonis-profile .adonis-project-caption p{
+  max-width:470px;
+  margin:10px auto 0;
+  text-align:center;
+  font-size:15.5px;
+  line-height:1.55;
+  color:#55514c;
+}
+
+/* Project modal gallery: same fixed black-stage language as portfolio.
+   Fill the image frame itself; no blurred fill behind it. */
+.adonis-profile .adonis-project-modal .adonis-gallery-frame{
+  background:#050505;
+  border-radius:20px;
+  padding:18px;
+}
+.adonis-profile .adonis-project-modal .adonis-fixed-media{
+  width:min(100%,390px);
+  aspect-ratio:9/16;
+  margin:0 auto;
+  padding:5px;
+  background:#050505;
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:17px;
+  overflow:hidden;
+  box-shadow:
+    inset 0 0 0 4px #050505,
+    inset 0 0 0 5px rgba(255,255,255,.48);
+}
+.adonis-profile .adonis-project-modal .adonis-fixed-media::before,
+.adonis-profile .adonis-project-modal .adonis-fixed-media::after{
+  content:none !important;
+  display:none !important;
+}
+.adonis-profile .adonis-project-modal .adonis-fixed-media > img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  border-radius:11px;
+  background:#050505;
+}
+.adonis-profile .adonis-project-modal > small,
+.adonis-profile .adonis-project-modal > h2,
+.adonis-profile .adonis-project-modal > p{
+  text-align:center;
+}
+.adonis-profile .adonis-project-modal > .adonis-btn{
+  font-weight:900;
+  font-size:13px;
+  letter-spacing:.035em;
+}
+
+/* Sharing actions: larger, cleaner labels. No WhatsApp explanatory sub-label. */
+.adonis-profile .adonis-share-actions{
+  background:#050505;
+  padding:20px 22px 34px;
+  gap:12px;
+}
+.adonis-profile .adonis-share-actions button{
+  min-height:64px;
+  border-radius:16px;
+}
+.adonis-profile .adonis-share-actions strong{
+  font-size:15px;
+  line-height:1.15;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+.adonis-profile .adonis-share-actions small{
+  display:none !important;
+}
+.adonis-profile .adonis-copy-toast{
+  font-size:12px;
+  font-weight:700;
+}
+
+@media (max-width:420px){
+  .adonis-profile .adonis-brand-strip{
+    min-height:132px;
+    padding:28px 20px 31px;
+  }
+  .adonis-profile .adonis-featured-project{
+    padding:14px;
+    border-radius:18px;
+  }
+  .adonis-profile .adonis-portfolio .adonis-fixed-media,
+  .adonis-profile .adonis-project-modal .adonis-fixed-media{
+    width:100%;
+  }
+  .adonis-profile .adonis-share-actions strong{
+    font-size:14px;
+  }
+}
