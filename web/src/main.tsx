@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import FreePreviewEditShortcut from './components/free-profile/FreePreviewEditShortcut'
 import './index.css'
+import './components/profile-templates/IntapProfileAdonisgV1.mobile.css'
 
 // ✅ Redirección ultra-temprana (antes de que React se monte)
 // Soporta: /?slug=juan  →  /juan
