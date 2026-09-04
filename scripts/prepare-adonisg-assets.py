@@ -59,6 +59,16 @@ def save_webp(src: Path, dest: Path, max_side: int = 1280, quality: int = 76):
         im.save(dest, "WEBP", quality=quality, method=6)
 
 
+def save_inverted_png(src: Path, dest: Path, max_side: int = 420):
+    from PIL import Image, ImageOps
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(src) as im:
+        im = ImageOps.exif_transpose(im).convert("RGB")
+        im = ImageOps.invert(im)
+        im.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+        im.save(dest, "PNG", optimize=True)
+
+
 def save_jpeg(src: Path, dest: Path, width: int = 1200, height: int = 630, quality: int = 82):
     from PIL import Image, ImageOps
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -102,9 +112,10 @@ def main():
                     shutil.rmtree(child) if child.is_dir() else child.unlink()
 
         copy_exact(by_fragment(roots["brand"], "LOGO BLANCO@2x"), OUT / "brand" / "logo-white.png")
-        copy_exact(by_fragment(roots["brand"], "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png")
+        # Sustituye el distintivo superior por la reducción negra oficial solicitada,
+        # manteniendo la misma ruta consumida por el template para no introducir otra dependencia.
+        save_inverted_png(by_fragment(roots["brand"], "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png", 420)
         copy_exact(by_fragment(roots["brand"], "Linkedin Banner"), OUT / "brand" / "linkedin-banner.jpg")
-        # Logo negro solicitado para la esquina superior izquierda. Se usa desde el recurso original recibido.
         save_webp(by_fragment(roots["brand"], "PHOTO-2026-06-25-07-29-40"), OUT / "brand" / "top-logo.webp", 520, 88)
 
         photos, work, certs = roots["photos"], roots["work"], roots["certs"]
