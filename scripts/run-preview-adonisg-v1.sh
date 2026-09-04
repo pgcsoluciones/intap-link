@@ -38,9 +38,12 @@ if grep -nE 'database_name = "intap_db"|bucket_name = "intap-r2"|name = "intap-a
   fail "wrangler.preview.toml contiene referencia productiva"
 fi
 
+grep -Fq 'VITE_API_URL=https://intap-api-preview.fliaprince.workers.dev' web/.env.preview || fail "web/.env.preview no apunta al API Preview"
+
 echo "✓ Rama segura: $(git branch --show-current)"
 echo "✓ HEAD: $(git rev-parse HEAD)"
 echo "✓ Config Preview aislada comprobada"
+echo "✓ Web Preview apunta al Worker Preview, no a api.intaprd.com"
 
 printf '\n▶ Preparar entorno Python aislado para optimización de assets\n'
 if [ ! -x "$VENV_DIR/bin/python" ]; then
@@ -54,8 +57,15 @@ fi
 printf '\n▶ Preparar y optimizar recursos reales de Argenis\n'
 run "$VENV_DIR/bin/python" scripts/prepare-adonisg-assets.py
 
-printf '\n▶ Validar TypeScript y build Web\n'
-(cd web && npm run build) || fail "Build Web"
+printf '\n▶ Validar TypeScript y build Web EN MODO PREVIEW\n'
+(cd web && npm run build:preview) || fail "Build Web Preview"
+
+# Guardia crítica: el bundle Preview no puede contener el API productivo.
+if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then
+  fail "El bundle Preview contiene api.intaprd.com"
+fi
+grep -R -Fq 'https://intap-api-preview.fliaprince.workers.dev' web/dist/assets || fail "El bundle Preview no contiene el API Preview"
+echo "✓ Bundle Web Preview apunta exclusivamente al backend Preview esperado"
 
 printf '\n▶ Seed específico SOLO D1 Preview · /adonisg\n'
 (cd api && npx wrangler d1 execute "$PREVIEW_DB" --remote --config "$PREVIEW_CONFIG" --file "$SEED_FILE") || fail "Seed D1 Preview /adonisg"
@@ -69,7 +79,7 @@ API_CODE="$(curl -sS -L -o /tmp/adonisg-api.json -w '%{http_code}' "$API_URL")"
 [ "$API_CODE" = '200' ] || fail "API /adonisg respondió HTTP $API_CODE"
 grep -Fq 'personal_brand_adonisg_v1' /tmp/adonisg-api.json || fail "API no devolvió template personal_brand_adonisg_v1"
 grep -Fq 'Argenis Grullón' /tmp/adonisg-api.json || fail "API no devolvió identidad de Argenis"
-echo "✓ API /adonisg devuelve identidad + template correctos"
+echo "✓ API /adonisg devuelve identidad + template correctos desde D1 Preview"
 
 printf '\n▶ Deploy Web + Pages Functions SOLO Preview\n'
 WEB_LOG="$LOG_DIR/web-pages-$(date +%Y%m%d-%H%M%S).log"
