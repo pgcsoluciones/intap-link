@@ -95,14 +95,18 @@ printf '\n▶ Smokes técnicos perfil + assets + discovery\n'
 for url in \
   "$WEB_ORIGIN/adonisg?lang=en" \
   "$WEB_ORIGIN/assets/adonisg/hero/argenis-hero.webp" \
+  "$WEB_ORIGIN/assets/adonisg/brand/logo-black-transparent.png" \
   "$WEB_ORIGIN/assets/adonisg/brand/logo-white.png" \
-  "$WEB_ORIGIN/assets/adonisg/portraits/argenis-01.webp" \
-  "$WEB_ORIGIN/assets/adonisg/portraits/argenis-06.webp" \
+  "$WEB_ORIGIN/assets/adonisg/portraits/behind-01.webp" \
   "$WEB_ORIGIN/assets/adonisg/portfolio/beauty-fragrance/beauty-cover.webp" \
   "$WEB_ORIGIN/assets/adonisg/portfolio/red-statement/red-03.webp" \
-  "$WEB_ORIGIN/assets/adonisg/media/dlb-dmh-exito.webp" \
-  "$WEB_ORIGIN/assets/adonisg/media/la-vitrina.webp" \
-  "$WEB_ORIGIN/assets/adonisg/testimonials/dr-hugo-maria.webp" \
+  "$WEB_ORIGIN/assets/adonisg/media/appearance-01.webp" \
+  "$WEB_ORIGIN/assets/adonisg/media/appearance-02.webp" \
+  "$WEB_ORIGIN/assets/adonisg/media/appearance-03.webp" \
+  "$WEB_ORIGIN/assets/adonisg/testimonials/brachy.webp" \
+  "$WEB_ORIGIN/assets/adonisg/testimonials/dr-hugo.webp" \
+  "$WEB_ORIGIN/assets/adonisg/testimonials/la-faisa.webp" \
+  "$WEB_ORIGIN/assets/adonisg/testimonials/viuda-blanca.webp" \
   "$WEB_ORIGIN/assets/adonisg/certifications/cert-01.webp" \
   "$WEB_ORIGIN/assets/adonisg/videos/video-01.mp4" \
   "$WEB_ORIGIN/assets/adonisg/og/adonisg-og.jpg" \
