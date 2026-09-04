@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import shutil
 import subprocess
 import sys
@@ -20,20 +19,14 @@ ZIP_NAMES = {
     "work": "trabajos argenis.zip",
 }
 
-SEARCH_DIRS = [
-    ROOT,
-    ROOT / "assets-source",
-    Path.home() / "Downloads",
-    Path.home() / "Desktop",
-]
+SEARCH_DIRS = [ROOT, ROOT / "assets-source", Path.home() / "Downloads", Path.home() / "Desktop"]
 
 
 def ensure_pillow():
     try:
         from PIL import Image, ImageOps  # noqa
-        return
     except Exception:
-        print("▶ Pillow no está instalado; instalando dependencia local para optimizar imágenes...")
+        print("▶ Instalando Pillow para optimización local de imágenes...")
         subprocess.run([sys.executable, "-m", "pip", "install", "--user", "Pillow"], check=True)
 
 
@@ -47,21 +40,16 @@ def find_zip(name: str) -> Path:
         for candidate in base.glob(f"**/{name}"):
             if candidate.is_file():
                 return candidate
-    raise FileNotFoundError(
-        f"No encontré {name}. Colócalo en ~/Downloads, ~/Desktop o {ROOT}/assets-source y vuelve a ejecutar."
-    )
-
-
-def first(root: Path, pattern: str) -> Path:
-    matches = [p for p in root.rglob(pattern) if p.is_file() and not p.name.startswith("._")]
-    if not matches:
-        raise FileNotFoundError(f"No encontré recurso: {pattern}")
-    return sorted(matches)[0]
+    raise FileNotFoundError(f"No encontré {name}. Debe estar en Downloads, Desktop o {ROOT}/assets-source.")
 
 
 def by_fragment(root: Path, fragment: str, suffixes=(".jpg", ".jpeg", ".png")) -> Path:
     frag = fragment.lower()
-    matches = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in suffixes and frag in p.name.lower() and not p.name.startswith("._")]
+    matches = [
+        p for p in root.rglob("*")
+        if p.is_file() and p.suffix.lower() in suffixes and frag in p.name.lower()
+        and not p.name.startswith("._") and p.name != ".DS_Store"
+    ]
     if not matches:
         raise FileNotFoundError(f"No encontré recurso con fragmento: {fragment}")
     return sorted(matches)[0]
@@ -82,12 +70,10 @@ def save_jpeg(src: Path, dest: Path, width: int = 1200, height: int = 630, quali
     with Image.open(src) as im:
         im = ImageOps.exif_transpose(im).convert("RGB")
         ratio = max(width / im.width, height / im.height)
-        size = (max(1, round(im.width * ratio)), max(1, round(im.height * ratio)))
-        im = im.resize(size, Image.Resampling.LANCZOS)
+        im = im.resize((max(1, round(im.width * ratio)), max(1, round(im.height * ratio))), Image.Resampling.LANCZOS)
         left = max(0, (im.width - width) // 2)
         top = max(0, (im.height - height) // 2)
-        im = im.crop((left, top, left + width, top + height))
-        im.save(dest, "JPEG", quality=quality, optimize=True, progressive=True)
+        im.crop((left, top, left + width, top + height)).save(dest, "JPEG", quality=quality, optimize=True, progressive=True)
 
 
 def copy_exact(src: Path, dest: Path):
@@ -97,6 +83,11 @@ def copy_exact(src: Path, dest: Path):
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+
+
+def write_series(root: Path, folder: str, items: list[tuple[str, str]], quality=76):
+    for fragment, name in items:
+        save_webp(by_fragment(root, fragment), OUT / "portfolio" / folder / name, 1280, quality)
 
 
 def main():
@@ -116,47 +107,56 @@ def main():
                 zf.extractall(target)
             roots[key] = target
 
-        # Limpieza únicamente del namespace del perfil especial.
         if OUT.exists():
             for child in OUT.iterdir():
                 if child.name not in {"README.md", "asset-manifest.json"}:
-                    if child.is_dir(): shutil.rmtree(child)
-                    else: child.unlink()
+                    shutil.rmtree(child) if child.is_dir() else child.unlink()
 
-        # Identidad gráfica: COPIA EXACTA, no redibujo ni modificación.
+        # Identidad gráfica: copia exacta. No se redibuja, recorta ni recolorea.
         copy_exact(by_fragment(roots["brand"], "LOGO BLANCO@2x"), OUT / "brand" / "logo-white.png")
         copy_exact(by_fragment(roots["brand"], "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png")
 
-        photos = roots["photos"]
-        work = roots["work"]
-        certs = roots["certs"]
-
+        photos, work, certs = roots["photos"], roots["work"], roots["certs"]
         hero = by_fragment(photos, "PHOTO-2026-07-27-11-34-00 (2)")
         cowboy = by_fragment(photos, "1.40.00")
         save_webp(hero, OUT / "hero" / "argenis-hero.webp", 1440, 80)
         save_webp(cowboy, OUT / "hero" / "argenis-manifesto.webp", 1280, 78)
         save_webp(cowboy, OUT / "hero" / "argenis-cowboy.webp", 1280, 78)
 
-        # Beauty & fragrance editorial.
-        save_webp(by_fragment(work, "13-28-42"), OUT / "portfolio" / "beauty-fragrance" / "beauty-cover.webp")
-        save_webp(by_fragment(work, "13-28-32"), OUT / "portfolio" / "beauty-fragrance" / "beauty-02.webp")
-        save_webp(by_fragment(work, "13-28-58"), OUT / "portfolio" / "beauty-fragrance" / "beauty-03.webp")
-        save_webp(by_fragment(work, "13-29-21"), OUT / "portfolio" / "beauty-fragrance" / "beauty-04.webp")
+        write_series(work, "beauty-fragrance", [
+            ("13-28-42", "beauty-cover.webp"), ("13-28-32", "beauty-02.webp"),
+            ("13-28-58", "beauty-03.webp"), ("13-29-21", "beauty-04.webp"),
+            ("13-33-22 (1)", "beauty-05.webp"),
+        ])
+        write_series(work, "red-statement", [
+            ("1.21.51", "red-cover.webp"), ("1.21.22", "red-02.webp"),
+            ("1.21.29", "red-03.webp"), ("1.21.37", "red-04.webp"), ("1.22.14", "red-05.webp"),
+        ])
+        write_series(work, "noir", [
+            ("1.16.29", "noir-cover.webp"), ("1.16.44", "noir-02.webp"),
+            ("1.16.53", "noir-03.webp"), ("1.17.00", "noir-04.webp"),
+        ])
+        write_series(work, "couple-lifestyle", [
+            ("10-29-36 (2)", "couple-cover.webp"), ("10-29-36 (3)", "couple-02.webp"),
+            ("10-29-36 (4)", "couple-03.webp"), ("10-29-36 (7)", "couple-04.webp"),
+        ])
+        write_series(work, "evening", [
+            ("10-48-44.jpg", "evening-cover.webp"), ("10-48-44 (1)", "evening-02.webp"),
+            ("10-48-44 (2)", "evening-03.webp"), ("10-48-44 (4)", "evening-04.webp"),
+            ("10-48-44 (6)", "evening-05.webp"),
+        ])
+        write_series(work, "mens-brand", [
+            ("08-20-01 (1)", "mens-cover.webp"), ("08-20-01 (2)", "mens-02.webp"),
+            ("08-20-01.jpg", "mens-03.webp"), ("08-20-02", "mens-04.webp"),
+        ])
 
-        # Portadas editoriales: curaduría inicial, no galería infinita.
-        save_webp(by_fragment(work, "1.21.51"), OUT / "portfolio" / "red-statement" / "red-cover.webp")
-        save_webp(by_fragment(work, "1.16.29"), OUT / "portfolio" / "noir" / "noir-cover.webp")
-        save_webp(by_fragment(work, "10-29-36 (2)"), OUT / "portfolio" / "couple-lifestyle" / "couple-cover.webp")
-        save_webp(by_fragment(work, "10-48-44.jpg"), OUT / "portfolio" / "evening" / "evening-cover.webp")
-        save_webp(by_fragment(work, "08-20-01 (1)"), OUT / "portfolio" / "mens-brand" / "mens-cover.webp")
+        save_webp(by_fragment(photos, "1.39.34"), OUT / "media" / "dlb-dmh-exito.webp", 1200, 78)
+        save_webp(by_fragment(photos, "1.46.11"), OUT / "media" / "bazar-emprendedores.webp", 1200, 78)
 
-        # Media / apariciones verificadas en los recursos entregados.
-        media_a = by_fragment(photos, "1.39.34")
-        media_b = by_fragment(photos, "1.46.11")
-        save_webp(media_a, OUT / "media" / "dlb-dmh-exito.webp", 1200, 78)
-        save_webp(media_b, OUT / "media" / "bazar-emprendedores.webp", 1200, 78)
-
-        cert_files = sorted([p for p in certs.rglob("*") if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"} and not p.name.startswith("._")])
+        cert_files = sorted([
+            p for p in certs.rglob("*") if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"}
+            and not p.name.startswith("._") and p.name != ".DS_Store"
+        ])
         if len(cert_files) < 5:
             raise RuntimeError(f"Esperaba 5 certificaciones y encontré {len(cert_files)}")
         for idx, src in enumerate(cert_files[:5], start=1):
@@ -164,17 +164,18 @@ def main():
 
         save_jpeg(hero, OUT / "og" / "adonisg-og.jpg")
 
-    required = [
-        "brand/logo-white.png", "brand/mark-white.png",
-        "hero/argenis-hero.webp", "hero/argenis-manifesto.webp", "hero/argenis-cowboy.webp",
-        "portfolio/beauty-fragrance/beauty-cover.webp", "portfolio/beauty-fragrance/beauty-02.webp",
-        "portfolio/beauty-fragrance/beauty-03.webp", "portfolio/beauty-fragrance/beauty-04.webp",
-        "portfolio/red-statement/red-cover.webp", "portfolio/noir/noir-cover.webp",
-        "portfolio/couple-lifestyle/couple-cover.webp", "portfolio/evening/evening-cover.webp",
-        "portfolio/mens-brand/mens-cover.webp", "media/dlb-dmh-exito.webp", "media/bazar-emprendedores.webp",
-        *[f"certifications/cert-{i:02d}.webp" for i in range(1,6)], "og/adonisg-og.jpg",
-    ]
-    missing = [rel for rel in required if not (OUT / rel).exists()]
+    required = sorted([
+        p.relative_to(OUT).as_posix() for p in OUT.rglob("*")
+        if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}
+    ])
+    must_have = {
+        "brand/logo-white.png", "brand/mark-white.png", "hero/argenis-hero.webp",
+        "portfolio/beauty-fragrance/beauty-cover.webp", "portfolio/red-statement/red-cover.webp",
+        "portfolio/noir/noir-cover.webp", "portfolio/couple-lifestyle/couple-cover.webp",
+        "portfolio/evening/evening-cover.webp", "portfolio/mens-brand/mens-cover.webp",
+        "media/dlb-dmh-exito.webp", "certifications/cert-01.webp", "og/adonisg-og.jpg",
+    }
+    missing = sorted(must_have.difference(required))
     if missing:
         raise RuntimeError("Assets faltantes: " + ", ".join(missing))
 
@@ -183,7 +184,7 @@ def main():
     for rel in required:
         p = OUT / rel
         print(f"  ✓ {rel} · {p.stat().st_size/1024:.1f} KiB · sha {sha(p)}")
-    print("✓ Logos copiados sin alteración de píxeles.")
+    print("✓ Logos originales copiados sin alteración de píxeles.")
 
 if __name__ == "__main__":
     main()
