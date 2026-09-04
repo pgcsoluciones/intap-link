@@ -1,10 +1,10 @@
-name: Deploy /adonisg Preview
+name: Deploy /argenisg Preview
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Rama a desplegar (solo Preview /adonisg)"
+        description: "Rama a desplegar (solo Preview /argenisg)"
         required: true
         default: "feature/kawvo-profile-adonisg-v1"
         type: string
@@ -79,7 +79,10 @@ jobs:
             hero/slide-01.webp hero/slide-02.webp hero/slide-03.webp hero/slide-04.webp hero/slide-05.webp \
             hero/quote-bg.webp hero/argenis-cowboy.webp; do fetch "$f"; done
 
-          for i in $(seq -w 1 13); do fetch "portraits/behind-$i.webp"; done
+          for i in $(seq 1 13); do
+            n=$(printf '%02d' "$i")
+            fetch "portraits/behind-$n.webp"
+          done
 
           for f in \
             portfolio/beauty-fragrance/beauty-cover.webp \
@@ -110,7 +113,13 @@ jobs:
             portfolio/mens-brand/mens-03.webp \
             portfolio/mens-brand/mens-04.webp; do fetch "$f"; done
 
-          for i in $(seq -w 1 9); do fetch "media/appearance-$i.webp"; done
+          # IMPORTANT: the component requests appearance-01..09, cert-01..05 and
+          # video-01..03. `seq -w 1 9` does NOT add a leading zero because the
+          # widest endpoint has one digit. Generate the padding explicitly.
+          for i in $(seq 1 9); do
+            n=$(printf '%02d' "$i")
+            fetch "media/appearance-$n.webp"
+          done
 
           for f in \
             testimonials/brachy.webp \
@@ -118,13 +127,44 @@ jobs:
             testimonials/la-faisa.webp \
             testimonials/viuda-blanca.webp; do fetch "$f"; done
 
-          for i in $(seq -w 1 5); do fetch "certifications/cert-$i.webp"; done
-          for i in $(seq -w 1 3); do fetch "videos/video-$i.mp4"; done
+          for i in $(seq 1 5); do
+            n=$(printf '%02d' "$i")
+            fetch "certifications/cert-$n.webp"
+          done
+
+          for i in $(seq 1 3); do
+            n=$(printf '%02d' "$i")
+            fetch "videos/video-$n.mp4"
+          done
           fetch "og/adonisg-og.jpg"
+
+          # Do not accept Cloudflare SPA HTML fallbacks disguised as media.
+          for f in "$ROOT"/media/*.webp "$ROOT"/certifications/*.webp; do
+            mime=$(file -b --mime-type "$f")
+            case "$mime" in image/*) ;; *) echo "::error::Asset inválido $f ($mime)"; exit 1;; esac
+          done
+          for f in "$ROOT"/videos/*.mp4; do
+            mime=$(file -b --mime-type "$f")
+            case "$mime" in video/*|application/octet-stream) ;; *) echo "::error::Video inválido $f ($mime)"; exit 1;; esac
+          done
 
           COUNT=$(find "$ROOT" -type f | wc -l | tr -d ' ')
           echo "✓ Assets disponibles: $COUNT archivos"
           test "$COUNT" -ge 74 || { echo "::error::Assets incompletos ($COUNT/74)"; exit 1; }
+
+      - name: Normalizar videos para Safari iPhone
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="web/public/assets/adonisg/videos"
+          for src in "$ROOT"/video-01.mp4 "$ROOT"/video-02.mp4 "$ROOT"/video-03.mp4; do
+            tmp="${src%.mp4}.safari.mp4"
+            ffmpeg -hide_banner -loglevel error -y -i "$src" \
+              -c:v libx264 -profile:v main -level 4.0 -pix_fmt yuv420p \
+              -movflags +faststart -c:a aac -b:a 128k "$tmp"
+            mv "$tmp" "$src"
+          done
+          echo "✓ Videos normalizados H.264/AAC + faststart para Safari/iPhone"
 
       - name: Build Web Preview
         shell: bash
@@ -150,38 +190,49 @@ jobs:
           ORIGIN=$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$LOG" | tail -1)
           test -n "$ORIGIN" || { echo "::error::No pude identificar la URL inmutable de Pages"; exit 1; }
           echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
-          echo "✓ Preview: $ORIGIN/adonisg"
+          echo "✓ Preview: $ORIGIN/argenisg"
 
-      - name: Smoke /adonisg
+      - name: Smoke /argenisg + assets
         shell: bash
         run: |
           set -euo pipefail
           ORIGIN="${{ steps.deploy.outputs.origin }}"
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            CODE=$(curl -sS -L -o /tmp/adonisg.html -w '%{http_code}' "$ORIGIN/adonisg?probe=$GITHUB_RUN_ID-$attempt" || true)
-            if [ "$CODE" = "200" ] && grep -Fq 'Argenis' /tmp/adonisg.html; then
-              echo "✓ /adonisg HTTP 200"
+            CODE=$(curl -sS -L -o /tmp/argenisg.html -w '%{http_code}' "$ORIGIN/argenisg?probe=$GITHUB_RUN_ID-$attempt" || true)
+            if [ "$CODE" = "200" ] && grep -Fq 'Argenis' /tmp/argenisg.html; then
+              echo "✓ /argenisg HTTP 200"
               break
             fi
             if [ "$attempt" = "10" ]; then
-              echo "::error::/adonisg no quedó disponible después de propagación"
+              echo "::error::/argenisg no quedó disponible después de propagación"
               exit 1
             fi
             sleep 4
           done
-          curl -fsSL "$ORIGIN/assets/adonisg/brand/logo-white.png" -o /dev/null
-          curl -fsSL "$ORIGIN/assets/adonisg/videos/video-01.mp4" -o /dev/null
-          echo "✓ Assets principales HTTP 200"
+
+          check_type() {
+            local url="$1" expected="$2"
+            headers=$(mktemp)
+            body=$(mktemp)
+            curl -fsSL -D "$headers" "$url" -o "$body"
+            ctype=$(grep -i '^content-type:' "$headers" | tail -1 | tr -d '\r' | cut -d: -f2- | xargs)
+            echo "✓ $url → $ctype"
+            case "$ctype" in $expected*) ;; *) echo "::error::Content-Type inesperado en $url: $ctype"; exit 1;; esac
+          }
+
+          check_type "$ORIGIN/assets/adonisg/brand/logo-black-transparent.png" "image/"
+          check_type "$ORIGIN/assets/adonisg/media/appearance-02.webp" "image/"
+          check_type "$ORIGIN/assets/adonisg/videos/video-01.mp4" "video/"
 
       - name: Resumen
         shell: bash
         run: |
           ORIGIN="${{ steps.deploy.outputs.origin }}"
           {
-            echo "## /adonisg Preview listo"
+            echo "## /argenisg Preview listo"
             echo ""
-            echo "- **ES:** $ORIGIN/adonisg"
-            echo "- **EN:** $ORIGIN/adonisg?lang=en"
+            echo "- **ES:** $ORIGIN/argenisg"
+            echo "- **EN:** $ORIGIN/argenisg?lang=en"
             echo "- **Rama:** ${{ inputs.ref }}"
             echo "- **Producción:** NO TOCADA"
             echo ""
