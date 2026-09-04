@@ -42,6 +42,21 @@ def find_zip(name: str) -> Path:
     raise FileNotFoundError(f"No encontré {name}. También se buscó en {ARGENIS_BACKUP_DIR}.")
 
 
+def find_optional_file(*names: str) -> Path | None:
+    lowered = {name.lower() for name in names}
+    for base in SEARCH_DIRS:
+        if not base.exists():
+            continue
+        for name in names:
+            direct = base / name
+            if direct.is_file():
+                return direct
+        for candidate in base.glob("**/*"):
+            if candidate.is_file() and candidate.name.lower() in lowered:
+                return candidate
+    return None
+
+
 def by_fragment(root: Path, fragment: str, suffixes=(".jpg", ".jpeg", ".png")) -> Path:
     frag = fragment.lower()
     matches = [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() in suffixes and frag in p.name.lower() and not p.name.startswith("._") and p.name != ".DS_Store"]
@@ -50,13 +65,22 @@ def by_fragment(root: Path, fragment: str, suffixes=(".jpg", ".jpeg", ".png")) -
     return sorted(matches)[0]
 
 
-def save_webp(src: Path, dest: Path, max_side: int = 1280, quality: int = 76):
+def save_webp(src: Path, dest: Path, max_side: int = 1280, quality: int = 78):
     from PIL import Image, ImageOps
     dest.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(src) as im:
         im = ImageOps.exif_transpose(im).convert("RGB")
         im.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
         im.save(dest, "WEBP", quality=quality, method=6)
+
+
+def save_png_alpha(src: Path, dest: Path, max_side: int = 1400):
+    from PIL import Image, ImageOps
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(src) as im:
+        im = ImageOps.exif_transpose(im).convert("RGBA")
+        im.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+        im.save(dest, "PNG", optimize=True)
 
 
 def save_inverted_png(src: Path, dest: Path, max_side: int = 420):
@@ -90,9 +114,22 @@ def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
 
 
-def write_series(root: Path, folder: str, items: list[tuple[str, str]], quality=76):
+def write_series(root: Path, folder: str, items: list[tuple[str, str]], quality=78):
     for fragment, name in items:
         save_webp(by_fragment(root, fragment), OUT / "portfolio" / folder / name, 1280, quality)
+
+
+def use_standalone_or_fragment(root: Path, standalone_names: tuple[str, ...], fragment: str | None, dest: Path, max_side=1400, quality=82) -> bool:
+    src = find_optional_file(*standalone_names)
+    if src is None and fragment:
+        try:
+            src = by_fragment(root, fragment)
+        except FileNotFoundError:
+            src = None
+    if src is None:
+        return False
+    save_webp(src, dest, max_side, quality)
+    return True
 
 
 def main():
@@ -125,9 +162,13 @@ def main():
         copy_exact(by_fragment(brand, "LOGO BLANCO@2x"), OUT / "brand" / "logo-white.png")
         save_inverted_png(by_fragment(brand, "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png", 420)
         copy_exact(by_fragment(brand, "Linkedin Banner"), OUT / "brand" / "linkedin-banner.jpg")
-        top_logo = by_fragment(brand, "PHOTO-2026-06-25-07-29-40")
-        copy_exact(top_logo, OUT / "brand" / "top-logo.jpg")
-        save_webp(top_logo, OUT / "brand" / "top-logo.webp", 520, 88)
+
+        top_logo = find_optional_file("logo-ngro-hero-sin-fondo.png", "LOGO NEGRO -sinfondo-01.png")
+        if top_logo:
+            save_png_alpha(top_logo, OUT / "brand" / "logo-black-transparent.png", 1400)
+        else:
+            black_logo = by_fragment(brand, "LOGO NEGRO@2x")
+            copy_exact(black_logo, OUT / "brand" / "logo-black-transparent.png")
 
         hero_items = [
             ("PHOTO-2026-07-27-11-34-00 (2)", "slide-01.webp"),
@@ -142,16 +183,22 @@ def main():
         save_webp(by_fragment(photos, "1.40.18"), OUT / "hero" / "quote-bg.webp", 1600, 82)
         save_webp(by_fragment(photos, "1.40.00"), OUT / "hero" / "argenis-cowboy.webp", 1400, 80)
 
-        portrait_items = [
-            ("PHOTO-2026-07-27-11-34-00 (1)", "argenis-01.webp"),
-            ("PHOTO-2026-07-27-11-34-00 (2)", "argenis-02.webp"),
-            ("1.40.00", "argenis-03.webp"),
-            ("1.43.04", "argenis-04.webp"),
-            ("1.45.04", "argenis-05.webp"),
-            ("1.40.18", "argenis-06.webp"),
-        ]
-        for fragment, name in portrait_items:
-            save_webp(by_fragment(photos, fragment), OUT / "portraits" / name, 1400, 80)
+        # Galería personal: prioriza el ZIP dedicado suministrado por el usuario.
+        behind_zip = find_optional_file("detras de argenis.zip")
+        behind_sources: list[Path] = []
+        if behind_zip:
+            behind_dir = tmp / "behind"
+            behind_dir.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(behind_zip) as zf:
+                zf.extractall(behind_dir)
+            behind_sources = sorted([p for p in behind_dir.rglob("*") if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"} and not p.name.startswith("._")])
+        if behind_sources:
+            for idx, src in enumerate(behind_sources[:13], 1):
+                save_webp(src, OUT / "portraits" / f"behind-{idx:02d}.webp", 1500, 82)
+        else:
+            fallback = ["1.26.51", "1.28.47", "1.31.50", "1.40.10", "1.43.04", "1.44.03", "1.45.04", "PHOTO-2026-07-27-11-34-00 (1)", "PHOTO-2026-07-27-11-34-00 (4)"]
+            for idx, fragment in enumerate(fallback, 1):
+                save_webp(by_fragment(photos, fragment), OUT / "portraits" / f"behind-{idx:02d}.webp", 1500, 82)
 
         write_series(work, "beauty-fragrance", [("13-28-42", "beauty-cover.webp"), ("13-28-32", "beauty-02.webp"), ("13-28-58", "beauty-03.webp"), ("13-29-21", "beauty-04.webp"), ("13-33-22 (1)", "beauty-05.webp")])
         write_series(work, "red-statement", [("1.21.51", "red-cover.webp"), ("1.21.22", "red-02.webp"), ("1.21.29", "red-03.webp"), ("1.21.37", "red-04.webp"), ("1.22.14", "red-05.webp")])
@@ -160,11 +207,34 @@ def main():
         write_series(work, "evening", [("10-48-44.jpg", "evening-cover.webp"), ("10-48-44 (1)", "evening-02.webp"), ("10-48-44 (2)", "evening-03.webp"), ("10-48-44 (4)", "evening-04.webp"), ("10-48-44 (6)", "evening-05.webp")])
         write_series(work, "mens-brand", [("08-20-01 (1)", "mens-cover.webp"), ("08-20-01 (2)", "mens-02.webp"), ("08-20-01.jpg", "mens-03.webp"), ("08-20-02", "mens-04.webp")])
 
-        save_webp(by_fragment(photos, "1.39.34"), OUT / "media" / "dlb-dmh-exito.webp", 1200, 78)
-        save_webp(by_fragment(photos, "1.46.11"), OUT / "media" / "bazar-emprendedores.webp", 1200, 78)
-        save_webp(by_fragment(photos, "PHOTO-2026-07-27-11-34-00 (4)"), OUT / "media" / "la-vitrina.webp", 1200, 78)
-        save_webp(by_fragment(work, "1.34.19"), OUT / "media" / "el-janis.webp", 1200, 78)
-        save_webp(by_fragment(work, "1.34.53"), OUT / "testimonials" / "dr-hugo-maria.webp", 1400, 80)
+        # Me has visto en: archivos exactos suministrados, con fallback a material ya presente en los ZIP.
+        media_specs = [
+            (("meviste-1.png",), "1.35.38"),
+            (("meviste-2.png",), "1.39.34"),
+            (("meviste-3.png",), "1.46.11"),
+            (("meviste-4.png",), None),
+            (("meviste-5.png",), None),
+            (("meviste-6.png",), "1.41.47"),
+            (("meviste-7.png",), None),
+            (("meviste-8.png",), None),
+            (("meviste.png",), "1.41.47"),
+        ]
+        media_count = 0
+        for idx, (names, fragment) in enumerate(media_specs, 1):
+            if use_standalone_or_fragment(work if fragment == "1.41.47" else photos, names, fragment, OUT / "media" / f"appearance-{idx:02d}.webp", 1500, 82):
+                media_count += 1
+        print(f"▶ Apariciones curadas integradas: {media_count}")
+
+        # Testimonios: nunca usar fotos de Argenis; prioriza los cuatro archivos de clientes suministrados.
+        testimonial_specs = [
+            (("testimonio-Brachy.png",), work, "1.34.19", "brachy.webp"),
+            (("Testimonio-Dr-Hugo.png",), work, "1.37.55", "dr-hugo.webp"),
+            (("testimonio-la-Faisa.jpg",), work, "10-48-44 (4)", "la-faisa.webp"),
+            (("testimonio-Viuda-blanca.png",), work, "1.22.14", "viuda-blanca.webp"),
+        ]
+        for names, root, fragment, name in testimonial_specs:
+            if not use_standalone_or_fragment(root, names, fragment, OUT / "testimonials" / name, 1400, 84):
+                raise RuntimeError(f"No encontré testimonio requerido: {name}")
 
         cert_files = sorted([p for p in certs.rglob("*") if p.is_file() and p.suffix.lower() in {".jpg", ".jpeg", ".png"} and not p.name.startswith("._") and p.name != ".DS_Store"])
         if len(cert_files) < 5:
@@ -181,9 +251,12 @@ def main():
 
     required = sorted([p.relative_to(OUT).as_posix() for p in OUT.rglob("*") if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}])
     must_have = {
-        "brand/logo-white.png", "brand/mark-white.png", "brand/linkedin-banner.jpg", "brand/top-logo.jpg", "brand/top-logo.webp",
-        "hero/slide-01.webp", "hero/slide-02.webp", "hero/slide-03.webp", "hero/slide-04.webp", "hero/slide-05.webp", "hero/quote-bg.webp",
-        "portraits/argenis-01.webp", "portraits/argenis-06.webp", "portfolio/beauty-fragrance/beauty-cover.webp", "portfolio/red-statement/red-cover.webp", "portfolio/noir/noir-cover.webp", "portfolio/couple-lifestyle/couple-cover.webp", "portfolio/evening/evening-cover.webp", "portfolio/mens-brand/mens-cover.webp", "media/dlb-dmh-exito.webp", "media/la-vitrina.webp", "media/el-janis.webp", "certifications/cert-01.webp", "og/adonisg-og.jpg", "videos/video-01.mp4"
+        "brand/logo-black-transparent.png", "brand/logo-white.png", "brand/linkedin-banner.jpg",
+        "hero/slide-01.webp", "hero/slide-05.webp", "hero/quote-bg.webp",
+        "portraits/behind-01.webp", "portfolio/beauty-fragrance/beauty-cover.webp", "portfolio/red-statement/red-cover.webp", "portfolio/noir/noir-cover.webp", "portfolio/couple-lifestyle/couple-cover.webp", "portfolio/evening/evening-cover.webp", "portfolio/mens-brand/mens-cover.webp",
+        "media/appearance-01.webp", "media/appearance-02.webp", "media/appearance-03.webp",
+        "testimonials/brachy.webp", "testimonials/dr-hugo.webp", "testimonials/la-faisa.webp", "testimonials/viuda-blanca.webp",
+        "certifications/cert-01.webp", "og/adonisg-og.jpg", "videos/video-01.mp4"
     }
     missing = sorted(must_have.difference(required))
     if missing:
@@ -194,7 +267,7 @@ def main():
     for rel in required:
         p = OUT / rel
         print(f"  ✓ {rel} · {p.stat().st_size / 1024:.1f} KiB · sha {sha(p)}")
-    print("✓ Identidad gráfica y banner final preservados; hero y galerías optimizados para móvil.")
+    print("✓ Curaduría móvil: logo transparente, galería personal, testimonios de clientes y apariciones reales integradas.")
 
 
 if __name__ == "__main__":
