@@ -126,14 +126,11 @@ def main():
         work = roots["work"]
         certs = roots["certs"]
 
-        # Identidad gráfica: preservar originales cuando corresponda.
         copy_exact(by_fragment(brand, "LOGO BLANCO@2x"), OUT / "brand" / "logo-white.png")
         save_inverted_png(by_fragment(brand, "REDUCCION BLANCO@2x"), OUT / "brand" / "mark-white.png", 420)
         copy_exact(by_fragment(brand, "Linkedin Banner"), OUT / "brand" / "linkedin-banner.jpg")
-        save_webp(by_fragment(brand, "PHOTO-2026-06-25-07-29-40"), OUT / "brand" / "top-logo.webp", 520, 88)
+        copy_exact(by_fragment(brand, "PHOTO-2026-06-25-07-29-40"), OUT / "brand" / "top-logo.jpg")
 
-        # Hero: las cinco imágenes seleccionadas por el usuario. Todas se sirven completas,
-        # el template decide el encuadre sin recorte destructivo.
         hero_items = [
             ("PHOTO-2026-07-27-11-34-00 (2)", "slide-01.webp"),
             ("1.40.00", "slide-02.webp"),
@@ -145,11 +142,9 @@ def main():
             save_webp(by_fragment(photos, fragment), OUT / "hero" / name, 1600, 82)
         copy_exact(OUT / "hero" / "slide-01.webp", OUT / "hero" / "argenis-hero.webp")
 
-        # Imagen de cierre solicitada: cowboy close-up para fundir contra negro.
         save_webp(by_fragment(photos, "1.40.18"), OUT / "hero" / "quote-bg.webp", 1600, 82)
         save_webp(by_fragment(photos, "1.40.00"), OUT / "hero" / "argenis-cowboy.webp", 1400, 80)
 
-        # Galería editorial de Argenis. Se muestra como un destacado único que abre modal.
         portrait_items = [
             ("PHOTO-2026-07-27-11-34-00 (1)", "argenis-01.webp"),
             ("PHOTO-2026-07-27-11-34-00 (2)", "argenis-02.webp"),
@@ -161,7 +156,6 @@ def main():
         for fragment, name in portrait_items:
             save_webp(by_fragment(photos, fragment), OUT / "portraits" / name, 1400, 80)
 
-        # Portafolio por proyectos, con varias imágenes dentro de cada galería.
         write_series(work, "beauty-fragrance", [
             ("13-28-42", "beauty-cover.webp"), ("13-28-32", "beauty-02.webp"),
             ("13-28-58", "beauty-03.webp"), ("13-29-21", "beauty-04.webp"),
@@ -190,13 +184,10 @@ def main():
             ("08-20-01.jpg", "mens-03.webp"), ("08-20-02", "mens-04.webp")
         ])
 
-        # Apariciones / prensa: se usan dentro de modales para mantener al visitante en el perfil.
         save_webp(by_fragment(photos, "1.39.34"), OUT / "media" / "dlb-dmh-exito.webp", 1200, 78)
         save_webp(by_fragment(photos, "1.46.11"), OUT / "media" / "bazar-emprendedores.webp", 1200, 78)
         save_webp(by_fragment(photos, "PHOTO-2026-07-27-11-34-00 (4)"), OUT / "media" / "la-vitrina.webp", 1200, 78)
         save_webp(by_fragment(work, "1.34.19"), OUT / "media" / "el-janis.webp", 1200, 78)
-
-        # Material testimonial recibido; el nuevo diseño también admite tarjetas tipográficas.
         save_webp(by_fragment(work, "1.34.53"), OUT / "testimonials" / "dr-hugo-maria.webp", 1400, 80)
 
         cert_files = sorted([
@@ -225,7 +216,7 @@ def main():
         if p.is_file() and p.name not in {"README.md", "asset-manifest.json"}
     ])
     must_have = {
-        "brand/logo-white.png", "brand/mark-white.png", "brand/linkedin-banner.jpg", "brand/top-logo.webp",
+        "brand/logo-white.png", "brand/mark-white.png", "brand/linkedin-banner.jpg", "brand/top-logo.jpg",
         "hero/slide-01.webp", "hero/slide-02.webp", "hero/slide-03.webp", "hero/slide-04.webp", "hero/slide-05.webp",
         "hero/quote-bg.webp", "portraits/argenis-01.webp", "portraits/argenis-06.webp",
         "portfolio/beauty-fragrance/beauty-cover.webp", "portfolio/red-statement/red-cover.webp",
