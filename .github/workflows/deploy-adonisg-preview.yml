@@ -1,0 +1,189 @@
+name: Deploy /adonisg Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Rama a desplegar (solo Preview /adonisg)"
+        required: true
+        default: "feature/kawvo-profile-adonisg-v1"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: adonisg-preview-manual
+  cancel-in-progress: false
+
+env:
+  ALLOWED_REF: feature/kawvo-profile-adonisg-v1
+  PAGES_PROJECT: intap-link
+  ASSET_SOURCE: https://7a0cad82.intap-link.pages.dev
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy-preview:
+    name: Build + deploy Preview only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Safety guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF="${{ inputs.ref }}"
+          test "$REF" = "$ALLOWED_REF" || { echo "::error::Solo se permite $ALLOWED_REF"; exit 1; }
+          test "$REF" != "main" || { echo "::error::main está bloqueada"; exit 1; }
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Falta CLOUDFLARE_API_TOKEN en GitHub Secrets"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "::error::Falta CLOUDFLARE_ACCOUNT_ID en GitHub Variables"; exit 1; }
+          echo "✓ Guardas Preview activas; Producción bloqueada"
+
+      - name: Checkout rama Preview
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Restaurar assets curados desde Preview inmutable
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="web/public/assets/adonisg"
+          rm -rf "$ROOT/brand" "$ROOT/hero" "$ROOT/portraits" "$ROOT/portfolio" "$ROOT/media" "$ROOT/testimonials" "$ROOT/certifications" "$ROOT/videos" "$ROOT/og"
+
+          fetch() {
+            local rel="$1"
+            mkdir -p "$ROOT/$(dirname "$rel")"
+            echo "↓ $rel"
+            curl --fail --silent --show-error --location --retry 3 --retry-delay 2 \
+              "$ASSET_SOURCE/assets/adonisg/$rel" -o "$ROOT/$rel"
+            test -s "$ROOT/$rel"
+          }
+
+          for f in \
+            brand/logo-white.png \
+            brand/mark-white.png \
+            brand/linkedin-banner.jpg \
+            brand/logo-black-transparent.png \
+            hero/argenis-hero.webp \
+            hero/slide-01.webp hero/slide-02.webp hero/slide-03.webp hero/slide-04.webp hero/slide-05.webp \
+            hero/quote-bg.webp hero/argenis-cowboy.webp; do fetch "$f"; done
+
+          for i in $(seq -w 1 13); do fetch "portraits/behind-$i.webp"; done
+
+          for f in \
+            portfolio/beauty-fragrance/beauty-cover.webp \
+            portfolio/beauty-fragrance/beauty-02.webp \
+            portfolio/beauty-fragrance/beauty-03.webp \
+            portfolio/beauty-fragrance/beauty-04.webp \
+            portfolio/beauty-fragrance/beauty-05.webp \
+            portfolio/red-statement/red-cover.webp \
+            portfolio/red-statement/red-02.webp \
+            portfolio/red-statement/red-03.webp \
+            portfolio/red-statement/red-04.webp \
+            portfolio/red-statement/red-05.webp \
+            portfolio/noir/noir-cover.webp \
+            portfolio/noir/noir-02.webp \
+            portfolio/noir/noir-03.webp \
+            portfolio/noir/noir-04.webp \
+            portfolio/couple-lifestyle/couple-cover.webp \
+            portfolio/couple-lifestyle/couple-02.webp \
+            portfolio/couple-lifestyle/couple-03.webp \
+            portfolio/couple-lifestyle/couple-04.webp \
+            portfolio/evening/evening-cover.webp \
+            portfolio/evening/evening-02.webp \
+            portfolio/evening/evening-03.webp \
+            portfolio/evening/evening-04.webp \
+            portfolio/evening/evening-05.webp \
+            portfolio/mens-brand/mens-cover.webp \
+            portfolio/mens-brand/mens-02.webp \
+            portfolio/mens-brand/mens-03.webp \
+            portfolio/mens-brand/mens-04.webp; do fetch "$f"; done
+
+          for i in $(seq -w 1 9); do fetch "media/appearance-$i.webp"; done
+
+          for f in \
+            testimonials/brachy.webp \
+            testimonials/dr-hugo.webp \
+            testimonials/la-faisa.webp \
+            testimonials/viuda-blanca.webp; do fetch "$f"; done
+
+          for i in $(seq -w 1 5); do fetch "certifications/cert-$i.webp"; done
+          for i in $(seq -w 1 3); do fetch "videos/video-$i.mp4"; done
+          fetch "og/adonisg-og.jpg"
+
+          COUNT=$(find "$ROOT" -type f | wc -l | tr -d ' ')
+          echo "✓ Assets disponibles: $COUNT archivos"
+          test "$COUNT" -ge 74 || { echo "::error::Assets incompletos ($COUNT/74)"; exit 1; }
+
+      - name: Build Web Preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build:preview -w web
+          if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then
+            echo "::error::El bundle Preview contiene api.intaprd.com"
+            exit 1
+          fi
+          grep -R -Fq 'https://intap-api-preview.fliaprince.workers.dev' web/dist/assets
+          echo "✓ Bundle conectado exclusivamente al API Preview"
+
+      - name: Deploy Cloudflare Pages Preview
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/adonisg-pages-deploy.log
+          npx wrangler pages deploy web/dist \
+            --project-name "$PAGES_PROJECT" \
+            --branch "$ALLOWED_REF" 2>&1 | tee "$LOG"
+          ORIGIN=$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$LOG" | tail -1)
+          test -n "$ORIGIN" || { echo "::error::No pude identificar la URL inmutable de Pages"; exit 1; }
+          echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
+          echo "✓ Preview: $ORIGIN/adonisg"
+
+      - name: Smoke /adonisg
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORIGIN="${{ steps.deploy.outputs.origin }}"
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            CODE=$(curl -sS -L -o /tmp/adonisg.html -w '%{http_code}' "$ORIGIN/adonisg?probe=$GITHUB_RUN_ID-$attempt" || true)
+            if [ "$CODE" = "200" ] && grep -Fq 'Argenis' /tmp/adonisg.html; then
+              echo "✓ /adonisg HTTP 200"
+              break
+            fi
+            if [ "$attempt" = "10" ]; then
+              echo "::error::/adonisg no quedó disponible después de propagación"
+              exit 1
+            fi
+            sleep 4
+          done
+          curl -fsSL "$ORIGIN/assets/adonisg/brand/logo-white.png" -o /dev/null
+          curl -fsSL "$ORIGIN/assets/adonisg/videos/video-01.mp4" -o /dev/null
+          echo "✓ Assets principales HTTP 200"
+
+      - name: Resumen
+        shell: bash
+        run: |
+          ORIGIN="${{ steps.deploy.outputs.origin }}"
+          {
+            echo "## /adonisg Preview listo"
+            echo ""
+            echo "- **ES:** $ORIGIN/adonisg"
+            echo "- **EN:** $ORIGIN/adonisg?lang=en"
+            echo "- **Rama:** ${{ inputs.ref }}"
+            echo "- **Producción:** NO TOCADA"
+            echo ""
+            echo "> Este workflow solo acepta la rama feature/kawvo-profile-adonisg-v1 y despliega a Pages Preview."
+          } >> "$GITHUB_STEP_SUMMARY"
