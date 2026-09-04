@@ -1,59 +1,43 @@
-/* /adonisg · QA refinements · 2026-09-04
-   Scope: only the corrections requested after Preview 4e40c982. */
+/* Argenis Grullón · QA refinements · 2026-09-04
+   Scope: preview branch only. Production untouched. */
 
-/* Hero: no logo over the portrait. Keep only language control. */
-.adonis-profile .adonis-top-logo-wrap{
-  display:none !important;
-}
-.adonis-profile .adonis-topbar{
-  justify-content:flex-end;
-}
+/* Hero: keep the portrait clean; language control only. */
+.adonis-profile .adonis-top-logo-wrap{display:none!important}
+.adonis-profile .adonis-topbar{justify-content:flex-end}
 
-/* Identity strip directly below hero.
-   Use the original WHITE transparent PNG and invert only at render time so
-   the source asset stays untouched and the result is black lettering on white. */
+/* Identity strip below hero: larger original mark, untouched proportions. */
 .adonis-profile .adonis-brand-strip{
   position:relative;
   background:#fff;
-  padding:32px 24px 36px;
-  min-height:150px;
+  padding:24px 18px 30px;
+  min-height:170px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-.adonis-profile .adonis-brand-strip img{
-  display:none !important;
-}
+.adonis-profile .adonis-brand-strip img{display:none!important}
 .adonis-profile .adonis-brand-strip::before{
   content:'';
   display:block;
-  width:min(82%,430px);
+  width:min(94%,520px);
   aspect-ratio:3/1;
   margin:0 auto;
-  background:url('/assets/adonisg/brand/logo-white.png') center/contain no-repeat;
+  background:url('/assets/adonisg/brand/al-estilo-logo-white.png') center/contain no-repeat;
   filter:invert(1);
 }
 
-/* Manifesto must read as exactly two deliberate lines. */
-.adonis-profile .adonis-manifesto h2{
-  white-space:pre-line;
-  line-height:1.02;
-}
+.adonis-profile .adonis-manifesto h2{white-space:pre-line;line-height:1.02}
 
-/* Portfolio: fixed black stage, image forced to the 9:16 rectangle.
-   No blurred/ghost background behind the artwork. */
-.adonis-profile .adonis-portfolio{
-  text-align:center;
-}
-.adonis-profile .adonis-portfolio h2{
-  text-align:center;
-}
+/* Portfolio: fixed editorial stage + white copy requested. */
+.adonis-profile .adonis-portfolio{text-align:center}
+.adonis-profile .adonis-portfolio h2{color:#fff!important;text-align:center}
 .adonis-profile .adonis-featured-project{
   background:#050505;
   border-radius:22px;
   padding:20px;
   overflow:hidden;
 }
-.adonis-profile .adonis-featured-project-button{
-  text-align:center;
-}
+.adonis-profile .adonis-featured-project-button{text-align:center}
 .adonis-profile .adonis-portfolio .adonis-fixed-media{
   width:min(100%,390px);
   aspect-ratio:9/16;
@@ -63,160 +47,118 @@
   border:1px solid rgba(255,255,255,.9);
   border-radius:18px;
   overflow:hidden;
-  box-shadow:
-    inset 0 0 0 4px #050505,
-    inset 0 0 0 5px rgba(255,255,255,.48);
+  box-shadow:inset 0 0 0 4px #050505,inset 0 0 0 5px rgba(255,255,255,.48);
 }
 .adonis-profile .adonis-portfolio .adonis-fixed-media::before,
-.adonis-profile .adonis-portfolio .adonis-fixed-media::after{
-  content:none !important;
-  display:none !important;
+.adonis-profile .adonis-portfolio .adonis-fixed-media::after{content:none!important;display:none!important}
+.adonis-profile .adonis-portfolio .adonis-fixed-media>img{
+  width:100%;height:100%;object-fit:cover;object-position:center;border-radius:12px;background:#050505
 }
-.adonis-profile .adonis-portfolio .adonis-fixed-media > img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  object-position:center;
-  border-radius:12px;
-  background:#050505;
-}
-.adonis-profile .adonis-project-caption{
-  text-align:center;
-  padding:18px 10px 2px;
-}
-.adonis-profile .adonis-project-caption small{
-  text-align:center;
-}
-.adonis-profile .adonis-project-caption h3{
-  text-align:center;
-  margin-top:7px;
-}
-.adonis-profile .adonis-project-caption p{
-  max-width:470px;
-  margin:10px auto 0;
-  text-align:center;
-  font-size:15.5px;
-  line-height:1.55;
-  color:#55514c;
-}
+.adonis-profile .adonis-project-caption{text-align:center;padding:18px 10px 2px}
+.adonis-profile .adonis-project-caption small,
+.adonis-profile .adonis-project-caption h3,
+.adonis-profile .adonis-project-caption p{color:#fff!important;text-align:center}
+.adonis-profile .adonis-project-caption h3{margin-top:7px}
+.adonis-profile .adonis-project-caption p{max-width:470px;margin:10px auto 0;font-size:15.5px;line-height:1.55}
 
-/* Project modal gallery: same fixed black-stage language as portfolio.
-   Fill the image frame itself; no blurred fill behind it. */
-.adonis-profile .adonis-project-modal .adonis-gallery-frame{
-  background:#050505;
-  border-radius:20px;
-  padding:18px;
-}
+/* Project modal keeps same visual language. */
+.adonis-profile .adonis-project-modal .adonis-gallery-frame{background:#050505;border-radius:20px;padding:18px}
 .adonis-profile .adonis-project-modal .adonis-fixed-media{
-  width:min(100%,390px);
-  aspect-ratio:9/16;
-  margin:0 auto;
-  padding:5px;
-  background:#050505;
-  border:1px solid rgba(255,255,255,.9);
-  border-radius:17px;
-  overflow:hidden;
-  box-shadow:
-    inset 0 0 0 4px #050505,
-    inset 0 0 0 5px rgba(255,255,255,.48);
+  width:min(100%,390px);aspect-ratio:9/16;margin:0 auto;padding:5px;background:#050505;
+  border:1px solid rgba(255,255,255,.9);border-radius:17px;overflow:hidden;
+  box-shadow:inset 0 0 0 4px #050505,inset 0 0 0 5px rgba(255,255,255,.48)
 }
 .adonis-profile .adonis-project-modal .adonis-fixed-media::before,
-.adonis-profile .adonis-project-modal .adonis-fixed-media::after{
-  content:none !important;
-  display:none !important;
+.adonis-profile .adonis-project-modal .adonis-fixed-media::after{content:none!important;display:none!important}
+.adonis-profile .adonis-project-modal .adonis-fixed-media>img{width:100%;height:100%;object-fit:cover;object-position:center;border-radius:11px;background:#050505}
+.adonis-profile .adonis-project-modal>small,
+.adonis-profile .adonis-project-modal>h2,
+.adonis-profile .adonis-project-modal>p{text-align:center}
+
+/* “Me has visto en”: every source uses one square frame regardless of original dimensions. */
+.adonis-profile .adonis-media .adonis-fixed-media{
+  width:100%!important;
+  aspect-ratio:1/1!important;
+  height:auto!important;
+  overflow:hidden!important;
+  background:#080808!important;
+  border-radius:20px!important;
 }
-.adonis-profile .adonis-project-modal .adonis-fixed-media > img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  object-position:center;
-  border-radius:11px;
-  background:#050505;
+.adonis-profile .adonis-media .adonis-fixed-media::before,
+.adonis-profile .adonis-media .adonis-fixed-media::after{display:none!important;content:none!important}
+.adonis-profile .adonis-media .adonis-fixed-media>img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
 }
-.adonis-profile .adonis-project-modal > small,
-.adonis-profile .adonis-project-modal > h2,
-.adonis-profile .adonis-project-modal > p{
-  text-align:center;
+.adonis-profile .adonis-media-card{align-items:stretch}
+
+/* Platform block: logo is the title. Do not repeat “Al Estilo de Argenis”. */
+.adonis-profile .adonis-platform img{
+  display:block;
+  width:min(92%,560px)!important;
+  max-width:none!important;
+  height:auto!important;
+  margin:0 auto 26px!important;
+  object-fit:contain;
 }
-.adonis-profile .adonis-project-modal > .adonis-btn{
-  font-weight:900;
-  font-size:13px;
-  letter-spacing:.035em;
+.adonis-profile .adonis-platform h2{display:none!important}
+.adonis-profile .adonis-platform p{margin-top:0!important}
+
+/* Videos: keep native controls usable on iPhone/Safari and avoid stretched frames. */
+.adonis-profile .adonis-video-feature,
+.adonis-profile .adonis-video-thumbs button{overflow:hidden;background:#000}
+.adonis-profile .adonis-video-feature video,
+.adonis-profile .adonis-video-thumbs video{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  pointer-events:auto!important;
 }
 
-/* Sharing actions: make "Compartir perfil" impossible to miss.
-   Both actions live directly below the social cards, full width and readable. */
+/* Sharing is secondary: discreet text links, not dominant CTA buttons. */
 .adonis-profile .adonis-share-actions{
   position:relative;
-  display:grid;
-  grid-template-columns:1fr;
-  background:#050505;
-  padding:4px 22px 38px;
-  gap:11px;
-}
-.adonis-profile .adonis-share-actions button{
-  width:100%;
-  min-height:62px;
-  border:1px solid rgba(255,255,255,.94);
-  border-radius:18px;
-  background:#101010;
-  color:#fff !important;
-  display:flex;
+  display:flex!important;
   align-items:center;
   justify-content:center;
-  box-shadow:0 9px 22px rgba(0,0,0,.32);
+  flex-wrap:wrap;
+  gap:8px 18px!important;
+  background:#050505;
+  padding:14px 22px 28px!important;
 }
-.adonis-profile .adonis-share-actions button:first-child{
-  background:#fff;
-  color:#090909 !important;
-  border-color:#fff;
+.adonis-profile .adonis-share-actions button{
+  width:auto!important;
+  min-height:0!important;
+  padding:6px 2px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:rgba(255,255,255,.78)!important;
+  box-shadow:none!important;
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  text-decoration:underline;
+  text-decoration-thickness:1px;
+  text-underline-offset:4px;
 }
-.adonis-profile .adonis-share-actions strong{
-  font-size:16px;
-  line-height:1.15;
-  font-weight:850;
-  letter-spacing:.01em;
-}
-.adonis-profile .adonis-share-actions small{
-  display:none !important;
-}
+.adonis-profile .adonis-share-actions button:first-child{background:transparent!important;color:rgba(255,255,255,.78)!important;border:0!important}
+.adonis-profile .adonis-share-actions strong{font-size:13px!important;line-height:1.2;font-weight:500!important;letter-spacing:.02em}
+.adonis-profile .adonis-share-actions small{display:none!important}
 .adonis-profile .adonis-copy-toast{
-  position:absolute;
-  left:50%;
-  bottom:5px;
-  transform:translate(-50%,50%);
-  z-index:4;
-  background:#fff;
-  color:#111;
-  border-radius:999px;
-  padding:8px 14px;
-  font-size:12px;
-  font-weight:700;
-  white-space:nowrap;
-  box-shadow:0 10px 28px rgba(0,0,0,.35);
+  position:absolute;left:50%;bottom:2px;transform:translate(-50%,50%);z-index:4;background:#fff;color:#111;
+  border-radius:999px;padding:7px 12px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 10px 28px rgba(0,0,0,.35)
 }
 
 @media (max-width:420px){
-  .adonis-profile .adonis-brand-strip{
-    min-height:132px;
-    padding:28px 20px 31px;
-  }
-  .adonis-profile .adonis-brand-strip::before{
-    width:min(88%,380px);
-  }
-  .adonis-profile .adonis-featured-project{
-    padding:14px;
-    border-radius:18px;
-  }
+  .adonis-profile .adonis-brand-strip{min-height:150px;padding:22px 12px 26px}
+  .adonis-profile .adonis-brand-strip::before{width:96%}
+  .adonis-profile .adonis-featured-project{padding:14px;border-radius:18px}
   .adonis-profile .adonis-portfolio .adonis-fixed-media,
-  .adonis-profile .adonis-project-modal .adonis-fixed-media{
-    width:100%;
-  }
-  .adonis-profile .adonis-share-actions{
-    padding-left:18px;
-    padding-right:18px;
-  }
-  .adonis-profile .adonis-share-actions strong{
-    font-size:15.5px;
-  }
+  .adonis-profile .adonis-project-modal .adonis-fixed-media{width:100%}
+  .adonis-profile .adonis-platform img{width:96%!important;margin-bottom:22px!important}
+  .adonis-profile .adonis-share-actions{padding-left:18px!important;padding-right:18px!important}
 }
