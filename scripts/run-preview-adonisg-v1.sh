@@ -14,70 +14,45 @@ fail(){ echo; echo "✗ ERROR: $1"; echo "Producción NO fue tocada."; exit 1; }
 run(){ echo; echo "▶ $*"; "$@" || fail "$*"; }
 
 cleanup_assets(){
-  for d in brand hero portfolio media certifications og; do
+  for d in brand hero portraits portfolio media testimonials certifications videos og; do
     rm -rf "$ROOT/web/public/assets/adonisg/$d" 2>/dev/null || true
   done
 }
 trap cleanup_assets EXIT
 
 wait_http_200(){
-  local url="$1"
-  local label="$2"
-  local attempts="${3:-8}"
-  local delay="${4:-4}"
-  local code="000"
-  local i
+  local url="$1"; local label="$2"; local attempts="${3:-8}"; local delay="${4:-4}"; local code="000"; local i
   for i in $(seq 1 "$attempts"); do
-    code="$(curl -sS -L --max-time 30 -o /dev/null -w '%{http_code}' "${url}${url#*\?}" 2>/dev/null || true)"
-    # La expresión anterior no añade cache-buster correctamente a URLs sin query;
-    # rehacemos el request explícitamente para evitar edge cache durante propagación.
     if [[ "$url" == *\?* ]]; then
       code="$(curl -sS -L --max-time 30 -o /dev/null -w '%{http_code}' "${url}&kawvo_preview_probe=$(date +%s)-$i" 2>/dev/null || true)"
     else
       code="$(curl -sS -L --max-time 30 -o /dev/null -w '%{http_code}' "${url}?kawvo_preview_probe=$(date +%s)-$i" 2>/dev/null || true)"
     fi
-    if [ "$code" = "200" ]; then
-      echo "✓ $label -> HTTP 200 (intento $i/$attempts)"
-      return 0
-    fi
-    echo "… $label -> HTTP $code (intento $i/$attempts); esperando ${delay}s por propagación Pages"
-    sleep "$delay"
+    if [ "$code" = "200" ]; then echo "✓ $label -> HTTP 200 (intento $i/$attempts)"; return 0; fi
+    echo "… $label -> HTTP $code (intento $i/$attempts); esperando ${delay}s por propagación Pages"; sleep "$delay"
   done
   fail "$label no alcanzó HTTP 200 después de $attempts intentos (último HTTP $code)"
 }
 
 cd "$ROOT" || fail "No existe $ROOT"
 mkdir -p "$LOG_DIR"
-
-printf '\n============================================================\n'
-printf ' KAWVO LINK · /adonisg · PREVIEW AISLADO\n'
-printf '============================================================\n'
+printf '\n============================================================\n KAWVO LINK · /adonisg · PREVIEW AISLADO\n============================================================\n'
 
 run git fetch github "$BRANCH"
 run git checkout -B "$BRANCH" "github/$BRANCH"
 run git reset --hard "github/$BRANCH"
 run git diff --check
-
 [ "$(git branch --show-current)" != "main" ] || fail "Rama main bloqueada"
-
-if grep -nE 'database_name = "intap_db"|bucket_name = "intap-r2"|name = "intap-api"$' api/wrangler.preview.toml; then
-  fail "wrangler.preview.toml contiene referencia productiva"
-fi
-
+if grep -nE 'database_name = "intap_db"|bucket_name = "intap-r2"|name = "intap-api"$' api/wrangler.preview.toml; then fail "wrangler.preview.toml contiene referencia productiva"; fi
 grep -Fq 'VITE_API_URL=https://intap-api-preview.fliaprince.workers.dev' web/.env.preview || fail "web/.env.preview no apunta al API Preview"
-
 echo "✓ Rama segura: $(git branch --show-current)"
 echo "✓ HEAD: $(git rev-parse HEAD)"
 echo "✓ Config Preview aislada comprobada"
 echo "✓ Web Preview apunta al Worker Preview, no a api.intaprd.com"
 
 printf '\n▶ Preparar entorno Python aislado para optimización de assets\n'
-if [ ! -x "$VENV_DIR/bin/python" ]; then
-  run python3 -m venv "$VENV_DIR"
-fi
-if ! "$VENV_DIR/bin/python" -c 'import PIL' >/dev/null 2>&1; then
-  run "$VENV_DIR/bin/python" -m pip install --disable-pip-version-check --no-input Pillow
-fi
+if [ ! -x "$VENV_DIR/bin/python" ]; then run python3 -m venv "$VENV_DIR"; fi
+if ! "$VENV_DIR/bin/python" -c 'import PIL' >/dev/null 2>&1; then run "$VENV_DIR/bin/python" -m pip install --disable-pip-version-check --no-input Pillow; fi
 "$VENV_DIR/bin/python" -c 'from PIL import Image; print("✓ Pillow disponible en venv:", Image.__version__)' || fail "Pillow no quedó disponible en venv"
 
 printf '\n▶ Preparar y optimizar recursos reales de Argenis\n'
@@ -85,10 +60,7 @@ run "$VENV_DIR/bin/python" scripts/prepare-adonisg-assets.py
 
 printf '\n▶ Validar TypeScript y build Web EN MODO PREVIEW\n'
 (cd web && npm run build:preview) || fail "Build Web Preview"
-
-if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then
-  fail "El bundle Preview contiene api.intaprd.com"
-fi
+if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then fail "El bundle Preview contiene api.intaprd.com"; fi
 grep -R -Fq 'https://intap-api-preview.fliaprince.workers.dev' web/dist/assets || fail "El bundle Preview no contiene el API Preview"
 echo "✓ Bundle Web Preview apunta exclusivamente al backend Preview esperado"
 
@@ -110,14 +82,11 @@ printf '\n▶ Deploy Web + Pages Functions SOLO Preview\n'
 WEB_LOG="$LOG_DIR/web-pages-$(date +%Y%m%d-%H%M%S).log"
 npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH" 2>&1 | tee "$WEB_LOG"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Web Preview"
-
 WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$WEB_LOG" | tail -1)"
 [ -n "$WEB_ORIGIN" ] || fail "No pude identificar WEB_PAGES_ORIGIN"
 echo "✓ WEB_PAGES_ORIGIN=$WEB_ORIGIN"
 
 printf '\n▶ Esperar propagación real de Pages/Functions\n'
-# Históricamente Kawvo espera 8–10 s tras Pages. Aquí usamos retries porque
-# deployments inmutables recién publicados pueden responder 404 durante unos segundos.
 wait_http_200 "$WEB_ORIGIN/" "Web Preview root" 10 4
 wait_http_200 "$WEB_ORIGIN/index.html" "Web Preview index.html" 10 4
 wait_http_200 "$WEB_ORIGIN/adonisg" "Perfil /adonisg" 10 4
@@ -127,9 +96,15 @@ for url in \
   "$WEB_ORIGIN/adonisg?lang=en" \
   "$WEB_ORIGIN/assets/adonisg/hero/argenis-hero.webp" \
   "$WEB_ORIGIN/assets/adonisg/brand/logo-white.png" \
+  "$WEB_ORIGIN/assets/adonisg/portraits/argenis-01.webp" \
+  "$WEB_ORIGIN/assets/adonisg/portraits/argenis-06.webp" \
   "$WEB_ORIGIN/assets/adonisg/portfolio/beauty-fragrance/beauty-cover.webp" \
+  "$WEB_ORIGIN/assets/adonisg/portfolio/red-statement/red-03.webp" \
   "$WEB_ORIGIN/assets/adonisg/media/dlb-dmh-exito.webp" \
+  "$WEB_ORIGIN/assets/adonisg/media/la-vitrina.webp" \
+  "$WEB_ORIGIN/assets/adonisg/testimonials/dr-hugo-maria.webp" \
   "$WEB_ORIGIN/assets/adonisg/certifications/cert-01.webp" \
+  "$WEB_ORIGIN/assets/adonisg/videos/video-01.mp4" \
   "$WEB_ORIGIN/assets/adonisg/og/adonisg-og.jpg" \
   "$WEB_ORIGIN/adonisg/ai.md" \
   "$WEB_ORIGIN/adonisg/facts.json" \
@@ -160,9 +135,7 @@ assert 'Argenis Grullón' in text
 print('✓ facts.json válido y contiene identidad')
 PY
 
-printf '\n============================================================\n'
-printf '✓ /adonisg · PREVIEW LISTO PARA QA VISUAL HUMANO\n'
-printf '============================================================\n'
+printf '\n============================================================\n✓ /adonisg · PREVIEW LISTO PARA QA VISUAL HUMANO\n============================================================\n'
 echo "Rama:       $BRANCH"
 echo "Commit:     $(git rev-parse HEAD)"
 echo "ES:         $WEB_ORIGIN/adonisg"
