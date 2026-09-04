@@ -20,6 +20,32 @@ cleanup_assets(){
 }
 trap cleanup_assets EXIT
 
+wait_http_200(){
+  local url="$1"
+  local label="$2"
+  local attempts="${3:-8}"
+  local delay="${4:-4}"
+  local code="000"
+  local i
+  for i in $(seq 1 "$attempts"); do
+    code="$(curl -sS -L --max-time 30 -o /dev/null -w '%{http_code}' "${url}${url#*\?}" 2>/dev/null || true)"
+    # La expresión anterior no añade cache-buster correctamente a URLs sin query;
+    # rehacemos el request explícitamente para evitar edge cache durante propagación.
+    if [[ "$url" == *\?* ]]; then
+      code="$(curl -sS -L --max-time 30 -o /dev/null -w '%{http_code}' "${url}&kawvo_preview_probe=$(date +%s)-$i" 2>/dev/null || true)"
+    else
+      code="$(curl -sS -L --max-time 30 -o /dev/null -w '%{http_code}' "${url}?kawvo_preview_probe=$(date +%s)-$i" 2>/dev/null || true)"
+    fi
+    if [ "$code" = "200" ]; then
+      echo "✓ $label -> HTTP 200 (intento $i/$attempts)"
+      return 0
+    fi
+    echo "… $label -> HTTP $code (intento $i/$attempts); esperando ${delay}s por propagación Pages"
+    sleep "$delay"
+  done
+  fail "$label no alcanzó HTTP 200 después de $attempts intentos (último HTTP $code)"
+}
+
 cd "$ROOT" || fail "No existe $ROOT"
 mkdir -p "$LOG_DIR"
 
@@ -60,7 +86,6 @@ run "$VENV_DIR/bin/python" scripts/prepare-adonisg-assets.py
 printf '\n▶ Validar TypeScript y build Web EN MODO PREVIEW\n'
 (cd web && npm run build:preview) || fail "Build Web Preview"
 
-# Guardia crítica: el bundle Preview no puede contener el API productivo.
 if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then
   fail "El bundle Preview contiene api.intaprd.com"
 fi
@@ -83,7 +108,6 @@ echo "✓ API /adonisg devuelve identidad + template correctos desde D1 Preview"
 
 printf '\n▶ Deploy Web + Pages Functions SOLO Preview\n'
 WEB_LOG="$LOG_DIR/web-pages-$(date +%Y%m%d-%H%M%S).log"
-# Desde raíz: así Wrangler incluye functions/ y no pierde SEO/GEO/AI discovery.
 npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH" 2>&1 | tee "$WEB_LOG"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Web Preview"
 
@@ -91,9 +115,15 @@ WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$WEB_LOG"
 [ -n "$WEB_ORIGIN" ] || fail "No pude identificar WEB_PAGES_ORIGIN"
 echo "✓ WEB_PAGES_ORIGIN=$WEB_ORIGIN"
 
+printf '\n▶ Esperar propagación real de Pages/Functions\n'
+# Históricamente Kawvo espera 8–10 s tras Pages. Aquí usamos retries porque
+# deployments inmutables recién publicados pueden responder 404 durante unos segundos.
+wait_http_200 "$WEB_ORIGIN/" "Web Preview root" 10 4
+wait_http_200 "$WEB_ORIGIN/index.html" "Web Preview index.html" 10 4
+wait_http_200 "$WEB_ORIGIN/adonisg" "Perfil /adonisg" 10 4
+
 printf '\n▶ Smokes técnicos perfil + assets + discovery\n'
 for url in \
-  "$WEB_ORIGIN/adonisg" \
   "$WEB_ORIGIN/adonisg?lang=en" \
   "$WEB_ORIGIN/assets/adonisg/hero/argenis-hero.webp" \
   "$WEB_ORIGIN/assets/adonisg/brand/logo-white.png" \
@@ -106,13 +136,11 @@ for url in \
   "$WEB_ORIGIN/robots.txt" \
   "$WEB_ORIGIN/sitemap.xml" \
   "$WEB_ORIGIN/llms.txt"; do
-  code="$(curl -sS -L -o /dev/null -w '%{http_code}' "$url")"
-  [ "$code" = '200' ] || fail "$url respondió HTTP $code"
-  echo "✓ $url -> HTTP 200"
+  wait_http_200 "$url" "$url" 6 3
 done
 
 printf '\n▶ Validar SEO/GEO server-side para crawler\n'
-CRAWLER_HTML="$(curl -sS -A 'Twitterbot/1.0' "$WEB_ORIGIN/adonisg")"
+CRAWLER_HTML="$(curl -sS -A 'Twitterbot/1.0' "$WEB_ORIGIN/adonisg?kawvo_crawler_probe=$(date +%s)")"
 printf '%s' "$CRAWLER_HTML" | grep -Fq 'Argenis Grullón' || fail "Metadata crawler no contiene Argenis Grullón"
 printf '%s' "$CRAWLER_HTML" | grep -Fq 'rel="canonical"' || fail "Falta canonical"
 printf '%s' "$CRAWLER_HTML" | grep -Fq 'og:title' || fail "Falta og:title"
@@ -121,9 +149,9 @@ printf '%s' "$CRAWLER_HTML" | grep -Fq 'application/ld+json' || fail "Falta JSON
 echo "✓ SEO/GEO server-side presente"
 
 printf '\n▶ Validar recursos IA del perfil\n'
-curl -sS "$WEB_ORIGIN/adonisg/ai.md" -o /tmp/adonisg-ai.md
+curl -sS "$WEB_ORIGIN/adonisg/ai.md?kawvo_ai_probe=$(date +%s)" -o /tmp/adonisg-ai.md
 grep -Fq 'Argenis Grullón' /tmp/adonisg-ai.md || fail "ai.md no contiene Argenis Grullón"
-curl -sS "$WEB_ORIGIN/adonisg/facts.json" -o /tmp/adonisg-facts.json
+curl -sS "$WEB_ORIGIN/adonisg/facts.json?kawvo_facts_probe=$(date +%s)" -o /tmp/adonisg-facts.json
 python3 - <<'PY'
 import json
 p=json.load(open('/tmp/adonisg-facts.json'))
