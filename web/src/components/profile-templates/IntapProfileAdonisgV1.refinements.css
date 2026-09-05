@@ -10,8 +10,8 @@
 .adonis-profile .adonis-brand-strip{
   position:relative;
   background:#fff!important;
-  padding:34px 16px 38px;
-  min-height:180px;
+  padding:24px 12px 28px;
+  min-height:190px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -21,10 +21,10 @@
 .adonis-profile .adonis-brand-strip::after{content:none!important;display:none!important}
 .adonis-profile .adonis-brand-strip img{
   display:block!important;
-  width:min(96%,560px)!important;
+  width:min(100%,600px)!important;
   max-width:none!important;
   height:auto!important;
-  max-height:150px!important;
+  max-height:178px!important;
   margin:0 auto!important;
   object-fit:contain!important;
   opacity:1!important;
@@ -169,8 +169,8 @@
 }
 
 @media (max-width:420px){
-  .adonis-profile .adonis-brand-strip{min-height:168px;padding:30px 10px 34px}
-  .adonis-profile .adonis-brand-strip img{width:98%!important;max-height:138px!important}
+  .adonis-profile .adonis-brand-strip{min-height:182px;padding:22px 8px 26px}
+  .adonis-profile .adonis-brand-strip img{width:100%!important;max-height:162px!important}
   .adonis-profile .adonis-featured-project{padding:14px;border-radius:18px}
   .adonis-profile .adonis-portfolio .adonis-fixed-media,
   .adonis-profile .adonis-project-modal .adonis-fixed-media{width:100%}
