@@ -10,7 +10,7 @@ SET
   category='Servicios profesionales',
   subcategory='Asesoría de imagen y estilismo de moda',
   template_id='personal_brand_adonisg_v1',
-  template_data='{"role":"Asesor de Imagen · Estilista de Moda · Estratega de Marca","role_en":"Image Consultant · Fashion Stylist · Personal Brand Strategist","whatsapp":"18293024095","languages":{"default":"es","enabled":["es","en"]},"instagram_url":"https://www.instagram.com/argenisgrullonrd/","instagram_feed_endpoint":"/api/argenisg-instagram","media_mentions_json":"[]","collaborations_json":"[{\"name\":\"Raquel Moreta\"},{\"name\":\"Lily Payamps\"},{\"name\":\"Lilibeth Durán\"},{\"name\":\"Todo Abrigos\"},{\"name\":\"Black Photos\"},{\"name\":\"Jeisly Blossom\"}]"}',
+  template_data='{"role":"Asesor de Imagen · Estilista de Moda · Estratega de Marca","role_en":"Image Consultant · Fashion Stylist · Personal Brand Strategist","whatsapp":"18293024095","languages":{"default":"es","enabled":["es","en"]},"instagram_url":"https://www.instagram.com/argenisgrullonrd/","instagram_feed_endpoint":"https://intap-api-preview.fliaprince.workers.dev/api/v1/public/profiles/argenisg/instagram/latest","media_mentions_json":"[]","collaborations_json":"[{\"name\":\"Raquel Moreta\"},{\"name\":\"Lily Payamps\"},{\"name\":\"Lilibeth Durán\"},{\"name\":\"Todo Abrigos\"},{\"name\":\"Black Photos\"},{\"name\":\"Jeisly Blossom\"}]"}',
   is_published=1,
   is_active=1,
   updated_at=datetime('now')
