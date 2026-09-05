@@ -39,6 +39,10 @@ printf '\n▶ Preparar ruta final /argenisg y canonical host-aware\n'
 run python3 scripts/prepare-argenisg-final-route.py
 grep -Fq '/argenisg' web/src/components/profile-templates/IntapProfileAdonisgV1.tsx || fail "Ruta /argenisg no quedó aplicada"
 
+printf '\n▶ Preparar última publicación Instagram inline\n'
+run python3 scripts/prepare-argenisg-instagram-inline.py
+grep -Fq 'InstagramLatestMedia' web/src/components/profile-templates/IntapProfileAdonisgV1.tsx || fail "Viewer Instagram inline no quedó aplicado"
+
 printf '\n▶ Build Web Preview\n'
 (cd web && npm run build:preview) || fail "Build Web Preview"
 if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then fail "Bundle Preview contiene API productiva"; fi
