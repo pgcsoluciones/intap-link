@@ -27,7 +27,7 @@ export const onRequestGet = async ({ env }: PagesContext) => {
   const user = env.ARGENIS_INSTAGRAM_USER_ID?.trim() || 'me'
   const url = new URL(`https://graph.instagram.com/${encodeURIComponent(user)}/media`)
   url.searchParams.set('fields', 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp')
-  url.searchParams.set('limit', '6')
+  url.searchParams.set('limit', '1')
   url.searchParams.set('access_token', token)
 
   try {
@@ -42,7 +42,7 @@ export const onRequestGet = async ({ env }: PagesContext) => {
       return json({ configured: true, items: [], upstream_status: upstream.status }, 502, 'no-store')
     }
 
-    return json({ configured: true, items: payload.data.slice(0, 6) })
+    return json({ configured: true, items: payload.data.slice(0, 1) })
   } catch (error) {
     console.error('Instagram feed request failed', error)
     return json({ configured: true, items: [] }, 502, 'no-store')
