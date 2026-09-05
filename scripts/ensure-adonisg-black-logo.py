@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import shutil
 import tempfile
 import zipfile
 from pathlib import Path
@@ -69,23 +70,29 @@ def make_black_transparent(src: Path, dest: Path) -> None:
 
 
 def main() -> None:
-    # Prefer the exact user-supplied transparent black logo when it exists locally.
+    # Highest priority: the exact black transparent PNG supplied for the strip
+    # below the hero. Copy it byte-for-byte; do not convert it to WEBP/JPEG or
+    # derive a replacement while this file is available.
+    exact = find_named("logo-ngro-debajo-hero-sin-fondo.png")
+    if exact:
+        TARGET.parent.mkdir(parents=True, exist_ok=True)
+        if exact.resolve() != TARGET.resolve():
+            shutil.copy2(exact, TARGET)
+        print(f"✓ Logo exacto debajo del hero preservado como PNG: {exact}")
+        return
+
+    # Secondary accepted originals, also kept as PNG.
     supplied = find_named("logo-ngro-hero-sin-fondo.png", "LOGO NEGRO -sinfondo-01.png")
     if supplied and supplied.resolve() != TARGET.resolve():
         TARGET.parent.mkdir(parents=True, exist_ok=True)
-        with Image.open(supplied) as im:
-            im = ImageOps.exif_transpose(im).convert("RGBA")
-            im.thumbnail((1400, 1400), Image.Resampling.LANCZOS)
-            im.save(TARGET, "PNG", optimize=True)
+        shutil.copy2(supplied, TARGET)
         print(f"✓ Logo negro transparente localizado: {supplied}")
         return
     if TARGET.is_file():
         print(f"✓ Logo negro transparente listo: {TARGET}")
         return
 
-    # Fallback: derive black pixels from the official white transparent logo,
-    # preserving its exact alpha/silhouette instead of depending on a missing
-    # 'LOGO NEGRO@2x' filename inside the historical ZIP.
+    # Last-resort fallback only when no official black transparent PNG exists.
     brand_zip = find_brand_zip()
     with tempfile.TemporaryDirectory(prefix="adonisg-logo-") as td:
         tmp = Path(td)
