@@ -5,16 +5,17 @@
 .adonis-profile .adonis-top-logo-wrap{display:none!important}
 .adonis-profile .adonis-topbar{justify-content:flex-end}
 
-/* Identity strip below hero. Use the real black transparent logo already restored
-   by the Preview workflow. Never hide it behind a pseudo-element. */
+/* Identity strip below hero. The asset is a transparent PNG; never paint a black
+   replacement box, invert it, rasterize it to another format, or hide it. */
 .adonis-profile .adonis-brand-strip{
   position:relative;
-  background:#fff;
+  background:#fff!important;
   padding:34px 16px 38px;
   min-height:180px;
   display:flex;
   align-items:center;
   justify-content:center;
+  overflow:hidden;
 }
 .adonis-profile .adonis-brand-strip::before,
 .adonis-profile .adonis-brand-strip::after{content:none!important;display:none!important}
@@ -23,18 +24,21 @@
   width:min(96%,560px)!important;
   max-width:none!important;
   height:auto!important;
-  max-height:none!important;
+  max-height:150px!important;
   margin:0 auto!important;
   object-fit:contain!important;
   opacity:1!important;
   visibility:visible!important;
+  background:transparent!important;
+  filter:none!important;
+  mix-blend-mode:normal!important;
 }
 
 .adonis-profile .adonis-manifesto h2{white-space:pre-line;line-height:1.02}
 
-/* Portfolio: fixed editorial stage + white copy requested. */
-.adonis-profile .adonis-portfolio{text-align:center}
-.adonis-profile .adonis-portfolio h2{color:#fff!important;text-align:center}
+/* Portfolio: title belongs to the light paper heading, while the project card is black. */
+.adonis-profile .adonis-portfolio{text-align:center;background:#f8f6f1!important}
+.adonis-profile .adonis-portfolio>h2{color:#111!important;text-align:center!important}
 .adonis-profile .adonis-featured-project{
   background:#050505;
   border-radius:22px;
@@ -166,7 +170,7 @@
 
 @media (max-width:420px){
   .adonis-profile .adonis-brand-strip{min-height:168px;padding:30px 10px 34px}
-  .adonis-profile .adonis-brand-strip img{width:98%!important}
+  .adonis-profile .adonis-brand-strip img{width:98%!important;max-height:138px!important}
   .adonis-profile .adonis-featured-project{padding:14px;border-radius:18px}
   .adonis-profile .adonis-portfolio .adonis-fixed-media,
   .adonis-profile .adonis-project-modal .adonis-fixed-media{width:100%}
