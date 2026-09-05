@@ -16,6 +16,7 @@ export const PROFILE_TEMPLATE_IDS = {
   oneAEventos: 'events_1a_v1',
   rentaoRd: 'car_rental_rentao_v1',
   aycDominicana: 'industrial_aycdom_v1',
+  adonisg: 'personal_brand_adonisg_v1',
 } as const
 
 
@@ -64,6 +65,16 @@ const RentaoTemplate = lazy(
 const AyCTemplate = lazy(
   () =>
     import('./IntapProfileAyCDominicanaV1')
+      .then((module) => ({
+        default:
+          module.default as ProfileTemplateComponent,
+      })),
+)
+
+
+const AdonisgTemplate = lazy(
+  () =>
+    import('./IntapProfileAdonisgV1')
       .then((module) => ({
         default:
           module.default as ProfileTemplateComponent,
@@ -135,6 +146,14 @@ export function renderRegisteredProfileTemplate(
     case PROFILE_TEMPLATE_IDS.aycDominicana:
       content = (
         <AyCTemplate
+          profile={profile}
+        />
+      )
+      break
+
+    case PROFILE_TEMPLATE_IDS.adonisg:
+      content = (
+        <AdonisgTemplate
           profile={profile}
         />
       )

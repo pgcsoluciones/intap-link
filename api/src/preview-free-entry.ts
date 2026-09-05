@@ -12,6 +12,7 @@ import './scan-status'
 import './scan-to-claim'
 import './ai-profile-assistant-access'
 import './ai-profile-assistant'
+import './instagram-preview'
 import { registerDemoAiRoutes } from './routes/demo-ai'
 import app from './preview-free-actions'
 
