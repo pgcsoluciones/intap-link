@@ -13,7 +13,7 @@ export type InstagramMediaItem = InstagramMediaChild & {
   caption?: string
   permalink?: string
   timestamp?: string
-  children?: InstagramMediaChild[]
+  children?: InstagramMediaChild[] | { data?: InstagramMediaChild[] }
 }
 
 function isVideo(type?: string) {
@@ -46,7 +46,8 @@ function MediaPane({ item }: { item: InstagramMediaChild }) {
 
 export default function InstagramLatestMedia({ item }: { item: InstagramMediaItem }) {
   const slides = useMemo(() => {
-    const children = Array.isArray(item.children) ? item.children.filter(child => child.media_url || child.thumbnail_url) : []
+    const rawChildren = Array.isArray(item.children) ? item.children : (item.children?.data || [])
+    const children = rawChildren.filter(child => child.media_url || child.thumbnail_url)
     if (item.media_type === 'CAROUSEL_ALBUM' && children.length) return children
     return [item]
   }, [item])
