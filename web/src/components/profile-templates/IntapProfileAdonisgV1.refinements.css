@@ -103,6 +103,31 @@
 }
 .adonis-profile .adonis-media-card{align-items:stretch}
 
+/* Instagram: only the latest publication, centered and large enough to read.
+   Reels/videos use the thumbnail returned by Instagram and open the original post. */
+.adonis-profile .adonis-instagram .adonis-feed-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  width:min(100%,430px)!important;
+  margin:24px auto!important;
+  gap:0!important;
+}
+.adonis-profile .adonis-instagram .adonis-feed-grid>a{
+  display:block!important;
+  width:100%!important;
+  aspect-ratio:1/1!important;
+  overflow:hidden!important;
+  border-radius:22px!important;
+  background:#0a0a0a!important;
+}
+.adonis-profile .adonis-instagram .adonis-feed-grid img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+
 /* Platform block: logo is the title. */
 .adonis-profile .adonis-platform img{
   display:block!important;
@@ -174,6 +199,7 @@
   .adonis-profile .adonis-featured-project{padding:14px;border-radius:18px}
   .adonis-profile .adonis-portfolio .adonis-fixed-media,
   .adonis-profile .adonis-project-modal .adonis-fixed-media{width:100%}
+  .adonis-profile .adonis-instagram .adonis-feed-grid{width:100%!important}
   .adonis-profile .adonis-platform img{width:98%!important;margin-bottom:24px!important}
   .adonis-profile .adonis-contact-icons{padding-bottom:22px!important}
   .adonis-profile .adonis-share-actions{padding:2px 18px 38px!important;gap:10px 26px!important}
