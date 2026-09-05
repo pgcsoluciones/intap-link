@@ -1,0 +1,45 @@
+/* Instagram latest-post viewer · stays inside the profile */
+.adonis-profile .adonis-feed-single{
+  width:min(100%,520px);
+  margin:22px auto 12px;
+  border-radius:22px;
+  overflow:hidden;
+  background:#050505;
+}
+.adonis-profile .adonis-feed-single img,
+.adonis-profile .adonis-feed-single video{
+  display:block;
+  width:100%;
+  height:auto;
+  max-height:720px;
+  object-fit:contain;
+  background:#050505;
+}
+.adonis-profile .adonis-feed-carousel{
+  display:flex;
+  overflow-x:auto;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;
+  overscroll-behavior-x:contain;
+}
+.adonis-profile .adonis-feed-carousel::-webkit-scrollbar{display:none}
+.adonis-profile .adonis-feed-slide{
+  min-width:100%;
+  scroll-snap-align:center;
+  background:#050505;
+}
+.adonis-profile .adonis-feed-caption{
+  margin:12px auto 0;
+  max-width:520px;
+  font-size:14px;
+  line-height:1.55;
+  color:inherit;
+  white-space:pre-line;
+}
+.adonis-profile .adonis-feed-hint{
+  display:block;
+  margin:8px auto 0;
+  font-size:11px;
+  opacity:.62;
+  letter-spacing:.04em;
+}
