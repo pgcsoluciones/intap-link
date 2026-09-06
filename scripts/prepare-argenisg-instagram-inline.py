@@ -26,11 +26,16 @@ if old_fetch in text:
     text = text.replace(old_fetch, new_fetch, 1)
 
 old_section = "    <section className=\"adonis-instagram\"><h2>{t.latest}</h2><p>{t.latestCopy}</p>{feed.length > 0 ? <div className=\"adonis-feed-grid\">{feed.map((item, i) => <a key={item.id || i} href={item.permalink || instagram} target=\"_blank\" rel=\"noopener noreferrer\"><img src={item.thumbnail_url || item.media_url} alt={item.caption || 'Instagram'} /></a>)}</div> : feedReady && <div className=\"adonis-feed-empty\"><FaInstagram /></div>}<a href={instagram} target=\"_blank\" rel=\"noopener noreferrer\">{t.instagramCta} <FaArrowRight /></a></section>\n"
-new_section = "    <section className=\"adonis-instagram\"><h2>{t.latest}</h2><p>{t.latestCopy}</p>{feed.length > 0 ? <InstagramLatestMedia item={feed[0]} /> : feedReady && <div className=\"adonis-feed-empty\"><FaInstagram /></div>}<a href={instagram} target=\"_blank\" rel=\"noopener noreferrer\">{t.instagramCta} <FaArrowRight /></a></section>\n"
+previous_inline_section = "    <section className=\"adonis-instagram\"><h2>{t.latest}</h2><p>{t.latestCopy}</p>{feed.length > 0 ? <InstagramLatestMedia item={feed[0]} /> : feedReady && <div className=\"adonis-feed-empty\"><FaInstagram /></div>}<a href={instagram} target=\"_blank\" rel=\"noopener noreferrer\">{t.instagramCta} <FaArrowRight /></a></section>\n"
+new_section = "    <section className=\"adonis-instagram\"><h2>{t.latest}</h2><p>{t.latestCopy}</p>{feed.length > 0 ? <InstagramLatestMedia item={feed[0]} /> : feedReady && <div className=\"adonis-feed-empty\"><FaInstagram /></div>}</section>\n"
+
 if new_section not in text:
-    if old_section not in text:
+    if previous_inline_section in text:
+        text = text.replace(previous_inline_section, new_section, 1)
+    elif old_section in text:
+        text = text.replace(old_section, new_section, 1)
+    else:
         raise SystemExit('No encontré sección Instagram esperada para convertirla a reproducción inline')
-    text = text.replace(old_section, new_section, 1)
 
 TARGET.write_text(text, encoding="utf-8")
-print('✓ Instagram latest: una sola publicación, foto/video/reel/carrusel reproducible dentro del perfil')
+print('✓ Instagram latest: una sola publicación inline, sin CTA externo y con composición preservada')
