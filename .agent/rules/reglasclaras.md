@@ -224,3 +224,30 @@ Ausencia de deuda técnica.
 Integridad estructural.
 
 Control total del ecosistema Cloudflare.
+
+---
+
+## 1️⃣1️⃣ Método operativo aprobado con asistente remoto
+
+Esta regla es obligatoria y complementa las anteriores.
+
+Cuando el asistente tenga acceso de lectura/escritura al repositorio:
+
+- el asistente debe investigar y ejecutar directamente los cambios de código en el repo;
+- el asistente debe revisar rama, HEAD, contexto y archivos antes de modificar;
+- el asistente debe crear commits trazables;
+- el asistente no debe pedir al usuario que edite archivos por terminal si puede realizar el cambio directamente;
+- el usuario solo ejecuta comandos cuando la acción depende de su entorno local o de credenciales que el asistente no posee, principalmente sincronización local, build/deploy autenticado, pruebas físicas y QA visual;
+- cuando el usuario deba ejecutar comandos, se debe entregar un único bloque listo para copiar y pegar;
+- no se deben delegar al usuario verificaciones Git rutinarias que el asistente pueda resolver desde GitHub;
+- se trabaja Preview primero y Producción únicamente con autorización explícita;
+- se trabaja por lotes pequeños y cada runner debe tocar solo las capas necesarias para el lote actual;
+- un cambio UI-only no debe tocar D1, Worker, OAuth, migraciones ni Producción;
+- tras el QA, si el usuario no aprueba el lote, se corrige ese mismo lote antes de avanzar;
+- si el asistente carece realmente de una herramienta o permiso necesario, debe indicarlo explícitamente antes de pedir una edición manual al usuario.
+
+Regla corta obligatoria:
+
+**Asistente = analiza, modifica, versiona y prepara. Usuario = sincroniza local, despliega cuando sus credenciales sean necesarias y hace QA/aprobación.**
+
+Esta regla no debe tratarse como una preferencia temporal de una conversación, sino como parte del contrato operativo permanente del proyecto.
