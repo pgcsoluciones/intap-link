@@ -54,6 +54,17 @@ function oauthConfig(c: any) {
   return { appId, appSecret, encryptionKey, callback }
 }
 
+function profileReturnUrl(c: any, slug: string): string {
+  const configured = String(c.env.INSTAGRAM_PROFILE_RETURN_ORIGIN || c.env.WEB_URL || '').trim()
+  const fallback = new URL(c.req.url).origin
+  const base = (configured || fallback).replace(/\/$/, '')
+  return `${base}/${encodeURIComponent(slug || 'argenisg')}`
+}
+
+function environmentLabel(c: any): string {
+  return String(c.env.ENVIRONMENT || '').trim().toLowerCase() === 'preview' ? 'Preview' : 'Producción'
+}
+
 function htmlPage(title: string, body: string, status = 200) {
   return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:Inter,system-ui,sans-serif;background:#0d0d0d;color:#fff;margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}.card{max-width:560px;background:#171717;border:1px solid #333;border-radius:24px;padding:32px;text-align:center}.ok{font-size:48px;margin-bottom:12px}a{color:#fff}</style></head><body><main class="card">${body}</main></body></html>`, { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow' } })
 }
@@ -65,7 +76,7 @@ app.get('/api/v1/integrations/instagram/connect', async (c: any) => {
 
   const { appId, appSecret, encryptionKey, callback } = oauthConfig(c)
   if (!appId || !appSecret || !encryptionKey) {
-    return htmlPage('Instagram pendiente', '<h1>Instagram OAuth aún no está configurado</h1><p>El entorno Preview necesita sus secretos de Meta antes de iniciar la vinculación.</p>', 503)
+    return htmlPage('Instagram pendiente', '<h1>Instagram OAuth aún no está configurado</h1><p>Este entorno necesita sus secretos de Meta antes de iniciar la vinculación.</p>', 503)
   }
 
   const inviteHash = await sha256Hex(invite)
@@ -191,8 +202,10 @@ app.get('/api/v1/integrations/instagram/callback', async (c: any) => {
     c.env.DB.prepare(`UPDATE profile_instagram_invites SET status='used', used_at=datetime('now') WHERE id=?`).bind((stateRow as any).invite_id),
   ])
 
-  const profileUrl = `https://preview.intaprd.com/${encodeURIComponent(String((stateRow as any).slug || 'argenisg'))}`
-  return htmlPage('Instagram conectado', `<div class="ok">✓</div><h1>Instagram vinculado correctamente</h1><p>${username ? `@${username} quedó conectado al perfil Preview.` : 'La cuenta autorizada quedó conectada al perfil Preview.'}</p><p><a href="${profileUrl}">Volver al perfil</a></p>`)
+  const slug = String((stateRow as any).slug || 'argenisg')
+  const profileUrl = profileReturnUrl(c, slug)
+  const envLabel = environmentLabel(c)
+  return htmlPage('Instagram conectado', `<div class="ok">✓</div><h1>Instagram vinculado correctamente</h1><p>${username ? `@${username} quedó conectado al perfil ${envLabel}.` : `La cuenta autorizada quedó conectada al perfil ${envLabel}.`}</p><p><a href="${profileUrl}">Volver al perfil</a></p>`)
 })
 
 app.get('/api/v1/public/profiles/:slug/instagram/latest', async (c: any) => {
