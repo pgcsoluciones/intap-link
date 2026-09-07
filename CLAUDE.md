@@ -9,6 +9,28 @@
 └── api/   → Worker de Cloudflare (backend/API)
 ```
 
+## Contrato operativo obligatorio con el asistente
+
+Cuando el asistente tenga acceso de lectura/escritura al repositorio, el método aprobado es:
+
+- el asistente inspecciona rama, HEAD, diffs y archivos;
+- el asistente realiza directamente las modificaciones de código en el repo;
+- el asistente crea commits trazables y prepara los cambios;
+- **no se debe pedir al usuario que edite archivos por terminal si el asistente puede hacer el cambio directamente**;
+- el usuario recibe comandos solo para sincronizar su copia local, ejecutar deploy/build con sus credenciales, o realizar QA que dependa de su Mac/dispositivo;
+- cuando el usuario deba ejecutar comandos, deben entregarse en un único bloque listo para copiar y pegar;
+- no se deben delegar al usuario verificaciones Git rutinarias que el asistente pueda resolver con acceso al repositorio;
+- Preview primero y Producción solo con autorización explícita;
+- trabajar por lotes pequeños y no tocar D1, Worker, OAuth, migraciones o Producción si el lote actual no lo requiere;
+- si un cambio es UI-only, el runner debe ser UI-only;
+- si por una limitación real el asistente no puede escribir en el repo, debe declararlo antes de pedir una edición manual.
+
+Regla resumida:
+
+> **Asistente = analiza, modifica, versiona y prepara. Usuario = sincroniza local, despliega cuando sus credenciales sean necesarias y hace QA/aprobación.**
+
+Este contrato prevalece como rutina de trabajo del proyecto y debe mantenerse en futuras sesiones.
+
 ## Fuente de verdad de despliegue
 
 La propiedad de cada frontend se determina por los dominios activos de Cloudflare y por el contrato de Producción del repositorio.

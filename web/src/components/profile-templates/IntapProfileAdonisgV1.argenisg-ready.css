@@ -1,0 +1,19 @@
+/* Final /argenisg refinements. Keep the official transparent PNG intact. */
+.adonis-profile .adonis-brand-strip{
+  min-height:210px!important;
+  padding:26px 10px 30px!important;
+}
+.adonis-profile .adonis-brand-strip img{
+  width:min(100%,620px)!important;
+  max-height:180px!important;
+}
+@media (max-width:420px){
+  .adonis-profile .adonis-brand-strip{
+    min-height:192px!important;
+    padding:22px 6px 26px!important;
+  }
+  .adonis-profile .adonis-brand-strip img{
+    width:100%!important;
+    max-height:168px!important;
+  }
+}

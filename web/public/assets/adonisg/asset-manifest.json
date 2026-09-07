@@ -1,0 +1,29 @@
+{
+  "profile": "adonisg",
+  "templateId": "personal_brand_adonisg_v1",
+  "strategy": "mobile-first curated portfolio",
+  "hero": "/assets/adonisg/hero/argenis-hero.webp",
+  "brand": {
+    "logoWhite": "/assets/adonisg/brand/al-estilo-logo-white.png",
+    "markWhite": "/assets/adonisg/brand/al-estilo-mark-white.png"
+  },
+  "portfolio": [
+    "/assets/adonisg/portfolio/beauty-fragrance/beauty-cover.webp",
+    "/assets/adonisg/portfolio/red-statement/red-cover.webp",
+    "/assets/adonisg/portfolio/noir/noir-cover.webp",
+    "/assets/adonisg/portfolio/couple-lifestyle/couple-cover.webp",
+    "/assets/adonisg/portfolio/evening/evening-cover.webp",
+    "/assets/adonisg/portfolio/mens-brand/mens-cover.webp"
+  ],
+  "media": [
+    "/assets/adonisg/media/dlb-dmh-exito.webp",
+    "/assets/adonisg/media/bazar-emprendedores.webp"
+  ],
+  "certifications": [
+    "/assets/adonisg/certifications/cert-01.webp",
+    "/assets/adonisg/certifications/cert-02.webp",
+    "/assets/adonisg/certifications/cert-03.webp",
+    "/assets/adonisg/certifications/cert-04.webp",
+    "/assets/adonisg/certifications/cert-05.webp"
+  ]
+}
