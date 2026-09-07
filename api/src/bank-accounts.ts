@@ -1,6 +1,6 @@
 import app from './preview-entry'
 import { cookieNames } from './lib/cookies'
-import { resolveFeaturePromotionAccess } from './feature-promotions'
+import { resolveFeaturePromotionAccess } from './lib/feature-promotion-access'
 
 type AccountType = 'savings' | 'checking'
 type Currency = 'DOP' | 'USD'
