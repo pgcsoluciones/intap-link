@@ -3,12 +3,13 @@ import { FaAddressCard, FaArrowLeft, FaArrowRight, FaEnvelope, FaGlobeAmericas, 
 import type { IntapProfileV2Profile } from './IntapProfileV2'
 import { resolveProfileLanguagePolicy, resolveRequestedProfileLanguage, type ProfileLanguageCode } from './profileLanguages'
 import './IntapProfileAdonisgV1.css'
+import InstagramLatestMedia, { type InstagramMediaItem } from './InstagramLatestMedia'
 
 type Localized = { es: string; en: string }
 type Project = { id: string; title: Localized; category: Localized; cover: string; images: string[]; description: Localized }
 type MediaItem = { name: string; title: Localized; image: string }
 type Collaboration = { name: string; role?: string }
-type FeedItem = { id: string; media_url?: string; thumbnail_url?: string; permalink?: string; caption?: string }
+type FeedItem = InstagramMediaItem
 type FaqItem = { q: Localized; a: Localized }
 type TestimonialItem = { quote: Localized; by: Localized; image: string; note?: Localized }
 
@@ -24,7 +25,7 @@ const COPY = {
     certification: 'Formación y certificaciones', certificationCopy: 'Certificado por IBA · Image & Business Academy', viewCredentials: 'Ver credenciales',
     platformTitle: 'Al Estilo de Argenis', platformCopy: 'Una plataforma creada para educar, inspirar y demostrar que la imagen puede convertirse en una poderosa herramienta de transformación personal y profesional.',
     videos: 'Argenis en acción', videosCopy: 'Color, presencia, estilo y propósito. Una selección breve para ver su enfoque en movimiento.',
-    latest: 'Argenis ahora', latestCopy: 'Lo último de @argenisgrullonrd', instagramCta: 'Ver más en Instagram', faq: 'Preguntas frecuentes',
+    latest: 'Argenis en Instagram', latestCopy: 'Lo último de @argenisgrullonrd', instagramCta: 'Ver más en Instagram', faq: 'Preguntas frecuentes',
     quoteA: 'No solo transformo la manera en que te ves.', quoteB: 'Te ayudo a proyectar el poder de quien realmente eres.',
     contactTitle: 'Solicitar asesoría', contactCopy: 'Cuéntame brevemente qué deseas proyectar y te contacto por WhatsApp.',
     name: 'Nombre y apellido', whatsapp: 'WhatsApp', email: 'Correo electrónico', service: 'Servicio', goal: '¿Qué deseas lograr?', send: 'Enviar solicitud', viaWhatsapp: 'Escribir por WhatsApp', close: 'Cerrar',
@@ -43,7 +44,7 @@ const COPY = {
     certification: 'Training and certifications', certificationCopy: 'Certified by IBA · Image & Business Academy', viewCredentials: 'View credentials',
     platformTitle: 'Al Estilo de Argenis', platformCopy: 'A platform created to educate, inspire and show how image can become a powerful tool for personal and professional transformation.',
     videos: 'Argenis in action', videosCopy: 'Color, presence, style and purpose. A short selection to see his approach in motion.',
-    latest: 'Argenis now', latestCopy: 'Latest from @argenisgrullonrd', instagramCta: 'See more on Instagram', faq: 'Frequently asked questions',
+    latest: 'Argenis on Instagram', latestCopy: 'Latest from @argenisgrullonrd', instagramCta: 'See more on Instagram', faq: 'Frequently asked questions',
     quoteA: 'I do not only transform the way you look.', quoteB: 'I help you project the power of who you truly are.',
     contactTitle: 'Request a consultation', contactCopy: 'Tell me briefly what you want to project and I will contact you through WhatsApp.',
     name: 'Full name', whatsapp: 'WhatsApp', email: 'Email', service: 'Service', goal: 'What would you like to achieve?', send: 'Send request', viaWhatsapp: 'Write on WhatsApp', close: 'Close',
@@ -150,7 +151,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
 
   useEffect(() => {
     const origin = (import.meta.env.VITE_PUBLIC_ORIGIN || window.location.origin).replace(/\/$/, '')
-    const canonical = `${origin}/adonisg${language === 'en' ? '?lang=en' : ''}`
+    const canonical = `${window.location.origin.replace(/\/$/, '')}/argenisg${language === 'en' ? '?lang=en' : ''}`
     const title = language === 'en' ? 'Argenis Grullón | Image Consultant & Fashion Stylist' : 'Argenis Grullón | Asesor de Imagen y Estilista de Moda'
     const description = language === 'en' ? 'IBA-certified image consultant, fashion stylist and personal brand strategist in Santiago, Dominican Republic.' : 'Asesor de imagen certificado por IBA, estilista de moda y estratega de marca personal en Santiago, República Dominicana.'
     document.title = title
@@ -161,7 +162,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
     document.documentElement.lang = language
   }, [language])
 
-  useEffect(() => { const endpoint = td.instagram_feed_endpoint; if (!endpoint) { setFeedReady(true); return } fetch(endpoint, { headers: { Accept: 'application/json' } }).then(r => r.ok ? r.json() : Promise.reject()).then(json => { const items = Array.isArray(json?.items) ? json.items : Array.isArray(json?.data) ? json.data : []; setFeed(items.slice(0, 6)); setFeedReady(true) }).catch(() => setFeedReady(true)) }, [td.instagram_feed_endpoint])
+  useEffect(() => { const endpoint = td.instagram_feed_endpoint; if (!endpoint) { setFeedReady(true); return } fetch(endpoint, { headers: { Accept: 'application/json' } }).then(r => r.ok ? r.json() : Promise.reject()).then(json => { const items = Array.isArray(json?.items) ? json.items : Array.isArray(json?.data) ? json.data : []; setFeed(items.slice(0, 1)); setFeedReady(true) }).catch(() => setFeedReady(true)) }, [td.instagram_feed_endpoint])
 
   const openWhatsApp = (message: string) => window.open(`https://wa.me/${cleanPhone(whatsapp)}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   const openProject = (project: Project) => { setProjectPortalOpen(false); setGalleryIndex(0); setActiveProject(project) }
@@ -170,7 +171,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
   const downloadVcard = () => { const card = ['BEGIN:VCARD','VERSION:3.0','FN:Argenis Grullón','ORG:Al Estilo de Argenis','TITLE:Asesor de Imagen · Fashion Stylist',`TEL;TYPE=CELL:+${cleanPhone(whatsapp)}`,email ? `EMAIL:${email}` : '',`URL:${instagram}`,'END:VCARD'].filter(Boolean).join('\r\n'); const url = URL.createObjectURL(new Blob([card], { type: 'text/vcard;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = 'Argenis-Grullon.vcf'; a.click(); URL.revokeObjectURL(url) }
   const playVideo = (index: number) => { videoRefs.current.forEach((video, i) => { if (video && i !== index) { video.pause(); video.currentTime = 0 } }); setSelectedVideo(index); setPlayingVideo(index); setTimeout(() => videoRefs.current[index]?.play(), 0) }
   const finishVideo = (index: number) => { setPlayingVideo(null); if (index !== 0) setSelectedVideo(0) }
-  const profileUrl = typeof window === 'undefined' ? 'https://nfc.kawvoia.com/adonisg' : window.location.href
+  const profileUrl = typeof window === 'undefined' ? 'https://nfc.kawvoia.com/argenisg' : window.location.href
   const shareProfile = () => openWhatsApp(language === 'en' ? `Argenis Grullón profile: ${profileUrl}` : `Perfil de Argenis Grullón: ${profileUrl}`)
   const copyProfileLink = async () => { try { await navigator.clipboard.writeText(profileUrl); setCopied(true); window.setTimeout(() => setCopied(false), 2200) } catch { const input = document.createElement('textarea'); input.value = profileUrl; document.body.appendChild(input); input.select(); document.execCommand('copy'); input.remove(); setCopied(true); window.setTimeout(() => setCopied(false), 2200) } }
 
@@ -220,7 +221,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
 
     <section className="adonis-videos"><h2>{t.videos}</h2><p>{t.videosCopy}</p><div className="adonis-video-feature"><video ref={node => { videoRefs.current[selectedVideo] = node }} key={VIDEOS[selectedVideo]} src={VIDEOS[selectedVideo]} preload="metadata" playsInline controls={playingVideo === selectedVideo} onLoadedMetadata={e => { if (e.currentTarget.currentTime === 0) e.currentTarget.currentTime = 0.12 }} onEnded={() => finishVideo(selectedVideo)} /><button className={`adonis-video-play${playingVideo === selectedVideo ? ' is-hidden' : ''}`} onClick={() => playVideo(selectedVideo)} aria-label="Play"><FaPlay /></button></div><div className="adonis-video-thumbs">{VIDEOS.map((src, i) => i === selectedVideo ? null : <button key={src} onClick={() => playVideo(i)}><video src={src} preload="metadata" muted playsInline onLoadedMetadata={e => { if (e.currentTarget.currentTime === 0) e.currentTarget.currentTime = 0.12 }} /><span><FaPlay /></span></button>)}</div><button className="adonis-btn adonis-btn-dark adonis-video-cta" onClick={() => setContactOpen(true)}>{t.request}</button></section>
 
-    <section className="adonis-instagram"><h2>{t.latest}</h2><p>{t.latestCopy}</p>{feed.length > 0 ? <div className="adonis-feed-grid">{feed.map((item, i) => <a key={item.id || i} href={item.permalink || instagram} target="_blank" rel="noopener noreferrer"><img src={item.thumbnail_url || item.media_url} alt={item.caption || 'Instagram'} /></a>)}</div> : feedReady && <div className="adonis-feed-empty"><FaInstagram /></div>}<a href={instagram} target="_blank" rel="noopener noreferrer">{t.instagramCta} <FaArrowRight /></a></section>
+    <section className="adonis-instagram"><h2>{t.latest}</h2><p>{t.latestCopy}</p>{feed.length > 0 ? <InstagramLatestMedia item={feed[0]} /> : feedReady && <div className="adonis-feed-empty"><FaInstagram /></div>}</section>
 
     <section className="adonis-faq"><h2>{t.faq}</h2>{FAQS.map((item, i) => <article key={item.q.es} className={faqOpen === i ? 'is-open' : ''}><button onClick={() => setFaqOpen(faqOpen === i ? null : i)}><span>{item.q[language]}</span><b>{faqOpen === i ? '×' : '+'}</b></button>{faqOpen === i && <p>{item.a[language]}</p>}</article>)}</section>
 
@@ -228,7 +229,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
 
     <section className="adonis-contact-icons"><button onClick={() => openWhatsApp(language === 'en' ? 'Hello Argenis, I would like information about an image consultation.' : 'Hola Argenis, me interesa una asesoría de imagen.')}><FaWhatsapp /><span>WhatsApp</span></button><a href={instagram} target="_blank" rel="noopener noreferrer"><FaInstagram /><span>Instagram</span></a><button onClick={downloadVcard}><FaAddressCard /><span>{t.contact}</span></button></section>
     <section className="adonis-share-actions"><button onClick={shareProfile}><strong>{t.shareProfile}</strong><small>{t.shareDirect}</small></button><button onClick={copyProfileLink}><strong>{t.copyLink}</strong></button>{copied && <span className="adonis-copy-toast">{t.copied}</span>}</section>
-    <section className="adonis-brand-footer"><img src="/assets/adonisg/brand/linkedin-banner.jpg" alt="Al Estilo de Argenis" /></section>
+    <section className="adonis-brand-footer"><img src="/assets/adonisg/brand/footer-banner.png" alt="Al Estilo de Argenis" /></section>
     <footer className="adonis-credit"><span>ARGENIS GRULLÓN · REPÚBLICA DOMINICANA · 2026</span><a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">Creado por Kawvo Link · nfc.kawvoia.com</a></footer>
 
     {projectPortalOpen && <ModalShell label={t.projectPortal} onClose={() => setProjectPortalOpen(false)} wide><div className="adonis-project-portal"><h2>{t.projectPortal}</h2><div>{PROJECTS.map(project => <button key={project.id} onClick={() => openProject(project)}><div className="adonis-portal-image"><img src={project.cover} alt={project.title[language]} /></div><strong>{project.title[language]}</strong><span>{t.viewDetails}</span></button>)}</div></div></ModalShell>}
