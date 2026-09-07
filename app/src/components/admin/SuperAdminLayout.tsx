@@ -13,7 +13,7 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'resources' | 'resources'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'promotions'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -25,6 +25,7 @@ const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'billing', label: 'Billing / Pagos' },
   { key: 'paymentLinks', label: 'Enlaces de pago' },
   { key: 'products', label: 'Productos / códigos' },
+  { key: 'promotions', label: 'Promociones de funciones' },
   { key: 'landing', label: 'Landing marketing' },
   { key: 'plans', label: 'Planes y módulos' },
   { key: 'gateways', label: 'Pasarelas' },
@@ -59,24 +60,17 @@ export default function SuperAdminLayout({
   }, [currentSection])
 
   function navigate(section: SuperAdminNavSection) {
-    if (section === 'products') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/products') window.location.href = '/superadmin/products'
-      return
+    const routes: Partial<Record<SuperAdminNavSection, string>> = {
+      products: '/superadmin/products',
+      support: '/superadmin/support',
+      resources: '/superadmin/resources',
+      feedback: '/superadmin/feedback',
+      demo: '/superadmin/demo',
+      promotions: '/superadmin/promotions',
     }
-    if (section === 'support') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/support') window.location.href = '/superadmin/support'
-      return
-    }
-    if (section === 'resources') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/resources') window.location.href = '/superadmin/resources'
-      return
-    }
-    if (section === 'feedback') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/feedback') window.location.href = '/superadmin/feedback'
-      return
-    }
-    if (section === 'demo') {
-      if (typeof window !== 'undefined' && window.location.pathname !== '/superadmin/demo') window.location.href = '/superadmin/demo'
+    const route = routes[section]
+    if (route) {
+      if (typeof window !== 'undefined' && window.location.pathname !== route) window.location.href = route
       return
     }
     onNavigate?.(section)
