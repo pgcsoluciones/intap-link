@@ -5,7 +5,7 @@ import { apiGet, apiPost } from '../../lib/api'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 
 type Phase = 'loading' | 'verified' | 'activated' | 'profile_draft' | 'profile_draft_owner' | 'blocked' | 'error'
-type OwnershipChoice = 'self' | null
+type OwnershipChoice = 'self' | 'different' | null
 
 type ProductInfo = {
   public_code?: string
@@ -73,7 +73,7 @@ export default function ScanActivationEntry() {
 
       const loaded = await loadPending()
       if (!loaded) {
-        setMessage('La activación fue preparada, pero no pudimos recuperar su confirmación. Intenta nuevamente.')
+        setMessage('No pudimos continuar con la activación. Intenta nuevamente.')
         setPhase('error')
       }
     } finally {
@@ -114,7 +114,7 @@ export default function ScanActivationEntry() {
           window.location.replace(nextUrl)
           return
         }
-        setMessage('El perfil vinculado no tiene una dirección disponible.')
+        setMessage('No pudimos abrir el perfil asociado a este producto.')
         setPhase('error')
         return
       }
@@ -138,14 +138,11 @@ export default function ScanActivationEntry() {
       }
 
       if (status.state !== 'pending_activation') {
-        setMessage('No pudimos determinar el estado de este producto.')
+        setMessage('No pudimos abrir este producto.')
         setPhase('error')
         return
       }
 
-      // La pantalla pública /l/:code ya preguntó si desea activar ahora.
-      // Aquí solo comprobamos la sesión, preparamos el intent one-time y
-      // confirmamos explícitamente para qué usuario se vinculará el producto.
       const me: any = await apiGet('/me').catch(() => ({ ok: false }))
       if (!active) return
 
@@ -170,12 +167,22 @@ export default function ScanActivationEntry() {
     rememberCode()
 
     try {
-      await apiPost('/auth/logout', {}).catch(() => undefined)
-    } finally {
-      // El logout revoca la sesión actual, pero el intent de activación y el
-      // public_code deben conservarse para que la otra persona pueda entrar.
+      const logout: any = await apiPost('/auth/logout', {}).catch(() => ({ ok: false }))
+      if (!logout?.ok) {
+        setMessage('No pudimos cerrar la sesión actual. Intenta nuevamente.')
+        return
+      }
+
+      const meAfterLogout: any = await apiGet('/me').catch(() => ({ ok: false }))
+      if (meAfterLogout?.ok) {
+        setMessage('La sesión actual sigue abierta. Intenta nuevamente.')
+        return
+      }
+
       rememberCode()
-      window.location.replace(`/admin/login?activation=scan&public_code=${encodeURIComponent(code)}`)
+      window.location.replace(`/admin/login?activation=scan&public_code=${encodeURIComponent(code)}&switch_user=1`)
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -203,13 +210,11 @@ export default function ScanActivationEntry() {
       String(meAfterActivation.data?.subcategory || '').trim()
     )
 
-    // Primera activación: el perfil base todavía necesita completar su presentación.
     if (!hasActivity) {
       navigate('/admin/free/onboarding/intro', { replace: true })
       return
     }
 
-    // Producto adicional: conserva el destino normal y no repite onboarding.
     const nextUrl = String(result.data?.next_url || '')
     if (nextUrl) {
       window.location.assign(nextUrl)
@@ -227,29 +232,22 @@ export default function ScanActivationEntry() {
           {phase === 'loading' && (
             <div className="py-8 text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-cyan-500" />
-              <h1 className="mt-4 text-xl font-black">Preparando tu activación…</h1>
-              <p className="mt-2 text-sm text-slate-500">Estamos verificando de forma segura tu producto y tu cuenta.</p>
+              <h1 className="mt-4 text-xl font-black">Abriendo tu producto…</h1>
             </div>
           )}
 
           {phase === 'verified' && (
             <>
               <h1 className="mt-3 text-[28px] font-black leading-tight">Producto confirmado</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-500">Kawvo validó automáticamente los datos asociados a este artículo. No necesitas escribir ningún código.</p>
               <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                 <p className="text-base font-extrabold text-slate-900">{product?.label || 'Producto Kawvo'}</p>
-                <div className="mt-3 space-y-2 text-sm font-bold text-emerald-800">
-                  <p>✓ Producto confirmado</p>
-                  <p>✓ Código de compra verificado</p>
-                  <p>✓ Código de activación verificado</p>
-                </div>
+                <p className="mt-2 text-sm font-bold text-emerald-800">✓ Listo para vincular</p>
                 {accountEmail && <p className="mt-3 text-xs text-slate-500">Sesión actual: {accountEmail}</p>}
               </div>
 
               {!ownershipChoice && (
                 <div className="mt-5">
                   <h2 className="text-lg font-black">¿Para quién es este producto?</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">No vamos a asumir que pertenece a la sesión abierta. Confirma antes de vincularlo.</p>
                   <button
                     type="button"
                     onClick={() => setOwnershipChoice('self')}
@@ -260,24 +258,33 @@ export default function ScanActivationEntry() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void continueWithDifferentUser()}
+                    onClick={() => setOwnershipChoice('different')}
                     disabled={busy}
                     className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-extrabold text-slate-700 disabled:opacity-40"
                   >
-                    {busy ? 'Cerrando sesión…' : 'Es para otra persona'}
+                    Es para otra persona
                   </button>
                 </div>
               )}
 
               {ownershipChoice === 'self' && (
                 <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
-                  <p className="text-sm font-black text-cyan-900">Confirmación de vinculación</p>
+                  <p className="text-sm font-black text-cyan-900">Vincular a mi cuenta</p>
                   <p className="mt-2 text-sm leading-6 text-slate-700">
                     {product?.has_profile
-                      ? `Este producto será vinculado a tu perfil actual${product?.profile_slug ? ` /${product.profile_slug}` : ''}.`
-                      : 'Este producto quedará vinculado a tu cuenta y al perfil que crearás a continuación.'}
+                      ? `Se vinculará a tu perfil${product?.profile_slug ? ` /${product.profile_slug}` : ''}.`
+                      : 'Se vinculará a tu cuenta y al perfil que crearás a continuación.'}
                   </p>
-                  {accountEmail && <p className="mt-2 text-xs font-bold text-slate-500">Cuenta: {accountEmail}</p>}
+                  {accountEmail && <p className="mt-2 text-xs font-bold text-slate-500">{accountEmail}</p>}
+                </div>
+              )}
+
+              {ownershipChoice === 'different' && (
+                <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-black text-amber-900">Usar otra cuenta</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">
+                    {accountEmail ? `Cerraremos la sesión de ${accountEmail}.` : 'Cerraremos la sesión actual.'} Luego la otra persona podrá acceder o crear su cuenta.
+                  </p>
                 </div>
               )}
 
@@ -287,6 +294,17 @@ export default function ScanActivationEntry() {
                 <>
                   <button type="button" onClick={confirmActivation} disabled={busy} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-40">
                     {busy ? 'Activando…' : 'Vincular a mi perfil'}
+                  </button>
+                  <button type="button" onClick={() => setOwnershipChoice(null)} disabled={busy} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-600 disabled:opacity-40">
+                    Volver
+                  </button>
+                </>
+              )}
+
+              {ownershipChoice === 'different' && (
+                <>
+                  <button type="button" onClick={() => void continueWithDifferentUser()} disabled={busy} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-40">
+                    {busy ? 'Cerrando sesión…' : 'Cerrar sesión y continuar'}
                   </button>
                   <button type="button" onClick={() => setOwnershipChoice(null)} disabled={busy} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-600 disabled:opacity-40">
                     Volver
@@ -329,7 +347,6 @@ export default function ScanActivationEntry() {
           {phase === 'activated' && (
             <div className="py-4 text-center">
               <h1 className="text-2xl font-black">Abriendo perfil…</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-500">Estamos llevando este producto a su Perfil Digital.</p>
             </div>
           )}
 
