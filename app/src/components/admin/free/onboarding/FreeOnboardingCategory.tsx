@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../../../lib/api'
 import { FREE_PROFILE_CATEGORIES } from '../../../../../../shared/free-profile-starter-content'
@@ -10,9 +10,11 @@ function normalize(value: string) {
 
 export default function FreeOnboardingCategory() {
   const navigate = useNavigate()
+  const subcategoryRef = useRef<HTMLDivElement>(null)
   const [category, setCategory] = useState(() => sessionStorage.getItem('kawvo_free_category') || '')
   const [subcategory, setSubcategory] = useState(() => sessionStorage.getItem('kawvo_free_subcategory') || '')
   const [query, setQuery] = useState('')
+  const [editingCategory, setEditingCategory] = useState(() => !sessionStorage.getItem('kawvo_free_category'))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -26,17 +28,38 @@ export default function FreeOnboardingCategory() {
   useEffect(() => {
     apiGet('/me').then((json: any) => {
       if (json.ok) {
-        if (!category) setCategory(json.data?.category || '')
-        if (!subcategory) setSubcategory(json.data?.subcategory || '')
+        const storedCategory = category || json.data?.category || ''
+        const storedSubcategory = subcategory || json.data?.subcategory || ''
+        if (!category && storedCategory) setCategory(storedCategory)
+        if (!subcategory && storedSubcategory) setSubcategory(storedSubcategory)
+        if (storedCategory) setEditingCategory(false)
       }
     }).finally(() => setLoading(false))
-  }, [category, subcategory])
+    // only hydrate once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const revealSubcategory = () => {
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        subcategoryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 80)
+    })
+  }
 
   const chooseCategory = (value: string) => {
     setCategory(value)
     setSubcategory('')
     setQuery('')
     setError('')
+    setEditingCategory(false)
+    revealSubcategory()
+  }
+
+  const changeCategory = () => {
+    setEditingCategory(true)
+    setSubcategory('')
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
   }
 
   const handleContinue = async () => {
@@ -44,10 +67,7 @@ export default function FreeOnboardingCategory() {
     setSaving(true)
     setError('')
     try {
-      const json: any = await apiPut('/me/profile', {
-        category,
-        subcategory,
-      })
+      const json: any = await apiPut('/me/profile', { category, subcategory })
       if (json.ok) {
         sessionStorage.setItem('kawvo_free_category', category)
         sessionStorage.setItem('kawvo_free_subcategory', subcategory)
@@ -75,43 +95,56 @@ export default function FreeOnboardingCategory() {
 
         <p className="mb-2 text-sm font-extrabold uppercase tracking-[0.14em] text-cyan-700">Paso 1 de 2</p>
         <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">¿A qué te dedicas?</h1>
-        <p className="mt-3 text-base font-medium leading-7 text-slate-700">Elige tu actividad comercial. Después te mostraremos opciones más específicas para preparar mejor tu perfil.</p>
+        <p className="mt-3 text-base font-medium leading-7 text-slate-700">Elige tu actividad comercial y enseguida te mostraremos opciones más específicas.</p>
 
         <div className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-          <label className="block text-sm font-black uppercase tracking-[0.08em] text-slate-600">
-            Actividad comercial
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={category || 'Busca o selecciona una actividad'}
-              className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base font-bold text-slate-900 outline-none placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
-            />
-          </label>
+          {editingCategory || !category ? (
+            <>
+              <label className="block text-sm font-black uppercase tracking-[0.08em] text-slate-600">
+                Actividad comercial
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Busca o selecciona una actividad"
+                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-base font-bold text-slate-900 outline-none placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                />
+              </label>
 
-          <div className="mt-3 max-h-64 overflow-y-auto rounded-2xl border border-slate-100 bg-white p-2">
-            {filteredCategories.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => chooseCategory(item)}
-                className={`flex min-h-12 w-full items-center justify-between rounded-xl px-3 py-3 text-left text-base font-bold transition ${category === item ? 'bg-cyan-50 text-cyan-800' : 'text-slate-700 hover:bg-slate-50'}`}
-              >
-                <span>{item}</span>
-                {category === item && <span aria-hidden="true">✓</span>}
-              </button>
-            ))}
-            {filteredCategories.length === 0 && <p className="px-3 py-4 text-base font-medium leading-6 text-slate-600">No encontramos una coincidencia. Prueba con otra palabra o selecciona “Otros”.</p>}
-          </div>
+              <div className="mt-3 max-h-64 overflow-y-auto rounded-2xl border border-slate-100 bg-white p-2">
+                {filteredCategories.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => chooseCategory(item)}
+                    className="flex min-h-12 w-full items-center justify-between rounded-xl px-3 py-3 text-left text-base font-bold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <span>{item}</span>
+                    <span aria-hidden="true" className="text-slate-300">›</span>
+                  </button>
+                ))}
+                {filteredCategories.length === 0 && <p className="px-3 py-4 text-base font-medium leading-6 text-slate-600">No encontramos una coincidencia. Prueba con otra palabra o selecciona “Otros”.</p>}
+              </div>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-cyan-100 bg-cyan-50 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.1em] text-cyan-700">Actividad seleccionada</p>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-base font-black text-slate-900">✓ {category}</p>
+                <button type="button" onClick={changeCategory} className="text-sm font-black text-cyan-700">Cambiar</button>
+              </div>
+            </div>
+          )}
 
-          {category && (
-            <div className="mt-7 border-t border-slate-100 pt-6">
-              <label className="block text-sm font-black normal-case tracking-normal text-slate-700">
-                ¿Cuál opción describe mejor lo que haces?
-                <span className="mt-1 block text-sm font-medium leading-6 text-slate-600">Selecciona la subcategoría que más se acerque a tu actividad.</span>
+          {category && !editingCategory && (
+            <div ref={subcategoryRef} className="mt-6 border-t border-slate-100 pt-6">
+              <label className="block text-base font-black normal-case tracking-normal text-slate-900">
+                ¿Cuál de estas opciones describe mejor lo que haces?
+                <span className="mt-2 block text-sm font-medium leading-6 text-slate-600">Selecciona la opción que más se acerque a tu actividad.</span>
                 <select
                   value={subcategory}
+                  autoFocus
                   onChange={(event) => setSubcategory(event.target.value)}
-                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base font-bold text-slate-800 outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"
+                  className="mt-4 w-full rounded-2xl border border-cyan-200 bg-white px-4 py-4 text-base font-bold text-slate-800 outline-none ring-4 ring-cyan-50 focus:border-cyan-400 focus:ring-cyan-100"
                 >
                   <option value="">Selecciona una opción</option>
                   {subcategories.map((item) => <option key={item} value={item}>{item}</option>)}
