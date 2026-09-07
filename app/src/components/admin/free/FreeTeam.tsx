@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPost } from '../../../lib/api'
+import { apiGet, apiPost, apiPut } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
 
 const PERMISSIONS = [
@@ -59,11 +59,14 @@ export default function FreeTeam() {
   const [data, setData] = useState<TeamPayload | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [nameSaving, setNameSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [count, setCount] = useState(1)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [teamName, setTeamName] = useState('')
+  const [savedTeamName, setSavedTeamName] = useState('')
   const [permissions, setPermissions] = useState<string[]>(['name', 'role', 'photo', 'phone', 'email', 'whatsapp'])
   const [generated, setGenerated] = useState<Array<{ code: string }>>([])
 
@@ -79,12 +82,28 @@ export default function FreeTeam() {
     else {
       setData(json.data)
       setPage(json.data?.pagination?.page || nextPage)
+      const currentName = String(json.data?.team?.name || '').trim()
+      setTeamName(currentName)
+      setSavedTeamName(currentName)
       setError('')
     }
     setLoading(false)
   }
 
   useEffect(() => { void load(1, '') }, [])
+
+  const saveTeamName = async () => {
+    const name = teamName.trim().replace(/\s+/g, ' ')
+    if (name.length < 2) { setError('Escribe un nombre para identificar tu Team.'); return }
+    if (nameSaving) return
+    setNameSaving(true); setError(''); setMessage('')
+    const json: any = await apiPut('/me/team/name', { name }).catch(() => ({ ok: false }))
+    setNameSaving(false)
+    if (!json?.ok) return setError(json?.error || 'No pudimos guardar el nombre del Team.')
+    setTeamName(json.data?.name || name)
+    setSavedTeamName(json.data?.name || name)
+    setMessage('Nombre del Team guardado. Este será el nombre que verán al validar tus códigos.')
+  }
 
   const togglePermission = (key: string) => {
     if (key === 'name' || key === 'role') return
@@ -93,12 +112,15 @@ export default function FreeTeam() {
 
   const createCodes = async () => {
     if (saving) return
+    const currentName = savedTeamName.trim()
+    if (currentName.length < 2) { setError('Primero asigna un nombre a tu Team.'); return }
+    if (teamName.trim() !== savedTeamName.trim()) { setError('Guarda el nombre del Team antes de generar códigos.'); return }
     setSaving(true); setError(''); setMessage(''); setGenerated([])
     const json: any = await apiPost('/me/team/codes', { count, permissions }).catch(() => ({ ok: false }))
     setSaving(false)
     if (!json?.ok) return setError(json?.error || 'No pudimos generar los códigos.')
     setGenerated(json.data || [])
-    setMessage(`${(json.data || []).length} código(s) generado(s). Cada código es válido durante 24 horas y solo puede utilizarse una vez.`)
+    setMessage(`${(json.data || []).length} código(s) generado(s) para ${savedTeamName}. Cada código es válido durante 24 horas y solo puede utilizarse una vez.`)
     await load(1, query)
   }
 
@@ -117,6 +139,8 @@ export default function FreeTeam() {
   }
 
   const selectedLabels = useMemo(() => PERMISSIONS.filter(([key]) => permissions.includes(key)).map(([, label]) => label), [permissions])
+  const nameChanged = teamName.trim() !== savedTeamName.trim()
+  const canGenerate = savedTeamName.trim().length >= 2 && !nameChanged
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950">
@@ -130,6 +154,17 @@ export default function FreeTeam() {
           </div>
           {data && <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Miembros vinculados</p><p className="text-2xl font-black">{data.member_count}</p></div>}
         </div>
+
+        <section className="mt-6 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.15em] text-cyan-700">Identidad del Team</p>
+          <h2 className="mt-1 text-xl font-black">Nombre del Team</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Este nombre se mostrará cuando una persona valide un código, para que pueda confirmar que está entrando al Team correcto.</p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <input value={teamName} onChange={(event) => setTeamName(event.target.value.slice(0, 80))} maxLength={80} placeholder="Ej. Equipo Comercial Kawvo" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
+            <button type="button" onClick={() => void saveTeamName()} disabled={nameSaving || !teamName.trim() || !nameChanged} className="rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{nameSaving ? 'Guardando…' : nameChanged ? 'Guardar nombre' : 'Guardado'}</button>
+          </div>
+          {savedTeamName && !nameChanged && <p className="mt-3 text-xs font-bold text-emerald-700">✓ Los usuarios verán: {savedTeamName}</p>}
+        </section>
 
         <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -147,9 +182,10 @@ export default function FreeTeam() {
             })}
           </div>
           <p className="mt-3 text-xs text-slate-400">Editable: {selectedLabels.join(' · ')}</p>
-          <button type="button" onClick={() => void createCodes()} disabled={saving} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{saving ? 'Generando…' : `Generar ${count} código${count === 1 ? '' : 's'}`}</button>
+          {!canGenerate && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Guarda primero el nombre del Team para generar códigos.</p>}
+          <button type="button" onClick={() => void createCodes()} disabled={saving || !canGenerate} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{saving ? 'Generando…' : `Generar ${count} código${count === 1 ? '' : 's'}`}</button>
 
-          {generated.length > 0 && <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-cyan-700">Códigos recién generados</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{generated.map((item) => <button key={item.code} type="button" onClick={() => void copy(item.code)} className="rounded-xl bg-white px-3 py-3 font-mono text-sm font-black text-slate-900 shadow-sm">{item.code} · Copiar</button>)}</div></div>}
+          {generated.length > 0 && <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-cyan-700">{savedTeamName} · Códigos recién generados</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{generated.map((item) => <button key={item.code} type="button" onClick={() => void copy(item.code)} className="rounded-xl bg-white px-3 py-3 font-mono text-sm font-black text-slate-900 shadow-sm">{item.code} · Copiar</button>)}</div></div>}
         </section>
 
         {error && <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
@@ -163,7 +199,7 @@ export default function FreeTeam() {
 
           {loading ? <p className="py-10 text-center text-sm text-slate-400">Cargando…</p> : <div className="mt-5 grid gap-3">{(data?.codes || []).map((row) => (
             <article key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3"><div><button type="button" onClick={() => void copy(row.code)} className="font-mono text-base font-black text-slate-950">{row.code}</button><p className="mt-1 text-xs text-slate-500">Generado: {formatDate(row.created_at)} · Vence: {formatDate(row.expires_at)}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${row.status === 'active' ? 'bg-emerald-100 text-emerald-700' : row.status === 'used' ? 'bg-cyan-100 text-cyan-700' : 'bg-amber-100 text-amber-800'}`}>{statusLabel(row.status)}</span></div>
+              <div className="flex flex-wrap items-start justify-between gap-3"><div><button type="button" onClick={() => void copy(row.code)} className="font-mono text-base font-black text-slate-950">{row.code}</button><p className="mt-1 text-xs font-semibold text-cyan-700">Team: {savedTeamName || data?.team?.name}</p><p className="mt-1 text-xs text-slate-500">Generado: {formatDate(row.created_at)} · Vence: {formatDate(row.expires_at)}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${row.status === 'active' ? 'bg-emerald-100 text-emerald-700' : row.status === 'used' ? 'bg-cyan-100 text-cyan-700' : 'bg-amber-100 text-amber-800'}`}>{statusLabel(row.status)}</span></div>
               {row.status === 'used' && <div className="mt-3 rounded-xl bg-white p-3 text-xs leading-5 text-slate-600"><strong>{row.member_name || row.used_by_email || 'Usuario vinculado'}</strong>{row.used_by_email ? ` · ${row.used_by_email}` : ''}<br />Producto: {row.product_code || '—'} · Usado: {formatDate(row.used_at)}</div>}
               <p className="mt-3 text-[11px] leading-5 text-slate-500">Puede editar: {(row.permissions || []).map((key) => PERMISSIONS.find(([id]) => id === key)?.[1] || key).join(' · ')}</p>
               {row.status !== 'used' && <div className="mt-3 flex flex-wrap gap-2">{row.status === 'active' ? <button type="button" disabled={saving} onClick={() => void action(row, 'deactivate')} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800">Desactivar</button> : <button type="button" disabled={saving} onClick={() => void action(row, 'reactivate')} className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white">Reactivar 24 h</button>}<button type="button" onClick={() => void copy(row.code)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Copiar</button></div>}
