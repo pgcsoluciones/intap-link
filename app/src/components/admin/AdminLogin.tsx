@@ -17,14 +17,11 @@ export default function AdminLogin() {
   const validProductCode = /^[A-Z2-9]{8,24}$/.test(scanCode)
   const isScanFlow = searchParams.get('activation') === 'scan' && validProductCode
   const isDraftResume = searchParams.get('resume_profile') === '1' && validProductCode
+  const isSwitchUser = searchParams.get('switch_user') === '1' && isScanFlow
   const hasProductContext = isScanFlow || isDraftResume
 
   useEffect(() => {
     if (!hasProductContext) {
-      // A normal/direct login must not inherit an old scan-to-claim context.
-      // Otherwise AdminGuard can correctly authenticate the user and then
-      // redirect them to /admin/artifacts/activate?scan=1 because a stale
-      // product code remained in browser storage from a previous test/scan.
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       return
@@ -32,10 +29,8 @@ export default function AdminLogin() {
 
     sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
     localStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
-    // Scan-to-claim starts in register mode; returning to an already-owned
-    // draft profile must start in login mode and preserve the product context.
-    setMode(isDraftResume ? 'login' : 'register')
-  }, [hasProductContext, isDraftResume, scanCode])
+    setMode(isDraftResume || isSwitchUser ? 'login' : 'register')
+  }, [hasProductContext, isDraftResume, isSwitchUser, scanCode])
 
   const persistAuthMode = (nextMode: Mode) => {
     sessionStorage.setItem('kawvo_auth_mode', nextMode)
@@ -64,9 +59,6 @@ export default function AdminLogin() {
 
   const handleGoogle = () => {
     persistAuthMode(mode)
-    // OAuth must start on the same app custom domain that owns the session.
-    // In Preview this yields app.preview.intaprd.com as redirect_uri instead
-    // of the workers.dev origin; Production likewise stays on app.intaprd.com.
     window.location.href = '/api/v1/auth/google/start'
   }
 
@@ -77,15 +69,17 @@ export default function AdminLogin() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="mb-8 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isDraftResume ? 'Continúa tu perfil' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
             {isDraftResume
-              ? 'Tu producto ya está conectado. Inicia sesión para continuar configurando tu Perfil Digital.'
-              : isScanFlow
-                ? 'Tu producto ya fue reconocido. Valida tu correo para continuar con la activación, sin escribir códigos.'
-                : isRegister
-                  ? 'Valida tu correo y luego te guiaremos para activar tu artículo NFC o QR y preparar tu Perfil Digital Gratis.'
-                  : 'Accede para administrar tu perfil y tus productos Kawvo.'}
+              ? 'Inicia sesión para continuar configurando tu Perfil Digital.'
+              : isSwitchUser
+                ? 'La sesión anterior fue cerrada. Accede o crea una cuenta para continuar con este producto.'
+                : isScanFlow
+                  ? 'Tu producto está listo. Accede o crea una cuenta para continuar.'
+                  : isRegister
+                    ? 'Valida tu correo para crear tu acceso a Kawvo Link.'
+                    : 'Accede para administrar tu perfil y tus productos Kawvo.'}
           </p>
         </div>
 
@@ -114,7 +108,7 @@ export default function AdminLogin() {
           </div>
         </div>
 
-        {isRegister && !isScanFlow && !isDraftResume && <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4 text-center"><p className="text-sm font-extrabold text-slate-900">Perfil Digital Gratis con tu artículo Kawvo</p><p className="mt-1 text-xs leading-5 text-slate-500">Para completar el registro necesitarás un artículo NFC o QR y sus códigos de compra/activación.</p></div>}
+        {isRegister && !isScanFlow && !isDraftResume && <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4 text-center"><p className="text-sm font-extrabold text-slate-900">Perfil Digital Gratis con tu artículo Kawvo</p><p className="mt-1 text-xs leading-5 text-slate-500">Crea tu acceso y sigue los pasos en pantalla.</p></div>}
       </section>
     </main>
   )
