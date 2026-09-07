@@ -1,9 +1,11 @@
 import app from './preview-free-entry'
+import { refreshDueInstagramConnections } from './instagram-token-refresh'
 
 type PreviewEnv = {
   WEB_PAGES_ORIGIN?: string
   APP_PAGES_ORIGIN?: string
   DB: D1Database
+  INSTAGRAM_TOKEN_ENCRYPTION_KEY?: string
 }
 
 const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'
@@ -87,10 +89,6 @@ async function proxyPublicProfileWithMeta(
   request: Request,
   env: PreviewEnv,
 ) {
-  // Pages Functions es la fuente canónica de metadata para perfiles públicos.
-  // El front door Preview solo debe transportar ese HTML sin volver a
-  // inyectar title/Open Graph/Twitter, porque produciría tags duplicados
-  // y potencialmente contradictorios.
   return proxyPagesPreview(
     request,
     env.WEB_PAGES_ORIGIN,
@@ -181,9 +179,6 @@ export default {
       }
     }
 
-    // API stays on the Worker. Every other browser route is served from the
-    // matching Pages application. This prevents app.preview.intaprd.com from
-    // falling through to Hono for React routes such as /activate-product/:code.
     if (!url.pathname.startsWith('/api/')) {
       if (url.hostname === 'preview.intaprd.com') {
         if (url.pathname === '/invitacion' || url.pathname === '/invitacion/') {
@@ -197,5 +192,9 @@ export default {
     }
 
     return app.fetch(request, env as any, ctx)
+  },
+
+  scheduled(_event: ScheduledEvent, env: PreviewEnv, ctx: ExecutionContext) {
+    ctx.waitUntil(refreshDueInstagramConnections(env as any))
   },
 }
