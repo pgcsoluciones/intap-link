@@ -34,6 +34,11 @@ if ! "$VENV_DIR/bin/python" -c 'import PIL' >/dev/null 2>&1; then run "$VENV_DIR
 run "$VENV_DIR/bin/python" scripts/ensure-adonisg-black-logo.py
 run "$VENV_DIR/bin/python" scripts/prepare-adonisg-assets.py
 
+printf '\n▶ Integrar banner final del pie de página\n'
+run python3 scripts/prepare-argenisg-footer-banner.py
+grep -Fq '/assets/adonisg/brand/footer-banner.png' web/src/components/profile-templates/IntapProfileAdonisgV1.tsx || fail "Banner final no quedó referenciado"
+[ -f web/public/assets/adonisg/brand/footer-banner.png ] || fail "Banner final no quedó generado"
+
 printf '\n▶ Preparar ruta final /argenisg y canonical host-aware\n'
 run python3 scripts/prepare-argenisg-final-route.py
 grep -Fq '/argenisg' web/src/components/profile-templates/IntapProfileAdonisgV1.tsx || fail "Ruta /argenisg no quedó aplicada"
@@ -56,6 +61,7 @@ WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$WEB_LOG"
 wait200 "$WEB_ORIGIN/argenisg" "Perfil /argenisg"
 wait200 "$WEB_ORIGIN/argenisg?lang=en" "Perfil /argenisg EN"
 wait200 "$WEB_ORIGIN/assets/adonisg/brand/logo-black-transparent.png" "Logo PNG transparente"
+wait200 "$WEB_ORIGIN/assets/adonisg/brand/footer-banner.png" "Banner final del pie"
 
 printf '\n============================================================\n✓ /argenisg · PREVIEW UI-ONLY LISTO PARA QA\n============================================================\n'
 echo "Rama:       $BRANCH"
