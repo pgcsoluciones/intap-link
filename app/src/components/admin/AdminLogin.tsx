@@ -4,6 +4,7 @@ import { apiPost } from '../../lib/api'
 
 type Mode = 'login' | 'register'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+const TEAM_CODE_KEY = 'kawvo_team_join_code'
 
 export default function AdminLogin() {
   const navigate = useNavigate()
@@ -14,23 +15,34 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
 
   const scanCode = String(searchParams.get('public_code') || '').trim().toUpperCase()
+  const teamCode = String(searchParams.get('team_code') || '').trim().toUpperCase()
   const validProductCode = /^[A-Z2-9]{8,24}$/.test(scanCode)
+  const validTeamCode = /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(teamCode)
+  const isTeamFlow = searchParams.get('activation') === 'team' && validProductCode && validTeamCode
   const isScanFlow = searchParams.get('activation') === 'scan' && validProductCode
   const isDraftResume = searchParams.get('resume_profile') === '1' && validProductCode
   const isSwitchUser = searchParams.get('switch_user') === '1' && isScanFlow
-  const hasProductContext = isScanFlow || isDraftResume
+  const hasProductContext = isScanFlow || isDraftResume || isTeamFlow
 
   useEffect(() => {
     if (!hasProductContext) {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+      sessionStorage.removeItem(TEAM_CODE_KEY)
+      localStorage.removeItem(TEAM_CODE_KEY)
       return
     }
 
     sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
     localStorage.setItem(SCAN_PUBLIC_CODE_KEY, scanCode)
+    if (isTeamFlow) {
+      sessionStorage.setItem(TEAM_CODE_KEY, teamCode)
+      localStorage.setItem(TEAM_CODE_KEY, teamCode)
+      setMode('register')
+      return
+    }
     setMode(isDraftResume || isSwitchUser ? 'login' : 'register')
-  }, [hasProductContext, isDraftResume, isSwitchUser, scanCode])
+  }, [hasProductContext, isDraftResume, isSwitchUser, isTeamFlow, scanCode, teamCode])
 
   const persistAuthMode = (nextMode: Mode) => {
     sessionStorage.setItem('kawvo_auth_mode', nextMode)
@@ -69,17 +81,19 @@ export default function AdminLogin() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="mb-8 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isTeamFlow ? 'Vincula tu producto al Team' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
-            {isDraftResume
-              ? 'Inicia sesión para continuar configurando tu Perfil Digital.'
-              : isSwitchUser
-                ? 'La sesión anterior fue cerrada. Accede o crea una cuenta para continuar con este producto.'
-                : isScanFlow
-                  ? 'Tu producto está listo. Accede o crea una cuenta para continuar.'
-                  : isRegister
-                    ? 'Valida tu correo para crear tu acceso a Kawvo Link.'
-                    : 'Accede para administrar tu perfil y tus productos Kawvo.'}
+            {isTeamFlow
+              ? 'Accede o crea tu cuenta. Al validar el correo retomaremos la vinculación al perfil Team.'
+              : isDraftResume
+                ? 'Inicia sesión para continuar configurando tu Perfil Digital.'
+                : isSwitchUser
+                  ? 'La sesión anterior fue cerrada. Accede o crea una cuenta para continuar con este producto.'
+                  : isScanFlow
+                    ? 'Tu producto está listo. Accede o crea una cuenta para continuar.'
+                    : isRegister
+                      ? 'Valida tu correo para crear tu acceso a Kawvo Link.'
+                      : 'Accede para administrar tu perfil y tus productos Kawvo.'}
           </p>
         </div>
 
@@ -108,7 +122,7 @@ export default function AdminLogin() {
           </div>
         </div>
 
-        {isRegister && !isScanFlow && !isDraftResume && <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4 text-center"><p className="text-sm font-extrabold text-slate-900">Perfil Digital Gratis con tu artículo Kawvo</p><p className="mt-1 text-xs leading-5 text-slate-500">Crea tu acceso y sigue los pasos en pantalla.</p></div>}
+        {isRegister && !hasProductContext && <div className="mt-5 rounded-[22px] border border-cyan-100 bg-cyan-50/70 p-4 text-center"><p className="text-sm font-extrabold text-slate-900">Perfil Digital Gratis con tu artículo Kawvo</p><p className="mt-1 text-xs leading-5 text-slate-500">Crea tu acceso y sigue los pasos en pantalla.</p></div>}
       </section>
     </main>
   )
