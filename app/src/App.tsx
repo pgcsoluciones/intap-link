@@ -44,6 +44,7 @@ import FreeNotifications from './components/admin/free/FreeNotifications'
 import FreeTeam from './components/admin/free/FreeTeam'
 import FreeTeamMember from './components/admin/free/FreeTeamMember'
 import FreeTeamJoin from './components/admin/free/FreeTeamJoin'
+import TeamPermissionGuard from './components/admin/free/TeamPermissionGuard'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
 import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
 import FreeOnboardingIdentity from './components/admin/free/onboarding/FreeOnboardingIdentity'
@@ -55,7 +56,7 @@ import FreeOnboardingSource from './components/admin/free/onboarding/FreeOnboard
 import FreeOnboardingBuilder from './components/admin/free/onboarding/FreeOnboardingBuilder'
 import FreeOnboardingReview from './components/admin/free/onboarding/FreeOnboardingReview'
 import FreeArtifactActivation from './components/admin/free/onboarding/FreeArtifactActivation'
-import { ArtifactActivation, ArtifactManager } from './components/admin/ArtifactActivation'
+import { ArtifactManager } from './components/admin/ArtifactActivation'
 
 const FreeAiProfileAssistant = lazy(() => import('./components/admin/free/FreeAiProfileAssistant'))
 
@@ -66,11 +67,7 @@ function AiRouteFallback() {
 function UnknownAppRouteRedirect() {
   const location = useLocation()
   const WEB_URL = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
-
-  if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')) {
-    return <Navigate to="/admin" replace />
-  }
-
+  if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/auth')) return <Navigate to="/admin" replace />
   window.location.replace(`${WEB_URL}${location.pathname}${location.search}${location.hash}`)
   return null
 }
@@ -84,7 +81,7 @@ function App() {
         <Route path="/admin/check-email" element={<AdminVerify />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/activate-product/:publicCode" element={<ScanActivationEntry />} />
-        <Route path="/activate" element={<ArtifactActivation />} />
+        <Route path="/activate" element={<Navigate to="/admin/artifacts/activate" replace />} />
 
         <Route path="/admin/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingSlug /></AdminGuard>} />
         <Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingCategory /></AdminGuard>} />
@@ -99,10 +96,9 @@ function App() {
         <Route path="/admin/free/onboarding/source" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSource /></AdminGuard>} />
         <Route path="/admin/free/onboarding/builder" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingBuilder /></AdminGuard>} />
         <Route path="/admin/free/onboarding/review" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingReview /></AdminGuard>} />
-
-        <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingSlug /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="free"><TeamPermissionGuard permission="identifier"><FreeOnboardingSlug /></TeamPermissionGuard></AdminGuard>} />
         <Route path="/admin/free/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingIdentity /></AdminGuard>} />
-        <Route path="/admin/free/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingContact /></AdminGuard>} />
+        <Route path="/admin/free/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="free"><TeamPermissionGuard permission={['phone','email','whatsapp']}><FreeOnboardingContact /></TeamPermissionGuard></AdminGuard>} />
         <Route path="/admin/free/onboarding/done" element={<AdminGuard requireProfile={false} planScope="free"><FreeOnboardingDone /></AdminGuard>} />
 
         <Route path="/admin/free/home" element={<AdminGuard planScope="free"><FreePwaHome /></AdminGuard>} />
@@ -112,16 +108,16 @@ function App() {
         <Route path="/admin/free/team/member" element={<AdminGuard requireProfile={false} planScope="free"><FreeTeamMember /></AdminGuard>} />
         <Route path="/admin/free/team/join" element={<AdminGuard requireProfile={false} planScope="free"><FreeTeamJoin /></AdminGuard>} />
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
-        <Route path="/admin/free/editor" element={<AdminGuard planScope="free"><FreeVisualEditor /></AdminGuard>} />
-        <Route path="/admin/free/ai-profile" element={<AdminGuard planScope="free"><Suspense fallback={<AiRouteFallback />}><FreeAiProfileAssistant /></Suspense></AdminGuard>} />
-        <Route path="/admin/free/bank-accounts" element={<AdminGuard planScope="free"><FreeBankAccounts /></AdminGuard>} />
-        <Route path="/admin/free/identifier" element={<AdminGuard planScope="free"><FreeIdentifier /></AdminGuard>} />
-        <Route path="/admin/free/links" element={<AdminGuard planScope="free"><FreeLinks /></AdminGuard>} />
-        <Route path="/admin/free/location" element={<AdminGuard planScope="free"><FreeLocation /></AdminGuard>} />
-        <Route path="/admin/free/portfolio" element={<AdminGuard planScope="free"><FreePortfolio /></AdminGuard>} />
-        <Route path="/admin/free/quick-actions" element={<AdminGuard planScope="free"><FreeQuickActions /></AdminGuard>} />
-        <Route path="/admin/free/services" element={<AdminGuard planScope="free"><FreeServices /></AdminGuard>} />
-        <Route path="/admin/free/style" element={<AdminGuard planScope="free"><FreeStyle /></AdminGuard>} />
+        <Route path="/admin/free/editor" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="design"><FreeVisualEditor /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/ai-profile" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="ai"><Suspense fallback={<AiRouteFallback />}><FreeAiProfileAssistant /></Suspense></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/bank-accounts" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="bank_accounts"><FreeBankAccounts /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/identifier" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="identifier"><FreeIdentifier /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/links" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="links"><FreeLinks /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/location" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="location"><FreeLocation /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/portfolio" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="portfolio"><FreePortfolio /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/quick-actions" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="quick_actions"><FreeQuickActions /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/services" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="services"><FreeServices /></TeamPermissionGuard></AdminGuard>} />
+        <Route path="/admin/free/style" element={<AdminGuard planScope="free"><TeamPermissionGuard permission="design"><FreeStyle /></TeamPermissionGuard></AdminGuard>} />
         <Route path="/admin/artifacts/activate" element={<AdminGuard requireProfile={false}><FreeArtifactActivation /></AdminGuard>} />
         <Route path="/admin/artifacts" element={<AdminGuard requireProfile={false}><ArtifactManager /></AdminGuard>} />
 
@@ -141,7 +137,6 @@ function App() {
         <Route path="/admin/visual" element={<AdminGuard planScope="paid"><AdminVisual /></AdminGuard>} />
         <Route path="/admin/template" element={<AdminGuard planScope="paid"><AdminTemplate /></AdminGuard>} />
         <Route path="/admin/retention" element={<AdminGuard><AdminRetention /></AdminGuard>} />
-
         <Route path="/admin" element={<AdminGuard planScope="paid"><AdminDashboard /></AdminGuard>} />
         <Route path="/" element={<AdminGuard planScope="paid"><AdminDashboard /></AdminGuard>} />
         <Route path="*" element={<UnknownAppRouteRedirect />} />
