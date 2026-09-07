@@ -92,6 +92,10 @@ export default function ArtifactLinkResolver() {
     window.location.assign(`${appOrigin()}/activate-product/${encodeURIComponent(code)}`)
   }
 
+  if (state === 'loading') {
+    return <main aria-busy="true" style={{ minHeight: '100vh', background: '#fff' }} />
+  }
+
   const cardStyle: React.CSSProperties = {
     width: '100%',
     maxWidth: 420,
@@ -132,15 +136,6 @@ export default function ArtifactLinkResolver() {
           style={{ display: 'block', width: 124, maxWidth: '48%', height: 36, objectFit: 'contain', margin: '0 auto' }}
         />
 
-        {state === 'loading' && (
-          <>
-            <div style={{ width: 42, height: 42, margin: '20px auto 0', border: '4px solid #e2e8f0', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
-            <h1 style={{ margin: '16px 0 8px', fontSize: 24 }}>Reconociendo tu producto…</h1>
-            <p style={{ margin: 0, lineHeight: 1.6, color: '#64748b' }}>Estamos comprobando su estado.</p>
-          </>
-        )}
-
         {state === 'pending_activation' && (
           <>
             <div style={{ width: 48, height: 48, margin: '20px auto 0', display: 'grid', placeItems: 'center', borderRadius: '50%', background: '#ecfeff', color: '#0891b2', fontSize: 24, fontWeight: 900 }}>✓</div>
@@ -175,7 +170,7 @@ export default function ArtifactLinkResolver() {
             <p style={{ margin: '0 0 20px', lineHeight: 1.6, color: '#64748b' }}>
               {state === 'profile_draft_owner'
                 ? (message || 'Tu Perfil Digital todavía está en construcción.')
-                : 'Este Perfil Digital todavía está en construcción. Su propietario está preparando su presentación en Kawvo Link.'}
+                : 'Este Perfil Digital todavía está en construcción.'}
             </p>
 
             {state === 'profile_draft_owner' && profileUrl && (
