@@ -2,6 +2,9 @@ name = "intap-api"
 main = "src/preview-free-entry.ts"
 compatibility_date = "2024-02-08"
 
+[triggers]
+crons = ["17 5 * * *"]
+
 # Rutas de producción — el Worker maneja /api/* en ambos dominios.
 # La zona (zone_name) debe existir en la cuenta Cloudflare; si no,
 # también se puede configurar desde el dashboard (Workers → Triggers → Routes).
