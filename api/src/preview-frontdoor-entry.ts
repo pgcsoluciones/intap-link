@@ -1,5 +1,6 @@
 import app from './preview-free-entry'
 import { refreshDueInstagramConnections } from './instagram-token-refresh'
+import { cleanupExpiredTeamCodes } from './team-v2'
 
 type PreviewEnv = {
   WEB_PAGES_ORIGIN?: string
@@ -35,13 +36,7 @@ async function validatePreviewSession(request: Request, env: PreviewEnv, slug: s
   if (!rawToken) return false
   const tokenHash = await sha256Hex(rawToken)
   const row = await env.DB.prepare(
-    `SELECT s.id
-       FROM profile_preview_sessions s
-       JOIN profiles p ON p.id = s.profile_id
-      WHERE s.token_hash = ?
-        AND s.expires_at > datetime('now')
-        AND lower(p.slug) = lower(?)
-      LIMIT 1`,
+    `SELECT s.id FROM profile_preview_sessions s JOIN profiles p ON p.id=s.profile_id WHERE s.token_hash=? AND s.expires_at>datetime('now') AND lower(p.slug)=lower(?) LIMIT 1`,
   ).bind(tokenHash, slug).first()
   return Boolean(row)
 }
@@ -53,47 +48,24 @@ function escapeHtml(value: string) {
 async function proxyPagesPreview(request: Request, origin: string | undefined, marker: string, allowEmbeddedFrame = false) {
   const requestUrl = new URL(request.url)
   const pagesOrigin = String(origin || '').replace(/\/$/, '')
-
-  if (!pagesOrigin) {
-    return new Response(`Preview ${marker} origin is not configured.`, { status: 503 })
-  }
-
+  if (!pagesOrigin) return new Response(`Preview ${marker} origin is not configured.`, { status: 503 })
   const target = new URL(`${requestUrl.pathname}${requestUrl.search}`, `${pagesOrigin}/`)
   const method = request.method.toUpperCase()
   const headers = new Headers(request.headers)
   headers.delete('host')
   headers.set('x-intap-preview-proxy', marker)
-
-  const upstream = await fetch(target.toString(), {
-    method,
-    headers,
-    body: method === 'GET' || method === 'HEAD' ? undefined : request.body,
-    redirect: 'manual',
-  })
-
+  const upstream = await fetch(target.toString(), { method, headers, body: method === 'GET' || method === 'HEAD' ? undefined : request.body, redirect: 'manual' })
   const responseHeaders = new Headers(upstream.headers)
   if (allowEmbeddedFrame) {
     responseHeaders.delete('x-frame-options')
     responseHeaders.set('content-security-policy', "frame-ancestors https://app.preview.intaprd.com")
     responseHeaders.set('cache-control', 'no-store')
   }
-
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
-  })
+  return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders })
 }
 
-async function proxyPublicProfileWithMeta(
-  request: Request,
-  env: PreviewEnv,
-) {
-  return proxyPagesPreview(
-    request,
-    env.WEB_PAGES_ORIGIN,
-    'web-custom-domain',
-  )
+async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
+  return proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
 }
 
 async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
@@ -101,100 +73,56 @@ async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
   if (request.method.toUpperCase() !== 'GET' || response.status !== 200) return response
   const contentType = response.headers.get('content-type') || ''
   if (!contentType.includes('text/html')) return response
-
   const url = new URL(request.url)
   const canonical = `${url.origin}/invitacion`
   const title = 'Te recomiendo Kawvo Link'
   const description = 'Crea tu presentación digital con Kawvo Link y comparte quién eres, qué haces y cómo contactarte en un solo lugar.'
   const image = `${url.origin}/assets/og/kawvo-link-og.png`
   const meta = [
-    `<title>${escapeHtml(title)}</title>`,
-    `<meta name="description" content="${escapeHtml(description)}">`,
-    `<meta property="og:type" content="website">`,
-    `<meta property="og:site_name" content="Kawvo Link">`,
-    `<meta property="og:title" content="${escapeHtml(title)}">`,
-    `<meta property="og:description" content="${escapeHtml(description)}">`,
-    `<meta property="og:url" content="${escapeHtml(canonical)}">`,
-    `<meta property="og:image" content="${escapeHtml(image)}">`,
-    `<meta property="og:image:alt" content="Kawvo Link">`,
-    `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${escapeHtml(title)}">`,
-    `<meta name="twitter:description" content="${escapeHtml(description)}">`,
-    `<meta name="twitter:image" content="${escapeHtml(image)}">`,
+    `<title>${escapeHtml(title)}</title>`, `<meta name="description" content="${escapeHtml(description)}">`, `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Kawvo Link">`, `<meta property="og:title" content="${escapeHtml(title)}">`, `<meta property="og:description" content="${escapeHtml(description)}">`,
+    `<meta property="og:url" content="${escapeHtml(canonical)}">`, `<meta property="og:image" content="${escapeHtml(image)}">`, `<meta property="og:image:alt" content="Kawvo Link">`,
+    `<meta name="twitter:card" content="summary_large_image">`, `<meta name="twitter:title" content="${escapeHtml(title)}">`, `<meta name="twitter:description" content="${escapeHtml(description)}">`, `<meta name="twitter:image" content="${escapeHtml(image)}">`,
   ].join('\n')
-
   const html = await response.text()
   const updated = html.replace(/<title>[\s\S]*?<\/title>/i, '').replace('</head>', `${meta}\n</head>`)
   const headers = new Headers(response.headers)
-  headers.delete('content-length')
-  headers.delete('content-encoding')
-  headers.set('cache-control', 'no-store')
-  headers.set('x-robots-tag', 'noindex, nofollow, noarchive')
-  return new Response(updated, { status: response.status, statusText: response.statusText, headers })
+  headers.delete('content-length'); headers.delete('content-encoding'); headers.set('cache-control','no-store'); headers.set('x-robots-tag','noindex, nofollow, noarchive')
+  return new Response(updated,{status:response.status,statusText:response.statusText,headers})
 }
 
 function renewPreviewRedirect(slug: string, embedded: boolean) {
   const mode = embedded ? '' : '?full=1'
-  const target = `https://app.preview.intaprd.com/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}${mode}`
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: target,
-      'Cache-Control': 'no-store',
-    },
-  })
+  return new Response(null,{status:302,headers:{Location:`https://app.preview.intaprd.com/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}${mode}`,'Cache-Control':'no-store'}})
 }
 
 export default {
   async fetch(request: Request, env: PreviewEnv, ctx: ExecutionContext) {
     const url = new URL(request.url)
     const isDraftPreviewRequest = url.searchParams.get('preview') === '1'
-
-    if (
-      url.hostname === 'preview.intaprd.com' &&
-      !url.pathname.startsWith('/api/') &&
-      isDraftPreviewRequest
-    ) {
-      const slug = slugFromPath(url.pathname)
-      const embedded = url.searchParams.get('embedded') === '1'
-      const valid = await validatePreviewSession(request, env, slug)
-
-      if (!valid && slug) {
-        return renewPreviewRedirect(slug, embedded)
-      }
-
-      if (embedded) {
-        return proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain', true)
-      }
+    if (url.hostname === 'preview.intaprd.com' && !url.pathname.startsWith('/api/') && isDraftPreviewRequest) {
+      const slug=slugFromPath(url.pathname),embedded=url.searchParams.get('embedded')==='1'
+      const valid=await validatePreviewSession(request,env,slug)
+      if(!valid && slug)return renewPreviewRedirect(slug,embedded)
+      if(embedded)return proxyPagesPreview(request,env.WEB_PAGES_ORIGIN,'web-custom-domain',true)
     }
-
-    if (url.pathname.startsWith('/api/v1/public/profiles/') && isDraftPreviewRequest) {
-      const slug = slugFromPath(url.pathname)
-      const valid = await validatePreviewSession(request, env, slug)
-      if (!valid) {
-        return new Response(JSON.stringify({ ok: false, error: 'preview_session_required' }), {
-          status: 403,
-          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-        })
-      }
+    if(url.pathname.startsWith('/api/v1/public/profiles/') && isDraftPreviewRequest){
+      const slug=slugFromPath(url.pathname),valid=await validatePreviewSession(request,env,slug)
+      if(!valid)return new Response(JSON.stringify({ok:false,error:'preview_session_required'}),{status:403,headers:{'content-type':'application/json','cache-control':'no-store'}})
     }
-
-    if (!url.pathname.startsWith('/api/')) {
-      if (url.hostname === 'preview.intaprd.com') {
-        if (url.pathname === '/invitacion' || url.pathname === '/invitacion/') {
-          return proxyInvitationWithMeta(request, env)
-        }
-        return proxyPublicProfileWithMeta(request, env)
+    if(!url.pathname.startsWith('/api/')){
+      if(url.hostname==='preview.intaprd.com'){
+        if(url.pathname==='/invitacion'||url.pathname==='/invitacion/')return proxyInvitationWithMeta(request,env)
+        return proxyPublicProfileWithMeta(request,env)
       }
-      if (url.hostname === 'app.preview.intaprd.com') {
-        return proxyPagesPreview(request, env.APP_PAGES_ORIGIN, 'app-custom-domain')
-      }
+      if(url.hostname==='app.preview.intaprd.com')return proxyPagesPreview(request,env.APP_PAGES_ORIGIN,'app-custom-domain')
     }
-
-    return app.fetch(request, env as any, ctx)
+    return app.fetch(request,env as any,ctx)
   },
-
   scheduled(_event: ScheduledEvent, env: PreviewEnv, ctx: ExecutionContext) {
-    ctx.waitUntil(refreshDueInstagramConnections(env as any))
+    ctx.waitUntil(Promise.all([
+      refreshDueInstagramConnections(env as any),
+      cleanupExpiredTeamCodes(env as any),
+    ]))
   },
 }
