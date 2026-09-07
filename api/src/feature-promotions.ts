@@ -49,6 +49,10 @@ function cleanCode(value: unknown): string {
   return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40)
 }
 
+function sqlNow(): string {
+  return new Date().toISOString().slice(0, 19).replace('T', ' ')
+}
+
 async function syncPromotionModule(c: any, promotionId: string) {
   const promo = await c.env.DB.prepare(
     `SELECT id, feature_code, target_plan, access_mode, profile_id, starts_at, ends_at, is_enabled
@@ -62,10 +66,17 @@ async function syncPromotionModule(c: any, promotionId: string) {
   const enabled = Number((promo as any).is_enabled || 0) === 1
   const startsAt = String((promo as any).starts_at || '')
   const endsAt = (promo as any).ends_at ? String((promo as any).ends_at) : null
-  const activeNow = enabled && startsAt <= new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const now = sqlNow()
+  const activeNow = enabled && startsAt <= now && (!endsAt || endsAt > now)
+  const reason = `promotion:${promotionId}`
 
-  // Existing module consumers (including bank_accounts) keep working without
-  // duplicating entitlement logic. Only current grants are materialized.
+  // Always remove grants previously materialized by this promotion first.
+  // This prevents an old indefinite grant from surviving when an admin moves
+  // the start date to the future, adds an end date, expires or disables it.
+  await c.env.DB.prepare(
+    `DELETE FROM profile_modules WHERE assignment_reason = ?`,
+  ).bind(reason).run()
+
   if (!activeNow) return
 
   if (mode === 'all') {
@@ -77,15 +88,34 @@ async function syncPromotionModule(c: any, promotionId: string) {
        ON CONFLICT(profile_id, module_code) DO UPDATE SET
          expires_at = excluded.expires_at,
          assignment_reason = excluded.assignment_reason`,
-    ).bind(featureCode, endsAt, `promotion:${promotionId}`, targetPlan).run()
-  } else if (mode === 'profile' && (promo as any).profile_id) {
+    ).bind(featureCode, endsAt, reason, targetPlan).run()
+    return
+  }
+
+  if (mode === 'profile' && (promo as any).profile_id) {
     await c.env.DB.prepare(
       `INSERT INTO profile_modules (profile_id, module_code, expires_at, activated_at, assignment_reason)
        VALUES (?, ?, ?, datetime('now'), ?)
        ON CONFLICT(profile_id, module_code) DO UPDATE SET
          expires_at = excluded.expires_at,
          assignment_reason = excluded.assignment_reason`,
-    ).bind(String((promo as any).profile_id), featureCode, endsAt, `promotion:${promotionId}`).run()
+    ).bind(String((promo as any).profile_id), featureCode, endsAt, reason).run()
+    return
+  }
+
+  if (mode === 'code') {
+    await c.env.DB.prepare(
+      `INSERT INTO profile_modules (profile_id, module_code, expires_at, activated_at, assignment_reason)
+       SELECT fpr.profile_id, ?, ?, datetime('now'), ?
+         FROM feature_promotion_redemptions fpr
+         JOIN profiles p ON p.id = fpr.profile_id
+        WHERE fpr.promotion_id = ?
+          AND p.plan_id = ?
+          AND p.is_active = 1
+       ON CONFLICT(profile_id, module_code) DO UPDATE SET
+         expires_at = excluded.expires_at,
+         assignment_reason = excluded.assignment_reason`,
+    ).bind(featureCode, endsAt, reason, promotionId, targetPlan).run()
   }
 }
 
@@ -206,13 +236,14 @@ app.post('/api/v1/superadmin/feature-promotions', requireSuperAdmin('super_admin
   const accessMode = String(body.access_mode || 'all').trim().toLowerCase()
   const promoCode = accessMode === 'code' ? cleanCode(body.promo_code) : null
   const profileId = accessMode === 'profile' ? String(body.profile_id || '').trim() : null
-  const startsAt = String(body.starts_at || '').trim() || new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const startsAt = String(body.starts_at || '').trim() || sqlNow()
   const endsAt = body.ends_at ? String(body.ends_at).trim() : null
 
   if (!featureCode || !name) return c.json({ ok: false, error: 'Función y nombre son obligatorios.' }, 400)
   if (!['all', 'code', 'profile'].includes(accessMode)) return c.json({ ok: false, error: 'Modo de acceso no válido.' }, 400)
   if (accessMode === 'code' && !promoCode) return c.json({ ok: false, error: 'Indica el código promocional.' }, 400)
   if (accessMode === 'profile' && !profileId) return c.json({ ok: false, error: 'Selecciona el perfil.' }, 400)
+  if (endsAt && endsAt <= startsAt) return c.json({ ok: false, error: 'La fecha final debe ser posterior a la fecha de inicio.' }, 400)
 
   if (profileId) {
     const profile = await c.env.DB.prepare(`SELECT id FROM profiles WHERE id = ? LIMIT 1`).bind(profileId).first()
@@ -250,6 +281,7 @@ app.put('/api/v1/superadmin/feature-promotions/:id', requireSuperAdmin('super_ad
   const enabled = body.is_enabled !== undefined ? (body.is_enabled ? 1 : 0) : Number((existing as any).is_enabled || 0)
 
   if (!name || !startsAt) return c.json({ ok: false, error: 'Nombre e inicio son obligatorios.' }, 400)
+  if (endsAt && endsAt <= startsAt) return c.json({ ok: false, error: 'La fecha final debe ser posterior a la fecha de inicio.' }, 400)
 
   await c.env.DB.prepare(
     `UPDATE feature_promotions
@@ -257,14 +289,7 @@ app.put('/api/v1/superadmin/feature-promotions/:id', requireSuperAdmin('super_ad
       WHERE id = ?`,
   ).bind(name, startsAt, endsAt, enabled, id).run()
 
-  if (!enabled) {
-    await c.env.DB.prepare(
-      `DELETE FROM profile_modules WHERE assignment_reason = ?`,
-    ).bind(`promotion:${id}`).run()
-  } else {
-    await syncPromotionModule(c, id)
-  }
-
+  await syncPromotionModule(c, id)
   return c.json({ ok: true })
 })
 
