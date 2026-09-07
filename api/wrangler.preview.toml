@@ -3,6 +3,9 @@ main = "src/preview-frontdoor-entry.ts"
 compatibility_date = "2024-02-08"
 workers_dev = true
 
+[triggers]
+crons = ["17 5 * * *"]
+
 [[routes]]
 pattern = "app.preview.intaprd.com/*"
 zone_name = "intaprd.com"
