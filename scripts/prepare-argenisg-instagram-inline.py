@@ -6,6 +6,12 @@ TARGET = ROOT / "web/src/components/profile-templates/IntapProfileAdonisgV1.tsx"
 
 text = TARGET.read_text(encoding="utf-8")
 
+# Copy final aprobado para el bloque social. Idempotente para ejecuciones repetidas.
+text = text.replace("latest: 'Argenis ahora',", "latest: 'Argenis en Instagram',")
+text = text.replace("latest: 'Argenis now',", "latest: 'Argenis on Instagram',")
+if "latest: 'Argenis en Instagram'," not in text or "latest: 'Argenis on Instagram'," not in text:
+    raise SystemExit('No pude consolidar el título final del bloque Instagram')
+
 old_import = "import './IntapProfileAdonisgV1.css'\n"
 new_import = "import './IntapProfileAdonisgV1.css'\nimport InstagramLatestMedia, { type InstagramMediaItem } from './InstagramLatestMedia'\n"
 if new_import not in text:
@@ -38,4 +44,4 @@ if new_section not in text:
         raise SystemExit('No encontré sección Instagram esperada para convertirla a reproducción inline')
 
 TARGET.write_text(text, encoding="utf-8")
-print('✓ Instagram latest: una sola publicación inline, sin CTA externo y con composición preservada')
+print('✓ Instagram: título final, una sola publicación inline, sin CTA externo y con composición preservada')
