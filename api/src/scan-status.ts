@@ -133,7 +133,7 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
         state: isOwner ? 'profile_draft_owner' : 'profile_draft',
         artifact: base,
         message: isOwner
-          ? 'Tu producto está activo, pero tu Perfil Digital todavía está en construcción.'
+          ? 'Tu Perfil Digital todavía está en construcción.'
           : 'Este Perfil Digital todavía está en construcción.',
         next_url: isOwner
           ? `${configuredAppUrl(c)}/admin/free`
