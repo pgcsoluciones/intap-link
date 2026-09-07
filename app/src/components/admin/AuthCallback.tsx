@@ -3,11 +3,18 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { API_BASE, apiGet } from '../../lib/api'
 
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+const TEAM_CODE_KEY = 'kawvo_team_join_code'
 
 function readScanCode(): string {
   const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
   const code = value.trim().toUpperCase()
   return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
+}
+
+function readTeamCode(): string {
+  const value = sessionStorage.getItem(TEAM_CODE_KEY) || localStorage.getItem(TEAM_CODE_KEY) || ''
+  const code = value.trim().toUpperCase()
+  return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code) ? code : ''
 }
 
 export default function AuthCallback() {
@@ -34,16 +41,18 @@ export default function AuthCallback() {
         sessionStorage.removeItem('kawvo_auth_mode')
         localStorage.removeItem('kawvo_auth_mode')
 
-        // Scan-to-claim is a standalone flow. If this authentication began from
-        // a physical product, return to that product route and let that screen
-        // create/resume the secure server intent. Do not enter legacy onboarding.
         const scanCode = readScanCode()
+        const teamCode = readTeamCode()
+        if (scanCode && teamCode) {
+          navigate('/admin/free/team/join', { replace: true })
+          return
+        }
+
         if (scanCode) {
           navigate(`/activate-product/${encodeURIComponent(scanCode)}?resume=1`, { replace: true })
           return
         }
 
-        // Non-scan logins keep their established account behavior.
         const pendingPublicCode = sessionStorage.getItem('intap_activation_public_code')
         if (pendingPublicCode) {
           navigate('/admin/artifacts/activate', { replace: true })
