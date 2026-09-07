@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { FaChevronLeft, FaChevronRight, FaInstagram, FaPlay } from 'react-icons/fa'
+import { FaChevronLeft, FaChevronRight, FaInstagram } from 'react-icons/fa'
 import './InstagramLatestMedia.css'
 
 export type InstagramMediaChild = {
@@ -36,7 +36,6 @@ function MediaPane({ item }: { item: InstagramMediaChild }) {
           preload="metadata"
           className="adonis-ig-media"
         />
-        <span className="adonis-ig-video-badge"><FaPlay /> Video</span>
       </div>
     )
   }
