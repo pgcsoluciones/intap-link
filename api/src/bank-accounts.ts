@@ -1,5 +1,6 @@
 import app from './preview-entry'
 import { cookieNames } from './lib/cookies'
+import { resolveFeaturePromotionAccess } from './feature-promotions'
 
 type AccountType = 'savings' | 'checking'
 type Currency = 'DOP' | 'USD'
@@ -7,7 +8,6 @@ type DisplayMode = 'masked' | 'visible'
 type HolderIdType = 'cedula' | 'rnc'
 
 const MAX_BANK_ACCOUNTS = 3
-const FAIR_CUTOFF_UTC = '2026-09-06 04:00:00'
 
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
@@ -84,21 +84,21 @@ async function bankAccess(c: any, profileId: string, planId: string) {
   }
 
   const moduleRow = await c.env.DB.prepare(
-    `SELECT profile_id FROM profile_modules
+    `SELECT profile_id, assignment_reason FROM profile_modules
       WHERE profile_id = ?
         AND module_code = 'bank_accounts'
         AND (expires_at IS NULL OR expires_at > datetime('now'))
       LIMIT 1`,
   ).bind(profileId).first()
 
-  if (moduleRow) return { allowed: true, source: 'fair' as const }
+  if (moduleRow) {
+    const reason = String((moduleRow as any).assignment_reason || '')
+    return { allowed: true, source: reason.startsWith('promotion:') ? 'promotion' as const : 'fair' as const }
+  }
 
-  const promo = await c.env.DB.prepare(
-    `SELECT CASE WHEN datetime('now') < ? THEN 1 ELSE 0 END AS active`,
-  ).bind(FAIR_CUTOFF_UTC).first()
-
-  if (Number((promo as any)?.active || 0) === 1) {
-    return { allowed: true, source: 'fair' as const }
+  const promotion = await resolveFeaturePromotionAccess(c, profileId, 'free', 'bank_accounts')
+  if (promotion.allowed) {
+    return { allowed: true, source: 'promotion' as const, promotion: promotion.promotion }
   }
 
   return { allowed: false, source: null, locked_reason: 'plan_required' as const }
@@ -168,7 +168,7 @@ app.put('/api/v1/me/bank-accounts/settings', requireBankAuth, async (c: any) => 
 
   const profileId = String((profile as any).id)
   const access = await bankAccess(c, profileId, String((profile as any).plan_id || 'free'))
-  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias disponibles en Plan Básico.' }, 403)
+  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias no disponibles para tu plan actual.' }, 403)
 
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -190,7 +190,7 @@ app.post('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
 
   const profileId = String((profile as any).id)
   const access = await bankAccess(c, profileId, String((profile as any).plan_id || 'free'))
-  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias disponibles en Plan Básico.' }, 403)
+  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias no disponibles para tu plan actual.' }, 403)
 
   const countRow = await c.env.DB.prepare(
     `SELECT COUNT(*) AS n FROM profile_bank_accounts WHERE profile_id = ?`,
@@ -248,7 +248,7 @@ app.put('/api/v1/me/bank-accounts/:id', requireBankAuth, async (c: any) => {
 
   const profileId = String((profile as any).id)
   const access = await bankAccess(c, profileId, String((profile as any).plan_id || 'free'))
-  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias disponibles en Plan Básico.' }, 403)
+  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias no disponibles para tu plan actual.' }, 403)
 
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
@@ -293,7 +293,7 @@ app.delete('/api/v1/me/bank-accounts/:id', requireBankAuth, async (c: any) => {
 
   const profileId = String((profile as any).id)
   const access = await bankAccess(c, profileId, String((profile as any).plan_id || 'free'))
-  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias disponibles en Plan Básico.' }, 403)
+  if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias no disponibles para tu plan actual.' }, 403)
 
   const result = await c.env.DB.prepare(
     `DELETE FROM profile_bank_accounts WHERE id = ? AND profile_id = ?`,
