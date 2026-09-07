@@ -12,17 +12,22 @@ import './preview-bank-accounts'
 import './scan-status'
 import './scan-to-claim'
 import './artifact-controls'
+import './team'
 import './ai-profile-assistant-access'
 import './ai-profile-assistant'
 import './instagram-preview'
 import { refreshDueInstagramConnections } from './instagram-token-refresh'
+import { cleanupExpiredTeamCodes } from './team'
 import { registerDemoAiRoutes } from './routes/demo-ai'
 import app from './preview-free-actions'
 
 registerDemoAiRoutes(app)
 
 ;(app as any).scheduled = (_event: ScheduledEvent, env: any, ctx: ExecutionContext) => {
-  ctx.waitUntil(refreshDueInstagramConnections(env))
+  ctx.waitUntil(Promise.all([
+    refreshDueInstagramConnections(env),
+    cleanupExpiredTeamCodes(env),
+  ]))
 }
 
 export default app
