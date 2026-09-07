@@ -77,8 +77,15 @@ export default function ArtifactLinkResolver() {
       })
       const json: any = await response.json().catch(() => ({ ok: false }))
       if (!response.ok || !json?.ok) { setTeamError(json?.error || 'No pudimos validar el código Team.'); return }
+
+      const nameResponse = await fetch(`${appOrigin()}/api/v1/public/team/name`, {
+        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team_id: json.data?.team_id }),
+      })
+      const nameJson: any = await nameResponse.json().catch(() => ({ ok: false }))
+      if (!nameResponse.ok || !nameJson?.ok) { setTeamError(nameJson?.error || 'No pudimos identificar el Team de este código.'); return }
+
       setTeamCode(normalized)
-      setTeamResult(json.data)
+      setTeamResult({ ...json.data, ...nameJson.data })
     } catch { setTeamError('No pudimos validar el código Team.') }
     finally { setTeamChecking(false) }
   }
@@ -117,7 +124,7 @@ export default function ArtifactLinkResolver() {
 
             {teamOpen && !teamResult && <div style={{ marginTop: 22, textAlign: 'left' }}>
               <h2 style={{ margin: 0, fontSize: 19 }}>Vincular a un Team</h2>
-              <p style={{ margin: '8px 0 0', color: '#64748b', lineHeight: 1.55, fontSize: 14 }}>Ingresa el código de vinculación suministrado por el administrador Team del perfil master.</p>
+              <p style={{ margin: '8px 0 0', color: '#64748b', lineHeight: 1.55, fontSize: 14 }}>Ingresa el código de vinculación suministrado por el administrador Team.</p>
               <input value={teamCode} onChange={(event) => setTeamCode(event.target.value.toUpperCase())} placeholder="TEAM-XXXX-XXXX" autoComplete="off" spellCheck={false} style={{ width: '100%', boxSizing: 'border-box', marginTop: 16, border: '1px solid #cbd5e1', borderRadius: 14, padding: '14px 15px', fontSize: 15, fontWeight: 800, textTransform: 'uppercase', background: '#f8fafc' }} />
               {teamError && <p style={{ margin: '12px 0 0', color: '#be123c', fontSize: 13, lineHeight: 1.5 }}>{teamError}</p>}
               <button type="button" onClick={() => void inspectTeamCode()} disabled={teamChecking || !teamCode.trim()} style={{ ...primaryButton, marginTop: 14, opacity: teamChecking || !teamCode.trim() ? .5 : 1 }}>{teamChecking ? 'Validando…' : 'Validar código'}</button>
@@ -126,11 +133,14 @@ export default function ArtifactLinkResolver() {
 
             {teamOpen && teamResult && <div style={{ marginTop: 22, textAlign: 'left' }}>
               <div style={{ border: '1px solid #bae6fd', background: '#f0f9ff', borderRadius: 18, padding: 16 }}>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: '#0369a1' }}>CÓDIGO CONFIRMADO</p>
-                <h2 style={{ margin: '6px 0 0', fontSize: 20 }}>{teamResult.master_name}</h2>
-                <p style={{ margin: '8px 0 0', color: '#475569', lineHeight: 1.5, fontSize: 13 }}>Este producto quedará vinculado al perfil Team y el código no podrá volver a utilizarse.</p>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: '#0369a1' }}>TEAM CONFIRMADO</p>
+                <h2 style={{ margin: '6px 0 0', fontSize: 22 }}>{teamResult.team_name}</h2>
+                {teamResult.master_name && teamResult.master_name !== teamResult.team_name && <p style={{ margin: '5px 0 0', color: '#64748b', fontSize: 13 }}>Perfil principal: {teamResult.master_name}</p>}
+                <p style={{ margin: '12px 0 0', color: '#334155', lineHeight: 1.5, fontSize: 14, fontWeight: 700 }}>Confirma que este es el Team correcto antes de continuar.</p>
+                <p style={{ margin: '8px 0 0', color: '#64748b', lineHeight: 1.5, fontSize: 13 }}>Este producto quedará vinculado a este Team y el código no podrá volver a utilizarse.</p>
               </div>
-              <button type="button" onClick={continueTeam} style={{ ...primaryButton, marginTop: 14 }}>Continuar con la vinculación</button>
+              <button type="button" onClick={continueTeam} style={{ ...primaryButton, marginTop: 14 }}>Sí, continuar con {teamResult.team_name}</button>
+              <button type="button" onClick={() => { setTeamResult(null); setTeamCode(''); }} style={secondaryButton}>No es mi Team</button>
               <button type="button" onClick={() => setState('later')} style={secondaryButton}>Vincular luego</button>
             </div>}
           </>
