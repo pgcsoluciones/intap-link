@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { apiGet, apiPost } from '../../lib/api'
 
@@ -13,6 +13,8 @@ type Artifact = {
   profile_is_active?: number | boolean | null
   profile_is_published?: number | boolean | null
   public_url: string
+  activated_at?: string | null
+  created_at?: string | null
 }
 
 const PENDING_PUBLIC_CODE = 'intap_activation_public_code'
@@ -23,6 +25,20 @@ function ProductLabel({ type }: { type: string }) {
     keychain: 'Llavero NFC', stand: 'Estación de Contacto', qr: 'Código QR', other: 'Producto Kawvo',
   }
   return <>{labels[type] || labels.other}</>
+}
+
+function artifactTimestamp(item: Artifact): number {
+  const raw = item.activated_at || item.created_at || ''
+  const time = raw ? Date.parse(raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`) : Number.NaN
+  return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER
+}
+
+function formattedAddedDate(item: Artifact): string {
+  const raw = item.activated_at || item.created_at || ''
+  if (!raw) return ''
+  const date = new Date(raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('es-DO', { day: 'numeric', month: 'short', year: 'numeric' }).format(date)
 }
 
 export function ArtifactActivation() {
@@ -63,15 +79,15 @@ export function ArtifactActivation() {
         <Link to="/admin/login" className="mb-7 text-xs font-bold text-slate-500">← Volver</Link>
         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
         <h1 className="mt-2 text-[30px] font-black leading-tight tracking-[-0.04em]">Vincula tu producto</h1>
-        <p className="mt-2 text-[15px] leading-6 text-slate-500">Primero identifica el producto. La activación segura se completa desde tu cuenta.</p>
+        <p className="mt-2 text-[15px] leading-6 text-slate-500">Ingresa el código visible de tu producto para continuar.</p>
 
         <form onSubmit={identify} className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">Código público del producto
+          <label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">Código del producto
             <input value={publicCode} onChange={event => setPublicCode(event.target.value.toUpperCase())} autoComplete="off" spellCheck={false} placeholder="TJ6RLWSWXJ" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-black tracking-[0.14em] uppercase outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
           </label>
           {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
           {preview && <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 p-4 text-sm"><p className="font-black text-cyan-700">Producto disponible</p><p className="mt-1 font-extrabold text-slate-900"><ProductLabel type={preview.product_type} /></p><p className="mt-1 font-mono text-xs font-bold text-slate-500">{preview.public_code}</p></div>}
-          {!preview ? <button disabled={loading || !publicCode.trim()} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-35">{loading ? 'Identificando…' : 'Identificar producto'}</button> : <button type="button" onClick={continueToAccount} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">Continuar con mi cuenta</button>}
+          {!preview ? <button disabled={loading || !publicCode.trim()} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-35">{loading ? 'Buscando…' : 'Continuar'}</button> : <button type="button" onClick={continueToAccount} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">Continuar con mi cuenta</button>}
         </form>
       </section>
     </main>
@@ -124,7 +140,7 @@ export function ArtifactActivationAuthenticated() {
   if (!me?.profile_id) return <CenteredMessage text="Primero necesitamos crear tu perfil para saber dónde debe apuntar el producto." action={<Link to="/admin/free/onboarding/slug" className="font-black text-cyan-700">Crear mi perfil y continuar →</Link>} />
   if (artifact) {
     const published = Number(artifact.profile_is_active) === 1 && Number(artifact.profile_is_published) === 1
-    return <CenteredMessage text="Producto vinculado correctamente" action={<div className="space-y-3"><p className="text-sm text-slate-500">Destino: /{artifact.profile_slug}</p>{published ? <a href={artifact.public_url} className="font-black text-cyan-700">Abrir mi perfil →</a> : <><p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Tu perfil todavía está en construcción. Podrás usar este producto normalmente cuando publiques el perfil.</p><Link to="/admin/free" className="font-black text-cyan-700">Continuar editando mi perfil →</Link></>}</div>} />
+    return <CenteredMessage text="Producto vinculado correctamente" action={<div className="space-y-3"><p className="text-sm text-slate-500">Destino: /{artifact.profile_slug}</p>{published ? <a href={artifact.public_url} className="font-black text-cyan-700">Abrir mi perfil →</a> : <><p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Tu perfil todavía está en construcción.</p><Link to="/admin/free" className="font-black text-cyan-700">Continuar editando mi perfil →</Link></>}</div>} />
   }
 
   return <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950"><section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center"><div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)]"><p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">Paso final</p><h1 className="mt-2 text-2xl font-black">Confirma la activación</h1><div className="mt-4 rounded-2xl bg-cyan-50 p-4"><p className="text-sm font-black"><ProductLabel type={product?.product_type || 'other'} /></p><p className="mt-1 font-mono text-xs font-bold text-slate-500">{product?.public_code}</p><p className="mt-2 text-xs text-slate-500">Cuenta: {me?.email}</p><p className="mt-1 text-xs text-slate-500">Perfil: /{me?.slug}</p></div><form onSubmit={activate}><label className="mt-5 block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">Código secreto de activación<input value={secret} onChange={event => setSecret(event.target.value.toUpperCase())} autoComplete="off" spellCheck={false} placeholder="ABCD2345…" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-black tracking-[0.12em] uppercase outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" /></label>{error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}<button disabled={saving || !secret.trim()} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-35">{saving ? 'Vinculando…' : 'Activar y vincular producto'}</button></form></div></section></main>
@@ -149,6 +165,11 @@ export function ArtifactManager() {
 
   useEffect(() => { refresh() }, [])
 
+  const principalId = useMemo(() => {
+    if (artifacts.length === 0) return ''
+    return [...artifacts].sort((a, b) => artifactTimestamp(a) - artifactTimestamp(b))[0]?.id || ''
+  }, [artifacts])
+
   const runAction = async (item: Artifact, action: 'deactivate' | 'reactivate' | 'unlink' | 'link-current') => {
     if (busyId) return
     setBusyId(item.id)
@@ -161,7 +182,7 @@ export function ArtifactManager() {
       return
     }
     const success: Record<typeof action, string> = {
-      deactivate: 'Producto desactivado. Conserva su vínculo y podrás reactivarlo cuando quieras.',
+      deactivate: 'Producto desactivado. Podrás reactivarlo cuando quieras.',
       reactivate: 'Producto reactivado correctamente.',
       unlink: 'Producto desvinculado del perfil. El producto sigue siendo tuyo.',
       'link-current': 'Producto vinculado a tu perfil actual.',
@@ -179,17 +200,23 @@ export function ArtifactManager() {
       <section className="mx-auto w-full max-w-3xl">
         <Link to="/admin" className="text-xs font-bold text-slate-500">← Volver al panel</Link>
         <div className="mt-5 mb-7 flex items-end justify-between gap-4"><div><p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p><h1 className="mt-2 text-3xl font-black">Mis productos físicos</h1></div><Link to="/admin/artifacts/activate" className="rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white">{productCta}</Link></div>
-        <p className="mb-5 text-sm leading-6 text-slate-600">Aquí puedes pausar temporalmente un producto, reactivarlo o desvincularlo de tu perfil sin perder la propiedad del artículo.</p>
+        <p className="mb-5 text-sm leading-6 text-slate-600">Administra los productos vinculados a tu cuenta.</p>
         {message && <p className="mb-4 rounded-xl bg-cyan-50 px-3 py-2 text-sm font-bold text-cyan-700">{message}</p>}
 
         {loading ? <p className="text-slate-400">Cargando…</p> : <div className="grid gap-4 sm:grid-cols-2">{artifacts.map(item => {
           const suspended = item.status === 'suspended'
           const linked = Boolean(item.profile_id)
           const busy = busyId === item.id
+          const principal = item.id === principalId
+          const addedDate = formattedAddedDate(item)
           return (
-            <div key={item.id} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div key={item.id} className={`rounded-[24px] border bg-white p-5 shadow-sm ${principal ? 'border-cyan-300 ring-1 ring-cyan-100' : 'border-slate-200'}`}>
               <div className="flex items-start justify-between gap-3">
-                <div><p className="text-xs font-black uppercase tracking-widest text-slate-400"><ProductLabel type={item.product_type} /></p><p className="mt-2 font-mono text-lg font-bold">{item.public_code}</p></div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-400"><ProductLabel type={item.product_type} />{principal ? ' · Producto principal' : ''}</p>
+                  <p className="mt-2 font-mono text-lg font-bold">{item.public_code}</p>
+                  {addedDate && <p className="mt-1 text-xs font-semibold text-slate-400">Agregado el {addedDate}</p>}
+                </div>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${suspended ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{suspended ? 'Desactivado' : 'Activo'}</span>
               </div>
 
