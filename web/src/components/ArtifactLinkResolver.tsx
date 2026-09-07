@@ -4,9 +4,6 @@ import { useParams } from 'react-router-dom'
 const KAWVO_COMPACT_LOGO = '/assets/free-starter/branding/logo-solo.png'
 
 function appOrigin() {
-  // Canonical public hosts must always hand off to the admin APP host.
-  // Resolve them at runtime before considering build-time env values so a
-  // local/CI env override can never keep /activate-product on the public site.
   const host = window.location.hostname.toLowerCase()
   if (host === 'preview.intaprd.com') return 'https://app.preview.intaprd.com'
   if (host === 'intaprd.com' || host === 'www.intaprd.com' || host === 'link.intaprd.com') {
@@ -21,7 +18,7 @@ function appOrigin() {
     : 'https://app.intaprd.com'
 }
 
-type ProductState = 'loading' | 'pending_activation' | 'activated' | 'profile_draft' | 'profile_draft_owner' | 'blocked' | 'unavailable' | 'not_ready' | 'later' | 'error'
+type ProductState = 'loading' | 'pending_activation' | 'profile_draft' | 'profile_draft_owner' | 'blocked' | 'unavailable' | 'not_ready' | 'later' | 'error'
 
 type ArtifactInfo = {
   public_code?: string
@@ -66,8 +63,14 @@ export default function ArtifactLinkResolver() {
           return
         }
 
+        const nextUrl = String(json.next_url || '')
+        if (json.state === 'activated' && nextUrl) {
+          window.location.replace(nextUrl)
+          return
+        }
+
         setArtifact(json.artifact || null)
-        setProfileUrl(String(json.next_url || ''))
+        setProfileUrl(nextUrl)
         setLoginUrl(String(json.login_url || ''))
         setMessage(String(json.message || ''))
         setState(String(json.state || 'error') as ProductState)
@@ -86,8 +89,6 @@ export default function ArtifactLinkResolver() {
     if (!code || starting) return
     setStarting(true)
     setMessage('')
-
-    // Public site only confirms intention. Handoff must be an absolute APP URL.
     window.location.assign(`${appOrigin()}/activate-product/${encodeURIComponent(code)}`)
   }
 
@@ -192,19 +193,6 @@ export default function ArtifactLinkResolver() {
                   Conocer Kawvo Link
                 </button>
               </>
-            )}
-          </>
-        )}
-
-        {state === 'activated' && (
-          <>
-            <div style={{ width: 48, height: 48, margin: '20px auto 0', display: 'grid', placeItems: 'center', borderRadius: '50%', background: '#ecfdf5', color: '#047857', fontSize: 24, fontWeight: 900 }}>✓</div>
-            <h1 style={{ margin: '16px 0 8px', fontSize: 26 }}>Este producto ya está activo</h1>
-            <p style={{ margin: '0 0 20px', lineHeight: 1.6, color: '#64748b' }}>{artifact?.label || 'Tu producto Kawvo'} ya está conectado a un Perfil Digital.</p>
-            {profileUrl ? (
-              <button type="button" onClick={() => window.location.assign(profileUrl)} style={primaryButton}>Abrir Perfil Digital</button>
-            ) : (
-              <p style={{ margin: 0, lineHeight: 1.6, color: '#64748b' }}>El producto está activo, pero su perfil todavía no está disponible públicamente.</p>
             )}
           </>
         )}
