@@ -1,10 +1,11 @@
 /* /argenisg · compact contact pills */
 .adonis-profile .adonis-contact-icons{
-  background:#050505;
+  background:#030303!important;
   padding:24px 22px 30px;
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:9px;
+  border-top:1px solid rgba(255,255,255,.035);
 }
 
 .adonis-profile .adonis-contact-icons button,
@@ -36,6 +37,12 @@
 .adonis-profile .adonis-contact-icons svg{
   font-size:18px;
   flex:none;
+}
+
+/* Contact pills + share links are one continuous black footer zone. */
+.adonis-profile .adonis-share-actions{
+  background:#030303!important;
+  border-top:0!important;
 }
 
 @media(max-width:420px){
