@@ -1,9 +1,17 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const NFC_INTEREST_URL = 'https://nfc.kawvoia.com'
 
 export default function FreeOnboardingWelcome() {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('profile_deleted') === '1') {
+      navigate('/admin/artifacts', { replace: true })
+    }
+  }, [navigate])
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
