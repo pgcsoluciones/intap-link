@@ -1,0 +1,5 @@
+/* The edge injects semantic profile content for crawlers before React mounts.
+   Keep it non-visual for human visitors so there is no text-only flash. */
+[data-kawvo-server-profile="1"] {
+  display: none !important;
+}
