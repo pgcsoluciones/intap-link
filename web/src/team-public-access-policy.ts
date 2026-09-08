@@ -4,7 +4,7 @@ function appOrigin() {
   return 'https://app.intaprd.com'
 }
 
-type TeamPolicy = { team_member: boolean; login_enabled: boolean; role?: string | null; synchronized?: boolean; team_name?: string; show_bank_accounts?: boolean }
+type TeamPolicy = { team_member: boolean; login_enabled: boolean; role?: string | null; synchronized?: boolean; team_name?: string; company_name?: string; show_bank_accounts?: boolean }
 
 const policyCache = new Map<string, TeamPolicy>()
 const pending = new Map<string, Promise<TeamPolicy | null>>()
@@ -22,7 +22,7 @@ function exposePolicy(policy: TeamPolicy | null) {
     return
   }
   root.dataset.kawvoTeamMember = '1'
-  root.dataset.kawvoTeamName = String(policy.team_name || '').trim()
+  root.dataset.kawvoTeamName = String(policy.company_name || '').trim()
   root.dataset.kawvoTeamShowBanks = policy.show_bank_accounts === false ? '0' : '1'
 }
 
@@ -45,6 +45,7 @@ async function loadPolicy(slug: string): Promise<TeamPolicy | null> {
       role: json.data?.role ?? null,
       synchronized: Boolean(json.data?.synchronized),
       team_name: String(json.data?.team_name || '').trim(),
+      company_name: String(json.data?.company_name || '').trim(),
       show_bank_accounts: json.data?.show_bank_accounts !== false,
     }
     policyCache.set(slug, policy)
@@ -65,7 +66,7 @@ export async function warmTeamPublicProfile() {
 
 function applyTeamIdentityPolicy(data: TeamPolicy) {
   if (!data.team_member) return
-  const companyName = String(data.team_name || '').trim()
+  const companyName = String(data.company_name || '').trim()
   if (!companyName) return
 
   const containers = Array.from(document.querySelectorAll<HTMLElement>('.ilx-impact-name, .ilx-personal-text, .ilx-essential-name'))
