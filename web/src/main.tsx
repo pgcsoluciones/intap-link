@@ -2,34 +2,25 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import FreePreviewEditShortcut from './components/free-profile/FreePreviewEditShortcut'
-import { installTeamPublicAccessPolicy } from './team-public-access-policy'
+import { installTeamPublicAccessPolicy, warmTeamPublicProfile } from './team-public-access-policy'
 import './index.css'
 import './components/profile-templates/IntapProfileAdonisgV1.mobile.css'
 
-// ✅ Redirección ultra-temprana (antes de que React se monte)
-// Soporta: /?slug=juan  →  /juan
 (() => {
   try {
     const q = new URLSearchParams(window.location.search)
     const slug = q.get('slug')
-
-    // Solo redirige si estás en la raíz y existe slug
     if (slug && (window.location.pathname === '/' || window.location.pathname === '')) {
       const target = `/${encodeURIComponent(slug)}`
       window.location.replace(target)
       return
     }
   } catch {
-    // Si algo falla, no bloquea la app
+    // no bloquea la app
   }
 })()
 
-installTeamPublicAccessPolicy()
-
-// Safari/iPhone requires video.play() to happen inside the original user gesture.
-// The Argenis template previously deferred play() with setTimeout after React state,
-// which can lose iOS user activation. Capture the tap first and start the featured
-// video synchronously; React can still update its own state afterwards.
+// Safari/iPhone requires video.play() inside the original user gesture.
 document.addEventListener('click', (event) => {
   const target = event.target
   if (!(target instanceof Element)) return
@@ -43,16 +34,23 @@ document.addEventListener('click', (event) => {
   video.playsInline = true
   const result = video.play()
   if (result && typeof result.catch === 'function') {
-    result.catch(() => {
-      // Native controls remain visible so the user can retry directly.
-      video.controls = true
-    })
+    result.catch(() => { video.controls = true })
   }
 }, true)
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-    <FreePreviewEditShortcut />
-  </React.StrictMode>
-)
+async function bootstrap() {
+  // Para perfiles Team sincronizamos primero los datos heredados del Master.
+  // Así React solicita el perfil cuando plantilla, portafolio, servicios y demás
+  // secciones corporativas ya están actualizadas.
+  await warmTeamPublicProfile().catch(() => undefined)
+  installTeamPublicAccessPolicy()
+
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+      <FreePreviewEditShortcut />
+    </React.StrictMode>
+  )
+}
+
+void bootstrap()
