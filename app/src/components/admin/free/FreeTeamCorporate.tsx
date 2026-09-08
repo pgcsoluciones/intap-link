@@ -12,6 +12,7 @@ type CodeRow = { id:string; code:string; status:string; assignment_status?:strin
 type MemberRow = { id:string; status:string; admin_role?:'member'|'editor'|'subadmin'; permissions?:string[]; joined_at?:string; name?:string|null; role?:string|null; email?:string|null; product_code?:string|null }
 type BasicPayload = { team:{ id:string; name:string; name_confirmed?:boolean; master_profile_id:string }; codes:CodeRow[]; pagination:{ page:number; page_size:number; total:number; pages:number }; member_count:number }
 type ManagePayload = { access:{ role:'master'|'editor'|'subadmin'; can_generate_codes:boolean; can_manage_roles:boolean; can_toggle_members:boolean; can_edit_members:boolean }; members:MemberRow[] }
+type RoleCredential = { memberName:string; role:string; password:string }
 
 function formatDate(value?:string|null){
   if(!value)return '—'
@@ -34,6 +35,7 @@ export default function FreeTeamCorporate(){
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
+  const [roleCredential,setRoleCredential]=useState<RoleCredential|null>(null)
   const [teamName,setTeamName]=useState('')
   const [savedName,setSavedName]=useState('')
   const [nameConfirmed,setNameConfirmed]=useState(false)
@@ -94,11 +96,18 @@ export default function FreeTeamCorporate(){
   }
   const setMemberRole=async(member:MemberRow,role:'member'|'editor'|'subadmin')=>{
     if(!isMaster||busy)return
-    setBusy(true);setError('');setMessage('')
+    setBusy(true);setError('');setMessage('');setRoleCredential(null)
     const json:any=await apiPost(`/me/team/members/${member.id}/role`,{role}).catch(()=>({ok:false}))
     setBusy(false)
     if(!json?.ok){setError(json?.error||'No pudimos cambiar el rol.');return}
-    setMessage(`Rol actualizado a ${roleLabel(role)}.`);await load(page,query)
+    const temporaryPassword=String(json.data?.temporary_password||'').trim()
+    if(temporaryPassword){
+      setRoleCredential({memberName:member.name||member.email||'Miembro Team',role:roleLabel(role),password:temporaryPassword})
+      setMessage(`Rol actualizado a ${roleLabel(role)}. Entrega la contraseña temporal al colaborador.`)
+    }else{
+      setMessage(`Rol actualizado a ${roleLabel(role)}.`)
+    }
+    await load(page,query)
   }
   const toggleMember=async(member:MemberRow)=>{
     if(!canToggle||busy)return
@@ -109,6 +118,7 @@ export default function FreeTeamCorporate(){
     setMessage(active?'Miembro activado.':'Miembro desactivado. El dispositivo mostrará Perfil no disponible.');await load(page,query)
   }
   const copy=async(value:string)=>{try{await navigator.clipboard.writeText(value);setMessage(`Código ${value} copiado.`)}catch{setMessage('No pudimos copiar el código.')}}
+  const copyPassword=async()=>{if(!roleCredential)return;try{await navigator.clipboard.writeText(roleCredential.password);setMessage('Contraseña temporal copiada.')}catch{setMessage('No pudimos copiar la contraseña temporal.')}}
 
   if(loading)return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
 
@@ -117,6 +127,7 @@ export default function FreeTeamCorporate(){
     <div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-600">KAWVO LINK · TEAM</p><h1 className="mt-1 text-3xl font-black">Equipo de trabajo</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">RR. HH. prepara los perfiles y entrega los dispositivos listos. Los miembros normales no necesitan cuenta ni onboarding.</p></div>{basic&&<div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Miembros</p><p className="text-2xl font-black">{basic.member_count}</p></div>}</div>
 
     {error&&<p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}{message&&<p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}
+    {roleCredential&&<section className="mt-4 rounded-[24px] border border-amber-300 bg-amber-50 p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">Acceso administrativo Team</p><h2 className="mt-1 text-lg font-black text-amber-950">Contraseña temporal</h2><p className="mt-1 text-sm text-amber-900"><strong>{roleCredential.memberName}</strong> · {roleCredential.role}</p></div><button type="button" onClick={()=>setRoleCredential(null)} className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-black text-amber-800">Cerrar</button></div><div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center"><code className="min-w-0 flex-1 rounded-2xl border border-amber-200 bg-white px-4 py-3 text-center text-base font-black tracking-[0.08em] text-slate-950">{roleCredential.password}</code><button type="button" onClick={()=>void copyPassword()} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Copiar contraseña</button></div><p className="mt-3 text-xs font-bold leading-5 text-amber-800">Muéstrala o cópiala ahora. Por seguridad no volverá a mostrarse después de cerrar este aviso. El colaborador deberá cambiarla en su primer acceso.</p></section>}
 
     <section className="mt-6 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm"><p className="text-[11px] font-black uppercase tracking-[0.15em] text-cyan-700">Identidad del Team</p><h2 className="mt-1 text-xl font-black">Nombre del Team</h2><p className="mt-2 text-sm leading-6 text-slate-500">Debes asignar y guardar un nombre antes de generar códigos. Ese nombre confirma al administrador que está trabajando en el Team correcto.</p>{isMaster?<div className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={teamName} onChange={(e)=>{setTeamName(e.target.value.slice(0,80));if(e.target.value.trim()!==savedName.trim())setNameConfirmed(false)}} placeholder="Ej. Equipo Comercial Kawvo" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold"/><button type="button" onClick={()=>void saveName()} disabled={busy||teamName.trim().length<2||(!nameChanged&&nameConfirmed)} className="rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white disabled:opacity-35">{busy?'Guardando…':nameConfirmed&&!nameChanged?'Guardado':'Guardar nombre'}</button></div>:<p className="mt-3 text-base font-black">{savedName}</p>}{nameConfirmed&&!nameChanged&&<p className="mt-3 text-xs font-bold text-emerald-700">✓ Nombre confirmado: {savedName}</p>}</section>
 
