@@ -31,6 +31,12 @@ type AiUsage = {
   monthly_limit?: number
 }
 
+type TeamAdminContext = {
+  role?: string
+  team_name?: string
+  can_manage_team?: boolean
+}
+
 type RowProps = {
   icon: ReactNode
   label: string
@@ -78,6 +84,7 @@ export default function FreeAccount() {
   const [bankActive, setBankActive] = useState(false)
   const [resources, setResources] = useState<ResourceItem[]>([])
   const [aiUsage, setAiUsage] = useState<AiUsage | null>(null)
+  const [teamContext, setTeamContext] = useState<TeamAdminContext>({ role: 'none' })
   const [unreadCount, setUnreadCount] = useState(0)
   const [shareFeedback, setShareFeedback] = useState('')
   const [qrBusy, setQrBusy] = useState(false)
@@ -103,12 +110,14 @@ export default function FreeAccount() {
       apiGet('/me/ai-profile-assistant/context').catch(() => ({ ok: false })),
       apiGet('/me/account/resources').catch(() => ({ ok: false })),
       apiGet('/me/notifications?limit=1').catch(() => ({ ok: false })),
-    ]).then(([meJson, bankJson, aiJson, resourcesJson, notificationsJson]: any[]) => {
+      apiGet('/me/team/admin-context').catch(() => ({ ok: false })),
+    ]).then(([meJson, bankJson, aiJson, resourcesJson, notificationsJson, teamJson]: any[]) => {
       if (meJson?.ok) setMe(meJson.data || null)
       if (bankJson?.ok) setBankActive(Boolean(bankJson.data?.access?.allowed && bankJson.data?.enabled !== false))
       if (aiJson?.ok) setAiUsage(aiJson.data?.usage || null)
       if (resourcesJson?.ok) setResources(Array.isArray(resourcesJson.data?.items) ? resourcesJson.data.items : [])
       if (notificationsJson?.ok) setUnreadCount(Number(notificationsJson.data?.unread_count || 0))
+      if (teamJson?.ok) setTeamContext(teamJson.data || { role: 'none' })
     }).finally(() => setLoading(false))
   }, [])
 
@@ -262,6 +271,13 @@ export default function FreeAccount() {
   if (loading) return <div className="min-h-screen bg-white flex items-center justify-center"><div className="loading-spinner" /></div>
 
   const profileLabel = me?.name || me?.email || 'Mi cuenta Kawvo'
+  const teamDetail = teamContext.role === 'master'
+    ? `Administrar ${teamContext.team_name || 'mi Team'}`
+    : teamContext.role === 'editor'
+      ? 'Acceso como Editor'
+      : teamContext.role === 'subadmin'
+        ? 'Acceso como Subadministrador'
+        : 'Crea y administra un equipo de trabajo'
 
   return (
     <>
@@ -351,6 +367,7 @@ export default function FreeAccount() {
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label={pwaInstalled ? "Kawvo está instalada" : "Instalar app Kawvo"} detail={pwaInstalled ? "La estás usando como app en este dispositivo" : (pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app")} onClick={() => pwaInstalled ? undefined : void installPwa()} />
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts?from=account')} />
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5M10.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5"/></svg>} label="Team" detail={teamDetail} badge={teamContext.role === 'master' ? 'MASTER' : teamContext.role === 'editor' ? 'EDITOR' : teamContext.role === 'subadmin' ? 'SUBADMIN' : undefined} onClick={() => navigate('/admin/free/team')} />
               <SettingsRow icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void previewQr()} />
               {bankActive && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18M12 3 3 8h18L12 3Z"/></svg>} label="Enviar enlace de cuentas" detail="Comparte con tus clientes el enlace directo a tus cuentas bancarias" onClick={() => void shareBankAccounts()} />}
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3.5 19c.5-3.5 2.6-5.5 5.5-5.5s5 2 5.5 5.5M14 14c2.8-.3 5 1.4 5.5 4.5"/></svg>} label="Invitar a un amigo" onClick={() => setShowInvitePreview(true)} />
