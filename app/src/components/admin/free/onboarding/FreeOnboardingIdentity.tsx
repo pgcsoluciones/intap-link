@@ -4,6 +4,10 @@ import { apiGet, apiPut, apiUpload } from '../../../../lib/api'
 import ImageCropModal from '../../ImageCropModal'
 import { FreeBackButton } from '../FreePanelUi'
 
+function normalizeSlug(value: string) {
+  return value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '').slice(0, 32)
+}
+
 export default function FreeOnboardingIdentity() {
   const navigate = useNavigate()
   const editingFromPanel = new URLSearchParams(window.location.search).get('from') === 'panel'
@@ -11,6 +15,8 @@ export default function FreeOnboardingIdentity() {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [bio, setBio] = useState('')
+  const [slug, setSlug] = useState('')
+  const [originalSlug, setOriginalSlug] = useState('')
   const [templateData, setTemplateData] = useState<Record<string, any>>({})
   const [avatarUrl, setAvatarUrl] = useState('')
   const [profileId, setProfileId] = useState<string | null>(null)
@@ -31,9 +37,12 @@ export default function FreeOnboardingIdentity() {
       if (json?.ok && json.data) {
         const d = json.data
         const currentTemplateData = d.templateData && typeof d.templateData === 'object' ? d.templateData : {}
+        const currentSlug = String(d.slug || '')
         setName(d.name || '')
         setRole(currentTemplateData.role || currentTemplateData.title || '')
         setBio(d.bio || '')
+        setSlug(currentSlug.startsWith('kawvo-') ? '' : currentSlug)
+        setOriginalSlug(currentSlug)
         setTemplateData(currentTemplateData)
         setAvatarUrl(d.avatar_url || '')
         setProfileId(d.profile_id || null)
@@ -79,9 +88,25 @@ export default function FreeOnboardingIdentity() {
       setError('Completa tu nombre y tu cargo.')
       return
     }
+    const normalizedSlug = normalizeSlug(slug)
+    if (!teamMember && normalizedSlug.length < 2) {
+      setError('Elige un usuario de al menos 2 caracteres.')
+      return
+    }
+
     setSaving(true)
     setError('')
     try {
+      if (!teamMember && normalizedSlug && normalizedSlug !== originalSlug) {
+        const slugResult: any = await apiPut('/me/profile/slug', { slug: normalizedSlug })
+        if (!slugResult?.ok) {
+          setError(slugResult?.error === 'Slug no disponible' ? 'Ese usuario ya está siendo usado por otro perfil. Prueba con otro.' : slugResult?.error || 'No pudimos guardar tu usuario.')
+          return
+        }
+        setOriginalSlug(normalizedSlug)
+        setSlug(normalizedSlug)
+      }
+
       const nextTemplate = { ...templateData, role: role.trim(), free_identity_confirmed: true }
       const body: Record<string, unknown> = { name: name.trim(), template_data: nextTemplate }
       if (!teamMember) body.bio = bio.trim()
@@ -98,13 +123,15 @@ export default function FreeOnboardingIdentity() {
 
   if (loading) return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
 
+  const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
+
   return <>
     {cropFile && <ImageCropModal file={cropFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setCropFile(null)} />}
     <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950 sm:px-5">
       <section className="mx-auto w-full max-w-[430px] py-1">
         <FreeBackButton onClick={() => navigate('/admin/free')} />
         <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">{teamMember ? 'Completa tu perfil Team' : editingFromPanel ? 'Edita tu presentación' : 'Tu identidad'}</h1>
-        <p className="mt-3 text-base font-medium leading-7 text-slate-700">{teamMember ? `Nombre y cargo son esenciales. Las demás opciones dependen de lo autorizado por ${masterName}.` : 'Actualiza tu foto, nombre, cargo y descripción.'}</p>
+        <p className="mt-3 text-base font-medium leading-7 text-slate-700">{teamMember ? `Nombre y cargo son esenciales. Las demás opciones dependen de lo autorizado por ${masterName}.` : 'Actualiza en un solo lugar tu usuario, foto, nombre, cargo y descripción.'}</p>
 
         {teamMember && <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">Amarillo: editable · Gris: administrado por Team.</div>}
 
@@ -118,6 +145,7 @@ export default function FreeOnboardingIdentity() {
           </div>
 
           <div className="mt-5 space-y-4">
+            {!teamMember && <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Usuario</span><div className="mt-2 flex items-center rounded-2xl border border-amber-200 bg-white px-4 focus-within:border-cyan-400"><span className="text-sm font-bold text-slate-400">/</span><input value={slug} onChange={(e) => setSlug(normalizeSlug(e.target.value))} maxLength={32} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="tuusuario" className="min-w-0 flex-1 bg-transparent px-1 py-3.5 text-base font-semibold outline-none" /></div>{slug && <span className="mt-2 block break-all text-xs font-semibold text-cyan-700">{webUrl}/{normalizeSlug(slug)}</span>}</label>}
             <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Nombre</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Tu nombre" className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400" /></label>
             <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Cargo</span><input value={role} onChange={(e) => setRole(e.target.value)} maxLength={80} placeholder="Ej. Asesor de ventas" className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400" /></label>
             <label className={`block rounded-2xl p-3 ${teamMember ? 'bg-slate-100' : 'bg-white'}`}><span className="text-sm font-bold">Sobre mí</span><textarea value={bio} onChange={(e) => setBio(e.target.value)} disabled={teamMember} maxLength={300} rows={4} className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base outline-none disabled:text-slate-400" />{teamMember && <span className="mt-1 block text-xs font-semibold text-slate-400">Información heredada del perfil master</span>}</label>
