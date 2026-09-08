@@ -42,10 +42,23 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
 
   const teamName = String((row as any).team_name || '').trim()
   const template = readObject((row as any).template_data)
+  let templateChanged = false
   if (teamName && template.team_company_name !== teamName) {
     template.team_company_name = teamName
+    templateChanged = true
+  }
+  if (templateChanged) {
     await c.env.DB.prepare(`UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?`)
       .bind(JSON.stringify(template), String((row as any).profile_id)).run()
+  }
+
+  const showBankAccounts = template.team_show_bank_accounts !== false && String(template.team_show_bank_accounts).toLowerCase() !== 'false'
+  if (!showBankAccounts) {
+    await c.env.DB.prepare(`
+      INSERT INTO profile_bank_settings(profile_id,is_enabled,updated_at)
+      VALUES(?,0,datetime('now'))
+      ON CONFLICT(profile_id) DO UPDATE SET is_enabled=0,updated_at=datetime('now')
+    `).bind(String((row as any).profile_id)).run()
   }
 
   const role = String((row as any).admin_role || 'member')
@@ -60,6 +73,7 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
     login_enabled: loginEnabled,
     role: loginEnabled ? role : 'member',
     team_name: teamName,
+    show_bank_accounts: showBankAccounts,
     synchronized: Boolean((sync as any)?.changed),
   } })
 })
