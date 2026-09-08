@@ -21,14 +21,13 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
      LIMIT 1
   `).bind(slug).first()
 
-  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', synchronized: false } })
+  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', company_name: '', synchronized: false } })
 
   const sync = await syncTeamMemberFromMaster(c, String((row as any).profile_id)).catch((error) => {
     console.error('[team/public-policy] master sync failed', error)
     return { team_member: true, changed: false }
   })
 
-  // Re-read state after synchronization so role/public flags are authoritative.
   row = await c.env.DB.prepare(`
     SELECT tm.id,tm.profile_id,tm.admin_role,tm.status,tw.name team_name,tw.status team_status,p.is_active,p.is_published,p.template_data
       FROM profiles p
@@ -38,20 +37,11 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
      LIMIT 1
   `).bind(slug).first()
 
-  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', synchronized: false } })
+  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', company_name: '', synchronized: false } })
 
   const teamName = String((row as any).team_name || '').trim()
   const template = readObject((row as any).template_data)
-  let templateChanged = false
-  if (teamName && template.team_company_name !== teamName) {
-    template.team_company_name = teamName
-    templateChanged = true
-  }
-  if (templateChanged) {
-    await c.env.DB.prepare(`UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?`)
-      .bind(JSON.stringify(template), String((row as any).profile_id)).run()
-  }
-
+  const companyName = String(template.team_company_name || '').trim()
   const showBankAccounts = template.team_show_bank_accounts !== false && String(template.team_show_bank_accounts).toLowerCase() !== 'false'
   if (!showBankAccounts) {
     await c.env.DB.prepare(`
@@ -73,6 +63,7 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
     login_enabled: loginEnabled,
     role: loginEnabled ? role : 'member',
     team_name: teamName,
+    company_name: companyName,
     show_bank_accounts: showBankAccounts,
     synchronized: Boolean((sync as any)?.changed),
   } })
