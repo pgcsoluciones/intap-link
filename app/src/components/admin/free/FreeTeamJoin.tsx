@@ -21,12 +21,10 @@ export default function FreeTeamJoin() {
       setLoading(false)
       return
     }
-    apiPost('/public/team/code/inspect', { code, public_code: publicCode })
-      .then(async (json: any) => {
+    apiPost('/public/team/code/inspect-v2', { code, public_code: publicCode })
+      .then((json: any) => {
         if (!json?.ok) { setError(json?.error || 'El código Team ya no está disponible.'); return }
-        const nameJson: any = await apiPost('/public/team/name', { team_id: json.data?.team_id }).catch(() => ({ ok: false }))
-        if (!nameJson?.ok) { setError(nameJson?.error || 'No pudimos identificar el Team de este código.'); return }
-        setTeam({ ...json.data, ...nameJson.data })
+        setTeam(json.data || null)
       })
       .catch(() => setError('No pudimos validar el código Team.'))
       .finally(() => setLoading(false))
@@ -55,6 +53,7 @@ export default function FreeTeamJoin() {
             <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
               <p className="text-sm font-black text-slate-900">Confirma que este es el Team correcto.</p>
               <p className="mt-1 text-xs leading-5 text-slate-600">Al continuar, tu producto quedará conectado a <strong>{team?.team_name}</strong> y este código no podrá volver a utilizarse.</p>
+              {team?.reserved_for_this_product && <p className="mt-2 text-xs font-bold text-cyan-800">Este código fue reservado específicamente para este producto.</p>}
             </div>
             <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-amber-800">Producto</p><p className="mt-1 font-mono text-base font-black">{publicCode}</p><p className="mt-3 text-xs font-black uppercase tracking-wide text-amber-800">Código Team</p><p className="mt-1 font-mono text-base font-black">{code}</p></div>
             <p className="mt-4 text-xs leading-5 text-slate-500">Después de vincularlo, este dispositivo dejará de funcionar como perfil independiente. Las opciones editables dependerán de lo autorizado por el administrador Team.</p>
