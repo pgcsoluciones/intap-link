@@ -59,6 +59,7 @@ export type FreeProfileData = {
   slug: string
   name: string
   role: string
+  companyName?: string
   personalBadge: string
   aboutTitle: string
   portfolioTitle: string
