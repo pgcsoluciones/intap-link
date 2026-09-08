@@ -130,6 +130,29 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
 
   if (!activationCode) return c.json({ ok: true, state: 'not_ready', artifact: base, message: 'Este producto todavía no está habilitado para activación.' })
 
+  // Mantiene la reserva corporativa estricta: al escanear un dispositivo ya
+  // preparado por RR. HH. no se ofrece activación independiente.
+  await c.env.DB.prepare(`UPDATE team_link_codes SET status='expired',updated_at=datetime('now') WHERE status='active' AND expires_at<=datetime('now')`).run()
+  await c.env.DB.prepare(`DELETE FROM team_link_codes WHERE status!='used' AND used_at IS NULL AND created_at<=datetime('now','-48 hours')`).run()
+  const reservation = await c.env.DB.prepare(
+    `SELECT tc.id,tc.status,tc.expires_at,tw.id team_id,tw.name team_name,mp.name master_name
+       FROM team_link_codes tc
+       JOIN team_workspaces tw ON tw.id=tc.team_id
+       JOIN profiles mp ON mp.id=tw.master_profile_id
+      WHERE tc.artifact_id=? AND tc.used_at IS NULL AND tc.status IN('active','expired','disabled')
+      ORDER BY tc.created_at DESC LIMIT 1`,
+  ).bind(artifactId).first()
+
+  if (reservation) {
+    return c.json({ ok: true, state: 'team_reserved', artifact: base, reservation: {
+      team_id: String((reservation as any).team_id),
+      team_name: String((reservation as any).team_name || (reservation as any).master_name || 'Mi Team'),
+      master_name: String((reservation as any).master_name || ''),
+      status: String((reservation as any).status || ''),
+      expires_at: String((reservation as any).expires_at || ''),
+    } })
+  }
+
   return c.json({ ok: true, state: 'pending_activation', artifact: base })
 })
 
