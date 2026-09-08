@@ -82,11 +82,16 @@ function normalizeUrl(type: QuickActionType, value: unknown): string {
   return `https://${raw}`
 }
 
+function isStarterCall(value: unknown) {
+  const digits = String(value || '').replace(/\D/g, '')
+  return digits === '8090000000' || digits === '18090000000'
+}
+
 app.get('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
   const userId = c.get('userId') as string
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`,
+    `SELECT id, template_data FROM profiles WHERE user_id = ? LIMIT 1`,
   ).bind(userId).first()
 
   if (!profile) {
@@ -124,19 +129,25 @@ app.get('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
     selected.map((item) => [item.type as QuickActionType, item.url]),
   )
 
+  const contactPhone = String((contact as any)?.phone || '')
+  const storedCall = socialMap.get('call') || ''
   const values = {
-    call: socialMap.get('call') || String((contact as any)?.phone || ''),
+    call: contactPhone && (!storedCall || isStarterCall(storedCall)) ? contactPhone : storedCall,
     instagram: socialMap.get('instagram') || '',
     location: socialMap.get('location') || String((contact as any)?.map_url || ''),
     email: socialMap.get('email') || String((contact as any)?.email || ''),
     tiktok: socialMap.get('tiktok') || '',
   }
 
+  let templateData: Record<string, any> = {}
+  try { templateData = JSON.parse(String((profile as any).template_data || '{}')) || {} } catch { templateData = {} }
+
   return c.json({
     ok: true,
     data: {
       selected,
       values,
+      confirmed: templateData.free_quick_actions_confirmed === true,
       max_selected: 3,
       allowed_types: [...ALLOWED_TYPES],
       recommended: ['call', 'instagram', 'location'],
@@ -180,7 +191,7 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
   }
 
   const profile = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? LIMIT 1`,
+    `SELECT id, template_data FROM profiles WHERE user_id = ? LIMIT 1`,
   ).bind(userId).first()
 
   if (!profile) {
@@ -189,6 +200,9 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
 
   const profileId = String((profile as any).id)
   const ids = items.map(() => crypto.randomUUID())
+  let templateData: Record<string, any> = {}
+  try { templateData = JSON.parse(String((profile as any).template_data || '{}')) || {} } catch { templateData = {} }
+  templateData.free_quick_actions_confirmed = true
 
   const statements = [
     c.env.DB.prepare(
@@ -209,6 +223,9 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
         item.sort_order,
       ),
     ),
+    c.env.DB.prepare(
+      `UPDATE profiles SET template_data = ?, updated_at = datetime('now') WHERE id = ?`,
+    ).bind(JSON.stringify(templateData), profileId),
   ]
 
   await c.env.DB.batch(statements)
@@ -217,6 +234,7 @@ app.put('/api/v1/me/free/quick-actions', requirePreviewAuth, async (c: any) => {
     ok: true,
     data: {
       selected: items,
+      confirmed: true,
     },
   })
 })
