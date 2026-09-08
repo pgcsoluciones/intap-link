@@ -17,7 +17,7 @@ function readObject(raw: unknown): Record<string, any> {
 
 export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, initialClone = false) {
   const relation = await c.env.DB.prepare(`
-    SELECT tm.id member_id,tm.permissions_json,tm.profile_id,tw.master_profile_id
+    SELECT tm.id member_id,tm.permissions_json,tm.profile_id,tm.admin_role,tw.master_profile_id
       FROM team_members tm
       JOIN team_workspaces tw ON tw.id=tm.team_id
      WHERE tm.profile_id=? AND tm.status='active' AND tw.status='active'
@@ -27,7 +27,15 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
 
   const memberId = String((relation as any).member_id)
   const masterId = String((relation as any).master_profile_id)
+  const adminRole = String((relation as any).admin_role || 'member')
   const permissions = readPermissions((relation as any).permissions_json)
+
+  // Un miembro normal no tiene panel propio: RR. HH. administra su tarjeta.
+  // Por eso TODO el contenido corporativo debe seguir al Master aunque el código
+  // original haya llevado permisos. Los permisos solo pueden crear divergencia
+  // cuando el miembro tiene un rol administrativo con acceso al panel.
+  const memberOwns = (section: string) =>
+    (adminRole === 'editor' || adminRole === 'subadmin') && permissions.has(section)
 
   const [master, member] = await Promise.all([
     c.env.DB.prepare(`SELECT bio,category,subcategory,theme_id,layout_id,free_palette_id,free_brand_color,hero_url,hero_position_x,hero_position_y,hero_zoom,accent_color,button_style,template_id,template_data,blocks_order FROM profiles WHERE id=? LIMIT 1`).bind(masterId).first(),
@@ -51,7 +59,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
 
   const statements: any[] = []
 
-  if (initialClone || !permissions.has('design')) {
+  if (initialClone || !memberOwns('design')) {
     statements.push(c.env.DB.prepare(`
       UPDATE profiles SET
         theme_id=?,layout_id=?,free_palette_id=?,free_brand_color=?,hero_url=?,
@@ -70,7 +78,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
     UPDATE profiles SET bio=?,category=?,subcategory=?,template_data=?,updated_at=datetime('now') WHERE id=?
   `).bind((master as any).bio ?? null,(master as any).category ?? null,(master as any).subcategory ?? null,JSON.stringify(mergedTemplate),memberProfileId))
 
-  if (initialClone || !permissions.has('location')) {
+  if (initialClone || !memberOwns('location')) {
     statements.push(c.env.DB.prepare(`
       INSERT INTO profile_contact(profile_id,whatsapp,email,phone,hours,address,map_url,updated_at)
       SELECT ?,mc.whatsapp,mc.email,mc.phone,master.hours,master.address,master.map_url,datetime('now')
@@ -82,7 +90,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
     `).bind(memberProfileId,memberProfileId,masterId))
   }
 
-  if (initialClone || !permissions.has('links')) {
+  if (initialClone || !memberOwns('links')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_links WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,label,url,sort_order,is_active,is_cta FROM profile_links WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
@@ -90,7 +98,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
     }
   }
 
-  if (initialClone || !permissions.has('portfolio')) {
+  if (initialClone || !memberOwns('portfolio')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_gallery WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,image_key,alt_text,title,description,sort_order FROM profile_gallery WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
@@ -98,7 +106,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
     }
   }
 
-  if (initialClone || !permissions.has('services')) {
+  if (initialClone || !memberOwns('services')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_products WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,title,description,price,image_url,whatsapp_text,is_featured,sort_order FROM profile_products WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
@@ -106,7 +114,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
     }
   }
 
-  if (initialClone || !permissions.has('quick_actions')) {
+  if (initialClone || !memberOwns('quick_actions')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_social_links WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,type,url,sort_order,enabled FROM profile_social_links WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
