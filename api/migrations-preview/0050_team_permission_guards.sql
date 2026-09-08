@@ -1,38 +1,39 @@
 -- Team permission enforcement · Preview
 -- Frontend bloquea visualmente; estos triggers impiden bypass directo por API/cliente.
+-- D1 remote confunde el END de CASE con el END del trigger si CASE no va entre paréntesis.
 
 CREATE TRIGGER IF NOT EXISTS trg_team_profile_update_guard
 BEFORE UPDATE ON profiles
 WHEN EXISTS (SELECT 1 FROM team_members tm WHERE tm.profile_id = OLD.id)
 BEGIN
-  SELECT CASE WHEN NEW.slug IS NOT OLD.slug
-    THEN RAISE(ABORT, 'team_permission_denied:identifier') END;
+  SELECT (CASE WHEN NEW.slug IS NOT OLD.slug
+    THEN RAISE(ABORT, 'team_permission_denied:identifier') END);
 
-  SELECT CASE WHEN NEW.name IS NOT OLD.name
+  SELECT (CASE WHEN NEW.name IS NOT OLD.name
     AND NOT EXISTS (
       SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p
        WHERE tm.profile_id = OLD.id AND p.value = 'name'
-    ) THEN RAISE(ABORT, 'team_permission_denied:name') END;
+    ) THEN RAISE(ABORT, 'team_permission_denied:name') END);
 
-  SELECT CASE WHEN NEW.avatar_url IS NOT OLD.avatar_url
+  SELECT (CASE WHEN NEW.avatar_url IS NOT OLD.avatar_url
     AND NOT EXISTS (
       SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p
        WHERE tm.profile_id = OLD.id AND p.value = 'photo'
-    ) THEN RAISE(ABORT, 'team_permission_denied:photo') END;
+    ) THEN RAISE(ABORT, 'team_permission_denied:photo') END);
 
-  SELECT CASE WHEN json_extract(COALESCE(NEW.template_data,'{}'),'$.role') IS NOT json_extract(COALESCE(OLD.template_data,'{}'),'$.role')
+  SELECT (CASE WHEN json_extract(COALESCE(NEW.template_data,'{}'),'$.role') IS NOT json_extract(COALESCE(OLD.template_data,'{}'),'$.role')
     AND NOT EXISTS (
       SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p
        WHERE tm.profile_id = OLD.id AND p.value = 'role'
-    ) THEN RAISE(ABORT, 'team_permission_denied:role') END;
+    ) THEN RAISE(ABORT, 'team_permission_denied:role') END);
 
-  SELECT CASE WHEN json_remove(COALESCE(NEW.template_data,'{}'),'$.role','$.free_identity_confirmed') IS NOT json_remove(COALESCE(OLD.template_data,'{}'),'$.role','$.free_identity_confirmed')
+  SELECT (CASE WHEN json_remove(COALESCE(NEW.template_data,'{}'),'$.role','$.free_identity_confirmed') IS NOT json_remove(COALESCE(OLD.template_data,'{}'),'$.role','$.free_identity_confirmed')
     AND NOT EXISTS (
       SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p
        WHERE tm.profile_id = OLD.id AND p.value = 'design'
-    ) THEN RAISE(ABORT, 'team_permission_denied:design') END;
+    ) THEN RAISE(ABORT, 'team_permission_denied:design') END);
 
-  SELECT CASE WHEN (
+  SELECT (CASE WHEN (
       NEW.theme_id IS NOT OLD.theme_id OR
       NEW.layout_id IS NOT OLD.layout_id OR
       NEW.free_palette_id IS NOT OLD.free_palette_id OR
@@ -44,25 +45,25 @@ BEGIN
     ) AND NOT EXISTS (
       SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p
        WHERE tm.profile_id = OLD.id AND p.value = 'design'
-    ) THEN RAISE(ABORT, 'team_permission_denied:design') END;
+    ) THEN RAISE(ABORT, 'team_permission_denied:design') END);
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_team_contact_update_guard
 BEFORE UPDATE ON profile_contact
 WHEN EXISTS (SELECT 1 FROM team_members tm WHERE tm.profile_id = OLD.profile_id)
 BEGIN
-  SELECT CASE WHEN NEW.phone IS NOT OLD.phone
+  SELECT (CASE WHEN NEW.phone IS NOT OLD.phone
     AND NOT EXISTS (SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p WHERE tm.profile_id=OLD.profile_id AND p.value='phone')
-    THEN RAISE(ABORT, 'team_permission_denied:phone') END;
-  SELECT CASE WHEN NEW.email IS NOT OLD.email
+    THEN RAISE(ABORT, 'team_permission_denied:phone') END);
+  SELECT (CASE WHEN NEW.email IS NOT OLD.email
     AND NOT EXISTS (SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p WHERE tm.profile_id=OLD.profile_id AND p.value='email')
-    THEN RAISE(ABORT, 'team_permission_denied:email') END;
-  SELECT CASE WHEN NEW.whatsapp IS NOT OLD.whatsapp
+    THEN RAISE(ABORT, 'team_permission_denied:email') END);
+  SELECT (CASE WHEN NEW.whatsapp IS NOT OLD.whatsapp
     AND NOT EXISTS (SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p WHERE tm.profile_id=OLD.profile_id AND p.value='whatsapp')
-    THEN RAISE(ABORT, 'team_permission_denied:whatsapp') END;
-  SELECT CASE WHEN (NEW.address IS NOT OLD.address OR NEW.map_url IS NOT OLD.map_url)
+    THEN RAISE(ABORT, 'team_permission_denied:whatsapp') END);
+  SELECT (CASE WHEN (NEW.address IS NOT OLD.address OR NEW.map_url IS NOT OLD.map_url)
     AND NOT EXISTS (SELECT 1 FROM team_members tm, json_each(tm.permissions_json) p WHERE tm.profile_id=OLD.profile_id AND p.value='location')
-    THEN RAISE(ABORT, 'team_permission_denied:location') END;
+    THEN RAISE(ABORT, 'team_permission_denied:location') END);
 END;
 
 CREATE TRIGGER IF NOT EXISTS trg_team_gallery_insert_guard
