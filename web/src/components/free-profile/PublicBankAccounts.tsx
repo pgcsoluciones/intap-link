@@ -28,6 +28,7 @@ const BANK_LOGO_FILES: Record<string, string> = {
 function bankInitials(name: string) { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'B' }
 function accountTypeLabel(type: PublicBankAccount['account_type']) { return type === 'checking' ? 'Cuenta corriente' : 'Cuenta de ahorros' }
 function bankLogoUrl(code: string | null) { if (!code) return null; const file = BANK_LOGO_FILES[code]; return file ? `/bank-logos/${file}` : null }
+function teamCompanyName() { return String(document.documentElement.dataset.kawvoTeamName || '').trim() }
 
 export default function PublicBankAccounts() {
   const { slug = '' } = useParams()
@@ -56,6 +57,9 @@ export default function PublicBankAccounts() {
 
   useEffect(() => {
     if (!slug) return
+    if (document.documentElement.dataset.kawvoTeamMember === '1' && document.documentElement.dataset.kawvoTeamShowBanks === '0') {
+      setEnabled(false); setItems([]); return
+    }
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
     const endpoint = isPreview
       ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/preview-bank-accounts?preview=1`
@@ -93,7 +97,10 @@ export default function PublicBankAccounts() {
 
   function shareBankSectionWhatsApp() {
     const url = bankSectionUrl()
-    const message = `Te comparto mis datos bancarios para transferencias: ${url}`
+    const company = teamCompanyName()
+    const message = company
+      ? `Te comparto los datos bancarios de ${company}: ${url}`
+      : `Te comparto mis datos bancarios para transferencias: ${url}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
