@@ -1,12 +1,19 @@
 import app from './index'
 import { syncTeamMemberFromMaster } from './team-master-sync'
 
+function readObject(raw: unknown): Record<string, any> {
+  try {
+    const parsed = JSON.parse(String(raw || '{}'))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch { return {} }
+}
+
 app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
   const slug = String(c.req.query('slug') || '').trim().toLowerCase()
   if (!slug) return c.json({ ok: false, error: 'Perfil requerido.' }, 400)
 
   let row = await c.env.DB.prepare(`
-    SELECT tm.id,tm.profile_id,tm.admin_role,tm.status,tw.name team_name,tw.status team_status,p.is_active,p.is_published
+    SELECT tm.id,tm.profile_id,tm.admin_role,tm.status,tw.name team_name,tw.status team_status,p.is_active,p.is_published,p.template_data
       FROM profiles p
       JOIN team_members tm ON tm.profile_id=p.id
       JOIN team_workspaces tw ON tw.id=tm.team_id
@@ -23,7 +30,7 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
 
   // Re-read state after synchronization so role/public flags are authoritative.
   row = await c.env.DB.prepare(`
-    SELECT tm.id,tm.profile_id,tm.admin_role,tm.status,tw.name team_name,tw.status team_status,p.is_active,p.is_published
+    SELECT tm.id,tm.profile_id,tm.admin_role,tm.status,tw.name team_name,tw.status team_status,p.is_active,p.is_published,p.template_data
       FROM profiles p
       JOIN team_members tm ON tm.profile_id=p.id
       JOIN team_workspaces tw ON tw.id=tm.team_id
@@ -32,6 +39,14 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
   `).bind(slug).first()
 
   if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', synchronized: false } })
+
+  const teamName = String((row as any).team_name || '').trim()
+  const template = readObject((row as any).template_data)
+  if (teamName && template.team_company_name !== teamName) {
+    template.team_company_name = teamName
+    await c.env.DB.prepare(`UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?`)
+      .bind(JSON.stringify(template), String((row as any).profile_id)).run()
+  }
 
   const role = String((row as any).admin_role || 'member')
   const usable = String((row as any).status || '') === 'active'
@@ -44,7 +59,7 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
     team_member: true,
     login_enabled: loginEnabled,
     role: loginEnabled ? role : 'member',
-    team_name: String((row as any).team_name || ''),
+    team_name: teamName,
     synchronized: Boolean((sync as any)?.changed),
   } })
 })
