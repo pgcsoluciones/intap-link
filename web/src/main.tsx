@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import FreePreviewEditShortcut from './components/free-profile/FreePreviewEditShortcut'
+import { installTeamPublicAccessPolicy } from './team-public-access-policy'
 import './index.css'
 import './components/profile-templates/IntapProfileAdonisgV1.mobile.css'
 
@@ -22,6 +23,8 @@ import './components/profile-templates/IntapProfileAdonisgV1.mobile.css'
     // Si algo falla, no bloquea la app
   }
 })()
+
+installTeamPublicAccessPolicy()
 
 // Safari/iPhone requires video.play() to happen inside the original user gesture.
 // The Argenis template previously deferred play() with setTimeout after React state,
