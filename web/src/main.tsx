@@ -4,6 +4,7 @@ import App from './App'
 import FreePreviewEditShortcut from './components/free-profile/FreePreviewEditShortcut'
 import { installTeamPublicAccessPolicy, warmTeamPublicProfile } from './team-public-access-policy'
 import './index.css'
+import './semantic-shell-hide.css'
 import './components/profile-templates/IntapProfileAdonisgV1.mobile.css'
 
 (() => {
