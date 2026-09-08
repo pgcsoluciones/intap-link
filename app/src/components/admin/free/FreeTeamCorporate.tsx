@@ -1,0 +1,129 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { apiGet, apiPost, apiPut } from '../../../lib/api'
+import { FreeBackButton } from './FreePanelUi'
+
+const PERMISSIONS = [
+  ['name', 'Nombre'], ['role', 'Cargo'], ['photo', 'Foto'], ['phone', 'Teléfono'], ['email', 'Correo'], ['whatsapp', 'WhatsApp'],
+  ['portfolio', 'Portafolio'], ['services', 'Servicios'], ['links', 'Enlaces'], ['quick_actions', 'Botones directos'], ['location', 'Ubicación'], ['design', 'Diseño'],
+] as const
+
+type CodeRow = { id:string; code:string; status:string; assignment_status?:string; permissions?:string[]; expires_at?:string; used_at?:string|null; created_at?:string; member_name?:string|null; used_by_email?:string|null; product_code?:string|null }
+type MemberRow = { id:string; status:string; admin_role?:'member'|'editor'|'subadmin'; permissions?:string[]; joined_at?:string; name?:string|null; role?:string|null; email?:string|null; product_code?:string|null }
+type BasicPayload = { team:{ id:string; name:string; name_confirmed?:boolean; master_profile_id:string }; codes:CodeRow[]; pagination:{ page:number; page_size:number; total:number; pages:number }; member_count:number }
+type ManagePayload = { access:{ role:'master'|'editor'|'subadmin'; can_generate_codes:boolean; can_manage_roles:boolean; can_toggle_members:boolean; can_edit_members:boolean }; members:MemberRow[] }
+
+function formatDate(value?:string|null){
+  if(!value)return '—'
+  const date=new Date(value.includes('T')?value:`${value.replace(' ','T')}Z`)
+  return Number.isNaN(date.getTime())?value:date.toLocaleString('es-DO',{dateStyle:'medium',timeStyle:'short'})
+}
+function codeStatus(row:CodeRow){
+  if(row.status==='assigned')return 'Asignado'
+  if(row.status==='expired')return 'Caducado'
+  if(row.status==='disabled')return 'Desactivado'
+  return 'Creado · Sin asignar'
+}
+function roleLabel(role?:string){return role==='editor'?'Editor':role==='subadmin'?'Subadministrador':'Miembro'}
+
+export default function FreeTeamCorporate(){
+  const navigate=useNavigate()
+  const [basic,setBasic]=useState<BasicPayload|null>(null)
+  const [manage,setManage]=useState<ManagePayload|null>(null)
+  const [loading,setLoading]=useState(true)
+  const [busy,setBusy]=useState(false)
+  const [error,setError]=useState('')
+  const [message,setMessage]=useState('')
+  const [teamName,setTeamName]=useState('')
+  const [savedName,setSavedName]=useState('')
+  const [nameConfirmed,setNameConfirmed]=useState(false)
+  const [count,setCount]=useState(1)
+  const [permissions,setPermissions]=useState<string[]>(['name','role','photo','phone','email','whatsapp'])
+  const [query,setQuery]=useState('')
+  const [page,setPage]=useState(1)
+  const [generated,setGenerated]=useState<string[]>([])
+
+  const load=async(nextPage=page,q=query)=>{
+    setLoading(true);setError('')
+    const base:any=await apiGet(`/me/team?page=${nextPage}&q=${encodeURIComponent(q)}`).catch(()=>({ok:false}))
+    if(!base?.ok){setError(base?.error||'No pudimos abrir Team.');setLoading(false);return}
+    const admin:any=await apiGet(`/me/team/manage?page=${nextPage}&q=${encodeURIComponent(q)}`).catch(()=>({ok:false}))
+    if(!admin?.ok){setError(admin?.error||'No pudimos abrir la administración Team.');setLoading(false);return}
+    setBasic(base.data);setManage(admin.data);setPage(base.data?.pagination?.page||nextPage)
+    const current=String(base.data?.team?.name||'').trim();setTeamName(current);setSavedName(current);setNameConfirmed(Boolean(base.data?.team?.name_confirmed))
+    setLoading(false)
+  }
+  useEffect(()=>{void load(1,'')},[])
+
+  const isMaster=manage?.access?.role==='master'
+  const canToggle=Boolean(manage?.access?.can_toggle_members)
+  const canEdit=Boolean(manage?.access?.can_edit_members)
+  const selectedLabels=useMemo(()=>PERMISSIONS.filter(([key])=>permissions.includes(key)).map(([,label])=>label),[permissions])
+  const nameChanged=teamName.trim()!==savedName.trim()
+  const canGenerate=Boolean(isMaster&&nameConfirmed&&savedName.trim().length>=2&&!nameChanged)
+
+  const saveName=async()=>{
+    if(!isMaster||busy)return
+    const name=teamName.trim().replace(/\s+/g,' ')
+    if(name.length<2){setError('Escribe y guarda un nombre para tu Team.');return}
+    setBusy(true);setError('');setMessage('')
+    const json:any=await apiPut('/me/team/name',{name}).catch(()=>({ok:false}))
+    setBusy(false)
+    if(!json?.ok){setError(json?.error||'No pudimos guardar el nombre.');return}
+    setSavedName(json.data?.name||name);setTeamName(json.data?.name||name);setNameConfirmed(true);setMessage('Nombre del Team guardado. Ya puedes generar códigos.')
+  }
+  const togglePermission=(key:string)=>{
+    if(!isMaster||key==='name'||key==='role')return
+    setPermissions((current)=>current.includes(key)?current.filter((item)=>item!==key):[...current,key])
+  }
+  const createCodes=async()=>{
+    if(!canGenerate||busy)return
+    setBusy(true);setError('');setMessage('');setGenerated([])
+    const json:any=await apiPost('/me/team/codes',{count,permissions}).catch(()=>({ok:false}))
+    setBusy(false)
+    if(!json?.ok){setError(json?.error||'No pudimos generar los códigos.');return}
+    const codes=(json.data||[]).map((item:any)=>String(item.code||''));setGenerated(codes);setMessage(`${codes.length} código(s) creado(s). Estado inicial: Sin asignar.`);await load(1,query)
+  }
+  const codeAction=async(row:CodeRow,type:'deactivate'|'reactivate')=>{
+    if(!isMaster||busy||row.status==='assigned')return
+    setBusy(true);setError('');setMessage('')
+    const json:any=await apiPost(`/me/team/codes/${row.id}/${type}`,{}).catch(()=>({ok:false}))
+    setBusy(false)
+    if(!json?.ok){setError(json?.error||'No pudimos actualizar el código.');return}
+    setMessage(type==='reactivate'?'Código reactivado por 24 horas.':'Código desactivado.');await load(page,query)
+  }
+  const setMemberRole=async(member:MemberRow,role:'member'|'editor'|'subadmin')=>{
+    if(!isMaster||busy)return
+    setBusy(true);setError('');setMessage('')
+    const json:any=await apiPost(`/me/team/members/${member.id}/role`,{role}).catch(()=>({ok:false}))
+    setBusy(false)
+    if(!json?.ok){setError(json?.error||'No pudimos cambiar el rol.');return}
+    setMessage(`Rol actualizado a ${roleLabel(role)}.`);await load(page,query)
+  }
+  const toggleMember=async(member:MemberRow)=>{
+    if(!canToggle||busy)return
+    const active=member.status!=='active';setBusy(true);setError('');setMessage('')
+    const json:any=await apiPost(`/me/team/members/${member.id}/status`,{active}).catch(()=>({ok:false}))
+    setBusy(false)
+    if(!json?.ok){setError(json?.error||'No pudimos actualizar el miembro.');return}
+    setMessage(active?'Miembro activado.':'Miembro desactivado. El dispositivo mostrará Perfil no disponible.');await load(page,query)
+  }
+  const copy=async(value:string)=>{try{await navigator.clipboard.writeText(value);setMessage(`Código ${value} copiado.`)}catch{setMessage('No pudimos copiar el código.')}}
+
+  if(loading)return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
+
+  return <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950"><div className="mx-auto w-full max-w-[980px] px-5 pb-24 pt-5">
+    <FreeBackButton onClick={()=>navigate('/admin/free/account')} />
+    <div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-600">KAWVO LINK · TEAM</p><h1 className="mt-1 text-3xl font-black">Equipo de trabajo</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">RR. HH. prepara los perfiles y entrega los dispositivos listos. Los miembros normales no necesitan cuenta ni onboarding.</p></div>{basic&&<div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right"><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Miembros</p><p className="text-2xl font-black">{basic.member_count}</p></div>}</div>
+
+    {error&&<p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}{message&&<p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}
+
+    <section className="mt-6 rounded-[28px] border border-cyan-200 bg-white p-5 shadow-sm"><p className="text-[11px] font-black uppercase tracking-[0.15em] text-cyan-700">Identidad del Team</p><h2 className="mt-1 text-xl font-black">Nombre del Team</h2><p className="mt-2 text-sm leading-6 text-slate-500">Debes asignar y guardar un nombre antes de generar códigos. Ese nombre confirma al administrador que está trabajando en el Team correcto.</p>{isMaster?<div className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={teamName} onChange={(e)=>{setTeamName(e.target.value.slice(0,80));if(e.target.value.trim()!==savedName.trim())setNameConfirmed(false)}} placeholder="Ej. Equipo Comercial Kawvo" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-bold"/><button type="button" onClick={()=>void saveName()} disabled={busy||teamName.trim().length<2||(!nameChanged&&nameConfirmed)} className="rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white disabled:opacity-35">{busy?'Guardando…':nameConfirmed&&!nameChanged?'Guardado':'Guardar nombre'}</button></div>:<p className="mt-3 text-base font-black">{savedName}</p>}{nameConfirmed&&!nameChanged&&<p className="mt-3 text-xs font-bold text-emerald-700">✓ Nombre confirmado: {savedName}</p>}</section>
+
+    {isMaster&&<section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">Generar códigos</h2><p className="mt-1 text-xs leading-5 text-slate-500">Cada código es de un solo uso, válido por 24 horas y se elimina si permanece sin uso por más de 48 horas.</p></div><label className="text-xs font-black text-slate-600">Cantidad<input type="number" min={1} max={50} value={count} onChange={(e)=>setCount(Math.min(50,Math.max(1,Number(e.target.value)||1)))} className="ml-2 w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"/></label></div><div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{PERMISSIONS.map(([key,label])=>{const selected=permissions.includes(key);const essential=key==='name'||key==='role';return <button key={key} type="button" onClick={()=>togglePermission(key)} className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-black ${selected?'border-amber-300 bg-amber-50 text-amber-900':'border-slate-200 bg-slate-100 text-slate-400'} ${essential?'cursor-default':''}`}><span>{label}</span><span>{selected?'✓':'—'}</span></button>})}</div><p className="mt-3 text-xs text-slate-400">Campos permitidos: {selectedLabels.join(' · ')}</p>{!canGenerate&&<p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Primero asigna y guarda el nombre del Team.</p>}<button type="button" onClick={()=>void createCodes()} disabled={busy||!canGenerate} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{busy?'Generando…':`Generar ${count} código${count===1?'':'s'}`}</button>{generated.length>0&&<div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4"><p className="text-xs font-black uppercase tracking-wide text-cyan-700">Códigos creados · Sin asignar</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{generated.map((code)=><button key={code} type="button" onClick={()=>void copy(code)} className="rounded-xl bg-white px-3 py-3 font-mono text-sm font-black">{code} · Copiar</button>)}</div></div>}</section>}
+
+    <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-xl font-black">Códigos y asignaciones</h2><p className="mt-1 text-xs text-slate-500">8 por página. Busca por código, producto, correo o nombre.</p></div><form onSubmit={(e)=>{e.preventDefault();void load(1,query)}} className="flex gap-2"><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Buscar…" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"/><button className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white">Buscar</button></form></div><div className="mt-5 grid gap-3">{(basic?.codes||[]).map((row)=><article key={row.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><button type="button" onClick={()=>void copy(row.code)} className="font-mono text-base font-black">{row.code}</button><p className="mt-1 text-xs text-slate-500">Creado: {formatDate(row.created_at)} · Vence: {formatDate(row.expires_at)}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${row.status==='assigned'?'bg-cyan-100 text-cyan-700':row.status==='created'?'bg-slate-200 text-slate-700':row.status==='disabled'?'bg-amber-100 text-amber-800':'bg-rose-100 text-rose-700'}`}>{codeStatus(row)}</span></div>{row.status==='assigned'&&<div className="mt-3 rounded-xl bg-white p-3 text-xs leading-5 text-slate-600"><strong>{row.member_name||row.used_by_email||'Miembro asignado'}</strong><br/>Producto: {row.product_code||'—'} · Asignado: {formatDate(row.used_at)}</div>}<p className="mt-3 text-[11px] text-slate-500">Campos permitidos: {(row.permissions||[]).map((key)=>PERMISSIONS.find(([id])=>id===key)?.[1]||key).join(' · ')}</p>{isMaster&&row.status!=='assigned'&&<div className="mt-3 flex gap-2">{row.status==='disabled'||row.status==='expired'?<button type="button" disabled={busy} onClick={()=>void codeAction(row,'reactivate')} className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white">Reactivar 24 h</button>:<button type="button" disabled={busy} onClick={()=>void codeAction(row,'deactivate')} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800">Desactivar</button>}</div>}</article>)}{basic?.codes?.length===0&&<p className="py-8 text-center text-sm text-slate-400">Todavía no hay códigos.</p>}</div>{basic&&basic.pagination.pages>1&&<div className="mt-5 flex items-center justify-between"><button type="button" disabled={page<=1||loading} onClick={()=>void load(page-1,query)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black disabled:opacity-30">Anterior</button><span className="text-xs font-bold text-slate-500">Página {page} de {basic.pagination.pages}</span><button type="button" disabled={page>=basic.pagination.pages||loading} onClick={()=>void load(page+1,query)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black disabled:opacity-30">Siguiente</button></div>}</section>
+
+    <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="text-xl font-black">Miembros</h2><p className="mt-1 text-xs text-slate-500">El Master prepara y administra los perfiles. Solo los roles asignados tienen acceso administrativo.</p></div></div><div className="mt-5 grid gap-3">{(manage?.members||[]).map((member)=><article key={member.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-black">{member.name||'Miembro Team'}</p><p className="mt-1 text-xs text-slate-500">{member.role||'Cargo pendiente'} · {member.email||'Sin correo de contacto'}</p><p className="mt-1 text-xs text-slate-400">Producto: {member.product_code||'—'} · Desde {formatDate(member.joined_at)}</p></div><div className="flex gap-2"><span className="rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-black uppercase text-violet-700">{roleLabel(member.admin_role)}</span><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${member.status==='active'?'bg-emerald-100 text-emerald-700':'bg-slate-200 text-slate-600'}`}>{member.status==='active'?'Activo':'Desactivado'}</span></div></div><div className="mt-3 flex flex-wrap gap-2">{canEdit&&<button type="button" onClick={()=>navigate(`/admin/free/team/member-edit?id=${encodeURIComponent(member.id)}`)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black">Editar perfil</button>}{canToggle&&<button type="button" disabled={busy} onClick={()=>void toggleMember(member)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black">{member.status==='active'?'Desactivar':'Activar'}</button>}{isMaster&&<select value={member.admin_role||'member'} onChange={(e)=>void setMemberRole(member,e.target.value as 'member'|'editor'|'subadmin')} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black"><option value="member">Miembro</option><option value="editor">Editor</option><option value="subadmin">Subadministrador</option></select>}</div></article>)}{manage?.members?.length===0&&<p className="py-8 text-center text-sm text-slate-400">Los miembros aparecerán aquí cuando RR. HH. vincule un dispositivo nuevo mediante un código Team.</p>}</div></section>
+  </div></main>
+}
