@@ -21,7 +21,7 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
      LIMIT 1
   `).bind(slug).first()
 
-  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', company_name: '', synchronized: false } })
+  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', internal_team_name: '', company_name: '', synchronized: false } })
 
   const sync = await syncTeamMemberFromMaster(c, String((row as any).profile_id)).catch((error) => {
     console.error('[team/public-policy] master sync failed', error)
@@ -37,9 +37,9 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
      LIMIT 1
   `).bind(slug).first()
 
-  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', company_name: '', synchronized: false } })
+  if (!row) return c.json({ ok: true, data: { team_member: false, login_enabled: false, role: null, team_name: '', internal_team_name: '', company_name: '', synchronized: false } })
 
-  const teamName = String((row as any).team_name || '').trim()
+  const internalTeamName = String((row as any).team_name || '').trim()
   const template = readObject((row as any).template_data)
   const companyName = String(template.team_company_name || '').trim()
   const showBankAccounts = template.team_show_bank_accounts !== false && String(template.team_show_bank_accounts).toLowerCase() !== 'false'
@@ -62,7 +62,10 @@ app.get('/api/v1/public/team/member-access/policy', async (c: any) => {
     team_member: true,
     login_enabled: loginEnabled,
     role: loginEnabled ? role : 'member',
-    team_name: teamName,
+    // team_name se conserva como alias público por compatibilidad con la Graph Card.
+    // El nombre operativo/interno del Team viaja separado.
+    team_name: companyName,
+    internal_team_name: internalTeamName,
     company_name: companyName,
     show_bank_accounts: showBankAccounts,
     synchronized: Boolean((sync as any)?.changed),
