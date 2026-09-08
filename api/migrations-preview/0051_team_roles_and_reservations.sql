@@ -16,3 +16,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_team_members_one_subadmin
 CREATE UNIQUE INDEX IF NOT EXISTS idx_team_link_codes_reserved_artifact
   ON team_link_codes(artifact_id)
   WHERE artifact_id IS NOT NULL AND used_at IS NULL;
+
+CREATE TRIGGER IF NOT EXISTS trg_team_link_code_reservation_guard
+BEFORE UPDATE OF artifact_id ON team_link_codes
+WHEN OLD.artifact_id IS NOT NULL
+ AND NEW.artifact_id IS NOT OLD.artifact_id
+BEGIN
+  SELECT RAISE(ABORT, 'team_reserved_product_mismatch');
+END;
