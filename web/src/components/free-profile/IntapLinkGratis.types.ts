@@ -81,6 +81,8 @@ export type FreeProfileData = {
   services: FreeProfileService[]
   portfolio: FreeProfilePortfolioItem[]
   customLinks: FreeProfileCustomLink[]
+  teamMember?: boolean
+  teamAccessRole?: 'member' | 'editor' | 'subadmin' | null
 }
 
 export const FREE_PROFILE_LIMITS = {
