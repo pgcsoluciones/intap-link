@@ -44,6 +44,7 @@ import FreeNotifications from './components/admin/free/FreeNotifications'
 import FreeTeam from './components/admin/free/FreeTeam'
 import FreeTeamMember from './components/admin/free/FreeTeamMember'
 import FreeTeamJoin from './components/admin/free/FreeTeamJoin'
+import FreeTeamAssign from './components/admin/free/FreeTeamAssign'
 import TeamPermissionGuard from './components/admin/free/TeamPermissionGuard'
 import FreeOnboardingSlug from './components/admin/free/onboarding/FreeOnboardingSlug'
 import FreeOnboardingCategory from './components/admin/free/onboarding/FreeOnboardingCategory'
@@ -105,6 +106,7 @@ function App() {
         <Route path="/admin/free/account" element={<AdminGuard planScope="free"><FreeAccount /></AdminGuard>} />
         <Route path="/admin/free/notifications" element={<AdminGuard planScope="free"><FreeNotifications /></AdminGuard>} />
         <Route path="/admin/free/team" element={<AdminGuard planScope="free"><FreeTeam /></AdminGuard>} />
+        <Route path="/admin/free/team/assign" element={<AdminGuard requireProfile={false} planScope="free"><FreeTeamAssign /></AdminGuard>} />
         <Route path="/admin/free/team/member" element={<AdminGuard requireProfile={false} planScope="free"><FreeTeamMember /></AdminGuard>} />
         <Route path="/admin/free/team/join" element={<AdminGuard requireProfile={false} planScope="free"><FreeTeamJoin /></AdminGuard>} />
         <Route path="/admin/free" element={<AdminGuard planScope="free"><FreeDashboard /></AdminGuard>} />
