@@ -122,6 +122,56 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, 
     }
   }
 
+  // La habilitación de módulos NO se deduce de una lista fija de secciones Team.
+  // El miembro refleja exactamente los módulos que el Master tenga habilitados
+  // en profile_modules (incluidos módulos añadidos por promociones o en el futuro).
+  statements.push(c.env.DB.prepare(`DELETE FROM profile_modules WHERE profile_id=?`).bind(memberProfileId))
+  const moduleRows = await c.env.DB.prepare(`SELECT module_code,expires_at,activated_at FROM profile_modules WHERE profile_id=?`).bind(masterId).all()
+  for (const row of moduleRows.results as any[]) {
+    statements.push(c.env.DB.prepare(`INSERT INTO profile_modules(profile_id,module_code,expires_at,activated_at) VALUES(?,?,?,?)`).bind(memberProfileId,row.module_code,row.expires_at,row.activated_at))
+  }
+
+  // Contenido corporativo adicional que no forma parte de los campos variables
+  // del miembro. Se copia según los datos reales presentes en el Master; si el
+  // Master no usa una sección, el miembro queda igualmente vacío.
+  statements.push(c.env.DB.prepare(`DELETE FROM profile_faqs WHERE profile_id=?`).bind(memberProfileId))
+  const faqRows = await c.env.DB.prepare(`SELECT id,question,answer,sort_order FROM profile_faqs WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
+  for (const row of faqRows.results as any[]) {
+    statements.push(c.env.DB.prepare(`INSERT INTO profile_faqs(id,profile_id,question,answer,sort_order) VALUES(?,?,?,?,?)`).bind(`team-sync:${memberId}:faq:${row.id}`,memberProfileId,row.question,row.answer,row.sort_order))
+  }
+
+  statements.push(c.env.DB.prepare(`DELETE FROM profile_videos WHERE profile_id=?`).bind(memberProfileId))
+  const videoRows = await c.env.DB.prepare(`SELECT id,title,url,sort_order FROM profile_videos WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
+  for (const row of videoRows.results as any[]) {
+    statements.push(c.env.DB.prepare(`INSERT INTO profile_videos(id,profile_id,title,url,sort_order) VALUES(?,?,?,?,?)`).bind(`team-sync:${memberId}:video:${row.id}`,memberProfileId,row.title,row.url,row.sort_order))
+  }
+
+  statements.push(c.env.DB.prepare(`DELETE FROM profile_bank_settings WHERE profile_id=?`).bind(memberProfileId))
+  statements.push(c.env.DB.prepare(`
+    INSERT INTO profile_bank_settings(profile_id,is_enabled,updated_at)
+    SELECT ?,is_enabled,datetime('now') FROM profile_bank_settings WHERE profile_id=?
+  `).bind(memberProfileId,masterId))
+
+  statements.push(c.env.DB.prepare(`DELETE FROM profile_bank_accounts WHERE profile_id=?`).bind(memberProfileId))
+  const bankRows = await c.env.DB.prepare(`
+    SELECT id,bank_code,bank_name,account_number,account_type,currency,holder_name,
+           holder_id_type,holder_id_number,display_mode,sort_order,is_active,created_at
+      FROM profile_bank_accounts
+     WHERE profile_id=? ORDER BY sort_order
+  `).bind(masterId).all()
+  for (const row of bankRows.results as any[]) {
+    statements.push(c.env.DB.prepare(`
+      INSERT INTO profile_bank_accounts(
+        id,profile_id,bank_code,bank_name,account_number,account_type,currency,holder_name,
+        holder_id_type,holder_id_number,display_mode,sort_order,is_active,created_at,updated_at
+      ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))
+    `).bind(
+      `team-sync:${memberId}:bank:${row.id}`,memberProfileId,row.bank_code,row.bank_name,row.account_number,
+      row.account_type,row.currency,row.holder_name,row.holder_id_type,row.holder_id_number,row.display_mode,
+      row.sort_order,row.is_active,row.created_at,
+    ))
+  }
+
   if (statements.length) await c.env.DB.batch(statements)
   return { team_member: true, changed: statements.length > 0 }
 }
