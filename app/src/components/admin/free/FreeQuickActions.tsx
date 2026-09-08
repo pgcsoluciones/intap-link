@@ -4,7 +4,6 @@ import { apiGet, apiPut } from '../../../lib/api'
 import { FreeBackButton, FreeLimitUpgradeCard, FreeUpgradeCard } from './FreePanelUi'
 
 type QuickActionType = 'call' | 'instagram' | 'location' | 'email' | 'tiktok'
-
 type QuickAction = { type: QuickActionType; url: string }
 type QuickActionsPayload = { selected?: QuickAction[]; values?: Partial<Record<QuickActionType, string>> }
 
@@ -59,6 +58,14 @@ function displayValue(type: QuickActionType, value: string) {
   return value
 }
 
+function isStarterValue(type: QuickActionType, value: string) {
+  const raw = String(value || '')
+  if (type === 'call') return raw.replace(/\D/g, '') === '18090000000' || raw.replace(/\D/g, '') === '8090000000'
+  if (type === 'instagram') return raw.toLowerCase().includes('instagram.com/intaprd') || raw.toLowerCase() === '@intaprd'
+  if (type === 'location') return raw.includes('Santo+Domingo%2C+Rep%C3%BAblica+Dominicana')
+  return false
+}
+
 export default function FreeQuickActions() {
   const navigate = useNavigate()
   const [selected, setSelected] = useState<QuickActionType[]>([])
@@ -73,13 +80,18 @@ export default function FreeQuickActions() {
     Promise.all([apiGet('/me/free/quick-actions'), apiGet('/me/contact')]).then(([json, contactJson]: any[]) => {
       if (!json?.ok) return setError(json?.error || 'No pudimos cargar tus botones de contacto.')
       const data = (json.data || {}) as QuickActionsPayload
+      const contactPhone = contactJson?.ok ? String(contactJson.data?.phone || '').trim() : ''
+      const contactEmail = contactJson?.ok ? String(contactJson.data?.email || '').trim() : ''
       const canonicalMapUrl = contactJson?.ok ? String(contactJson.data?.map_url || '').trim() : ''
-      setSelected((data.selected || []).map((item) => item.type).slice(0, MAX_SELECTED))
+      const storedSelected = (data.selected || []).map((item) => item.type).slice(0, MAX_SELECTED)
+      setSelected(storedSelected)
+
       const nextValues: Partial<Record<QuickActionType, string>> = {}
       OPTIONS.forEach((option) => {
-        const stored = option.type === 'location' && canonicalMapUrl
-          ? canonicalMapUrl
-          : data.values?.[option.type] || data.selected?.find((item) => item.type === option.type)?.url || ''
+        let stored = data.values?.[option.type] || data.selected?.find((item) => item.type === option.type)?.url || ''
+        if (option.type === 'call' && contactPhone && (!stored || isStarterValue('call', stored))) stored = contactPhone
+        if (option.type === 'email' && contactEmail && !stored) stored = contactEmail
+        if (option.type === 'location' && canonicalMapUrl) stored = canonicalMapUrl
         nextValues[option.type] = displayValue(option.type, stored)
       })
       setValues(nextValues)
@@ -124,7 +136,9 @@ export default function FreeQuickActions() {
       const normalizedValues = { ...values }
       items.forEach((item) => { normalizedValues[item.type] = displayValue(item.type, item.url) })
       setValues(normalizedValues)
-      setMessage('Botones de contacto actualizados.')
+      setSelected(items.map((item) => item.type))
+      sessionStorage.setItem('kawvo_free_quick_actions_reviewed', '1')
+      setMessage('Botones de contacto guardados y marcados como revisados.')
     } catch { setError('No se pudieron guardar tus accesos rápidos.') }
     finally { setSaving(false) }
   }
