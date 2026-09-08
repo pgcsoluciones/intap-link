@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import FreePreviewEditShortcut from './components/free-profile/FreePreviewEditShortcut'
 import { installTeamPublicAccessPolicy, warmTeamPublicProfile } from './team-public-access-policy'
+import { installFreeContactVCardFix } from './free-contact-vcard-fix'
 import './index.css'
 import './semantic-shell-hide.css'
 import './components/profile-templates/IntapProfileAdonisgV1.mobile.css'
@@ -45,6 +46,7 @@ async function bootstrap() {
   // secciones corporativas ya están actualizadas.
   await warmTeamPublicProfile().catch(() => undefined)
   installTeamPublicAccessPolicy()
+  installFreeContactVCardFix()
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
