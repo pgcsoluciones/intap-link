@@ -4,7 +4,7 @@ function appOrigin() {
   return 'https://app.intaprd.com'
 }
 
-type TeamPolicy = { team_member: boolean; login_enabled: boolean; role?: string | null }
+type TeamPolicy = { team_member: boolean; login_enabled: boolean; role?: string | null; synchronized?: boolean }
 
 const policyCache = new Map<string, TeamPolicy>()
 const pending = new Map<string, Promise<TeamPolicy | null>>()
@@ -30,6 +30,7 @@ async function loadPolicy(slug: string): Promise<TeamPolicy | null> {
       team_member: Boolean(json.data?.team_member),
       login_enabled: Boolean(json.data?.login_enabled),
       role: json.data?.role ?? null,
+      synchronized: Boolean(json.data?.synchronized),
     }
     policyCache.set(slug, policy)
     return policy
@@ -58,6 +59,18 @@ async function applyTeamAccessPolicy() {
     login.style.removeProperty('display')
     login.removeAttribute('aria-hidden')
     return
+  }
+
+  // La API actualiza las secciones heredadas desde el Master. Como la consulta
+  // pública del perfil pudo ocurrir unos milisegundos antes, hacemos una sola
+  // recarga por visita para que el usuario vea inmediatamente la versión nueva.
+  if (data.synchronized) {
+    const key = `kawvo_team_synced_reload:${slug}`
+    if (sessionStorage.getItem(key) !== '1') {
+      sessionStorage.setItem(key, '1')
+      window.location.reload()
+      return
+    }
   }
 
   if (!data.login_enabled) {
