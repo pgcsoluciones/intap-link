@@ -59,10 +59,15 @@ app.post('/api/v1/me/team/members/:id/role',requireAuth,async(c:any)=>{
   const role=String(body.role||'member');if(!['member','editor','subadmin'].includes(role))return c.json({ok:false,error:'Rol no válido.'},400)
   const memberId=String(c.req.param('id')||'');const target=await c.env.DB.prepare(`SELECT id,admin_role FROM team_members WHERE id=? AND team_id=? LIMIT 1`).bind(memberId,String((team as any).id)).first();if(!target)return c.json({ok:false,error:'Miembro no encontrado.'},404)
   if(ROLES.has(role)){const other=await c.env.DB.prepare(`SELECT id FROM team_members WHERE team_id=? AND admin_role=? AND id<>? LIMIT 1`).bind(String((team as any).id),role,memberId).first();if(other)return c.json({ok:false,error:role==='editor'?'Free permite un solo Editor por Team.':'Free permite un solo Subadministrador por Team.'},409)}
+
+  const previousRole=String((target as any).admin_role||'member')
   let temporaryPassword:string|null=null
   if(ROLES.has(role)){
-    const existing=await c.env.DB.prepare(`SELECT team_member_id FROM team_member_credentials WHERE team_member_id=? LIMIT 1`).bind(memberId).first()
-    if(!existing){temporaryPassword=randomPassword();const rec=await newPasswordRecord(temporaryPassword);await c.env.DB.prepare(`INSERT INTO team_member_credentials(team_member_id,password_salt,password_hash,must_change_password,created_at,updated_at) VALUES(?,?,?,1,datetime('now'),datetime('now'))`).bind(memberId,rec.salt,rec.hash).run()}
+    if(!ROLES.has(previousRole)){
+      temporaryPassword=randomPassword()
+      const rec=await newPasswordRecord(temporaryPassword)
+      await c.env.DB.prepare(`INSERT INTO team_member_credentials(team_member_id,password_salt,password_hash,must_change_password,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,?,0,NULL,datetime('now'),datetime('now')) ON CONFLICT(team_member_id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,must_change_password=1,failed_attempts=0,locked_until=NULL,password_changed_at=NULL,updated_at=datetime('now')`).bind(memberId,rec.salt,rec.hash,1).run()
+    }
   }else{
     await c.env.DB.prepare(`DELETE FROM team_member_credentials WHERE team_member_id=?`).bind(memberId).run()
     await c.env.DB.prepare(`UPDATE auth_sessions SET revoked_at=datetime('now') WHERE user_id=(SELECT user_id FROM team_members WHERE id=?) AND revoked_at IS NULL`).bind(memberId).run()
