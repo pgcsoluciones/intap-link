@@ -15,7 +15,7 @@ function readObject(raw: unknown): Record<string, any> {
   } catch { return {} }
 }
 
-export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) {
+export async function syncTeamMemberFromMaster(c: any, memberProfileId: string, initialClone = false) {
   const relation = await c.env.DB.prepare(`
     SELECT tm.id member_id,tm.permissions_json,tm.profile_id,tw.master_profile_id
       FROM team_members tm
@@ -30,7 +30,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) 
   const permissions = readPermissions((relation as any).permissions_json)
 
   const [master, member] = await Promise.all([
-    c.env.DB.prepare(`SELECT bio,category,subcategory,theme_id,layout_id,free_palette_id,free_brand_color,hero_url,hero_position_x,hero_position_y,hero_zoom,accent_color,button_style,template_id,template_data FROM profiles WHERE id=? LIMIT 1`).bind(masterId).first(),
+    c.env.DB.prepare(`SELECT bio,category,subcategory,theme_id,layout_id,free_palette_id,free_brand_color,hero_url,hero_position_x,hero_position_y,hero_zoom,accent_color,button_style,template_id,template_data,blocks_order FROM profiles WHERE id=? LIMIT 1`).bind(masterId).first(),
     c.env.DB.prepare(`SELECT template_data FROM profiles WHERE id=? LIMIT 1`).bind(memberProfileId).first(),
   ])
   if (!master || !member) return { team_member: true, changed: false }
@@ -51,21 +51,18 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) 
 
   const statements: any[] = []
 
-  // Shared presentation data follows the Master unless the member has explicit
-  // permission to own that section. Identity fields (name, role, avatar) and
-  // direct contact fields are deliberately never overwritten here.
-  if (!permissions.has('design')) {
+  if (initialClone || !permissions.has('design')) {
     statements.push(c.env.DB.prepare(`
       UPDATE profiles SET
         theme_id=?,layout_id=?,free_palette_id=?,free_brand_color=?,hero_url=?,
-        hero_position_x=?,hero_position_y=?,hero_zoom=?,accent_color=?,button_style=?,template_id=?,
+        hero_position_x=?,hero_position_y=?,hero_zoom=?,accent_color=?,button_style=?,template_id=?,blocks_order=?,
         updated_at=datetime('now')
       WHERE id=?
     `).bind(
       (master as any).theme_id ?? null,(master as any).layout_id ?? null,(master as any).free_palette_id ?? null,
       (master as any).free_brand_color ?? null,(master as any).hero_url ?? null,(master as any).hero_position_x ?? 50,
       (master as any).hero_position_y ?? 50,(master as any).hero_zoom ?? 1,(master as any).accent_color ?? null,
-      (master as any).button_style ?? null,(master as any).template_id ?? null,memberProfileId,
+      (master as any).button_style ?? null,(master as any).template_id ?? null,(master as any).blocks_order ?? null,memberProfileId,
     ))
   }
 
@@ -73,7 +70,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) 
     UPDATE profiles SET bio=?,category=?,subcategory=?,template_data=?,updated_at=datetime('now') WHERE id=?
   `).bind((master as any).bio ?? null,(master as any).category ?? null,(master as any).subcategory ?? null,JSON.stringify(mergedTemplate),memberProfileId))
 
-  if (!permissions.has('location')) {
+  if (initialClone || !permissions.has('location')) {
     statements.push(c.env.DB.prepare(`
       INSERT INTO profile_contact(profile_id,whatsapp,email,phone,hours,address,map_url,updated_at)
       SELECT ?,mc.whatsapp,mc.email,mc.phone,master.hours,master.address,master.map_url,datetime('now')
@@ -85,7 +82,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) 
     `).bind(memberProfileId,memberProfileId,masterId))
   }
 
-  if (!permissions.has('links')) {
+  if (initialClone || !permissions.has('links')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_links WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,label,url,sort_order,is_active,is_cta FROM profile_links WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
@@ -93,7 +90,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) 
     }
   }
 
-  if (!permissions.has('portfolio')) {
+  if (initialClone || !permissions.has('portfolio')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_gallery WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,image_key,alt_text,title,description,sort_order FROM profile_gallery WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
@@ -101,7 +98,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) 
     }
   }
 
-  if (!permissions.has('services')) {
+  if (initialClone || !permissions.has('services')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_products WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,title,description,price,image_url,whatsapp_text,is_featured,sort_order FROM profile_products WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
@@ -109,7 +106,7 @@ export async function syncTeamMemberFromMaster(c: any, memberProfileId: string) 
     }
   }
 
-  if (!permissions.has('quick_actions')) {
+  if (initialClone || !permissions.has('quick_actions')) {
     statements.push(c.env.DB.prepare(`DELETE FROM profile_social_links WHERE profile_id=?`).bind(memberProfileId))
     const rows = await c.env.DB.prepare(`SELECT id,type,url,sort_order,enabled FROM profile_social_links WHERE profile_id=? ORDER BY sort_order`).bind(masterId).all()
     for (const row of rows.results as any[]) {
