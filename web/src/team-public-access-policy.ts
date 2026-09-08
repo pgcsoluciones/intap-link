@@ -4,7 +4,7 @@ function appOrigin() {
   return 'https://app.intaprd.com'
 }
 
-type TeamPolicy = { team_member: boolean; login_enabled: boolean; role?: string | null; synchronized?: boolean }
+type TeamPolicy = { team_member: boolean; login_enabled: boolean; role?: string | null; synchronized?: boolean; team_name?: string; show_bank_accounts?: boolean }
 
 const policyCache = new Map<string, TeamPolicy>()
 const pending = new Map<string, Promise<TeamPolicy | null>>()
@@ -13,9 +13,22 @@ function currentSlug() {
   return decodeURIComponent(window.location.pathname.split('/').filter(Boolean)[0] || '').trim()
 }
 
+function exposePolicy(policy: TeamPolicy | null) {
+  const root = document.documentElement
+  if (!policy?.team_member) {
+    delete root.dataset.kawvoTeamMember
+    delete root.dataset.kawvoTeamName
+    delete root.dataset.kawvoTeamShowBanks
+    return
+  }
+  root.dataset.kawvoTeamMember = '1'
+  root.dataset.kawvoTeamName = String(policy.team_name || '').trim()
+  root.dataset.kawvoTeamShowBanks = policy.show_bank_accounts === false ? '0' : '1'
+}
+
 async function loadPolicy(slug: string): Promise<TeamPolicy | null> {
   const cached = policyCache.get(slug)
-  if (cached) return cached
+  if (cached) { exposePolicy(cached); return cached }
   const existing = pending.get(slug)
   if (existing) return existing
 
@@ -31,8 +44,11 @@ async function loadPolicy(slug: string): Promise<TeamPolicy | null> {
       login_enabled: Boolean(json.data?.login_enabled),
       role: json.data?.role ?? null,
       synchronized: Boolean(json.data?.synchronized),
+      team_name: String(json.data?.team_name || '').trim(),
+      show_bank_accounts: json.data?.show_bank_accounts !== false,
     }
     policyCache.set(slug, policy)
+    exposePolicy(policy)
     return policy
   }).catch(() => null).finally(() => pending.delete(slug))
 
@@ -44,7 +60,7 @@ export async function warmTeamPublicProfile() {
   if (typeof window === 'undefined') return
   const slug = currentSlug()
   if (!slug || slug === 'l') return
-  await loadPolicy(slug)
+  exposePolicy(await loadPolicy(slug))
 }
 
 async function applyTeamAccessPolicy() {
@@ -58,6 +74,7 @@ async function applyTeamAccessPolicy() {
   login.setAttribute('aria-hidden', 'true')
 
   const data = await loadPolicy(slug)
+  exposePolicy(data)
   if (!data) return
 
   if (!data.team_member) {
@@ -67,9 +84,6 @@ async function applyTeamAccessPolicy() {
   }
 
   if (!data.login_enabled) {
-    // Miembro normal: el acceso no debe existir visualmente ni quedar como
-    // control inactivo. Lo retiramos del DOM; el observer vuelve a aplicar la
-    // política si React reconstruye el footer.
     login.remove()
     return
   }
