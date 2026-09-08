@@ -42,26 +42,40 @@ function readObject(raw: unknown): Record<string, any> {
 }
 
 async function writeTeamPresentationSettings(c: any, teamId: string, masterProfileId: string, companyName: string, showBankAccounts?: boolean) {
-  const master = await c.env.DB.prepare(`SELECT template_data FROM profiles WHERE id=? LIMIT 1`).bind(masterProfileId).first()
+  const [master, masterBankSetting, members] = await Promise.all([
+    c.env.DB.prepare(`SELECT template_data FROM profiles WHERE id=? LIMIT 1`).bind(masterProfileId).first(),
+    c.env.DB.prepare(`SELECT is_enabled FROM profile_bank_settings WHERE profile_id=? LIMIT 1`).bind(masterProfileId).first(),
+    c.env.DB.prepare(`
+      SELECT p.id,p.template_data
+        FROM team_members tm
+        JOIN profiles p ON p.id=tm.profile_id
+       WHERE tm.team_id=?
+    `).bind(teamId).all(),
+  ])
+
   const masterTemplate = readObject((master as any)?.template_data)
   masterTemplate.team_company_name = companyName
   if (typeof showBankAccounts === 'boolean') masterTemplate.team_show_bank_accounts = showBankAccounts
 
-  const members = await c.env.DB.prepare(`
-    SELECT p.id,p.template_data
-      FROM team_members tm
-      JOIN profiles p ON p.id=tm.profile_id
-     WHERE tm.team_id=?
-  `).bind(teamId).all()
-
   const statements: any[] = [
     c.env.DB.prepare(`UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?`).bind(JSON.stringify(masterTemplate), masterProfileId),
   ]
+  const inheritedBankEnabled = masterBankSetting ? Number((masterBankSetting as any).is_enabled || 0) === 1 : true
+
   for (const row of members.results as any[]) {
     const memberTemplate = readObject(row.template_data)
     memberTemplate.team_company_name = companyName
     if (typeof showBankAccounts === 'boolean') memberTemplate.team_show_bank_accounts = showBankAccounts
     statements.push(c.env.DB.prepare(`UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?`).bind(JSON.stringify(memberTemplate), String(row.id)))
+
+    if (typeof showBankAccounts === 'boolean') {
+      const enabled = showBankAccounts && inheritedBankEnabled ? 1 : 0
+      statements.push(c.env.DB.prepare(`
+        INSERT INTO profile_bank_settings(profile_id,is_enabled,updated_at)
+        VALUES(?,?,datetime('now'))
+        ON CONFLICT(profile_id) DO UPDATE SET is_enabled=excluded.is_enabled,updated_at=datetime('now')
+      `).bind(String(row.id), enabled))
+    }
   }
   if (statements.length) await c.env.DB.batch(statements)
 }
