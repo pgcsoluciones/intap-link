@@ -34,8 +34,6 @@ function normalizeTeamName(value: unknown) {
   return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 80)
 }
 
-// El master define el nombre humano del Team. El nombre es independiente del
-// nombre del perfil principal y es el que se muestra al validar un código.
 app.put('/api/v1/me/team/name', requireTeamNameAuth, async (c: any) => {
   const userId = c.get('userId') as string
   let body: any = {}
@@ -50,17 +48,16 @@ app.put('/api/v1/me/team/name', requireTeamNameAuth, async (c: any) => {
   if (!team) return c.json({ ok: false, error: 'Team no encontrado.' }, 404)
 
   await c.env.DB.prepare(
-    `UPDATE team_workspaces SET name = ?, updated_at = datetime('now') WHERE id = ? AND owner_user_id = ?`,
+    `UPDATE team_workspaces SET name = ?, name_confirmed = 1, updated_at = datetime('now') WHERE id = ? AND owner_user_id = ?`,
   ).bind(name, String((team as any).id), userId).run()
 
-  return c.json({ ok: true, data: { team_id: String((team as any).id), name } })
+  return c.json({ ok: true, data: { team_id: String((team as any).id), name, name_confirmed: true } })
 })
 
-// Contexto autenticado del nombre: sirve tanto al master como a un miembro.
 app.get('/api/v1/me/team/name', requireTeamNameAuth, async (c: any) => {
   const userId = c.get('userId') as string
   const row = await c.env.DB.prepare(
-    `SELECT tw.id AS team_id, tw.name AS team_name, mp.name AS master_name, mp.slug AS master_slug,
+    `SELECT tw.id AS team_id, tw.name AS team_name, tw.name_confirmed, mp.name AS master_name, mp.slug AS master_slug,
             CASE WHEN tw.owner_user_id = ? THEN 'master' ELSE 'member' END AS role
        FROM team_workspaces tw
        JOIN profiles mp ON mp.id = tw.master_profile_id
@@ -75,12 +72,11 @@ app.get('/api/v1/me/team/name', requireTeamNameAuth, async (c: any) => {
     team_name: String((row as any).team_name || ''),
     master_name: String((row as any).master_name || ''),
     master_slug: String((row as any).master_slug || ''),
+    name_confirmed: Number((row as any).name_confirmed || 0) === 1,
     role: String((row as any).role || ''),
   } })
 })
 
-// Se consulta solo después de que /public/team/code/inspect validó el código y
-// devolvió team_id. No expone miembros, permisos ni información privada.
 app.post('/api/v1/public/team/name', async (c: any) => {
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Solicitud inválida.' }, 400) }
