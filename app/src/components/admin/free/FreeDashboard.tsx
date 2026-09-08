@@ -40,8 +40,7 @@ type FreeItem = {
 }
 
 const freeItems: FreeItem[] = [
-  { title: 'Elige tu usuario', text: 'Ej.: @tuusuario', to: '/admin/free/identifier', icon: '@', help: 'Este será tu nombre único en el enlace público.', readinessKey: 'identifier', baseRequired: true },
-  { title: 'Completa tu presentación', text: 'Foto de perfil, nombre, cargo y descripción', to: '/admin/free/onboarding/identity?from=panel', icon: '◉', help: 'Configura cómo te presentas.', readinessKey: 'identity', baseRequired: true, teamPermission: ['name', 'role', 'photo'] },
+  { title: 'Completa tu presentación', text: 'Usuario, foto de perfil, nombre, cargo y descripción', to: '/admin/free/onboarding/identity?from=panel', icon: '◉', help: 'Aquí editas juntos los datos esenciales de tu presentación.', readinessKey: 'identity', baseRequired: true, teamPermission: ['name', 'role', 'photo'] },
   { title: 'Agrega tus datos de contacto', text: 'WhatsApp, teléfono y correo', to: '/admin/free/onboarding/contact', icon: '☎', help: 'Coloca los medios reales por los que quieres que te contacten.', readinessKey: 'contact', teamPermission: ['phone', 'email', 'whatsapp'] },
   { title: 'Botones de contacto directo', text: 'Hasta 3 botones principales', to: '/admin/free/quick-actions', icon: '◉', help: 'Elige las acciones más importantes.', readinessKey: 'quick_actions', teamPermission: 'quick_actions' },
   { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖', help: 'Agrega la dirección real de tu negocio.', stateKey: 'location', teamPermission: 'location' },
@@ -103,11 +102,8 @@ export default function FreeDashboard() {
       }
       if (quickJson?.ok) {
         const selected = Array.isArray(quickJson.data?.selected) ? quickJson.data.selected : []
-        const real = selected.filter((item: any) => {
-          const url = String(item?.url || '')
-          return Boolean(url.trim()) && !url.includes('18090000000') && !url.includes('instagram.com/intaprd') && !url.includes('Santo+Domingo%2C+Rep%C3%BAblica+Dominicana')
-        })
-        setQuickActionsConfirmed(real.length >= 2)
+        const confirmed = quickJson.data?.confirmed === true || meJson?.data?.templateData?.free_quick_actions_confirmed === true
+        setQuickActionsConfirmed(Boolean(confirmed && selected.length >= 2))
       }
       if (galleryJson?.ok) {
         const photos = Array.isArray(galleryJson.photos) ? galleryJson.photos : []
@@ -150,7 +146,7 @@ export default function FreeDashboard() {
   const effectivePublishReady = isTeamMember ? baseReady : baseReady && contactConfirmed && quickActionsConfirmed && portfolioConfirmed && servicesConfirmed
   const publishMissing = isTeamMember
     ? [!nameReady ? 'nombre' : '', !roleReady ? 'cargo' : ''].filter(Boolean)
-    : [!baseReady ? 'los datos esenciales' : '', !contactConfirmed ? 'contacto real' : '', !quickActionsConfirmed ? 'accesos rápidos reales' : '', !portfolioConfirmed ? '3 imágenes reales de portafolio' : '', !servicesConfirmed ? '2 servicios revisados' : ''].filter(Boolean)
+    : [!baseReady ? 'los datos esenciales' : '', !contactConfirmed ? 'contacto real' : '', !quickActionsConfirmed ? 'accesos rápidos revisados' : '', !portfolioConfirmed ? '3 imágenes reales de portafolio' : '', !servicesConfirmed ? '2 servicios revisados' : ''].filter(Boolean)
 
   const baseChecklist = isTeamMember
     ? [{ label: 'Nombre', done: nameReady }, { label: 'Cargo', done: roleReady }]
@@ -204,8 +200,7 @@ export default function FreeDashboard() {
   }
 
   const completedForItem = (item: FreeItem) => {
-    if (item.readinessKey === 'identifier') return usernameReady
-    if (item.readinessKey === 'identity') return nameReady && roleReady && (isTeamMember || photoReady)
+    if (item.readinessKey === 'identity') return nameReady && roleReady && (isTeamMember || photoReady) && (isTeamMember || usernameReady)
     if (item.readinessKey === 'contact') return contactConfirmed
     if (item.readinessKey === 'quick_actions') return quickActionsConfirmed
     if (item.readinessKey === 'portfolio') return portfolioConfirmed
@@ -216,7 +211,6 @@ export default function FreeDashboard() {
 
   const memberCanEdit = (item: FreeItem) => {
     if (!isTeamMember) return true
-    if (item.readinessKey === 'identifier') return false
     if (!item.teamPermission) return false
     return Array.isArray(item.teamPermission) ? item.teamPermission.some((key) => teamPermissions.has(key)) : teamPermissions.has(item.teamPermission)
   }
@@ -249,7 +243,7 @@ export default function FreeDashboard() {
           <div className="flex items-center gap-4"><div className="relative shrink-0"><button type="button" onClick={() => avatarEditable && avatarInputRef.current?.click()} disabled={avatarUploading || !avatarEditable} className="relative h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100 disabled:opacity-60">{me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-2xl text-slate-400">👤</div>}{avatarEditable && <span className="absolute inset-x-0 bottom-0 bg-slate-950/75 py-1 text-center text-[9px] font-black text-white">{avatarUploading ? 'Subiendo…' : 'Cambiar'}</span>}</button><input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={avatarUploading || !avatarEditable} onChange={chooseAvatar} /></div><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="truncate text-base font-black">{me?.name || me?.email || 'Mi perfil'}</p><span className="rounded-full bg-cyan-50 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-700">Gratis</span></div>{me?.slug && <p className="mt-0.5 text-xs font-semibold text-slate-400">@{me.slug}</p>}{me?.category && <p className="mt-1 text-xs font-bold text-cyan-600">{me.category}</p>}</div></div>
           {avatarError && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{avatarError}</p>}
 
-          <button type="button" onClick={() => navigate(isTeamMember || usernameReady ? '/admin/free/onboarding/identity?from=panel' : '/admin/free/identifier')} className="mt-5 flex w-full items-center justify-between rounded-2xl border-2 border-cyan-300 bg-cyan-50 px-4 py-4 text-left shadow-sm"><span className="min-w-0 flex-1"><span className="inline-flex rounded-full bg-cyan-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Empieza por aquí · Recomendado</span><span className="mt-2 block text-base font-black">Personaliza tu perfil</span><span className="mt-1 block text-xs text-slate-600">Completa primero {isTeamMember ? 'nombre y cargo' : 'estos 4 datos esenciales'}.</span><span className="mt-3 flex flex-wrap gap-2">{baseChecklist.map((item) => <span key={item.label} className={`rounded-full px-2.5 py-1 text-[10px] font-black ${item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{item.done ? '✓ ' : ''}{item.label}</span>)}</span></span><span className="ml-3 text-xl font-black text-cyan-700">›</span></button>
+          <button type="button" onClick={() => navigate('/admin/free/onboarding/identity?from=panel')} className="mt-5 flex w-full items-center justify-between rounded-2xl border-2 border-cyan-300 bg-cyan-50 px-4 py-4 text-left shadow-sm"><span className="min-w-0 flex-1"><span className="inline-flex rounded-full bg-cyan-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Empieza por aquí · Recomendado</span><span className="mt-2 block text-base font-black">Personaliza tu perfil</span><span className="mt-1 block text-xs text-slate-600">Completa primero {isTeamMember ? 'nombre y cargo' : 'estos 4 datos esenciales'}.</span><span className="mt-3 flex flex-wrap gap-2">{baseChecklist.map((item) => <span key={item.label} className={`rounded-full px-2.5 py-1 text-[10px] font-black ${item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{item.done ? '✓ ' : ''}{item.label}</span>)}</span></span><span className="ml-3 text-xl font-black text-cyan-700">›</span></button>
 
           <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"><div><p className="text-sm font-black">{me?.is_published ? 'Publicado' : 'Borrador'}</p><p className="mt-0.5 text-xs text-slate-400">{me?.is_published ? 'Tu perfil está visible.' : 'Aún no está visible públicamente.'}</p></div><button onClick={togglePublished} disabled={publishing || (!me?.is_published && !effectivePublishReady)} className={`rounded-full px-4 py-2 text-xs font-black ${me?.is_published ? 'bg-white text-slate-700' : effectivePublishReady ? 'bg-cyan-600 text-white' : 'bg-slate-200 text-slate-400'} disabled:cursor-not-allowed`}>{publishing ? 'Guardando…' : me?.is_published ? 'Ocultar' : effectivePublishReady ? 'Publicar' : 'Completa los datos'}</button></div>
           {!me?.is_published && !effectivePublishReady && <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Para publicar faltan {publishMissing.join(', ')}.</p>}
