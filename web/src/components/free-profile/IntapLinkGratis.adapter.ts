@@ -230,6 +230,9 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
   const starterOffset = starterVariant === 2 ? 2 : 0
   const starterAsset = (offset: number) => starterAssets.length ? starterAssets[(starterOffset + offset) % starterAssets.length] : ''
   const name = readString(data, 'name') || (starterGenerated ? (readString(data, 'subcategory') || readString(templateData, 'free_starter_subcategory') || starter.heroLabel || starter.role) : slug)
+  const teamMember = templateData.team_member === true || String(templateData.team_member || '').toLowerCase() === 'true'
+  const datasetCompany = typeof document !== 'undefined' ? String(document.documentElement.dataset.kawvoTeamName || '').trim() : ''
+  const companyName = teamMember ? (readString(templateData, 'team_company_name') || datasetCompany) : ''
 
   const whatsappLink = findLinkUrl(links, isWhatsAppLink)
   const mapLink = findLinkUrl(links, isMapLink)
@@ -237,8 +240,6 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
   const phone = normalizePhone(realPhoneSource) || (starterGenerated ? STARTER_PHONE : '')
   const realInstagram = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
   const instagram = realInstagram || (starterGenerated ? STARTER_INSTAGRAM : '')
-  // La ubicación configurada en profile_contact es la fuente canónica.
-  // Los social_links solo conservan la selección/orden del botón, no una coordenada paralela.
   const realLocation = readString(contact, 'map_url') || findSocialUrl(socialLinks, 'location') || findSocialUrl(socialLinks, 'free_location') || mapLink
   const location = realLocation || (starterGenerated ? STARTER_LOCATION : '')
   const role = readString(templateData, 'role', 'title') || readString(data, 'subcategory', 'category') || starter.role
@@ -267,6 +268,7 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       slug,
       name,
       role,
+      companyName,
       personalBadge: readString(templateData, 'personal_badge') || 'Marca personal',
       aboutTitle: allowedTitle(readString(templateData, 'about_section_title'), ABOUT_TITLES, 'Sobre mí'),
       portfolioTitle: allowedTitle(readString(templateData, 'portfolio_section_title'), PORTFOLIO_TITLES, 'Portafolio'),
@@ -289,6 +291,8 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       services: resolveVisibleServices(data, category || starter.category, templateData),
       portfolio: actualPortfolio.length > 0 ? actualPortfolio : starterPortfolio,
       customLinks: resolveCustomLinks(data),
+      teamMember,
+      teamAccessRole: teamMember ? (readString(templateData, 'team_access_role') as FreeProfileData['teamAccessRole']) || 'member' : null,
     },
   }
 }
