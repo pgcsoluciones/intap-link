@@ -40,6 +40,13 @@ async function loadPolicy(slug: string): Promise<TeamPolicy | null> {
   return request
 }
 
+export async function warmTeamPublicProfile() {
+  if (typeof window === 'undefined') return
+  const slug = currentSlug()
+  if (!slug || slug === 'l' || !slug.startsWith('team-')) return
+  await loadPolicy(slug)
+}
+
 async function applyTeamAccessPolicy() {
   const login = document.querySelector<HTMLAnchorElement>('.ilx-footer-login')
   if (!login) return
@@ -47,8 +54,6 @@ async function applyTeamAccessPolicy() {
   const slug = currentSlug()
   if (!slug || slug === 'l') return
 
-  // No dejamos visible el acceso mientras todavía no sabemos si el perfil es Team.
-  // Así un miembro común nunca recibe un parpadeo de "Iniciar sesión".
   login.style.display = 'none'
   login.setAttribute('aria-hidden', 'true')
 
@@ -59,18 +64,6 @@ async function applyTeamAccessPolicy() {
     login.style.removeProperty('display')
     login.removeAttribute('aria-hidden')
     return
-  }
-
-  // La API actualiza las secciones heredadas desde el Master. Como la consulta
-  // pública del perfil pudo ocurrir unos milisegundos antes, hacemos una sola
-  // recarga por visita para que el usuario vea inmediatamente la versión nueva.
-  if (data.synchronized) {
-    const key = `kawvo_team_synced_reload:${slug}`
-    if (sessionStorage.getItem(key) !== '1') {
-      sessionStorage.setItem(key, '1')
-      window.location.reload()
-      return
-    }
   }
 
   if (!data.login_enabled) {
