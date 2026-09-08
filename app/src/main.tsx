@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { installKawvoBranding } from './kawvo-brand'
+import { installTeamCopyFallback } from './team-copy-fallback'
 import './index.css'
 import './kawvo-brand.css'
 
@@ -32,6 +33,7 @@ if ('serviceWorker' in navigator) {
 }
 
 installKawvoBranding()
+installTeamCopyFallback()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
