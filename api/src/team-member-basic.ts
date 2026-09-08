@@ -36,10 +36,9 @@ app.get('/api/v1/me/team/members/:id/basic', requireAuth, async (c: any) => {
   if (!access || !['master','editor','subadmin'].includes(String((access as any).access_role || ''))) return c.json({ ok:false,error:'Tu rol no permite editar miembros.' },403)
 
   const row = await c.env.DB.prepare(`
-    SELECT tm.id,tm.admin_role,tm.permissions_json,tm.status,p.name,p.template_data,pc.phone,pc.email,pc.whatsapp,u.email account_email,a.public_code product_code
+    SELECT tm.id,tm.admin_role,tm.permissions_json,tm.status,p.name,p.slug,p.avatar_url,p.is_published,p.template_data,pc.phone,pc.email,pc.whatsapp,a.public_code product_code
       FROM team_members tm
       JOIN profiles p ON p.id=tm.profile_id
-      JOIN users u ON u.id=tm.user_id
       JOIN intap_artifacts a ON a.id=tm.artifact_id
       LEFT JOIN profile_contact pc ON pc.profile_id=tm.profile_id
      WHERE tm.id=? AND tm.team_id=?
@@ -58,7 +57,9 @@ app.get('/api/v1/me/team/members/:id/basic', requireAuth, async (c: any) => {
     phone:String((row as any).phone||''),
     email:String((row as any).email||''),
     whatsapp:String((row as any).whatsapp||''),
-    account_email:String((row as any).account_email||''),
+    avatar_url:String((row as any).avatar_url||''),
+    slug:String((row as any).slug||''),
+    is_published:Number((row as any).is_published||0)===1,
     product_code:String((row as any).product_code||''),
   }})
 })
