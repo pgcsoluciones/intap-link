@@ -204,6 +204,20 @@ ${seoHeadHtml}
     }
   };
 
+  const fetchTeamPolicyForShare = async (slug: string): Promise<any | null> => {
+    try {
+      const response = await fetch(
+        `${discoveryRuntime.apiBase}/team/member-access/policy?slug=${encodeURIComponent(slug)}`,
+        { headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } } as RequestInit,
+      );
+      if (!response.ok) return null;
+      const payload = await response.json() as any;
+      return payload?.ok === true && payload?.data ? payload.data : null;
+    } catch {
+      return null;
+    }
+  };
+
   const profileShareImage = (profile: any): string => {
     const templateData = profile?.templateData && typeof profile.templateData === 'object'
       ? profile.templateData
@@ -244,7 +258,7 @@ ${seoHeadHtml}
     const name = clean(profile?.name) || clean(profile?.slug) || 'Perfil Digital';
     const description = clean(profile?.bio) || clean(templateData?.shortDescription) || `Perfil digital de ${name}`;
     const role = clean(templateData?.role) || clean(templateData?.jobTitle) || '';
-    const companyName = clean(templateData?.companyName) || '';
+    const companyName = clean(templateData?.companyName) || clean(templateData?.team_company_name) || '';
     const category = clean(profile?.category);
     const subcategory = clean(profile?.subcategory);
     const services = (Array.isArray(profile?.products) ? profile.products : [])
@@ -337,6 +351,7 @@ ${seoHeadHtml}
   <noscript data-kawvo-profile-discovery=\"dynamic\">
     <main>
       <h1>${escapeHtml(name)}</h1>
+      ${companyName ? `<p>${escapeHtml(companyName)}</p>` : ''}
       ${role ? `<p>${escapeHtml(role)}</p>` : ''}
       ${category || subcategory ? `<p>${escapeHtml([category, subcategory].filter(Boolean).join(' · '))}</p>` : ''}
       <p>${escapeHtml(description)}</p>
@@ -645,9 +660,10 @@ ${seoHeadHtml}
 
   // share=bancos: social card bancaria aprobada para WhatsApp y redes.
   if (url.searchParams.get('share') === 'bancos' && /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) {
-    const [bankMeta, profile] = await Promise.all([
+    const [bankMeta, profile, teamPolicy] = await Promise.all([
       getDynamicProfileSeoBundle(slug, discoveryRuntime),
       fetchPublicProfileForShare(slug),
+      fetchTeamPolicyForShare(slug),
     ]);
     if (bankMeta) {
       const response = await fetchSpaShell();
@@ -655,11 +671,16 @@ ${seoHeadHtml}
       if (contentType.includes('text/html')) {
         const html = await response.text();
         const cleanName = bankMeta.title.split('|')[0].trim();
+        const teamName = teamPolicy?.team_member === true ? String(teamPolicy?.team_name || '').replace(/\s+/g, ' ').trim() : '';
+        const cardName = teamName || cleanName;
         const pageUrl = `${url.origin}/${encodeURIComponent(slug)}?share=bancos`;
         const image = profile ? profileShareImage(profile) : bankMeta.image;
+        const isTeam = Boolean(teamName);
         const updatedHtml = injectHeadMetadata(html, {
-          title: `Datos bancarios de ${cleanName} | Kawvo Link`,
-          description: 'Consulta los datos bancarios compartidos desde su presentación digital Kawvo Link.',
+          title: isTeam ? `Te comparto los datos bancarios de ${cardName} | Kawvo Link` : `Datos bancarios de ${cardName} | Kawvo Link`,
+          description: isTeam
+            ? `Consulta los datos bancarios de ${cardName} compartidos desde su perfil corporativo Kawvo Link.`
+            : 'Consulta los datos bancarios compartidos desde su presentación digital Kawvo Link.',
           url: pageUrl,
           image,
           imageType: imageTypeFor(image),
