@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { syncTeamMemberFromMaster } from './team-master-sync'
 
 const ADMIN_ROLES = new Set(['member', 'editor', 'subadmin'])
 
@@ -139,6 +140,13 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
     return c.json({ ok: false, error: 'No pudimos preparar este dispositivo. El código no fue consumido.' }, 409)
   }
 
+  try {
+    await syncTeamMemberFromMaster(c, profileId, true)
+  } catch (error) {
+    console.error('[team/corporate/assign] initial Master clone failed', error)
+    return c.json({ ok: false, error: 'El dispositivo quedó vinculado, pero no pudimos copiar la presentación Master. Abre Team y vuelve a sincronizar.' }, 500)
+  }
+
   return c.json({ ok: true, data: {
     member_id: memberId,
     profile_id: profileId,
@@ -160,7 +168,7 @@ app.post('/api/v1/me/team/members/:id/reset-access', requireAuth, async (c: any)
   if (!['editor','subadmin'].includes(String((member as any).admin_role || 'member'))) return c.json({ ok: false, error: 'Este miembro no tiene acceso administrativo.' }, 409)
   const temporaryPassword = randomPassword()
   const credential = await hashPassword(temporaryPassword)
-  await c.env.DB.prepare(`INSERT INTO team_member_credentials(team_member_id,password_salt,password_hash,must_change_password,failed_attempts,locked_until,updated_at) VALUES(?,?,?,1,0,NULL,datetime('now')) ON CONFLICT(team_member_id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,must_change_password=1,failed_attempts=0,locked_until=NULL,updated_at=datetime('now')`).bind(String((member as any).id),credential.salt,credential.hash).run()
+  await c.env.DB.prepare(`INSERT INTO team_member_credentials(team_member_id,password_salt,password_hash,must_change_password,failed_attempts,locked_until,updated_at) VALUES(?,?,?,1,0,NULL,datetime('now'),datetime('now')) ON CONFLICT(team_member_id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,must_change_password=1,failed_attempts=0,locked_until=NULL,updated_at=datetime('now')`).bind(String((member as any).id),credential.salt,credential.hash).run()
   return c.json({ ok: true, data: { temporary_password: temporaryPassword } })
 })
 
