@@ -43,7 +43,7 @@ async function loadPolicy(slug: string): Promise<TeamPolicy | null> {
 export async function warmTeamPublicProfile() {
   if (typeof window === 'undefined') return
   const slug = currentSlug()
-  if (!slug || slug === 'l' || !slug.startsWith('team-')) return
+  if (!slug || slug === 'l') return
   await loadPolicy(slug)
 }
 
@@ -54,7 +54,7 @@ async function applyTeamAccessPolicy() {
   const slug = currentSlug()
   if (!slug || slug === 'l') return
 
-  login.style.display = 'none'
+  login.style.setProperty('display', 'none', 'important')
   login.setAttribute('aria-hidden', 'true')
 
   const data = await loadPolicy(slug)
@@ -67,7 +67,10 @@ async function applyTeamAccessPolicy() {
   }
 
   if (!data.login_enabled) {
-    login.removeAttribute('href')
+    // Miembro normal: el acceso no debe existir visualmente ni quedar como
+    // control inactivo. Lo retiramos del DOM; el observer vuelve a aplicar la
+    // política si React reconstruye el footer.
+    login.remove()
     return
   }
 
