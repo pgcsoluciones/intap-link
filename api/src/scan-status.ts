@@ -53,9 +53,9 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
   const artifact = await c.env.DB.prepare(
     `SELECT a.id, a.public_code, a.product_type, a.status, a.owner_user_id, a.profile_id,
             p.slug AS profile_slug, p.user_id AS profile_user_id, p.is_active AS profile_is_active, p.is_published AS profile_is_published,
-            tm.user_id AS team_member_user_id, tm.status AS team_member_status,
-            tw.master_profile_id AS team_master_profile_id,
-            mp.slug AS team_master_slug, mp.is_active AS team_master_is_active, mp.is_published AS team_master_is_published
+            tm.id AS team_member_id, tm.user_id AS team_member_user_id, tm.status AS team_member_status, tm.admin_role AS team_admin_role,
+            tw.id AS team_id, tw.name AS team_name, tw.master_profile_id AS team_master_profile_id,
+            mp.slug AS team_master_slug, mp.name AS team_master_name
        FROM intap_artifacts a
        LEFT JOIN profiles p ON p.id = a.profile_id
        LEFT JOIN team_members tm ON tm.artifact_id = a.id
@@ -70,13 +70,39 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
   const status = String((artifact as any).status || '')
   const productType = String((artifact as any).product_type || 'other')
   const profileSlug = String((artifact as any).profile_slug || '').trim()
+  const teamMemberId = String((artifact as any).team_member_id || '')
   const teamMemberUserId = String((artifact as any).team_member_user_id || '')
-  const teamMasterSlug = String((artifact as any).team_master_slug || '').trim()
   const currentUserId = teamMemberUserId ? await sessionUserId(c) : null
   const base = { public_code: publicCode, product_type: productType, label: productLabel(productType) }
 
-  if (teamMemberUserId && currentUserId === teamMemberUserId) {
-    return c.json({ ok: true, state: 'activated', artifact: base, next_url: `${configuredAppUrl(c)}/admin/free` })
+  // Un producto Team ya vinculado nunca vuelve a mostrar activación.
+  if (teamMemberId) {
+    const profileIsActive = Number((artifact as any).profile_is_active) === 1
+    const profileIsPublished = Number((artifact as any).profile_is_published) === 1
+    const memberActive = String((artifact as any).team_member_status || '') === 'active'
+
+    if (status === 'activated' && memberActive && profileSlug && profileIsActive && profileIsPublished) {
+      return c.json({ ok: true, state: 'activated', artifact: base, next_url: `${configuredWebUrl(c)}/${encodeURIComponent(profileSlug)}` })
+    }
+
+    const isRoleUser = ['editor', 'subadmin'].includes(String((artifact as any).team_admin_role || 'member'))
+    const canOpenTeam = Boolean(currentUserId && currentUserId === teamMemberUserId && isRoleUser)
+    const notAssigned = !profileSlug || !String((artifact as any).profile_id || '')
+    return c.json({
+      ok: true,
+      state: notAssigned ? 'team_unassigned' : (status === 'suspended' || !memberActive ? 'team_unavailable' : 'team_pending'),
+      artifact: base,
+      team: {
+        id: String((artifact as any).team_id || ''),
+        name: String((artifact as any).team_name || (artifact as any).team_master_name || 'Team'),
+      },
+      message: notAssigned
+        ? 'Este dispositivo pertenece a un Team, pero todavía no tiene un perfil asignado.'
+        : status === 'suspended' || !memberActive
+          ? 'El perfil de este dispositivo no está disponible actualmente.'
+          : 'Este dispositivo pertenece a un Team y su perfil todavía no está publicado.',
+      manage_url: canOpenTeam ? `${configuredAppUrl(c)}/admin/free/team` : null,
+    })
   }
 
   if (status === 'activated') {
@@ -90,7 +116,7 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
     if (profileSlug && profileIsActive && !profileIsPublished) {
       const ownerUserId = String((artifact as any).owner_user_id || '')
       const profileUserId = String((artifact as any).profile_user_id || '')
-      const viewerId = currentUserId || await sessionUserId(c)
+      const viewerId = await sessionUserId(c)
       const isOwner = Boolean(viewerId && (viewerId === ownerUserId || viewerId === profileUserId))
       return c.json({
         ok: true,
@@ -103,15 +129,6 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
     }
 
     return c.json({ ok: true, state: 'unavailable', artifact: base, message: 'El Perfil Digital vinculado a este producto no está disponible actualmente.' })
-  }
-
-  if (status === 'suspended' && teamMemberUserId) {
-    const masterActive = Number((artifact as any).team_master_is_active) === 1
-    const masterPublished = Number((artifact as any).team_master_is_published) === 1
-    if (teamMasterSlug && masterActive && masterPublished) {
-      return c.json({ ok: true, state: 'activated', artifact: base, next_url: `${configuredWebUrl(c)}/${encodeURIComponent(teamMasterSlug)}` })
-    }
-    return c.json({ ok: true, state: 'unavailable', artifact: base, message: 'El perfil general del Team no está disponible actualmente.' })
   }
 
   if (status === 'suspended' || status === 'revoked') {
@@ -130,29 +147,8 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
 
   if (!activationCode) return c.json({ ok: true, state: 'not_ready', artifact: base, message: 'Este producto todavía no está habilitado para activación.' })
 
-  // Mantiene la reserva corporativa estricta: al escanear un dispositivo ya
-  // preparado por RR. HH. no se ofrece activación independiente.
-  await c.env.DB.prepare(`UPDATE team_link_codes SET status='expired',updated_at=datetime('now') WHERE status='active' AND expires_at<=datetime('now')`).run()
-  await c.env.DB.prepare(`DELETE FROM team_link_codes WHERE status!='used' AND used_at IS NULL AND created_at<=datetime('now','-48 hours')`).run()
-  const reservation = await c.env.DB.prepare(
-    `SELECT tc.id,tc.status,tc.expires_at,tw.id team_id,tw.name team_name,mp.name master_name
-       FROM team_link_codes tc
-       JOIN team_workspaces tw ON tw.id=tc.team_id
-       JOIN profiles mp ON mp.id=tw.master_profile_id
-      WHERE tc.artifact_id=? AND tc.used_at IS NULL AND tc.status IN('active','expired','disabled')
-      ORDER BY tc.created_at DESC LIMIT 1`,
-  ).bind(artifactId).first()
-
-  if (reservation) {
-    return c.json({ ok: true, state: 'team_reserved', artifact: base, reservation: {
-      team_id: String((reservation as any).team_id),
-      team_name: String((reservation as any).team_name || (reservation as any).master_name || 'Mi Team'),
-      master_name: String((reservation as any).master_name || ''),
-      status: String((reservation as any).status || ''),
-      expires_at: String((reservation as any).expires_at || ''),
-    } })
-  }
-
+  // Todo producto nuevo conserva las tres opciones. El vínculo Team se decide
+  // al escanear y validar un código Team; no se bloquea previamente por reserva.
   return c.json({ ok: true, state: 'pending_activation', artifact: base })
 })
 
