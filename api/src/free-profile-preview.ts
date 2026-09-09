@@ -49,12 +49,35 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   const slug = String(c.req.param('slug') || '').trim()
   if (!slug || !/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) return c.text('Perfil no válido.', 400)
 
-  const owned = await c.env.DB.prepare(
-    `SELECT id FROM profiles WHERE user_id = ? AND slug = ? LIMIT 1`,
+  let allowed = await c.env.DB.prepare(
+    `SELECT id FROM profiles WHERE user_id = ? AND lower(slug) = lower(?) LIMIT 1`,
   ).bind(userId, slug).first()
-  if (!owned) return c.text('Perfil no encontrado.', 404)
 
-  const profileId = String((owned as any).id || '')
+  if (!allowed) {
+    allowed = await c.env.DB.prepare(`
+      SELECT target.id
+        FROM profiles target
+        JOIN team_members target_member ON target_member.profile_id=target.id
+        JOIN team_workspaces tw ON tw.id=target_member.team_id
+        LEFT JOIN team_members requester_member
+          ON requester_member.team_id=tw.id AND requester_member.user_id=?
+       WHERE lower(target.slug)=lower(?)
+         AND target_member.status='active'
+         AND tw.status='active'
+         AND (
+           tw.owner_user_id=?
+           OR (
+             requester_member.status='active'
+             AND requester_member.admin_role IN ('editor','subadmin')
+           )
+         )
+       LIMIT 1
+    `).bind(userId, slug, userId).first()
+  }
+
+  if (!allowed) return c.text('Perfil no encontrado.', 404)
+
+  const profileId = String((allowed as any).id || '')
   const rawToken = generateToken(32)
   const tokenHash = await sha256Hex(rawToken)
   const sessionId = crypto.randomUUID()
