@@ -41,6 +41,13 @@ function readPermissions(raw: unknown): string[] {
 function normalizeSlugBase(value: unknown) {
   return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'team'
 }
+function sameValue(a: unknown, b: unknown) { return String(a ?? '') === String(b ?? '') }
+function readObject(raw: unknown): Record<string, any> {
+  try {
+    const value = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {}
+  } catch { return {} }
+}
 
 async function nextTeamMemberSlug(c: any, team: any) {
   const base = normalizeSlugBase((team as any).master_slug)
@@ -81,7 +88,7 @@ async function hashPassword(password: string, saltHex?: string) {
 }
 
 async function masterTeam(c: any, userId: string) {
-  return c.env.DB.prepare(`SELECT tw.*,p.name master_name,p.slug master_slug,p.bio master_bio,p.category master_category,p.subcategory master_subcategory,p.theme_id master_theme_id,p.layout_id master_layout_id,p.free_palette_id master_palette_id,p.hero_url master_hero_url,p.template_data master_template_data FROM team_workspaces tw JOIN profiles p ON p.id=tw.master_profile_id WHERE tw.owner_user_id=? AND tw.status='active' LIMIT 1`).bind(userId).first()
+  return c.env.DB.prepare(`SELECT tw.*,p.name master_name,p.slug master_slug,p.bio master_bio,p.category master_category,p.subcategory master_subcategory,p.theme_id master_theme_id,p.layout_id master_layout_id,p.free_palette_id master_palette_id,p.avatar_url master_avatar_url,p.hero_url master_hero_url,p.template_data master_template_data FROM team_workspaces tw JOIN profiles p ON p.id=tw.master_profile_id WHERE tw.owner_user_id=? AND tw.status='active' LIMIT 1`).bind(userId).first()
 }
 
 async function validateCodeForTeam(c: any, teamId: string, code: string, publicCode: string) {
@@ -92,6 +99,56 @@ async function validateCodeForTeam(c: any, teamId: string, code: string, publicC
   if (String((row as any).status) === 'expired' || String((row as any).expires_at || '') <= new Date().toISOString().replace('T',' ').slice(0,19)) return { error: 'Este código Team caducó. Reactívalo o genera uno nuevo.', status: 410 }
   if ((row as any).artifact_owner_user_id || !['available','unassigned'].includes(String((row as any).artifact_status || '')) || !(row as any).activation_code_id) return { error: 'Este dispositivo ya no está disponible para vinculación.', status: 409 }
   return { row }
+}
+
+async function verifyClone(c: any, masterProfileId: string, memberProfileId: string) {
+  const [master, member, masterContact, memberContact, counts] = await Promise.all([
+    c.env.DB.prepare(`SELECT bio,category,subcategory,theme_id,layout_id,free_palette_id,free_brand_color,hero_url,hero_position_x,hero_position_y,hero_zoom,accent_color,button_style,template_id,blocks_order FROM profiles WHERE id=? LIMIT 1`).bind(masterProfileId).first(),
+    c.env.DB.prepare(`SELECT bio,category,subcategory,theme_id,layout_id,free_palette_id,free_brand_color,hero_url,hero_position_x,hero_position_y,hero_zoom,accent_color,button_style,template_id,blocks_order,template_data FROM profiles WHERE id=? LIMIT 1`).bind(memberProfileId).first(),
+    c.env.DB.prepare(`SELECT hours,address,map_url FROM profile_contact WHERE profile_id=? LIMIT 1`).bind(masterProfileId).first(),
+    c.env.DB.prepare(`SELECT hours,address,map_url FROM profile_contact WHERE profile_id=? LIMIT 1`).bind(memberProfileId).first(),
+    c.env.DB.prepare(`
+      SELECT
+        (SELECT COUNT(*) FROM profile_links WHERE profile_id=?) master_links,
+        (SELECT COUNT(*) FROM profile_links WHERE profile_id=?) member_links,
+        (SELECT COUNT(*) FROM profile_gallery WHERE profile_id=?) master_gallery,
+        (SELECT COUNT(*) FROM profile_gallery WHERE profile_id=?) member_gallery,
+        (SELECT COUNT(*) FROM profile_products WHERE profile_id=?) master_products,
+        (SELECT COUNT(*) FROM profile_products WHERE profile_id=?) member_products,
+        (SELECT COUNT(*) FROM profile_social_links WHERE profile_id=?) master_social,
+        (SELECT COUNT(*) FROM profile_social_links WHERE profile_id=?) member_social,
+        (SELECT COUNT(*) FROM profile_modules WHERE profile_id=?) master_modules,
+        (SELECT COUNT(*) FROM profile_modules WHERE profile_id=?) member_modules,
+        (SELECT COUNT(*) FROM profile_faqs WHERE profile_id=?) master_faqs,
+        (SELECT COUNT(*) FROM profile_faqs WHERE profile_id=?) member_faqs,
+        (SELECT COUNT(*) FROM profile_videos WHERE profile_id=?) master_videos,
+        (SELECT COUNT(*) FROM profile_videos WHERE profile_id=?) member_videos,
+        (SELECT COUNT(*) FROM profile_bank_accounts WHERE profile_id=?) master_banks,
+        (SELECT COUNT(*) FROM profile_bank_accounts WHERE profile_id=?) member_banks
+    `).bind(masterProfileId,memberProfileId,masterProfileId,memberProfileId,masterProfileId,memberProfileId,masterProfileId,memberProfileId,masterProfileId,memberProfileId,masterProfileId,memberProfileId,masterProfileId,memberProfileId,masterProfileId,memberProfileId).first(),
+  ])
+  if (!master || !member) return false
+  const fields = ['bio','category','subcategory','theme_id','layout_id','free_palette_id','free_brand_color','hero_url','hero_position_x','hero_position_y','hero_zoom','accent_color','button_style','template_id','blocks_order']
+  if (!fields.every((key) => sameValue((master as any)[key], (member as any)[key]))) return false
+  if (!sameValue((masterContact as any)?.hours,(memberContact as any)?.hours) || !sameValue((masterContact as any)?.address,(memberContact as any)?.address) || !sameValue((masterContact as any)?.map_url,(memberContact as any)?.map_url)) return false
+  const pairs = [['master_links','member_links'],['master_gallery','member_gallery'],['master_products','member_products'],['master_social','member_social'],['master_modules','member_modules'],['master_faqs','member_faqs'],['master_videos','member_videos'],['master_banks','member_banks']]
+  if (!pairs.every(([a,b]) => Number((counts as any)?.[a] || 0) === Number((counts as any)?.[b] || 0))) return false
+  const template = readObject((member as any).template_data)
+  return template.team_member === true && String(template.team_master_profile_id || '') === masterProfileId
+}
+
+async function verifyAssignmentState(c: any, teamId: string, memberId: string, profileId: string, artifactId: string, codeId: string) {
+  const row = await c.env.DB.prepare(`
+    SELECT tm.id member_id,tm.profile_id member_profile_id,tm.artifact_id member_artifact_id,tm.status member_status,
+           a.profile_id artifact_profile_id,a.status artifact_status,
+           tc.status code_status,tc.member_profile_id code_profile_id,tc.artifact_id code_artifact_id
+      FROM team_members tm
+      JOIN intap_artifacts a ON a.id=tm.artifact_id
+      JOIN team_link_codes tc ON tc.id=tm.invite_code_id
+     WHERE tm.id=? AND tm.team_id=? LIMIT 1
+  `).bind(memberId,teamId).first()
+  if (!row) return false
+  return String((row as any).member_profile_id)===profileId && String((row as any).member_artifact_id)===artifactId && String((row as any).member_status)==='active' && String((row as any).artifact_profile_id)===profileId && String((row as any).artifact_status)==='activated' && String((row as any).code_status)==='used' && String((row as any).code_profile_id)===profileId && String((row as any).code_artifact_id)===artifactId && Boolean(codeId)
 }
 
 app.get('/api/v1/me/team/corporate/prepare', requireAuth, async (c: any) => {
@@ -141,9 +198,10 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   if (requestedWhatsapp && !allowed.has('whatsapp')) return c.json({ ok: false, error: 'WhatsApp no está habilitado para este código Team.' }, 400)
   if (requestedEmail && !allowed.has('email')) return c.json({ ok: false, error: 'Correo no está habilitado para este código Team.' }, 400)
 
-  const phone = allowed.has('phone') ? requestedPhone : ''
-  const whatsapp = allowed.has('whatsapp') ? requestedWhatsapp : ''
-  const email = allowed.has('email') ? requestedEmail : ''
+  const masterContact = await c.env.DB.prepare(`SELECT whatsapp,email,phone FROM profile_contact WHERE profile_id=? LIMIT 1`).bind(String((team as any).master_profile_id)).first()
+  const phone = allowed.has('phone') ? (requestedPhone || null) : ((masterContact as any)?.phone ?? null)
+  const whatsapp = allowed.has('whatsapp') ? (requestedWhatsapp || null) : ((masterContact as any)?.whatsapp ?? null)
+  const email = allowed.has('email') ? (requestedEmail || null) : ((masterContact as any)?.email ?? null)
 
   if (accessRole === 'editor' || accessRole === 'subadmin') {
     const existing = await c.env.DB.prepare(`SELECT id FROM team_members WHERE team_id=? AND admin_role=? LIMIT 1`).bind(String((team as any).id), accessRole).first()
@@ -158,11 +216,14 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   let masterTemplate: any = {}
   try { masterTemplate = JSON.parse(String((team as any).master_template_data || '{}')) || {} } catch { masterTemplate = {} }
   const templateData = { ...masterTemplate, role: roleTitle, free_identity_confirmed: true, team_member: true, team_id: String((team as any).id), team_master_profile_id: String((team as any).master_profile_id), team_permissions: permissions, team_access_role: accessRole, team_joined_at: new Date().toISOString() }
+  const initialAvatar = allowed.has('photo') ? null : ((team as any).master_avatar_url || null)
 
+  // A Team profile is born unpublished. It is only made public after the full
+  // Master clone and all source-of-truth relations have been verified.
   const statements: any[] = [
     c.env.DB.prepare(`INSERT INTO users(id,email,created_at) VALUES(?,?,datetime('now'))`).bind(seatUserId,syntheticEmail),
-    c.env.DB.prepare(`INSERT INTO profiles(id,user_id,slug,plan_id,theme_id,layout_id,name,bio,category,subcategory,free_palette_id,avatar_url,hero_url,template_data,is_published,created_at,updated_at) VALUES(?,?,?,'free',?,?,?,?,?,?,?,?,?,?,?,datetime('now'),datetime('now'))`).bind(profileId,seatUserId,slug,String((team as any).master_theme_id || 'default'),String((team as any).master_layout_id || 'esencial'),name,String((team as any).master_bio || ''),String((team as any).master_category || ''),String((team as any).master_subcategory || ''),String((team as any).master_palette_id || ''),null,String((team as any).master_hero_url || ''),JSON.stringify(templateData),publishNow ? 1 : 0),
-    c.env.DB.prepare(`INSERT INTO profile_contact(profile_id,whatsapp,email,phone,hours,address,map_url) SELECT ?,?,?,?,hours,address,map_url FROM profile_contact WHERE profile_id=?`).bind(profileId,whatsapp || null,email || null,phone || null,String((team as any).master_profile_id)),
+    c.env.DB.prepare(`INSERT INTO profiles(id,user_id,slug,plan_id,theme_id,layout_id,name,bio,category,subcategory,free_palette_id,avatar_url,hero_url,template_data,is_published,created_at,updated_at) VALUES(?,?,?,'free',?,?,?,?,?,?,?,?,?,?,0,datetime('now'),datetime('now'))`).bind(profileId,seatUserId,slug,String((team as any).master_theme_id || 'default'),String((team as any).master_layout_id || 'esencial'),name,String((team as any).master_bio || ''),String((team as any).master_category || ''),String((team as any).master_subcategory || ''),String((team as any).master_palette_id || ''),initialAvatar,String((team as any).master_hero_url || ''),JSON.stringify(templateData)),
+    c.env.DB.prepare(`INSERT INTO profile_contact(profile_id,whatsapp,email,phone,hours,address,map_url) SELECT ?,?,?,?,hours,address,map_url FROM profile_contact WHERE profile_id=?`).bind(profileId,whatsapp,email,phone,String((team as any).master_profile_id)),
     c.env.DB.prepare(`INSERT INTO team_members(id,team_id,user_id,profile_id,artifact_id,invite_code_id,status,permissions_json,admin_role,joined_at,updated_at) VALUES(?,?,?,?,?,?,'active',?,?,datetime('now'),datetime('now'))`).bind(memberId,String((team as any).id),seatUserId,profileId,String(invite.artifact_id),String(invite.id),JSON.stringify(permissions),accessRole),
     c.env.DB.prepare(`UPDATE intap_artifacts SET owner_user_id=?,profile_id=?,status='activated',activated_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND owner_user_id IS NULL AND status IN('available','unassigned')`).bind(seatUserId,profileId,String(invite.artifact_id)),
     c.env.DB.prepare(`UPDATE artifact_activation_codes SET status='used',used_at=datetime('now') WHERE id=? AND status='active'`).bind(String(invite.activation_code_id)),
@@ -187,12 +248,30 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
     return c.json({ ok: false, error: 'No pudimos preparar este dispositivo. El código no fue consumido.' }, 409)
   }
 
+  const teamId = String((team as any).id)
+  const masterProfileId = String((team as any).master_profile_id)
+  const artifactId = String(invite.artifact_id)
+  let cloneOk = false
   try {
     await syncTeamMemberFromMaster(c, profileId, true)
+    cloneOk = await verifyClone(c, masterProfileId, profileId)
+    if (!cloneOk) {
+      console.warn('[team/corporate/assign] clone verification mismatch; retrying', { profileId, masterProfileId })
+      await syncTeamMemberFromMaster(c, profileId, true)
+      cloneOk = await verifyClone(c, masterProfileId, profileId)
+    }
   } catch (error) {
     console.error('[team/corporate/assign] initial Master clone failed', error)
-    return c.json({ ok: false, error: 'El dispositivo quedó vinculado, pero no pudimos copiar la presentación Master. Abre Team y vuelve a sincronizar.' }, 500)
   }
+
+  const sourceOk = await verifyAssignmentState(c, teamId, memberId, profileId, artifactId, String(invite.activation_code_id))
+  if (!cloneOk || !sourceOk) {
+    await c.env.DB.prepare(`UPDATE profiles SET is_published=0,updated_at=datetime('now') WHERE id=?`).bind(profileId).run().catch(() => undefined)
+    console.error('[team/corporate/assign] postcondition failed', { cloneOk, sourceOk, profileId, artifactId, memberId })
+    return c.json({ ok: false, error: 'El dispositivo quedó reservado dentro del Team, pero la presentación Master no superó la verificación final. No fue publicada. Abre Team y sincroniza antes de entregarlo.' }, 500)
+  }
+
+  await c.env.DB.prepare(`UPDATE profiles SET is_published=?,updated_at=datetime('now') WHERE id=?`).bind(publishNow ? 1 : 0,profileId).run()
 
   return c.json({ ok: true, data: {
     member_id: memberId,
@@ -203,6 +282,8 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
     access_role: accessRole,
     permissions,
     status: publishNow ? 'published' : 'draft',
+    clone_verified: true,
+    source_verified: true,
     temporary_password: temporaryPassword || null,
   } })
 })
