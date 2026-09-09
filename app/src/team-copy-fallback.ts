@@ -14,6 +14,20 @@ function fallbackCopy(value: string) {
   return ok
 }
 
+const COPY_FEEDBACK_MS = 1600
+
+function showCopiedFeedback(button: HTMLButtonElement) {
+  const original = String(button.textContent || '').trim()
+  if (!original || button.dataset.teamCopyFeedback === '1') return
+  button.dataset.teamCopyFeedback = '1'
+  button.textContent = 'Código copiado'
+  button.setAttribute('aria-live', 'polite')
+  window.setTimeout(() => {
+    if (button.isConnected) button.textContent = original
+    delete button.dataset.teamCopyFeedback
+  }, COPY_FEEDBACK_MS)
+}
+
 export function installTeamCopyFallback() {
   document.addEventListener('click', (event) => {
     const target = event.target
@@ -21,10 +35,13 @@ export function installTeamCopyFallback() {
     const button = target.closest('button')
     if (!(button instanceof HTMLButtonElement)) return
     const text = String(button.textContent || '').trim()
-    if (!text.includes('TEAM-') || !/Copiar/i.test(text)) return
+    if (!text.includes('TEAM-')) return
     const match = text.match(/TEAM-[A-Z0-9]+-[A-Z0-9]+/i)
     if (!match) return
     const code = match[0].toUpperCase()
+
+    showCopiedFeedback(button)
+
     // The component already tries the modern Clipboard API. This fallback is
     // intentionally delayed so it only matters on browsers/contexts where that
     // path is unavailable or rejected.
