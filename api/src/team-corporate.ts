@@ -31,6 +31,12 @@ async function requireAuth(c: any, next: any) {
 
 function normalizeCode(value: unknown) { return String(value || '').trim().toUpperCase().replace(/\s+/g, '') }
 function cleanText(value: unknown, max = 120) { return String(value || '').trim().replace(/\s+/g, ' ').slice(0, max) }
+function readPermissions(raw: unknown): string[] {
+  try {
+    const parsed = JSON.parse(String(raw || '[]'))
+    return Array.isArray(parsed) ? Array.from(new Set(['name', 'role', ...parsed.map(String)])) : ['name', 'role']
+  } catch { return ['name', 'role'] }
+}
 function normalizeSlugBase(value: unknown) {
   return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'team'
 }
@@ -101,7 +107,7 @@ app.get('/api/v1/me/team/corporate/prepare', requireAuth, async (c: any) => {
     master_name: String((team as any).master_name || ''),
     public_code: publicCode,
     team_code: code,
-    permissions: (() => { try { const p = JSON.parse(String((validated.row as any).permissions_json || '[]')); return Array.isArray(p) ? p : [] } catch { return [] } })(),
+    permissions: readPermissions((validated.row as any).permissions_json),
   } })
 })
 
@@ -116,9 +122,6 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   const publicCode = normalizeCode(body.public_code)
   const name = cleanText(body.name, 100)
   const roleTitle = cleanText(body.role_title, 100)
-  const phone = cleanText(body.phone, 40)
-  const whatsapp = cleanText(body.whatsapp, 40)
-  const email = cleanText(body.email, 180).toLowerCase()
   const accessRole = ADMIN_ROLES.has(String(body.access_role || 'member')) ? String(body.access_role || 'member') : 'member'
   const publishNow = body.publish_now !== false
 
@@ -127,6 +130,19 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   const validated: any = await validateCodeForTeam(c, String((team as any).id), code, publicCode)
   if (validated.error) return c.json({ ok: false, error: validated.error }, validated.status)
   const invite = validated.row as any
+  const permissions = readPermissions(invite.permissions_json)
+  const allowed = new Set(permissions)
+
+  const requestedPhone = cleanText(body.phone, 40)
+  const requestedWhatsapp = cleanText(body.whatsapp, 40)
+  const requestedEmail = cleanText(body.email, 180).toLowerCase()
+  if (requestedPhone && !allowed.has('phone')) return c.json({ ok: false, error: 'Teléfono no está habilitado para este código Team.' }, 400)
+  if (requestedWhatsapp && !allowed.has('whatsapp')) return c.json({ ok: false, error: 'WhatsApp no está habilitado para este código Team.' }, 400)
+  if (requestedEmail && !allowed.has('email')) return c.json({ ok: false, error: 'Correo no está habilitado para este código Team.' }, 400)
+
+  const phone = allowed.has('phone') ? requestedPhone : ''
+  const whatsapp = allowed.has('whatsapp') ? requestedWhatsapp : ''
+  const email = allowed.has('email') ? requestedEmail : ''
 
   if (accessRole === 'editor' || accessRole === 'subadmin') {
     const existing = await c.env.DB.prepare(`SELECT id FROM team_members WHERE team_id=? AND admin_role=? LIMIT 1`).bind(String((team as any).id), accessRole).first()
@@ -140,7 +156,6 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   const syntheticEmail = `seat-${seatUserId.replace(/-/g,'')}@team.internal.kawvo`
   let masterTemplate: any = {}
   try { masterTemplate = JSON.parse(String((team as any).master_template_data || '{}')) || {} } catch { masterTemplate = {} }
-  const permissions = (() => { try { const p = JSON.parse(String(invite.permissions_json || '[]')); return Array.isArray(p) ? Array.from(new Set(['name','role',...p.map(String)])) : ['name','role'] } catch { return ['name','role'] } })()
   const templateData = { ...masterTemplate, role: roleTitle, free_identity_confirmed: true, team_member: true, team_id: String((team as any).id), team_master_profile_id: String((team as any).master_profile_id), team_permissions: permissions, team_access_role: accessRole, team_joined_at: new Date().toISOString() }
 
   const statements: any[] = [
@@ -179,6 +194,7 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
     public_code: publicCode,
     team_name: String((team as any).name || ''),
     access_role: accessRole,
+    permissions,
     status: publishNow ? 'published' : 'draft',
     temporary_password: temporaryPassword || null,
   } })
