@@ -16,6 +16,7 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [teamIdentity, setTeamIdentity] = useState<any>(null)
 
   const queryScanCode = String(searchParams.get('public_code') || '').trim().toUpperCase()
   const queryTeamCode = String(searchParams.get('team_code') || '').trim().toUpperCase()
@@ -54,9 +55,10 @@ export default function AdminLogin() {
     if (isTeamFlow) {
       sessionStorage.setItem(TEAM_CODE_KEY, teamCode)
       localStorage.setItem(TEAM_CODE_KEY, teamCode)
-      // Team device preparation belongs to the existing Master account. Never
-      // create a new independent Free account just because a Team code is present.
       setMode('login')
+      apiPost('/public/team/browser-authority', { public_code: scanCode, team_code: teamCode })
+        .then((json: any) => { if (json?.ok) setTeamIdentity(json.data || null) })
+        .catch(() => undefined)
       return
     }
     setMode(isDraftResume || isSwitchUser ? 'login' : 'register')
@@ -110,7 +112,7 @@ export default function AdminLogin() {
           <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isTeamFlow ? 'Accede como Administrador Master' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
             {isTeamFlow
-              ? 'Este producto fue validado con un código Team. Accede con la cuenta Master que administra ese Team para preparar el perfil del colaborador.'
+              ? 'El código Team ya identificó a qué organización pertenece este dispositivo. Ahora debemos confirmar la cuenta Master en este navegador antes de prepararlo.'
               : isDraftResume
                 ? 'Inicia sesión para continuar configurando tu Perfil Digital.'
                 : isSwitchUser
@@ -122,6 +124,14 @@ export default function AdminLogin() {
                       : 'Accede para administrar tu perfil y tus productos Kawvo.'}
           </p>
         </div>
+
+        {isTeamFlow && teamIdentity && <div className="mb-4 rounded-[22px] border border-cyan-200 bg-cyan-50 p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-700">TEAM IDENTIFICADO</p>
+          <p className="mt-1 text-lg font-black text-slate-950">{teamIdentity.team_name}</p>
+          {teamIdentity.master_name && <p className="mt-1 text-sm font-semibold text-slate-600">Administrador Master: {teamIdentity.master_name}</p>}
+          <p className="mt-2 text-xs leading-5 text-slate-500">Producto {scanCode}</p>
+          <div className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-xs font-bold leading-5 text-amber-800">Estado: este navegador necesita confirmar una sesión del Administrador Master para continuar.</div>
+        </div>}
 
         <div className="rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
           {!isTeamFlow && <div className="grid grid-cols-2 gap-1 rounded-[22px] bg-slate-100 p-1">
@@ -136,7 +146,7 @@ export default function AdminLogin() {
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nombre@email.com" required className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
               </label>
               {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Enviando…' : isTeamFlow ? 'Acceder al Team' : isRegister ? 'Validar mi correo' : 'Continuar'}</button>
+              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Enviando…' : isTeamFlow ? 'Iniciar sesión como Master' : isRegister ? 'Validar mi correo' : 'Continuar'}</button>
             </form>
 
             <div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-slate-200" /><span className="text-xs font-semibold text-slate-400">o continúa con</span><span className="h-px flex-1 bg-slate-200" /></div>
