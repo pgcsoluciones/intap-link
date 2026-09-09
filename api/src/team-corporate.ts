@@ -3,6 +3,7 @@ import { cookieNames } from './lib/cookies'
 import { syncTeamMemberFromMaster } from './team-master-sync'
 
 const ADMIN_ROLES = new Set(['member', 'editor', 'subadmin'])
+const KDF_ITERATIONS = 50000
 
 async function sha256Hex(input: string) {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
@@ -75,7 +76,7 @@ function hex(bytes: Uint8Array) { return Array.from(bytes).map((b) => b.toString
 async function hashPassword(password: string, saltHex?: string) {
   const salt = saltHex ? new Uint8Array((saltHex.match(/.{1,2}/g) || []).map((part) => parseInt(part, 16))) : crypto.getRandomValues(new Uint8Array(16))
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' }, key, 256)
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: KDF_ITERATIONS, hash: 'SHA-256' }, key, 256)
   return { salt: hex(salt), hash: hex(new Uint8Array(bits)) }
 }
 
@@ -171,7 +172,13 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   let temporaryPassword = ''
   if (accessRole !== 'member') {
     temporaryPassword = randomPassword()
-    const credential = await hashPassword(temporaryPassword)
+    let credential: { salt: string; hash: string }
+    try {
+      credential = await hashPassword(temporaryPassword)
+    } catch (error) {
+      console.error('[team/corporate/assign] credential hash failed', error)
+      return c.json({ ok: false, error: 'No pudimos preparar el acceso administrativo del colaborador. Intenta nuevamente.' }, 500)
+    }
     statements.push(c.env.DB.prepare(`INSERT INTO team_member_credentials(team_member_id,password_salt,password_hash,must_change_password,created_at,updated_at) VALUES(?,?,?,1,datetime('now'),datetime('now'))`).bind(memberId,credential.salt,credential.hash))
   }
 
