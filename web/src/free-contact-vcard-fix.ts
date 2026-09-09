@@ -15,6 +15,14 @@ function safeFileName(value: string) {
   return normalized || 'contacto'
 }
 
+function normalizePhone(value: string) {
+  let digits = String(value || '').replace(/\D/g, '')
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  if (digits.length === 10 && /^(809|829|849)/.test(digits)) digits = `1${digits}`
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+  return digits ? `+${digits}` : ''
+}
+
 function visibleIdentity() {
   const name = document.querySelector<HTMLElement>('.ilx-identity h1')?.textContent?.trim() || ''
   const role = document.querySelector<HTMLElement>('.ilx-identity p')?.textContent?.trim() || ''
@@ -24,10 +32,10 @@ function visibleIdentity() {
 function visiblePhone() {
   const whatsapp = document.querySelector<HTMLAnchorElement>('.ilx-main-cta[href*="wa.me/"]')?.href || ''
   const waMatch = whatsapp.match(/wa\.me\/(\d+)/i)
-  if (waMatch?.[1]) return `+${waMatch[1]}`
+  if (waMatch?.[1]) return normalizePhone(waMatch[1])
 
   const tel = document.querySelector<HTMLAnchorElement>('.ilx-quick a[href^="tel:"]')?.getAttribute('href') || ''
-  return tel.replace(/^tel:/i, '').trim()
+  return normalizePhone(tel.replace(/^tel:/i, '').trim())
 }
 
 function downloadContactFromVisibleProfile() {
