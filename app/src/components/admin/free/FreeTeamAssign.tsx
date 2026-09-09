@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPost } from '../../../lib/api'
+import { apiGet, apiPost, apiUpload } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
+
+const PERMISSION_LABELS: Record<string, string> = {
+  name: 'Nombre', role: 'Cargo', photo: 'Foto', phone: 'Teléfono', email: 'Correo', whatsapp: 'WhatsApp',
+  portfolio: 'Portafolio', services: 'Servicios', links: 'Enlaces', quick_actions: 'Botones directos', location: 'Ubicación', design: 'Diseño',
+}
 
 export default function FreeTeamAssign() {
   const navigate = useNavigate()
@@ -18,8 +23,19 @@ export default function FreeTeamAssign() {
   const [phone, setPhone] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
   const [accessRole, setAccessRole] = useState<'member' | 'editor' | 'subadmin'>('member')
   const [publishNow, setPublishNow] = useState(true)
+
+  const allowed = useMemo(() => new Set<string>(Array.isArray(context?.permissions) ? context.permissions.map(String) : []), [context])
+  const canPhoto = allowed.has('photo')
+  const canPhone = allowed.has('phone')
+  const canWhatsapp = allowed.has('whatsapp')
+  const canEmail = allowed.has('email')
+  const permissionSummary = useMemo(() => {
+    const ordered = ['name','role','photo','phone','email','whatsapp','portfolio','services','links','quick_actions','location','design']
+    return ordered.filter((key) => allowed.has(key) || key === 'name' || key === 'role').map((key) => PERMISSION_LABELS[key]).filter(Boolean)
+  }, [allowed])
 
   useEffect(() => {
     if (!publicCode || !teamCode) {
@@ -40,20 +56,34 @@ export default function FreeTeamAssign() {
     if (saving) return
     if (!name.trim() || !roleTitle.trim()) { setError('Completa nombre y cargo del colaborador.'); return }
     setSaving(true); setError('')
-    const json: any = await apiPost('/me/team/corporate/assign', {
+    const payload: any = {
       public_code: publicCode,
       team_code: teamCode,
       name: name.trim(),
       role_title: roleTitle.trim(),
-      phone: phone.trim(),
-      whatsapp: whatsapp.trim(),
-      email: email.trim(),
       access_role: accessRole,
       publish_now: publishNow,
-    }).catch(() => ({ ok: false }))
+    }
+    if (canPhone) payload.phone = phone.trim()
+    if (canWhatsapp) payload.whatsapp = whatsapp.trim()
+    if (canEmail) payload.email = email.trim()
+
+    const json: any = await apiPost('/me/team/corporate/assign', payload).catch(() => ({ ok: false }))
+    if (!json?.ok) {
+      setSaving(false)
+      setError(json?.error || 'No pudimos asignar el dispositivo.')
+      return
+    }
+
+    let photoWarning = ''
+    if (canPhoto && photo && json.data?.member_id) {
+      const form = new FormData()
+      form.append('file', photo)
+      const uploaded: any = await apiUpload(`/me/team/members/${encodeURIComponent(String(json.data.member_id))}/avatar`, form).catch(() => ({ ok: false }))
+      if (!uploaded?.ok) photoWarning = uploaded?.error || 'El perfil fue creado, pero no pudimos guardar la foto. Puedes agregarla luego desde Editar perfil.'
+    }
     setSaving(false)
-    if (!json?.ok) { setError(json?.error || 'No pudimos asignar el dispositivo.'); return }
-    setResult(json.data)
+    setResult({ ...json.data, photo_warning: photoWarning })
   }
 
   if (loading) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
@@ -70,6 +100,7 @@ export default function FreeTeamAssign() {
           <p><strong>Estado:</strong> {result.status === 'published' ? 'Publicado' : 'Perfil pendiente'}</p>
           <p><strong>Rol:</strong> {result.access_role === 'member' ? 'Miembro' : result.access_role === 'editor' ? 'Editor' : 'Subadministrador'}</p>
         </div>
+        {result.photo_warning && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">{result.photo_warning}</p>}
         {result.temporary_password && <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4"><p className="text-xs font-black uppercase text-amber-800">Contraseña temporal</p><p className="mt-2 font-mono text-lg font-black text-slate-950">{result.temporary_password}</p><p className="mt-2 text-xs leading-5 text-amber-800">Entrégala únicamente al colaborador con rol. Deberá cambiarla en su primer acceso.</p></div>}
         <button type="button" onClick={() => navigate('/admin/free/team')} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white">Volver al Team</button>
       </section>
@@ -87,13 +118,15 @@ export default function FreeTeamAssign() {
 
         <section className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-black">Datos del colaborador</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">RR. HH. prepara el perfil. El miembro normal no necesita crear cuenta ni pasar por onboarding.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">Completa únicamente los datos habilitados para este perfil. Los demás permanecerán administrados por el Team.</p>
+          {permissionSummary.length > 0 && <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600">Habilitados: {permissionSummary.join(' · ')}</p>}
           <div className="mt-4 grid gap-3">
             <label className="text-xs font-black text-slate-600">Nombre *<input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
             <label className="text-xs font-black text-slate-600">Cargo *<input value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
-            <label className="text-xs font-black text-slate-600">Teléfono<input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
-            <label className="text-xs font-black text-slate-600">WhatsApp<input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
-            <label className="text-xs font-black text-slate-600">Correo de contacto<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /><span className="mt-1 block font-normal text-slate-400">Es un dato público del perfil; no se usa como credencial de acceso.</span></label>
+            {canPhoto && <label className="text-xs font-black text-slate-600">Foto<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium" /><span className="mt-1 block font-normal text-slate-400">JPG, PNG o WebP · máximo 8 MB.</span></label>}
+            {canPhone && <label className="text-xs font-black text-slate-600">Teléfono<input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>}
+            {canWhatsapp && <label className="text-xs font-black text-slate-600">WhatsApp<input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>}
+            {canEmail && <label className="text-xs font-black text-slate-600">Correo de contacto<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /><span className="mt-1 block font-normal text-slate-400">Es un dato público del perfil; no se usa como credencial de acceso.</span></label>}
           </div>
         </section>
 
