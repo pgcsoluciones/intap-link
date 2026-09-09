@@ -7,7 +7,8 @@ EXPECTED_MAIN="f180d3055395072e62b70de364e75aae714789df"
 PRODUCT_SHA="2d608bc4722b438638cb00a02adec5c7d39db8e4"
 WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
-LOG_DIR="$ROOT/.production-team-authority-release-2026-09-09-logs"
+LOG_DIR="/tmp/kawvo-production-team-authority-release-2026-09-09-logs"
+OLD_LOG_DIR="$ROOT/.production-team-authority-release-2026-09-09-logs"
 WORKER_LOG="$LOG_DIR/worker.log"
 WEB_LOG="$LOG_DIR/web.log"
 APP_LOG="$LOG_DIR/app.log"
@@ -17,7 +18,10 @@ fail(){ echo; echo "✗ ERROR: $1"; exit 1; }
 run(){ echo; echo "▶ $*"; "$@" || fail "$*"; }
 
 cd "$ROOT" || fail "No existe $ROOT"
-rm -rf "$LOG_DIR" && mkdir -p "$LOG_DIR"
+# El runner no debe ensuciar el working tree. Limpiamos únicamente el directorio
+# de logs creado por versiones anteriores de ESTE runner y escribimos logs en /tmp.
+rm -rf "$OLD_LOG_DIR" "$LOG_DIR"
+mkdir -p "$LOG_DIR"
 
 cat <<EOF
 ============================================================
@@ -61,9 +65,12 @@ EXPECTED_SORTED="$(printf '%s\n' "$EXPECTED_FILES" | sort)"
 echo "✓ Delta exacto confirmado: 12 commits / 11 archivos"
 echo "✓ No incluye migrations-preview ni infraestructura QA posterior"
 
+# Antes de separar HEAD, el repo debe estar limpio. Los logs viven fuera del repo.
+[ -z "$(git status --porcelain)" ] || { git status --short; fail "Working tree ya venía sucio antes de validar el producto"; }
+
 # Validar exactamente el árbol que será promovido.
 run git checkout --detach "$PRODUCT_SHA"
-[ -z "$(git status --porcelain)" ] || fail "Working tree no está limpio"
+[ -z "$(git status --porcelain)" ] || { git status --short; fail "Working tree no está limpio después del checkout exacto"; }
 run git diff --check "$EXPECTED_MAIN...$PRODUCT_SHA"
 run node scripts/audit-team-flow-invariants.mjs
 run npm ci
@@ -164,5 +171,6 @@ App Pages:      ${APP_ORIGIN:-ver log}
 D1:             solo lectura; sin migraciones en este delta
 Invariant audit: 22/22 antes del release
 QA Preview posterior: NO PROMOVIDO
+Logs:           $LOG_DIR
 ============================================================
 EOF
