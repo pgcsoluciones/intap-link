@@ -3,19 +3,33 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiUpload } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
 
+const TEAM_CODE_KEY = 'kawvo_team_join_code'
+const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+
 const PERMISSION_LABELS: Record<string, string> = {
   name: 'Nombre', role: 'Cargo', photo: 'Foto', phone: 'Teléfono', email: 'Correo', whatsapp: 'WhatsApp',
   portfolio: 'Portafolio', services: 'Servicios', links: 'Enlaces', quick_actions: 'Botones directos', location: 'Ubicación', design: 'Diseño',
 }
 
+function clearTeamActivationContext() {
+  sessionStorage.removeItem(TEAM_CODE_KEY)
+  localStorage.removeItem(TEAM_CODE_KEY)
+  sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+  localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
+  sessionStorage.removeItem('kawvo_team_resume_url')
+  localStorage.removeItem('kawvo_team_resume_url')
+}
+
 export default function FreeTeamAssign() {
   const navigate = useNavigate()
   const params = new URLSearchParams(window.location.search)
-  const publicCode = String(params.get('public_code') || '').trim().toUpperCase()
-  const teamCode = String(params.get('team_code') || '').trim().toUpperCase()
+  const publicCode = String(params.get('public_code') || sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || '').trim().toUpperCase()
+  const teamCode = String(params.get('team_code') || sessionStorage.getItem(TEAM_CODE_KEY) || localStorage.getItem(TEAM_CODE_KEY) || '').trim().toUpperCase()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [switchingAccount, setSwitchingAccount] = useState(false)
   const [error, setError] = useState('')
+  const [masterRequired, setMasterRequired] = useState(false)
   const [context, setContext] = useState<any>(null)
   const [result, setResult] = useState<any>(null)
   const [name, setName] = useState('')
@@ -43,14 +57,38 @@ export default function FreeTeamAssign() {
       setLoading(false)
       return
     }
+    sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
+    localStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
+    sessionStorage.setItem(TEAM_CODE_KEY, teamCode)
+    localStorage.setItem(TEAM_CODE_KEY, teamCode)
+
     apiGet(`/me/team/corporate/prepare?public_code=${encodeURIComponent(publicCode)}&team_code=${encodeURIComponent(teamCode)}`)
       .then((json: any) => {
-        if (!json?.ok) setError(json?.error || 'No pudimos preparar este dispositivo.')
-        else setContext(json.data)
+        if (!json?.ok) {
+          const message = json?.error || 'No pudimos preparar este dispositivo.'
+          setError(message)
+          setMasterRequired(json?.code === 'TEAM_MASTER_REQUIRED' || message.includes('Administrador Master'))
+        } else {
+          setContext(json.data)
+          setMasterRequired(false)
+        }
       })
       .catch(() => setError('No pudimos validar tu acceso al Team.'))
       .finally(() => setLoading(false))
   }, [publicCode, teamCode])
+
+  const accessAsCorrectMaster = async () => {
+    if (switchingAccount || !publicCode || !teamCode) return
+    setSwitchingAccount(true)
+    setError('')
+    // Preserve source-of-truth identifiers across logout/login.
+    sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
+    localStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
+    sessionStorage.setItem(TEAM_CODE_KEY, teamCode)
+    localStorage.setItem(TEAM_CODE_KEY, teamCode)
+    await apiPost('/auth/logout', {}).catch(() => undefined)
+    window.location.assign(`/admin/login?activation=team&public_code=${encodeURIComponent(publicCode)}&team_code=${encodeURIComponent(teamCode)}`)
+  }
 
   const submit = async () => {
     if (saving) return
@@ -82,6 +120,7 @@ export default function FreeTeamAssign() {
       const uploaded: any = await apiUpload(`/me/team/members/${encodeURIComponent(String(json.data.member_id))}/avatar`, form).catch(() => ({ ok: false }))
       if (!uploaded?.ok) photoWarning = uploaded?.error || 'El perfil fue creado, pero no pudimos guardar la foto. Puedes agregarla luego desde Editar perfil.'
     }
+    clearTeamActivationContext()
     setSaving(false)
     setResult({ ...json.data, photo_warning: photoWarning })
   }
@@ -98,6 +137,8 @@ export default function FreeTeamAssign() {
           <p><strong>Team:</strong> {result.team_name}</p>
           <p><strong>Producto:</strong> {result.public_code}</p>
           <p><strong>Estado:</strong> {result.status === 'published' ? 'Publicado' : 'Perfil pendiente'}</p>
+          <p><strong>Presentación Master:</strong> {result.clone_verified ? 'Verificada' : 'Pendiente'}</p>
+          <p><strong>Vinculación:</strong> {result.source_verified ? 'Verificada' : 'Pendiente'}</p>
           <p><strong>Rol:</strong> {result.access_role === 'member' ? 'Miembro' : result.access_role === 'editor' ? 'Editor' : 'Subadministrador'}</p>
         </div>
         {result.photo_warning && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-800">{result.photo_warning}</p>}
@@ -114,32 +155,34 @@ export default function FreeTeamAssign() {
         <p className="mt-3 text-[11px] font-black uppercase tracking-[0.18em] text-cyan-700">KAWVO LINK · TEAM</p>
         <h1 className="mt-1 text-3xl font-black">Preparar dispositivo</h1>
         {context && <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4"><p className="text-xs font-black uppercase text-cyan-700">Team confirmado</p><p className="mt-1 text-lg font-black">{context.team_name}</p><p className="mt-1 text-xs text-slate-500">Producto {publicCode}</p></div>}
-        {error && <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
+        {error && <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700"><p>{error}</p>{masterRequired && <button type="button" onClick={() => void accessAsCorrectMaster()} disabled={switchingAccount} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white disabled:opacity-40">{switchingAccount ? 'Cambiando cuenta…' : 'Acceder con la cuenta Master correcta'}</button>}</div>}
 
-        <section className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-black">Datos del colaborador</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Completa únicamente los datos habilitados para este perfil. Los demás permanecerán administrados por el Team.</p>
-          {permissionSummary.length > 0 && <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600">Habilitados: {permissionSummary.join(' · ')}</p>}
-          <div className="mt-4 grid gap-3">
-            <label className="text-xs font-black text-slate-600">Nombre *<input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
-            <label className="text-xs font-black text-slate-600">Cargo *<input value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
-            {canPhoto && <label className="text-xs font-black text-slate-600">Foto<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium" /><span className="mt-1 block font-normal text-slate-400">JPG, PNG o WebP · máximo 8 MB.</span></label>}
-            {canPhone && <label className="text-xs font-black text-slate-600">Teléfono<input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>}
-            {canWhatsapp && <label className="text-xs font-black text-slate-600">WhatsApp<input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>}
-            {canEmail && <label className="text-xs font-black text-slate-600">Correo de contacto<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /><span className="mt-1 block font-normal text-slate-400">Es un dato público del perfil; no se usa como credencial de acceso.</span></label>}
-          </div>
-        </section>
+        {context && <>
+          <section className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-black">Datos del colaborador</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Completa únicamente los datos habilitados para este perfil. Los demás permanecerán administrados por el Team.</p>
+            {permissionSummary.length > 0 && <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600">Habilitados: {permissionSummary.join(' · ')}</p>}
+            <div className="mt-4 grid gap-3">
+              <label className="text-xs font-black text-slate-600">Nombre *<input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
+              <label className="text-xs font-black text-slate-600">Cargo *<input value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>
+              {canPhoto && <label className="text-xs font-black text-slate-600">Foto<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium" /><span className="mt-1 block font-normal text-slate-400">JPG, PNG o WebP · máximo 8 MB.</span></label>}
+              {canPhone && <label className="text-xs font-black text-slate-600">Teléfono<input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>}
+              {canWhatsapp && <label className="text-xs font-black text-slate-600">WhatsApp<input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /></label>}
+              {canEmail && <label className="text-xs font-black text-slate-600">Correo de contacto<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm" /><span className="mt-1 block font-normal text-slate-400">Es un dato público del perfil; no se usa como credencial de acceso.</span></label>}
+            </div>
+          </section>
 
-        <section className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-black">Rol de acceso</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Solo Editor y Subadministrador reciben acceso al panel Team.</p>
-          <div className="mt-4 grid gap-2">
-            {([['member','Miembro','Sin acceso al panel.'],['editor','Editor','Puede editar campos habilitados de miembros.'],['subadmin','Subadministrador','Puede editar y activar/desactivar miembros.']] as const).map(([value,label,detail]) => <button key={value} type="button" onClick={() => setAccessRole(value)} className={`rounded-2xl border p-4 text-left ${accessRole === value ? 'border-cyan-300 bg-cyan-50' : 'border-slate-200 bg-white'}`}><span className="block text-sm font-black">{label}</span><span className="mt-1 block text-xs text-slate-500">{detail}</span></button>)}
-          </div>
-          <label className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold"><span>Publicar al terminar</span><input type="checkbox" checked={publishNow} onChange={(e) => setPublishNow(e.target.checked)} /></label>
-        </section>
+          <section className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-black">Rol de acceso</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Solo Editor y Subadministrador reciben acceso al panel Team.</p>
+            <div className="mt-4 grid gap-2">
+              {([['member','Miembro','Sin acceso al panel.'],['editor','Editor','Puede editar campos habilitados de miembros.'],['subadmin','Subadministrador','Puede editar y activar/desactivar miembros.']] as const).map(([value,label,detail]) => <button key={value} type="button" onClick={() => setAccessRole(value)} className={`rounded-2xl border p-4 text-left ${accessRole === value ? 'border-cyan-300 bg-cyan-50' : 'border-slate-200 bg-white'}`}><span className="block text-sm font-black">{label}</span><span className="mt-1 block text-xs text-slate-500">{detail}</span></button>)}
+            </div>
+            <label className="mt-4 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm font-bold"><span>Publicar al terminar</span><input type="checkbox" checked={publishNow} onChange={(e) => setPublishNow(e.target.checked)} /></label>
+          </section>
 
-        <button type="button" onClick={() => void submit()} disabled={saving || !context} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{saving ? 'Preparando…' : 'Asignar colaborador y preparar dispositivo'}</button>
+          <button type="button" onClick={() => void submit()} disabled={saving || !context} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{saving ? 'Preparando…' : 'Asignar colaborador y preparar dispositivo'}</button>
+        </>}
       </div>
     </main>
   )
