@@ -107,12 +107,12 @@ export default function AdminLogin() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
-        <div className="mb-8 text-center">
+        <div className="mb-7 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isTeamFlow ? 'Accede como Administrador Master' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
             {isTeamFlow
-              ? 'El código Team ya identificó a qué organización pertenece este dispositivo. Ahora debemos confirmar la cuenta Master en este navegador antes de prepararlo.'
+              ? 'Inicia sesión con la cuenta Administrador Master para continuar preparando este dispositivo.'
               : isDraftResume
                 ? 'Inicia sesión para continuar configurando tu Perfil Digital.'
                 : isSwitchUser
@@ -125,12 +125,10 @@ export default function AdminLogin() {
           </p>
         </div>
 
-        {isTeamFlow && teamIdentity && <div className="mb-4 rounded-[22px] border border-cyan-200 bg-cyan-50 p-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-700">TEAM IDENTIFICADO</p>
+        {isTeamFlow && teamIdentity && <div className="mb-4 rounded-[22px] border border-cyan-200 bg-cyan-50 p-4 text-center">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-700">TEAM</p>
           <p className="mt-1 text-lg font-black text-slate-950">{teamIdentity.team_name}</p>
-          {teamIdentity.master_name && <p className="mt-1 text-sm font-semibold text-slate-600">Administrador Master: {teamIdentity.master_name}</p>}
-          <p className="mt-2 text-xs leading-5 text-slate-500">Producto {scanCode}</p>
-          <div className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-xs font-bold leading-5 text-amber-800">Estado: este navegador necesita confirmar una sesión del Administrador Master para continuar.</div>
+          {teamIdentity.master_name && <p className="mt-1 text-sm font-semibold text-slate-600">Administrador: {teamIdentity.master_name}</p>}
         </div>}
 
         <div className="rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
@@ -146,7 +144,7 @@ export default function AdminLogin() {
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nombre@email.com" required className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
               </label>
               {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Enviando…' : isTeamFlow ? 'Iniciar sesión como Master' : isRegister ? 'Validar mi correo' : 'Continuar'}</button>
+              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Enviando…' : isTeamFlow ? 'Continuar como Master' : isRegister ? 'Validar mi correo' : 'Continuar'}</button>
             </form>
 
             <div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-slate-200" /><span className="text-xs font-semibold text-slate-400">o continúa con</span><span className="h-px flex-1 bg-slate-200" /></div>
