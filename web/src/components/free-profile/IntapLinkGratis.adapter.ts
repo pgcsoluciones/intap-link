@@ -161,7 +161,7 @@ function resolveCustomLinks(data: UnknownRecord): FreeProfileData['customLinks']
     url: readString(link, 'url'),
   })).filter((link) => Boolean(link.url))
 }
-function resolveQuickActions(data: UnknownRecord, phone: string, instagram: string, location: string): FreeProfileQuickAction[] {
+function resolveQuickActions(data: UnknownRecord, phone: string, whatsapp: string, email: string, instagram: string, location: string): FreeProfileQuickAction[] {
   const socialLinks = readRecords(data, 'social_links', 'socialLinks')
   const selected = socialLinks.map((link) => {
     const rawType = normalizeText(readString(link, 'type')).replace(/^free_/, '')
@@ -172,13 +172,14 @@ function resolveQuickActions(data: UnknownRecord, phone: string, instagram: stri
     if (type === 'call') url = phone ? `tel:+${phone}` : storedUrl.startsWith('tel:') ? storedUrl : normalizePhone(storedUrl) ? `tel:+${normalizePhone(storedUrl)}` : ''
     if (type === 'instagram') url = instagram || normalizeInstagram(storedUrl)
     if (type === 'location' && location) url = location
-    if (type === 'email') url = normalizeEmailUrl(storedUrl)
+    if (type === 'email') url = email ? `mailto:${email}` : normalizeEmailUrl(storedUrl)
     if (!url) return null
     return { type, label: QUICK_ACTION_LABELS[type], url, sortOrder: Number(link.sort_order ?? link.sortOrder ?? 999) }
   }).filter((item): item is FreeProfileQuickAction & { sortOrder: number } => Boolean(item)).sort((a, b) => a.sortOrder - b.sortOrder).slice(0, 3).map(({ sortOrder: _sortOrder, ...item }) => item)
   if (selected.length > 0) return selected
   const fallback: FreeProfileQuickAction[] = []
   if (phone) fallback.push({ type: 'call', label: 'Llamar', url: `tel:+${phone}` })
+  if (email) fallback.push({ type: 'email', label: 'Email', url: `mailto:${email}` })
   if (instagram) fallback.push({ type: 'instagram', label: 'Instagram', url: instagram })
   if (location) fallback.push({ type: 'location', label: 'Ubicación', url: location })
   return fallback.slice(0, 3)
@@ -263,8 +264,11 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
 
   const whatsappLink = findLinkUrl(links, isWhatsAppLink)
   const mapLink = findLinkUrl(links, isMapLink)
-  const realPhoneSource = readString(data, 'whatsapp_number', 'whatsappNumber') || readString(contact, 'whatsapp', 'phone') || whatsappLink
+  const realPhoneSource = readString(contact, 'phone')
+  const realWhatsappSource = readString(data, 'whatsapp_number', 'whatsappNumber') || readString(contact, 'whatsapp') || whatsappLink
   const phone = normalizePhone(realPhoneSource) || (starterGenerated ? STARTER_PHONE : '')
+  const whatsapp = normalizePhone(realWhatsappSource) || phone
+  const email = readString(contact, 'email')
   const realInstagramRaw = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
   const instagram = normalizeInstagram(realInstagramRaw) || (starterGenerated ? STARTER_INSTAGRAM : '')
   const realLocation = readString(contact, 'map_url') || findSocialUrl(socialLinks, 'location') || findSocialUrl(socialLinks, 'free_location') || mapLink
@@ -303,6 +307,8 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       servicesDescription: readString(templateData, 'services_section_description').slice(0, 240) || starter.servicesDescription,
       bio: readString(data, 'bio') || starter.bio,
       phone,
+      whatsapp,
+      email,
       whatsappGreetingName: greetingName,
       whatsappCtaLabel: readString(templateData, 'whatsapp_cta_label') || 'Escríbeme por WhatsApp',
       instagram,
@@ -314,7 +320,7 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       heroZoom: Number.isFinite(heroZoom) ? heroZoom : 1,
       category: category || starter.category,
       vcardFileName: `${safeSlug}.vcf`,
-      quickActions: resolveQuickActions(data, phone, instagram, location),
+      quickActions: resolveQuickActions(data, phone, whatsapp, email, instagram, location),
       services: resolveVisibleServices(data, category || starter.category, templateData),
       portfolio: actualPortfolio.length > 0 ? actualPortfolio : starterPortfolio,
       customLinks: resolveCustomLinks(data),

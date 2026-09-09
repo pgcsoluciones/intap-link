@@ -110,11 +110,11 @@ function ensureReadableColor(foreground: string, background: string, minimum = 4
 }
 
 function whatsappUrl(profile: FreeProfileData, subject?: string) {
-  if (!profile.phone) return ''
+  if (!profile.whatsapp) return ''
   const message = subject
     ? `Hola ${profile.whatsappGreetingName}, vi "${subject}" en tu perfil de Kawvo Link y me gustaría recibir más información.`
     : `Hola ${profile.whatsappGreetingName}, vi tu perfil en Kawvo Link y me gustaría recibir más información.`
-  return `https://wa.me/${profile.phone}?text=${encodeURIComponent(message)}`
+  return `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(message)}`
 }
 
 function loginUrl() {
@@ -251,7 +251,9 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
       `FN:${escapeVCard(profile.name)}`,
       `N:;${escapeVCard(profile.name)};;;`,
       profile.role ? `TITLE:${escapeVCard(profile.role)}` : '',
-      profile.phone ? `TEL;TYPE=CELL:${profile.phone}` : '',
+      profile.phone ? `TEL;TYPE=CELL,VOICE:${profile.phone}` : '',
+      profile.whatsapp && profile.whatsapp !== profile.phone ? `TEL;TYPE=CELL,WHATSAPP:${profile.whatsapp}` : '',
+      profile.email ? `EMAIL;TYPE=INTERNET:${escapeVCard(profile.email)}` : '',
       `URL:${canonicalUrl}`,
       'END:VCARD',
       '',
@@ -315,7 +317,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     } catch { /* cancelar compartir no es error */ }
   }
 
-  const hasPhone = Boolean(profile.phone)
+  const hasWhatsapp = Boolean(profile.whatsapp)
 
   return (
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
@@ -323,7 +325,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
       <div className="ilx-shell">
         <Identity profile={profile} layout={layout} />
         <div className="ilx-body">
-          {hasPhone && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
+          {hasWhatsapp && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
 
           {quickActions.length > 0 && (
             <nav className="ilx-quick" aria-label="Acciones rápidas">
@@ -408,7 +410,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           <article className="ilx-modal" role="dialog" aria-modal="true" aria-label={modal.item.title}>
             <button type="button" className="ilx-modal-close" onClick={() => setModal(null)} aria-label="Cerrar"><FaTimes /></button>
             <div className="ilx-modal-media">{modal.kind === 'portfolio' ? <img src={modal.item.image} alt={modal.item.title} /> : modal.item.image ? <img src={modal.item.image} alt={modal.item.title} /> : <span className="ilx-modal-service-icon">{serviceIcon(modal.item.iconKey)}</span>}</div>
-            <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasPhone && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
+            <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasWhatsapp && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
           </article>
         </div>
       )}

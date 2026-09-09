@@ -296,7 +296,7 @@ export default function KawvoLinkDemo() {
       name: form.name.trim() || 'Tu nombre', role: form.role.trim() || 'Tu puesto / cargo',
       personalBadge: 'Demo Kawvo Link', aboutTitle: 'Sobre mí', portfolioTitle: 'Mis trabajos',
       servicesTitle: form.servicesTitle?.trim() || 'Mis servicios', servicesDescription: form.servicesDescription?.trim() || 'Una muestra de lo que puedo hacer por ti.',
-      bio: form.bio.trim() || 'Aquí aparecerá una descripción breve sobre ti o tu negocio.', phone: whatsapp,
+      bio: form.bio.trim() || 'Aquí aparecerá una descripción breve sobre ti o tu negocio.', phone: callPhone, whatsapp, email,
       whatsappGreetingName: form.name.trim() || 'Hola', whatsappCtaLabel: 'Hablar por WhatsApp', instagram,
       location: isAiGenerated ? '' : DEFAULT_LOCATION, portrait, hero, heroPositionX: 50, heroPositionY: 50, heroZoom: 1,
       category: isAiGenerated ? (currentSector || 'Demo') : 'Demo', vcardFileName: 'kawvo-demo.vcf',

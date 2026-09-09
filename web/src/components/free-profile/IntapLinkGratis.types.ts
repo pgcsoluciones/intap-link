@@ -67,6 +67,8 @@ export type FreeProfileData = {
   servicesDescription: string
   bio: string
   phone: string
+  whatsapp: string
+  email: string
   whatsappGreetingName: string
   whatsappCtaLabel: string
   instagram: string
