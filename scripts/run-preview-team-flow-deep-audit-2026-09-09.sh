@@ -7,6 +7,7 @@ DEPLOY_BRANCH="feature-kawvo-onboarding-product-flow-v1"
 BASE_SHA="f180d3055395072e62b70de364e75aae714789df"
 PRODUCT_SHA="2d608bc4722b438638cb00a02adec5c7d39db8e4"
 RUNNER_PATH="scripts/run-preview-team-flow-deep-audit-2026-09-09.sh"
+QA_MIGRATION_PATH="api/migrations-preview/0056_team_qa_device_public_codes_fix.sql"
 WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
 WRANGLER_CFG="api/wrangler.preview.toml"
@@ -15,6 +16,7 @@ WEB_LOG="$LOG_DIR/web-pages.log"
 APP_LOG="$LOG_DIR/app-pages.log"
 WORKER_LOG="$LOG_DIR/worker.log"
 D1_AUDIT_LOG="$LOG_DIR/d1-team-source-truth-audit.log"
+QA_ARTIFACTS=(QATEAM22A2 QATEAM23B3 QATEAM24C4 QATEAM25D5 QATEAM26E6)
 
 fail(){ echo; echo "✗ ERROR: $1"; exit 1; }
 run(){ echo; echo "▶ $*"; "$@" || fail "$*"; }
@@ -44,9 +46,9 @@ HEAD_SHA="$(git rev-parse HEAD)"
 echo "Feature head:             $HEAD_SHA"
 
 # Asegurar que el producto auditado sigue exactamente intacto y que por encima
-# solo existe este runner. Esto evita probar una mezcla accidental de cambios.
+# solo existen infraestructura QA de Preview y este runner.
 git merge-base --is-ancestor "$PRODUCT_SHA" HEAD || fail "El SHA de producto ya no es ancestro de la rama"
-EXTRA_FILES="$(git diff --name-only "$PRODUCT_SHA"..HEAD | grep -v "^${RUNNER_PATH}$" || true)"
+EXTRA_FILES="$(git diff --name-only "$PRODUCT_SHA"..HEAD | grep -v -E "^(${RUNNER_PATH}|${QA_MIGRATION_PATH})$" || true)"
 [ -z "$EXTRA_FILES" ] || { echo "$EXTRA_FILES"; fail "Hay cambios de producto posteriores al SHA auditado"; }
 
 CURRENT_MAIN="$(git rev-parse github/main)"
@@ -55,6 +57,13 @@ CURRENT_MAIN="$(git rev-parse github/main)"
 git merge-base --is-ancestor github/main "$PRODUCT_SHA" || fail "El producto no es fast-forward desde main"
 
 run git diff --check "$BASE_SHA...$PRODUCT_SHA"
+
+# Los public codes físicos excluyen 0 y 1. Validar también la infraestructura QA
+# para impedir falsos negativos del smoke como el detectado en 0055.
+for artifact in "${QA_ARTIFACTS[@]}"; do
+  [[ "$artifact" =~ ^[A-Z2-9]{8,24}$ ]] || fail "QA artifact inválido para isPublicCodeShape: $artifact"
+done
+echo "✓ QA artifact public codes cumplen [A-Z2-9]{8,24}"
 
 # Contrato arquitectónico: Team e Independiente no pueden compartir mutación.
 run node scripts/audit-team-flow-invariants.mjs
@@ -91,6 +100,9 @@ echo "▶ Auditar integridad Team en D1 Preview"
 
   echo "--- Legacy real-account member rows (diagnostic only) ---"
   (cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command="SELECT tm.id,tm.admin_role,u.email,p.slug FROM team_members tm JOIN users u ON u.id=tm.user_id JOIN profiles p ON p.id=tm.profile_id WHERE COALESCE(tm.admin_role,'member')='member' AND u.email NOT LIKE '%@team.internal.kawvo' ORDER BY tm.joined_at DESC LIMIT 20;" )
+
+  echo "--- QA artifacts shape/source ---"
+  (cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command="SELECT id,public_code,status FROM intap_artifacts WHERE id LIKE 'qa-team-artifact-%' ORDER BY id;" )
 } 2>&1 | tee "$D1_AUDIT_LOG"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Auditoría D1 Preview"
 
@@ -107,7 +119,7 @@ echo
 echo "▶ Deploy App Preview → $APP_PROJECT"
 (npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch "$DEPLOY_BRANCH") 2>&1 | tee "$APP_LOG"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Pages Preview"
-APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$APP_LOG" | tail -1)"
+APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages.dev' "$APP_LOG" | tail -1)"
 [ -n "$APP_ORIGIN" ] || fail "No pude identificar APP_PAGES_ORIGIN"
 
 # El front door Preview debe apuntar a deployments inmutables recién creados.
@@ -148,13 +160,14 @@ done
 
 # Smoke API 1: los QA artifacts de Preview deben resolver desde la fuente real.
 QA_OK=0
-for artifact in QATEAM01A1 QATEAM02B2 QATEAM03C3 QATEAM04D4 QATEAM05E5; do
+for artifact in "${QA_ARTIFACTS[@]}"; do
   body="$(curl -sS -X POST 'https://app.preview.intaprd.com/api/v1/public/artifacts/scan/status' -H 'content-type: application/json' --data "{\"public_code\":\"$artifact\"}")"
   if printf '%s' "$body" | grep -q '"ok":true'; then
     echo "✓ scan/status $artifact responde desde D1 Preview"
     QA_OK=1
     break
   fi
+  echo "· scan/status $artifact no disponible: $body"
 done
 [ "$QA_OK" = "1" ] || fail "Ningún QA artifact respondió ok en scan/status"
 
