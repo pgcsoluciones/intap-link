@@ -25,8 +25,8 @@ const QUICK_ACTION_LABELS: Record<FreeProfileQuickActionType, string> = {
 const QUICK_ACTION_TYPES = new Set<FreeProfileQuickActionType>(['call', 'instagram', 'location', 'email', 'tiktok'])
 const ABOUT_TITLES = new Set(['Sobre mí', 'Quién soy', 'Conóceme'])
 const PORTFOLIO_TITLES = new Set(['Portafolio', 'Mis trabajos', 'Proyectos'])
-const STARTER_PHONE = '8090000000'
-const STARTER_INSTAGRAM = 'https://www.instagram.com/intaprd'
+const STARTER_PHONE = '18090000000'
+const STARTER_INSTAGRAM = 'https://www.instagram.com/intaprd/'
 const STARTER_LOCATION = 'https://www.google.com/maps/search/?api=1&query=Santo%20Domingo%2C%20Rep%C3%BAblica%20Dominicana'
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -62,8 +62,31 @@ function normalizeText(value: string): string {
 }
 function normalizePhone(value: string): string {
   const waMatch = value.match(/wa\.me\/(\d+)/i)
-  if (waMatch) return waMatch[1]
-  return value.replace(/\D/g, '')
+  let digits = (waMatch?.[1] || value).replace(/\D/g, '')
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  if (digits.length === 10 && /^(809|829|849)/.test(digits)) digits = `1${digits}`
+  return digits
+}
+function normalizeInstagram(value: string): string {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  let handle = raw
+  try {
+    const candidate = /^https?:\/\//i.test(raw) ? raw : raw.startsWith('www.') ? `https://${raw}` : ''
+    if (candidate) {
+      const parsed = new URL(candidate)
+      if (!/(^|\.)instagram\.com$/i.test(parsed.hostname)) return raw
+      handle = parsed.pathname.split('/').filter(Boolean)[0] || ''
+    }
+  } catch { /* se normaliza como usuario debajo */ }
+  handle = handle.replace(/^@+/, '').split(/[/?#]/)[0].trim()
+  if (!handle || !/^[a-zA-Z0-9._]{1,30}$/.test(handle)) return raw
+  return `https://www.instagram.com/${handle}/`
+}
+function normalizeEmailUrl(value: string): string {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  return raw.toLowerCase().startsWith('mailto:') ? raw : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw) ? `mailto:${raw}` : raw
 }
 function findLinkUrl(links: UnknownRecord[], matcher: (label: string, url: string) => boolean): string {
   const match = links.find((link) => matcher(normalizeText(readString(link, 'label')), normalizeText(readString(link, 'url'))))
@@ -145,7 +168,11 @@ function resolveQuickActions(data: UnknownRecord, phone: string, instagram: stri
     if (!QUICK_ACTION_TYPES.has(rawType as FreeProfileQuickActionType)) return null
     const type = rawType as FreeProfileQuickActionType
     const storedUrl = readString(link, 'url')
-    const url = type === 'location' && location ? location : storedUrl
+    let url = storedUrl
+    if (type === 'call') url = phone ? `tel:+${phone}` : storedUrl.startsWith('tel:') ? storedUrl : normalizePhone(storedUrl) ? `tel:+${normalizePhone(storedUrl)}` : ''
+    if (type === 'instagram') url = instagram || normalizeInstagram(storedUrl)
+    if (type === 'location' && location) url = location
+    if (type === 'email') url = normalizeEmailUrl(storedUrl)
     if (!url) return null
     return { type, label: QUICK_ACTION_LABELS[type], url, sortOrder: Number(link.sort_order ?? link.sortOrder ?? 999) }
   }).filter((item): item is FreeProfileQuickAction & { sortOrder: number } => Boolean(item)).sort((a, b) => a.sortOrder - b.sortOrder).slice(0, 3).map(({ sortOrder: _sortOrder, ...item }) => item)
@@ -238,8 +265,8 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
   const mapLink = findLinkUrl(links, isMapLink)
   const realPhoneSource = readString(data, 'whatsapp_number', 'whatsappNumber') || readString(contact, 'whatsapp', 'phone') || whatsappLink
   const phone = normalizePhone(realPhoneSource) || (starterGenerated ? STARTER_PHONE : '')
-  const realInstagram = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
-  const instagram = realInstagram || (starterGenerated ? STARTER_INSTAGRAM : '')
+  const realInstagramRaw = findSocialUrl(socialLinks, 'instagram') || findSocialUrl(socialLinks, 'free_instagram') || findLinkUrl(links, (_, url) => url.includes('instagram.com'))
+  const instagram = normalizeInstagram(realInstagramRaw) || (starterGenerated ? STARTER_INSTAGRAM : '')
   const realLocation = readString(contact, 'map_url') || findSocialUrl(socialLinks, 'location') || findSocialUrl(socialLinks, 'free_location') || mapLink
   const location = realLocation || (starterGenerated ? STARTER_LOCATION : '')
   const role = readString(templateData, 'role', 'title') || readString(data, 'subcategory', 'category') || starter.role
