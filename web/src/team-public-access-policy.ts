@@ -82,25 +82,26 @@ function applyTeamIdentityPolicy(data: TeamPolicy) {
       container.insertBefore(company, memberName)
     }
     company.textContent = companyName
-    company.style.fontSize = 'clamp(1.7rem, 5vw, 2.35rem)'
-    company.style.fontWeight = '900'
-    company.style.lineHeight = '1.05'
-    company.style.letterSpacing = '-0.035em'
-    company.style.marginBottom = '6px'
+    company.style.fontSize = 'clamp(1.05rem, 3.2vw, 1.3rem)'
+    company.style.fontWeight = '600'
+    company.style.lineHeight = '1.15'
+    company.style.letterSpacing = '-0.015em'
+    company.style.marginBottom = '3px'
 
     memberName.classList.add('ilx-team-member-name')
-    memberName.style.fontSize = 'clamp(1.15rem, 3.5vw, 1.45rem)'
+    memberName.style.fontSize = 'clamp(1.75rem, 7vw, 2.15rem)'
     memberName.style.fontWeight = '800'
-    memberName.style.lineHeight = '1.15'
+    memberName.style.lineHeight = '1.05'
+    memberName.style.letterSpacing = '-0.035em'
     memberName.style.margin = '0'
 
     if (role) {
       role.classList.add('ilx-team-member-role')
-      role.style.fontSize = '0.82rem'
-      role.style.fontWeight = '650'
+      role.style.fontSize = 'clamp(0.98rem, 3.8vw, 1.15rem)'
+      role.style.fontWeight = '500'
       role.style.lineHeight = '1.25'
-      role.style.marginTop = '4px'
-      role.style.opacity = '0.78'
+      role.style.marginTop = '5px'
+      role.style.opacity = '0.72'
     }
   }
 }
