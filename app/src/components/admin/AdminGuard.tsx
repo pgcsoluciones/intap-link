@@ -11,11 +11,18 @@ interface Props {
 }
 
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
+const TEAM_CODE_KEY = 'kawvo_team_join_code'
 
 function readScanCode(): string {
   const raw = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
   const code = raw.trim().toUpperCase()
   return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
+}
+
+function readTeamCode(): string {
+  const raw = sessionStorage.getItem(TEAM_CODE_KEY) || localStorage.getItem(TEAM_CODE_KEY) || ''
+  const code = raw.trim().toUpperCase()
+  return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code) ? code : ''
 }
 
 function clearScanCode() {
@@ -42,9 +49,6 @@ function interruptedFreeOnboardingRoute(data: any): string | null {
   const template = readTemplateData(data?.templateData ?? data?.template_data)
   if (template.team_member === true || String(template.team_member || '').toLowerCase() === 'true') return null
 
-  // Scan-to-claim creates a temporary kawvo-* slug. While that slug is still
-  // present, the independent profile has not finished its first-run setup.
-  // Established/legacy profiles must never be forced back through onboarding.
   const slug = String(data?.slug || '').trim().toLowerCase()
   if (!slug.startsWith('kawvo-')) return null
 
@@ -71,24 +75,32 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
   useEffect(() => {
     setReady(false)
 
+    const scanCode = readScanCode()
+    const teamCode = readTeamCode()
+    const hasTeamActivationContext = Boolean(scanCode && teamCode)
+    const insideTeamFlow = location.pathname === '/admin/free/team' || location.pathname.startsWith('/admin/free/team/')
+
     apiGet('/me').then(async (json: any) => {
       if (!json.ok) {
-        navigate('/admin/login', { replace: true })
+        // Never drop a validated Team activation into a generic login. The two
+        // identifiers are the source of truth needed to resume Master preparation.
+        if (hasTeamActivationContext) {
+          navigate(`/admin/login?activation=team&public_code=${encodeURIComponent(scanCode)}&team_code=${encodeURIComponent(teamCode)}`, { replace: true })
+        } else {
+          navigate('/admin/login', { replace: true })
+        }
         return
       }
 
-      // Team activation/join is an explicit branch of the product activation
-      // flow, not an interruption of the independent Free onboarding. While
-      // the user is inside any Team route, that flow must have priority over
-      // scan-resume and starter-resume redirects.
-      const insideTeamFlow = location.pathname === '/admin/free/team' || location.pathname.startsWith('/admin/free/team/')
+      // A validated Team code and product pair always outranks the independent
+      // scan-to-claim and starter recovery flows. This prevents a Team device
+      // from ever materializing an independent Free draft by navigation overlap.
+      if (hasTeamActivationContext && !insideTeamFlow) {
+        navigate(`/admin/free/team/assign?public_code=${encodeURIComponent(scanCode)}&team_code=${encodeURIComponent(teamCode)}`, { replace: true })
+        return
+      }
 
-      if (location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow) {
-        // Scan-to-claim continuity only needs to run when this browser actually
-        // remembers a scanned product. Avoid probing /scan/pending on every
-        // normal panel reload: a 404 is the expected "nothing pending" state
-        // and was delaying the guard while showing the dark loading screen.
-        const scanCode = readScanCode()
+      if (location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         if (scanCode) {
           let scanPending: any = await apiGet('/me/artifacts/scan/pending')
             .catch(() => ({ ok: false }))
@@ -103,8 +115,6 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
             } else if (start.ok && start.state === 'activated') {
               clearScanCode()
             } else if (!start.ok) {
-              // A stale/invalid remembered code must not penalize every future
-              // reload. Visiting /l/:code again will recreate continuity.
               clearScanCode()
             }
           }
@@ -117,7 +127,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       }
 
       const pendingActivation = sessionStorage.getItem('intap_activation_public_code')
-      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow) {
+      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         navigate('/admin/artifacts/activate', { replace: true })
         return
       }
@@ -137,14 +147,9 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         return
       }
 
-      // An activated independent product already owns a profile row before the
-      // starter onboarding is finished. Previously that row made AdminGuard
-      // treat it as an ordinary draft and the user could land on a blank panel.
-      // Resume from server-persisted progress instead. Do not interfere while
-      // the user is already inside onboarding, product activation or Team routes.
       const insideOnboarding = location.pathname.startsWith('/admin/free/onboarding/')
       const insideArtifactFlow = location.pathname.startsWith('/admin/artifacts')
-      if (!insideOnboarding && !insideArtifactFlow && !insideTeamFlow) {
+      if (!insideOnboarding && !insideArtifactFlow && !insideTeamFlow && !hasTeamActivationContext) {
         const resume = interruptedFreeOnboardingRoute(json.data)
         if (resume) {
           navigate(resume, { replace: true })
@@ -154,7 +159,11 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
 
       setReady(true)
     }).catch(() => {
-      navigate('/admin/login', { replace: true })
+      if (hasTeamActivationContext) {
+        navigate(`/admin/login?activation=team&public_code=${encodeURIComponent(scanCode)}&team_code=${encodeURIComponent(teamCode)}`, { replace: true })
+      } else {
+        navigate('/admin/login', { replace: true })
+      }
     })
   }, [location.pathname, navigate, planScope, requireProfile])
 
