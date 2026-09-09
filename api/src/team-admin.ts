@@ -1,7 +1,8 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 
-const CODE_PAGE_SIZE = 8
+const CODE_PAGE_SIZE = 5
+const MEMBER_PAGE_SIZE = 5
 const ADMIN_ROLES = new Set(['member', 'editor', 'subadmin'])
 const BASIC_FIELDS = ['name', 'role', 'phone', 'email', 'whatsapp'] as const
 
@@ -79,16 +80,19 @@ app.get('/api/v1/me/team/manage', requireAuth, async (c: any) => {
   const q = String(c.req.query('q') || '').trim()
   const like = `%${q}%`
   const page = Math.max(1, Number(c.req.query('page') || 1) || 1)
+  const memberPage = Math.max(1, Number(c.req.query('member_page') || 1) || 1)
   const offset = (page - 1) * CODE_PAGE_SIZE
+  const memberOffset = (memberPage - 1) * MEMBER_PAGE_SIZE
 
   const [members, memberCount, codeRows, codeCount] = await Promise.all([
-    c.env.DB.prepare(`SELECT tm.id,tm.user_id,tm.profile_id,tm.artifact_id,tm.status,tm.permissions_json,tm.admin_role,tm.joined_at,tm.updated_at,u.email,p.name,p.slug,json_extract(COALESCE(p.template_data,'{}'),'$.role') role,a.public_code product_code,a.product_type FROM team_members tm JOIN users u ON u.id=tm.user_id JOIN profiles p ON p.id=tm.profile_id JOIN intap_artifacts a ON a.id=tm.artifact_id WHERE tm.team_id=? ORDER BY tm.joined_at DESC`).bind(access.teamId).all(),
+    c.env.DB.prepare(`SELECT tm.id,tm.user_id,tm.profile_id,tm.artifact_id,tm.status,tm.permissions_json,tm.admin_role,tm.joined_at,tm.updated_at,u.email,p.name,p.slug,json_extract(COALESCE(p.template_data,'{}'),'$.role') role,a.public_code product_code,a.product_type FROM team_members tm JOIN users u ON u.id=tm.user_id JOIN profiles p ON p.id=tm.profile_id JOIN intap_artifacts a ON a.id=tm.artifact_id WHERE tm.team_id=? ORDER BY tm.joined_at DESC LIMIT ? OFFSET ?`).bind(access.teamId,MEMBER_PAGE_SIZE,memberOffset).all(),
     c.env.DB.prepare(`SELECT COUNT(*) n FROM team_members WHERE team_id=?`).bind(access.teamId).first(),
     access.accessRole === 'master' ? c.env.DB.prepare(`SELECT tc.id,tc.code,tc.status,tc.permissions_json,tc.expires_at,tc.used_at,tc.created_at,tc.updated_at,tc.artifact_id,u.email used_by_email,p.name member_name,p.slug member_slug,a.public_code product_code,a.product_type FROM team_link_codes tc LEFT JOIN users u ON u.id=tc.used_by_user_id LEFT JOIN profiles p ON p.id=tc.member_profile_id LEFT JOIN intap_artifacts a ON a.id=tc.artifact_id WHERE tc.team_id=? AND (?='' OR tc.code LIKE ? OR COALESCE(u.email,'') LIKE ? OR COALESCE(p.name,'') LIKE ? OR COALESCE(a.public_code,'') LIKE ?) ORDER BY tc.created_at DESC LIMIT ? OFFSET ?`).bind(access.teamId,q,like,like,like,like,CODE_PAGE_SIZE,offset).all() : Promise.resolve({ results: [] }),
     access.accessRole === 'master' ? c.env.DB.prepare(`SELECT COUNT(*) n FROM team_link_codes tc LEFT JOIN users u ON u.id=tc.used_by_user_id LEFT JOIN profiles p ON p.id=tc.member_profile_id LEFT JOIN intap_artifacts a ON a.id=tc.artifact_id WHERE tc.team_id=? AND (?='' OR tc.code LIKE ? OR COALESCE(u.email,'') LIKE ? OR COALESCE(p.name,'') LIKE ? OR COALESCE(a.public_code,'') LIKE ?)`).bind(access.teamId,q,like,like,like,like).first() : Promise.resolve({ n: 0 }),
   ])
 
   const total = Number((codeCount as any)?.n || 0)
+  const memberTotal = Number((memberCount as any)?.n || 0)
   return c.json({ ok: true, data: {
     team: { id: access.teamId, name: access.teamName, master_profile_id: access.masterProfileId },
     access: {
@@ -99,7 +103,8 @@ app.get('/api/v1/me/team/manage', requireAuth, async (c: any) => {
       can_edit_members: true,
     },
     members: (members.results || []).map((row: any) => ({ ...row, permissions: readPermissions(row.permissions_json) })),
-    member_count: Number((memberCount as any)?.n || 0),
+    member_count: memberTotal,
+    member_pagination: { page: memberPage, page_size: MEMBER_PAGE_SIZE, total: memberTotal, pages: Math.max(1, Math.ceil(memberTotal / MEMBER_PAGE_SIZE)) },
     codes: ((codeRows as any).results || []).map((row: any) => ({ ...row, permissions: readPermissions(row.permissions_json), reserved: Boolean(row.artifact_id && !row.used_at) })),
     pagination: { page, page_size: CODE_PAGE_SIZE, total, pages: Math.max(1, Math.ceil(total / CODE_PAGE_SIZE)) },
   } })
