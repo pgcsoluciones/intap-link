@@ -23,6 +23,46 @@ function clearScanCode() {
   localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
 }
 
+function readTemplateData(value: unknown): Record<string, any> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, any>
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    } catch { return {} }
+  }
+  return {}
+}
+
+function interruptedFreeOnboardingRoute(data: any): string | null {
+  if (!data?.profile_id) return null
+  const planId = data?.plan_id || data?.plan_code || 'free'
+  if (planId !== 'free') return null
+
+  const template = readTemplateData(data?.templateData ?? data?.template_data)
+  if (template.team_member === true || String(template.team_member || '').toLowerCase() === 'true') return null
+
+  // Scan-to-claim creates a temporary kawvo-* slug. While that slug is still
+  // present, the independent profile has not finished its first-run setup.
+  // Established/legacy profiles must never be forced back through onboarding.
+  const slug = String(data?.slug || '').trim().toLowerCase()
+  if (!slug.startsWith('kawvo-')) return null
+
+  const generated = template.free_starter_generated === true || String(template.free_starter_generated || '').toLowerCase() === 'true'
+  const unconfirmed = template.free_starter_unconfirmed === true || String(template.free_starter_unconfirmed || '').toLowerCase() === 'true'
+  const category = String(data?.category || template.free_starter_category || '').trim()
+  const subcategory = String(data?.subcategory || template.free_starter_subcategory || '').trim()
+  const leadSource = String(template.free_starter_lead_source || '').trim()
+
+  if (!generated) {
+    if (!category || !subcategory) return '/admin/free/onboarding/intro'
+    if (!leadSource) return '/admin/free/onboarding/source'
+    return '/admin/free/onboarding/builder'
+  }
+  if (unconfirmed) return '/admin/free/onboarding/review'
+  return null
+}
+
 export default function AdminGuard({ children, requireProfile = true, planScope }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -89,6 +129,21 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       if (json.data?.profile_id && planScope === 'paid' && planId === 'free') {
         navigate('/admin/free', { replace: true })
         return
+      }
+
+      // An activated independent product already owns a profile row before the
+      // starter onboarding is finished. Previously that row made AdminGuard
+      // treat it as an ordinary draft and the user could land on a blank panel.
+      // Resume from server-persisted progress instead. Do not interfere while
+      // the user is already inside onboarding or product activation routes.
+      const insideOnboarding = location.pathname.startsWith('/admin/free/onboarding/')
+      const insideArtifactFlow = location.pathname.startsWith('/admin/artifacts')
+      if (!insideOnboarding && !insideArtifactFlow) {
+        const resume = interruptedFreeOnboardingRoute(json.data)
+        if (resume) {
+          navigate(resume, { replace: true })
+          return
+        }
       }
 
       setReady(true)
