@@ -77,7 +77,13 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         return
       }
 
-      if (location.pathname !== '/admin/artifacts/activate') {
+      // Team activation/join is an explicit branch of the product activation
+      // flow, not an interruption of the independent Free onboarding. While
+      // the user is inside any Team route, that flow must have priority over
+      // scan-resume and starter-resume redirects.
+      const insideTeamFlow = location.pathname === '/admin/free/team' || location.pathname.startsWith('/admin/free/team/')
+
+      if (location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow) {
         // Scan-to-claim continuity only needs to run when this browser actually
         // remembers a scanned product. Avoid probing /scan/pending on every
         // normal panel reload: a 404 is the expected "nothing pending" state
@@ -111,7 +117,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       }
 
       const pendingActivation = sessionStorage.getItem('intap_activation_public_code')
-      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate') {
+      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow) {
         navigate('/admin/artifacts/activate', { replace: true })
         return
       }
@@ -135,10 +141,10 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       // starter onboarding is finished. Previously that row made AdminGuard
       // treat it as an ordinary draft and the user could land on a blank panel.
       // Resume from server-persisted progress instead. Do not interfere while
-      // the user is already inside onboarding or product activation routes.
+      // the user is already inside onboarding, product activation or Team routes.
       const insideOnboarding = location.pathname.startsWith('/admin/free/onboarding/')
       const insideArtifactFlow = location.pathname.startsWith('/admin/artifacts')
-      if (!insideOnboarding && !insideArtifactFlow) {
+      if (!insideOnboarding && !insideArtifactFlow && !insideTeamFlow) {
         const resume = interruptedFreeOnboardingRoute(json.data)
         if (resume) {
           navigate(resume, { replace: true })
