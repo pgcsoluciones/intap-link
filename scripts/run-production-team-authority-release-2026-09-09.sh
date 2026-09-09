@@ -9,6 +9,8 @@ WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
 LOG_DIR="/tmp/kawvo-production-team-authority-release-2026-09-09-logs"
 OLD_LOG_DIR="$ROOT/.production-team-authority-release-2026-09-09-logs"
+OLD_PREVIEW_LOG_DIR="$ROOT/.preview-team-flow-deep-audit-2026-09-09-logs"
+OLD_PROD_AUDIT_LOG_DIR="$ROOT/.prod-team-source-truth-readonly-2026-09-09"
 WORKER_LOG="$LOG_DIR/worker.log"
 WEB_LOG="$LOG_DIR/web.log"
 APP_LOG="$LOG_DIR/app.log"
@@ -18,9 +20,9 @@ fail(){ echo; echo "✗ ERROR: $1"; exit 1; }
 run(){ echo; echo "▶ $*"; "$@" || fail "$*"; }
 
 cd "$ROOT" || fail "No existe $ROOT"
-# El runner no debe ensuciar el working tree. Limpiamos únicamente el directorio
-# de logs creado por versiones anteriores de ESTE runner y escribimos logs en /tmp.
-rm -rf "$OLD_LOG_DIR" "$LOG_DIR"
+# El runner no debe ensuciar el working tree. Limpiamos únicamente directorios
+# de logs generados por nuestros runners/auditorías y escribimos el release log en /tmp.
+rm -rf "$OLD_LOG_DIR" "$OLD_PREVIEW_LOG_DIR" "$OLD_PROD_AUDIT_LOG_DIR" "$LOG_DIR"
 mkdir -p "$LOG_DIR"
 
 cat <<EOF
@@ -65,8 +67,8 @@ EXPECTED_SORTED="$(printf '%s\n' "$EXPECTED_FILES" | sort)"
 echo "✓ Delta exacto confirmado: 12 commits / 11 archivos"
 echo "✓ No incluye migrations-preview ni infraestructura QA posterior"
 
-# Antes de separar HEAD, el repo debe estar limpio. Los logs viven fuera del repo.
-[ -z "$(git status --porcelain)" ] || { git status --short; fail "Working tree ya venía sucio antes de validar el producto"; }
+# Antes de separar HEAD, el repo debe estar limpio. Los logs conocidos ya fueron retirados.
+[ -z "$(git status --porcelain)" ] || { git status --short; fail "Working tree contiene cambios ajenos a nuestros logs; no se toca Producción"; }
 
 # Validar exactamente el árbol que será promovido.
 run git checkout --detach "$PRODUCT_SHA"
