@@ -33,7 +33,8 @@ app.get('/api/v1/me/team/members/:id/basic', requireAuth, async (c: any) => {
      WHERE tw.owner_user_id=? OR tm.user_id=?
      LIMIT 1
   `).bind(requester,requester,requester,requester).first()
-  if (!access || !['master','editor','subadmin'].includes(String((access as any).access_role || ''))) return c.json({ ok:false,error:'Tu rol no permite editar miembros.' },403)
+  const accessRole=String((access as any)?.access_role || '')
+  if (!access || !['master','editor','subadmin'].includes(accessRole)) return c.json({ ok:false,error:'Tu rol no permite editar miembros.' },403)
 
   const row = await c.env.DB.prepare(`
     SELECT tm.id,tm.admin_role,tm.permissions_json,tm.status,p.name,p.slug,p.avatar_url,p.is_published,p.template_data,pc.phone,pc.email,pc.whatsapp,a.public_code product_code
@@ -50,8 +51,10 @@ app.get('/api/v1/me/team/members/:id/basic', requireAuth, async (c: any) => {
   return c.json({ ok:true,data:{
     id:String((row as any).id),
     admin_role:String((row as any).admin_role||'member'),
+    access_role:accessRole,
     status:String((row as any).status||'active'),
     permissions,
+    editable_fields:accessRole==='master'?['name','role','photo','phone','email','whatsapp']:[...new Set(['name','role',...permissions])],
     name:String((row as any).name||''),
     role:String(template.role||''),
     phone:String((row as any).phone||''),
