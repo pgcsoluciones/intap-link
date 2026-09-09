@@ -25,6 +25,13 @@ function readTeamCode(): string {
   return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code) ? code : ''
 }
 
+function saveTeamContext(publicCode: string, teamCode: string) {
+  sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
+  localStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
+  sessionStorage.setItem(TEAM_CODE_KEY, teamCode)
+  localStorage.setItem(TEAM_CODE_KEY, teamCode)
+}
+
 function clearScanCode() {
   sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
   localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
@@ -75,9 +82,9 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
   useEffect(() => {
     setReady(false)
 
-    const scanCode = readScanCode()
-    const teamCode = readTeamCode()
-    const hasTeamActivationContext = Boolean(scanCode && teamCode)
+    let scanCode = readScanCode()
+    let teamCode = readTeamCode()
+    let hasTeamActivationContext = Boolean(scanCode && teamCode)
     const insideTeamFlow = location.pathname === '/admin/free/team' || location.pathname.startsWith('/admin/free/team/')
 
     apiGet('/me').then(async (json: any) => {
@@ -90,6 +97,22 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
           navigate('/admin/login', { replace: true })
         }
         return
+      }
+
+      // OAuth and magic-link authentication may return in a tab/browser context
+      // where session/local storage is unavailable. Recover the validated Team
+      // activation from the short-lived HttpOnly handoff cookie before allowing
+      // the generic dashboard route to win.
+      if (!hasTeamActivationContext && !insideTeamFlow && (location.pathname === '/admin' || location.pathname === '/')) {
+        const resume: any = await apiGet('/me/team/browser-resume').catch(() => ({ ok: false, resume: false }))
+        if (resume?.ok && resume?.resume && resume?.data?.public_code && resume?.data?.team_code) {
+          scanCode = String(resume.data.public_code).trim().toUpperCase()
+          teamCode = String(resume.data.team_code).trim().toUpperCase()
+          hasTeamActivationContext = Boolean(scanCode && teamCode)
+          saveTeamContext(scanCode, teamCode)
+          navigate(String(resume.data.resume_url || `/admin/free/team/assign?public_code=${encodeURIComponent(scanCode)}&team_code=${encodeURIComponent(teamCode)}`), { replace: true })
+          return
+        }
       }
 
       // A validated Team code and product pair always outranks the independent
