@@ -1,5 +1,6 @@
-import { Navigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import ScanActivationEntry from './ScanActivationEntry'
+import TeamActivationAuthorityGate from './TeamActivationAuthorityGate'
 
 const TEAM_CODE_KEY = 'kawvo_team_join_code'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
@@ -21,7 +22,7 @@ export default function ActivationAuthorityEntry() {
   const hasTeamContext = /^[A-Z2-9]{8,24}$/.test(productCode) && /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(teamCode)
 
   if (hasTeamContext) {
-    return <Navigate to={`/admin/free/team/assign?public_code=${encodeURIComponent(productCode)}&team_code=${encodeURIComponent(teamCode)}`} replace />
+    return <TeamActivationAuthorityGate publicCode={productCode} teamCode={teamCode} />
   }
   return <ScanActivationEntry />
 }
