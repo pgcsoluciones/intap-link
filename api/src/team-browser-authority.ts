@@ -1,6 +1,9 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 
+const TEAM_RESUME_COOKIE = 'kawvo_team_resume'
+const TEAM_RESUME_MAX_AGE = 15 * 60
+
 function normalizeCode(value: unknown) {
   return String(value || '').trim().toUpperCase().replace(/\s+/g, '')
 }
@@ -16,6 +19,44 @@ function parseCookie(header: string, name: string) {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+function base64UrlEncode(value: string) {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ''
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte) })
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function base64UrlDecode(value: string) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
+  const binary = atob(padded)
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
+}
+
+function setResumeCookie(c: any, publicCode: string, teamCode: string) {
+  const payload = base64UrlEncode(JSON.stringify({ public_code: publicCode, team_code: teamCode }))
+  c.header('Set-Cookie', `${TEAM_RESUME_COOKIE}=${payload}; Max-Age=${TEAM_RESUME_MAX_AGE}; Path=/; HttpOnly; Secure; SameSite=Lax`)
+}
+
+function clearResumeCookie(c: any) {
+  c.header('Set-Cookie', `${TEAM_RESUME_COOKIE}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax`)
+}
+
+function readResumeCookie(c: any): { public_code: string; team_code: string } | null {
+  const raw = parseCookie(c.req.header('Cookie') || '', TEAM_RESUME_COOKIE)
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(base64UrlDecode(raw))
+    const publicCode = normalizeCode(parsed?.public_code)
+    const teamCode = normalizeCode(parsed?.team_code)
+    if (!/^[A-Z2-9]{8,24}$/.test(publicCode) || !/^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(teamCode)) return null
+    return { public_code: publicCode, team_code: teamCode }
+  } catch {
+    return null
+  }
+}
+
 async function sessionUserId(c: any): Promise<string | null> {
   const raw = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).session)
   if (!raw) return null
@@ -25,24 +66,8 @@ async function sessionUserId(c: any): Promise<string | null> {
   return row ? String((row as any).user_id || '') : null
 }
 
-/**
- * Read-only authority preflight used by the public scan browser.
- * It never reserves, consumes, activates, publishes or mutates a Team/product.
- * The Team code identifies the Team; only the authenticated Master authorizes preparation.
- */
-app.post('/api/v1/public/team/browser-authority', async (c: any) => {
-  let body: any = {}
-  try { body = await c.req.json() } catch {
-    return c.json({ ok: false, error: 'Solicitud inválida.' }, 400)
-  }
-
-  const teamCode = normalizeCode(body.team_code)
-  const publicCode = normalizeCode(body.public_code)
-  if (!/^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(teamCode) || !/^[A-Z2-9]{8,24}$/.test(publicCode)) {
-    return c.json({ ok: false, error: 'Código Team o producto inválido.' }, 400)
-  }
-
-  const row = await c.env.DB.prepare(`
+async function inspectTeamPair(c: any, publicCode: string, teamCode: string) {
+  return c.env.DB.prepare(`
     SELECT tc.id code_id,tc.status code_status,tc.expires_at,tc.used_at,
            tw.id team_id,tw.name team_name,tw.owner_user_id,tw.master_profile_id,
            p.name master_name,
@@ -61,24 +86,59 @@ app.post('/api/v1/public/team/browser-authority', async (c: any) => {
      WHERE tc.code=?
      LIMIT 1
   `).bind(publicCode, teamCode).first()
+}
+
+function pairUnavailable(row: any) {
+  if (!row) return true
+  if (row.used_at || String(row.code_status) === 'used' || String(row.code_status) === 'disabled' || String(row.code_status) === 'expired') return true
+  const expiresAt = String(row.expires_at || '')
+  if (expiresAt && expiresAt <= new Date().toISOString().replace('T', ' ').slice(0, 19)) return true
+  if (row.artifact_owner_user_id || !['available', 'unassigned'].includes(String(row.artifact_status || '')) || !row.activation_code_id) return true
+  return false
+}
+
+/**
+ * Read-only authority preflight used by the public scan browser.
+ * It never reserves, consumes, activates, publishes or mutates a Team/product.
+ * The Team code identifies the Team; only the authenticated Master authorizes preparation.
+ *
+ * It also stores a short-lived HttpOnly resume cookie so authentication can return
+ * to the exact Team activation flow even when local/session storage is not available
+ * after an OAuth or magic-link handoff.
+ */
+app.post('/api/v1/public/team/browser-authority', async (c: any) => {
+  let body: any = {}
+  try { body = await c.req.json() } catch {
+    return c.json({ ok: false, error: 'Solicitud inválida.' }, 400)
+  }
+
+  const teamCode = normalizeCode(body.team_code)
+  const publicCode = normalizeCode(body.public_code)
+  if (!/^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(teamCode) || !/^[A-Z2-9]{8,24}$/.test(publicCode)) {
+    return c.json({ ok: false, error: 'Código Team o producto inválido.' }, 400)
+  }
+
+  const row: any = await inspectTeamPair(c, publicCode, teamCode)
 
   if (!row) return c.json({ ok: false, error: 'No pudimos validar este código Team para el producto.' }, 404)
-  if ((row as any).used_at || String((row as any).code_status) === 'used') {
+  if (row.used_at || String(row.code_status) === 'used') {
     return c.json({ ok: false, error: 'Este código Team ya fue utilizado.' }, 409)
   }
-  if (String((row as any).code_status) === 'disabled') {
+  if (String(row.code_status) === 'disabled') {
     return c.json({ ok: false, error: 'Este código Team está desactivado.' }, 409)
   }
-  const expiresAt = String((row as any).expires_at || '')
-  if (String((row as any).code_status) === 'expired' || (expiresAt && expiresAt <= new Date().toISOString().replace('T', ' ').slice(0, 19))) {
+  const expiresAt = String(row.expires_at || '')
+  if (String(row.code_status) === 'expired' || (expiresAt && expiresAt <= new Date().toISOString().replace('T', ' ').slice(0, 19))) {
     return c.json({ ok: false, error: 'Este código Team caducó. Reactívalo o genera uno nuevo.' }, 410)
   }
-  if ((row as any).artifact_owner_user_id || !['available', 'unassigned'].includes(String((row as any).artifact_status || '')) || !(row as any).activation_code_id) {
+  if (row.artifact_owner_user_id || !['available', 'unassigned'].includes(String(row.artifact_status || '')) || !row.activation_code_id) {
     return c.json({ ok: false, error: 'Este dispositivo ya no está disponible para vinculación.' }, 409)
   }
 
+  setResumeCookie(c, publicCode, teamCode)
+
   const sessionUser = await sessionUserId(c)
-  const ownerUserId = String((row as any).owner_user_id || '')
+  const ownerUserId = String(row.owner_user_id || '')
   const sessionState = !sessionUser
     ? 'signed_out'
     : sessionUser === ownerUserId
@@ -88,13 +148,53 @@ app.post('/api/v1/public/team/browser-authority', async (c: any) => {
   return c.json({
     ok: true,
     data: {
-      team_id: String((row as any).team_id),
-      team_name: String((row as any).team_name || (row as any).master_name || 'Mi Team'),
-      master_name: String((row as any).master_name || ''),
+      team_id: String(row.team_id),
+      team_name: String(row.team_name || row.master_name || 'Mi Team'),
+      master_name: String(row.master_name || ''),
       public_code: publicCode,
       team_code: teamCode,
       session_state: sessionState,
       master_verified: sessionState === 'master_verified',
+    },
+  })
+})
+
+/**
+ * Authenticated recovery endpoint for post-login navigation.
+ * The cookie alone never authorizes a Team operation: we re-check the active
+ * Team/product pair and require the authenticated user to be that Team's Master.
+ */
+app.get('/api/v1/me/team/browser-resume', async (c: any) => {
+  const sessionUser = await sessionUserId(c)
+  if (!sessionUser) return c.json({ ok: false, resume: false, error: 'Unauthorized' }, 401)
+
+  const context = readResumeCookie(c)
+  if (!context) return c.json({ ok: true, resume: false })
+
+  const row: any = await inspectTeamPair(c, context.public_code, context.team_code)
+  if (pairUnavailable(row)) {
+    clearResumeCookie(c)
+    return c.json({ ok: true, resume: false })
+  }
+
+  if (sessionUser !== String(row.owner_user_id || '')) {
+    return c.json({
+      ok: true,
+      resume: false,
+      account_mismatch: true,
+      team_name: String(row.team_name || row.master_name || 'Mi Team'),
+    })
+  }
+
+  return c.json({
+    ok: true,
+    resume: true,
+    data: {
+      public_code: context.public_code,
+      team_code: context.team_code,
+      team_id: String(row.team_id),
+      team_name: String(row.team_name || row.master_name || 'Mi Team'),
+      resume_url: `/admin/free/team/assign?public_code=${encodeURIComponent(context.public_code)}&team_code=${encodeURIComponent(context.team_code)}`,
     },
   })
 })
