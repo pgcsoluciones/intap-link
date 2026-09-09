@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { apiGet, apiPut } from '../../../../lib/api'
 
 const SOURCES = [
   'Recomendación',
@@ -14,12 +15,56 @@ const SOURCES = [
 export default function FreeOnboardingSource() {
   const navigate = useNavigate()
   const [source, setSource] = useState(() => sessionStorage.getItem('kawvo_free_lead_source') || '')
+  const [templateData, setTemplateData] = useState<Record<string, any>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  const continueFlow = () => {
-    if (!source) return
+  useEffect(() => {
+    let active = true
+    apiGet('/me').then((json: any) => {
+      if (!active || !json?.ok) return
+      const template = json.data?.templateData && typeof json.data.templateData === 'object' ? json.data.templateData : {}
+      setTemplateData(template)
+      const savedSource = String(template.free_starter_lead_source || '').trim()
+      if (!source && savedSource) {
+        setSource(savedSource)
+        sessionStorage.setItem('kawvo_free_lead_source', savedSource)
+      }
+      const category = String(json.data?.category || template.free_starter_category || '').trim()
+      const subcategory = String(json.data?.subcategory || template.free_starter_subcategory || '').trim()
+      if (category) sessionStorage.setItem('kawvo_free_category', category)
+      if (subcategory) sessionStorage.setItem('kawvo_free_subcategory', subcategory)
+    }).catch(() => setError('No pudimos recuperar el avance de tu perfil.'))
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+    // hydrate once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const continueFlow = async () => {
+    if (!source || saving) return
+    setSaving(true)
+    setError('')
+    const nextTemplate = {
+      ...templateData,
+      free_starter_lead_source: source,
+      free_onboarding_stage: 'builder',
+      free_onboarding_updated_at: new Date().toISOString(),
+    }
+    const result: any = await apiPut('/me/profile', { template_data: nextTemplate })
+      .catch(() => ({ ok: false, error: 'No pudimos guardar tu avance.' }))
+    setSaving(false)
+    if (!result?.ok) {
+      setError(result?.error || 'No pudimos guardar tu avance. Intenta nuevamente.')
+      return
+    }
+    setTemplateData(nextTemplate)
     sessionStorage.setItem('kawvo_free_lead_source', source)
     navigate('/admin/free/onboarding/builder')
   }
+
+  if (loading) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950 sm:px-5 sm:py-8">
@@ -42,8 +87,10 @@ export default function FreeOnboardingSource() {
             ))}
           </div>
 
-          <button type="button" onClick={continueFlow} disabled={!source} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition disabled:opacity-35">
-            Preparar mi perfil base
+          {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-700">{error}</p>}
+
+          <button type="button" onClick={() => void continueFlow()} disabled={!source || saving} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-base font-extrabold text-white transition disabled:opacity-35">
+            {saving ? 'Guardando avance…' : 'Preparar mi perfil base'}
           </button>
         </div>
       </section>
