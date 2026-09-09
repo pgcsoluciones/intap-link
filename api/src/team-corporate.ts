@@ -31,6 +31,31 @@ async function requireAuth(c: any, next: any) {
 
 function normalizeCode(value: unknown) { return String(value || '').trim().toUpperCase().replace(/\s+/g, '') }
 function cleanText(value: unknown, max = 120) { return String(value || '').trim().replace(/\s+/g, ' ').slice(0, max) }
+function normalizeSlugBase(value: unknown) {
+  return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'team'
+}
+
+async function nextTeamMemberSlug(c: any, team: any) {
+  const base = normalizeSlugBase((team as any).master_slug)
+  const rows = await c.env.DB.prepare(`
+    SELECT p.slug
+      FROM team_members tm
+      JOIN profiles p ON p.id=tm.profile_id
+     WHERE tm.team_id=? AND lower(p.slug) LIKE lower(?)
+  `).bind(String((team as any).id), `${base}-%`).all()
+  let max = 0
+  for (const row of (rows.results || []) as any[]) {
+    const match = String(row.slug || '').toLowerCase().match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)$`))
+    if (match) max = Math.max(max, Number(match[1]) || 0)
+  }
+  let sequence = max + 1
+  for (let guard = 0; guard < 1000; guard += 1, sequence += 1) {
+    const candidate = `${base}-${sequence}`
+    const exists = await c.env.DB.prepare(`SELECT id FROM profiles WHERE lower(slug)=lower(?) LIMIT 1`).bind(candidate).first()
+    if (!exists) return candidate
+  }
+  return `${base}-${Date.now()}`
+}
 
 function randomPassword(length = 12) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%'
@@ -111,7 +136,7 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   const seatUserId = crypto.randomUUID()
   const profileId = crypto.randomUUID()
   const memberId = crypto.randomUUID()
-  const slug = `team-${crypto.randomUUID().replace(/-/g,'').slice(0,10)}`
+  const slug = await nextTeamMemberSlug(c, team)
   const syntheticEmail = `seat-${seatUserId.replace(/-/g,'')}@team.internal.kawvo`
   let masterTemplate: any = {}
   try { masterTemplate = JSON.parse(String((team as any).master_template_data || '{}')) || {} } catch { masterTemplate = {} }
