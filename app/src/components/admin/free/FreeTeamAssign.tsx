@@ -53,6 +53,7 @@ export default function FreeTeamAssign() {
 
   useEffect(() => {
     if (!publicCode || !teamCode) {
+      clearTeamActivationContext()
       setError('No encontramos el dispositivo o el código Team que estabas preparando.')
       setLoading(false)
       return
@@ -66,8 +67,10 @@ export default function FreeTeamAssign() {
       .then((json: any) => {
         if (!json?.ok) {
           const message = json?.error || 'No pudimos preparar este dispositivo.'
+          const requiresMaster = json?.code === 'TEAM_MASTER_REQUIRED' || message.includes('Administrador Master')
           setError(message)
-          setMasterRequired(json?.code === 'TEAM_MASTER_REQUIRED' || message.includes('Administrador Master'))
+          setMasterRequired(requiresMaster)
+          if (!requiresMaster) clearTeamActivationContext()
         } else {
           setContext(json.data)
           setMasterRequired(false)
@@ -77,11 +80,15 @@ export default function FreeTeamAssign() {
       .finally(() => setLoading(false))
   }, [publicCode, teamCode])
 
+  const cancelPreparation = () => {
+    clearTeamActivationContext()
+    navigate('/admin/free/account')
+  }
+
   const accessAsCorrectMaster = async () => {
     if (switchingAccount || !publicCode || !teamCode) return
     setSwitchingAccount(true)
     setError('')
-    // Preserve source-of-truth identifiers across logout/login.
     sessionStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
     localStorage.setItem(SCAN_PUBLIC_CODE_KEY, publicCode)
     sessionStorage.setItem(TEAM_CODE_KEY, teamCode)
@@ -151,7 +158,7 @@ export default function FreeTeamAssign() {
   return (
     <main className="min-h-screen bg-[#f7f9fc] font-['Inter'] text-slate-950">
       <div className="mx-auto w-full max-w-[620px] px-5 pb-24 pt-5">
-        <FreeBackButton onClick={() => navigate('/admin/free/account')} />
+        <FreeBackButton onClick={cancelPreparation} />
         <p className="mt-3 text-[11px] font-black uppercase tracking-[0.18em] text-cyan-700">KAWVO LINK · TEAM</p>
         <h1 className="mt-1 text-3xl font-black">Preparar dispositivo</h1>
         {context && <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4"><p className="text-xs font-black uppercase text-cyan-700">Team confirmado</p><p className="mt-1 text-lg font-black">{context.team_name}</p><p className="mt-1 text-xs text-slate-500">Producto {publicCode}</p></div>}
