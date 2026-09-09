@@ -218,10 +218,12 @@ app.post('/api/v1/me/team/corporate/assign', requireAuth, async (c: any) => {
   const templateData = { ...masterTemplate, role: roleTitle, free_identity_confirmed: true, team_member: true, team_id: String((team as any).id), team_master_profile_id: String((team as any).master_profile_id), team_permissions: permissions, team_access_role: accessRole, team_joined_at: new Date().toISOString() }
   const initialAvatar = allowed.has('photo') ? null : ((team as any).master_avatar_url || null)
 
-  // A Team profile is born unpublished. It is only made public after the full
-  // Master clone and all source-of-truth relations have been verified.
+  // A Team seat is an internal system user. Production has legacy databases where
+  // users only exposes id/email, while newer schemas may also have created_at with
+  // a default. Insert only the portable columns so Team assignment works across
+  // both schemas without requiring a destructive/auth-schema migration.
   const statements: any[] = [
-    c.env.DB.prepare(`INSERT INTO users(id,email,created_at) VALUES(?,?,datetime('now'))`).bind(seatUserId,syntheticEmail),
+    c.env.DB.prepare(`INSERT INTO users(id,email) VALUES(?,?)`).bind(seatUserId,syntheticEmail),
     c.env.DB.prepare(`INSERT INTO profiles(id,user_id,slug,plan_id,theme_id,layout_id,name,bio,category,subcategory,free_palette_id,avatar_url,hero_url,template_data,is_published,created_at,updated_at) VALUES(?,?,?,'free',?,?,?,?,?,?,?,?,?,?,0,datetime('now'),datetime('now'))`).bind(profileId,seatUserId,slug,String((team as any).master_theme_id || 'default'),String((team as any).master_layout_id || 'esencial'),name,String((team as any).master_bio || ''),String((team as any).master_category || ''),String((team as any).master_subcategory || ''),String((team as any).master_palette_id || ''),initialAvatar,String((team as any).master_hero_url || ''),JSON.stringify(templateData)),
     c.env.DB.prepare(`INSERT INTO profile_contact(profile_id,whatsapp,email,phone,hours,address,map_url) SELECT ?,?,?,?,hours,address,map_url FROM profile_contact WHERE profile_id=?`).bind(profileId,whatsapp,email,phone,String((team as any).master_profile_id)),
     c.env.DB.prepare(`INSERT INTO team_members(id,team_id,user_id,profile_id,artifact_id,invite_code_id,status,permissions_json,admin_role,joined_at,updated_at) VALUES(?,?,?,?,?,?,'active',?,?,datetime('now'),datetime('now'))`).bind(memberId,String((team as any).id),seatUserId,profileId,String(invite.artifact_id),String(invite.id),JSON.stringify(permissions),accessRole),
