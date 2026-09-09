@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 EXPECTED_PRODUCT_SHA="f45fbac212f3bb361349c88a63740da1dcce3ff3"
 LAST_PROD_SHA="2d608bc4722b438638cb00a02adec5c7d39db8e4"
+RUNNER_PATH="scripts/run-production-team-browser-and-seat-compat-2026-09-09.sh"
 LOG_DIR="/tmp/kawvo-team-browser-seat-compat-2026-09-09"
 WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
@@ -26,9 +27,20 @@ EOF
 
 run git fetch github main
 CURRENT_MAIN="$(git rev-parse github/main)"
-[ "$CURRENT_MAIN" = "$EXPECTED_PRODUCT_SHA" ] || fail "github/main cambió: esperado $EXPECTED_PRODUCT_SHA, actual $CURRENT_MAIN"
-run git checkout -B main github/main
-run git reset --hard github/main
+
+# main puede contener commits operativos posteriores al producto (este runner),
+# pero el binario desplegable queda fijado exactamente a EXPECTED_PRODUCT_SHA.
+git merge-base --is-ancestor "$EXPECTED_PRODUCT_SHA" "$CURRENT_MAIN" || fail "El producto objetivo ya no es ancestro de github/main"
+EXTRA_FILES="$(git diff --name-only "$EXPECTED_PRODUCT_SHA..$CURRENT_MAIN")"
+if [ -n "$EXTRA_FILES" ]; then
+  while IFS= read -r path; do
+    [ "$path" = "$RUNNER_PATH" ] || fail "github/main contiene cambios posteriores no operativos al producto: $path"
+  done <<< "$EXTRA_FILES"
+fi
+
+echo "✓ main contiene el producto objetivo; cambios posteriores permitidos: solo runner operativo"
+run git checkout --detach "$EXPECTED_PRODUCT_SHA"
+run git reset --hard "$EXPECTED_PRODUCT_SHA"
 
 run git diff --check "$LAST_PROD_SHA...$EXPECTED_PRODUCT_SHA"
 
@@ -57,7 +69,7 @@ printf '%s' "$CASE_BEFORE" | grep -q 'available' || fail "El artifact de prueba 
 printf '%s' "$CASE_BEFORE" | grep -q 'TEAM-2X7G-SHPJ' || fail "No aparece el Team code esperado"
 printf '%s' "$CASE_BEFORE" | grep -q 'active' || fail "El código/activation ya no está activo"
 
-# Deploy API + superficies desde el mismo SHA.
+# Deploy API + superficies desde EXACTAMENTE el SHA de producto.
 echo
 echo "▶ Deploy Worker Producción"
 (cd api && npm run deploy:production) 2>&1 | tee "$LOG_DIR/worker.log"
