@@ -43,8 +43,13 @@ export default function AuthCallback() {
 
         const scanCode = readScanCode()
         const teamCode = readTeamCode()
+
+        // Team corporate preparation is a separate activation branch. A normal
+        // Team member never claims the physical product into an independent
+        // Free account. After authentication we always return the Master to the
+        // corporate assignment screen with both identifiers intact.
         if (scanCode && teamCode) {
-          navigate('/admin/free/team/join', { replace: true })
+          navigate(`/admin/free/team/assign?public_code=${encodeURIComponent(scanCode)}&team_code=${encodeURIComponent(teamCode)}`, { replace: true })
           return
         }
 
