@@ -35,15 +35,9 @@ export default function FreeOnboardingBuilder() {
 
   useEffect(() => {
     if (done || error) return
-    const imageTimer = window.setInterval(() => {
-      setImageIndex((value) => (value + 1) % BUILDER_IMAGES.length)
-    }, 3800)
-    const messageTimer = window.setInterval(() => {
-      setStatusIndex((value) => Math.min(value + 1, STATUS_MESSAGES.length - 1))
-    }, Math.floor(BUILD_MS / STATUS_MESSAGES.length))
-    const progressTimer = window.setInterval(() => {
-      setProgress((value) => Math.min(96, value + 3))
-    }, Math.max(300, Math.floor(BUILD_MS / 31)))
+    const imageTimer = window.setInterval(() => setImageIndex((value) => (value + 1) % BUILDER_IMAGES.length), 3800)
+    const messageTimer = window.setInterval(() => setStatusIndex((value) => Math.min(value + 1, STATUS_MESSAGES.length - 1)), Math.floor(BUILD_MS / STATUS_MESSAGES.length))
+    const progressTimer = window.setInterval(() => setProgress((value) => Math.min(96, value + 3)), Math.max(300, Math.floor(BUILD_MS / 31)))
     return () => {
       window.clearInterval(imageTimer)
       window.clearInterval(messageTimer)
@@ -55,15 +49,6 @@ export default function FreeOnboardingBuilder() {
     let cancelled = false
 
     const build = async () => {
-      const category = sessionStorage.getItem('kawvo_free_category') || ''
-      const subcategory = sessionStorage.getItem('kawvo_free_subcategory') || ''
-      const leadSource = sessionStorage.getItem('kawvo_free_lead_source') || ''
-      if (!category || !subcategory || !leadSource) {
-        navigate('/admin/free/onboarding/category', { replace: true })
-        return
-      }
-
-      const starter = resolveFreeStarterContent(category)
       const startedAt = Date.now()
       const me: any = await apiGet('/me').catch(() => ({ ok: false }))
       if (!me.ok) {
@@ -72,6 +57,34 @@ export default function FreeOnboardingBuilder() {
       }
 
       const previousTemplate = me.data?.templateData && typeof me.data.templateData === 'object' ? me.data.templateData : {}
+      const category = sessionStorage.getItem('kawvo_free_category') || String(me.data?.category || previousTemplate.free_starter_category || '').trim()
+      const subcategory = sessionStorage.getItem('kawvo_free_subcategory') || String(me.data?.subcategory || previousTemplate.free_starter_subcategory || '').trim()
+      const leadSource = sessionStorage.getItem('kawvo_free_lead_source') || String(previousTemplate.free_starter_lead_source || '').trim()
+
+      if (category) sessionStorage.setItem('kawvo_free_category', category)
+      if (subcategory) sessionStorage.setItem('kawvo_free_subcategory', subcategory)
+      if (leadSource) sessionStorage.setItem('kawvo_free_lead_source', leadSource)
+
+      if (!category || !subcategory) {
+        navigate('/admin/free/onboarding/category', { replace: true })
+        return
+      }
+      if (!leadSource) {
+        navigate('/admin/free/onboarding/source', { replace: true })
+        return
+      }
+
+      const alreadyGenerated = previousTemplate.free_starter_generated === true || String(previousTemplate.free_starter_generated || '').toLowerCase() === 'true'
+      if (alreadyGenerated) {
+        sessionStorage.setItem('kawvo_free_starter_variant', String(previousTemplate.free_starter_variant || 1))
+        sessionStorage.setItem('kawvo_free_starter_selected', '1')
+        sessionStorage.setItem('kawvo_free_starter_materialized', '1')
+        setProgress(100)
+        setDone(true)
+        return
+      }
+
+      const starter = resolveFreeStarterContent(category)
       const nextTemplate = {
         ...previousTemplate,
         role: subcategory || starter.role,
@@ -84,10 +97,13 @@ export default function FreeOnboardingBuilder() {
         free_starter_lead_source: leadSource,
         free_starter_variant: 1,
         free_starter_generated_at: new Date().toISOString(),
+        free_onboarding_stage: 'review',
+        free_onboarding_updated_at: new Date().toISOString(),
       }
 
       const profileResult: any = await apiPut('/me/profile', {
         category,
+        subcategory,
         bio: starter.bio,
         layout_id: 'impacto',
         template_data: nextTemplate,
@@ -160,13 +176,7 @@ export default function FreeOnboardingBuilder() {
         <p className="mt-4 text-base font-medium leading-7 text-slate-700">Queremos entregarte un borrador útil para que no empieces desde una pantalla vacía.</p>
 
         <div className="relative mt-8 h-60 w-full overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-          <img
-            key={imageIndex}
-            src={`${builderMediaBase}${BUILDER_IMAGES[imageIndex]}`}
-            alt="Asistentes preparando tu perfil"
-            className="absolute inset-0 h-full w-full object-contain p-2"
-            style={{ animation: 'kawvoWorkerCross 3.8s ease-in-out both' }}
-          />
+          <img key={imageIndex} src={`${builderMediaBase}${BUILDER_IMAGES[imageIndex]}`} alt="Asistentes preparando tu perfil" className="absolute inset-0 h-full w-full object-contain p-2" style={{ animation: 'kawvoWorkerCross 3.8s ease-in-out both' }} />
         </div>
 
         {error ? (
