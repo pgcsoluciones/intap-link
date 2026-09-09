@@ -3,7 +3,7 @@ import { cookieNames } from './lib/cookies'
 
 const TEAM_CODE_TTL_HOURS = 24
 const TEAM_CODE_PURGE_HOURS = 48
-const TEAM_PAGE_SIZE = 8
+const TEAM_PAGE_SIZE = 5
 const TEAM_PERMISSIONS = ['name','role','photo','phone','email','whatsapp','portfolio','services','links','quick_actions','location','design'] as const
 
 type TeamPermission = typeof TEAM_PERMISSIONS[number]
@@ -36,6 +36,26 @@ async function requireTeamAuth(c: any, next: any) {
 }
 
 function normalizeCode(value: unknown) { return String(value || '').trim().toUpperCase().replace(/\s+/g, '') }
+function normalizeSlugBase(value: unknown) {
+  return String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'team'
+}
+async function nextTeamMemberSlug(c: any, teamId: string, masterSlug: string) {
+  const base = normalizeSlugBase(masterSlug)
+  const rows = await c.env.DB.prepare(`SELECT p.slug FROM team_members tm JOIN profiles p ON p.id=tm.profile_id WHERE tm.team_id=? AND lower(p.slug) LIKE lower(?)`).bind(teamId, `${base}-%`).all()
+  let max = 0
+  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  for (const row of (rows.results || []) as any[]) {
+    const match = String(row.slug || '').toLowerCase().match(new RegExp(`^${escaped}-(\\d+)$`))
+    if (match) max = Math.max(max, Number(match[1]) || 0)
+  }
+  let sequence = max + 1
+  for (let guard = 0; guard < 1000; guard += 1, sequence += 1) {
+    const candidate = `${base}-${sequence}`
+    const exists = await c.env.DB.prepare(`SELECT id FROM profiles WHERE lower(slug)=lower(?) LIMIT 1`).bind(candidate).first()
+    if (!exists) return candidate
+  }
+  return `${base}-${Date.now()}`
+}
 function jsonObject(raw: unknown): Record<string, any> { try { const value = JSON.parse(String(raw || '{}')); return value && typeof value === 'object' && !Array.isArray(value) ? value : {} } catch { return {} } }
 function parsePermissions(value: unknown): TeamPermission[] {
   const allowed = new Set<string>(TEAM_PERMISSIONS)
@@ -125,7 +145,10 @@ app.post('/api/v1/me/team/codes/:id/deactivate', requireTeamAuth, async (c:any)=
 app.post('/api/v1/me/team/codes/:id/reactivate', requireTeamAuth, async (c:any)=>{
   const userId=c.get('userId') as string;const team=await ensureMasterTeam(c,userId);if(!team)return c.json({ok:false,error:'Equipo no encontrado.'},404);const id=String(c.req.param('id')||'')
   const row=await c.env.DB.prepare(`SELECT status,used_at FROM team_link_codes WHERE id=? AND team_id=? LIMIT 1`).bind(id,String((team as any).id)).first();if(!row)return c.json({ok:false,error:'Código no encontrado.'},404);if((row as any).used_at || String((row as any).status)==='used')return c.json({ok:false,error:'Un código utilizado no puede reactivarse.'},409)
-  await c.env.DB.prepare(`UPDATE team_link_codes SET status='active',expires_at=datetime('now','+${TEAM_CODE_TTL_HOURS} hours'),updated_at=datetime('now') WHERE id=? AND team_id=? AND used_at IS NULL`).bind(id,String((team as any).id)).run();return c.json({ok:true,data:{valid_hours:TEAM_CODE_TTL_HOURS}})
+  const result:any=await c.env.DB.prepare(`UPDATE team_link_codes SET status='active',expires_at=datetime('now','+${TEAM_CODE_TTL_HOURS} hours'),updated_at=datetime('now') WHERE id=? AND team_id=? AND used_at IS NULL`).bind(id,String((team as any).id)).run()
+  if(Number(result?.meta?.changes || 0)<1)return c.json({ok:false,error:'No pudimos reactivar este código.'},409)
+  const updated=await c.env.DB.prepare(`SELECT status,expires_at FROM team_link_codes WHERE id=? AND team_id=? LIMIT 1`).bind(id,String((team as any).id)).first()
+  return c.json({ok:true,data:{status:String((updated as any)?.status||'active'),expires_at:String((updated as any)?.expires_at||''),valid_hours:TEAM_CODE_TTL_HOURS}})
 })
 
 app.post('/api/v1/public/team/code/inspect', async (c:any)=>{
@@ -154,7 +177,7 @@ app.post('/api/v1/me/team/join', requireTeamAuth, async (c:any)=>{
   if(await c.env.DB.prepare(`SELECT id FROM team_members WHERE user_id=? LIMIT 1`).bind(userId).first())return c.json({ok:false,error:'Esta cuenta ya pertenece a un Team.'},409)
   if(await c.env.DB.prepare(`SELECT id FROM team_workspaces WHERE owner_user_id=? LIMIT 1`).bind(userId).first())return c.json({ok:false,error:'Una cuenta administradora Team no puede convertirse en miembro.'},409)
 
-  const existingProfile=await c.env.DB.prepare(`SELECT id,slug FROM profiles WHERE user_id=? LIMIT 1`).bind(userId).first();const profileId=existingProfile?String((existingProfile as any).id):crypto.randomUUID();const slug=existingProfile?String((existingProfile as any).slug||''):`team-${crypto.randomUUID().replace(/-/g,'').slice(0,10)}`
+  const existingProfile=await c.env.DB.prepare(`SELECT id,slug FROM profiles WHERE user_id=? LIMIT 1`).bind(userId).first();const profileId=existingProfile?String((existingProfile as any).id):crypto.randomUUID();const slug=existingProfile?String((existingProfile as any).slug||''):await nextTeamMemberSlug(c,String((invite as any).team_id),String((invite as any).master_slug||'team'))
   const permissions=readPermissions((invite as any).permissions_json);const masterTemplate=jsonObject((invite as any).master_template_data);const nextTemplate={...masterTemplate,role:'',free_identity_confirmed:false,team_member:true,team_id:String((invite as any).team_id),team_master_profile_id:String((invite as any).master_profile_id),team_permissions:permissions,team_joined_at:new Date().toISOString()}
   const [contact,links,gallery,services,user]=await Promise.all([
     c.env.DB.prepare(`SELECT whatsapp,email,phone,hours,address,map_url FROM profile_contact WHERE profile_id=? LIMIT 1`).bind(String((invite as any).master_profile_id)).first(),
