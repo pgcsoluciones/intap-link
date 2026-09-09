@@ -1,25 +1,67 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet } from '../../../../lib/api'
+import { apiGet, apiPut } from '../../../../lib/api'
 import FreeStarterNativePreview from './FreeStarterNativePreview'
 
 export default function FreeOnboardingReview() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const category = sessionStorage.getItem('kawvo_free_category') || ''
-  const subcategory = sessionStorage.getItem('kawvo_free_subcategory') || ''
+  const [category, setCategory] = useState(() => sessionStorage.getItem('kawvo_free_category') || '')
+  const [subcategory, setSubcategory] = useState(() => sessionStorage.getItem('kawvo_free_subcategory') || '')
+  const [templateData, setTemplateData] = useState<Record<string, any>>({})
 
   useEffect(() => {
+    let active = true
     apiGet('/me')
       .then((json: any) => {
+        if (!active) return
         if (!json?.ok || !json.data?.profile_id) {
           navigate('/admin/free/onboarding/welcome', { replace: true })
+          return
+        }
+        const template = json.data?.templateData && typeof json.data.templateData === 'object' ? json.data.templateData : {}
+        setTemplateData(template)
+        const savedCategory = category || String(json.data?.category || template.free_starter_category || '').trim()
+        const savedSubcategory = subcategory || String(json.data?.subcategory || template.free_starter_subcategory || '').trim()
+        if (savedCategory) {
+          setCategory(savedCategory)
+          sessionStorage.setItem('kawvo_free_category', savedCategory)
+        }
+        if (savedSubcategory) {
+          setSubcategory(savedSubcategory)
+          sessionStorage.setItem('kawvo_free_subcategory', savedSubcategory)
         }
       })
       .catch(() => setError('No pudimos abrir la vista previa de tu borrador.'))
-      .finally(() => setLoading(false))
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+    // hydrate once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate])
+
+  const continueToPanel = async () => {
+    if (saving) return
+    setSaving(true)
+    setError('')
+    const nextTemplate = {
+      ...templateData,
+      free_starter_unconfirmed: false,
+      free_starter_reviewed_at: new Date().toISOString(),
+      free_onboarding_stage: 'customize',
+      free_onboarding_updated_at: new Date().toISOString(),
+    }
+    const result: any = await apiPut('/me/profile', { template_data: nextTemplate })
+      .catch(() => ({ ok: false, error: 'No pudimos guardar tu avance.' }))
+    setSaving(false)
+    if (!result?.ok) {
+      setError(result?.error || 'No pudimos guardar tu avance. Intenta nuevamente.')
+      return
+    }
+    setTemplateData(nextTemplate)
+    navigate('/admin/free', { replace: true })
+  }
 
   if (loading) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
 
@@ -59,8 +101,8 @@ export default function FreeOnboardingReview() {
 
             {error && <p className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{error}</p>}
 
-            <button type="button" onClick={() => navigate('/admin/free', { replace: true })} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">
-              Editar mi perfil
+            <button type="button" onClick={() => void continueToPanel()} disabled={saving} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-40">
+              {saving ? 'Guardando avance…' : 'Editar mi perfil'}
             </button>
           </aside>
         </div>
