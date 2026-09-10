@@ -21,13 +21,13 @@ Estado: contrato de producto para Preview/QA del Asistente IA.
 ### Mis trabajos / Portafolio
 - Máximo 5 imágenes en Plan Gratis.
 - Título de cada trabajo: máximo 80 caracteres.
-- Descripción de cada trabajo: máximo 90 caracteres (presentación breve, hasta 2 líneas en el editor).
+- Descripción de cada trabajo: máximo 180 caracteres (presentación breve, hasta 2 líneas en el editor).
 - La IA nunca elimina, reemplaza ni reordena imágenes automáticamente.
 
 ### Mis servicios
 - Máximo 3 servicios en Plan Gratis.
 - Título de servicio: máximo 60 caracteres.
-- Descripción por servicio: máximo 90 caracteres.
+- Descripción por servicio: máximo 180 caracteres.
 - Título visible de la sección: máximo 60 caracteres.
 - Descripción general de la sección: máximo 240 caracteres.
 - La IA nunca elimina servicios automáticamente; las actualizaciones de texto existentes requieren revisión/confirmación explícita.

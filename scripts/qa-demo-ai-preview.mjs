@@ -33,7 +33,7 @@ async function readyCase(label, activity, work, expected) {
   assert.equal(result.json.data.demo.services.length, 3, `${label}: exactamente 3 servicios`)
   for (const service of result.json.data.demo.services) {
     assert.ok(service.title.length <= 60, `${label}: service title <=60`)
-    assert.ok(service.description.length <= 90, `${label}: service desc <=90`)
+    assert.ok(service.description.length <= 180, `${label}: service desc <=180`)
   }
   console.log(`✓ ${label}: ${expected}`)
 }

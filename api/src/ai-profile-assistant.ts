@@ -114,7 +114,7 @@ function validateProposal(raw: unknown, maxServices: number, maxPortfolio: numbe
   const services = rawServices.map((item: any) => ({
     id: strictText(item?.id, 80),
     title: strictText(item?.title, 60),
-    description: strictText(item?.description, 90),
+    description: strictText(item?.description, 180),
   }))
   if (services.some((item) => item.id === null || item.title === null || item.description === null)) return null
 
@@ -122,7 +122,7 @@ function validateProposal(raw: unknown, maxServices: number, maxPortfolio: numbe
   const portfolio = rawPortfolio.map((item: any) => ({
     id: strictText(item?.id, 80),
     title: strictText(item?.title, 80),
-    description: strictText(item?.description, 90),
+    description: strictText(item?.description, 180),
   }))
   if (portfolio.some((item) => item.id === null || item.title === null || item.description === null)) return null
 
@@ -209,10 +209,10 @@ async function ownerContext(c: any, userId: string) {
   ])
   const templateData = parseObject((profile as any).template_data)
   const services: ExistingService[] = (servicesResult.results as any[]).map((row) => ({
-    id: String(row.id), title: text(row.title, 60), description: text(row.description, 90), has_image: Boolean(row.image_url),
+    id: String(row.id), title: text(row.title, 60), description: text(row.description, 180), has_image: Boolean(row.image_url),
   }))
   const portfolio: ExistingPortfolio[] = (portfolioResult.results as any[]).map((row) => ({
-    id: String(row.id), title: text(row.title, 80), description: text(row.description, 90),
+    id: String(row.id), title: text(row.title, 80), description: text(row.description, 180),
   }))
   const contactData = {
     whatsapp: text((contact as any)?.whatsapp, 80),
@@ -404,7 +404,7 @@ function buildInput(answers: Record<string, string>, followUp: Array<{ question:
     configured_channels: context.configuredChannels,
     plan: { code: context.planId, limits },
     editing_scope: editingScope,
-    field_limits: { name: 80, professional_title: 80, bio: 300, portfolio_max: limits.max_portfolio, portfolio_title: 80, portfolio_description: 90, services_max: limits.max_services, service_title: 60, service_description: 90, services_section_title: 60, services_section_description: 240 },
+    field_limits: { name: 80, professional_title: 80, bio: 300, portfolio_max: limits.max_portfolio, portfolio_title: 80, portfolio_description: 180, services_max: limits.max_services, service_title: 60, service_description: 180, services_section_title: 60, services_section_description: 240 },
     answers,
     follow_up_answers: followUp,
     conversation,
@@ -468,7 +468,7 @@ const EDITORIAL_INSTRUCTIONS = [
   'COHERENCIA: la propuesta cuenta una sola historia. professional_title posiciona; bio explica valor; servicios demuestran qué puede hacer; CTA indica el siguiente paso. Evita redundancia entre campos.',
   'TÍTULO: corto, específico y fácil de comprender. Puede usar especialidad + enfoque si está respaldado. Evita Emprendedor, Servicios profesionales o Soluciones integrales cuando exista algo más concreto.',
   'BIO: normalmente 2 o 3 frases breves. Explica qué hace, en qué situación ayuda, para quién y qué valor práctico obtiene el cliente cuando el contexto lo permita. No sobrecargues ni repitas servicios. Evita aperturas automáticas tipo Somos una empresa dedicada, En [nombre] realizamos o Nos especializamos en ofrecer.',
-  'LÍMITES REALES: respeta field_limits exactamente. Nombre y título/puesto 80; bio 300; portafolio máximo 5, título 80 y descripción 90; servicios máximo 3, título 60 y descripción 90; título de sección de servicios 60 y descripción general 240; CTA máximo 45. Cada texto debe nacer terminado dentro de su límite. Nunca redactes una frase más larga esperando que el sistema la recorte. Si necesitas acortar, reescribe y cierra la idea naturalmente dentro del máximo permitido.',
+  'LÍMITES REALES: respeta field_limits exactamente. Nombre y título/puesto 80; bio 300; portafolio máximo 5, título 80 y descripción 180; servicios máximo 3, título 60 y descripción 180; título de sección de servicios 60 y descripción general 240; CTA máximo 45. Cada texto debe nacer terminado dentro de su límite. Nunca redactes una frase más larga esperando que el sistema la recorte. Si necesitas acortar, reescribe y cierra la idea naturalmente dentro del máximo permitido.',
   'ALCANCE DE EDICIÓN: editing_scope=missing_only significa conservar todo campo ya completado y proponer contenido únicamente para vacíos; puedes usar lo existente como contexto. editing_scope=full_profile permite proponer mejoras de texto, pero nunca modifica imágenes, URLs, canales, cuentas bancarias, diseño ni orden. El nombre no se cambia por IA en ningún alcance.',
   'TRABAJOS/PORTAFOLIO: actúa únicamente como optimizador de texto ya escrito por el usuario. Tú NO ves los píxeles de las imágenes. Conserva exactamente cada id recibido. Si el título existente tiene texto, puedes mejorarlo sin cambiar su significado; si está vacío, debe permanecer vacío. Si la descripción existente tiene texto, puedes mejorar redacción, claridad y presentación sin añadir hechos nuevos; si está vacía, debe permanecer vacía. Nunca generes título o descripción desde cero, nunca completes un campo vacío y nunca deduzcas contenido de la foto. No elimines, reemplaces, reordenes ni cruces datos entre trabajos. En missing_only conserva portfolio sin cambios; en full_profile optimiza únicamente campos que ya contienen texto.',
   'SERVICIOS: actúa únicamente como optimizador de los servicios ya creados por el usuario. Conserva exactamente cada id recibido y el mismo orden. No crees servicios nuevos ni elimines servicios existentes. Si el título existente tiene texto, puedes mejorarlo sin cambiar el servicio real; si está vacío, debe permanecer vacío. Si la descripción existente tiene texto, puedes mejorar claridad, utilidad y redacción sin añadir hechos nuevos; si está vacía, debe permanecer vacía. En missing_only conserva los servicios sin cambios; en full_profile optimiza únicamente campos que ya contienen texto. Respeta siempre los límites de caracteres.',

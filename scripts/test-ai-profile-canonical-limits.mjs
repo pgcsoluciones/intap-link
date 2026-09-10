@@ -11,11 +11,11 @@ assert.match(identity, /maxLength=\{80\}[^\n]*placeholder="Ej\. Asesor de ventas
 assert.match(identity, /maxLength=\{300\}[^\n]*rows=\{4\}/)
 
 assert.match(portfolio, /const MAX_PHOTOS = 5/)
-assert.match(portfolio, /const DESCRIPTION_LIMIT = 90/)
+assert.match(portfolio, /const DESCRIPTION_LIMIT = 180/)
 assert.match(portfolio, /maxLength=\{80\}[^\n]*placeholder="Título de la imagen"/)
 
 assert.match(services, /const MAX_SERVICES = 3/)
-assert.match(services, /const DESCRIPTION_LIMIT = 90/)
+assert.match(services, /const DESCRIPTION_LIMIT = 180/)
 assert.match(services, /const SERVICE_TITLE_LIMIT = 60/)
 assert.match(services, /const SECTION_DESCRIPTION_LIMIT = 240/)
 
