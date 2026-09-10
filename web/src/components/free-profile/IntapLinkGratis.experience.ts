@@ -40,15 +40,15 @@ export type FreePalette = {
 export const FREE_PALETTES: FreePalette[] = [
   {
     id: 'intap',
-    name: 'INTAP',
+    name: 'Kawvo',
     colors: {
       primary: '#071F5F',
       secondary: '#0B61C9',
-      accent: '#07966A',
-      button: '#10B981',
-      background: '#EAF0F7',
+      accent: '#0B61C9',
+      button: '#0B61C9',
+      background: '#F8FAFC',
       surface: '#FFFFFF',
-      text: '#11213D',
+      text: '#111827',
       heroGradient: '#071F5F',
     },
   },
