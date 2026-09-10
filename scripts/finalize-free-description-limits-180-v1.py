@@ -54,7 +54,7 @@ replace_exact(
     'app/src/components/admin/free/FreeAiProfileAssistant.tsx',
     'maxLength={90}',
     'maxLength={180}',
-    expected=1,
+    expected=2,
 )
 replace_exact(
     'app/src/components/admin/free/FreeAiProfileAssistant.tsx',
