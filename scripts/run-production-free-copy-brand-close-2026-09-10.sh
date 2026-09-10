@@ -38,7 +38,7 @@ run git diff --check
 
 echo
 echo "▶ Diff de cierre"
-git diff -- \
+git --no-pager diff -- \
   api/src/ai-profile-assistant.ts \
   app/src/components/admin/free/FreeAiProfileAssistant.tsx \
   scripts/qa-demo-ai-preview.mjs \
