@@ -46,8 +46,8 @@ replace_exact(
 # Revisión editable de la propuesta IA en el panel Free.
 replace_exact(
     'app/src/components/admin/free/FreeAiProfileAssistant.tsx',
-    "e.target.value.slice(0,90)",
-    "e.target.value.slice(0,180)",
+    'e.target.value.slice(0,90)',
+    'e.target.value.slice(0,180)',
     expected=2,
 )
 replace_exact(
@@ -72,6 +72,12 @@ replace_exact(
     'scripts/qa-demo-ai-preview.mjs',
     'service desc <=90',
     'service desc <=180',
+)
+replace_exact(
+    'scripts/test-ai-profile-canonical-limits.mjs',
+    'const DESCRIPTION_LIMIT = 90',
+    'const DESCRIPTION_LIMIT = 180',
+    expected=2,
 )
 replace_exact(
     'docs/KAWVO_AI_PROFILE_CANONICAL_FIELDS.md',
@@ -99,6 +105,15 @@ checks = {
         "accent: '#0B61C9'",
         "button: '#0B61C9'",
     ],
+    'web/src/components/free-profile/IntapLinkGratisProfile.tsx': [
+        'function readableText(background: string)',
+        "const onAction = readableText(action)",
+        "'--ilx-on-action': onAction",
+    ],
+    'web/src/components/free-profile/IntapLinkGratisRebuilt.css': [
+        'background:\n    var(--ilx-action);',
+        'color: #fff;',
+    ],
 }
 for path, needles in checks.items():
     text = (ROOT / path).read_text()
@@ -120,7 +135,6 @@ for path in critical_files:
     text = (ROOT / path).read_text()
     suspicious = [
         'description, 90)',
-        'description, 90)',
         'description: 90',
         'description 90',
         'slice(0,90)',
@@ -134,3 +148,4 @@ for path in critical_files:
 print('\n✓ Cierre 180 validado: Portafolio y Servicios no se recortan por debajo de 180 en los flujos Free principales.')
 print('✓ Los límites superiores (bio 300, sección Servicios 240, etc.) permanecen sin reducirse.')
 print('✓ Paleta base Kawvo: azul, blanco y negro; verde queda fuera del preset principal.')
+print('✓ Contraste: botones de acción oscuros usan texto/iconos claros mediante --ilx-on-action; CTA principal permanece blanco.')
