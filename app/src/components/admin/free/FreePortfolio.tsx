@@ -12,7 +12,7 @@ type Photo = {
 }
 
 const MAX_PHOTOS = 5
-const DESCRIPTION_LIMIT = 90
+const DESCRIPTION_LIMIT = 180
 const PORTFOLIO_TITLES = ['Portafolio', 'Mis trabajos', 'Proyectos'] as const
 
 function photoUrl(key: string) {
