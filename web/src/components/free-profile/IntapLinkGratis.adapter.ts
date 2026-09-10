@@ -112,7 +112,7 @@ function resolvePortfolio(data: UnknownRecord): FreeProfileData['portfolio'] {
   return readRecords(data, 'gallery').map((item, index) => ({
     id: readString(item, 'id', 'image_key') || `portfolio-${index + 1}`,
     title: readString(item, 'title', 'label') || `Portafolio ${index + 1}`,
-    description: readString(item, 'description').slice(0, 90),
+    description: readString(item, 'description').slice(0, 180),
     image: readString(item, 'image_url', 'imageUrl'),
   })).filter((item) => Boolean(item.image))
 }
@@ -129,7 +129,7 @@ function resolveServices(data: UnknownRecord): FreeProfileService[] {
     return {
       id: readString(item, 'id') || `service-${index + 1}`,
       title,
-      description: (readString(item, 'description') || 'Solicita más información sobre este servicio.').slice(0, 90),
+      description: (readString(item, 'description') || 'Solicita más información sobre este servicio.').slice(0, 180),
       image: usesIconToken ? undefined : visual || undefined,
       iconKey,
     }
@@ -149,7 +149,7 @@ function resolveVisibleServices(data: UnknownRecord, category: string, templateD
   return starter.services.slice(0, 3).map((service, index) => ({
     id: `starter-service-${index + 1}`,
     title: service.title,
-    description: service.description.slice(0, 90),
+    description: service.description.slice(0, 180),
     image: assets.length ? assets[(offset + index) % assets.length] : undefined,
     iconKey: SERVICE_ICON_SEQUENCE[index % SERVICE_ICON_SEQUENCE.length],
   }))
@@ -186,7 +186,7 @@ function resolveQuickActions(data: UnknownRecord, phone: string, whatsapp: strin
 }
 
 const DEFAULT_FREE_PROFILE_COLORS: FreeProfileAppearanceColors = {
-  primary: '#071f5f', secondary: '#0b61c9', accent: '#07966a', button: '#10b981', background: '#eaf0f7', surface: '#ffffff', text: '#11213d', heroGradient: '#071f5f',
+  primary: '#071f5f', secondary: '#0b61c9', accent: '#0b61c9', button: '#0b61c9', background: '#f8fafc', surface: '#ffffff', text: '#111827', heroGradient: '#071f5f',
 }
 function normalizeHexColor(value: string): string {
   const trimmed = value.trim()
