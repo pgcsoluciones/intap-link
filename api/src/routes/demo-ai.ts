@@ -137,7 +137,7 @@ function validateResult(raw: unknown): DemoResult | null {
   const services = Array.isArray(value.demo.services)
     ? value.demo.services.slice(0, MAX_SERVICES).map((item: any) => ({
         title: clean(item?.title, 60),
-        description: clean(item?.description, 90),
+        description: clean(item?.description, 180),
       })).filter((item: DemoService) => item.title && item.description)
     : []
   if (!professionalTitle || !bio || !sectionTitle || services.length !== 3) return null
@@ -200,7 +200,7 @@ const INSTRUCTIONS = [
   'Si existe ambigüedad material que impide saber qué hace, devuelve needs_more_info. Normalmente una pregunta; máximo tres si son imprescindibles.',
   'Si la explicación ya resuelve la ambigüedad, no preguntes.',
   'Evita frases genéricas como calidad y confianza, somos tu mejor opción, soluciones a tu medida, excelencia garantizada o servicio personalizado.',
-  'Respeta límites desde el origen: professional_title 80, bio 300, título sección 60, descripción sección 240, máximo 3 servicios, título servicio 60 y descripción servicio 90.',
+  'Respeta límites desde el origen: professional_title 80, bio 300, título sección 60, descripción sección 240, máximo 3 servicios, título servicio 60 y descripción servicio 180.',
   'No repitas en el copy llamadas a escribir por WhatsApp; la plantilla ya tiene ese CTA visual.',
   'Devuelve solo JSON conforme al esquema.',
 ].join('\n')
@@ -307,7 +307,7 @@ export function registerDemoAiRoutes(app: any) {
         services_section_description: 240,
         services_max: 3,
         service_title: 60,
-        service_description: 90,
+        service_description: 180,
       },
       allowed_asset_categories: DEMO_AI_CATEGORIES,
       must_finalize: round >= 2,
