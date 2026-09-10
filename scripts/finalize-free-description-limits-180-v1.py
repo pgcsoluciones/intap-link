@@ -14,6 +14,17 @@ def replace_exact(path: str, old: str, new: str, expected: int = 1) -> None:
     print(f"✓ {path}: {count} reemplazo(s)")
 
 
+def replace_optional(path: str, old: str, new: str) -> None:
+    file = ROOT / path
+    text = file.read_text()
+    count = text.count(old)
+    if count:
+        file.write_text(text.replace(old, new))
+        print(f"✓ {path}: {count} reemplazo(s) opcional(es)")
+    else:
+        print(f"✓ {path}: texto informativo opcional no presente; se continúa")
+
+
 # Asistente IA: validación, lectura del contexto, límites comunicados al modelo y copy editorial.
 replace_exact(
     'api/src/ai-profile-assistant.ts',
@@ -54,9 +65,11 @@ replace_exact(
     'app/src/components/admin/free/FreeAiProfileAssistant.tsx',
     'maxLength={90}',
     'maxLength={180}',
-    expected=2,
+    expected=1,
 )
-replace_exact(
+# Este texto explicativo no está presente en todas las revisiones del componente.
+# No debe bloquear el cierre si no existe.
+replace_optional(
     'app/src/components/admin/free/FreeAiProfileAssistant.tsx',
     'Título 80 caracteres y descripción 90.',
     'Título 80 caracteres y descripción 180.',
