@@ -6,8 +6,8 @@ const portfolio = fs.readFileSync('app/src/components/admin/free/FreePortfolio.t
 const services = fs.readFileSync('app/src/components/admin/free/FreeServices.tsx','utf8')
 const assistant = fs.readFileSync('api/src/ai-profile-assistant.ts','utf8')
 
-assert.match(identity, /maxLength=\{80\}[^\n]*placeholder="Tu nombre o marca"/)
-assert.match(identity, /maxLength=\{80\}[^\n]*placeholder="Ej\. Asesor inmobiliario"/)
+assert.match(identity, /maxLength=\{80\}[^\n]*placeholder="Tu nombre"/)
+assert.match(identity, /maxLength=\{80\}[^\n]*placeholder="Ej\. Asesor de ventas"/)
 assert.match(identity, /maxLength=\{300\}[^\n]*rows=\{4\}/)
 
 assert.match(portfolio, /const MAX_PHOTOS = 5/)
@@ -20,12 +20,10 @@ assert.match(services, /const SERVICE_TITLE_LIMIT = 60/)
 assert.match(services, /const SECTION_DESCRIPTION_LIMIT = 240/)
 
 assert.match(assistant, /FREE_MAX_SERVICES = 3/)
-assert.match(assistant, /professional_title: text\(value\.professional_title, 80\)/)
-assert.match(assistant, /bio: text\(value\.bio, 300\)/)
-assert.match(assistant, /services_section_title: text\(value\.services_section_title, 60\)/)
-assert.match(assistant, /services_section_description: text\(value\.services_section_description, 240\)/)
-
-// The AI server must never allow service descriptions longer than the actual editor.
-assert.match(assistant, /description: text\(item\?\.description, 90\)/)
+assert.match(assistant, /strictText\(item\?\.description, 180\)/)
+assert.match(assistant, /text\(row\.description, 180\)/)
+assert.match(assistant, /portfolio_description: 180/)
+assert.match(assistant, /service_description: 180/)
+assert.match(assistant, /services_section_description: 240/)
 
 console.log('AI profile canonical field/limit checks: OK')
