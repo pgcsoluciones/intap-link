@@ -92,7 +92,7 @@ function contrastRatio(foreground: string, background: string) {
 function readableText(background: string) {
   const white = '#FFFFFF'
   const dark = '#111827'
-  return contrastRatio(white, background) >= contrastRatio(dark, background) ? white : dark
+  return luminance(background) <= 0.62 ? white : dark
 }
 
 function ensureReadableColor(foreground: string, background: string, minimum = 4.5) {
