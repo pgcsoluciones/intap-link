@@ -245,14 +245,19 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   async function downloadVCard() {
     const canonicalUrl = `${window.location.origin}${window.location.pathname}`
     const escapeVCard = (value: string) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
+    const phone = String(profile.phone || '').trim()
+    const mobile = String(profile.whatsapp || '').trim()
+    const phoneKey = phone.replace(/\D/g, '')
+    const mobileKey = mobile.replace(/\D/g, '')
+    const distinctPhone = Boolean(phone && (!mobile || phoneKey !== mobileKey))
     const content = [
       'BEGIN:VCARD',
       'VERSION:3.0',
       `FN:${escapeVCard(profile.name)}`,
       `N:;${escapeVCard(profile.name)};;;`,
       profile.role ? `TITLE:${escapeVCard(profile.role)}` : '',
-      profile.phone ? `TEL;TYPE=CELL,VOICE:${profile.phone}` : '',
-      profile.whatsapp && profile.whatsapp !== profile.phone ? `TEL;TYPE=CELL,WHATSAPP:${profile.whatsapp}` : '',
+      mobile ? `TEL;TYPE=CELL:${mobile}` : '',
+      distinctPhone ? `TEL;TYPE=VOICE:${phone}` : '',
       profile.email ? `EMAIL;TYPE=INTERNET:${escapeVCard(profile.email)}` : '',
       `URL:${canonicalUrl}`,
       'END:VCARD',
