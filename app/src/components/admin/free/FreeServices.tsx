@@ -12,7 +12,7 @@ type Service = {
 }
 
 const MAX_SERVICES = 3
-const DESCRIPTION_LIMIT = 90
+const DESCRIPTION_LIMIT = 180
 const SERVICE_TITLE_LIMIT = 60
 const SECTION_DESCRIPTION_LIMIT = 240
 const SERVICE_TITLE_SUGGESTIONS = ['Servicios', 'Qué hacemos', 'Lo que ofrezco'] as const
