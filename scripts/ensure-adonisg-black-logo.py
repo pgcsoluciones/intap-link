@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageChops, ImageOps
 
 ROOT = Path.home() / "Desktop" / "intap-link-universal-bilingual-audit"
 ASSET_SOURCE = ROOT / "assets-source"
@@ -59,13 +59,31 @@ def find_fragment(root: Path, fragment: str) -> Path:
 
 
 def make_black_transparent(src: Path, dest: Path) -> None:
+    """Build a black logo with transparency from the official white artwork.
+
+    Some source PNGs/JPEGs have an opaque black canvas, so using the source alpha
+    alone turns the entire image into a black rectangle. The effective alpha is
+    therefore the intersection of the original alpha and the source luminance:
+    white artwork stays opaque, black background becomes transparent and antialias
+    edges keep their smooth coverage.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(src) as im:
-        im = ImageOps.exif_transpose(im).convert("RGBA")
-        alpha = im.getchannel("A")
-        black = Image.new("RGBA", im.size, (0, 0, 0, 0))
-        black.putalpha(alpha)
+        rgba = ImageOps.exif_transpose(im).convert("RGBA")
+        source_alpha = rgba.getchannel("A")
+        luminance = ImageOps.grayscale(rgba.convert("RGB"))
+        effective_alpha = ImageChops.multiply(source_alpha, luminance)
+
+        black = Image.new("RGBA", rgba.size, (0, 0, 0, 0))
+        black.putalpha(effective_alpha)
         black.thumbnail((1400, 1400), Image.Resampling.LANCZOS)
+
+        alpha = black.getchannel("A")
+        lo, hi = alpha.getextrema()
+        if lo != 0 or hi == 0:
+            raise RuntimeError(
+                f"El logo derivado no contiene transparencia válida (alpha={lo}..{hi}); no se guardará."
+            )
         black.save(dest, "PNG", optimize=True)
 
 
@@ -100,7 +118,7 @@ def main() -> None:
             zf.extractall(tmp)
         white = find_fragment(tmp, "LOGO BLANCO@2x")
         make_black_transparent(white, TARGET)
-    print(f"✓ Logo negro transparente derivado de identidad oficial: {TARGET}")
+    print(f"✓ Logo negro transparente derivado correctamente de identidad oficial: {TARGET}")
 
 
 if __name__ == "__main__":
