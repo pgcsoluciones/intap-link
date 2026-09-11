@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageOps
+from PIL import Image, ImageChops, ImageOps, ImageStat
 
 ROOT = Path.home() / "Desktop" / "intap-link-universal-bilingual-audit"
 ASSET_SOURCE = ROOT / "assets-source"
@@ -58,39 +58,73 @@ def find_fragment(root: Path, fragment: str) -> Path:
     return sorted(matches)[0]
 
 
-def make_black_transparent(src: Path, dest: Path) -> None:
-    """Build a black logo with transparency from the official white artwork.
+def _corner_luminance(gray: Image.Image) -> float:
+    w, h = gray.size
+    sw = max(4, min(w // 12, 80))
+    sh = max(4, min(h // 12, 80))
+    crops = [
+        gray.crop((0, 0, sw, sh)),
+        gray.crop((w - sw, 0, w, sh)),
+        gray.crop((0, h - sh, sw, h)),
+        gray.crop((w - sw, h - sh, w, h)),
+    ]
+    return sum(ImageStat.Stat(c).mean[0] for c in crops) / len(crops)
 
-    Some source PNGs/JPEGs have an opaque black canvas, so using the source alpha
-    alone turns the entire image into a black rectangle. The effective alpha is
-    therefore the intersection of the original alpha and the source luminance:
-    white artwork stays opaque, black background becomes transparent and antialias
-    edges keep their smooth coverage.
+
+def make_black_transparent(src: Path, dest: Path) -> None:
+    """Extract the contrasting artwork from an opaque source and render it black.
+
+    The official identity exports can arrive as white artwork on black OR black
+    artwork on white. We detect the canvas from the corners and build alpha from
+    the contrast against that canvas. This avoids both failure modes: an opaque
+    black rectangle and an inverted transparent logo.
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(src) as im:
         rgba = ImageOps.exif_transpose(im).convert("RGBA")
         source_alpha = rgba.getchannel("A")
-        luminance = ImageOps.grayscale(rgba.convert("RGB"))
-        effective_alpha = ImageChops.multiply(source_alpha, luminance)
+        gray = ImageOps.grayscale(rgba.convert("RGB"))
+        bg = _corner_luminance(gray)
 
-        black = Image.new("RGBA", rgba.size, (0, 0, 0, 0))
+        # Dark background => light artwork: alpha follows luminance.
+        # Light background => dark artwork: alpha follows inverted luminance.
+        mask = gray if bg < 128 else ImageOps.invert(gray)
+        # Remove weak background noise while preserving antialiased edges.
+        mask = mask.point(lambda p: 0 if p < 18 else min(255, round((p - 18) * 255 / 237)))
+        effective_alpha = ImageChops.multiply(source_alpha, mask)
+
+        bbox = effective_alpha.getbbox()
+        if not bbox:
+            raise RuntimeError("No se detectó arte útil en el logo fuente")
+
+        # Crop transparent margins so CSS sizes the actual logo, not the old canvas.
+        pad = 12
+        left = max(0, bbox[0] - pad)
+        top = max(0, bbox[1] - pad)
+        right = min(rgba.width, bbox[2] + pad)
+        bottom = min(rgba.height, bbox[3] + pad)
+        effective_alpha = effective_alpha.crop((left, top, right, bottom))
+
+        black = Image.new("RGBA", effective_alpha.size, (0, 0, 0, 0))
         black.putalpha(effective_alpha)
         black.thumbnail((1400, 1400), Image.Resampling.LANCZOS)
 
         alpha = black.getchannel("A")
         lo, hi = alpha.getextrema()
-        if lo != 0 or hi == 0:
+        bbox2 = alpha.getbbox()
+        coverage = 0.0
+        if bbox2:
+            nz = sum(1 for p in alpha.getdata() if p > 8)
+            coverage = nz / (alpha.width * alpha.height)
+        if hi == 0 or coverage <= 0.01 or coverage >= 0.92:
             raise RuntimeError(
-                f"El logo derivado no contiene transparencia válida (alpha={lo}..{hi}); no se guardará."
+                f"Extracción de logo inválida (alpha={lo}..{hi}, cobertura={coverage:.1%}, fondo={bg:.1f})"
             )
         black.save(dest, "PNG", optimize=True)
+        print(f"✓ Fondo detectado luminancia={bg:.1f} · cobertura útil={coverage:.1%}")
 
 
 def main() -> None:
-    # Highest priority: the exact black transparent PNG supplied for the strip
-    # below the hero. Copy it byte-for-byte; do not convert it to WEBP/JPEG or
-    # derive a replacement while this file is available.
     exact = find_named("logo-ngro-debajo-hero-sin-fondo.png")
     if exact:
         TARGET.parent.mkdir(parents=True, exist_ok=True)
@@ -99,7 +133,6 @@ def main() -> None:
         print(f"✓ Logo exacto debajo del hero preservado como PNG: {exact}")
         return
 
-    # Secondary accepted originals, also kept as PNG.
     supplied = find_named("logo-ngro-hero-sin-fondo.png", "LOGO NEGRO -sinfondo-01.png")
     if supplied and supplied.resolve() != TARGET.resolve():
         TARGET.parent.mkdir(parents=True, exist_ok=True)
@@ -110,14 +143,17 @@ def main() -> None:
         print(f"✓ Logo negro transparente listo: {TARGET}")
         return
 
-    # Last-resort fallback only when no official black transparent PNG exists.
     brand_zip = find_brand_zip()
     with tempfile.TemporaryDirectory(prefix="adonisg-logo-") as td:
         tmp = Path(td)
         with zipfile.ZipFile(brand_zip) as zf:
             zf.extractall(tmp)
-        white = find_fragment(tmp, "LOGO BLANCO@2x")
-        make_black_transparent(white, TARGET)
+        # Prefer a real black export if present. If not, extract from white export.
+        try:
+            source = find_fragment(tmp, "LOGO NEGRO@2x")
+        except FileNotFoundError:
+            source = find_fragment(tmp, "LOGO BLANCO@2x")
+        make_black_transparent(source, TARGET)
     print(f"✓ Logo negro transparente derivado correctamente de identidad oficial: {TARGET}")
 
 
