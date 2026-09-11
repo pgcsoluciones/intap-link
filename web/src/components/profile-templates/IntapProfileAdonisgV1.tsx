@@ -187,7 +187,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
       <div className="adonis-hero-dots">{HERO_SLIDES.map((_, i) => <button key={i} className={i === heroSlide ? 'is-active' : ''} onClick={() => setHeroSlide(i)} aria-label={`Slide ${i + 1}`} />)}</div>
     </header>
 
-    <section className="adonis-brand-strip"><img src="/assets/adonisg/brand/logo-black-transparent.png" alt="Al Estilo de Argenis" /></section>
+    <section className="adonis-brand-strip"><img src="/assets/adonisg/brand/logo-black-transparent-v2.png" alt="Al Estilo de Argenis" /></section>
     <section className="adonis-manifesto"><h2>{t.manifesto}</h2></section>
     <section className="adonis-about"><h2>{t.about}</h2><p>{t.aboutA}</p><p>{t.aboutB}</p><p>{t.aboutC}</p></section>
 
