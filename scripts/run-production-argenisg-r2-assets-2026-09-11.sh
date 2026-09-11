@@ -61,6 +61,7 @@ echo '▶ Aplicar registro persistente D1'
 )
 
 # 2) Subir todos los binarios a R2 con keys estables.
+# En Wrangler 3, `r2 object put` ya opera contra R2 remoto por defecto y no acepta --remote.
 echo
 echo '▶ Subir recursos a R2'
 while IFS= read -r -d '' file; do
@@ -79,7 +80,7 @@ while IFS= read -r -d '' file; do
   echo "  R2 ← $rel"
   (
     cd api
-    npx wrangler r2 object put "$BUCKET/$key" --file "$file" --content-type "$ctype" --remote >/dev/null
+    npx wrangler r2 object put "$BUCKET/$key" --file "$file" --content-type "$ctype" >/dev/null
   )
 done < <(find "$ASSET_ROOT" -type f ! -name README.md ! -name asset-manifest.json -print0 | sort -z)
 
