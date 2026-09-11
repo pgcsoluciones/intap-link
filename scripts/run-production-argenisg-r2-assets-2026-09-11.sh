@@ -87,6 +87,8 @@ done < <(find "$ASSET_ROOT" -type f ! -name README.md ! -name asset-manifest.jso
 echo "✓ R2: $COUNT recursos persistidos bajo $R2_PREFIX"
 
 # 3) Registrar cada asset en D1. D1 guarda la relación lógica; no guardamos binarios BLOB.
+# Wrangler/D1 remoto no admite BEGIN/COMMIT SQL en este flujo de importación, por eso
+# generamos un archivo idempotente sin transacción explícita.
 python3 - "$ASSET_ROOT" "$TMP_SQL" "$PROFILE_ID" "$R2_PREFIX" <<'PY'
 from pathlib import Path
 import mimetypes, sys
@@ -99,7 +101,7 @@ def q(v: str) -> str:
     return "'" + v.replace("'", "''") + "'"
 
 files = sorted(p for p in root.rglob('*') if p.is_file() and p.name not in {'README.md','asset-manifest.json'})
-lines = ['BEGIN;', f"DELETE FROM profile_assets WHERE profile_id={q(profile_id)};"]
+lines = [f"DELETE FROM profile_assets WHERE profile_id={q(profile_id)};"]
 for idx, p in enumerate(files, 1):
     rel = p.relative_to(root).as_posix()
     ctype = mimetypes.guess_type(p.name)[0] or 'application/octet-stream'
@@ -110,7 +112,6 @@ for idx, p in enumerate(files, 1):
         f'{q(profile_id)},{q(rel)},{q(r2)},{q(kind)},{q(ctype)},{idx},1,\'{{}}\',datetime(\'now\')) '
         'ON CONFLICT(profile_id,asset_key) DO UPDATE SET r2_key=excluded.r2_key,kind=excluded.kind,content_type=excluded.content_type,sort_order=excluded.sort_order,is_active=1,updated_at=datetime(\'now\');'
     )
-lines.append('COMMIT;')
 out.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 print(f'✓ SQL de inventario generado: {len(files)} assets')
 PY
