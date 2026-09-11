@@ -276,7 +276,6 @@ export default function KawvoLinkDemoAi() {
 
         {error && <div className="kawvo-demo-ai-error" role="alert">{error}</div>}
         <p className="kawvo-demo-ai-foot">No crea una cuenta ni publica un perfil.</p>
-        <button type="button" className="kawvo-demo-ai-secondary kawvo-demo-ai-manual-bottom" onClick={fallback}>Probar sin IA</button>
       </section>
     </main>
   )
