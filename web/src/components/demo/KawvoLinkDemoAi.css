@@ -2,5 +2,11 @@
 
 .kawvo-demo-ai-bank-option{align-items:flex-start!important;padding:14px;border:1px solid #dbe4ee;border-radius:16px;background:#f8fafc}.kawvo-demo-ai-bank-option span{display:grid;gap:3px}.kawvo-demo-ai-bank-option small{font-weight:600;color:#64748b;line-height:1.35}
 
+/* Portada Demo IA: copy centrado sin alterar la lectura de los formularios posteriores. */
+.kawvo-demo-ai-shell:has(>input[placeholder^="Ej. Electricista"]){text-align:center}
+.kawvo-demo-ai-shell:has(>input[placeholder^="Ej. Electricista"]) .kawvo-demo-ai-kicker,.kawvo-demo-ai-shell:has(>input[placeholder^="Ej. Electricista"]) h1,.kawvo-demo-ai-shell:has(>input[placeholder^="Ej. Electricista"])>p:not(.kawvo-demo-ai-foot){text-align:center}
+.kawvo-demo-ai-shell:has(>input[placeholder^="Ej. Electricista"]) .kawvo-demo-ai-examples{justify-content:center}
+.kawvo-demo-ai-shell:has(>input[placeholder^="Ej. Electricista"])>input{ text-align:left }
+
 /* Demo IA V1.5 */
 .kawvo-demo-ai-manual-link{font-size:11px!important;font-weight:700!important;color:#94a3b8!important;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
