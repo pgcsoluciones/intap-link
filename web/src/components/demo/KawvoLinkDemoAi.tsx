@@ -6,6 +6,7 @@ import './KawvoLinkDemoAi.css'
 const TERMS_VERSION = 'demo-ai-v1.0'
 const DRAFT_KEY = 'kawvo_demo_ai_draft_v1'
 const SESSION_KEY = 'kawvo_demo_session'
+const KAWLINK_LOGO = '/assets/free-starter/branding/logo-kawlink.png'
 
 type Step = 1 | 2 | 3 | 4 | 5
 type AiReady = {
@@ -210,6 +211,10 @@ export default function KawvoLinkDemoAi() {
   return (
     <main className="kawvo-demo-ai-page">
       <section className="kawvo-demo-ai-shell">
+        <div className="kawvo-demo-ai-brand">
+          <img src={KAWLINK_LOGO} alt="Kawlink" />
+        </div>
+
         <div className="kawvo-demo-ai-top">
           <span>Demo con IA · Beta</span>
           <small>{step <= 4 ? `${step}/4` : 'Casi listo'}</small>
