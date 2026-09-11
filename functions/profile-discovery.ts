@@ -526,25 +526,30 @@ export async function getDynamicProfileSeoBundle(
   const entityType =
     dynamicEntityType(profile)
 
-  const titleSource = role
-    ? `${name} | ${role}`
-    : (
-        company &&
-        company.toLowerCase() !==
-          name.toLowerCase()
-      )
-      ? `${name} | ${company}`
-      : name
+  const isArgenisg = slug === 'argenisg'
 
-  const descriptionSource =
-    compactText(profile.bio) ||
-    dynamicTemplateText(
-      profile,
-      'shortDescription',
-      'companyHeadline',
-      'companyAbout'
-    ) ||
-    `Perfil digital de ${name} en INTAP LINK`
+  const titleSource = isArgenisg
+    ? 'Argenis Grullón | Asesor de Imagen y Estilista de Moda'
+    : role
+      ? `${name} | ${role}`
+      : (
+          company &&
+          company.toLowerCase() !==
+            name.toLowerCase()
+        )
+        ? `${name} | ${company}`
+        : name
+
+  const descriptionSource = isArgenisg
+    ? 'Argenis Grullón, asesor de imagen, estilista de moda y estratega de marca personal. Imagen, presencia y posicionamiento con intención.'
+    : compactText(profile.bio) ||
+      dynamicTemplateText(
+        profile,
+        'shortDescription',
+        'companyHeadline',
+        'companyAbout'
+      ) ||
+      `Perfil digital de ${name} en INTAP LINK`
 
   const title =
     truncateSeoText(
@@ -595,18 +600,16 @@ export async function getDynamicProfileSeoBundle(
       profile.avatarUrl
     )
 
-  const image =
-    heroImage ||
-    galleryImage ||
-    avatarImage ||
-    `${runtime.baseUrl}/favicon.ico`
+  const image = isArgenisg
+    ? `${runtime.baseUrl}/assets/adonisg/og/adonisg-og.jpg`
+    : heroImage ||
+      galleryImage ||
+      avatarImage ||
+      `${runtime.baseUrl}/favicon.ico`
 
   const twitterCard:
     'summary' | 'summary_large_image' =
-      (
-        heroImage ||
-        galleryImage
-      )
+      isArgenisg || heroImage || galleryImage
         ? 'summary_large_image'
         : 'summary'
 
@@ -678,7 +681,7 @@ export async function getDynamicProfileSeoBundle(
     imageType:
       inferDynamicImageType(image),
     siteName:
-      company || name,
+      isArgenisg ? 'Argenis Grullón' : company || name,
     twitterCard,
     seoHeadHtml:
       buildDynamicProfileSeoHead(
