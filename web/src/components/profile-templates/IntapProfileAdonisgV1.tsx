@@ -158,7 +158,7 @@ export default function IntapProfileAdonisgV1({ profile }: { profile: IntapProfi
     const meta = (key: string, value: string, property = false) => { const selector = `meta[${property ? 'property' : 'name'}="${key}"]`; let el = document.head.querySelector<HTMLMetaElement>(selector); if (!el) { el = document.createElement('meta'); el.setAttribute(property ? 'property' : 'name', key); document.head.appendChild(el) } el.content = value }
     let canonicalEl = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]'); if (!canonicalEl) { canonicalEl = document.createElement('link'); canonicalEl.rel = 'canonical'; document.head.appendChild(canonicalEl) }
     canonicalEl.href = canonical
-    meta('description', description); meta('og:title', title, true); meta('og:description', description, true); meta('og:type', 'profile', true); meta('og:url', canonical, true); meta('og:image', `${origin}/assets/adonisg/og/adonisg-og-v2.jpg?v=20260911-r2-v2`, true); meta('twitter:card', 'summary_large_image'); meta('twitter:title', title); meta('twitter:description', description); meta('twitter:image', `${origin}/assets/adonisg/og/adonisg-og-v2.jpg?v=20260911-r2-v2`)
+    meta('description', description); meta('og:title', title, true); meta('og:description', description, true); meta('og:type', 'profile', true); meta('og:url', canonical, true); meta('og:image', `${origin}/assets/adonisg/og/adonisg-og-v4.jpg?v=20260911-r2-v2`, true); meta('twitter:card', 'summary_large_image'); meta('twitter:title', title); meta('twitter:description', description); meta('twitter:image', `${origin}/assets/adonisg/og/adonisg-og-v4.jpg?v=20260911-r2-v2`)
     document.documentElement.lang = language
   }, [language])
 

@@ -221,7 +221,7 @@ ${seoHeadHtml}
   const profileShareImage = (profile: any): string => {
     const profileSlug = typeof profile?.slug === 'string' ? profile.slug.trim().toLowerCase() : '';
     if (profileSlug === 'argenisg') {
-      return `${url.origin}/assets/adonisg/og/adonisg-og-v2.jpg`;
+      return `${url.origin}/assets/adonisg/og/adonisg-og-v4.jpg`;
     }
     const templateData = profile?.templateData && typeof profile.templateData === 'object'
       ? profile.templateData
