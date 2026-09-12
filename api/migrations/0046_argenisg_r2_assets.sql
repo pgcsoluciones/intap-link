@@ -30,7 +30,7 @@ SET template_data = json_set(
       '$.asset_manifest_version', 1,
       '$.asset_route', '/assets/adonisg',
       '$.asset_r2_prefix', 'profile-assets/argenisg/v1',
-      '$.social_image_url', 'https://api.intaprd.com/api/v1/public/profiles/argenisg/assets/og/adonisg-og-v4.jpg'
+      '$.social_image_url', 'https://api.intaprd.com/api/v1/public/profiles/argenisg/assets/og/adonisg-og-v5.jpg'
     ),
     updated_at = datetime('now')
 WHERE slug = 'argenisg';

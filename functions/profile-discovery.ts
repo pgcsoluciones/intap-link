@@ -601,7 +601,7 @@ export async function getDynamicProfileSeoBundle(
     )
 
   const image = isArgenisg
-    ? `${runtime.baseUrl}/assets/adonisg/og/adonisg-og-v4.jpg`
+    ? `${runtime.baseUrl}/assets/adonisg/og/adonisg-og-v5.jpg`
     : heroImage ||
       galleryImage ||
       avatarImage ||
