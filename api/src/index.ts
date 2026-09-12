@@ -926,85 +926,52 @@ type FreePublicationReadiness = {
   steps: {
     identifier: boolean
     identity: boolean
+    photo: boolean
+    hero: boolean
     contact: boolean
     quick_actions: boolean
     portfolio: boolean
     services: boolean
   }
-  counts: {
-    quick_actions: number
-    portfolio: number
-    services: number
-  }
+  counts: { quick_actions: number; portfolio: number; services: number }
 }
 
 async function getFreePublicationReadiness(c: any, profileId: string): Promise<FreePublicationReadiness> {
   const [profileRow, contactRow, quickRow, galleryRow, servicesRow] = await Promise.all([
-    c.env.DB.prepare(
-      `SELECT slug, name, template_data FROM profiles WHERE id = ? LIMIT 1`
-    ).bind(profileId).first(),
-    c.env.DB.prepare(
-      `SELECT whatsapp, phone, email FROM profile_contact WHERE profile_id = ? LIMIT 1`
-    ).bind(profileId).first(),
-    c.env.DB.prepare(
-      `SELECT COUNT(*) AS n
-         FROM profile_social_links
-        WHERE profile_id = ?
-          AND enabled = 1
-          AND type IN ('call','instagram','location','email','tiktok')`
-    ).bind(profileId).first(),
-    c.env.DB.prepare(
-      `SELECT COUNT(*) AS n FROM profile_gallery WHERE profile_id = ?`
-    ).bind(profileId).first(),
-    c.env.DB.prepare(
-      `SELECT COUNT(*) AS n
-         FROM profile_products
-        WHERE profile_id = ?
-          AND trim(COALESCE(title, '')) <> ''
-          AND trim(COALESCE(description, '')) <> ''
-          AND trim(COALESCE(image_url, '')) <> ''`
-    ).bind(profileId).first(),
+    c.env.DB.prepare(`SELECT slug,name,avatar_url,hero_url,template_data FROM profiles WHERE id=? LIMIT 1`).bind(profileId).first(),
+    c.env.DB.prepare(`SELECT whatsapp,phone,email FROM profile_contact WHERE profile_id=? LIMIT 1`).bind(profileId).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM profile_social_links WHERE profile_id=? AND enabled=1 AND type IN ('call','instagram','location','email','tiktok')`).bind(profileId).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM profile_gallery WHERE profile_id=?`).bind(profileId).first(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS n FROM profile_products WHERE profile_id=? AND trim(COALESCE(title,''))<>''`).bind(profileId).first(),
   ])
-
-  const profile = (profileRow || {}) as any
-  const contact = (contactRow || {}) as any
-  let templateData: Record<string, any> = {}
-  try { templateData = JSON.parse(String(profile.template_data || '{}')) } catch { templateData = {} }
-
-  const slug = String(profile.slug || '').trim()
-  const role = String(templateData.role || templateData.title || '').trim()
-  const quickActions = Number((quickRow as any)?.n || 0)
-  const portfolio = Number((galleryRow as any)?.n || 0)
-  const services = Number((servicesRow as any)?.n || 0)
-
-  const steps = {
-    identifier: Boolean(slug && !slug.startsWith('kawvo-')),
-    identity: Boolean(String(profile.name || '').trim() && role && templateData.free_identity_confirmed === true),
-    contact: Boolean(String(contact.whatsapp || '').trim() || String(contact.phone || '').trim() || String(contact.email || '').trim()),
-    quick_actions: quickActions >= 2,
-    portfolio: portfolio >= 3,
-    services: services >= 2,
+  const profile=(profileRow||{}) as any
+  const contact=(contactRow||{}) as any
+  let templateData:Record<string,any>={}
+  try { templateData=JSON.parse(String(profile.template_data||'{}')) } catch { templateData={} }
+  const slug=String(profile.slug||'').trim()
+  const role=String(templateData.role||templateData.title||'').trim()
+  const quickActions=Number((quickRow as any)?.n||0)
+  const portfolio=Number((galleryRow as any)?.n||0)
+  const services=Number((servicesRow as any)?.n||0)
+  const isStarter=(value:unknown)=>String(value||'').includes('/assets/free-starter/')
+  const steps={
+    identifier:Boolean(slug && !slug.startsWith('kawvo-')),
+    identity:Boolean(String(profile.name||'').trim() && role && templateData.free_identity_confirmed===true),
+    photo:Boolean(String(profile.avatar_url||'').trim() && !isStarter(profile.avatar_url)),
+    hero:Boolean(String(profile.hero_url||'').trim() && !isStarter(profile.hero_url)),
+    contact:Boolean(String(contact.whatsapp||'').trim() || String(contact.phone||'').trim() || String(contact.email||'').trim()),
+    quick_actions:quickActions>=2,
+    portfolio:portfolio>=1,
+    services:services>=1,
   }
-
-  const labels: Record<keyof typeof steps, string> = {
-    identifier: 'Reserva tu identificador público',
-    identity: 'Confirma tu nombre o marca y a qué te dedicas',
-    contact: 'Agrega al menos un medio de contacto',
-    quick_actions: 'Configura al menos 2 accesos rápidos',
-    portfolio: 'Agrega al menos 3 imágenes reales a tu portafolio',
-    services: 'Completa al menos 2 servicios con título, descripción e imagen',
-  }
-
-  const missing = (Object.keys(steps) as Array<keyof typeof steps>)
-    .filter((key) => !steps[key])
-    .map((key) => labels[key])
-
-  return {
-    ready: missing.length === 0,
-    missing,
-    steps,
-    counts: { quick_actions: quickActions, portfolio, services },
-  }
+  const required:[keyof typeof steps,string][]=[
+    ['identifier','Elige tu usuario público'],
+    ['identity','Completa tu nombre o negocio y cargo'],
+    ['photo','Agrega tu foto de perfil'],
+    ['hero','Agrega tu portada'],
+  ]
+  const missing=required.filter(([key])=>!steps[key]).map(([,label])=>label)
+  return { ready:missing.length===0, missing, steps, counts:{quick_actions:quickActions,portfolio,services} }
 }
 
 me.get('/', async (c) => {
@@ -1695,6 +1662,25 @@ me.post('/profile/avatar', async (c) => {
   ).bind(avatarUrl, profileId).run()
 
   return c.json({ ok: true, avatar_url: avatarUrl })
+})
+
+me.post('/profile/hero', async (c) => {
+  const userId = c.get('userId') as string
+  const profile = await c.env.DB.prepare(`SELECT id FROM profiles WHERE user_id=? LIMIT 1`).bind(userId).first()
+  if (!profile) return c.json({ok:false,error:'Perfil no encontrado'},404)
+  const fd=await c.req.formData(); const fileVal=fd.get('file')
+  if (!(fileVal && typeof fileVal==='object' && 'name' in (fileVal as any) && 'stream' in (fileVal as any))) return c.json({ok:false,error:'Archivo requerido'},400)
+  const file=fileVal as any as File
+  const ext=file.name.split('.').pop()?.toLowerCase()||'jpg'
+  if (!['jpg','jpeg','png','webp'].includes(ext)) return c.json({ok:false,error:'Formato no permitido'},400)
+  const profileId=(profile as any).id
+  const key=`heroes/${profileId}/${crypto.randomUUID()}.${ext}`
+  await c.env.BUCKET.put(key,file.stream(),{httpMetadata:{contentType:file.type||'image/jpeg'}})
+  const origin=new URL(c.req.url).origin
+  const encodedKey=key.split('/').map(encodeURIComponent).join('/')
+  const heroUrl=`${origin}/api/v1/public/assets/${encodedKey}`
+  await c.env.DB.prepare(`UPDATE profiles SET hero_url=?,hero_position_x=50,hero_position_y=50,hero_zoom=1,updated_at=datetime('now') WHERE id=?`).bind(heroUrl,profileId).run()
+  return c.json({ok:true,hero_url:heroUrl})
 })
 
 me.put('/profile/slug', async (c) => {

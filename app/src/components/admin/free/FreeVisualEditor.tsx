@@ -192,7 +192,7 @@ export default function FreeVisualEditor() {
     }
   }
 
-  const requiredKeys: Array<keyof FreePublicationReadiness['steps']> = ['identifier', 'identity', 'contact', 'quick_actions', 'portfolio', 'services']
+  const requiredKeys: Array<keyof FreePublicationReadiness['steps']> = ['identifier', 'identity', 'photo', 'hero']
   const completedRequired = requiredKeys.filter((key) => readiness?.steps?.[key]).length
   const completionPercent = Math.round((completedRequired / requiredKeys.length) * 100)
 
@@ -231,10 +231,10 @@ export default function FreeVisualEditor() {
             <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div><p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Progreso</p><h2 className="mt-1 text-lg font-black">Tu perfil está {completionPercent}% completo</h2></div>
-                <span className={`rounded-full px-3 py-1.5 text-xs font-black ${completionPercent === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-50 text-cyan-700'}`}>{completedRequired}/6</span>
+                <span className={`rounded-full px-3 py-1.5 text-xs font-black ${completionPercent === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-cyan-50 text-cyan-700'}`}>{completedRequired}/4</span>
               </div>
               <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full transition-all ${completionPercent === 100 ? 'bg-emerald-500' : 'bg-cyan-600'}`} style={{ width: `${completionPercent}%` }} /></div>
-              <p className="mt-2 text-xs font-medium leading-5 text-slate-500">El porcentaje usa solo los 6 requisitos necesarios para publicar. Enlaces y cuentas bancarias no reducen ese porcentaje.</p>
+              <p className="mt-2 text-xs font-medium leading-5 text-slate-500">El porcentaje usa solo los requisitos indispensables para publicar. El resto del contenido puede personalizarse después.</p>
             </section>
 
             <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.06)]">

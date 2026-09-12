@@ -14,6 +14,7 @@ interface MeData {
   name: string | null
   bio: string | null
   avatar_url: string | null
+  hero_url?: string | null
   category: string | null
   is_published: number
   plan_id: string | null
@@ -40,7 +41,7 @@ type FreeItem = {
 }
 
 const freeItems: FreeItem[] = [
-  { title: 'Completa tu presentación', text: 'Usuario, foto de perfil, nombre, cargo y descripción', to: '/admin/free/onboarding/identity?from=panel', icon: '◉', help: 'Aquí editas juntos los datos esenciales de tu presentación.', readinessKey: 'identity', baseRequired: true, teamPermission: ['name', 'role', 'photo'] },
+  { title: 'Completa tu presentación', text: 'Usuario, foto, portada, nombre y cargo', to: '/admin/free/onboarding/identity?from=panel', icon: '◉', help: 'Aquí editas juntos los datos esenciales de tu presentación.', readinessKey: 'identity', baseRequired: true, teamPermission: ['name', 'role', 'photo'] },
   { title: 'Agrega tus datos de contacto', text: 'WhatsApp, teléfono y correo', to: '/admin/free/onboarding/contact', icon: '☎', help: 'Coloca los medios reales por los que quieres que te contacten.', readinessKey: 'contact', teamPermission: ['phone', 'email', 'whatsapp'] },
   { title: 'Botones de contacto directo', text: 'Hasta 3 botones principales', to: '/admin/free/quick-actions', icon: '◉', help: 'Elige las acciones más importantes.', readinessKey: 'quick_actions', teamPermission: 'quick_actions' },
   { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖', help: 'Agrega la dirección real de tu negocio.', stateKey: 'location', teamPermission: 'location' },
@@ -140,17 +141,18 @@ export default function FreeDashboard() {
   const roleReady = Boolean(identityConfirmed && String(templateData.role || '').trim())
   const usernameReady = Boolean(readiness?.steps?.identifier)
   const photoReady = Boolean(me?.avatar_url && !isStarterAsset(me.avatar_url))
+  const heroReady = Boolean(me?.hero_url && !isStarterAsset(me.hero_url))
   const isTeamMember = teamContext.role === 'member'
   const teamPermissions = new Set<string>(teamContext.member?.permissions || [])
-  const baseReady = isTeamMember ? nameReady && roleReady : nameReady && roleReady && usernameReady && photoReady
-  const effectivePublishReady = isTeamMember ? baseReady : baseReady && contactConfirmed && quickActionsConfirmed && portfolioConfirmed && servicesConfirmed
+  const baseReady = isTeamMember ? nameReady && roleReady : nameReady && roleReady && usernameReady && photoReady && heroReady
+  const effectivePublishReady = baseReady
   const publishMissing = isTeamMember
     ? [!nameReady ? 'nombre' : '', !roleReady ? 'cargo' : ''].filter(Boolean)
-    : [!baseReady ? 'los datos esenciales' : '', !contactConfirmed ? 'contacto real' : '', !quickActionsConfirmed ? 'accesos rápidos revisados' : '', !portfolioConfirmed ? '3 imágenes reales de portafolio' : '', !servicesConfirmed ? '2 servicios revisados' : ''].filter(Boolean)
+    : [!nameReady ? 'nombre' : '', !roleReady ? 'cargo' : '', !usernameReady ? 'usuario' : '', !photoReady ? 'foto' : '', !heroReady ? 'portada' : ''].filter(Boolean)
 
   const baseChecklist = isTeamMember
     ? [{ label: 'Nombre', done: nameReady }, { label: 'Cargo', done: roleReady }]
-    : [{ label: 'Nombre', done: nameReady }, { label: 'Cargo', done: roleReady }, { label: 'Usuario', done: usernameReady }, { label: 'Foto', done: photoReady }]
+    : [{ label: 'Nombre', done: nameReady }, { label: 'Cargo', done: roleReady }, { label: 'Usuario', done: usernameReady }, { label: 'Foto', done: photoReady }, { label: 'Portada', done: heroReady }]
 
   const togglePublished = async () => {
     if (!me || publishing) return
@@ -200,7 +202,7 @@ export default function FreeDashboard() {
   }
 
   const completedForItem = (item: FreeItem) => {
-    if (item.readinessKey === 'identity') return nameReady && roleReady && (isTeamMember || photoReady) && (isTeamMember || usernameReady)
+    if (item.readinessKey === 'identity') return nameReady && roleReady && (isTeamMember || photoReady) && (isTeamMember || usernameReady) && (isTeamMember || heroReady)
     if (item.readinessKey === 'contact') return contactConfirmed
     if (item.readinessKey === 'quick_actions') return quickActionsConfirmed
     if (item.readinessKey === 'portfolio') return portfolioConfirmed

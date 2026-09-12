@@ -135,7 +135,7 @@ export default function KawvoLinkDemoAi() {
   const [workDescription, setWorkDescription] = useState('')
   const [contact, setContact] = useState<ContactForm>({ whatsapp: '', samePhoneAsWhatsapp: true, phone: '', instagram: '', email: '' })
   const [consent, setConsent] = useState(false)
-  const [includeBankDemo, setIncludeBankDemo] = useState(true)
+  const [includeBankDemo] = useState(false)
   const [questions, setQuestions] = useState<string[]>([])
   const [clarification, setClarification] = useState('')
   const [round, setRound] = useState(1)
@@ -145,9 +145,9 @@ export default function KawvoLinkDemoAi() {
   const next = () => {
     setError('')
     if (step === 1 && !activity.trim()) return setError('Cuéntanos a qué te dedicas.')
-    if (step === 2 && !name.trim()) return setError('Escribe el nombre con el que quieres aparecer.')
-    if (step === 3 && workDescription.trim().length < 8) return setError('Cuéntanos brevemente qué haces para preparar una buena Demo.')
-    setStep((current) => Math.min(4, current + 1) as Step)
+    if (step === 2 && !name.trim()) return setError('Escribe tu nombre o el de tu negocio.')
+    if (step === 2 && !role.trim()) return setError('Escribe tu cargo o puesto.')
+    setStep((current) => Math.min(3, current + 1) as Step)
   }
 
   const generate = async () => {
@@ -166,7 +166,7 @@ export default function KawvoLinkDemoAi() {
           activity,
           name,
           professional_title: role,
-          work_description: workDescription,
+          work_description: workDescription || activity,
           clarification: clarification || undefined,
           round,
         }),
@@ -217,7 +217,7 @@ export default function KawvoLinkDemoAi() {
 
         <div className="kawvo-demo-ai-top">
           <span>Demo con IA · Beta</span>
-          <small>{step <= 4 ? `${step}/4` : 'Casi listo'}</small>
+          <small>{step <= 3 ? `${step}/3` : 'Casi listo'}</small>
         </div>
 
         {step === 1 && <>
@@ -238,23 +238,10 @@ export default function KawvoLinkDemoAi() {
         </>}
 
         {step === 3 && <>
-          <p className="kawvo-demo-ai-kicker">CUÉNTANOS LO QUE HACES</p>
-          <h1>¿Qué haces principalmente?</h1>
-          <p>Como normalmente se lo explicarías a un cliente.</p>
-          <textarea autoFocus rows={6} maxLength={900} value={workDescription} onChange={(event) => setWorkDescription(event.target.value)} placeholder="Ej. Instalo lámparas y abanicos, inversores, arreglo cortos y hago instalaciones nuevas." />
-          <button onClick={next}>Continuar</button>
-        </>}
-
-        {step === 4 && <>
           <p className="kawvo-demo-ai-kicker">PARA QUE PUEDAN CONTACTARTE</p>
-          <h1>Tus datos esenciales</h1>
+          <h1>¿Cuál es tu número de contacto?</h1>
           <label><span>WhatsApp</span><input inputMode="tel" maxLength={20} value={contact.whatsapp} onChange={(event) => setContact({ ...contact, whatsapp: event.target.value })} placeholder="809-000-0000" /><small>Lo mostraremos con el código +1.</small></label>
-          <label className="kawvo-demo-ai-check"><input type="checkbox" checked={contact.samePhoneAsWhatsapp} onChange={(event) => setContact({ ...contact, samePhoneAsWhatsapp: event.target.checked })} /><span>Usar este mismo número para llamadas</span></label>
-          {!contact.samePhoneAsWhatsapp && <label><span>Teléfono para llamadas</span><input inputMode="tel" maxLength={20} value={contact.phone} onChange={(event) => setContact({ ...contact, phone: event.target.value })} /></label>}
-          <label><span>Instagram <small>Opcional</small></span><input maxLength={50} value={contact.instagram} onChange={(event) => setContact({ ...contact, instagram: event.target.value })} placeholder="@usuario" /></label>
-          <label><span>Correo <small>Opcional</small></span><input type="email" maxLength={120} value={contact.email} onChange={(event) => setContact({ ...contact, email: event.target.value })} placeholder="correo@dominio.com" /></label>
-
-          <label className="kawvo-demo-ai-check kawvo-demo-ai-bank-option"><input type="checkbox" checked={includeBankDemo} onChange={(event) => setIncludeBankDemo(event.target.checked)} /><span><strong>Mostrar cómo se verían tus datos para recibir transferencias</strong><small>Incluiremos un ejemplo ficticio de cuenta bancaria y cédula/RNC para que veas cómo tus clientes podrían consultar los datos necesarios para pagarte. Puedes quitar este ejemplo si no quieres mostrarlo.</small></span></label>
+          <p className="kawvo-demo-ai-note">Los demás datos, imágenes, servicios y enlaces los puedes editar más adelante. Te recomendamos cambiar las imágenes para que tu perfil refleje mejor tu trabajo.</p>
 
           <div className="kawvo-demo-ai-consent">
             <strong>Antes de crear tu Demo</strong>

@@ -12,6 +12,7 @@ export default function FreeOnboardingIdentity() {
   const navigate = useNavigate()
   const editingFromPanel = new URLSearchParams(window.location.search).get('from') === 'panel'
   const fileRef = useRef<HTMLInputElement>(null)
+  const heroFileRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [bio, setBio] = useState('')
@@ -19,6 +20,8 @@ export default function FreeOnboardingIdentity() {
   const [originalSlug, setOriginalSlug] = useState('')
   const [templateData, setTemplateData] = useState<Record<string, any>>({})
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [heroUrl, setHeroUrl] = useState('')
+  const [heroCropFile, setHeroCropFile] = useState<File | null>(null)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -45,6 +48,7 @@ export default function FreeOnboardingIdentity() {
         setOriginalSlug(currentSlug)
         setTemplateData(currentTemplateData)
         setAvatarUrl(d.avatar_url || '')
+        setHeroUrl(d.hero_url || '')
         setProfileId(d.profile_id || null)
       }
       if (teamJson?.ok && teamJson.data?.role === 'member') {
@@ -80,6 +84,18 @@ export default function FreeOnboardingIdentity() {
     } finally {
       setUploading(false)
     }
+  }
+
+  const chooseHero = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file=event.target.files?.[0]
+    if (heroFileRef.current) heroFileRef.current.value=''
+    if (!file || !profileId || teamMember) return
+    setHeroCropFile(file)
+  }
+  const uploadHero = async (blob:Blob) => {
+    setHeroCropFile(null); setUploading(true); setError('')
+    try { const form=new FormData(); form.append('file',blob,'hero.jpg'); const result:any=await apiUpload('/me/profile/hero',form); if(result?.ok&&result.hero_url)setHeroUrl(result.hero_url); else setError(result?.error||'No pudimos subir la portada.') }
+    catch { setError('No pudimos subir la portada.') } finally { setUploading(false) }
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -127,11 +143,12 @@ export default function FreeOnboardingIdentity() {
 
   return <>
     {cropFile && <ImageCropModal file={cropFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setCropFile(null)} />}
+    {heroCropFile && <ImageCropModal file={heroCropFile} aspectRatio={16/9} outputWidth={1200} onSave={uploadHero} onCancel={() => setHeroCropFile(null)} />}
     <main className="min-h-screen bg-[#f7f9fc] px-4 py-5 font-['Inter'] text-slate-950 sm:px-5">
       <section className="mx-auto w-full max-w-[430px] py-1">
         <FreeBackButton onClick={() => navigate('/admin/free')} />
         <h1 className="text-[30px] font-black leading-tight tracking-[-0.03em]">{teamMember ? 'Completa tu perfil Team' : editingFromPanel ? 'Edita tu presentación' : 'Tu identidad'}</h1>
-        <p className="mt-3 text-base font-medium leading-7 text-slate-700">{teamMember ? `Nombre y cargo son esenciales. Las demás opciones dependen de lo autorizado por ${masterName}.` : 'Actualiza en un solo lugar tu usuario, foto, nombre, cargo y descripción.'}</p>
+        <p className="mt-3 text-base font-medium leading-7 text-slate-700">{teamMember ? `Nombre y cargo son esenciales. Las demás opciones dependen de lo autorizado por ${masterName}.` : 'Actualiza en un solo lugar tu usuario, foto, portada, nombre y cargo. La descripción y demás contenidos pueden editarse después.'}</p>
 
         {teamMember && <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">Amarillo: editable · Gris: administrado por Team.</div>}
 
@@ -143,6 +160,8 @@ export default function FreeOnboardingIdentity() {
               {canEditPhoto ? <><button type="button" onClick={() => fileRef.current?.click()} disabled={uploading || !profileId} className="mt-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold">{uploading ? 'Subiendo…' : avatarUrl ? 'Cambiar foto' : 'Subir foto'}</button><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={chooseAvatar} /></> : <p className="mt-1 text-xs font-semibold text-slate-400">Administrada por el Team</p>}
             </div>
           </div>
+
+          {!teamMember && <div className="mt-4 rounded-2xl bg-amber-50/50 p-3"><div className="flex items-center justify-between"><div><p className="text-sm font-bold">Portada</p><p className="mt-1 text-xs text-slate-500">Imagen principal de la plantilla Impacto.</p></div><button type="button" onClick={()=>heroFileRef.current?.click()} disabled={uploading||!profileId} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold">{heroUrl?'Cambiar portada':'Subir portada'}</button></div><button type="button" onClick={()=>heroFileRef.current?.click()} className="mt-3 block aspect-video w-full overflow-hidden rounded-2xl border border-amber-200 bg-slate-100">{heroUrl?<img src={heroUrl} alt="Portada" className="h-full w-full object-cover"/>:<span className="grid h-full place-items-center text-sm font-bold text-slate-400">Agrega tu portada</span>}</button><input ref={heroFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={chooseHero}/></div>}
 
           <div className="mt-5 space-y-4">
             {!teamMember && <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Usuario</span><div className="mt-2 flex items-center rounded-2xl border border-amber-200 bg-white px-4 focus-within:border-cyan-400"><span className="text-sm font-bold text-slate-400">/</span><input value={slug} onChange={(e) => setSlug(normalizeSlug(e.target.value))} maxLength={32} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="tuusuario" className="min-w-0 flex-1 bg-transparent px-1 py-3.5 text-base font-semibold outline-none" /></div>{slug && <span className="mt-2 block break-all text-xs font-semibold text-cyan-700">{webUrl}/{normalizeSlug(slug)}</span>}</label>}
