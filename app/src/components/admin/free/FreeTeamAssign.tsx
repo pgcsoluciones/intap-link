@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiUpload } from '../../../lib/api'
+import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import { FreeBackButton } from './FreePanelUi'
 
@@ -142,8 +143,9 @@ export default function FreeTeamAssign() {
 
     let photoWarning = ''
     if (canPhoto && photo && json.data?.member_id) {
+      const optimized = await optimizeImageBlobForUpload(photo, { maxDimension: 400, quality: 0.82, baseName: 'avatar' })
       const form = new FormData()
-      form.append('file', photo, 'avatar.jpg')
+      form.append('file', optimized, optimized.name)
       const uploaded: any = await apiUpload(`/me/team/members/${encodeURIComponent(String(json.data.member_id))}/avatar`, form).catch(() => ({ ok: false }))
       if (!uploaded?.ok) photoWarning = uploaded?.error || 'El perfil fue creado, pero no pudimos guardar la foto. Puedes agregarla luego desde Editar perfil.'
     }

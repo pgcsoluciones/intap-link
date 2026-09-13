@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPost, apiUpload } from '../../../lib/api'
+import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import { UpgradeCrownIcon, basicPlanWhatsAppUrl } from './FreePanelUi'
 import FreeNotificationBell from './FreeNotificationBell'
@@ -164,8 +165,9 @@ export default function FreeAccount() {
     setAvatarUploading(true)
     setAvatarError('')
     try {
+      const optimized = await optimizeImageBlobForUpload(blob, { maxDimension: 400, quality: 0.82, baseName: 'avatar' })
       const form = new FormData()
-      form.append('file', blob, 'avatar.jpg')
+      form.append('file', optimized, optimized.name)
       const result: any = await apiUpload('/me/profile/avatar', form)
       if (!result?.ok || !result?.avatar_url) {
         setAvatarError(result?.error || 'No pudimos cambiar tu foto.')

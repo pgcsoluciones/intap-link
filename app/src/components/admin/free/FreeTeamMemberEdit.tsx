@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
+import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import { FreeBackButton } from './FreePanelUi'
 import ImageCropModal from '../ImageCropModal'
 
@@ -52,7 +53,7 @@ export default function FreeTeamMemberEdit(){
     setMessage('Perfil del miembro actualizado.');await load()
   }
   const choosePhoto=(event:React.ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];if(inputRef.current)inputRef.current.value='';if(!file||!member||uploading||!canEdit('photo'))return;setCropFile(file)}
-  const uploadCropped=async(blob:Blob)=>{if(!member||uploading||!canEdit('photo'))return;setCropFile(null);setUploading(true);setError('');setMessage('');const form=new FormData();form.append('file',blob,'avatar.jpg');const json:any=await apiUpload(`/me/team/members/${member.id}/avatar`,form).catch(()=>({ok:false}));setUploading(false);if(!json?.ok){setError(json?.error||'No pudimos actualizar la foto.');return}setMember({...member,avatar_url:json.avatar_url});setMessage('Foto del miembro actualizada.')}
+  const uploadCropped=async(blob:Blob)=>{if(!member||uploading||!canEdit('photo'))return;setCropFile(null);setUploading(true);setError('');setMessage('');const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:400,quality:0.82,baseName:'avatar'});const form=new FormData();form.append('file',optimized,optimized.name);const json:any=await apiUpload(`/me/team/members/${member.id}/avatar`,form).catch(()=>({ok:false}));setUploading(false);if(!json?.ok){setError(json?.error||'No pudimos actualizar la foto.');return}setMember({...member,avatar_url:json.avatar_url});setMessage('Foto del miembro actualizada.')}
   const revokeAccess=async()=>{
     if(!member||member.access_role!=='master'||!hasAdministrativeAccess||revoking)return
     const confirmed=window.confirm('Se eliminará la contraseña de acceso y se cerrarán las sesiones activas de este colaborador. El perfil permanecerá en el Team como Miembro. ¿Deseas continuar?')

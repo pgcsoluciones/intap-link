@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut, apiUpload } from '../../../../lib/api'
+import { optimizeImageBlobForUpload } from '../../../../lib/imageUploadOptimization'
 import ImageCropModal from '../../ImageCropModal'
 import { FreeBackButton } from '../FreePanelUi'
 
@@ -74,8 +75,9 @@ export default function FreeOnboardingIdentity() {
     setUploading(true)
     setError('')
     try {
+      const optimized = await optimizeImageBlobForUpload(blob, { maxDimension: 400, quality: 0.82, baseName: 'avatar' })
       const form = new FormData()
-      form.append('file', blob, 'avatar.jpg')
+      form.append('file', optimized, optimized.name)
       const result: any = await apiUpload('/me/profile/avatar', form)
       if (result.ok && result.avatar_url) setAvatarUrl(result.avatar_url)
       else setError(result.error || 'No pudimos subir la foto.')
@@ -94,7 +96,7 @@ export default function FreeOnboardingIdentity() {
   }
   const uploadHero = async (blob:Blob) => {
     setHeroCropFile(null); setUploading(true); setError('')
-    try { const form=new FormData(); form.append('file',blob,'hero.jpg'); const result:any=await apiUpload('/me/profile/hero',form); if(result?.ok&&result.hero_url)setHeroUrl(result.hero_url); else setError(result?.error||'No pudimos subir la portada.') }
+    try { const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:1200,quality:0.82,baseName:'hero'}); const form=new FormData(); form.append('file',optimized,optimized.name); const result:any=await apiUpload('/me/profile/hero',form); if(result?.ok&&result.hero_url)setHeroUrl(result.hero_url); else setError(result?.error||'No pudimos subir la portada.') }
     catch { setError('No pudimos subir la portada.') } finally { setUploading(false) }
   }
 

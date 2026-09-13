@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
+import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
 import type { FreePublicationReadiness } from './FreeFirstRunGuide'
@@ -183,7 +184,8 @@ export default function FreeDashboard() {
     if (avatarUploading) return
     setAvatarFile(null); setAvatarUploading(true); setAvatarError('')
     try {
-      const form = new FormData(); form.append('file', blob, 'avatar.jpg')
+      const optimized = await optimizeImageBlobForUpload(blob, { maxDimension: 400, quality: 0.82, baseName: 'avatar' })
+      const form = new FormData(); form.append('file', optimized, optimized.name)
       const result: any = await apiUpload('/me/profile/avatar', form)
       if (!result?.ok || !result?.avatar_url) { setAvatarError(result?.error || 'No pudimos cambiar tu foto.'); return }
       setMe((current) => current ? { ...current, avatar_url: result.avatar_url } : current)

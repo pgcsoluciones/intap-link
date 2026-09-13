@@ -27,6 +27,11 @@ function replaceBrandLabel(element: HTMLElement) {
   const logo = document.createElement('img')
   logo.src = logoUrl(MARK_LOGO_PATH)
   logo.alt = 'Kawvo'
+  logo.onerror = () => {
+    logo.onerror = null
+    logo.src = '/kawvo-icon.svg'
+    logo.dataset.kawvoBrandMark = '1'
+  }
   applyScreenLogoSizing(logo)
 
   element.textContent = ''
@@ -40,6 +45,10 @@ function replaceLegacyMarks() {
     .forEach((image) => {
       if (image.dataset.kawvoBrandMark === '1') return
       image.src = logoUrl(MARK_LOGO_PATH)
+      image.onerror = () => {
+        image.onerror = null
+        image.src = '/kawvo-icon.svg'
+      }
       applyScreenLogoSizing(image)
       image.dataset.kawvoBrandMark = '1'
     })
