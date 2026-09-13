@@ -111,7 +111,9 @@ export default function FreeGuidedTour({ storageId }: Props) {
   const [open, setOpen] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
+  const [cardHeight, setCardHeight] = useState(250)
   const autoStartedRef = useRef(false)
+  const cardRef = useRef<HTMLElement | null>(null)
 
   const findAvailableIndex = useCallback((start: number, direction: 1 | -1 = 1) => {
     let index = start
@@ -162,6 +164,7 @@ export default function FreeGuidedTour({ storageId }: Props) {
       const step = STEPS[stepIndex]
       const element = step ? document.querySelector(step.target) as HTMLElement | null : null
       if (element) setRect(element.getBoundingClientRect())
+      if (cardRef.current) setCardHeight(cardRef.current.getBoundingClientRect().height || 250)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -169,11 +172,14 @@ export default function FreeGuidedTour({ storageId }: Props) {
         setOpen(false)
       }
     }
+    const observer = typeof ResizeObserver !== 'undefined' && cardRef.current ? new ResizeObserver(update) : null
+    if (observer && cardRef.current) observer.observe(cardRef.current)
     window.addEventListener('resize', update)
     window.addEventListener('scroll', update, true)
     window.addEventListener('keydown', onKey)
-    update()
+    window.requestAnimationFrame(update)
     return () => {
+      observer?.disconnect()
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
       window.removeEventListener('keydown', onKey)
@@ -206,7 +212,8 @@ export default function FreeGuidedTour({ storageId }: Props) {
   const step = STEPS[stepIndex]
   if (!step) return null
 
-  const pad = 8
+  // Un poco de aire alrededor del área explicada para que el foco no se sienta apretado.
+  const pad = 14
   const safeRect = rect ? {
     left: clamp(rect.left - pad, 8, window.innerWidth - 16),
     top: clamp(rect.top - pad, 8, window.innerHeight - 16),
@@ -220,13 +227,26 @@ export default function FreeGuidedTour({ storageId }: Props) {
   const isLast = findAvailableIndex(stepIndex + 1, 1) < 0
   const mobile = window.innerWidth < 640
   const cardWidth = Math.min(360, window.innerWidth - 32)
-  const cardLeft = mobile || !safeRect
-    ? (window.innerWidth - cardWidth) / 2
-    : clamp(safeRect.left + holeWidth / 2 - cardWidth / 2, 16, window.innerWidth - cardWidth - 16)
-  const preferBelow = !safeRect || safeRect.bottom < window.innerHeight * 0.54
-  const cardTop = mobile
-    ? undefined
-    : clamp(preferBelow ? (safeRect?.bottom || 90) + 18 : (safeRect?.top || 300) - 250, 16, window.innerHeight - 270)
+  const cardLeft = safeRect
+    ? clamp(safeRect.left + holeWidth / 2 - cardWidth / 2, 16, window.innerWidth - cardWidth - 16)
+    : (window.innerWidth - cardWidth) / 2
+
+  const cardGap = mobile ? 14 : 18
+  const viewportMargin = 16
+  const spaceBelow = safeRect ? window.innerHeight - safeRect.bottom : 0
+  const spaceAbove = safeRect ? safeRect.top : 0
+  const fitsBelow = Boolean(safeRect && spaceBelow >= cardHeight + cardGap + viewportMargin)
+  const fitsAbove = Boolean(safeRect && spaceAbove >= cardHeight + cardGap + viewportMargin)
+
+  let cardTop = window.innerHeight - cardHeight - viewportMargin
+  if (safeRect) {
+    if (fitsBelow || (!fitsAbove && spaceBelow >= spaceAbove)) {
+      cardTop = safeRect.bottom + cardGap
+    } else {
+      cardTop = safeRect.top - cardHeight - cardGap
+    }
+  }
+  cardTop = clamp(cardTop, viewportMargin, Math.max(viewportMargin, window.innerHeight - cardHeight - viewportMargin))
 
   return (
     <div className="fixed inset-0 z-[10000]" aria-live="polite">
@@ -235,14 +255,15 @@ export default function FreeGuidedTour({ storageId }: Props) {
         <div className="fixed left-0 bg-slate-950/80 backdrop-blur-[1px]" style={{ top: safeRect.top, width: safeRect.left, height: holeHeight }} />
         <div className="fixed right-0 bg-slate-950/80 backdrop-blur-[1px]" style={{ top: safeRect.top, left: safeRect.right, height: holeHeight }} />
         <div className="fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-[1px]" style={{ top: safeRect.bottom }} />
-        <div className="pointer-events-auto fixed rounded-[24px] border-[3px] border-cyan-300 shadow-[0_0_0_4px_rgba(34,211,238,0.18),0_0_42px_rgba(34,211,238,0.42)]" style={{ left: safeRect.left, top: safeRect.top, width: holeWidth, height: holeHeight }} />
+        <div className="pointer-events-auto fixed rounded-[26px] border-[3px] border-cyan-300 shadow-[0_0_0_5px_rgba(34,211,238,0.16),0_0_46px_rgba(34,211,238,0.42)]" style={{ left: safeRect.left, top: safeRect.top, width: holeWidth, height: holeHeight }} />
       </> : <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-[1px]" />}
 
       <section
+        ref={cardRef}
         role="dialog"
         aria-modal="true"
         aria-label="Recorrido guiado por tu panel"
-        className={`fixed z-[10002] rounded-[26px] border border-cyan-100 bg-white p-5 shadow-[0_28px_90px_rgba(2,8,23,0.34)] ${mobile ? 'bottom-4' : ''}`}
+        className="fixed z-[10002] rounded-[26px] border border-cyan-100 bg-white p-5 shadow-[0_28px_90px_rgba(2,8,23,0.34)]"
         style={{ width: cardWidth, left: cardLeft, top: cardTop }}
       >
         <div className="flex items-center justify-between gap-3">
