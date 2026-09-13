@@ -4,17 +4,22 @@ type Step={id:string;target:string;title:string;text:string}
 type Props={storageId:string}
 type TourState={completed?:boolean;snoozeUntil?:number}
 
-const VERSION='free-account-v1'
+const VERSION='free-account-v2'
 const SNOOZE_MS=24*60*60*1000
 const STEPS:Step[]=[
   {id:'identity',target:'[data-account-tour="identity"]',title:'Tu cuenta Kawvo',text:'Aquí identificas tu cuenta, tu perfil y el plan que tienes activo. Desde tu foto también puedes actualizar tu imagen.'},
   {id:'plan',target:'[data-account-tour="plan"]',title:'Opciones de tu plan',text:'Desde aquí puedes conocer funciones adicionales disponibles para ampliar tu cuenta cuando las necesites.'},
-  {id:'notifications-ai',target:'[data-account-tour="notifications-ai"]',title:'Avisos y uso de IA',text:'Consulta tus notificaciones y revisa cuántos usos de IA tienes disponibles.'},
-  {id:'products',target:'[data-account-tour="products"]',title:'Tus productos Kawvo',text:'Aquí administras los dispositivos NFC o QR vinculados a tu cuenta y puedes instalar Kawvo como acceso rápido en tu dispositivo.'},
+  {id:'notifications',target:'[data-account-tour="notifications"]',title:'Tus notificaciones',text:'Aquí revisas avisos importantes relacionados con tu cuenta, tu perfil y la actividad de Kawvo.'},
+  {id:'ai',target:'[data-account-tour="ai"]',title:'Cuotas de IA',text:'Consulta cuántos usos de las funciones de IA tienes disponibles hoy y durante el mes.'},
+  {id:'install-app',target:'[data-account-tour="install-app"]',title:'Instala Kawvo como app',text:'Añade Kawvo a tu dispositivo para entrar más rápido, como si fuera una aplicación instalada.'},
+  {id:'products',target:'[data-account-tour="products"]',title:'Tus productos Kawvo',text:'Aquí administras los productos NFC o QR vinculados a tu cuenta y revisas cuáles están activos o asociados a tus perfiles.'},
   {id:'team',target:'[data-account-tour="team"]',title:'Administra un grupo con Team',text:'Team conecta varios perfiles bajo una misma administración. El Master configura la información común una sola vez y define qué campos serán data variable para cada miembro, evitando configurar perfil por perfil.'},
-  {id:'sharing',target:'[data-account-tour="sharing"]',title:'Comparte tu perfil y facilita pagos',text:'Desde aquí puedes descargar el QR de tu perfil y, cuando tengas cuentas bancarias disponibles, compartir un enlace preparado para facilitar transferencias sin exponer innecesariamente datos sensibles.'},
-  {id:'help',target:'[data-account-tour="help"]',title:'Ayuda y recursos',text:'Aquí encontrarás recursos de apoyo y acceso al centro de ayuda cuando necesites asistencia.'},
-  {id:'security',target:'[data-account-tour="security"]',title:'Cuenta y seguridad',text:'En esta área están las opciones relacionadas con el acceso y la seguridad de tu cuenta.'},
+  {id:'qr',target:'[data-account-tour="qr"]',title:'QR de tu perfil',text:'Desde aquí generas y descargas el código QR que abre directamente tu perfil para compartirlo en impresos, mostradores o materiales promocionales.'},
+  {id:'bank-transfer',target:'[data-account-tour="bank-transfer"]',title:'Facilita transferencias',text:'Cuando esta función está disponible, puedes compartir un enlace directo para que tus clientes consulten los datos necesarios para transferirte. Los datos sensibles se mantienen protegidos u ocultos cuando corresponde.'},
+  {id:'invite',target:'[data-account-tour="invite"]',title:'Invita a otra persona',text:'Desde aquí puedes compartir una invitación para que otra persona conozca Kawvo y cree su propia presentación digital.'},
+  {id:'resources',target:'[data-account-tour="resources"]',title:'Recursos de apoyo',text:'Aquí aparecen materiales y recursos adicionales disponibles para ayudarte a aprovechar mejor Kawvo.'},
+  {id:'support',target:'[data-account-tour="support"]',title:'Centro de ayuda y tickets',text:'Si necesitas asistencia, desde aquí puedes consultar ayuda o enviar un ticket de soporte sin salir de tu cuenta.'},
+  {id:'security',target:'[data-account-tour="security"]',title:'Cuenta y seguridad',text:'Aquí encuentras las opciones relacionadas con el acceso a tu cuenta, incluyendo cerrar sesión de forma segura.'},
 ]
 
 function keyOf(id:string){return `kawvo:${VERSION}:${id||'anonymous'}`}
