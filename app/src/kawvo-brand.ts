@@ -1,4 +1,5 @@
-const MARK_LOGO_PATH = '/assets/free-starter/branding/logo-solo.png'
+const MARK_LOGO_PATH = '/assets/free-starter/branding/logo-kawlink.png'
+const FALLBACK_LOGO_URL = 'https://intaprd.com/assets/free-starter/branding/logo-kawlink.png'
 
 function webBase() {
   const configured = String(import.meta.env.VITE_WEB_URL || '').replace(/\/$/, '')
@@ -17,21 +18,32 @@ function applyScreenLogoSizing(image: HTMLImageElement) {
   image.style.height = ''
 }
 
+function installWordmarkFallback(image: HTMLImageElement, host: HTMLElement) {
+  let usedFallback = false
+  image.onerror = () => {
+    if (!usedFallback) {
+      usedFallback = true
+      image.src = FALLBACK_LOGO_URL
+      return
+    }
+    image.onerror = null
+    image.remove()
+    host.textContent = 'KAWLINK'
+    host.dataset.kawvoBrandLogo = '1'
+  }
+}
+
 function replaceBrandLabel(element: HTMLElement) {
   if (element.dataset.kawvoBrandLogo === '1') return
   if (element.children.length > 0) return
 
   const text = (element.textContent || '').trim().toUpperCase()
-  if (text !== 'KAWVO' && text !== 'KAWVO LINK') return
+  if (text !== 'KAWVO' && text !== 'KAWVO LINK' && text !== 'KAWLINK') return
 
   const logo = document.createElement('img')
   logo.src = logoUrl(MARK_LOGO_PATH)
-  logo.alt = 'Kawvo'
-  logo.onerror = () => {
-    logo.onerror = null
-    logo.src = '/kawvo-icon.svg'
-    logo.dataset.kawvoBrandMark = '1'
-  }
+  logo.alt = 'Kawlink'
+  installWordmarkFallback(logo, element)
   applyScreenLogoSizing(logo)
 
   element.textContent = ''
@@ -44,12 +56,11 @@ function replaceLegacyMarks() {
     .querySelectorAll<HTMLImageElement>('img[src="/kawvo-icon-192.png"][alt="Kawvo"], img[src="/kawvo-icon.svg"][alt="Kawvo"]')
     .forEach((image) => {
       if (image.dataset.kawvoBrandMark === '1') return
+      const host = (image.parentElement || image) as HTMLElement
       image.src = logoUrl(MARK_LOGO_PATH)
-      image.onerror = () => {
-        image.onerror = null
-        image.src = '/kawvo-icon.svg'
-      }
+      installWordmarkFallback(image, host)
       applyScreenLogoSizing(image)
+      image.alt = 'Kawlink'
       image.dataset.kawvoBrandMark = '1'
     })
 }
