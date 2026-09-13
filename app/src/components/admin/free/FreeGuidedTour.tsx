@@ -59,8 +59,8 @@ const STEPS: TourStep[] = [
   {
     id: 'bank-accounts',
     target: '[data-tour="bank-accounts"]',
-    title: 'Datos para recibir transferencias',
-    text: 'Si esta función está disponible en tu cuenta, aquí administras los datos bancarios que quieras mostrar a tus clientes.',
+    title: 'Facilita transferencias a tus clientes',
+    text: 'Aquí preparas tus cuentas para facilitar pagos por transferencia. Kawvo protege la privacidad ocultando datos sensibles cuando corresponde y tú compartes el acceso solo cuando lo necesitas.',
   },
   {
     id: 'ai-helper',
@@ -77,8 +77,8 @@ const STEPS: TourStep[] = [
   {
     id: 'header-actions',
     target: '[data-tour="header-actions"]',
-    title: 'Avisos y tu cuenta',
-    text: 'En la parte superior encuentras tus notificaciones, la guía y el acceso a la configuración de tu cuenta.',
+    title: 'Avisos, recorrido y Mi cuenta',
+    text: 'En la parte superior encuentras tus notificaciones, el acceso al recorrido y Mi cuenta, donde están las configuraciones avanzadas y opciones personales.',
   },
 ]
 
@@ -267,7 +267,7 @@ export default function FreeGuidedTour({ storageId }: Props) {
         style={{ width: cardWidth, left: cardLeft, top: cardTop }}
       >
         <div className="flex items-center justify-between gap-3">
-          <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-700">Guía Kawvo</span>
+          <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-700">Recorrido Kawvo</span>
           <span className="text-[11px] font-bold text-slate-400">{availableStepNumber}/{availableTotal}</span>
         </div>
         <h2 className="mt-3 text-xl font-black tracking-[-0.03em] text-slate-950">{step.title}</h2>

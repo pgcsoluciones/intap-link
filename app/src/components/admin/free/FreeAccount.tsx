@@ -6,6 +6,7 @@ import { UpgradeCrownIcon, basicPlanWhatsAppUrl } from './FreePanelUi'
 import FreeNotificationBell from './FreeNotificationBell'
 import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeSupportPanel from './FreeSupportPanel'
+import FreeAccountGuidedTour from './FreeAccountGuidedTour'
 
 type MeData = {
   email?: string | null
@@ -45,6 +46,7 @@ type RowProps = {
   onClick?: () => void
   href?: string
   danger?: boolean
+  tour?: string
 }
 
 function planLabel(me: MeData | null) {
@@ -58,7 +60,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <p className="mb-3 px-1 text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-400">{children}</p>
 }
 
-function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false }: RowProps) {
+function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false, tour }: RowProps) {
   const content = (
     <>
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center text-[24px] ${danger ? 'text-rose-500' : 'text-slate-500'}`}>{icon}</span>
@@ -72,8 +74,8 @@ function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false
   )
 
   const className = 'flex min-h-[70px] w-full items-center gap-3 border-b border-slate-200 px-4 py-3 text-left last:border-b-0'
-  if (href) return <a href={href} target="_blank" rel="noreferrer" className={className}>{content}</a>
-  return <button type="button" onClick={onClick} className={className}>{content}</button>
+  if (href) return <a href={href} target="_blank" rel="noreferrer" className={className} data-account-tour={tour}>{content}</a>
+  return <button type="button" onClick={onClick} className={className} data-account-tour={tour}>{content}</button>
 }
 
 export default function FreeAccount() {
@@ -277,7 +279,7 @@ export default function FreeAccount() {
       ? 'Acceso como Editor'
       : teamContext.role === 'subadmin'
         ? 'Acceso como Subadministrador'
-        : 'Crea y administra un equipo de trabajo'
+        : 'Integra un grupo bajo un mismo perfil sin configurar uno por uno'
 
   return (
     <>
@@ -328,14 +330,11 @@ export default function FreeAccount() {
 
       <main className="min-h-screen bg-white pb-24 font-['Inter'] text-slate-900">
         <section className="mx-auto w-full max-w-[430px] px-5 pt-6">
-          <div className="flex items-center gap-3 pb-5">
-            <button type="button" onClick={() => navigate('/admin/free')} aria-label="Volver" className="text-[34px] font-light leading-none text-slate-500">←</button>
-            <h1 className="text-[32px] font-black tracking-[-0.045em] text-slate-950">Mi cuenta</h1>
-          </div>
+          <div className="flex items-center justify-between gap-3 pb-5"><div className="flex items-center gap-3"><button type="button" onClick={() => navigate('/admin/free')} aria-label="Volver" className="text-[34px] font-light leading-none text-slate-500">←</button><h1 className="text-[32px] font-black tracking-[-0.045em] text-slate-950">Mi cuenta</h1></div><button type="button" onClick={() => window.dispatchEvent(new Event('kawvo:account-tour:start'))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Recorrido</button></div>
 
           <SectionTitle>CUENTA</SectionTitle>
           <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-            <div className="flex min-h-[92px] items-center gap-3 border-b border-slate-200 px-4 py-3">
+            <div data-account-tour="identity" className="flex min-h-[92px] items-center gap-3 border-b border-slate-200 px-4 py-3">
               <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-200">
                 {me?.avatar_url ? <img src={me.avatar_url} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full w-full items-center justify-center text-xl text-slate-500">●</span>}
                 <span className="absolute inset-x-0 bottom-0 bg-slate-950/70 py-0.5 text-center text-[8px] font-bold text-white">Editar</span>
@@ -349,8 +348,8 @@ export default function FreeAccount() {
               <span className="text-[28px] font-light text-slate-400">›</span>
             </div>
 
-            <SettingsRow icon={<span className="text-amber-500"><UpgradeCrownIcon className="h-6 w-6" /></span>} label="Mejora tu plan" detail="Conoce el Plan Plus" href={basicPlanWhatsAppUrl()} />
-            <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>} label="Notificaciones" detail={unreadCount > 0 ? `${unreadCount} sin leer` : undefined} onClick={openNotifications} />
+            <SettingsRow tour="plan" icon={<span className="text-amber-500"><UpgradeCrownIcon className="h-6 w-6" /></span>} label="Mejora tu plan" detail="Conoce el Plan Plus" href={basicPlanWhatsAppUrl()} />
+            <SettingsRow tour="notifications-ai" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>} label="Notificaciones" detail={unreadCount > 0 ? `${unreadCount} sin leer` : undefined} onClick={openNotifications} />
             <SettingsRow icon="✧" label="Cuotas de IA" detail={aiUsage ? `${aiUsage.remaining_today ?? '—'} hoy · ${aiUsage.remaining_month ?? '—'} este mes` : undefined} onClick={() => setShowAi((value) => !value)} />
             {showAi && (
               <div className="border-b border-slate-200 bg-white/70 px-5 py-4 text-sm text-slate-600">
@@ -365,10 +364,10 @@ export default function FreeAccount() {
           <div className="mt-8">
             <SectionTitle>MI KAWVO</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label={pwaInstalled ? "Kawvo está instalada" : "Instalar app Kawvo"} detail={pwaInstalled ? "La estás usando como app en este dispositivo" : (pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app")} onClick={() => pwaInstalled ? undefined : void installPwa()} />
+              <SettingsRow tour="products" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label={pwaInstalled ? "Kawvo está instalada" : "Instalar app Kawvo"} detail={pwaInstalled ? "La estás usando como app en este dispositivo" : (pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app")} onClick={() => pwaInstalled ? undefined : void installPwa()} />
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts?from=account')} />
-              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5M10.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5"/></svg>} label="Team" detail={teamDetail} badge={teamContext.role === 'master' ? 'MASTER' : teamContext.role === 'editor' ? 'EDITOR' : teamContext.role === 'subadmin' ? 'SUBADMIN' : undefined} onClick={() => navigate('/admin/free/team')} />
-              <SettingsRow icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void previewQr()} />
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5M10.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5"/></svg>} tour="team" label={teamContext.role === 'none' ? 'Crear mi primer Team' : 'Team'} detail={teamDetail} badge={teamContext.role === 'master' ? 'MASTER' : teamContext.role === 'editor' ? 'EDITOR' : teamContext.role === 'subadmin' ? 'SUBADMIN' : undefined} onClick={() => navigate('/admin/free/team')} />
+              <SettingsRow tour="sharing" icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void previewQr()} />
               {bankActive && <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18M12 3 3 8h18L12 3Z"/></svg>} label="Enviar enlace de cuentas" detail="Comparte con tus clientes el enlace directo a tus cuentas bancarias" onClick={() => void shareBankAccounts()} />}
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3.5 19c.5-3.5 2.6-5.5 5.5-5.5s5 2 5.5 5.5M14 14c2.8-.3 5 1.4 5.5 4.5"/></svg>} label="Invitar a un amigo" onClick={() => setShowInvitePreview(true)} />
             </div>
@@ -377,20 +376,21 @@ export default function FreeAccount() {
 
           <div className="mt-8">
             <SectionTitle>AYUDA Y RECURSOS</SectionTitle>
-            <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
+            <div data-account-tour="help" className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
               {resources.map((resource) => <SettingsRow key={resource.id} icon="□" label={resource.title} detail={resource.description || undefined} href={resource.url} />)}
             </div>
           </div>
 
           <div className="mt-8">
             <SectionTitle>CUENTA Y SEGURIDAD</SectionTitle>
-            <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
+            <div data-account-tour="security" className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
               <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 4H5v16h5"/><path d="M13 8l4 4-4 4M8 12h9"/></svg>} label="Cerrar sesión" onClick={() => void handleLogout()} />
             </div>
           </div>
 
           <div className="mt-8" id="account-support">
-            <FreeSupportPanel />
+            <FreeAccountGuidedTour storageId={String(me?.slug || me?.email || 'free')} />
+      <FreeSupportPanel />
           </div>
 
           {me?.slug && (
