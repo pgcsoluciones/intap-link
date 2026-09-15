@@ -19,10 +19,12 @@ export default function FreeNotificationBell({ hideTrigger = false }: Props) {
     void load()
     const timer = window.setInterval(() => void load(), 30000)
     const onFocus = () => void load()
+    const onChanged = () => void load()
     const onOpen = () => navigate('/admin/free/notifications?from=account')
     window.addEventListener('focus', onFocus)
+    window.addEventListener('kawvo:notifications-changed', onChanged)
     window.addEventListener('kawvo:open-notifications', onOpen)
-    return () => { window.clearInterval(timer); window.removeEventListener('focus', onFocus); window.removeEventListener('kawvo:open-notifications', onOpen) }
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', onFocus); window.removeEventListener('kawvo:notifications-changed', onChanged); window.removeEventListener('kawvo:open-notifications', onOpen) }
   }, [navigate])
 
   if (hideTrigger) return null

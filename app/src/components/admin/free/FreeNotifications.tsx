@@ -32,6 +32,10 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('es-DO')
 }
 
+function broadcastNotificationChange() {
+  window.dispatchEvent(new Event('kawvo:notifications-changed'))
+}
+
 export default function FreeNotifications() {
   const navigate = useNavigate()
   const [items, setItems] = useState<NotificationItem[]>([])
@@ -68,7 +72,8 @@ export default function FreeNotifications() {
       const readAt = new Date().toISOString()
       setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: readAt } : entry))
       setSelected({ ...item, read_at: readAt })
-      try { await apiPatch(`/me/notifications/${item.id}/read`, {}) } catch { /* optimistic */ }
+      broadcastNotificationChange()
+      try { await apiPatch(`/me/notifications/${item.id}/read`, {}); broadcastNotificationChange() } catch { /* optimistic */ }
     }
   }
 
@@ -77,13 +82,15 @@ export default function FreeNotifications() {
     const readAt = new Date().toISOString()
     setSelected({ ...selected, read_at: readAt })
     setItems((current) => current.map((entry) => entry.id === selected.id ? { ...entry, read_at: readAt } : entry))
-    try { await apiPatch(`/me/notifications/${selected.id}/read`, {}) } catch { /* optimistic */ }
+    broadcastNotificationChange()
+    try { await apiPatch(`/me/notifications/${selected.id}/read`, {}); broadcastNotificationChange() } catch { /* optimistic */ }
   }
 
   const markAllRead = async () => {
     const readAt = new Date().toISOString()
     setItems((current) => current.map((item) => ({ ...item, read_at: item.read_at || readAt })))
-    try { await apiPatch('/me/notifications/read-all', {}) } catch { /* optimistic */ }
+    broadcastNotificationChange()
+    try { await apiPatch('/me/notifications/read-all', {}); broadcastNotificationChange() } catch { /* optimistic */ }
   }
 
   const removeSelected = async () => {

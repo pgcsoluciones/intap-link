@@ -86,6 +86,10 @@ function storageKey(storageId: string) {
   return `kawvo:${TOUR_VERSION}:${storageId || 'anonymous'}`
 }
 
+function autoDisableKey(storageId: string) {
+  return `kawvo:tour-auto-disabled:dashboard:${storageId || 'anonymous'}`
+}
+
 function readState(key: string): TourState {
   try {
     return JSON.parse(localStorage.getItem(key) || '{}') as TourState
@@ -108,6 +112,7 @@ function clamp(value: number, min: number, max: number) {
 
 export default function FreeGuidedTour({ storageId }: Props) {
   const key = useMemo(() => storageKey(storageId), [storageId])
+  const autoKey = useMemo(() => autoDisableKey(storageId), [storageId])
   const [open, setOpen] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   const [rect, setRect] = useState<DOMRect | null>(null)
@@ -136,14 +141,14 @@ export default function FreeGuidedTour({ storageId }: Props) {
   const start = useCallback((force = false) => {
     if (!force) {
       const state = readState(key)
-      if (state.completed || Number(state.snoozeUntil || 0) > Date.now()) return
+      if (localStorage.getItem(autoKey) === '1' || state.completed || Number(state.snoozeUntil || 0) > Date.now()) return
     }
     const first = findAvailableIndex(0)
     if (first < 0) return
     setStepIndex(first)
     setOpen(true)
     window.setTimeout(() => positionCurrent(first), 40)
-  }, [findAvailableIndex, key, positionCurrent])
+  }, [autoKey, findAvailableIndex, key, positionCurrent])
 
   useEffect(() => {
     if (autoStartedRef.current || !storageId) return
@@ -191,7 +196,14 @@ export default function FreeGuidedTour({ storageId }: Props) {
     setOpen(false)
   }
 
+  const disableAuto = () => {
+    try { localStorage.setItem(autoKey, '1') } catch {}
+    writeState(key, { completed: true })
+    setOpen(false)
+  }
+
   const complete = () => {
+    try { localStorage.setItem(autoKey, '1') } catch {}
     writeState(key, { completed: true })
     setOpen(false)
   }
@@ -276,7 +288,7 @@ export default function FreeGuidedTour({ storageId }: Props) {
           <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: `${Math.max(8, (availableStepNumber / Math.max(availableTotal, 1)) * 100)}%` }} />
         </div>
         <div className="mt-5 flex items-center justify-between gap-2">
-          <button type="button" onClick={later} className="rounded-xl px-2 py-2 text-xs font-black text-slate-500">Ver más tarde</button>
+          <button type="button" onClick={disableAuto} className="rounded-xl px-2 py-2 text-xs font-black text-slate-500">Ya entendí · no mostrar solo</button>
           <div className="flex gap-2">
             {findAvailableIndex(stepIndex - 1, -1) >= 0 && <button type="button" onClick={() => go(-1)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Atrás</button>}
             <button type="button" onClick={() => isLast ? complete() : go(1)} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white">{isLast ? 'Completado' : 'Continuar'}</button>
