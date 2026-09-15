@@ -112,12 +112,41 @@ export default function FreeArtifactActivation() {
     return (
       <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
         <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
-          <div className="rounded-[28px] border border-slate-200 bg-white p-6 text-center shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
+          <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
             <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-            <h1 className="mt-3 text-2xl font-black">¿Qué deseas hacer?</h1>
-            <p className="mt-3 text-sm leading-6 text-slate-500">Para registrar un producto, escanea el QR de tu artículo Kawvo o acércalo por NFC y sigue las instrucciones que aparecerán en pantalla.</p>
-            <button type="button" onClick={() => navigate('/admin/free', { replace: true })} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white">Ir a mi perfil</button>
-            <button type="button" onClick={() => navigate('/admin/login', { replace: true })} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-extrabold text-slate-700">Iniciar sesión</button>
+            <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Activa tu dispositivo</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500">Usa el dispositivo Kawvo que tienes en tus manos para iniciar la activación.</p>
+
+            <div className="mt-6 rounded-[24px] border border-cyan-100 bg-cyan-50 p-5">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-lg font-black text-cyan-700 shadow-sm">1</span>
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">Acerca el NFC a tu móvil</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Desbloquea tu teléfono y acerca el dispositivo Kawvo a la zona NFC hasta que aparezca la notificación.</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-lg font-black text-cyan-700 shadow-sm">2</span>
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">O escanea su código QR</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Abre la cámara del móvil, apunta al QR del dispositivo y entra al enlace que aparecerá.</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-lg font-black text-cyan-700 shadow-sm">3</span>
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">Continúa desde el enlace</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Kawvo reconocerá el producto y te mostrará la pantalla para confirmar su vinculación a esta cuenta.</p>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs leading-5 text-slate-400">No necesitas introducir códigos de compra ni códigos de activación manualmente.</p>
+
+            <button type="button" onClick={() => window.location.reload()} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800">Ya lo escaneé · Revisar nuevamente</button>
+            <button type="button" onClick={() => navigate('/admin/free/onboarding/welcome', { replace: true })} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-extrabold text-slate-700 transition hover:bg-slate-50">Volver</button>
           </div>
         </section>
       </main>
