@@ -11,7 +11,7 @@ export default function FreeOnboardingWelcome() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('profile_deleted') === '1') {
-      navigate('/admin/free/onboarding/welcome', { replace: true })
+      navigate('/admin/artifacts', { replace: true })
     }
   }, [navigate])
 
