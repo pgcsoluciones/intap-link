@@ -49,7 +49,6 @@ if echo "$CHANGED" | grep -Eq '^(api/|web/|functions/)'; then
   fail "Detecté cambios en API, Web público o Functions. Se cancela producción."
 fi
 
-# Las únicas fuentes de producto permitidas en esta release están dentro del Admin App.
 UNEXPECTED="$(echo "$CHANGED" | grep -Ev '^(app/src/components/admin/free/|scripts/)' || true)"
 if [ -n "$UNEXPECTED" ]; then
   echo "$UNEXPECTED"
@@ -62,7 +61,8 @@ grep -Fq '(no volver a mostrar)' app/src/components/admin/free/FreeGuidedTour.ts
 grep -Fq 'tour-auto-disabled:account' app/src/components/admin/free/FreeAccountGuidedTour.tsx || fail "Falta persistencia Mi cuenta"
 grep -Fq 'tour-auto-disabled:team' app/src/components/admin/free/FreeTeamGuidedTour.tsx || fail "Falta persistencia Team"
 grep -Fq 'kawvo:notifications-changed' app/src/components/admin/free/FreeNotifications.tsx || fail "Falta refresco de notificaciones"
-grep -Fq "from === 'account'" app/src/components/admin/free/FreeNotifications.tsx || fail "Falta retorno dinámico de Notificaciones"
+grep -Fq "new URLSearchParams(location.search).get('from') === 'account'" app/src/components/admin/free/FreeNotifications.tsx || fail "Falta detección de origen de Notificaciones"
+grep -Fq "const backPath = fromAccount ? '/admin/free/account' : '/admin/free'" app/src/components/admin/free/FreeNotifications.tsx || fail "Falta retorno dinámico de Notificaciones"
 grep -Fq '/admin/artifacts?profile_deleted=1' app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx || fail "Falta flujo posterior a eliminar perfil"
 grep -Fq '/admin/artifacts/activate?start=1' app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx || fail "Falta entrada moderna de activación"
 
