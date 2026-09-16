@@ -288,7 +288,7 @@ export default function FreeGuidedTour({ storageId }: Props) {
           <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: `${Math.max(8, (availableStepNumber / Math.max(availableTotal, 1)) * 100)}%` }} />
         </div>
         <div className="mt-5 flex items-center justify-between gap-2">
-          <button type="button" onClick={disableAuto} className="rounded-xl px-2 py-2 text-xs font-black text-slate-500">Ya entendí · no mostrar solo</button>
+          <button type="button" onClick={disableAuto} className="rounded-xl px-2 py-2 text-sm font-black text-slate-700">Ya entendí <span className="block text-[11px] font-bold text-slate-400">(no volver a mostrar)</span></button>
           <div className="flex gap-2">
             {findAvailableIndex(stepIndex - 1, -1) >= 0 && <button type="button" onClick={() => go(-1)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">Atrás</button>}
             <button type="button" onClick={() => isLast ? complete() : go(1)} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white">{isLast ? 'Completado' : 'Continuar'}</button>
