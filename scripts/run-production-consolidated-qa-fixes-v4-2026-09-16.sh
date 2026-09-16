@@ -63,7 +63,7 @@ grep -Fq 'tour-auto-disabled:team' app/src/components/admin/free/FreeTeamGuidedT
 grep -Fq 'kawvo:notifications-changed' app/src/components/admin/free/FreeNotifications.tsx || fail "Falta refresco de notificaciones"
 grep -Fq "new URLSearchParams(location.search).get('from') === 'account'" app/src/components/admin/free/FreeNotifications.tsx || fail "Falta detección de origen de Notificaciones"
 grep -Fq "const backPath = fromAccount ? '/admin/free/account' : '/admin/free'" app/src/components/admin/free/FreeNotifications.tsx || fail "Falta retorno dinámico de Notificaciones"
-grep -Fq '/admin/artifacts?profile_deleted=1' app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx || fail "Falta flujo posterior a eliminar perfil"
+grep -Fq "navigate('/admin/artifacts', { replace: true })" app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx || fail "Falta flujo posterior a eliminar perfil"
 grep -Fq '/admin/artifacts/activate?start=1' app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx || fail "Falta entrada moderna de activación"
 
 echo "✓ Alcance e invariantes verificados"
