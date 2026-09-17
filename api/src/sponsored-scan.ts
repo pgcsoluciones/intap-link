@@ -7,13 +7,30 @@ function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function sessionUserId(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return null;const row=await c.env.DB.prepare(`SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first();return row?String((row as any).user_id||''):null}
 function productLabel(type:string){const labels:Record<string,string>={card:'Tarjeta NFC',ping:'Ping NFC',bracelet:'Pulsera NFC',keychain:'Llavero NFC',stand:'Estación de Contacto',qr:'Código QR',other:'Producto Kawvo'};return labels[type]||labels.other}
+function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,30)}
+
+async function ensureSponsorOwnerProfile(c:any,sponsorId:string,userId:string,row:any){
+  let profile=await c.env.DB.prepare(`SELECT id,username,status FROM sponsored_profiles WHERE sponsor_id=? AND user_id=? AND profile_role='sponsor_owner' LIMIT 1`).bind(sponsorId,userId).first()
+  if(profile)return profile
+
+  let preferred=cleanSlug(row.profile_slug)
+  if(preferred){
+    const used=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? LIMIT 1`).bind(preferred).first()
+    if(used)preferred=''
+  }
+  const id=crypto.randomUUID()
+  await c.env.DB.prepare(`INSERT INTO sponsored_profiles (id,sponsor_id,user_id,username,business_name,phone,whatsapp,status,profile_role) VALUES (?,?,?,?,?,?,?,'draft','sponsor_owner')`).bind(
+    id,sponsorId,userId,preferred||null,String(row.sponsor_name||'').trim().slice(0,100),String(row.sponsor_contact_whatsapp||'').trim().slice(0,40),String(row.sponsor_contact_whatsapp||'').trim().slice(0,40),
+  ).run()
+  return {id,username:preferred||null,status:'draft'}
+}
 
 app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   let body:any={}
   try{body=await c.req.json()}catch{return next()}
   const publicCode=String(body?.public_code||'').trim().toUpperCase()
   if(!publicCode)return next()
-  const row=await c.env.DB.prepare(`SELECT a.id,a.public_code,a.product_type,a.status AS artifact_status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,sa.beneficiary_user_id,sp.id AS sponsored_profile_id,sp.username,sp.status AS sponsored_profile_status,sp.user_id AS sponsored_user_id,st.name AS sponsor_name,st.logo_url AS sponsor_logo_url,st.banner_title,st.sponsor_type,st.is_active AS sponsor_is_active FROM intap_artifacts a JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id WHERE a.public_code=? LIMIT 1`).bind(publicCode).first().catch(()=>null)
+  const row=await c.env.DB.prepare(`SELECT a.id,a.public_code,a.product_type,a.status AS artifact_status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,sa.beneficiary_user_id,sp.id AS sponsored_profile_id,sp.username,sp.status AS sponsored_profile_status,sp.user_id AS sponsored_user_id,st.name AS sponsor_name,st.logo_url AS sponsor_logo_url,st.banner_title,st.sponsor_type,st.is_active AS sponsor_is_active,st.contact_email AS sponsor_contact_email,st.contact_whatsapp AS sponsor_contact_whatsapp,st.profile_slug FROM intap_artifacts a JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id WHERE a.public_code=? LIMIT 1`).bind(publicCode).first().catch(()=>null)
   if(!row)return next()
 
   const artifactId=String((row as any).id||'')
@@ -21,12 +38,32 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   const productType=String((row as any).product_type||'other')
   const currentUserId=await sessionUserId(c)
   const sponsorId=String((row as any).sponsor_id||'')
-  const sponsorMembership=currentUserId?await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,currentUserId).first():null
+  let sponsorMembership=currentUserId?await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,currentUserId).first():null
   const sponsor={id:sponsorId,name:String((row as any).sponsor_name||'Patrocinador'),logo_url:String((row as any).sponsor_logo_url||''),banner_title:String((row as any).banner_title||'Impulsado por'),type:String((row as any).sponsor_type||'merchant')}
   const artifact={public_code:publicCode,product_type:productType,label:productLabel(productType)}
 
   if(String((row as any).artifact_role||'beneficiary')==='master'){
-    return c.json({ok:true,state:sponsorMembership?'sponsored_master':'sponsored_master_login',artifact,sponsor,message:sponsorMembership?`Este es tu llavero Master · código ${publicCode}.`:'Este llavero Master requiere iniciar sesión como patrocinador.',manage_url:sponsorMembership?`${configuredAppUrl(c)}/admin/sponsor?master=${encodeURIComponent(publicCode)}`:null,login_url:sponsorMembership?null:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
+    if(!currentUserId){
+      return c.json({ok:true,state:'sponsored_master_login',artifact,sponsor,message:'Este es el llavero Master del patrocinador. Inicia sesión con el correo registrado para activarlo.',manage_url:null,login_url:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
+    }
+
+    if(!sponsorMembership){
+      const user=await c.env.DB.prepare(`SELECT email FROM users WHERE id=? LIMIT 1`).bind(currentUserId).first()
+      const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
+      const registeredEmail=String((row as any).sponsor_contact_email||'').trim().toLowerCase()
+      if(!registeredEmail||!accountEmail||registeredEmail!==accountEmail){
+        return c.json({ok:true,state:'sponsored_master_login',artifact,sponsor,message:'Este Master debe activarse con el mismo correo registrado por Super Admin para el patrocinador.',manage_url:null,login_url:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
+      }
+      await c.env.DB.prepare(`INSERT INTO sponsor_members (sponsor_id,user_id,role,status) VALUES (?,?,'owner','active') ON CONFLICT(sponsor_id,user_id) DO UPDATE SET role='owner',status='active'`).bind(sponsorId,currentUserId).run()
+      sponsorMembership={role:'owner'}
+    }
+
+    const role=String((sponsorMembership as any)?.role||'viewer')
+    if(role==='owner'){
+      const profile=await ensureSponsorOwnerProfile(c,sponsorId,currentUserId,row)
+      return c.json({ok:true,state:'sponsored_master',artifact,sponsor,message:'Master reconocido. Tu presentación patrocinada está lista en borrador.',profile:{username:(profile as any)?.username||null,status:(profile as any)?.status||'draft'},manage_url:`${configuredAppUrl(c)}/admin/sponsored?sponsor_master=1`,sponsor_panel_url:`${configuredAppUrl(c)}/admin/sponsor`})
+    }
+    return c.json({ok:true,state:'sponsored_master',artifact,sponsor,message:`Este es el llavero Master · código ${publicCode}.`,manage_url:`${configuredAppUrl(c)}/admin/sponsor?master=${encodeURIComponent(publicCode)}`,login_url:null})
   }
 
   const sponsoredStatus=String((row as any).sponsor_artifact_status||'')
