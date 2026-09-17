@@ -1,0 +1,43 @@
+import app from './index'
+import { cookieNames } from './lib/cookies'
+
+const CONSENT_VERSION='sponsored-v1-2026-09-17'
+
+async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));return match?decodeURIComponent(match[1]):null}
+async function sessionUserId(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return null;const row=await c.env.DB.prepare(`SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first();return row?String((row as any).user_id||''):null}
+async function requireUser(c:any,next:any){const id=await sessionUserId(c);if(!id)return c.json({ok:false,error:'Unauthorized'},401);c.set('userId',id);await next()}
+function clean(value:unknown,max=100){return String(value??'').trim().slice(0,max)}
+
+app.post('/api/v1/me/sponsored-profile/claim',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  const body=await c.req.json().catch(()=>({}))
+  const publicCode=clean(body?.public_code,64).toUpperCase()
+  const consentAccepted=body?.consent_accepted===true
+  const consentVersion=clean(body?.consent_version,80)
+  if(!publicCode)return c.json({ok:false,error:'Código requerido.'},400)
+  if(!consentAccepted||consentVersion!==CONSENT_VERSION)return c.json({ok:false,error:'Debes aceptar las condiciones del patrocinio para activar tu presentación.',code:'sponsored_consent_required'},422)
+
+  const artifact=await c.env.DB.prepare(`SELECT a.id,a.status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,st.name AS sponsor_name,st.is_active FROM intap_artifacts a JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id WHERE a.public_code=? LIMIT 1`).bind(publicCode).first()
+  if(!artifact)return c.json({ok:false,error:'Este producto no pertenece a un programa patrocinado.'},404)
+  if(String((artifact as any).artifact_role)==='master')return c.json({ok:false,error:'Este es el llavero Master del patrocinador.'},409)
+  if(Number((artifact as any).is_active)!==1)return c.json({ok:false,error:'El patrocinio no está activo.'},409)
+  if(String((artifact as any).sponsor_artifact_status)!=='available'||!['available','unassigned'].includes(String((artifact as any).status||'')))return c.json({ok:false,error:'Este producto ya fue activado o no está disponible.'},409)
+
+  const artifactId=String((artifact as any).id)
+  const activation=await c.env.DB.prepare(`SELECT id FROM artifact_activation_codes WHERE artifact_id=? AND status='active' AND (expires_at IS NULL OR expires_at>datetime('now')) ORDER BY created_at DESC LIMIT 1`).bind(artifactId).first()
+  if(!activation)return c.json({ok:false,error:'Este producto todavía no está habilitado para activación.'},409)
+
+  const profileId=crypto.randomUUID()
+  const sponsorName=clean((artifact as any).sponsor_name,160)
+  await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT INTO sponsored_profiles (id,sponsor_id,artifact_id,user_id,status,consent_version,consent_accepted_at,consent_sponsor_name) VALUES (?,?,?,?, 'draft',?,datetime('now'),?)`).bind(profileId,String((artifact as any).sponsor_id),artifactId,userId,CONSENT_VERSION,sponsorName),
+    c.env.DB.prepare(`UPDATE sponsor_artifacts SET status='activated',beneficiary_user_id=?,sponsored_profile_id=?,activated_at=datetime('now') WHERE artifact_id=? AND status='available'`).bind(userId,profileId,artifactId),
+    c.env.DB.prepare(`UPDATE intap_artifacts SET status='activated',owner_user_id=?,activated_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND status IN ('available','unassigned')`).bind(userId,artifactId),
+    c.env.DB.prepare(`UPDATE artifact_activation_codes SET status='used',used_at=datetime('now') WHERE id=? AND status='active'`).bind(String((activation as any).id)),
+  ])
+
+  return c.json({ok:true,data:{id:profileId,sponsor_name:sponsorName,status:'draft',consent_version:CONSENT_VERSION,next_url:'/admin/sponsored'}},201)
+})
+
+export default app
