@@ -2,7 +2,9 @@ import app from './preview-entry'
 import { Resend } from 'resend'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
 
-const KDF_ITERATIONS = 210000
+// Cloudflare Workers WebCrypto caps PBKDF2 at 100,000 iterations.
+// Keep this value identical for password creation and login verification.
+const KDF_ITERATIONS = 100000
 const MAX_PASSWORD_ATTEMPTS = 5
 
 async function sha256Hex(input: string): Promise<string> {
@@ -115,13 +117,13 @@ async function createVerifiedAction(c: any, userId: string, sessionId: string, p
   await c.env.DB.prepare(`INSERT INTO account_verified_actions(id,user_id,session_id,purpose,token_hash,target_email,expires_at,created_at) VALUES(?,?,?,?,?,?,datetime('now','+10 minutes'),datetime('now'))`).bind(crypto.randomUUID(),userId,sessionId,purpose,await sha256Hex(raw),targetEmail || null).run()
   return raw
 }
-async function consumeVerifiedAction(c: any, userId: string, purpose: string) {
+async function getVerifiedAction(c: any, userId: string, purpose: string) {
   const raw = parseCookie(c.req.header('Cookie') || '', credentialActionCookieName(c))
   if (!raw) return null
-  const row = await c.env.DB.prepare(`SELECT id,target_email FROM account_verified_actions WHERE user_id=? AND purpose=? AND token_hash=? AND consumed_at IS NULL AND expires_at>datetime('now') ORDER BY created_at DESC LIMIT 1`).bind(userId,purpose,await sha256Hex(raw)).first()
-  if (!row) return null
-  await c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE id=?`).bind(String((row as any).id)).run()
-  return row
+  return c.env.DB.prepare(`SELECT id,target_email FROM account_verified_actions WHERE user_id=? AND purpose=? AND token_hash=? AND consumed_at IS NULL AND expires_at>datetime('now') ORDER BY created_at DESC LIMIT 1`).bind(userId,purpose,await sha256Hex(raw)).first()
+}
+async function markVerifiedActionConsumed(c: any, actionId: string) {
+  await c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE id=? AND consumed_at IS NULL`).bind(actionId).run()
 }
 
 app.get('/api/v1/me/account/credentials', requireAccount, async (c: any) => {
@@ -156,9 +158,13 @@ app.post('/api/v1/me/account/password', requireAccount, async (c:any) => {
   let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
   const userId=c.get('accountUserId') as string, password=String(body?.password||'')
   if (password.length < 8 || password.length > 128) return c.json({ok:false,error:'La contraseña debe tener entre 8 y 128 caracteres.'},400)
-  if (!(await consumeVerifiedAction(c,userId,'password'))) return c.json({ok:false,error:'La verificación expiró. Solicita un nuevo código.'},403)
+  const action = await getVerifiedAction(c,userId,'password')
+  if (!action) return c.json({ok:false,error:'La verificación expiró. Solicita un nuevo código.'},403)
   const cred=await newPasswordRecord(password)
-  await c.env.DB.prepare(`INSERT INTO user_password_credentials(user_id,password_salt,password_hash,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,0,NULL,datetime('now'),datetime('now')) ON CONFLICT(user_id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,failed_attempts=0,locked_until=NULL,updated_at=datetime('now')`).bind(userId,cred.salt,cred.hash).run()
+  await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT INTO user_password_credentials(user_id,password_salt,password_hash,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,0,NULL,datetime('now'),datetime('now')) ON CONFLICT(user_id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,failed_attempts=0,locked_until=NULL,updated_at=datetime('now')`).bind(userId,cred.salt,cred.hash),
+    c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE id=? AND consumed_at IS NULL`).bind(String((action as any).id)),
+  ])
   return c.json({ok:true},200,{'Set-Cookie':clearCredentialActionCookie(c)})
 })
 
@@ -167,11 +173,13 @@ app.post('/api/v1/me/account/email/change/start', requireAccount, async (c:any) 
   const userId=c.get('accountUserId') as string, newEmail=String(body?.new_email||'').trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) return c.json({ok:false,error:'Correo inválido.'},400)
   if (newEmail === String(c.get('accountEmail')).toLowerCase()) return c.json({ok:false,error:'Ese correo ya está vinculado a tu cuenta.'},400)
-  if (!(await consumeVerifiedAction(c,userId,'email_change'))) return c.json({ok:false,error:'La autorización expiró. Vuelve a validar tu correo actual.'},403)
+  const action = await getVerifiedAction(c,userId,'email_change')
+  if (!action) return c.json({ok:false,error:'La autorización expiró. Vuelve a validar tu correo actual.'},403)
   const exists=await c.env.DB.prepare(`SELECT id FROM users WHERE lower(email)=? AND id<>? LIMIT 1`).bind(newEmail,userId).first()
   if (exists) return c.json({ok:false,error:'Ese correo ya está vinculado a otra cuenta.'},409)
   const result=await createChallenge(c,userId,newEmail,'email_new')
   if (!result.ok) return c.json({ok:false,error:result.error}, result.status || 500)
+  await markVerifiedActionConsumed(c,String((action as any).id))
   return c.json({ok:true},200,{'Set-Cookie':clearCredentialActionCookie(c)})
 })
 
