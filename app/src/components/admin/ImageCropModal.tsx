@@ -59,7 +59,7 @@ function computeCover(
   return { cropX, cropY, cropWidth, cropHeight }
 }
 
-function prepareWorkingImage(img: HTMLImageElement, maxDimension: number): WorkingImage {
+function prepareWorkingImage(img: HTMLImageElement, maxDimension: number, preserveAlpha: boolean): WorkingImage {
   const { naturalWidth, naturalHeight } = img
   if (naturalWidth <= maxDimension && naturalHeight <= maxDimension) {
     return { src: img.src, width: naturalWidth, height: naturalHeight }
@@ -73,8 +73,13 @@ function prepareWorkingImage(img: HTMLImageElement, maxDimension: number): Worki
   canvas.height = height
   const context = canvas.getContext('2d')
   if (!context) return { src: img.src, width: naturalWidth, height: naturalHeight }
+  context.clearRect(0, 0, width, height)
   context.drawImage(img, 0, 0, width, height)
-  return { src: canvas.toDataURL('image/jpeg', 0.95), width, height }
+  return {
+    src: preserveAlpha ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.95),
+    width,
+    height,
+  }
 }
 
 export default function ImageCropModal({
@@ -87,6 +92,7 @@ export default function ImageCropModal({
 }: Props) {
   const previewHeight = Math.round(PREVIEW_W / aspectRatio)
   const outputHeight = Math.round(outputWidth / aspectRatio)
+  const preserveAlpha = file.type === 'image/png' || file.type === 'image/webp'
 
   const imageRef = useRef<HTMLImageElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -108,7 +114,7 @@ export default function ImageCropModal({
     let objectUrlRevoked = false
 
     source.onload = () => {
-      const prepared = prepareWorkingImage(source, maxInputDimension)
+      const prepared = prepareWorkingImage(source, maxInputDimension, preserveAlpha)
       if (prepared.src !== objectUrl) {
         URL.revokeObjectURL(objectUrl)
         objectUrlRevoked = true
@@ -128,7 +134,7 @@ export default function ImageCropModal({
       imageRef.current = null
       if (!objectUrlRevoked) URL.revokeObjectURL(objectUrl)
     }
-  }, [file, maxInputDimension])
+  }, [file, maxInputDimension, preserveAlpha])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -206,6 +212,7 @@ export default function ImageCropModal({
     const context = canvas.getContext('2d')
     if (!context) { setSaveStage('idle'); return }
 
+    context.clearRect(0, 0, outputWidth, outputHeight)
     context.drawImage(
       image,
       crop.cropX,
@@ -218,6 +225,7 @@ export default function ImageCropModal({
       outputHeight,
     )
 
+    const outputType = preserveAlpha ? 'image/png' : 'image/jpeg'
     canvas.toBlob(async (blob) => {
       if (!blob) { setSaveStage('idle'); return }
       setSaveStage('uploading')
@@ -226,7 +234,7 @@ export default function ImageCropModal({
       } finally {
         setSaveStage('idle')
       }
-    }, 'image/jpeg', JPEG_Q)
+    }, outputType, preserveAlpha ? undefined : JPEG_Q)
   }
 
   return (
@@ -238,8 +246,8 @@ export default function ImageCropModal({
         </div>
 
         <div
-          className="relative mx-auto overflow-hidden rounded-xl bg-black select-none"
-          style={{ width: PREVIEW_W, height: previewHeight, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+          className="relative mx-auto overflow-hidden rounded-xl bg-[linear-gradient(45deg,#1f2937_25%,transparent_25%),linear-gradient(-45deg,#1f2937_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1f2937_75%),linear-gradient(-45deg,transparent_75%,#1f2937_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] select-none"
+          style={{ width: PREVIEW_W, height: previewHeight, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none', backgroundColor: '#111827' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
