@@ -1,7 +1,7 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 
-const CONSENT_VERSION='sponsored-v1-2026-09-17'
+const CONSENT_VERSION='sponsored-v1.1-2026-09-17'
 
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));return match?decodeURIComponent(match[1]):null}
