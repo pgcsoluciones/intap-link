@@ -1,131 +1,101 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
-import SponsoredImageEditor from './SponsoredImageEditor'
+import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
+import ImageCropModal from '../ImageCropModal'
 
 const palettes=[['blue','Azul profesional'],['teal','Verde azulado'],['slate','Gris elegante'],['burgundy','Borgoña'],['gold','Dorado']]
 const emptySchedule=[{day:'Lunes a Viernes',hours:'8:00 AM - 6:00 PM'},{day:'Sábados',hours:'9:00 AM - 1:00 PM'}]
 const SUPPORT_URL='https://nfc.kawvoia.com/respuesta?origen=perfil-patrocinado&tema=soporte'
 const SPONSOR_URL='https://nfc.kawvoia.com/respuesta?origen=perfil-patrocinado&interes=patrocinador'
-type PendingImage={file:File;kind:'avatar'|'gallery'}|null
+type PendingImage={file:File;kind:'avatar'|'hero'|'gallery'}|null
+const RD_AREA_CODES=/^(809|829|849)/
 
-function publicOrigin(){
-  const host=window.location.hostname.toLowerCase()
-  if(host==='app.preview.intaprd.com') return 'https://preview.intaprd.com'
-  if(host==='app.intaprd.com') return 'https://intaprd.com'
-  const configured=String(import.meta.env.VITE_WEB_URL||'').replace(/\/$/,'')
-  return configured||'https://intaprd.com'
-}
+function normalizePhone(input:string){const value=input.trim();if(!value)return'';const hadPlus=value.startsWith('+');const digits=value.replace(/\D/g,'');if(digits.length===10&&RD_AREA_CODES.test(digits))return`+1${digits}`;if(digits.length===11&&digits.startsWith('1')&&RD_AREA_CODES.test(digits.slice(1)))return`+${digits}`;if(hadPlus&&digits.length>=7&&digits.length<=15)return`+${digits}`;return digits.length>=7&&digits.length<=15?digits:value}
+function mapsSearchUrl(query:string){return`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`}
+function mapsEmbedUrl(query:string){return`https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`}
+function publicOrigin(){const host=window.location.hostname.toLowerCase();if(host==='app.preview.intaprd.com')return'https://preview.intaprd.com';if(host==='app.intaprd.com')return'https://intaprd.com';const configured=String(import.meta.env.VITE_WEB_URL||'').replace(/\/$/,'');return configured||'https://intaprd.com'}
 
 export default function SponsoredDashboard(){
-  const [data,setData]=useState<any>(null)
-  const [loading,setLoading]=useState(true)
-  const [saving,setSaving]=useState(false)
-  const [uploading,setUploading]=useState('')
-  const [pending,setPending]=useState<PendingImage>(null)
-  const [message,setMessage]=useState('')
-  const [error,setError]=useState('')
-  const [form,setForm]=useState<any>({username:'',business_name:'',specialization:'',what_we_do:'',avatar_url:'',show_avatar:true,phone:'',whatsapp:'',instagram:'',address:'',schedule:emptySchedule,gallery:[],gallery_title:'Catálogo',palette_id:'blue'})
+  const avatarRef=useRef<HTMLInputElement>(null)
+  const heroRef=useRef<HTMLInputElement>(null)
+  const galleryRef=useRef<HTMLInputElement>(null)
+  const[data,setData]=useState<any>(null)
+  const[loading,setLoading]=useState(true)
+  const[saving,setSaving]=useState(false)
+  const[uploading,setUploading]=useState('')
+  const[pending,setPending]=useState<PendingImage>(null)
+  const[message,setMessage]=useState('')
+  const[error,setError]=useState('')
+  const[previewQuery,setPreviewQuery]=useState('')
+  const[selectedLocation,setSelectedLocation]=useState(false)
+  const[locating,setLocating]=useState(false)
+  const[form,setForm]=useState<any>({username:'',business_name:'',specialization:'',what_we_do:'',avatar_url:'',hero_url:'',map_url:'',show_avatar:true,phone:'',whatsapp:'',instagram:'',address:'',schedule:emptySchedule,gallery:[],gallery_title:'Catálogo',palette_id:'blue'})
 
-  async function load(){
-    setLoading(true);setError('')
-    try{
-      const json:any=await apiGet('/me/sponsored-profile')
-      if(!json?.ok) throw new Error(json?.error||'No pudimos cargar tu perfil.')
-      setData(json.data)
-      if(json.data)setForm((current:any)=>({...current,...json.data,schedule:Array.isArray(json.data.schedule)&&json.data.schedule.length?json.data.schedule:emptySchedule,gallery:Array.isArray(json.data.gallery)?json.data.gallery:[]}))
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos cargar tu perfil.')}
-    finally{setLoading(false)}
-  }
+  async function load(){setLoading(true);setError('');try{const json:any=await apiGet('/me/sponsored-profile');if(!json?.ok)throw new Error(json?.error||'No pudimos cargar tu perfil.');setData(json.data);if(json.data){setForm((current:any)=>({...current,...json.data,schedule:Array.isArray(json.data.schedule)&&json.data.schedule.length?json.data.schedule:emptySchedule,gallery:Array.isArray(json.data.gallery)?json.data.gallery:[]}));setPreviewQuery(String(json.data.address||''));setSelectedLocation(Boolean(json.data.map_url))}}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar tu perfil.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
 
   const publicUrl=useMemo(()=>form.username?`${publicOrigin()}/p/${form.username}`:'',[form.username])
   const hasUsername=Boolean(data?.username)
+  const mapPreviewUrl=useMemo(()=>previewQuery?mapsEmbedUrl(previewQuery):'',[previewQuery])
 
-  async function uploadImage(file:File,kind:'avatar'|'gallery'){
+  async function uploadImage(blob:Blob,kind:'avatar'|'hero'|'gallery'){
     setUploading(kind);setError('');setMessage('')
     try{
-      const fd=new FormData();fd.append('file',file)
+      const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='avatar'?400:kind==='hero'?1200:1400,quality:.82,baseName:kind})
+      const fd=new FormData();fd.append('file',optimized,optimized.name)
       const res=await fetch(`${API_BASE}/me/sponsored-profile/media?kind=${kind}`,{method:'POST',credentials:'include',body:fd})
-      const json:any=await res.json().catch(()=>null)
-      if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.')
-      return String(json.url||'')
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos subir la imagen.');return ''}
-    finally{setUploading('')}
+      const json:any=await res.json().catch(()=>null);if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.')
+      const url=String(json.url||'')
+      if(kind==='avatar')setForm((v:any)=>({...v,avatar_url:url}))
+      else if(kind==='hero')setForm((v:any)=>({...v,hero_url:url}))
+      else setForm((v:any)=>({...v,gallery:[...v.gallery,{url,title:''}].slice(0,10)}))
+      setMessage('Imagen optimizada y cargada.')
+    }catch(e){setError(e instanceof Error?e.message:'No pudimos subir la imagen.')}finally{setUploading('')}
   }
+  function chooseImage(file:File|undefined,kind:'avatar'|'hero'|'gallery'){if(!file)return;if(file.size>12*1024*1024){setError('La imagen original supera 12 MB. Elige una más liviana.');return}if(kind==='gallery'&&form.gallery.length>=10)return;setError('');setMessage('');setPending({file,kind})}
 
-  function chooseImage(file:File|undefined,kind:'avatar'|'gallery'){
-    if(!file)return
-    if(file.size>12*1024*1024){setError('La imagen original supera 12 MB. Elige una más liviana.');return}
-    if(kind==='gallery'&&form.gallery.length>=10)return
-    setError('');setMessage('');setPending({file,kind})
-  }
-  async function acceptOptimized(file:File,kind:'avatar'|'gallery'){
-    const url=await uploadImage(file,kind);if(!url)return
-    if(kind==='avatar')setForm((v:any)=>({...v,avatar_url:url}))
-    else setForm((v:any)=>({...v,gallery:[...v.gallery,{url,title:''}].slice(0,10)}))
-    setMessage(kind==='avatar'?'Avatar optimizado y cargado.':'Imagen optimizada y agregada a la galería.')
-  }
+  function searchLocation(){const query=String(form.address||'').trim();if(!query){setError('Escribe el nombre del negocio o una dirección.');return}setError('');setSelectedLocation(false);setForm((v:any)=>({...v,map_url:''}));setPreviewQuery(query)}
+  function usePreviewLocation(){if(!previewQuery)return;setForm((v:any)=>({...v,map_url:mapsSearchUrl(previewQuery)}));setSelectedLocation(true);setError('')}
+  function useCurrentLocation(){if(!navigator.geolocation){setError('Este dispositivo no permite obtener tu ubicación actual.');return}setLocating(true);setError('');navigator.geolocation.getCurrentPosition((position)=>{const coordinates=`${position.coords.latitude.toFixed(6)},${position.coords.longitude.toFixed(6)}`;setPreviewQuery(coordinates);setForm((v:any)=>({...v,address:v.address?.trim()||'Ubicación actual',map_url:mapsSearchUrl(coordinates)}));setSelectedLocation(true);setLocating(false)},(geoError)=>{setLocating(false);setError(geoError.code===geoError.PERMISSION_DENIED?'Permite el acceso a tu ubicación o búscala escribiendo el nombre o la dirección.':'No pudimos obtener tu ubicación. Intenta buscarla por nombre o dirección.')},{enableHighAccuracy:true,timeout:10000,maximumAge:30000})}
 
-  async function saveUsername(){
-    setSaving(true);setError('');setMessage('')
-    try{const json:any=await apiPatch('/me/sponsored-profile',{username:String(form.username||'').trim().toLowerCase()});if(!json?.ok)throw new Error(json?.error||'No pudimos guardar el usuario.');setMessage('Usuario guardado. Ya puedes personalizar tu presentación.');await load()}
-    catch(e){setError(e instanceof Error?e.message:'No pudimos guardar el usuario.')}
-    finally{setSaving(false)}
-  }
-
-  async function saveAll(){
-    setSaving(true);setError('');setMessage('')
-    try{
-      const payload={business_name:form.business_name,specialization:form.specialization,what_we_do:form.what_we_do,avatar_url:form.avatar_url,show_avatar:form.show_avatar,phone:form.phone,whatsapp:form.whatsapp,instagram:form.instagram,address:form.address,schedule:form.schedule,gallery:form.gallery,gallery_title:form.gallery_title,palette_id:form.palette_id}
-      const json:any=await apiPatch('/me/sponsored-profile',payload)
-      if(!json?.ok)throw new Error(json?.error||'No pudimos guardar los cambios.')
-      setMessage('Cambios guardados.');await load()
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar los cambios.')}
-    finally{setSaving(false)}
-  }
-
-  async function togglePublish(){
-    setSaving(true);setError('');setMessage('')
-    try{
-      const route=data?.status==='published'?'/me/sponsored-profile/unpublish':'/me/sponsored-profile/publish'
-      const json:any=await apiPost(route,{})
-      if(!json?.ok)throw new Error(json?.error||(Array.isArray(json?.missing)?`Falta: ${json.missing.join(', ')}`:'No pudimos actualizar el estado.'))
-      setMessage(data?.status==='published'?'Perfil pasado a borrador.':'Perfil publicado.');await load()
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.')}
-    finally{setSaving(false)}
-  }
-
+  async function saveUsername(){setSaving(true);setError('');setMessage('');try{const json:any=await apiPatch('/me/sponsored-profile',{username:String(form.username||'').trim().toLowerCase()});if(!json?.ok)throw new Error(json?.error||'No pudimos guardar el usuario.');setMessage('Usuario guardado. Ya puedes personalizar tu presentación.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar el usuario.')}finally{setSaving(false)}}
+  async function saveAll(){setSaving(true);setError('');setMessage('');try{const payload={business_name:form.business_name,specialization:form.specialization,what_we_do:form.what_we_do,avatar_url:form.avatar_url,hero_url:form.hero_url,map_url:form.map_url,show_avatar:form.show_avatar,phone:normalizePhone(form.phone||''),whatsapp:normalizePhone(form.whatsapp||''),instagram:form.instagram,address:form.address,schedule:form.schedule,gallery:form.gallery,gallery_title:form.gallery_title,palette_id:form.palette_id};const json:any=await apiPatch('/me/sponsored-profile',payload);if(!json?.ok)throw new Error(json?.error||'No pudimos guardar los cambios.');setMessage('Cambios guardados.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar los cambios.')}finally{setSaving(false)}}
+  async function togglePublish(){setSaving(true);setError('');setMessage('');try{const route=data?.status==='published'?'/me/sponsored-profile/unpublish':'/me/sponsored-profile/publish';const json:any=await apiPost(route,{});if(!json?.ok)throw new Error(json?.error||(Array.isArray(json?.missing)?`Falta: ${json.missing.join(', ')}`:'No pudimos actualizar el estado.'));setMessage(data?.status==='published'?'Perfil pasado a borrador.':'Perfil publicado.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.')}finally{setSaving(false)}}
   async function copy(){if(!publicUrl)return;await navigator.clipboard.writeText(publicUrl);setMessage('Enlace copiado.')}
   async function downloadQr(){if(!publicUrl)return;try{const QRCode=await import('qrcode');const dataUrl=await QRCode.toDataURL(publicUrl,{width:1400,margin:3,errorCorrectionLevel:'H'});const a=document.createElement('a');a.href=dataUrl;a.download=`${form.username}-qr.png`;a.click()}catch{setError('No pudimos generar el QR.')}}
 
-  if(loading)return <main className="min-h-screen bg-[#f7f9fc]"/>
-  if(!data)return <main className="min-h-screen bg-[#f7f9fc] px-5 py-10 font-['Inter']"><div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6"><h1 className="text-2xl font-black">Perfil patrocinado</h1><p className="mt-2 text-slate-500">{error||'No tienes un perfil patrocinado activo.'}</p></div></main>
+  if(loading)return<main className="min-h-screen bg-[#f7f9fc]"/>
+  if(!data)return<main className="min-h-screen bg-[#f7f9fc] px-5 py-10 font-['Inter']"><div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6"><h1 className="text-2xl font-black">Perfil patrocinado</h1><p className="mt-2 text-slate-500">{error||'No tienes un perfil patrocinado activo.'}</p></div></main>
 
-  const input='mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'
-  const label='block text-xs font-black uppercase tracking-[.08em] text-slate-500'
-  const section='rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_14px_45px_rgba(15,23,42,.05)]'
-
-  return <main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[820px] space-y-5">
+  const field='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold outline-none focus:border-cyan-400'
+  const section='rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,.07)]'
+  return<main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[820px] space-y-5">
     <header className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-600">KAWLINK PATROCINADO</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Mi presentación</h1><p className="mt-1 text-sm text-slate-500">{data.sponsor?.name?`Impulsado por ${data.sponsor.name}`:'Perfil patrocinado permanente'}</p></div><span className={`w-fit rounded-full px-3 py-2 text-xs font-black ${data.status==='published'?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}`}>{data.status==='published'?'Publicado':'Borrador'}</span></header>
     {message&&<p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}{error&&<p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">{error}</p>}
 
-    {!hasUsername&&<section className={section}><p className="text-[11px] font-black uppercase tracking-[.12em] text-cyan-700">Primer paso obligatorio</p><h2 className="mt-2 text-2xl font-black">Elige tu usuario</h2><p className="mt-2 text-sm leading-6 text-slate-500">Este será tu enlace permanente. Debes definirlo antes de editar cualquier otra sección.</p><label className={`${label} mt-5`}>Tu enlace<div className="mt-2 flex items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"><span className="px-3 text-sm font-bold text-slate-400">intaprd.com/p/</span><input value={form.username} onChange={(e)=>setForm({...form,username:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'')})} className="min-w-0 flex-1 bg-transparent px-1 py-4 text-sm font-black outline-none" placeholder="tuusuario"/></div></label><button onClick={()=>void saveUsername()} disabled={saving||!form.username} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">Guardar mi usuario</button></section>}
+    {!hasUsername&&<section className={section}><p className="text-[11px] font-black uppercase tracking-[.12em] text-cyan-700">Primer paso obligatorio</p><h2 className="mt-2 text-[30px] font-black leading-tight tracking-[-.03em]">Elige tu usuario</h2><p className="mt-2 text-[15px] leading-6 text-slate-500">Este será tu enlace permanente. Debes definirlo antes de editar las demás secciones.</p><label className="mt-5 block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Usuario</span><div className="mt-2 flex items-center rounded-2xl border border-amber-200 bg-white px-4 focus-within:border-cyan-400"><span className="text-sm font-bold text-slate-400">/p/</span><input value={form.username} onChange={e=>setForm({...form,username:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'')})} className="min-w-0 flex-1 bg-transparent px-1 py-3.5 text-base font-semibold outline-none" placeholder="tuusuario"/></div></label><button onClick={()=>void saveUsername()} disabled={saving||!form.username} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-40">Guardar mi usuario</button></section>}
 
     {hasUsername&&<>
-      <section className={section}><h2 className="text-xl font-black">Identidad</h2><div className="mt-4 grid gap-4 sm:grid-cols-2"><label className={label}>Nombre / negocio<input className={input} value={form.business_name||''} onChange={(e)=>setForm({...form,business_name:e.target.value})}/></label><label className={label}>Especialización o cargo<input className={input} value={form.specialization||''} onChange={(e)=>setForm({...form,specialization:e.target.value})}/></label></div><label className={`${label} mt-4`}>Qué hacemos<textarea className={`${input} min-h-24 resize-y`} maxLength={240} value={form.what_we_do||''} onChange={(e)=>setForm({...form,what_we_do:e.target.value})}/></label><div className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto]"><label className={label}>Foto de avatar<input type="file" accept="image/jpeg,image/png,image/webp" className={input} onChange={(e)=>chooseImage(e.target.files?.[0],'avatar')}/><span className="mt-2 block text-[11px] normal-case tracking-normal text-slate-400">{uploading==='avatar'?'Subiendo…':'Recomendado 800×800 px · se recorta y optimiza a WEBP antes de subir'}</span>{form.avatar_url&&<img src={form.avatar_url} alt="Avatar" className="mt-3 h-24 w-24 rounded-full object-cover"/>}</label><label className="flex items-end gap-2 pb-3 text-sm font-bold text-slate-600"><input type="checkbox" checked={form.show_avatar!==false} onChange={(e)=>setForm({...form,show_avatar:e.target.checked})}/> Mostrar avatar</label></div></section>
+      <section className={section}><h2 className="text-[30px] font-black leading-tight tracking-[-.03em]">Edita tu presentación</h2><p className="mt-2 text-[15px] leading-6 text-slate-500">Misma estructura de edición utilizada en Perfil Gratis.</p>
+        <div className="mt-6 flex items-center gap-4 rounded-2xl bg-amber-50/50 p-3"><div className="h-20 w-20 overflow-hidden rounded-full border border-slate-200 bg-slate-100">{form.avatar_url?<img src={form.avatar_url} alt="" className="h-full w-full object-cover"/>:<div className="grid h-full place-items-center text-3xl text-slate-400">👤</div>}</div><div className="flex-1"><p className="text-sm font-bold">Foto de perfil</p><button type="button" onClick={()=>avatarRef.current?.click()} disabled={Boolean(uploading)} className="mt-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold">{uploading==='avatar'?'Subiendo…':form.avatar_url?'Cambiar foto':'Subir foto'}</button><input ref={avatarRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';chooseImage(f,'avatar')}}/></div></div>
+        <div className="mt-4 rounded-2xl bg-amber-50/50 p-3"><div className="flex items-center justify-between"><div><p className="text-sm font-bold">Portada</p><p className="mt-1 text-xs text-slate-500">Imagen principal de tu presentación.</p></div><button type="button" onClick={()=>heroRef.current?.click()} disabled={Boolean(uploading)} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold">{form.hero_url?'Cambiar portada':'Subir portada'}</button></div><button type="button" onClick={()=>heroRef.current?.click()} className="mt-3 block aspect-video w-full overflow-hidden rounded-2xl border border-amber-200 bg-slate-100">{form.hero_url?<img src={form.hero_url} alt="Portada" className="h-full w-full object-cover"/>:<span className="grid h-full place-items-center text-sm font-bold text-slate-400">Agrega tu portada</span>}</button><input ref={heroRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';chooseImage(f,'hero')}}/></div>
+        <div className="mt-5 space-y-4"><label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Nombre</span><input className={field} value={form.business_name||''} onChange={e=>setForm({...form,business_name:e.target.value})}/></label><label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Cargo</span><input className={field} value={form.specialization||''} onChange={e=>setForm({...form,specialization:e.target.value})}/></label><label className="block rounded-2xl bg-white p-3"><span className="text-sm font-bold">Qué hacemos</span><textarea className={`${field} min-h-24 resize-y`} maxLength={240} value={form.what_we_do||''} onChange={e=>setForm({...form,what_we_do:e.target.value})}/></label><label className="flex items-center gap-2 px-3 text-sm font-bold text-slate-600"><input type="checkbox" checked={form.show_avatar!==false} onChange={e=>setForm({...form,show_avatar:e.target.checked})}/> Mostrar avatar</label></div>
+      </section>
 
-      <section className={section}><h2 className="text-xl font-black">Contáctame</h2><div className="mt-4 grid gap-4 sm:grid-cols-2"><label className={label}>WhatsApp<input className={input} value={form.whatsapp||''} onChange={(e)=>setForm({...form,whatsapp:e.target.value})}/></label><label className={label}>Teléfono<input className={input} value={form.phone||''} onChange={(e)=>setForm({...form,phone:e.target.value})}/></label><label className={label}>Instagram<input className={input} value={form.instagram||''} onChange={(e)=>setForm({...form,instagram:e.target.value})}/></label><label className={label}>Ubicación<input className={input} value={form.address||''} onChange={(e)=>setForm({...form,address:e.target.value})}/></label></div></section>
+      <section className={section}><h2 className="text-[30px] font-black leading-tight tracking-[-.03em]">Cómo pueden contactarte</h2><p className="mt-2 text-[15px] leading-6 text-slate-500">Los números dominicanos se guardan automáticamente con +1, igual que en Perfil Gratis.</p><div className="mt-6 space-y-4">{[['WhatsApp','whatsapp','809 123 4567','tel'],['Teléfono','phone','809 000 0000','tel'],['Instagram','instagram','@usuario','text']].map(([label,key,placeholder,type])=><label key={key} className="block rounded-2xl bg-amber-50/50 p-3"><span className="text-xs font-bold uppercase tracking-[.12em] text-slate-600">{label}</span><input type={type} value={form[key]||''} onChange={e=>setForm({...form,[key]:e.target.value})} placeholder={placeholder} className={field}/></label>)}</div></section>
 
-      <section className={section}><h2 className="text-xl font-black">Nuestro horario</h2><p className="mt-1 text-sm text-slate-500">Una sección sencilla para mostrar cuándo atiendes.</p><div className="mt-4 space-y-3">{(form.schedule||[]).map((item:any,index:number)=><div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><input className={input} value={item.day||''} onChange={(e)=>{const s=[...form.schedule];s[index]={...s[index],day:e.target.value};setForm({...form,schedule:s})}} placeholder="Lunes a Viernes"/><input className={input} value={item.hours||''} onChange={(e)=>{const s=[...form.schedule];s[index]={...s[index],hours:e.target.value};setForm({...form,schedule:s})}} placeholder="8:00 AM - 6:00 PM"/><button type="button" onClick={()=>setForm({...form,schedule:form.schedule.filter((_:any,i:number)=>i!==index)})} className="self-end rounded-xl border border-slate-200 px-3 py-3 text-xs font-black text-slate-500">Quitar</button></div>)}</div><button type="button" disabled={(form.schedule||[]).length>=7} onClick={()=>setForm({...form,schedule:[...(form.schedule||[]),{day:'',hours:''}].slice(0,7)})} className="mt-4 rounded-xl border border-slate-200 px-4 py-2 text-xs font-black disabled:opacity-40">Agregar horario</button></section>
+      <section className={section}><h2 className="text-[30px] font-black leading-tight tracking-[-.03em]">Ubicación</h2><p className="mt-2 text-[15px] leading-6 text-slate-500">Encuentra tu negocio o dirección sin salir del panel, confirma el punto en el mapa y guárdalo en tu perfil.</p><label className="mt-5 block text-xs font-black text-slate-600">Nombre del negocio o dirección<input value={form.address||''} onChange={e=>{setForm({...form,address:e.target.value,map_url:''});setSelectedLocation(false);setError('')}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();searchLocation()}}} placeholder="Ej. Ferretería Beato, Villa Consuelo" className={field}/></label><button type="button" onClick={searchLocation} className="mt-3 w-full rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-700">Buscar ubicación</button><div className="my-4 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[.12em] text-slate-300"><span className="h-px flex-1 bg-slate-200"/>o<span className="h-px flex-1 bg-slate-200"/></div><button type="button" onClick={useCurrentLocation} disabled={locating} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 disabled:opacity-50">{locating?'Buscando tu ubicación…':'Usar mi ubicación actual'}</button>{mapPreviewUrl&&<div className="mt-5"><div className="overflow-hidden rounded-[22px] border border-slate-200 bg-slate-100"><iframe title="Vista previa de ubicación" src={mapPreviewUrl} className="h-[290px] w-full border-0" loading="lazy" referrerPolicy="no-referrer-when-downgrade"/></div><p className="mt-3 text-xs leading-5 text-slate-500">Verifica que el mapa muestre el lugar correcto. Si no coincide, ajusta el nombre o la dirección y vuelve a buscar.</p>{!selectedLocation?<button type="button" onClick={usePreviewLocation} className="mt-3 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Usar esta ubicación</button>:<div className="mt-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">✓ Ubicación seleccionada</div>}</div>}</section>
 
-      <section className={section}><div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Galería</h2><p className="mt-1 text-sm text-slate-500">Hasta 10 imágenes. Cada imagen se previsualiza, reencuadra y optimiza antes de subir.</p></div><span className="text-xs font-black text-slate-400">{form.gallery.length}/10</span></div><label className={`${label} mt-4`}>Título editable<input className={input} value={form.gallery_title||'Catálogo'} onChange={(e)=>setForm({...form,gallery_title:e.target.value})} placeholder="Catálogo"/></label><label className={`${label} mt-4`}>Agregar imagen<input type="file" accept="image/jpeg,image/png,image/webp" className={input} disabled={form.gallery.length>=10||uploading==='gallery'} onChange={(e)=>chooseImage(e.target.files?.[0],'gallery')}/><span className="mt-2 block text-[11px] normal-case tracking-normal text-slate-400">{uploading==='gallery'?'Subiendo…':'Recomendado 1400×1050 px · salida WEBP 1400×1050'}</span></label><div className="mt-4 grid gap-3 sm:grid-cols-2">{form.gallery.map((item:any,index:number)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={item.url} alt="" className="h-32 w-full rounded-xl object-cover"/><input className={input} value={item.title||''} onChange={(e)=>{const g=[...form.gallery];g[index]={...g[index],title:e.target.value};setForm({...form,gallery:g})}} placeholder="Título de la imagen"/><button type="button" onClick={()=>setForm({...form,gallery:form.gallery.filter((_:any,i:number)=>i!==index)})} className="mt-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Quitar</button></div>)}</div></section>
+      <section className={section}><h2 className="text-xl font-black">Nuestro horario</h2><p className="mt-1 text-sm text-slate-500">Muestra cuándo atiendes.</p><div className="mt-4 space-y-3">{(form.schedule||[]).map((item:any,index:number)=><div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><input className={field} value={item.day||''} onChange={e=>{const s=[...form.schedule];s[index]={...s[index],day:e.target.value};setForm({...form,schedule:s})}}/><input className={field} value={item.hours||''} onChange={e=>{const s=[...form.schedule];s[index]={...s[index],hours:e.target.value};setForm({...form,schedule:s})}}/><button type="button" onClick={()=>setForm({...form,schedule:form.schedule.filter((_:any,i:number)=>i!==index)})} className="self-end rounded-xl border border-slate-200 px-3 py-3 text-xs font-black text-slate-500">Quitar</button></div>)}</div><button type="button" disabled={(form.schedule||[]).length>=7} onClick={()=>setForm({...form,schedule:[...(form.schedule||[]),{day:'',hours:''}].slice(0,7)})} className="mt-4 rounded-xl border border-slate-200 px-4 py-2 text-xs font-black disabled:opacity-40">Agregar horario</button></section>
 
-      <section className={section}><h2 className="text-xl font-black">Apariencia</h2><p className="mt-1 text-sm text-slate-500">La portada es estándar. Elige una combinación de color para tu presentación.</p><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{palettes.map(([id,name])=><button type="button" key={id} onClick={()=>setForm({...form,palette_id:id})} className={`rounded-2xl border px-3 py-3 text-xs font-black ${form.palette_id===id?'border-cyan-400 bg-cyan-50 text-cyan-800':'border-slate-200 bg-white text-slate-600'}`}>{name}</button>)}</div></section>
+      <section className={section}><div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Galería</h2><p className="mt-1 text-sm text-slate-500">Hasta 10 imágenes. Usa el mismo gestor de recorte y optimización del Perfil Gratis.</p></div><span className="text-xs font-black text-slate-400">{form.gallery.length}/10</span></div><label className="mt-4 block rounded-2xl bg-amber-50/50 p-3"><span className="text-sm font-bold">Título de la sección</span><input className={field} value={form.gallery_title||'Catálogo'} onChange={e=>setForm({...form,gallery_title:e.target.value})}/></label><button type="button" onClick={()=>galleryRef.current?.click()} disabled={form.gallery.length>=10||uploading==='gallery'} className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black disabled:opacity-40">{uploading==='gallery'?'Subiendo…':'Agregar imagen'}</button><input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';chooseImage(f,'gallery')}}/><div className="mt-4 grid gap-3 sm:grid-cols-2">{form.gallery.map((item:any,index:number)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={item.url} alt="" className="h-32 w-full rounded-xl object-cover"/><input className={field} value={item.title||''} onChange={e=>{const g=[...form.gallery];g[index]={...g[index],title:e.target.value};setForm({...form,gallery:g})}} placeholder="Título de la imagen"/><button type="button" onClick={()=>setForm({...form,gallery:form.gallery.filter((_:any,i:number)=>i!==index)})} className="mt-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Quitar</button></div>)}</div></section>
+
+      <section className={section}><h2 className="text-xl font-black">Apariencia</h2><p className="mt-1 text-sm text-slate-500">Elige una combinación de color para tu presentación.</p><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{palettes.map(([id,name])=><button type="button" key={id} onClick={()=>setForm({...form,palette_id:id})} className={`rounded-2xl border px-3 py-3 text-xs font-black ${form.palette_id===id?'border-cyan-400 bg-cyan-50 text-cyan-800':'border-slate-200 bg-white text-slate-600'}`}>{name}</button>)}</div></section>
 
       <section className={section}><div className="grid gap-3 sm:grid-cols-2"><button onClick={()=>void saveAll()} disabled={saving} className="rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{saving?'Guardando…':'Guardar cambios'}</button><button onClick={()=>void togglePublish()} disabled={saving} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-black text-slate-800">{data.status==='published'?'Volver a borrador':'Publicar presentación'}</button></div>{publicUrl&&<div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><button onClick={()=>window.open(publicUrl,'_blank')} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Ver perfil</button><button onClick={()=>void copy()} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Copiar enlace</button><button onClick={()=>void downloadQr()} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Descargar QR</button><button onClick={()=>navigator.share?.({url:publicUrl,title:form.business_name||'KawLink'}).catch(()=>undefined)} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Compartir</button></div>}</section>
-
       <section className="grid gap-3 pb-8 sm:grid-cols-2"><a href={SUPPORT_URL} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Soporte técnico</a><a href={SPONSOR_URL} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Convertirme en patrocinador</a></section>
     </>}
-    {pending&&<SponsoredImageEditor file={pending.file} title={pending.kind==='avatar'?'Ajustar foto de avatar':'Ajustar imagen de galería'} aspect={pending.kind==='avatar'?1:4/3} outputWidth={pending.kind==='avatar'?800:1400} outputHeight={pending.kind==='avatar'?800:1050} recommended={pending.kind==='avatar'?'Formato cuadrado · salida optimizada 800×800':'Formato 4:3 · salida optimizada 1400×1050'} onCancel={()=>setPending(null)} onConfirm={async(file,preview)=>{URL.revokeObjectURL(preview);const kind=pending.kind;setPending(null);await acceptOptimized(file,kind)}}/>}
+
+    {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:pending.kind==='hero'?16/9:4/3} outputWidth={pending.kind==='avatar'?400:pending.kind==='hero'?1200:1400} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await uploadImage(blob,kind)}} onCancel={()=>setPending(null)}/>} 
   </div></main>
 }
