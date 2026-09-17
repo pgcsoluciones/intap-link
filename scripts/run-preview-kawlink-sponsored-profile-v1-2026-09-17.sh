@@ -110,6 +110,8 @@ code="$(curl -sS -o "$LOG_DIR/sponsor-api-smoke.json" -w '%{http_code}' https://
 echo "✓ sponsored public endpoint inexistente -> HTTP $code"
 [ "$code" = "404" ] || fail "Endpoint patrocinado no respondió 404 controlado"
 
+# The runner creates LOG_DIR itself; remove it before asserting a clean tree.
+rm -rf "$LOG_DIR"
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "El runner dejó cambios locales"; }
 
 cat <<EOF
