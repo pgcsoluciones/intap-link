@@ -4,6 +4,7 @@ import { API_BASE, apiGet } from '../../lib/api'
 
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 const TEAM_CODE_KEY = 'kawvo_team_join_code'
+const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
 
 function readScanCode(): string {
   const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
@@ -15,6 +16,12 @@ function readTeamCode(): string {
   const value = sessionStorage.getItem(TEAM_CODE_KEY) || localStorage.getItem(TEAM_CODE_KEY) || ''
   const code = value.trim().toUpperCase()
   return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code) ? code : ''
+}
+
+function readSponsorMasterCode(): string {
+  const value = sessionStorage.getItem(SPONSOR_MASTER_CODE_KEY) || localStorage.getItem(SPONSOR_MASTER_CODE_KEY) || ''
+  const code = value.trim().toUpperCase()
+  return /^[A-Z2-9]{8,24}$/.test(code) ? code : ''
 }
 
 export default function AuthCallback() {
@@ -40,6 +47,12 @@ export default function AuthCallback() {
         const authMode = sessionStorage.getItem('kawvo_auth_mode') || localStorage.getItem('kawvo_auth_mode') || 'login'
         sessionStorage.removeItem('kawvo_auth_mode')
         localStorage.removeItem('kawvo_auth_mode')
+
+        const sponsorMasterCode = readSponsorMasterCode()
+        if (sponsorMasterCode) {
+          navigate(`/admin/sponsor/entry?public_code=${encodeURIComponent(sponsorMasterCode)}`, { replace: true })
+          return
+        }
 
         const scanCode = readScanCode()
         const teamCode = readTeamCode()
