@@ -51,12 +51,13 @@ export async function optimizeImageBlobForUpload(input: Blob | File, options: Op
     if (!context) throw new Error('No se pudo preparar la imagen.')
     context.drawImage(loaded.source, 0, 0, width, height)
 
-    const encode = (type: string) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality))
-    let output = await encode('image/webp')
+    const preserveAlpha = input.type === 'image/png' || input.type === 'image/webp'
+    const encode = (type: string, encodeQuality?: number) => new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, encodeQuality))
+    let output = await encode('image/webp', quality)
     let extension = 'webp'
     if (!output || output.type !== 'image/webp') {
-      output = await encode('image/jpeg')
-      extension = 'jpg'
+      output = preserveAlpha ? await encode('image/png') : await encode('image/jpeg', quality)
+      extension = preserveAlpha ? 'png' : 'jpg'
     }
     if (!output) throw new Error('No se pudo optimizar la imagen.')
 
