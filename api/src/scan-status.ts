@@ -72,8 +72,85 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
   const profileSlug = String((artifact as any).profile_slug || '').trim()
   const teamMemberId = String((artifact as any).team_member_id || '')
   const teamMemberUserId = String((artifact as any).team_member_user_id || '')
-  const currentUserId = teamMemberUserId ? await sessionUserId(c) : null
+  const currentUserId = await sessionUserId(c)
   const base = { public_code: publicCode, product_type: productType, label: productLabel(productType) }
+
+  // Sponsored Profile is isolated from Free/Team. A sponsor assignment takes precedence
+  // only for artifacts explicitly registered in sponsor_artifacts.
+  const sponsored = await c.env.DB.prepare(
+    `SELECT sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,sa.beneficiary_user_id,
+            sp.id AS sponsored_profile_id,sp.username,sp.status AS sponsored_profile_status,sp.user_id AS sponsored_user_id,
+            st.name AS sponsor_name,st.logo_url AS sponsor_logo_url,st.banner_title,st.sponsor_type,st.is_active AS sponsor_is_active
+       FROM sponsor_artifacts sa
+       JOIN sponsor_tenants st ON st.id=sa.sponsor_id
+       LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id
+      WHERE sa.artifact_id=? LIMIT 1`,
+  ).bind(artifactId).first().catch(() => null)
+
+  if (sponsored) {
+    const sponsorActive = Number((sponsored as any).sponsor_is_active) === 1
+    const artifactRole = String((sponsored as any).artifact_role || 'beneficiary')
+    const sponsorId = String((sponsored as any).sponsor_id || '')
+    const sponsor = {
+      id: sponsorId,
+      name: String((sponsored as any).sponsor_name || 'Patrocinador'),
+      logo_url: String((sponsored as any).sponsor_logo_url || ''),
+      banner_title: String((sponsored as any).banner_title || 'Impulsado por'),
+      type: String((sponsored as any).sponsor_type || 'merchant'),
+    }
+
+    if (artifactRole === 'master') {
+      const membership = currentUserId ? await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId, currentUserId).first() : null
+      return c.json({
+        ok: true,
+        state: membership ? 'sponsored_master' : 'sponsored_master_login',
+        artifact: base,
+        sponsor,
+        message: membership ? `Este es tu llavero Master · código ${publicCode}.` : 'Este llavero Master requiere iniciar sesión como patrocinador.',
+        manage_url: membership ? `${configuredAppUrl(c)}/admin/sponsor` : null,
+        login_url: membership ? null : `${configuredAppUrl(c)}/admin/login?resume_sponsor=1&public_code=${encodeURIComponent(publicCode)}`,
+      })
+    }
+
+    if (!sponsorActive) return c.json({ ok: true, state: 'blocked', artifact: base, message: 'Este patrocinio no está disponible actualmente.' })
+
+    const sponsoredStatus = String((sponsored as any).sponsor_artifact_status || '')
+    const sponsoredProfileStatus = String((sponsored as any).sponsored_profile_status || '')
+    const sponsoredUsername = String((sponsored as any).username || '')
+    const sponsoredUserId = String((sponsored as any).sponsored_user_id || (sponsored as any).beneficiary_user_id || '')
+
+    if (sponsoredStatus === 'activated') {
+      if (sponsoredProfileStatus === 'published' && sponsoredUsername) {
+        return c.json({ ok: true, state: 'activated', artifact: base, sponsor, next_url: `${configuredWebUrl(c)}/p/${encodeURIComponent(sponsoredUsername)}` })
+      }
+      const isOwner = Boolean(currentUserId && sponsoredUserId && currentUserId === sponsoredUserId)
+      return c.json({
+        ok: true,
+        state: isOwner ? 'sponsored_draft_owner' : 'sponsored_draft',
+        artifact: base,
+        sponsor,
+        message: isOwner ? 'Tu presentación patrocinada todavía está en construcción.' : 'Esta presentación todavía está en construcción.',
+        next_url: isOwner ? `${configuredAppUrl(c)}/admin/sponsored` : null,
+        login_url: isOwner ? null : `${configuredAppUrl(c)}/admin/login?resume_sponsored=1&public_code=${encodeURIComponent(publicCode)}`,
+      })
+    }
+
+    if (sponsoredStatus === 'inactive') return c.json({ ok: true, state: 'blocked', artifact: base, sponsor, message: 'Este producto patrocinado está inactivo.' })
+
+    const activationCode = await c.env.DB.prepare(
+      `SELECT id FROM artifact_activation_codes WHERE artifact_id=? AND status='active' AND (expires_at IS NULL OR expires_at>datetime('now')) ORDER BY created_at DESC,id DESC LIMIT 1`,
+    ).bind(artifactId).first()
+    if (!activationCode) return c.json({ ok: true, state: 'not_ready', artifact: base, sponsor, message: 'Este producto patrocinado todavía no está habilitado para activación.' })
+
+    return c.json({
+      ok: true,
+      state: 'sponsored_pending_activation',
+      artifact: base,
+      sponsor,
+      message: 'Impulsamos tu crecimiento digital. Activa ahora tu llavero y personaliza tu presentación.',
+      next_url: `${configuredAppUrl(c)}/admin/sponsored/activate?public_code=${encodeURIComponent(publicCode)}`,
+    })
+  }
 
   // Un producto Team ya vinculado nunca vuelve a mostrar activación.
   if (teamMemberId) {
@@ -92,15 +169,8 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
       ok: true,
       state: notAssigned ? 'team_unassigned' : (status === 'suspended' || !memberActive ? 'team_unavailable' : 'team_pending'),
       artifact: base,
-      team: {
-        id: String((artifact as any).team_id || ''),
-        name: String((artifact as any).team_name || (artifact as any).team_master_name || 'Team'),
-      },
-      message: notAssigned
-        ? 'Este dispositivo pertenece a un Team, pero todavía no tiene un perfil asignado.'
-        : status === 'suspended' || !memberActive
-          ? 'El perfil de este dispositivo no está disponible actualmente.'
-          : 'Este dispositivo pertenece a un Team y su perfil todavía no está publicado.',
+      team: { id: String((artifact as any).team_id || ''), name: String((artifact as any).team_name || (artifact as any).team_master_name || 'Team') },
+      message: notAssigned ? 'Este dispositivo pertenece a un Team, pero todavía no tiene un perfil asignado.' : status === 'suspended' || !memberActive ? 'El perfil de este dispositivo no está disponible actualmente.' : 'Este dispositivo pertenece a un Team y su perfil todavía no está publicado.',
       manage_url: canOpenTeam ? `${configuredAppUrl(c)}/admin/free/team` : null,
     })
   }
@@ -116,8 +186,7 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
     if (profileSlug && profileIsActive && !profileIsPublished) {
       const ownerUserId = String((artifact as any).owner_user_id || '')
       const profileUserId = String((artifact as any).profile_user_id || '')
-      const viewerId = await sessionUserId(c)
-      const isOwner = Boolean(viewerId && (viewerId === ownerUserId || viewerId === profileUserId))
+      const isOwner = Boolean(currentUserId && (currentUserId === ownerUserId || currentUserId === profileUserId))
       return c.json({
         ok: true,
         state: isOwner ? 'profile_draft_owner' : 'profile_draft',
@@ -131,24 +200,13 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
     return c.json({ ok: true, state: 'unavailable', artifact: base, message: 'El Perfil Digital vinculado a este producto no está disponible actualmente.' })
   }
 
-  if (status === 'suspended' || status === 'revoked') {
-    return c.json({ ok: true, state: 'blocked', artifact: base, message: 'Este producto no está disponible actualmente.' })
-  }
-
-  if ((artifact as any).owner_user_id || !['available', 'unassigned'].includes(status)) {
-    return c.json({ ok: true, state: 'unavailable', artifact: base, message: 'Este producto ya no está disponible para activación.' })
-  }
+  if (status === 'suspended' || status === 'revoked') return c.json({ ok: true, state: 'blocked', artifact: base, message: 'Este producto no está disponible actualmente.' })
+  if ((artifact as any).owner_user_id || !['available', 'unassigned'].includes(status)) return c.json({ ok: true, state: 'unavailable', artifact: base, message: 'Este producto ya no está disponible para activación.' })
 
   const activationCode = await c.env.DB.prepare(
-    `SELECT id FROM artifact_activation_codes
-      WHERE artifact_id = ? AND status = 'active' AND (expires_at IS NULL OR expires_at > datetime('now'))
-      ORDER BY created_at DESC, id DESC LIMIT 1`,
+    `SELECT id FROM artifact_activation_codes WHERE artifact_id = ? AND status = 'active' AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY created_at DESC, id DESC LIMIT 1`,
   ).bind(artifactId).first()
-
   if (!activationCode) return c.json({ ok: true, state: 'not_ready', artifact: base, message: 'Este producto todavía no está habilitado para activación.' })
-
-  // Todo producto nuevo conserva las tres opciones. El vínculo Team se decide
-  // al escanear y validar un código Team; no se bloquea previamente por reserva.
   return c.json({ ok: true, state: 'pending_activation', artifact: base })
 })
 
