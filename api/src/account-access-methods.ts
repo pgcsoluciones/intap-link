@@ -35,6 +35,15 @@ function credentialActionCookie(c: any, value: string, maxAge = 10 * 60) {
 function clearCredentialActionCookie(c: any) {
   return credentialActionCookie(c, '', 0)
 }
+function passwordResetCookieName(c: any) {
+  return isPreviewEnvironment(c.env) ? 'kawvo_preview_password_reset' : 'kawvo_password_reset'
+}
+function passwordResetCookie(c: any, value: string, maxAge = 10 * 60) {
+  return buildScopedCookie(c.env, appUrl(c), passwordResetCookieName(c), value, maxAge, '/api/v1/auth/password')
+}
+function clearPasswordResetCookie(c: any) {
+  return passwordResetCookie(c, '', 0)
+}
 async function passwordHash(password: string, saltHex: string) {
   const salt = new Uint8Array((saltHex.match(/.{1,2}/g) || []).map((part) => parseInt(part, 16)))
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
@@ -69,7 +78,7 @@ async function sendVerificationCode(c: any, to: string, code: string, purpose: s
   if (!c.env.RESEND_API_KEY) throw new Error('El envío de correo no está configurado.')
   const resend = new Resend(c.env.RESEND_API_KEY)
   const from = c.env.RESEND_FROM || 'onboarding@resend.dev'
-  const label = purpose === 'email_new' ? 'confirmar tu nuevo correo' : purpose === 'email_change' ? 'autorizar el cambio de correo' : 'autorizar el cambio de contraseña'
+  const label = purpose === 'email_new' ? 'confirmar tu nuevo correo' : purpose === 'email_change' ? 'autorizar el cambio de correo' : purpose === 'password_reset' ? 'restablecer tu contraseña Kawvo' : 'autorizar el cambio de contraseña'
   const result: any = await resend.emails.send({
     from, to,
     subject: `Código de verificación Kawvo: ${code}`,
@@ -111,10 +120,10 @@ async function verifyChallenge(c: any, userId: string, email: string, purpose: s
   await c.env.DB.prepare(`UPDATE account_verification_challenges SET consumed_at=datetime('now') WHERE id=?`).bind(id).run()
   return true
 }
-async function createVerifiedAction(c: any, userId: string, sessionId: string, purpose: string, targetEmail?: string) {
+async function createVerifiedAction(c: any, userId: string, sessionId: string | null, purpose: string, targetEmail?: string) {
   const raw = token(32)
   await c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE user_id=? AND purpose=? AND consumed_at IS NULL`).bind(userId,purpose).run()
-  await c.env.DB.prepare(`INSERT INTO account_verified_actions(id,user_id,session_id,purpose,token_hash,target_email,expires_at,created_at) VALUES(?,?,?,?,?,?,datetime('now','+10 minutes'),datetime('now'))`).bind(crypto.randomUUID(),userId,sessionId,purpose,await sha256Hex(raw),targetEmail || null).run()
+  await c.env.DB.prepare(`INSERT INTO account_verified_actions(id,user_id,session_id,purpose,token_hash,target_email,expires_at,created_at) VALUES(?,?,?,?,?,?,datetime('now','+10 minutes'),datetime('now'))`).bind(crypto.randomUUID(),userId,sessionId || null,purpose,await sha256Hex(raw),targetEmail || null).run()
   return raw
 }
 async function getVerifiedAction(c: any, userId: string, purpose: string) {
@@ -124,6 +133,12 @@ async function getVerifiedAction(c: any, userId: string, purpose: string) {
 }
 async function markVerifiedActionConsumed(c: any, actionId: string) {
   await c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE id=? AND consumed_at IS NULL`).bind(actionId).run()
+}
+
+async function getPasswordResetAction(c: any) {
+  const raw = parseCookie(c.req.header('Cookie') || '', passwordResetCookieName(c))
+  if (!raw) return null
+  return c.env.DB.prepare(`SELECT id,user_id,target_email FROM account_verified_actions WHERE purpose='password_reset' AND token_hash=? AND consumed_at IS NULL AND expires_at>datetime('now') ORDER BY created_at DESC LIMIT 1`).bind(await sha256Hex(raw)).first()
 }
 
 app.get('/api/v1/me/account/credentials', requireAccount, async (c: any) => {
@@ -192,6 +207,46 @@ app.post('/api/v1/me/account/email/change/confirm', requireAccount, async (c:any
   if (exists) return c.json({ok:false,error:'Ese correo ya está vinculado a otra cuenta.'},409)
   await c.env.DB.prepare(`UPDATE users SET email=? WHERE id=?`).bind(newEmail,userId).run()
   return c.json({ok:true,data:{email:newEmail}})
+})
+
+
+app.post('/api/v1/auth/password/reset/start', async (c:any) => {
+  let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
+  const email=String(body?.email||'').trim().toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ok:false,error:'Correo inválido.'},400)
+  const user=await c.env.DB.prepare(`SELECT id,email FROM users WHERE lower(email)=? LIMIT 1`).bind(email).first()
+  // Respuesta uniforme para no revelar si una cuenta existe.
+  if (!user) return c.json({ok:true,message:'Si el correo está registrado, recibirás un código de verificación.'})
+  const result=await createChallenge(c,String((user as any).id),String((user as any).email||email).toLowerCase(),'password_reset')
+  if (!result.ok && Number(result.status||500) >= 500) return c.json({ok:false,error:result.error},result.status||503)
+  return c.json({ok:true,message:'Si el correo está registrado, recibirás un código de verificación.'})
+})
+
+app.post('/api/v1/auth/password/reset/confirm', async (c:any) => {
+  let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
+  const email=String(body?.email||'').trim().toLowerCase(), code=String(body?.code||'').trim()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(code)) return c.json({ok:false,error:'Código inválido.'},400)
+  const user=await c.env.DB.prepare(`SELECT id,email FROM users WHERE lower(email)=? LIMIT 1`).bind(email).first()
+  if (!user) return c.json({ok:false,error:'Código incorrecto o expirado.'},400)
+  const userId=String((user as any).id), canonicalEmail=String((user as any).email||email).toLowerCase()
+  if (!(await verifyChallenge(c,userId,canonicalEmail,'password_reset',code))) return c.json({ok:false,error:'Código incorrecto o expirado.'},400)
+  const rawAction=await createVerifiedAction(c,userId,null,'password_reset',canonicalEmail)
+  return c.json({ok:true},200,{'Set-Cookie':passwordResetCookie(c,rawAction)})
+})
+
+app.post('/api/v1/auth/password/reset/complete', async (c:any) => {
+  let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
+  const password=String(body?.password||'')
+  if (password.length < 8 || password.length > 128) return c.json({ok:false,error:'La contraseña debe tener entre 8 y 128 caracteres.'},400)
+  const action=await getPasswordResetAction(c)
+  if (!action) return c.json({ok:false,error:'La verificación expiró. Solicita un nuevo código.'},403)
+  const userId=String((action as any).user_id), cred=await newPasswordRecord(password)
+  await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT INTO user_password_credentials(user_id,password_salt,password_hash,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,0,NULL,datetime('now'),datetime('now')) ON CONFLICT(user_id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,failed_attempts=0,locked_until=NULL,updated_at=datetime('now')`).bind(userId,cred.salt,cred.hash),
+    c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE id=? AND consumed_at IS NULL`).bind(String((action as any).id)),
+    c.env.DB.prepare(`UPDATE auth_sessions SET revoked_at=datetime('now') WHERE user_id=? AND revoked_at IS NULL`).bind(userId),
+  ])
+  return c.json({ok:true},200,{'Set-Cookie':clearPasswordResetCookie(c)})
 })
 
 app.post('/api/v1/auth/password/login', async (c:any) => {
