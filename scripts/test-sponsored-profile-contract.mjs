@@ -70,6 +70,13 @@ has(superAdminBrand,'Patrocinador puede modificar','resumen de permisos')
 has(superAdminLayout,"sponsorBrand: '/superadmin/sponsors/brand'",'navegación a marca patrocinador')
 has(app,'/superadmin/sponsors/brand','ruta de marca patrocinador')
 
+// Sponsor identity is central and must propagate to Master + all linked public profiles.
+has(superAdminBrand,"apiPatch(`/superadmin/sponsors/${selectedId}/brand`,nextForm)",'imagen Super Admin se aplica inmediatamente al tenant central')
+has(superAdminBrand,'no se guarda una copia independiente por cliente','UI comunica identidad centralizada')
+has(publicApi,'JOIN sponsor_tenants st ON st.id=sp.sponsor_id','perfiles públicos leen identidad central del patrocinador')
+has(core,'JOIN sponsor_tenants st ON st.id=sp.sponsor_id','editor patrocinado lee identidad central del patrocinador')
+if(/sponsored_profiles[^\n]*(?:banner_image_url|sponsor_logo_url)/i.test(core))throw new Error('La identidad del patrocinador no debe copiarse dentro del perfil patrocinado')
+
 // Shared image management must reuse the Free cropper + optimizer everywhere.
 has(beneficiary,'ImageCropModal','perfil patrocinado reutiliza cropper aprobado de Free')
 has(beneficiary,'optimizeImageBlobForUpload','perfil patrocinado reutiliza optimización aprobada de Free')
