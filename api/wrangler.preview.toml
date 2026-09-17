@@ -18,15 +18,20 @@ zone_name = "intaprd.com"
 # app.preview.intaprd.com sirve App Preview y preview.intaprd.com sirve Web Preview.
 # /api/* se resuelve aquí y el resto se sirve desde los Pages Preview aprobados.
 #
-# IMPORTANTE: estos origins son deployments inmutables de Pages. No usar el alias
-# de rama aquí: una combinación de HTML viejo + assets del deployment nuevo puede
-# provocar pantalla negra (JS/CSS respondiendo como text/html por el fallback SPA).
+# Regla de despliegue:
+# - El valor persistido aquí DEBE ser el alias estable de la rama Preview, nunca un
+#   deployment inmutable antiguo. Así un redeploy accidental del Worker no puede
+#   regresar la UI a una versión vieja.
+# - Los runners completos de Preview reemplazan temporalmente este valor por el
+#   origin inmutable recién desplegado y restauran el archivo al terminar.
+# - Los runners de secretos NO deben ejecutar `wrangler deploy` después de
+#   `wrangler secret put`; el secreto se actualiza sin reescribir el front door.
 
 [vars]
 ENVIRONMENT = "preview"
 WORKER_NAME = "intap-api-preview"
 APP_URL = "https://app.preview.intaprd.com"
-APP_PAGES_ORIGIN = "https://5dcc3bc4.intap-web2.pages.dev"
+APP_PAGES_ORIGIN = "https://feature-account-access-metho.intap-web2.pages.dev"
 WEB_PAGES_ORIGIN = "https://a076daa8.intap-web2.pages.dev"
 API_URL = "https://intap-api-preview.fliaprince.workers.dev"
 WEB_URL = "https://preview.intaprd.com"
