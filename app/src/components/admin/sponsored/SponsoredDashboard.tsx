@@ -122,6 +122,6 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
       <section aria-label="Soporte técnico" className="space-y-3 pb-8"><FreeSupportPanel/>{!isMaster&&<a href={SPONSOR_URL} target="_blank" rel="noreferrer" className="block rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Quiero ser patrocinador</a>}</section>
     </>}
 
-    {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:pending.kind==='hero'?16/9:4/3} outputWidth={pending.kind==='avatar'?400:pending.kind==='hero'?1200:1400} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await uploadImage(blob,kind)}} onCancel={()=>setPending(null)}/>} 
+    {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:pending.kind==='hero'?16/9:4/3} outputWidth={pending.kind==='avatar'?400:pending.kind==='hero'?1200:1400} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await uploadImage(blob,kind)}} onCancel={()=>setPending(null)}/>}
   </div></main>
 }
