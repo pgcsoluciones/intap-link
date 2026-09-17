@@ -8,7 +8,10 @@ app.post('/api/v1/superadmin/sponsors/:id/assign-artifacts',requireSuperAdmin('s
   const sponsor=await c.env.DB.prepare(`SELECT id FROM sponsor_tenants WHERE id=? LIMIT 1`).bind(sponsorId).first()
   if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
   const body=await c.req.json().catch(()=>({}))
-  const publicCodes=Array.isArray(body.public_codes)?Array.from(new Set(body.public_codes.map((v:any)=>clean(v,64).toUpperCase()).filter(Boolean))):[]
+  const rawCodes:string[]=Array.isArray(body.public_codes)
+    ? body.public_codes.map((v:any)=>clean(v,64).toUpperCase()).filter((v:string)=>Boolean(v))
+    : []
+  const publicCodes:string[]=Array.from(new Set<string>(rawCodes))
   if(!publicCodes.length)return c.json({ok:false,error:'Agrega al menos un código de producto.'},422)
   const batchId=crypto.randomUUID();const batchName=clean(body.batch_name,100)||`Lote ${new Date().toISOString().slice(0,10)}`
   const accepted:string[]=[];const rejected:Array<{code:string;reason:string}>=[]
