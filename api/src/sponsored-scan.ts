@@ -43,6 +43,16 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   const artifact={public_code:publicCode,product_type:productType,label:productLabel(productType)}
 
   if(String((row as any).artifact_role||'beneficiary')==='master'){
+    // El Master es también el enlace público permanente del patrocinador.
+    // Una vez que su perfil propio está publicado, cualquier escaneo abre ese perfil
+    // directamente; la gestión queda disponible desde la cuenta, no desde el NFC/QR público.
+    const publicOwnerProfile=await c.env.DB.prepare(`SELECT username,status FROM sponsored_profiles WHERE sponsor_id=? AND profile_role='sponsor_owner' ORDER BY created_at ASC LIMIT 1`).bind(sponsorId).first().catch(()=>null)
+    const ownerUsername=String((publicOwnerProfile as any)?.username||'')
+    const ownerStatus=String((publicOwnerProfile as any)?.status||'')
+    if(ownerStatus==='published'&&ownerUsername){
+      return c.json({ok:true,state:'sponsored_master_public',artifact,sponsor,next_url:`${configuredWebUrl(c)}/p/${encodeURIComponent(ownerUsername)}`})
+    }
+
     if(!currentUserId){
       return c.json({ok:true,state:'sponsored_master_login',artifact,sponsor,message:'Este es el llavero Master del patrocinador. Inicia sesión con el correo registrado para activarlo.',manage_url:null,login_url:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
     }
