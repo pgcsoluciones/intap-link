@@ -43,6 +43,13 @@ export default function SponsoredAccessEntry(){
         if(!alive)return
         if(!status?.ok){setError(status?.error||'No pudimos validar el llavero Master.');setBusy(false);return}
 
+        if(status.state==='sponsored_master_public'&&status.next_url){
+          sessionStorage.removeItem(MASTER_KEY)
+          localStorage.removeItem(MASTER_KEY)
+          window.location.replace(status.next_url)
+          return
+        }
+
         if(status.state==='sponsored_master_login'){
           setWrongAccount(true)
           setBusy(false)
