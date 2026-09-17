@@ -13,11 +13,12 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'promotions'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'promotions' | 'sponsors'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
+  { key: 'sponsors', label: 'Perfil patrocinado' },
   { key: 'demo', label: 'Resultados Demo' },
   { key: 'support', label: 'Soporte / tickets' },
   { key: 'resources', label: 'Recursos de usuarios' },
@@ -41,20 +42,13 @@ type SuperAdminLayoutProps = {
   children: ReactNode
 }
 
-export default function SuperAdminLayout({
-  currentSection = 'dashboard',
-  onNavigate,
-  onLogout,
-  children,
-}: SuperAdminLayoutProps) {
+export default function SuperAdminLayout({ currentSection = 'dashboard', onNavigate, onLogout, children }: SuperAdminLayoutProps) {
   const [supportCount, setSupportCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     apiGet('/superadmin/support-tickets')
-      .then((json: any) => {
-        if (!cancelled && json?.ok) setSupportCount(Number(json.data?.open_count || 0))
-      })
+      .then((json: any) => { if (!cancelled && json?.ok) setSupportCount(Number(json.data?.open_count || 0)) })
       .catch(() => undefined)
     return () => { cancelled = true }
   }, [currentSection])
@@ -62,6 +56,7 @@ export default function SuperAdminLayout({
   function navigate(section: SuperAdminNavSection) {
     const routes: Partial<Record<SuperAdminNavSection, string>> = {
       products: '/superadmin/products',
+      sponsors: '/superadmin/sponsors',
       support: '/superadmin/support',
       resources: '/superadmin/resources',
       feedback: '/superadmin/feedback',
