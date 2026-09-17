@@ -6,7 +6,7 @@ function parseArray(value:unknown){try{const parsed=JSON.parse(String(value||'[]
 function rowToProfile(row:any){
   return {
     id:row.id,username:row.username,business_name:row.business_name,specialization:row.specialization,what_we_do:row.what_we_do,
-    avatar_url:row.avatar_url,show_avatar:Number(row.show_avatar)===1,cover_variant:row.cover_variant||'standard',phone:row.phone,whatsapp:row.whatsapp,instagram:row.instagram,address:row.address,
+    avatar_url:row.avatar_url,hero_url:row.hero_url,map_url:row.map_url,show_avatar:Number(row.show_avatar)===1,cover_variant:row.cover_variant||'standard',phone:row.phone,whatsapp:row.whatsapp,instagram:row.instagram,address:row.address,
     schedule:parseArray(row.schedule_json),gallery:parseArray(row.gallery_json),gallery_title:row.gallery_title||'Catálogo',palette_id:row.palette_id||'blue',status:row.status,
     modules:parseArray(row.modules_json),
     sponsor:{id:row.sponsor_id,name:row.sponsor_name,type:row.sponsor_type,logo_url:row.sponsor_logo_url,banner_title:row.banner_title||'Impulsado por',banner_image_url:row.banner_image_url,banner_cta_label:row.banner_cta_label||'Conocer más',banner_cta_type:row.banner_cta_type||'none',banner_cta_value:row.banner_cta_value,whatsapp_message_template:row.whatsapp_message_template,website_url:row.sponsor_website_url,contact_whatsapp:row.sponsor_contact_whatsapp}
