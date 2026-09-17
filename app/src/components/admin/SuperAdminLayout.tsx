@@ -13,12 +13,13 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'promotions' | 'sponsors'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'resources' | 'promotions' | 'sponsors' | 'sponsorBrand'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'subscribers', label: 'Suscriptores' },
   { key: 'sponsors', label: 'Perfil patrocinado' },
+  { key: 'sponsorBrand', label: 'Marca patrocinador' },
   { key: 'demo', label: 'Resultados Demo' },
   { key: 'support', label: 'Soporte / tickets' },
   { key: 'resources', label: 'Recursos de usuarios' },
@@ -64,6 +65,7 @@ export default function SuperAdminLayout({
     const routes: Partial<Record<SuperAdminNavSection, string>> = {
       products: '/superadmin/products',
       sponsors: '/superadmin/sponsors',
+      sponsorBrand: '/superadmin/sponsors/brand',
       support: '/superadmin/support',
       resources: '/superadmin/resources',
       feedback: '/superadmin/feedback',
