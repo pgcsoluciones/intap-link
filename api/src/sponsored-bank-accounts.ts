@@ -1,6 +1,8 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 
+const MAX_ACTIVE_BANK_ACCOUNTS=3
+
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));return match?decodeURIComponent(match[1]):null}
 async function sessionUserId(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return null;const row=await c.env.DB.prepare(`SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first();return row?String((row as any).user_id||''):null}
@@ -10,16 +12,16 @@ async function ownedProfile(c:any,userId:string){return c.env.DB.prepare(`SELECT
 async function bankEnabled(c:any,sponsorId:string){const row=await c.env.DB.prepare(`SELECT enabled FROM sponsor_module_grants WHERE sponsor_id=? AND module_code='bank_accounts' LIMIT 1`).bind(sponsorId).first();return Number((row as any)?.enabled||0)===1}
 
 app.get('/api/v1/me/sponsored-profile/bank-accounts',requireUser,async(c:any)=>{
-  const profile=await ownedProfile(c,String(c.get('userId')||''));if(!profile)return c.json({ok:true,data:{enabled:false,items:[]}})
-  const enabled=await bankEnabled(c,String((profile as any).sponsor_id));if(!enabled)return c.json({ok:true,data:{enabled:false,items:[]}})
+  const profile=await ownedProfile(c,String(c.get('userId')||''));if(!profile)return c.json({ok:true,data:{enabled:false,items:[],max_active:MAX_ACTIVE_BANK_ACCOUNTS}})
+  const enabled=await bankEnabled(c,String((profile as any).sponsor_id));if(!enabled)return c.json({ok:true,data:{enabled:false,items:[],max_active:MAX_ACTIVE_BANK_ACCOUNTS}})
   const rows=await c.env.DB.prepare(`SELECT id,bank_name,account_number,account_type,currency,holder_name,sort_order FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1 ORDER BY sort_order ASC,created_at ASC`).bind(String((profile as any).id)).all()
-  return c.json({ok:true,data:{enabled:true,items:rows.results||[]}})
+  return c.json({ok:true,data:{enabled:true,items:rows.results||[],max_active:MAX_ACTIVE_BANK_ACCOUNTS}})
 })
 
 app.post('/api/v1/me/sponsored-profile/bank-accounts',requireUser,async(c:any)=>{
   const profile=await ownedProfile(c,String(c.get('userId')||''));if(!profile)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
   if(!(await bankEnabled(c,String((profile as any).sponsor_id))))return c.json({ok:false,error:'Este módulo no está habilitado para tu patrocinio.'},403)
-  const count=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1`).bind(String((profile as any).id)).first();if(Number((count as any)?.n||0)>=5)return c.json({ok:false,error:'Puedes registrar hasta 5 cuentas bancarias.'},409)
+  const count=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1`).bind(String((profile as any).id)).first();if(Number((count as any)?.n||0)>=MAX_ACTIVE_BANK_ACCOUNTS)return c.json({ok:false,error:`Puedes mantener hasta ${MAX_ACTIVE_BANK_ACCOUNTS} cuentas bancarias activas.`},409)
   const body=await c.req.json().catch(()=>({}));const bankName=clean(body.bank_name,100);const accountNumber=clean(body.account_number,60);const holderName=clean(body.holder_name,120);const accountType=body.account_type==='checking'?'checking':'savings';const currency=body.currency==='USD'?'USD':'DOP'
   if(!bankName||!accountNumber||!holderName)return c.json({ok:false,error:'Banco, número de cuenta y titular son requeridos.'},422)
   const id=crypto.randomUUID();await c.env.DB.prepare(`INSERT INTO sponsored_bank_accounts(id,sponsored_profile_id,bank_name,account_number,account_type,currency,holder_name,sort_order) VALUES(?,?,?,?,?,?,?,?)`).bind(id,String((profile as any).id),bankName,accountNumber,accountType,currency,holderName,Number(body.sort_order||0)).run()
@@ -42,8 +44,8 @@ app.delete('/api/v1/me/sponsored-profile/bank-accounts/:id',requireUser,async(c:
 
 app.get('/api/v1/public/sponsored/:username/bank-accounts',async(c:any)=>{
   const username=clean(c.req.param('username'),40).toLowerCase();const profile=await c.env.DB.prepare(`SELECT sp.id,sp.sponsor_id FROM sponsored_profiles sp WHERE sp.username=? AND sp.status='published' LIMIT 1`).bind(username).first();if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
-  if(!(await bankEnabled(c,String((profile as any).sponsor_id))))return c.json({ok:true,data:{enabled:false,items:[]}})
-  const rows=await c.env.DB.prepare(`SELECT id,bank_name,account_number,account_type,currency,holder_name,sort_order FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1 ORDER BY sort_order ASC,created_at ASC`).bind(String((profile as any).id)).all();return c.json({ok:true,data:{enabled:true,items:rows.results||[]}})
+  if(!(await bankEnabled(c,String((profile as any).sponsor_id))))return c.json({ok:true,data:{enabled:false,items:[],max_active:MAX_ACTIVE_BANK_ACCOUNTS}})
+  const rows=await c.env.DB.prepare(`SELECT id,bank_name,account_number,account_type,currency,holder_name,sort_order FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1 ORDER BY sort_order ASC,created_at ASC`).bind(String((profile as any).id)).all();return c.json({ok:true,data:{enabled:true,items:rows.results||[],max_active:MAX_ACTIVE_BANK_ACCOUNTS}})
 })
 
 export default app
