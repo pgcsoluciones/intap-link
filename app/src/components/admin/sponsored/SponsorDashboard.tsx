@@ -1,102 +1,34 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE, apiGet, apiPatch } from '../../../lib/api'
-import SponsoredImageEditor from './SponsoredImageEditor'
+import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
+import ImageCropModal from '../ImageCropModal'
 import SponsoredDashboard from './SponsoredDashboard'
 
 type PendingImage={file:File;kind:'logo'|'banner'}|null
 type Tab='profile'|'brand'|'codes'
 
 export default function SponsorDashboard(){
-  const[tenant,setTenant]=useState<any>(null)
-  const[items,setItems]=useState<any[]>([])
-  const[loading,setLoading]=useState(true)
-  const[saving,setSaving]=useState(false)
-  const[uploading,setUploading]=useState('')
-  const[pending,setPending]=useState<PendingImage>(null)
-  const[message,setMessage]=useState('')
-  const[error,setError]=useState('')
-  const[form,setForm]=useState<any>({logo_url:'',banner_image_url:''})
-  const[tab,setTab]=useState<Tab>('profile')
-  const[query,setQuery]=useState('')
-  const[statusFilter,setStatusFilter]=useState('all')
-
-  async function load(){
-    setLoading(true);setError('')
-    try{
-      const[me,list]:any[]=await Promise.all([apiGet('/sponsor/me'),apiGet('/sponsor/artifacts')])
-      if(!me?.ok)throw new Error(me?.error||'No pudimos abrir el patrocinador.')
-      setTenant(me.data)
-      if(me.data)setForm({logo_url:me.data.logo_url||'',banner_image_url:me.data.banner_image_url||''})
-      if(list?.ok)setItems(Array.isArray(list.data)?list.data:[])
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos abrir el patrocinador.')}
-    finally{setLoading(false)}
-  }
+  const logoRef=useRef<HTMLInputElement>(null),bannerRef=useRef<HTMLInputElement>(null)
+  const[tenant,setTenant]=useState<any>(null),[items,setItems]=useState<any[]>([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[uploading,setUploading]=useState(''),[pending,setPending]=useState<PendingImage>(null),[message,setMessage]=useState(''),[error,setError]=useState(''),[form,setForm]=useState<any>({logo_url:'',banner_image_url:''}),[tab,setTab]=useState<Tab>('profile'),[query,setQuery]=useState(''),[statusFilter,setStatusFilter]=useState('all')
+  async function load(){setLoading(true);setError('');try{const[me,list]:any[]=await Promise.all([apiGet('/sponsor/me'),apiGet('/sponsor/artifacts')]);if(!me?.ok)throw new Error(me?.error||'No pudimos abrir el patrocinador.');setTenant(me.data);if(me.data)setForm({logo_url:me.data.logo_url||'',banner_image_url:me.data.banner_image_url||''});if(list?.ok)setItems(Array.isArray(list.data)?list.data:[])}catch(e){setError(e instanceof Error?e.message:'No pudimos abrir el patrocinador.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
-
   const beneficiaryItems=useMemo(()=>items.filter(i=>i.artifact_role!=='master'),[items])
-  const stats=useMemo(()=>({
-    total:beneficiaryItems.length,
-    active:beneficiaryItems.filter(i=>i.status==='activated').length,
-    pending:beneficiaryItems.filter(i=>i.status==='available').length,
-    published:beneficiaryItems.filter(i=>i.profile_status==='published').length,
-  }),[beneficiaryItems])
-  const filtered=useMemo(()=>beneficiaryItems.filter((item:any)=>{
-    const hay=[item.public_code,item.product_type,item.business_name,item.username,item.batch_name,item.city,item.zone].filter(Boolean).join(' ').toLowerCase()
-    const matchesQuery=!query.trim()||hay.includes(query.trim().toLowerCase())
-    const matchesStatus=statusFilter==='all'||(statusFilter==='published'?item.profile_status==='published':item.status===statusFilter)
-    return matchesQuery&&matchesStatus
-  }),[beneficiaryItems,query,statusFilter])
+  const stats=useMemo(()=>({total:beneficiaryItems.length,active:beneficiaryItems.filter(i=>i.status==='activated').length,pending:beneficiaryItems.filter(i=>i.status==='available').length,published:beneficiaryItems.filter(i=>i.profile_status==='published').length}),[beneficiaryItems])
+  const filtered=useMemo(()=>beneficiaryItems.filter((item:any)=>{const hay=[item.public_code,item.product_type,item.business_name,item.username,item.batch_name,item.city,item.zone].filter(Boolean).join(' ').toLowerCase();const matchesQuery=!query.trim()||hay.includes(query.trim().toLowerCase());const matchesStatus=statusFilter==='all'||(statusFilter==='published'?item.profile_status==='published':item.status===statusFilter);return matchesQuery&&matchesStatus}),[beneficiaryItems,query,statusFilter])
   const master=useMemo(()=>items.find(i=>i.artifact_role==='master')||null,[items])
-
-  function choose(file:File|undefined,kind:'logo'|'banner'){
-    if(!file)return
-    if(file.size>12*1024*1024){setError('La imagen original supera 12 MB. Elige una más liviana.');return}
-    setError('');setMessage('');setPending({file,kind})
-  }
-
-  async function upload(file:File,kind:'logo'|'banner'){
-    setUploading(kind);setError('');setMessage('')
-    try{
-      const fd=new FormData();fd.append('file',file)
-      const res=await fetch(`${API_BASE}/sponsor/media?kind=${kind}`,{method:'POST',credentials:'include',body:fd})
-      const json:any=await res.json().catch(()=>null)
-      if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.')
-      setForm((v:any)=>({...v,[kind==='logo'?'logo_url':'banner_image_url']:json.url}))
-      setMessage(kind==='logo'?'Logo optimizado y listo para guardar.':'Banner optimizado y listo para guardar.')
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos subir la imagen.')}
-    finally{setUploading('')}
-  }
-
-  async function save(){
-    setSaving(true);setMessage('');setError('')
-    try{
-      const json:any=await apiPatch('/sponsor/settings',{logo_url:form.logo_url,banner_image_url:form.banner_image_url})
-      if(!json?.ok)throw new Error(json?.error||'No pudimos guardar la imagen del patrocinio.')
-      setMessage('Imagen del patrocinio actualizada. Los enlaces y CTA permanecen protegidos.')
-      await load()
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar.')}
-    finally{setSaving(false)}
-  }
-
+  function choose(file:File|undefined,kind:'logo'|'banner'){if(!file)return;if(file.size>12*1024*1024){setError('La imagen original supera 12 MB. Elige una más liviana.');return}setError('');setMessage('');setPending({file,kind})}
+  async function uploadBlob(blob:Blob,kind:'logo'|'banner'){setUploading(kind);setError('');setMessage('');try{const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='logo'?1024:1600,quality:.82,baseName:kind});const fd=new FormData();fd.append('file',optimized,optimized.name);const res=await fetch(`${API_BASE}/sponsor/media?kind=${kind}`,{method:'POST',credentials:'include',body:fd});const json:any=await res.json().catch(()=>null);if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.');setForm((v:any)=>({...v,[kind==='logo'?'logo_url':'banner_image_url']:json.url}));setMessage(kind==='logo'?'Logo optimizado y listo para guardar.':'Banner optimizado y listo para guardar.')}catch(e){setError(e instanceof Error?e.message:'No pudimos subir la imagen.')}finally{setUploading('')}}
+  async function save(){setSaving(true);setMessage('');setError('');try{const json:any=await apiPatch('/sponsor/settings',{logo_url:form.logo_url,banner_image_url:form.banner_image_url});if(!json?.ok)throw new Error(json?.error||'No pudimos guardar la imagen del patrocinio.');setMessage('Imagen del patrocinio actualizada. Los enlaces y CTA permanecen protegidos.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar.')}finally{setSaving(false)}}
   if(loading)return<main className="min-h-screen bg-[#f7f9fc]"/>
   if(!tenant)return<main className="min-h-screen bg-[#f7f9fc] px-5 py-10 font-['Inter']"><div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6"><h1 className="text-2xl font-black">Panel patrocinador</h1><p className="mt-2 text-slate-500">{error||'Tu cuenta no tiene un módulo de patrocinio activo.'}</p></div></main>
-
   const input='mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'
-  const label='block text-xs font-black uppercase tracking-[.08em] text-slate-500'
   const tabClass=(name:Tab)=>`rounded-2xl px-4 py-3 text-sm font-black ${tab===name?'bg-slate-950 text-white':'border border-slate-200 bg-white text-slate-600'}`
-
   return<main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[1100px] space-y-5">
     <header className="rounded-[28px] border border-slate-200 bg-white p-6"><div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-600">MÓDULO PATROCINIO</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{tenant.name}</h1><p className="mt-1 text-sm text-slate-500">Tu perfil ejemplo, identidad de patrocinio y gestión completa de los códigos patrocinados.</p></div>{master&&<div className="rounded-2xl bg-cyan-50 px-4 py-3 text-sm"><p className="text-[10px] font-black uppercase tracking-[.12em] text-cyan-700">Master</p><p className="mt-1 font-black text-slate-800">{master.public_code}</p></div>}</div><nav className="mt-5 flex flex-wrap gap-2"><button onClick={()=>setTab('profile')} className={tabClass('profile')}>Mi presentación</button><button onClick={()=>setTab('brand')} className={tabClass('brand')}>Identidad de patrocinio</button><button onClick={()=>setTab('codes')} className={tabClass('codes')}>Códigos y trazabilidad</button></nav></header>
-
-    {message&&<p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}
-    {error&&<p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">{error}</p>}
-
-    {tab==='profile'&&<section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white"><div className="border-b border-slate-100 px-6 py-5"><h2 className="text-xl font-black">Mi perfil patrocinado de ejemplo</h2><p className="mt-1 text-sm leading-6 text-slate-500">Este perfil usa la misma experiencia que reciben tus clientes. Complétalo para que puedas mostrarles un ejemplo real. Publicarlo es opcional y no limita la gestión de tus códigos.</p></div><SponsoredDashboard/></section>}
-
-    {tab==='brand'&&<section className="rounded-[26px] border border-slate-200 bg-white p-5"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-xl font-black">Identidad de patrocinio</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Puedes actualizar únicamente el logo y la imagen del banner. Antes de subirlos podrás ajustarlos y el sistema los optimizará automáticamente.</p></div><span className="w-fit rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-800">Control visual</span></div><div className="mt-5 grid gap-5 sm:grid-cols-2"><label className={label}>Logo<input type="file" accept="image/jpeg,image/png,image/webp" className={input} onChange={e=>choose(e.target.files?.[0],'logo')}/><span className="mt-2 block text-[11px] normal-case tracking-normal text-slate-400">Recomendado 800×800 px o mayor · salida WEBP 1024×1024 · original hasta 12 MB</span>{form.logo_url&&<div className="mt-3 flex h-28 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={form.logo_url} alt="Vista previa del logo" className="max-h-full max-w-full object-contain"/></div>}</label><label className={label}>Banner<input type="file" accept="image/jpeg,image/png,image/webp" className={input} onChange={e=>choose(e.target.files?.[0],'banner')}/><span className="mt-2 block text-[11px] normal-case tracking-normal text-slate-400">Recomendado 1600×500 px · salida WEBP 1600×500 · original hasta 12 MB</span>{form.banner_image_url&&<img src={form.banner_image_url} alt="Vista previa del banner" className="mt-3 h-32 w-full rounded-2xl object-cover"/>}</label></div><div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm leading-6 text-emerald-900"><strong>Optimización automática:</strong> la imagen se recorta, reencuadra, redimensiona y convierte a WEBP antes de subirla.</div><div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2"><div><p className="text-[11px] font-black uppercase tracking-[.08em] text-slate-400">CTA administrado</p><p className="mt-1 text-sm font-bold text-slate-700">{tenant.banner_cta_label||'Conocer más'}</p></div><div><p className="text-[11px] font-black uppercase tracking-[.08em] text-slate-400">Destino</p><p className="mt-1 text-sm font-bold text-slate-700">Configurado por KawLink</p></div></div><button onClick={()=>void save()} disabled={saving||Boolean(uploading)} className="mt-5 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-40">{saving?'Guardando…':'Guardar imagen de patrocinio'}</button></section>}
-
-    {tab==='codes'&&<><section className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Comprados',stats.total],['Activos',stats.active],['Pendientes',stats.pending],['Publicados',stats.published]].map(([labelText,value])=><div key={String(labelText)} className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-black uppercase tracking-[.08em] text-slate-400">{labelText}</p><p className="mt-2 text-3xl font-black">{value}</p></div>)}</section><section className="rounded-[26px] border border-slate-200 bg-white p-5"><div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"><div><h2 className="text-xl font-black">Códigos patrocinados</h2><p className="mt-1 text-sm text-slate-500">Consulta el estado de cada producto, cliente asociado, perfil publicado y lote de origen.</p></div><div className="grid gap-2 sm:grid-cols-2"><input className={input} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar código, cliente, lote..."/><select className={input} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">Todos los estados</option><option value="available">Pendientes</option><option value="activated">Activados</option><option value="published">Perfil publicado</option></select></div></div><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[860px] border-collapse text-left text-sm"><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-[.08em] text-slate-400"><th className="py-3 pr-3">Código</th><th className="py-3 pr-3">Producto</th><th className="py-3 pr-3">Estado</th><th className="py-3 pr-3">Cliente</th><th className="py-3 pr-3">Perfil</th><th className="py-3 pr-3">Activado</th><th className="py-3">Lote / zona</th></tr></thead><tbody>{filtered.map(item=><tr key={item.public_code} className="border-b border-slate-100"><td className="py-3 pr-3 font-black">{item.public_code}</td><td className="py-3 pr-3">{item.product_type}</td><td className="py-3 pr-3"><span className={`rounded-full px-2 py-1 text-xs font-black ${item.status==='activated'?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}`}>{item.status==='activated'?'Activado':'Pendiente'}</span></td><td className="py-3 pr-3">{item.business_name||'—'}</td><td className="py-3 pr-3">{item.username?<a className="font-bold text-cyan-700 underline" href={`/p/${item.username}`} target="_blank" rel="noreferrer">/p/{item.username}</a>:item.profile_status||'—'}</td><td className="py-3 pr-3">{item.activated_at?new Date(item.activated_at).toLocaleDateString():'—'}</td><td className="py-3">{[item.batch_name,item.city,item.zone].filter(Boolean).join(' · ')||'—'}</td></tr>)}</tbody></table>{filtered.length===0&&<p className="py-8 text-center text-sm text-slate-400">No hay códigos que coincidan con este filtro.</p>}</div></section></>}
-
-    {pending&&<SponsoredImageEditor file={pending.file} title={pending.kind==='logo'?'Ajustar logo':'Ajustar banner'} aspect={pending.kind==='logo'?1:3.2} outputWidth={pending.kind==='logo'?1024:1600} outputHeight={pending.kind==='logo'?1024:500} recommended={pending.kind==='logo'?'Formato cuadrado · recomendado 800×800 px o mayor':'Formato horizontal · recomendado 1600×500 px'} onCancel={()=>setPending(null)} onConfirm={async(file,preview)=>{URL.revokeObjectURL(preview);const kind=pending.kind;setPending(null);await upload(file,kind)}}/>}
+    {message&&<p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}{error&&<p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">{error}</p>}
+    {tab==='profile'&&<section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white"><div className="border-b border-slate-100 px-6 py-5"><h2 className="text-xl font-black">Mi perfil patrocinado de ejemplo</h2><p className="mt-1 text-sm leading-6 text-slate-500">Este perfil usa la misma experiencia que reciben tus clientes. Complétalo para mostrarles un ejemplo real.</p></div><SponsoredDashboard/></section>}
+    {tab==='brand'&&<section className="rounded-[26px] border border-slate-200 bg-white p-5"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><h2 className="text-xl font-black">Identidad de patrocinio</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Logo y banner usan el mismo gestor de imagen aprobado del Perfil Gratis. CTA y destino permanecen protegidos.</p></div><span className="w-fit rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-800">Control visual</span></div><div className="mt-5 grid gap-5 sm:grid-cols-2"><div><p className="text-xs font-black uppercase tracking-[.08em] text-slate-500">Logo</p><button type="button" onClick={()=>logoRef.current?.click()} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold">{form.logo_url?'Cambiar logo':'Subir logo'}</button><input ref={logoRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';choose(f,'logo')}}/>{form.logo_url&&<div className="mt-3 flex h-28 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={form.logo_url} alt="Logo" className="max-h-full max-w-full object-contain"/></div>}</div><div><p className="text-xs font-black uppercase tracking-[.08em] text-slate-500">Banner</p><button type="button" onClick={()=>bannerRef.current?.click()} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold">{form.banner_image_url?'Cambiar banner':'Subir banner'}</button><input ref={bannerRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';choose(f,'banner')}}/>{form.banner_image_url&&<img src={form.banner_image_url} alt="Banner" className="mt-3 h-32 w-full rounded-2xl object-cover"/>}</div></div><div className="mt-5 grid gap-3 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2"><div><p className="text-[11px] font-black uppercase tracking-[.08em] text-slate-400">CTA administrado</p><p className="mt-1 text-sm font-bold text-slate-700">{tenant.banner_cta_label||'Conocer más'}</p></div><div><p className="text-[11px] font-black uppercase tracking-[.08em] text-slate-400">Destino</p><p className="mt-1 text-sm font-bold text-slate-700">Configurado por KawLink</p></div></div><button onClick={()=>void save()} disabled={saving||Boolean(uploading)} className="mt-5 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-40">{saving?'Guardando…':'Guardar imagen de patrocinio'}</button></section>}
+    {tab==='codes'&&<><section className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Comprados',stats.total],['Activos',stats.active],['Pendientes',stats.pending],['Publicados',stats.published]].map(([labelText,value])=><div key={String(labelText)} className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-black uppercase tracking-[.08em] text-slate-400">{labelText}</p><p className="mt-2 text-3xl font-black">{value}</p></div>)}</section><section className="rounded-[26px] border border-slate-200 bg-white p-5"><div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"><div><h2 className="text-xl font-black">Códigos patrocinados</h2><p className="mt-1 text-sm text-slate-500">Consulta estado, cliente, perfil y lote de origen.</p></div><div className="grid gap-2 sm:grid-cols-2"><input className={input} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar código, cliente, lote..."/><select className={input} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="all">Todos los estados</option><option value="available">Pendientes</option><option value="activated">Activados</option><option value="published">Perfil publicado</option></select></div></div><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[860px] border-collapse text-left text-sm"><thead><tr className="border-b border-slate-200 text-xs uppercase tracking-[.08em] text-slate-400"><th className="py-3 pr-3">Código</th><th className="py-3 pr-3">Producto</th><th className="py-3 pr-3">Estado</th><th className="py-3 pr-3">Cliente</th><th className="py-3 pr-3">Perfil</th><th className="py-3 pr-3">Activado</th><th className="py-3">Lote / zona</th></tr></thead><tbody>{filtered.map(item=><tr key={item.public_code} className="border-b border-slate-100"><td className="py-3 pr-3 font-black">{item.public_code}</td><td className="py-3 pr-3">{item.product_type}</td><td className="py-3 pr-3">{item.status==='activated'?'Activado':'Pendiente'}</td><td className="py-3 pr-3">{item.business_name||'—'}</td><td className="py-3 pr-3">{item.username?`/p/${item.username}`:item.profile_status||'—'}</td><td className="py-3 pr-3">{item.activated_at?new Date(item.activated_at).toLocaleDateString():'—'}</td><td className="py-3">{[item.batch_name,item.city,item.zone].filter(Boolean).join(' · ')||'—'}</td></tr>)}</tbody></table>{filtered.length===0&&<p className="py-8 text-center text-sm text-slate-400">No hay códigos que coincidan con este filtro.</p>}</div></section></>}
+    {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='logo'?1:3.2} outputWidth={pending.kind==='logo'?1024:1600} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await uploadBlob(blob,kind)}} onCancel={()=>setPending(null)}/>} 
   </div></main>
 }
