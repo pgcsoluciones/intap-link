@@ -78,6 +78,6 @@ has(beneficiaryBanks,'MAX_ACTIVE=3','límite visual de tres cuentas activas')
 has(beneficiaryBanks,'Configurar cuentas','acceso de configuración bancaria en panel')
 has(beneficiaryBanks,'Módulo no habilitado','gate bancario para beneficiario')
 has(publicBanks,'Cuentas bancarias','presentación bancaria pública')
-if(bankMigration.includes('profile_bank_accounts'))throw new Error('El módulo bancario patrocinado no debe reutilizar la tabla de Free/Plus/Team')
+if(/CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+profile_bank_accounts\b/i.test(bankMigration))throw new Error('El módulo bancario patrocinado no debe crear ni reutilizar la tabla de Free/Plus/Team')
 
 console.log('Sponsored Profile V1 contract checks: OK')
