@@ -11,7 +11,7 @@ function assetUrl(c:any,key:string){const origin=new URL(c.req.url).origin;const
 
 app.post('/api/v1/me/sponsored-profile/media',requireAuth,async(c:any)=>{
   const requester=String(c.get('userId')||'');const profile=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE user_id=? ORDER BY created_at DESC LIMIT 1`).bind(requester).first();if(!profile)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
-  const kind=String(c.req.query('kind')||'gallery');if(!['avatar','gallery'].includes(kind))return c.json({ok:false,error:'Tipo de imagen no válido.'},400)
+  const kind=String(c.req.query('kind')||'gallery');if(!['avatar','hero','gallery'].includes(kind))return c.json({ok:false,error:'Tipo de imagen no válido.'},400)
   const read=await readImage(c);if('error' in read)return c.json({ok:false,error:read.error},read.status)
   const profileId=String((profile as any).id);const key=`sponsored/${profileId}/${kind}/${crypto.randomUUID()}.${read.ext}`
   await c.env.BUCKET.put(key,read.file.stream(),{httpMetadata:{contentType:read.file.type||'image/jpeg'}})
