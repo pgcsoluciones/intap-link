@@ -1,0 +1,135 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
+
+type GalleryItem = { url?: string; image_url?: string; title?: string; label?: string; description?: string }
+type ScheduleItem = { day?: string; days?: string; label?: string; hours?: string; time?: string }
+type SponsoredData = {
+  username: string
+  business_name?: string
+  specialization?: string
+  what_we_do?: string
+  avatar_url?: string
+  show_avatar?: boolean
+  phone?: string
+  whatsapp?: string
+  instagram?: string
+  address?: string
+  schedule?: ScheduleItem[]
+  gallery?: GalleryItem[]
+  gallery_title?: string
+  palette_id?: string
+  sponsor?: {
+    name?: string
+    type?: string
+    logo_url?: string
+    banner_title?: string
+    banner_image_url?: string
+    banner_cta_label?: string
+    banner_cta_type?: string
+    banner_cta_value?: string
+    whatsapp_message_template?: string
+    website_url?: string
+    contact_whatsapp?: string
+  }
+}
+
+const palettes: Record<string,{accent:string;accentSoft:string;text:string}> = {
+  blue: { accent:'#174a9f', accentSoft:'#eef5ff', text:'#0f2d63' },
+  teal: { accent:'#0f766e', accentSoft:'#ecfdf5', text:'#134e4a' },
+  slate: { accent:'#334155', accentSoft:'#f1f5f9', text:'#0f172a' },
+  burgundy: { accent:'#9f1239', accentSoft:'#fff1f2', text:'#881337' },
+  gold: { accent:'#8a6423', accentSoft:'#fffbeb', text:'#65451a' },
+}
+
+function absoluteApi(path:string){return path}
+function cleanPhone(value?:string){return String(value||'').replace(/[^0-9+]/g,'')}
+function galleryUrl(item:GalleryItem){return String(item.url||item.image_url||'')}
+
+export default function SponsoredProfile(){
+  const { username='' }=useParams()
+  const [data,setData]=useState<SponsoredData|null>(null)
+  const [loading,setLoading]=useState(true)
+  const [error,setError]=useState('')
+  const [active,setActive]=useState(0)
+  const [modal,setModal]=useState<GalleryItem|null>(null)
+  const [qrOpen,setQrOpen]=useState(false)
+  const [qrData,setQrData]=useState('')
+  const [toast,setToast]=useState('')
+
+  useEffect(()=>{let alive=true;(async()=>{setLoading(true);setError('');try{const res=await fetch(absoluteApi(`/api/v1/public/sponsored/${encodeURIComponent(username)}`));const json:any=await res.json().catch(()=>null);if(!alive)return;if(!res.ok||!json?.ok){setError(json?.error||'Perfil no disponible.');return}setData(json.data)}catch{if(alive)setError('No pudimos cargar este perfil.')}finally{if(alive)setLoading(false)}})();return()=>{alive=false}},[username])
+
+  const gallery=useMemo(()=>Array.isArray(data?.gallery)?data!.gallery!.filter((item)=>galleryUrl(item)).slice(0,10):[],[data])
+  const schedule=useMemo(()=>Array.isArray(data?.schedule)?data!.schedule!.slice(0,7):[],[data])
+  const palette=palettes[data?.palette_id||'blue']||palettes.blue
+  const publicUrl=typeof window!=='undefined'?window.location.href:''
+
+  useEffect(()=>{if(gallery.length<2)return;const id=window.setInterval(()=>setActive((current)=>(current+1)%gallery.length),4200);return()=>window.clearInterval(id)},[gallery.length])
+
+  useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800);return()=>window.clearTimeout(id)},[toast])
+
+  async function share(){if(navigator.share){await navigator.share({title:data?.business_name||'KawLink',url:publicUrl}).catch(()=>undefined);return}await navigator.clipboard.writeText(publicUrl).catch(()=>undefined);setToast('Enlace copiado')}
+  async function copyLink(){await navigator.clipboard.writeText(publicUrl).catch(()=>undefined);setToast('Enlace copiado')}
+  async function openQr(){try{const QRCode=await import('qrcode');setQrData(await QRCode.toDataURL(publicUrl,{width:1000,margin:3,errorCorrectionLevel:'H'}));setQrOpen(true)}catch{setToast('No pudimos generar el QR')}}
+  function downloadQr(){if(!qrData)return;const a=document.createElement('a');a.href=qrData;a.download=`${data?.username||'kawlink'}-qr.png`;a.click()}
+
+  function sponsorCta(){const s=data?.sponsor;if(!s)return;let href='';if(s.banner_cta_type==='beneficiary_whatsapp'){const number=cleanPhone(data?.whatsapp||data?.phone);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más sobre estos productos.')}`}
+    if(s.banner_cta_type==='sponsor_whatsapp'){const number=cleanPhone(s.contact_whatsapp);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más.')}`}
+    if(s.banner_cta_type==='sponsor_url')href=String(s.banner_cta_value||s.website_url||'')
+    if(href)window.open(href,'_blank','noopener,noreferrer')
+  }
+
+  if(loading)return <main style={{minHeight:'100vh',background:'#fff'}}/>
+  if(error||!data)return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,fontFamily:'Inter,system-ui,sans-serif',background:'#f8fafc'}}><div style={{maxWidth:420,textAlign:'center'}}><h1 style={{fontSize:24}}>Perfil no disponible</h1><p style={{color:'#64748b'}}>{error||'No pudimos cargar este perfil.'}</p></div></main>
+
+  const whatsapp=cleanPhone(data.whatsapp||data.phone)
+  const instagram=String(data.instagram||'').trim()
+  const instagramHref=instagram?instagram.startsWith('http')?instagram:`https://instagram.com/${instagram.replace(/^@/,'')}`:''
+  const mapsHref=data.address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.address)}`:''
+  const vcardHref=`/api/v1/public/sponsored/${encodeURIComponent(data.username)}/vcard`
+  const card=(icon:string,title:string,subtitle:string,onClick:()=>void)=><button type="button" onClick={onClick} style={{display:'flex',alignItems:'center',gap:12,minHeight:70,padding:'12px 14px',border:'1px solid #dce7f6',borderRadius:16,background:'#fff',textAlign:'left',cursor:'pointer',boxShadow:'0 5px 18px rgba(15,45,99,.04)'}}><span style={{fontSize:27}}>{icon}</span><span style={{minWidth:0,flex:1}}><strong style={{display:'block',fontSize:14,color:palette.text}}>{title}</strong><small style={{display:'block',marginTop:3,color:'#718096',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{subtitle}</small></span><span style={{color:palette.accent,fontSize:22}}>›</span></button>
+
+  const sectionTitle:React.CSSProperties={margin:'0 0 14px',fontSize:23,lineHeight:1.15,fontWeight:850,color:palette.text,textAlign:'left'}
+  const section:React.CSSProperties={padding:'28px 22px 0'}
+  const cover=`linear-gradient(135deg,${palette.accent} 0%,#0f172a 100%)`
+  const visible=[0,1,2].map((offset)=>gallery[(active+offset)%Math.max(gallery.length,1)]).filter(Boolean)
+
+  return <main style={{minHeight:'100vh',background:'#eef2f7',fontFamily:'Inter,system-ui,sans-serif',color:'#172033'}}>
+    <article style={{width:'100%',maxWidth:520,minHeight:'100vh',margin:'0 auto',background:'#fff',boxShadow:'0 0 0 1px rgba(15,23,42,.04),paddingBottom:28}}>
+      <header style={{position:'relative'}}>
+        <div style={{height:220,background:cover,display:'flex',alignItems:'flex-end',padding:'24px 22px',boxSizing:'border-box',overflow:'hidden'}}>
+          <div style={{color:'#fff',maxWidth:300}}><div style={{fontSize:12,fontWeight:800,letterSpacing:2,textTransform:'uppercase',opacity:.85}}>Presentación profesional</div><div style={{marginTop:8,fontSize:24,fontWeight:850,lineHeight:1.05}}>{data.business_name||'Tu negocio'}</div></div>
+        </div>
+        {data.show_avatar!==false&&data.avatar_url&&<img src={data.avatar_url} alt={data.business_name||'Avatar'} style={{position:'absolute',left:'50%',bottom:-54,transform:'translateX(-50%)',width:108,height:108,objectFit:'cover',borderRadius:'50%',border:'5px solid #fff',boxShadow:'0 10px 28px rgba(15,23,42,.18)',background:'#fff'}}/>}
+      </header>
+
+      <section style={{padding:`${data.show_avatar!==false&&data.avatar_url?76:30}px 24px 0`,textAlign:'center'}}>
+        <h1 style={{margin:0,fontSize:30,lineHeight:1.05,color:palette.text}}>{data.business_name||'Nombre del negocio'}</h1>
+        <div style={{marginTop:7,fontSize:17,color:palette.accent,fontWeight:650}}>{data.specialization||'Especialización'}</div>
+        {data.what_we_do&&<p style={{margin:'10px auto 0',maxWidth:420,color:'#5f6f86',fontSize:15,lineHeight:1.55}}>{data.what_we_do}</p>}
+      </section>
+
+      <section style={section}><div style={{height:1,background:'#dce7f6',marginBottom:24}}/><h2 style={sectionTitle}>Contáctame</h2><div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:12}}>
+        {card('🟢','WhatsApp','Escríbeme ahora',()=>{if(whatsapp)window.open(`https://wa.me/${whatsapp.replace(/^\+/,'')}`,'_blank')})}
+        {card('📸','Instagram','Sígueme',()=>{if(instagramHref)window.open(instagramHref,'_blank','noopener,noreferrer')})}
+        {card('📍','Ubicación',data.address||'Ver ubicación',()=>{if(mapsHref)window.open(mapsHref,'_blank','noopener,noreferrer')})}
+        {card('👤','Guardar mi contacto','En tu dispositivo',()=>{window.location.href=vcardHref})}
+      </div></section>
+
+      {schedule.length>0&&<section style={section}><h2 style={sectionTitle}>Nuestro horario</h2><div style={{border:'1px solid #dce7f6',borderRadius:18,background:palette.accentSoft,padding:'16px 17px',display:'grid',gap:8}}>{schedule.map((item,index)=><div key={index} style={{display:'grid',gridTemplateColumns:'minmax(120px,.8fr) 1fr',gap:12,fontSize:14,lineHeight:1.4}}><strong style={{color:palette.text}}>{item.day||item.days||item.label||'Horario'}</strong><span style={{color:'#53657f'}}>{item.hours||item.time||''}</span></div>)}</div></section>}
+
+      {gallery.length>0&&<section style={section}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,marginBottom:14}}><h2 style={{...sectionTitle,margin:0}}>{data.gallery_title||'Catálogo'}</h2><div style={{display:'flex',alignItems:'center',gap:8,color:palette.text,fontSize:12,fontWeight:800}}><span>{Math.min(active+1,gallery.length)} de {gallery.length}</span><button onClick={()=>setActive((active-1+gallery.length)%gallery.length)} style={{border:0,width:34,height:34,borderRadius:'50%',background:palette.accentSoft,color:palette.accent,cursor:'pointer'}}>‹</button><button onClick={()=>setActive((active+1)%gallery.length)} style={{border:0,width:34,height:34,borderRadius:'50%',background:palette.accentSoft,color:palette.accent,cursor:'pointer'}}>›</button></div></div><div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:9}}>{visible.map((item,index)=><button key={`${active}-${index}`} type="button" onClick={()=>setModal(item)} style={{position:'relative',padding:0,border:0,borderRadius:14,overflow:'hidden',aspectRatio:'1.15/1',cursor:'pointer',background:'#e2e8f0'}}><img src={galleryUrl(item)} alt={item.title||item.label||'Galería'} style={{width:'100%',height:'100%',objectFit:'cover'}}/><span style={{position:'absolute',left:0,right:0,bottom:0,padding:'17px 8px 8px',background:'linear-gradient(transparent,rgba(0,0,0,.72))',color:'#fff',fontSize:12,textAlign:'left'}}>{item.title||item.label||'Ver detalle'}</span></button>)}</div><div style={{display:'flex',justifyContent:'center',gap:6,marginTop:12}}>{gallery.map((_,index)=><span key={index} style={{width:index===active?18:7,height:7,borderRadius:99,background:index===active?palette.accent:'#dbe4ef',transition:'all .2s'}}/>)}</div></section>}
+
+      <section style={{...section,paddingTop:32}}><div style={{textAlign:'center',fontSize:13,color:'#64748b',marginBottom:8}}>{data.sponsor?.banner_title||'Impulsado por'}: <strong style={{color:palette.text}}>{data.sponsor?.name}</strong></div><button type="button" onClick={sponsorCta} disabled={!data.sponsor?.banner_cta_type||data.sponsor?.banner_cta_type==='none'} style={{width:'100%',padding:0,border:'1px solid #dce7f6',borderRadius:18,overflow:'hidden',background:palette.accentSoft,cursor:data.sponsor?.banner_cta_type==='none'?'default':'pointer',minHeight:94}}>{data.sponsor?.banner_image_url?<img src={data.sponsor.banner_image_url} alt={data.sponsor.name||'Patrocinador'} style={{display:'block',width:'100%',height:120,objectFit:'cover'}}/>:<div style={{padding:20,display:'flex',alignItems:'center',justifyContent:'center',gap:14}}>{data.sponsor?.logo_url&&<img src={data.sponsor.logo_url} alt="" style={{maxHeight:52,maxWidth:130,objectFit:'contain'}}/>}<strong style={{color:palette.text,fontSize:18}}>{data.sponsor?.name}</strong></div>}</button><div style={{marginTop:9,textAlign:'center',fontSize:12,color:'#94a3b8'}}>Desarrollado por <strong style={{color:palette.accent}}>KawLink</strong></div></section>
+
+      <section style={{padding:'24px 22px 0',display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:8}}><button onClick={share} style={miniBtn}>Compartir</button><button onClick={copyLink} style={miniBtn}>Copiar enlace</button><button onClick={openQr} style={miniBtn}>QR</button><button onClick={()=>window.location.assign('https://app.intaprd.com/admin/login')} style={miniBtn}>Iniciar sesión</button></section>
+
+      <section style={{padding:'20px 22px 0',display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}><a href="https://wa.me/18000000000?text=Tengo%20un%20llavero%20patrocinado%20y%20me%20gustaría%20convertirme%20en%20patrocinador" target="_blank" rel="noreferrer" style={{textDecoration:'none',fontSize:12,color:'#64748b',textAlign:'center'}}>Convertirme en patrocinador</a><a href="https://wa.me/18000000000?text=Necesito%20soporte%20con%20mi%20perfil%20patrocinado" target="_blank" rel="noreferrer" style={{textDecoration:'none',fontSize:12,color:'#64748b',textAlign:'center'}}>Soporte técnico</a></section>
+    </article>
+
+    {modal&&<div role="dialog" aria-modal="true" onClick={()=>setModal(null)} style={{position:'fixed',inset:0,zIndex:50,background:'rgba(15,23,42,.86)',display:'grid',placeItems:'center',padding:22}}><div onClick={(e)=>e.stopPropagation()} style={{width:'min(720px,100%)',background:'#fff',borderRadius:22,overflow:'hidden'}}><img src={galleryUrl(modal)} alt={modal.title||'Galería'} style={{display:'block',width:'100%',maxHeight:'72vh',objectFit:'contain',background:'#0f172a'}}><div style={{padding:18}}><strong style={{fontSize:18,color:palette.text}}>{modal.title||modal.label||'Detalle'}</strong>{modal.description&&<p style={{margin:'8px 0 0',color:'#64748b',lineHeight:1.5}}>{modal.description}</p>}<button onClick={()=>setModal(null)} style={{...miniBtn,width:'100%',marginTop:14}}>Cerrar</button></div></div></div>}
+    {qrOpen&&<div role="dialog" aria-modal="true" onClick={()=>setQrOpen(false)} style={{position:'fixed',inset:0,zIndex:60,background:'rgba(15,23,42,.76)',display:'grid',placeItems:'center',padding:24}}><div onClick={(e)=>e.stopPropagation()} style={{background:'#fff',borderRadius:22,padding:22,width:'min(360px,100%)',textAlign:'center'}}><h3 style={{margin:'0 0 12px'}}>QR de mi perfil</h3>{qrData&&<img src={qrData} alt="QR" style={{width:'100%',maxWidth:280}}/>}<button onClick={downloadQr} style={{...miniBtn,width:'100%',marginTop:12}}>Descargar QR</button><button onClick={()=>setQrOpen(false)} style={{...miniBtn,width:'100%',marginTop:8,background:'#fff'}}>Cerrar</button></div></div>}
+    {toast&&<div style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',background:'#0f172a',color:'#fff',padding:'10px 14px',borderRadius:999,fontSize:13,zIndex:80}}>{toast}</div>}
+  </main>
+}
+
+const miniBtn:React.CSSProperties={border:'1px solid #dbe4ef',background:'#f8fafc',borderRadius:12,padding:'10px 8px',fontSize:11,fontWeight:750,color:'#334155',cursor:'pointer'}
