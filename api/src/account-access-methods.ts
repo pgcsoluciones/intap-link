@@ -67,11 +67,24 @@ async function sendVerificationCode(c: any, to: string, code: string, purpose: s
 }
 async function createChallenge(c: any, userId: string, email: string, purpose: string) {
   const recent = await c.env.DB.prepare(`SELECT COUNT(*) n FROM account_verification_challenges WHERE user_id=? AND purpose=? AND created_at>datetime('now','-10 minutes')`).bind(userId, purpose).first()
-  if (Number((recent as any)?.n || 0) >= 5) return { ok: false, error: 'Demasiados intentos. Espera unos minutos.' }
+  if (Number((recent as any)?.n || 0) >= 5) return { ok: false, status: 429, error: 'Demasiados intentos. Espera unos minutos.' }
   const id = crypto.randomUUID(), code = code6(), codeHash = await sha256Hex(`${id}:${code}`)
   await c.env.DB.prepare(`INSERT INTO account_verification_challenges(id,user_id,email,purpose,code_hash,expires_at,created_at) VALUES(?,?,?,?,?,datetime('now','+10 minutes'),datetime('now'))`).bind(id,userId,email,purpose,codeHash).run()
-  await sendVerificationCode(c,email,code,purpose)
-  return { ok: true }
+  try {
+    await sendVerificationCode(c,email,code,purpose)
+  } catch (error: any) {
+    console.error('[account-credentials] verification email failed', { purpose, email, message: error?.message || String(error) })
+    await c.env.DB.prepare(`DELETE FROM account_verification_challenges WHERE id=?`).bind(id).run().catch(() => undefined)
+    const missingProvider = !c.env.RESEND_API_KEY
+    return {
+      ok: false,
+      status: 503,
+      error: missingProvider
+        ? 'El servicio de verificación por correo no está configurado en este entorno.'
+        : 'No pudimos enviar el código de verificación. Intenta nuevamente.',
+    }
+  }
+  return { ok: true, status: 200 }
 }
 async function verifyChallenge(c: any, userId: string, email: string, purpose: string, code: string) {
   const row = await c.env.DB.prepare(`SELECT id,code_hash,attempts FROM account_verification_challenges WHERE user_id=? AND email=? AND purpose=? AND consumed_at IS NULL AND expires_at>datetime('now') ORDER BY created_at DESC LIMIT 1`).bind(userId,email,purpose).first()
@@ -109,7 +122,7 @@ app.post('/api/v1/me/account/credentials/verify/start', requireAccount, async (c
   const purpose = String(body?.purpose || '')
   if (!['password','email_change'].includes(purpose)) return c.json({ok:false,error:'Acción no válida.'},400)
   const result = await createChallenge(c,c.get('accountUserId'),c.get('accountEmail'),purpose)
-  return result.ok ? c.json({ok:true}) : c.json(result,429)
+  return result.ok ? c.json({ok:true}) : c.json({ok:false,error:result.error}, result.status || 500)
 })
 
 app.post('/api/v1/me/account/credentials/verify/confirm', requireAccount, async (c:any) => {
@@ -142,7 +155,7 @@ app.post('/api/v1/me/account/email/change/start', requireAccount, async (c:any) 
   const exists=await c.env.DB.prepare(`SELECT id FROM users WHERE lower(email)=? AND id<>? LIMIT 1`).bind(newEmail,userId).first()
   if (exists) return c.json({ok:false,error:'Ese correo ya está vinculado a otra cuenta.'},409)
   const result=await createChallenge(c,userId,newEmail,'email_new')
-  return result.ok ? c.json({ok:true}) : c.json(result,429)
+  return result.ok ? c.json({ok:true}) : c.json({ok:false,error:result.error}, result.status || 500)
 })
 
 app.post('/api/v1/me/account/email/change/confirm', requireAccount, async (c:any) => {
