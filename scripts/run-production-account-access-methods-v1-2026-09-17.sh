@@ -42,7 +42,20 @@ EOF
 run git fetch github main
 run git checkout "$BRANCH"
 run git pull --ff-only github main
-[ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local con cambios"; }
+
+# Bloquear cualquier cambio tracked. Los directorios .preview-* son artefactos
+# locales generados por runners/auditorías de Preview y no forman parte del repo.
+TRACKED_DIRTY="$(git status --porcelain --untracked-files=no)"
+[ -z "$TRACKED_DIRTY" ] || { printf '%s\n' "$TRACKED_DIRTY"; fail "Hay cambios tracked locales"; }
+
+# Permitir únicamente artefactos locales .preview-*/. Cualquier otro archivo
+# untracked sigue bloqueando el release para evitar arrastrar trabajo accidental.
+UNTRACKED_BAD="$(git ls-files --others --exclude-standard | grep -Ev '^\.preview-[^/]+/' || true)"
+[ -z "$UNTRACKED_BAD" ] || { printf '%s\n' "$UNTRACKED_BAD"; fail "Hay archivos locales no rastreados fuera de .preview-*"; }
+
+if git ls-files --others --exclude-standard | grep -Eq '^\.preview-[^/]+/'; then
+  echo "✓ Artefactos locales .preview-* detectados e ignorados de forma segura"
+fi
 
 HEAD_SHA="$(git rev-parse HEAD)"
 run git merge-base --is-ancestor "$RELEASE_BASE" "$HEAD_SHA"
