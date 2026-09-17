@@ -1,0 +1,40 @@
+import fs from 'node:fs'
+
+function read(path){return fs.readFileSync(path,'utf8')}
+function has(text,needle,label){if(!text.includes(needle))throw new Error(`Falta contrato: ${label}`)}
+
+const entry=read('api/src/preview-free-entry.ts')
+const scan=read('api/src/sponsored-scan.ts')
+const publicApi=read('api/src/sponsored-public.ts')
+const core=read('api/src/sponsored-profiles.ts')
+const app=read('app/src/App.tsx')
+const web=read('web/src/App.tsx')
+const publicUi=read('web/src/components/sponsored/SponsoredProfile.tsx')
+const beneficiary=read('app/src/components/admin/sponsored/SponsoredDashboard.tsx')
+const sponsor=read('app/src/components/admin/sponsored/SponsorDashboard.tsx')
+
+for(const mod of ['./sponsored-scan','./sponsored-public','./sponsored-profiles','./sponsored-media'])has(entry,mod,`registro API ${mod}`)
+has(scan,"sponsored_pending_activation",'estado de activación patrocinada')
+has(scan,"sponsored_master",'llavero Master')
+has(scan,"commercial inactivity cannot remove or block",'perpetuidad tras activación')
+has(publicApi,"sp.status='published'",'publicación obligatoria')
+if(/sp\.status='published'\s+AND\s+st\.is_active=1/.test(publicApi))throw new Error('El perfil público perpetuo no puede depender de st.is_active=1')
+has(core,"/api/v1/me/sponsored-profile/claim",'claim beneficiario')
+has(core,"gallery_title",'título de galería editable')
+has(core,"schedule_json",'horarios')
+has(app,'/admin/sponsored','panel beneficiario')
+has(app,'/admin/sponsor','panel patrocinador')
+has(app,'/superadmin/sponsors','super admin patrocinio')
+has(web,'/p/:username','namespace /p')
+has(web,'SponsoredAwareArtifactResolver','resolver patrocinado aislado')
+has(publicUi,'Nuestro horario','sección horario')
+has(publicUi,"data.gallery_title||'Catálogo'",'catálogo editable')
+has(publicUi,'Desarrollado por','firma KawLink')
+has(publicUi,'Convertirme en patrocinador','conversión B2B')
+has(publicUi,'Soporte técnico','soporte técnico')
+has(beneficiary,'Hasta 10 imágenes','límite galería comunicado')
+has(beneficiary,'Mostrar avatar','avatar opcional')
+has(sponsor,'Patrocinio actualizado en todos los perfiles asociados.','banner centralizado')
+has(sponsor,'Trazabilidad','trazabilidad patrocinador')
+
+console.log('Sponsored Profile V1 contract checks: OK')
