@@ -18,9 +18,13 @@ export default function SponsoredAwareArtifactResolver(){
 
   useEffect(()=>{let alive=true;(async()=>{if(!code){setError('Producto no válido.');setStatus('sponsored');return}try{const response=await fetch(`${appOrigin()}/api/v1/public/artifacts/scan/status`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({public_code:code})});const json:any=await response.json().catch(()=>({ok:false}));if(!alive)return;if(!response.ok||!json?.ok){setError(json?.error||'No pudimos comprobar este producto.');setStatus('sponsored');return}const state=String(json.state||'');if(!state.startsWith('sponsored_')){setStatus('normal');return}setPayload(json);setStatus('sponsored')}catch{if(alive){setError('No pudimos conectar con Kawvo.');setStatus('sponsored')}}})();return()=>{alive=false}},[code])
 
-  useEffect(()=>{if(status!=='sponsored'||!payload)return;if(payload.state==='sponsored_draft_owner'&&payload.next_url){/* owner chooses button below */} },[status,payload])
+  useEffect(()=>{
+    if(status!=='sponsored'||!payload)return
+    if(payload.state==='sponsored_master_public'&&payload.next_url){window.location.replace(payload.next_url);return}
+    if(payload.state==='sponsored_draft_owner'&&payload.next_url){/* owner chooses button below */}
+  },[status,payload])
 
-  if(status==='loading')return <main style={{minHeight:'100vh',background:'#fff'}}/>
+  if(status==='loading'||(status==='sponsored'&&payload?.state==='sponsored_master_public'))return <main style={{minHeight:'100vh',background:'#fff'}}/>
   if(status==='normal')return <ArtifactLinkResolver/>
 
   const sponsor=payload?.sponsor||{}
