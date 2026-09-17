@@ -350,6 +350,7 @@ export default function FreeAccount() {
               <span className="text-[28px] font-light text-slate-400">›</span>
             </div>
 
+            <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>} label="Credenciales" detail="Google, correo y contraseña Kawvo" onClick={() => navigate('/admin/free/credentials')} />
             <SettingsRow tour="plan" icon={<span className="text-amber-500"><UpgradeCrownIcon className="h-6 w-6" /></span>} label="Mejora tu plan" detail="Conoce el Plan Plus" href={basicPlanWhatsAppUrl()} />
             <SettingsRow tour="notifications" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>} label="Notificaciones" detail={unreadCount > 0 ? `${unreadCount} sin leer` : undefined} onClick={openNotifications} />
             <SettingsRow tour="ai" icon="✧" label="Cuotas de IA" detail={aiUsage ? `${aiUsage.remaining_today ?? '—'} hoy · ${aiUsage.remaining_month ?? '—'} este mes` : undefined} onClick={() => setShowAi((value) => !value)} />

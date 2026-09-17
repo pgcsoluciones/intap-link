@@ -14,6 +14,8 @@ export default function AdminLogin() {
   const [searchParams] = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginMethod, setLoginMethod] = useState<'email' | 'password'>('email')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [teamIdentity, setTeamIdentity] = useState<any>(null)
@@ -74,17 +76,27 @@ export default function AdminLogin() {
     setError('')
     setLoading(true)
     try {
-      const json: any = await apiPost('/auth/magic-link/start', { email, mode })
-      if (json.ok) {
-        sessionStorage.setItem('magic_link_email', email)
-        persistAuthMode(mode)
-        if (teamResumeUrl) {
-          sessionStorage.setItem('kawvo_team_resume_url', teamResumeUrl)
-          localStorage.setItem('kawvo_team_resume_url', teamResumeUrl)
+      if (mode === 'login' && loginMethod === 'password' && !hasProductContext) {
+        const json: any = await apiPost('/auth/password/login', { email, password })
+        if (json.ok) {
+          persistAuthMode(mode)
+          window.location.assign('/admin')
+        } else {
+          setError(json.error || 'Correo o contraseña incorrectos.')
         }
-        navigate('/admin/check-email')
       } else {
-        setError(json.error || 'Error al enviar el enlace')
+        const json: any = await apiPost('/auth/magic-link/start', { email, mode })
+        if (json.ok) {
+          sessionStorage.setItem('magic_link_email', email)
+          persistAuthMode(mode)
+          if (teamResumeUrl) {
+            sessionStorage.setItem('kawvo_team_resume_url', teamResumeUrl)
+            localStorage.setItem('kawvo_team_resume_url', teamResumeUrl)
+          }
+          navigate('/admin/check-email')
+        } else {
+          setError(json.error || 'Error al enviar el enlace')
+        }
       }
     } catch {
       setError('Error de conexión')
@@ -138,13 +150,15 @@ export default function AdminLogin() {
           </div>}
 
           <div className="p-4 pt-5">
+            {!isRegister && !hasProductContext && <div className="mb-4 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1"><button type="button" onClick={() => { setLoginMethod('email'); setError('') }} className={`rounded-xl px-3 py-2.5 text-xs font-black ${loginMethod === 'email' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Correo seguro</button><button type="button" onClick={() => { setLoginMethod('password'); setError('') }} className={`rounded-xl px-3 py-2.5 text-xs font-black ${loginMethod === 'password' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Contraseña Kawvo</button></div>}
             <form onSubmit={handleSubmit} className="space-y-4">
               <label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">
                 Correo electrónico
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nombre@email.com" required className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" />
               </label>
+              {!isRegister && loginMethod === 'password' && !hasProductContext && <label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">Contraseña Kawvo<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tu contraseña Kawvo" required className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" /></label>}
               {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Enviando…' : isTeamFlow ? 'Continuar como Master' : isRegister ? 'Validar mi correo' : 'Continuar'}</button>
+              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Procesando…' : isTeamFlow ? 'Continuar como Master' : isRegister ? 'Validar mi correo' : loginMethod === 'password' && !hasProductContext ? 'Entrar con contraseña' : 'Continuar'}</button>
             </form>
 
             <div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-slate-200" /><span className="text-xs font-semibold text-slate-400">o continúa con</span><span className="h-px flex-1 bg-slate-200" /></div>

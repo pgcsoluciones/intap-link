@@ -401,17 +401,32 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const email = (googleUser.email || '').toLowerCase().trim()
   if (!email) return c.redirect(`${appUrl}/admin/login?error=oauth_no_email`)
 
-  // Upsert usuario
-  await c.env.DB.prepare(
-    `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
-  ).bind(crypto.randomUUID(), email).run()
+  // Resolver identidad Google estable. El correo principal puede cambiar sin romper Google.
+  const googleSubject = String(googleUser.id || '').trim()
+  let user: any = null
+  if (googleSubject) {
+    const identity = await c.env.DB.prepare(
+      `SELECT user_id FROM user_auth_identities WHERE provider='google' AND provider_subject=? LIMIT 1`
+    ).bind(googleSubject).first().catch(() => null)
+    if (identity) user = await c.env.DB.prepare(`SELECT id FROM users WHERE id=? LIMIT 1`).bind((identity as any).user_id).first()
+  }
 
-  const user = await c.env.DB.prepare(
-    `SELECT id FROM users WHERE email = ? LIMIT 1`
-  ).bind(email).first()
+  if (!user) {
+    await c.env.DB.prepare(
+      `INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT(email) DO NOTHING`
+    ).bind(crypto.randomUUID(), email).run()
+    user = await c.env.DB.prepare(`SELECT id FROM users WHERE email = ? LIMIT 1`).bind(email).first()
+  }
   if (!user) return c.redirect(`${appUrl}/admin/login?error=user_error`)
 
   const userId = (user as any).id
+  if (googleSubject) {
+    await c.env.DB.prepare(
+      `INSERT INTO user_auth_identities(id,user_id,provider,provider_subject,provider_email,linked_at,last_used_at)
+       VALUES(?,?,'google',?,?,datetime('now'),datetime('now'))
+       ON CONFLICT(provider,provider_subject) DO UPDATE SET user_id=excluded.user_id,provider_email=excluded.provider_email,last_used_at=datetime('now')`
+    ).bind(crypto.randomUUID(),userId,googleSubject,email).run().catch(() => undefined)
+  }
 
   // Upsert identidad OAuth
   await c.env.DB.prepare(
