@@ -26,6 +26,7 @@ import SuperAdminSponsors from './components/admin/SuperAdminSponsors'
 import SponsoredActivation from './components/admin/sponsored/SponsoredActivation'
 import SponsoredDashboard from './components/admin/sponsored/SponsoredDashboard'
 import SponsorDashboard from './components/admin/sponsored/SponsorDashboard'
+import SponsoredResumeGate from './components/admin/sponsored/SponsoredResumeGate'
 import OnboardingSlug from './components/admin/onboarding/OnboardingSlug'
 import OnboardingCategory from './components/admin/onboarding/OnboardingCategory'
 import OnboardingIdentity from './components/admin/onboarding/OnboardingIdentity'
@@ -70,7 +71,7 @@ const FreeAiProfileAssistant = lazy(() => import('./components/admin/free/FreeAi
 function AiRouteFallback(){return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>}
 function UnknownAppRouteRedirect(){const location=useLocation();const WEB_URL=(import.meta.env.VITE_WEB_URL??'https://intaprd.com').replace(/\/$/,'');if(location.pathname.startsWith('/admin')||location.pathname.startsWith('/auth'))return <Navigate to="/admin" replace/>;window.location.replace(`${WEB_URL}${location.pathname}${location.search}${location.hash}`);return null}
 
-function App(){return <BrowserRouter><FreeRouteUx/><Routes>
+function App(){return <BrowserRouter><FreeRouteUx/><SponsoredResumeGate/><Routes>
 <Route path="/admin/login" element={<AdminLogin/>}/><Route path="/admin/check-email" element={<AdminVerify/>}/><Route path="/auth/callback" element={<AuthCallback/>}/><Route path="/team-access/:slug" element={<FreeTeamRoleLogin/>}/><Route path="/activate-product/:publicCode" element={<ActivationAuthorityEntry/>}/><Route path="/activate" element={<Navigate to="/admin/artifacts/activate" replace/>}/>
 <Route path="/admin/sponsored/activate" element={<SponsoredActivation/>}/><Route path="/admin/sponsored" element={<AdminGuard requireProfile={false}><SponsoredDashboard/></AdminGuard>}/><Route path="/admin/sponsor" element={<AdminGuard requireProfile={false}><SponsorDashboard/></AdminGuard>}/>
 <Route path="/admin/onboarding/slug" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingSlug/></AdminGuard>}/><Route path="/admin/onboarding/category" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingCategory/></AdminGuard>}/><Route path="/admin/onboarding/identity" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingIdentity/></AdminGuard>}/><Route path="/admin/onboarding/contact" element={<AdminGuard requireProfile={false} planScope="paid"><OnboardingContact/></AdminGuard>}/>
