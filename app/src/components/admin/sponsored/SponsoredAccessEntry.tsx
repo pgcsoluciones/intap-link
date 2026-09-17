@@ -50,7 +50,13 @@ export default function SponsoredAccessEntry(){
         }
 
         if(status.state==='sponsored_master'){
-          navigate(status.manage_url?new URL(status.manage_url).pathname+new URL(status.manage_url).search:`/admin/sponsored?sponsor_master=1`,{replace:true})
+          // The scan endpoint has now validated the registered sponsor email,
+          // created/updated the owner membership and ensured the sponsor-owner profile.
+          // The resume marker is no longer needed; clearing it prevents a redirect loop.
+          sessionStorage.removeItem(MASTER_KEY)
+          localStorage.removeItem(MASTER_KEY)
+          const target=status.manage_url?new URL(status.manage_url):null
+          navigate(target?target.pathname+target.search:'/admin/sponsored?sponsor_master=1',{replace:true})
           return
         }
 
