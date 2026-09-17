@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../lib/api'
 
 const KEY='kawvo_sponsored_public_code'
+const PANEL_KEY='kawvo_sponsored_panel_resume'
 const CONSENT_VERSION='sponsored-v1.1-2026-09-17'
 
 export default function SponsoredActivation(){
@@ -10,9 +11,15 @@ export default function SponsoredActivation(){
   const [loading,setLoading]=useState(true); const [error,setError]=useState(''); const [sponsor,setSponsor]=useState<any>(null); const [label,setLabel]=useState('Llavero Kawvo'); const [accepted,setAccepted]=useState(false)
   const code=String(params.get('public_code')||sessionStorage.getItem(KEY)||localStorage.getItem(KEY)||'').trim().toUpperCase()
 
-  useEffect(()=>{if(!code){setError('No encontramos el código de este producto.');setLoading(false);return}sessionStorage.setItem(KEY,code);localStorage.setItem(KEY,code);let alive=true;(async()=>{try{const me:any=await apiGet('/me').catch(()=>({ok:false}));if(!me?.ok){window.location.assign(`/admin/login?activation=sponsored&public_code=${encodeURIComponent(code)}`);return}const status:any=await apiPost('/public/artifacts/scan/status',{public_code:code});if(!alive)return;if(!status?.ok){setError(status?.error||'No pudimos validar este producto.');return}setSponsor(status.sponsor||null);setLabel(status.artifact?.label||'Producto Kawvo');if(status.state==='activated'&&status.next_url){window.location.replace(status.next_url);return}if(status.state==='sponsored_draft_owner'&&status.next_url){navigate('/admin/sponsored',{replace:true});return}if(status.state!=='sponsored_pending_activation'){setError(status.message||'Este producto no está disponible para activación.')}}catch{if(alive)setError('No pudimos validar este producto.')}finally{if(alive)setLoading(false)}})();return()=>{alive=false}},[code,navigate])
+  function enterSponsoredPanel(){
+    sessionStorage.removeItem(KEY);localStorage.removeItem(KEY)
+    sessionStorage.setItem(PANEL_KEY,'1');localStorage.setItem(PANEL_KEY,'1')
+    navigate('/admin/sponsored',{replace:true})
+  }
 
-  async function activate(){if(!accepted){setError('Confirma que estás de acuerdo para continuar.');return}setLoading(true);setError('');try{const json:any=await apiPost('/me/sponsored-profile/claim',{public_code:code,consent_accepted:true,consent_version:CONSENT_VERSION});if(!json?.ok){setError(json?.error||'No pudimos activar este producto.');return}sessionStorage.removeItem(KEY);localStorage.removeItem(KEY);navigate('/admin/sponsored',{replace:true})}catch{setError('No pudimos completar la activación.')}finally{setLoading(false)}}
+  useEffect(()=>{if(!code){setError('No encontramos el código de este producto.');setLoading(false);return}sessionStorage.setItem(KEY,code);localStorage.setItem(KEY,code);let alive=true;(async()=>{try{const me:any=await apiGet('/me').catch(()=>({ok:false}));if(!me?.ok){window.location.assign(`/admin/login?activation=sponsored&public_code=${encodeURIComponent(code)}`);return}const status:any=await apiPost('/public/artifacts/scan/status',{public_code:code});if(!alive)return;if(!status?.ok){setError(status?.error||'No pudimos validar este producto.');return}setSponsor(status.sponsor||null);setLabel(status.artifact?.label||'Producto Kawvo');if(status.state==='activated'&&status.next_url){sessionStorage.removeItem(KEY);localStorage.removeItem(KEY);window.location.replace(status.next_url);return}if(status.state==='sponsored_draft_owner'&&status.next_url){enterSponsoredPanel();return}if(status.state!=='sponsored_pending_activation'){setError(status.message||'Este producto no está disponible para activación.')}}catch{if(alive)setError('No pudimos validar este producto.')}finally{if(alive)setLoading(false)}})();return()=>{alive=false}},[code,navigate])
+
+  async function activate(){if(!accepted){setError('Confirma que estás de acuerdo para continuar.');return}setLoading(true);setError('');try{const json:any=await apiPost('/me/sponsored-profile/claim',{public_code:code,consent_accepted:true,consent_version:CONSENT_VERSION});if(!json?.ok){if(json?.code==='sponsored_account_already_linked'&&json?.data?.next_url){enterSponsoredPanel();return}setError(json?.error||'No pudimos activar este producto.');return}enterSponsoredPanel()}catch{setError('No pudimos completar la activación.')}finally{setLoading(false)}}
 
   const sponsorName=sponsor?.name||'tu patrocinador'
   return <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950"><section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[460px] flex-col justify-center"><div className="rounded-[30px] border border-slate-200 bg-white p-6 text-center shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
