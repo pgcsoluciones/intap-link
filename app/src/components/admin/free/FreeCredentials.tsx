@@ -11,8 +11,9 @@ type CredentialsStatus = {
 }
 
 type Flow = 'idle' | 'password-code' | 'password-new' | 'email-current-code' | 'email-new' | 'email-new-code'
+type Props = { backTo?: string; onBack?: () => void; embedded?: boolean }
 
-export default function FreeCredentials() {
+export default function FreeCredentials({backTo='/admin/free/account',onBack,embedded=false}:Props) {
   const navigate = useNavigate()
   const [status,setStatus]=useState<CredentialsStatus|null>(null)
   const [flow,setFlow]=useState<Flow>('idle')
@@ -59,9 +60,10 @@ export default function FreeCredentials() {
     setBusy(false);if(!j?.ok)return setMessage(j.error||'No pudimos cambiar el correo.')
     setFlow('idle');setCode('');setNewEmail('');setMessage('Correo principal actualizado.');await load()
   }
+  const goBack=()=>{if(onBack){onBack();return}navigate(backTo)}
 
-  return <main className="min-h-screen bg-white pb-24 font-['Inter'] text-slate-900"><section className="mx-auto w-full max-w-[430px] px-5 pt-6">
-    <div className="flex items-center gap-3 pb-5"><button type="button" onClick={()=>navigate('/admin/free/account')} className="text-[34px] font-light text-slate-500">←</button><div><h1 className="text-[30px] font-black tracking-[-.04em]">Credenciales</h1><p className="text-sm text-slate-500">Elige cómo acceder a tu cuenta Kawvo.</p></div></div>
+  return <main className={`${embedded?'bg-white':'min-h-screen bg-white pb-24'} font-['Inter'] text-slate-900`}><section className="mx-auto w-full max-w-[430px] px-5 pt-6 pb-8">
+    <div className="flex items-center gap-3 pb-5"><button type="button" onClick={goBack} className="text-[34px] font-light text-slate-500">←</button><div><h1 className="text-[30px] font-black tracking-[-.04em]">Credenciales</h1><p className="text-sm text-slate-500">Elige cómo acceder a tu cuenta Kawvo.</p></div></div>
 
     <div className="rounded-[24px] bg-[#f5f5f5] p-5">
       <p className="text-xs font-black uppercase tracking-[.12em] text-slate-400">Correo principal</p><p className="mt-2 break-all text-lg font-black">{status?.email||'Cargando…'}</p><p className="mt-1 text-sm leading-6 text-slate-500">Se usa para acceso seguro, verificaciones y recuperación de tu cuenta.</p>
