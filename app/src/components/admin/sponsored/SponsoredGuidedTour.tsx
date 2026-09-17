@@ -6,14 +6,14 @@ const SEEN_KEY='kawvo_sponsored_guided_tour_seen_v1'
 type Step={title:string;description:string;labels:string[]}
 const STEPS:Step[]=[
   {title:'Tu presentación',description:'Aquí ves el estado general de tu presentación patrocinada y puedes entrar a cada sección para mantenerla actualizada.',labels:['Mi presentación']},
-  {title:'Identidad',description:'Agrega tu nombre o negocio, especialización, una breve descripción de lo que haces y, si deseas, tu foto de avatar.',labels:['Identidad']},
-  {title:'Contáctame',description:'Configura WhatsApp, teléfono, Instagram y ubicación para que tus clientes puedan comunicarse contigo fácilmente.',labels:['Contáctame']},
+  {title:'Identidad',description:'Agrega tu nombre o negocio, especialización, una breve descripción de lo que haces y, si deseas, tu foto de avatar.',labels:['Presentación']},
+  {title:'Contáctanos',description:'Configura WhatsApp, teléfono, Instagram y ubicación para que tus clientes puedan comunicarse contigo fácilmente.',labels:['Contáctanos']},
   {title:'Nuestro horario',description:'Indica tus días y horarios de atención. Puedes agregar o quitar líneas según tu forma de trabajar.',labels:['Nuestro horario']},
   {title:'Catálogo o galería',description:'Sube hasta 10 imágenes y elige el nombre de esta sección, por ejemplo Catálogo, Portafolio, Proyectos o Mis trabajos.',labels:['Galería']},
   {title:'Apariencia',description:'Selecciona la combinación de colores que mejor represente tu presentación manteniendo el diseño aprobado.',labels:['Apariencia']},
   {title:'Cuentas bancarias',description:'Si esta función está incluida en tu patrocinio, desde Configurar cuentas podrás administrar hasta 3 cuentas activas.',labels:['Configurar cuentas']},
   {title:'Guardar y publicar',description:'Guarda tus cambios, publica tu presentación y luego podrás verla, compartirla, copiar su enlace o descargar su QR.',labels:['Guardar cambios','Publicar presentación']},
-  {title:'Ayuda y crecimiento',description:'Desde aquí puedes solicitar soporte técnico o conocer cómo convertirte también en patrocinador.',labels:['Soporte técnico','Convertirme en patrocinador']},
+  {title:'Ayuda y crecimiento',description:'Desde aquí puedes solicitar soporte técnico o conocer cómo convertirte también en patrocinador.',labels:['Soporte técnico','Quiero ser patrocinador']},
 ]
 
 function findElement(labels:string[]){
@@ -24,14 +24,15 @@ function findElement(labels:string[]){
   }
   return null
 }
+function ready(){return Boolean(document.querySelector('[data-sponsored-tour-ready="1"]'))}
 
 export default function SponsoredGuidedTour(){
   const[open,setOpen]=useState(false);const[index,setIndex]=useState(0)
   const available=useMemo(()=>STEPS.filter(step=>Boolean(findElement(step.labels))),[open])
   useEffect(()=>{
-    const start=()=>{setIndex(0);setOpen(true)}
+    const start=()=>{if(!ready())return;setIndex(0);setOpen(true)}
     window.addEventListener(EVENT,start as EventListener)
-    const timer=window.setTimeout(()=>{if(localStorage.getItem(SEEN_KEY)!=='1')start()},550)
+    const timer=window.setTimeout(()=>{if(localStorage.getItem(SEEN_KEY)!=='1'&&ready())start()},700)
     return()=>{window.clearTimeout(timer);window.removeEventListener(EVENT,start as EventListener)}
   },[])
   useEffect(()=>{if(!open||!available[index])return;const target=findElement(available[index].labels);target?.scrollIntoView({behavior:'smooth',block:'center'})},[open,index,available])
