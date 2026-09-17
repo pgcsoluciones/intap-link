@@ -1,15 +1,6 @@
 name: Deploy Perfil Patrocinado Preview
 
 on:
-  push:
-    branches:
-      - feature/kawlink-sponsored-profile-v1
-    paths:
-      - 'api/**'
-      - 'app/**'
-      - 'web/**'
-      - 'scripts/test-sponsored-profile-contract.mjs'
-      - '.github/workflows/deploy-sponsored-preview.yml'
   workflow_dispatch:
 
 permissions:
