@@ -3,6 +3,7 @@ import { FaAddressCard, FaInstagram, FaMapMarkerAlt, FaWhatsapp } from 'react-ic
 import { API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
+import FreeSupportPanel from '../free/FreeSupportPanel'
 
 const palettes=[
   ['blue','Azul profesional','#174a9f','#eef5ff'],
@@ -12,7 +13,6 @@ const palettes=[
   ['gold','Dorado','#8a6423','#fffbeb'],
 ]
 const emptySchedule=[{day:'Lunes a Viernes',hours:'8:00 AM - 6:00 PM'},{day:'Sábados',hours:'9:00 AM - 1:00 PM'}]
-const SUPPORT_URL='https://nfc.kawvoia.com/respuesta?origen=perfil-patrocinado&tema=soporte'
 const SPONSOR_URL='https://nfc.kawvoia.com/respuesta?origen=perfil-patrocinado&interes=patrocinador'
 type PendingImage={file:File;kind:'avatar'|'hero'|'gallery'}|null
 const RD_AREA_CODES=/^(809|829|849)/
@@ -119,7 +119,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
       <section className={section}><h2 className={heading}>Apariencia</h2><p className="mt-1 text-sm text-slate-500">La plantilla patrocinada es universal. Solo eliges la gama de colores disponible.</p><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{palettes.map(([id,name,accent,soft])=><button type="button" key={id} onClick={()=>setForm({...form,palette_id:id})} className={`overflow-hidden rounded-2xl border text-left ${form.palette_id===id?'border-cyan-500 ring-2 ring-cyan-100':'border-slate-200'}`}><div className="h-10" style={{background:`linear-gradient(90deg,${accent},${soft})`}}/><div className="px-3 py-2 text-xs font-black text-slate-700">{name}</div></button>)}</div></section>
 
       <section className={section}><div className="grid gap-3 sm:grid-cols-2"><button onClick={()=>void saveAll()} disabled={saving} className="rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{saving?'Guardando…':'Guardar cambios'}</button><button onClick={()=>void togglePublish()} disabled={saving} className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-black text-slate-800">{data.status==='published'?'Volver a borrador':'Publicar presentación'}</button></div>{publicUrl&&<div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><button onClick={()=>setViewMode('preview')} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Vista previa</button><button onClick={()=>void copy()} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Copiar enlace</button><button onClick={()=>void downloadQr()} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Descargar QR</button><button onClick={()=>navigator.share?.({url:publicUrl,title:form.business_name||'KawLink'}).catch(()=>undefined)} className="rounded-xl bg-slate-100 px-3 py-3 text-xs font-black">Compartir</button></div>}</section>
-      <section className={`grid gap-3 pb-8 ${isMaster?'sm:grid-cols-1':'sm:grid-cols-2'}`}><a href={SUPPORT_URL} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Soporte técnico</a>{!isMaster&&<a href={SPONSOR_URL} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Quiero ser patrocinador</a>}</section>
+      <section className="space-y-3 pb-8"><FreeSupportPanel/>{!isMaster&&<a href={SPONSOR_URL} target="_blank" rel="noreferrer" className="block rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Quiero ser patrocinador</a>}</section>
     </>}
 
     {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:pending.kind==='hero'?16/9:4/3} outputWidth={pending.kind==='avatar'?400:pending.kind==='hero'?1200:1400} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await uploadImage(blob,kind)}} onCancel={()=>setPending(null)}/>}
