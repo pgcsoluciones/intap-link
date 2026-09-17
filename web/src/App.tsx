@@ -19,10 +19,10 @@ import './components/PublicProfileError.css'
 
 const PublicProfile = lazy(() => import('./components/PublicProfile'))
 const SponsoredProfile = lazy(() => import('./components/sponsored/SponsoredProfile'))
+const SponsoredAwareArtifactResolver = lazy(() => import('./components/sponsored/SponsoredAwareArtifactResolver'))
 const KawvoLinkDemo = lazy(() => import('./components/demo/KawvoLinkDemo'))
 const KawvoLinkDemoAi = lazy(() => import('./components/demo/KawvoLinkDemoAi'))
 const KawvoLinkDemoShared = lazy(() => import('./components/demo/KawvoLinkDemoShared'))
-const ArtifactLinkResolver = lazy(() => import('./components/ArtifactLinkResolver'))
 const IntapProfileBioPestsManager = lazy(() => import('./components/profile-templates/IntapProfileBioPestsManager'))
 const IntapProfileBioPestsOperations = lazy(() => import('./components/profile-templates/IntapProfileBioPestsOperations'))
 
@@ -56,7 +56,7 @@ function App() {
       <Suspense fallback={<RouteLoader />}>
         <Routes>
           <Route path="/" element={<RootRoute />} />
-          <Route path="/l/:publicCode" element={<ArtifactLinkResolver />} />
+          <Route path="/l/:publicCode" element={<SponsoredAwareArtifactResolver />} />
           <Route path="/p/:username" element={<SponsoredProfile />} />
           <Route path="/demo" element={<KawvoLinkDemo />} />
           <Route path="/demo/ia" element={<KawvoLinkDemoAi />} />
