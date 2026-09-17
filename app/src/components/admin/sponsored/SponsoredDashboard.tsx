@@ -103,6 +103,14 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     {!hasUsername&&<SponsoredStarterOnboarding onComplete={load}/>}
 
     {hasUsername&&<>
+      <section className={section}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="text-[11px] font-black uppercase tracking-[.12em] text-slate-400">Estado de publicación</p><h2 className="mt-1 text-lg font-black">{data.status==='published'?'Tu presentación está publicada':'Tu presentación está en borrador'}</h2><p className="mt-1 text-sm text-slate-500">{data.status==='published'?'Está visible para tus clientes.':'Publícala cuando tengas listos tus datos principales.'}</p></div>
+          <button type="button" onClick={()=>void togglePublish()} disabled={saving} className={`shrink-0 rounded-2xl px-5 py-3 text-sm font-black disabled:opacity-40 ${data.status==='published'?'border border-slate-200 bg-white text-slate-700':'bg-cyan-600 text-white'}`}>{saving?'Procesando…':data.status==='published'?'Volver a borrador':'Publicar presentación'}</button>
+        </div>
+        {feedback('actions')}
+      </section>
+
       <section className={section}><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[.12em] text-cyan-700">Empieza por aquí · recomendado</p><h2 className="mt-1 text-xl font-black">Personaliza tu perfil</h2><p className="mt-1 text-sm text-slate-500">Ya tienes un borrador base. Sustituye los datos e imágenes de ejemplo por los tuyos antes de publicar.</p></div><span className={`rounded-full px-3 py-2 text-xs font-black ${essentialsReady?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}`}>{essentials.filter(i=>i.done).length}/5</span></div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">{essentials.map(item=><div key={item.label} className={`rounded-2xl border p-3 ${item.done?'border-emerald-200 bg-emerald-50':'border-amber-200 bg-amber-50'}`}><div className={`text-sm font-black ${item.done?'text-emerald-700':'text-amber-700'}`}>{item.done?'✓':'○'} {item.label}</div></div>)}</div><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={()=>document.getElementById('sponsored-identity')?.scrollIntoView({behavior:'smooth'})} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Editar perfil</button><button onClick={()=>setViewMode('preview')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700">Vista previa</button></div></section>
 
       <section id="sponsored-identity" className={section}><h2 className={heading}>Presentación</h2><p className="mt-1 text-sm leading-6 text-slate-500">Reemplaza el contenido de ejemplo por tus datos reales. La plantilla patrocinada es universal y no se cambia.</p>
