@@ -120,6 +120,6 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
       <section className={`grid gap-3 pb-8 ${isMaster?'sm:grid-cols-1':'sm:grid-cols-2'}`}><a href={SUPPORT_URL} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Soporte técnico</a>{!isMaster&&<a href={SPONSOR_URL} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm font-black text-slate-700 no-underline">Quiero ser patrocinador</a>}</section>
     </>}
 
-    {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:pending.kind==='hero'?16/9:4/3} outputWidth={pending.kind==='avatar'?400:pending.kind==='hero'?1200:1400} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await uploadImage(blob,kind)}} onCancel={()=>setPending(null)}/>} 
+    {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:pending.kind==='hero'?16/9:4/3} outputWidth={pending.kind==='avatar'?400:pending.kind==='hero'?1200:1400} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await uploadImage(blob,kind)}} onCancel={()=>setPending(null)}/>}
   </div></main>
 }
