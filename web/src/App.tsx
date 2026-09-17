@@ -35,6 +35,10 @@ const SponsoredProfile = lazy(
   () => import('./components/sponsored/SponsoredProfile'),
 )
 
+const SponsoredBankAccounts = lazy(
+  () => import('./components/sponsored/SponsoredBankAccounts'),
+)
+
 const SponsoredAwareArtifactResolver = lazy(
   () => import('./components/sponsored/SponsoredAwareArtifactResolver'),
 )
@@ -113,6 +117,15 @@ function PublicProfileRoute() {
   )
 }
 
+function SponsoredProfileRoute() {
+  return (
+    <>
+      <SponsoredProfile />
+      <SponsoredBankAccounts />
+    </>
+  )
+}
+
 function LegacyBankRoute() {
   const { slug = '' } = useParams()
   return <Navigate to={`/${encodeURIComponent(slug)}#bancos`} replace />
@@ -136,7 +149,7 @@ function App() {
 
           <Route
             path="/p/:username"
-            element={<SponsoredProfile />}
+            element={<SponsoredProfileRoute />}
           />
 
           <Route
