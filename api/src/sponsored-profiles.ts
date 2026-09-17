@@ -1,0 +1,313 @@
+import app from './index'
+import { cookieNames } from './lib/cookies'
+import { requireSuperAdmin } from './lib/admin-auth'
+
+const USERNAME_RE = /^[a-z0-9][a-z0-9-]{2,29}$/
+const RESERVED_USERNAMES = new Set(['admin','api','app','www','superadmin','support','demo','med','p','l'])
+
+async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+function parseCookie(header: string, name: string): string | null {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+async function sessionUserId(c: any): Promise<string | null> {
+  const raw = parseCookie(c.req.header('Cookie') || '', cookieNames(c.env).session)
+  if (!raw) return null
+  const row = await c.env.DB.prepare(
+    `SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1`,
+  ).bind(await sha256Hex(raw)).first()
+  return row ? String((row as any).user_id || '') : null
+}
+
+async function requireUser(c: any, next: any) {
+  const userId = await sessionUserId(c)
+  if (!userId) return c.json({ ok: false, error: 'Unauthorized' }, 401)
+  c.set('userId', userId)
+  await next()
+}
+
+function cleanText(value: unknown, max = 500): string {
+  return String(value ?? '').trim().slice(0, max)
+}
+
+function cleanUsername(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')
+}
+
+function jsonArray(value: unknown, maxItems: number): string {
+  const parsed = Array.isArray(value) ? value : []
+  return JSON.stringify(parsed.slice(0, maxItems))
+}
+
+function publicSponsoredProfile(row: any) {
+  const schedule = (() => { try { return JSON.parse(String(row.schedule_json || '[]')) } catch { return [] } })()
+  const gallery = (() => { try { return JSON.parse(String(row.gallery_json || '[]')) } catch { return [] } })()
+  const modules = (() => { try { return JSON.parse(String(row.modules_json || '[]')) } catch { return [] } })()
+  return {
+    id: row.id,
+    username: row.username,
+    business_name: row.business_name,
+    specialization: row.specialization,
+    what_we_do: row.what_we_do,
+    avatar_url: row.avatar_url,
+    show_avatar: Number(row.show_avatar) === 1,
+    cover_variant: row.cover_variant || 'standard',
+    phone: row.phone,
+    whatsapp: row.whatsapp,
+    instagram: row.instagram,
+    address: row.address,
+    schedule,
+    gallery,
+    gallery_title: row.gallery_title || 'Catálogo',
+    palette_id: row.palette_id || 'blue',
+    status: row.status,
+    modules,
+    sponsor: {
+      id: row.sponsor_id,
+      name: row.sponsor_name,
+      type: row.sponsor_type,
+      logo_url: row.sponsor_logo_url,
+      banner_title: row.banner_title || 'Impulsado por',
+      banner_image_url: row.banner_image_url,
+      banner_cta_label: row.banner_cta_label || 'Conocer más',
+      banner_cta_type: row.banner_cta_type || 'none',
+      banner_cta_value: row.banner_cta_value,
+      whatsapp_message_template: row.whatsapp_message_template,
+      website_url: row.sponsor_website_url,
+      contact_whatsapp: row.sponsor_contact_whatsapp,
+    },
+  }
+}
+
+const SPONSORED_SELECT = `
+  SELECT sp.*,
+         st.name AS sponsor_name, st.sponsor_type, st.logo_url AS sponsor_logo_url,
+         st.banner_title, st.banner_image_url, st.banner_cta_label, st.banner_cta_type,
+         st.banner_cta_value, st.whatsapp_message_template,
+         st.website_url AS sponsor_website_url, st.contact_whatsapp AS sponsor_contact_whatsapp
+    FROM sponsored_profiles sp
+    JOIN sponsor_tenants st ON st.id=sp.sponsor_id
+`
+
+app.get('/api/v1/public/sponsored/:username', async (c: any) => {
+  const username = cleanUsername(c.req.param('username'))
+  if (!username) return c.json({ ok: false, error: 'Perfil no encontrado.' }, 404)
+  const row = await c.env.DB.prepare(`${SPONSORED_SELECT} WHERE sp.username=? AND sp.status='published' AND st.is_active=1 LIMIT 1`).bind(username).first()
+  if (!row) return c.json({ ok: false, error: 'Perfil no encontrado.' }, 404)
+  return c.json({ ok: true, data: publicSponsoredProfile(row) })
+})
+
+app.get('/api/v1/public/sponsored/:username/vcard', async (c: any) => {
+  const username = cleanUsername(c.req.param('username'))
+  const row = await c.env.DB.prepare(`${SPONSORED_SELECT} WHERE sp.username=? AND sp.status='published' AND st.is_active=1 LIMIT 1`).bind(username).first()
+  if (!row) return c.text('Perfil no encontrado', 404)
+  const name = cleanText((row as any).business_name || username, 120)
+  const phone = cleanText((row as any).phone || (row as any).whatsapp, 40)
+  const url = `${String(c.env.WEB_URL || 'https://intaprd.com').replace(/\/$/, '')}/p/${encodeURIComponent(username)}`
+  const lines = ['BEGIN:VCARD','VERSION:3.0',`FN:${name}`, phone ? `TEL;TYPE=CELL:${phone}` : '', `URL:${url}`,'END:VCARD'].filter(Boolean)
+  return new Response(lines.join('\r\n'), { headers: { 'Content-Type': 'text/vcard; charset=utf-8', 'Content-Disposition': `attachment; filename="${username}.vcf"` } })
+})
+
+app.get('/api/v1/me/sponsored-profile', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  const row = await c.env.DB.prepare(`${SPONSORED_SELECT} WHERE sp.user_id=? ORDER BY sp.created_at DESC LIMIT 1`).bind(userId).first()
+  if (!row) return c.json({ ok: true, data: null })
+  return c.json({ ok: true, data: publicSponsoredProfile(row) })
+})
+
+app.post('/api/v1/me/sponsored-profile/claim', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  const body = await c.req.json().catch(() => ({}))
+  const publicCode = cleanText(body?.public_code, 64).toUpperCase()
+  if (!publicCode) return c.json({ ok: false, error: 'Código requerido.' }, 400)
+
+  const artifact = await c.env.DB.prepare(
+    `SELECT a.id,a.status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,st.name AS sponsor_name,st.is_active
+       FROM intap_artifacts a JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id
+      WHERE a.public_code=? LIMIT 1`,
+  ).bind(publicCode).first()
+  if (!artifact) return c.json({ ok: false, error: 'Este producto no pertenece a un programa patrocinado.' }, 404)
+  if (String((artifact as any).artifact_role) === 'master') return c.json({ ok: false, error: 'Este es el llavero Master del patrocinador.' }, 409)
+  if (Number((artifact as any).is_active) !== 1) return c.json({ ok: false, error: 'El patrocinio no está activo.' }, 409)
+  if (String((artifact as any).sponsor_artifact_status) !== 'available' || !['available','unassigned'].includes(String((artifact as any).status || ''))) {
+    return c.json({ ok: false, error: 'Este producto ya fue activado o no está disponible.' }, 409)
+  }
+
+  const artifactId = String((artifact as any).id)
+  const activation = await c.env.DB.prepare(
+    `SELECT id FROM artifact_activation_codes WHERE artifact_id=? AND status='active' AND (expires_at IS NULL OR expires_at>datetime('now')) ORDER BY created_at DESC LIMIT 1`,
+  ).bind(artifactId).first()
+  if (!activation) return c.json({ ok: false, error: 'Este producto todavía no está habilitado para activación.' }, 409)
+
+  const profileId = crypto.randomUUID()
+  await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT INTO sponsored_profiles (id,sponsor_id,artifact_id,user_id,status) VALUES (?,?,?,?, 'draft')`).bind(profileId, String((artifact as any).sponsor_id), artifactId, userId),
+    c.env.DB.prepare(`UPDATE sponsor_artifacts SET status='activated',beneficiary_user_id=?,sponsored_profile_id=?,activated_at=datetime('now') WHERE artifact_id=? AND status='available'`).bind(userId, profileId, artifactId),
+    c.env.DB.prepare(`UPDATE intap_artifacts SET status='activated',owner_user_id=?,activated_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND status IN ('available','unassigned')`).bind(userId, artifactId),
+    c.env.DB.prepare(`UPDATE artifact_activation_codes SET status='used',used_at=datetime('now') WHERE id=? AND status='active'`).bind(String((activation as any).id)),
+  ])
+
+  return c.json({ ok: true, data: { id: profileId, sponsor_name: (artifact as any).sponsor_name, status: 'draft', next_url: '/admin/sponsored' } }, 201)
+})
+
+app.patch('/api/v1/me/sponsored-profile', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  const current = await c.env.DB.prepare(`SELECT * FROM sponsored_profiles WHERE user_id=? ORDER BY created_at DESC LIMIT 1`).bind(userId).first()
+  if (!current) return c.json({ ok: false, error: 'No tienes un perfil patrocinado.' }, 404)
+  const body = await c.req.json().catch(() => ({}))
+  const currentUsername = cleanUsername((current as any).username)
+  const requestedUsername = body.username !== undefined ? cleanUsername(body.username) : currentUsername
+
+  if (!currentUsername) {
+    if (!requestedUsername || !USERNAME_RE.test(requestedUsername) || RESERVED_USERNAMES.has(requestedUsername)) {
+      return c.json({ ok: false, error: 'Primero elige un usuario válido de 3 a 30 caracteres.' }, 422)
+    }
+    const keys = Object.keys(body || {}).filter((key) => key !== 'username')
+    if (keys.length) return c.json({ ok: false, error: 'Primero debes guardar tu usuario antes de editar las demás secciones.', code: 'username_required' }, 422)
+  }
+
+  if (requestedUsername && requestedUsername !== currentUsername) {
+    if (!USERNAME_RE.test(requestedUsername) || RESERVED_USERNAMES.has(requestedUsername)) return c.json({ ok: false, error: 'Usuario no válido.' }, 422)
+    const exists = await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? AND id<>? LIMIT 1`).bind(requestedUsername, String((current as any).id)).first()
+    if (exists) return c.json({ ok: false, error: 'Ese usuario ya está ocupado.' }, 409)
+  }
+
+  const next = {
+    username: requestedUsername || null,
+    business_name: body.business_name !== undefined ? cleanText(body.business_name, 100) : (current as any).business_name,
+    specialization: body.specialization !== undefined ? cleanText(body.specialization, 100) : (current as any).specialization,
+    what_we_do: body.what_we_do !== undefined ? cleanText(body.what_we_do, 240) : (current as any).what_we_do,
+    avatar_url: body.avatar_url !== undefined ? cleanText(body.avatar_url, 800) : (current as any).avatar_url,
+    show_avatar: body.show_avatar !== undefined ? (body.show_avatar ? 1 : 0) : Number((current as any).show_avatar ?? 1),
+    phone: body.phone !== undefined ? cleanText(body.phone, 40) : (current as any).phone,
+    whatsapp: body.whatsapp !== undefined ? cleanText(body.whatsapp, 40) : (current as any).whatsapp,
+    instagram: body.instagram !== undefined ? cleanText(body.instagram, 160) : (current as any).instagram,
+    address: body.address !== undefined ? cleanText(body.address, 180) : (current as any).address,
+    schedule_json: body.schedule !== undefined ? jsonArray(body.schedule, 7) : String((current as any).schedule_json || '[]'),
+    gallery_json: body.gallery !== undefined ? jsonArray(body.gallery, 10) : String((current as any).gallery_json || '[]'),
+    gallery_title: body.gallery_title !== undefined ? cleanText(body.gallery_title, 40) || 'Catálogo' : (current as any).gallery_title,
+    palette_id: body.palette_id !== undefined ? cleanText(body.palette_id, 24) || 'blue' : (current as any).palette_id,
+  }
+
+  await c.env.DB.prepare(`UPDATE sponsored_profiles SET username=?,business_name=?,specialization=?,what_we_do=?,avatar_url=?,show_avatar=?,phone=?,whatsapp=?,instagram=?,address=?,schedule_json=?,gallery_json=?,gallery_title=?,palette_id=?,updated_at=datetime('now') WHERE id=?`).bind(
+    next.username,next.business_name,next.specialization,next.what_we_do,next.avatar_url,next.show_avatar,next.phone,next.whatsapp,next.instagram,next.address,next.schedule_json,next.gallery_json,next.gallery_title,next.palette_id,String((current as any).id),
+  ).run()
+  return c.json({ ok: true })
+})
+
+app.post('/api/v1/me/sponsored-profile/publish', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  const row = await c.env.DB.prepare(`SELECT * FROM sponsored_profiles WHERE user_id=? ORDER BY created_at DESC LIMIT 1`).bind(userId).first()
+  if (!row) return c.json({ ok: false, error: 'No tienes un perfil patrocinado.' }, 404)
+  const missing: string[] = []
+  if (!cleanUsername((row as any).username)) missing.push('usuario')
+  if (!cleanText((row as any).business_name)) missing.push('nombre')
+  if (!cleanText((row as any).specialization)) missing.push('especialización')
+  if (!cleanText((row as any).what_we_do)) missing.push('qué hacemos')
+  if (!cleanText((row as any).whatsapp) && !cleanText((row as any).phone)) missing.push('contacto')
+  if (missing.length) return c.json({ ok: false, error: 'Completa los datos requeridos antes de publicar.', missing }, 422)
+  await c.env.DB.prepare(`UPDATE sponsored_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=?`).bind(String((row as any).id)).run()
+  return c.json({ ok: true, data: { public_path: `/p/${encodeURIComponent(String((row as any).username))}` } })
+})
+
+app.post('/api/v1/me/sponsored-profile/unpublish', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  await c.env.DB.prepare(`UPDATE sponsored_profiles SET status='draft',updated_at=datetime('now') WHERE user_id=?`).bind(userId).run()
+  return c.json({ ok: true })
+})
+
+app.get('/api/v1/sponsor/me', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  const tenant = await c.env.DB.prepare(`SELECT st.*,sm.role FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1 LIMIT 1`).bind(userId).first()
+  if (!tenant) return c.json({ ok: true, data: null })
+  return c.json({ ok: true, data: tenant })
+})
+
+app.get('/api/v1/sponsor/artifacts', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(userId).first()
+  if (!membership) return c.json({ ok: false, error: 'No tienes acceso a un patrocinador.' }, 403)
+  const result = await c.env.DB.prepare(`SELECT a.public_code,a.product_type,sa.status,sa.artifact_role,sa.activated_at,sp.username,sp.business_name,sp.status AS profile_status,b.name AS batch_name,b.city,b.zone FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE sa.sponsor_id=? ORDER BY sa.created_at DESC`).bind(String((membership as any).sponsor_id)).all()
+  return c.json({ ok: true, data: result.results || [] })
+})
+
+app.patch('/api/v1/sponsor/settings', requireUser, async (c: any) => {
+  const userId = c.get('userId')
+  const membership = await c.env.DB.prepare(`SELECT sponsor_id,role FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(userId).first()
+  if (!membership || !['owner','admin'].includes(String((membership as any).role))) return c.json({ ok: false, error: 'No tienes permiso para editar el patrocinio.' }, 403)
+  const body = await c.req.json().catch(() => ({}))
+  await c.env.DB.prepare(`UPDATE sponsor_tenants SET logo_url=?,banner_title=?,banner_image_url=?,banner_cta_label=?,banner_cta_type=?,banner_cta_value=?,whatsapp_message_template=?,contact_whatsapp=?,website_url=?,updated_at=datetime('now') WHERE id=?`).bind(
+    cleanText(body.logo_url,800),cleanText(body.banner_title,80)||'Impulsado por',cleanText(body.banner_image_url,800),cleanText(body.banner_cta_label,60)||'Conocer más',
+    ['beneficiary_whatsapp','sponsor_whatsapp','sponsor_url','none'].includes(String(body.banner_cta_type)) ? String(body.banner_cta_type) : 'none',cleanText(body.banner_cta_value,800),cleanText(body.whatsapp_message_template,240)||'Hola, me interesa saber más sobre estos productos.',cleanText(body.contact_whatsapp,40),cleanText(body.website_url,800),String((membership as any).sponsor_id),
+  ).run()
+  return c.json({ ok: true })
+})
+
+app.get('/api/v1/superadmin/sponsors', requireSuperAdmin('viewer'), async (c: any) => {
+  const result = await c.env.DB.prepare(`SELECT st.*, (SELECT COUNT(*) FROM sponsor_artifacts sa WHERE sa.sponsor_id=st.id) AS products_total,(SELECT COUNT(*) FROM sponsor_artifacts sa WHERE sa.sponsor_id=st.id AND sa.status='activated') AS products_activated,(SELECT COUNT(*) FROM sponsored_profiles sp WHERE sp.sponsor_id=st.id AND sp.status='published') AS profiles_published FROM sponsor_tenants st ORDER BY st.created_at DESC`).all()
+  return c.json({ ok: true, data: result.results || [] })
+})
+
+app.post('/api/v1/superadmin/sponsors', requireSuperAdmin('super_admin'), async (c: any) => {
+  const body = await c.req.json().catch(() => ({}))
+  const name = cleanText(body.name,120)
+  const slug = cleanUsername(body.slug || name)
+  const sponsorType = body.sponsor_type === 'brand' ? 'brand' : 'merchant'
+  if (!name || !slug) return c.json({ ok: false, error: 'Nombre y slug son requeridos.' }, 422)
+  const id = crypto.randomUUID()
+  await c.env.DB.prepare(`INSERT INTO sponsor_tenants (id,name,slug,sponsor_type,logo_url,contact_email,contact_whatsapp,website_url,created_by_admin_user_id) VALUES (?,?,?,?,?,?,?,?,?)`).bind(id,name,slug,sponsorType,cleanText(body.logo_url,800),cleanText(body.contact_email,160),cleanText(body.contact_whatsapp,40),cleanText(body.website_url,800),String(c.get('adminUserId') || '')).run()
+  if (body.owner_user_id) await c.env.DB.prepare(`INSERT OR IGNORE INTO sponsor_members (sponsor_id,user_id,role,status) VALUES (?,?,'owner','active')`).bind(id,cleanText(body.owner_user_id,100)).run()
+  return c.json({ ok: true, data: { id } }, 201)
+})
+
+app.patch('/api/v1/superadmin/sponsors/:id', requireSuperAdmin('super_admin'), async (c: any) => {
+  const id = c.req.param('id')
+  const body = await c.req.json().catch(() => ({}))
+  await c.env.DB.prepare(`UPDATE sponsor_tenants SET name=?,sponsor_type=?,logo_url=?,contact_email=?,contact_whatsapp=?,website_url=?,is_active=?,updated_at=datetime('now') WHERE id=?`).bind(cleanText(body.name,120),body.sponsor_type==='brand'?'brand':'merchant',cleanText(body.logo_url,800),cleanText(body.contact_email,160),cleanText(body.contact_whatsapp,40),cleanText(body.website_url,800),body.is_active===false?0:1,id).run()
+  return c.json({ ok: true })
+})
+
+app.post('/api/v1/superadmin/sponsors/:id/assign-artifacts', requireSuperAdmin('super_admin'), async (c: any) => {
+  const sponsorId = c.req.param('id')
+  const body = await c.req.json().catch(() => ({}))
+  const publicCodes = Array.isArray(body.public_codes) ? body.public_codes.map((v:any)=>cleanText(v,64).toUpperCase()).filter(Boolean) : []
+  if (!publicCodes.length) return c.json({ ok:false,error:'Agrega al menos un código de producto.' },422)
+  const batchId = crypto.randomUUID()
+  const batchName = cleanText(body.batch_name,100) || `Lote ${new Date().toISOString().slice(0,10)}`
+  await c.env.DB.prepare(`INSERT INTO sponsor_batches (id,sponsor_id,name,quantity,city,zone,notes) VALUES (?,?,?,?,?,?,?)`).bind(batchId,sponsorId,batchName,publicCodes.length,cleanText(body.city,80),cleanText(body.zone,80),cleanText(body.notes,240)).run()
+  let assigned = 0
+  for (const code of publicCodes) {
+    const artifact = await c.env.DB.prepare(`SELECT id,status,owner_user_id FROM intap_artifacts WHERE public_code=? LIMIT 1`).bind(code).first()
+    if (!artifact || (artifact as any).owner_user_id || !['available','unassigned'].includes(String((artifact as any).status||''))) continue
+    await c.env.DB.prepare(`INSERT OR IGNORE INTO sponsor_artifacts (sponsor_id,artifact_id,batch_id,status,artifact_role) VALUES (?,?,?,'available','beneficiary')`).bind(sponsorId,String((artifact as any).id),batchId).run()
+    assigned += 1
+  }
+  return c.json({ ok:true,data:{ batch_id:batchId, requested:publicCodes.length, assigned } })
+})
+
+app.post('/api/v1/superadmin/sponsors/:id/master-artifact', requireSuperAdmin('super_admin'), async (c:any) => {
+  const sponsorId=c.req.param('id'); const body=await c.req.json().catch(()=>({})); const code=cleanText(body.public_code,64).toUpperCase()
+  const artifact=await c.env.DB.prepare(`SELECT id,status,owner_user_id FROM intap_artifacts WHERE public_code=? LIMIT 1`).bind(code).first()
+  if(!artifact) return c.json({ok:false,error:'Producto no encontrado.'},404)
+  const artifactId=String((artifact as any).id)
+  await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT OR REPLACE INTO sponsor_artifacts (sponsor_id,artifact_id,status,artifact_role) VALUES (?,?,'available','master')`).bind(sponsorId,artifactId),
+    c.env.DB.prepare(`UPDATE sponsor_tenants SET master_artifact_id=?,updated_at=datetime('now') WHERE id=?`).bind(artifactId,sponsorId),
+  ])
+  return c.json({ok:true})
+})
+
+app.patch('/api/v1/superadmin/sponsors/:id/modules', requireSuperAdmin('super_admin'), async (c:any) => {
+  const sponsorId=c.req.param('id'); const body=await c.req.json().catch(()=>({})); const modules=Array.isArray(body.modules)?body.modules:[]
+  for(const item of modules){const code=cleanText(item?.code,80);if(!code)continue;await c.env.DB.prepare(`INSERT INTO sponsor_module_grants (sponsor_id,module_code,enabled,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(sponsor_id,module_code) DO UPDATE SET enabled=excluded.enabled,updated_at=datetime('now')`).bind(sponsorId,code,item?.enabled===false?0:1).run()}
+  return c.json({ok:true})
+})
+
+export default app
