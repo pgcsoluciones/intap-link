@@ -1,0 +1,172 @@
+name: Deploy Perfil Patrocinado Preview
+
+on:
+  push:
+    branches:
+      - feature/kawlink-sponsored-profile-v1
+    paths:
+      - 'api/**'
+      - 'app/**'
+      - 'web/**'
+      - 'scripts/test-sponsored-profile-contract.mjs'
+      - '.github/workflows/deploy-sponsored-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kawlink-sponsored-preview
+  cancel-in-progress: true
+
+env:
+  ALLOWED_REF: feature/kawlink-sponsored-profile-v1
+  WEB_PROJECT: intap-link
+  APP_PROJECT: intap-web2
+  PREVIEW_DB: intap_db_preview
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  deploy-preview:
+    name: Build + migrate + deploy Preview only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Safety guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "$ALLOWED_REF" || { echo "::error::Solo se permite $ALLOWED_REF"; exit 1; }
+          test "${GITHUB_REF_NAME}" != "main" || { echo "::error::main está bloqueada"; exit 1; }
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Falta CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "::error::Falta CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          echo "✓ Solo Preview; Producción bloqueada"
+
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/kawlink-sponsored-profile-v1
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify unrelated discovery source is unchanged from main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          if ! git diff --quiet origin/main...HEAD -- functions/profile-discovery.ts; then
+            echo "::error::functions/profile-discovery.ts cambió dentro de esta feature; revisar antes de desplegar"
+            exit 1
+          fi
+          echo "✓ El error TypeScript heredado de profile-discovery no fue introducido por esta feature"
+
+      - name: Sponsored contract
+        run: node scripts/test-sponsored-profile-contract.mjs
+
+      - name: Build Web Preview
+        run: npm run build:preview -w web
+
+      - name: Build App Preview
+        run: npm run build:preview -w app
+
+      - name: Typecheck API
+        run: npx tsc --noEmit -p api/tsconfig.json
+
+      - name: Bundle API Preview
+        run: npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-sponsored-preview-api.mjs
+
+      - name: Apply D1 migrations Preview only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd api
+          npx wrangler d1 migrations apply "$PREVIEW_DB" --remote --config wrangler.preview.toml
+
+      - name: Deploy Web Pages Preview
+        id: webdeploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/sponsored-web-preview.log
+          npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$ALLOWED_REF" 2>&1 | tee "$LOG"
+          ORIGIN=$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$LOG" | tail -1)
+          test -n "$ORIGIN" || { echo "::error::No pude detectar origin Web Preview"; exit 1; }
+          echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
+          echo "✓ Web: $ORIGIN"
+
+      - name: Deploy App Pages Preview
+        id: appdeploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG=/tmp/sponsored-app-preview.log
+          npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch "$ALLOWED_REF" 2>&1 | tee "$LOG"
+          ORIGIN=$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG" | tail -1)
+          test -n "$ORIGIN" || { echo "::error::No pude detectar origin App Preview"; exit 1; }
+          echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
+          echo "✓ App: $ORIGIN"
+
+      - name: Deploy Preview front door Worker to immutable origins
+        shell: bash
+        env:
+          WEB_ORIGIN: ${{ steps.webdeploy.outputs.origin }}
+          APP_ORIGIN: ${{ steps.appdeploy.outputs.origin }}
+        run: |
+          set -euo pipefail
+          cp api/wrangler.preview.toml /tmp/wrangler-sponsored-preview.toml
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,re
+          p=Path('/tmp/wrangler-sponsored-preview.toml')
+          s=p.read_text()
+          s,n1=re.subn(r'WEB_PAGES_ORIGIN\s*=\s*"[^"]+"',f'WEB_PAGES_ORIGIN = "{os.environ["WEB_ORIGIN"]}"',s,count=1)
+          s,n2=re.subn(r'APP_PAGES_ORIGIN\s*=\s*"[^"]+"',f'APP_PAGES_ORIGIN = "{os.environ["APP_ORIGIN"]}"',s,count=1)
+          if n1!=1 or n2!=1: raise SystemExit('No pude reemplazar origins Preview')
+          p.write_text(s)
+          PY
+          cd api
+          npx wrangler deploy --config /tmp/wrangler-sponsored-preview.toml
+
+      - name: Smoke Preview custom domains
+        shell: bash
+        run: |
+          set -euo pipefail
+          wait200(){
+            local url="$1"
+            for i in $(seq 1 15); do
+              code=$(curl -sS -L -o /tmp/probe.out -w '%{http_code}' "$url?probe=${GITHUB_RUN_ID}-$i" || true)
+              if [ "$code" = "200" ]; then echo "✓ $url"; return 0; fi
+              sleep 4
+            done
+            echo "::error::$url no respondió 200"; return 1
+          }
+          wait200 'https://preview.intaprd.com/'
+          wait200 'https://app.preview.intaprd.com/admin/login'
+          wait200 'https://preview.intaprd.com/p/__sponsored_preview_probe__'
+          code=$(curl -sS -o /tmp/api-probe.json -w '%{http_code}' 'https://app.preview.intaprd.com/api/v1/public/sponsored/__sponsored_preview_probe__' || true)
+          case "$code" in 404|200) echo "✓ Sponsored API route reachable ($code)";; *) cat /tmp/api-probe.json || true; echo "::error::Sponsored API route respondió $code"; exit 1;; esac
+
+      - name: Summary
+        shell: bash
+        env:
+          WEB_ORIGIN: ${{ steps.webdeploy.outputs.origin }}
+          APP_ORIGIN: ${{ steps.appdeploy.outputs.origin }}
+        run: |
+          {
+            echo '## Perfil Patrocinado V1 · Preview desplegado'
+            echo ''
+            echo "- Web Preview: https://preview.intaprd.com"
+            echo "- App Preview: https://app.preview.intaprd.com"
+            echo "- Web inmutable: $WEB_ORIGIN"
+            echo "- App inmutable: $APP_ORIGIN"
+            echo "- Super Admin: https://app.preview.intaprd.com/superadmin/sponsors"
+            echo '- Producción: **NO TOCADA**'
+          } >> "$GITHUB_STEP_SUMMARY"
