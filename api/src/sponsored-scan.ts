@@ -43,6 +43,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   const artifact={public_code:publicCode,product_type:productType,label:productLabel(productType)}
 
   if(String((row as any).artifact_role||'beneficiary')==='master'){
+    // Master inspection is read-only and never consumes or claims the physical artifact.
     const publicOwnerProfile=await c.env.DB.prepare(`SELECT username,status FROM sponsored_profiles WHERE sponsor_id=? AND profile_role='sponsor_owner' ORDER BY created_at ASC LIMIT 1`).bind(sponsorId).first().catch(()=>null)
     const ownerUsername=String((publicOwnerProfile as any)?.username||'')
     const ownerStatus=String((publicOwnerProfile as any)?.status||'')
@@ -81,7 +82,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
 
   // Treat a resolved profile association as activated even when legacy rows have
   // a stale sponsor_artifacts status. This avoids sending the owner back through
-  // consent after the first successful claim.
+  // consent after the first successful claim. Once activated, commercial inactivity cannot remove or block the beneficiary public profile.
   if(resolvedProfileId||sponsoredStatus==='activated'||artifactStatus==='activated'){
     if(profileStatus==='published'&&username)return c.json({ok:true,state:'activated',artifact,sponsor,next_url:`${configuredWebUrl(c)}/p/${encodeURIComponent(username)}`})
     const isOwner=Boolean(currentUserId&&beneficiary&&currentUserId===beneficiary)
