@@ -63,7 +63,7 @@ app.post('/api/v1/me/sponsored-profile/claim',requireUser,async(c:any)=>{
     ])
   }catch(error:any){
     const message=String(error?.message||error||'')
-    if(/ux_sponsored_profiles_one_beneficiary_per_user|UNIQUE constraint failed: sponsored_profiles\.user_id/i.test(message)){
+    if(/sponsored_account_already_linked|ux_sponsored_profiles_one_beneficiary_per_user|UNIQUE constraint failed: sponsored_profiles\.user_id/i.test(message)){
       return c.json({ok:false,error:'Esta cuenta ya tiene un dispositivo patrocinado vinculado. Cada cuenta solo puede tener un dispositivo patrocinado.',code:'sponsored_account_already_linked'},409)
     }
     throw error
