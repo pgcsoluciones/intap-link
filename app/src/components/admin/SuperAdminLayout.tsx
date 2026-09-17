@@ -42,13 +42,20 @@ type SuperAdminLayoutProps = {
   children: ReactNode
 }
 
-export default function SuperAdminLayout({ currentSection = 'dashboard', onNavigate, onLogout, children }: SuperAdminLayoutProps) {
+export default function SuperAdminLayout({
+  currentSection = 'dashboard',
+  onNavigate,
+  onLogout,
+  children,
+}: SuperAdminLayoutProps) {
   const [supportCount, setSupportCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     apiGet('/superadmin/support-tickets')
-      .then((json: any) => { if (!cancelled && json?.ok) setSupportCount(Number(json.data?.open_count || 0)) })
+      .then((json: any) => {
+        if (!cancelled && json?.ok) setSupportCount(Number(json.data?.open_count || 0))
+      })
       .catch(() => undefined)
     return () => { cancelled = true }
   }, [currentSection])
