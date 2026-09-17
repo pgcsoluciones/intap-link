@@ -51,6 +51,7 @@ async function requireAccount(c: any, next: any) {
   if (!row) return c.json({ ok: false, error: 'Unauthorized' }, 401)
   c.set('accountUserId', String((row as any).user_id || ''))
   c.set('accountEmail', String((row as any).email || ''))
+  c.set('accountSessionId', String((row as any).session_id || ''))
   await next()
 }
 async function sendVerificationCode(c: any, to: string, code: string, purpose: string) {
@@ -99,9 +100,12 @@ async function verifyChallenge(c: any, userId: string, email: string, purpose: s
   await c.env.DB.prepare(`UPDATE account_verification_challenges SET consumed_at=datetime('now') WHERE id=?`).bind(id).run()
   return true
 }
-async function consumeAction(c: any, userId: string, purpose: string, raw: string) {
-  if (!raw) return null
-  const row = await c.env.DB.prepare(`SELECT id,target_email FROM account_verified_actions WHERE user_id=? AND purpose=? AND token_hash=? AND consumed_at IS NULL AND expires_at>datetime('now') LIMIT 1`).bind(userId,purpose,await sha256Hex(raw)).first()
+async function createVerifiedAction(c: any, userId: string, sessionId: string, purpose: string, targetEmail?: string) {
+  const raw = token(32)
+  await c.env.DB.prepare(`INSERT INTO account_verified_actions(id,user_id,session_id,purpose,token_hash,target_email,expires_at,created_at) VALUES(?,?,?,?,?,?,datetime('now','+10 minutes'),datetime('now'))`).bind(crypto.randomUUID(),userId,sessionId,purpose,await sha256Hex(raw),targetEmail || null).run()
+}
+async function consumeVerifiedAction(c: any, userId: string, sessionId: string, purpose: string) {
+  const row = await c.env.DB.prepare(`SELECT id,target_email FROM account_verified_actions WHERE user_id=? AND session_id=? AND purpose=? AND consumed_at IS NULL AND expires_at>datetime('now') ORDER BY created_at DESC LIMIT 1`).bind(userId,sessionId,purpose).first()
   if (!row) return null
   await c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE id=?`).bind(String((row as any).id)).run()
   return row
@@ -129,18 +133,18 @@ app.post('/api/v1/me/account/credentials/verify/confirm', requireAccount, async 
   let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
   const purpose=String(body?.purpose||''), code=String(body?.code||'').trim()
   if (!['password','email_change'].includes(purpose) || !/^\d{6}$/.test(code)) return c.json({ok:false,error:'Código inválido.'},400)
-  const userId=c.get('accountUserId') as string, email=c.get('accountEmail') as string
+  const userId=c.get('accountUserId') as string, email=c.get('accountEmail') as string, sessionId=c.get('accountSessionId') as string
   if (!(await verifyChallenge(c,userId,email,purpose,code))) return c.json({ok:false,error:'Código incorrecto o expirado.'},400)
-  const raw=token(32), id=crypto.randomUUID()
-  await c.env.DB.prepare(`INSERT INTO account_verified_actions(id,user_id,purpose,token_hash,expires_at,created_at) VALUES(?,?,?,?,datetime('now','+10 minutes'),datetime('now'))`).bind(id,userId,purpose,await sha256Hex(raw)).run()
-  return c.json({ok:true,data:{verification_token:raw}})
+  await c.env.DB.prepare(`UPDATE account_verified_actions SET consumed_at=datetime('now') WHERE user_id=? AND session_id=? AND purpose=? AND consumed_at IS NULL`).bind(userId,sessionId,purpose).run()
+  await createVerifiedAction(c,userId,sessionId,purpose)
+  return c.json({ok:true})
 })
 
 app.post('/api/v1/me/account/password', requireAccount, async (c:any) => {
   let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
-  const userId=c.get('accountUserId') as string, password=String(body?.password||''), verification=String(body?.verification_token||'')
+  const userId=c.get('accountUserId') as string, sessionId=c.get('accountSessionId') as string, password=String(body?.password||'')
   if (password.length < 8 || password.length > 128) return c.json({ok:false,error:'La contraseña debe tener entre 8 y 128 caracteres.'},400)
-  if (!(await consumeAction(c,userId,'password',verification))) return c.json({ok:false,error:'La verificación expiró. Solicita un nuevo código.'},403)
+  if (!(await consumeVerifiedAction(c,userId,sessionId,'password'))) return c.json({ok:false,error:'La verificación expiró. Solicita un nuevo código.'},403)
   const cred=await newPasswordRecord(password)
   await c.env.DB.prepare(`INSERT INTO user_password_credentials(user_id,password_salt,password_hash,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,0,NULL,datetime('now'),datetime('now')) ON CONFLICT(user_id) DO UPDATE SET password_salt=excluded.password_salt,password_hash=excluded.password_hash,failed_attempts=0,locked_until=NULL,updated_at=datetime('now')`).bind(userId,cred.salt,cred.hash).run()
   return c.json({ok:true})
@@ -148,10 +152,10 @@ app.post('/api/v1/me/account/password', requireAccount, async (c:any) => {
 
 app.post('/api/v1/me/account/email/change/start', requireAccount, async (c:any) => {
   let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
-  const userId=c.get('accountUserId') as string, newEmail=String(body?.new_email||'').trim().toLowerCase(), verification=String(body?.verification_token||'')
+  const userId=c.get('accountUserId') as string, sessionId=c.get('accountSessionId') as string, newEmail=String(body?.new_email||'').trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) return c.json({ok:false,error:'Correo inválido.'},400)
   if (newEmail === String(c.get('accountEmail')).toLowerCase()) return c.json({ok:false,error:'Ese correo ya está vinculado a tu cuenta.'},400)
-  if (!(await consumeAction(c,userId,'email_change',verification))) return c.json({ok:false,error:'La autorización expiró. Vuelve a validar tu correo actual.'},403)
+  if (!(await consumeVerifiedAction(c,userId,sessionId,'email_change'))) return c.json({ok:false,error:'La autorización expiró. Vuelve a validar tu correo actual.'},403)
   const exists=await c.env.DB.prepare(`SELECT id FROM users WHERE lower(email)=? AND id<>? LIMIT 1`).bind(newEmail,userId).first()
   if (exists) return c.json({ok:false,error:'Ese correo ya está vinculado a otra cuenta.'},409)
   const result=await createChallenge(c,userId,newEmail,'email_new')
