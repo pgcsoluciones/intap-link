@@ -14,7 +14,7 @@ async function uniqueTenantSlug(c:any,base:string){let candidate=base||`patrocin
 
 app.post('/api/v1/superadmin/sponsors',requireSuperAdmin('super_admin'),async(c:any)=>{
   const body=await c.req.json().catch(()=>({}))
-  const name=clean(body.name,120);const email=clean(body.contact_email,160).toLowerCase();const requestedProfileSlug=slug(body.slug);const sponsorType=body.sponsor_type==='brand'?'brand':'merchant'
+  const name=clean(body.name,120);const email=clean(body.contact_email,160).toLowerCase();const requestedProfileSlug=slug(body.profile_slug);const sponsorType=body.sponsor_type==='brand'?'brand':'merchant'
   if(!name||!email)return c.json({ok:false,error:'Nombre y correo del patrocinador son requeridos.'},422)
   if(requestedProfileSlug&&(!USERNAME_RE.test(requestedProfileSlug)||RESERVED.has(requestedProfileSlug)))return c.json({ok:false,error:'El slug público no es válido.'},422)
   if(requestedProfileSlug){const used=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? LIMIT 1`).bind(requestedProfileSlug).first();if(used)return c.json({ok:false,error:'Ese slug público ya está ocupado.'},409)}
@@ -26,7 +26,7 @@ app.post('/api/v1/superadmin/sponsors',requireSuperAdmin('super_admin'),async(c:
 
 app.patch('/api/v1/superadmin/sponsors/:id',requireSuperAdmin('super_admin'),async(c:any)=>{
   const id=String(c.req.param('id')||'');const body=await c.req.json().catch(()=>({}));const current=await c.env.DB.prepare(`SELECT * FROM sponsor_tenants WHERE id=? LIMIT 1`).bind(id).first();if(!current)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
-  const nextProfileSlug=body.slug!==undefined?slug(body.slug):slug((current as any).profile_slug)
+  const nextProfileSlug=body.profile_slug!==undefined?slug(body.profile_slug):slug((current as any).profile_slug)
   if(nextProfileSlug&&(!USERNAME_RE.test(nextProfileSlug)||RESERVED.has(nextProfileSlug)))return c.json({ok:false,error:'El slug público no es válido.'},422)
   if(nextProfileSlug){const used=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? AND sponsor_id<>? LIMIT 1`).bind(nextProfileSlug,id).first();if(used)return c.json({ok:false,error:'Ese slug público ya está ocupado.'},409)}
   const active=(body.is_active===false||Number(body.is_active)===0)?0:1
