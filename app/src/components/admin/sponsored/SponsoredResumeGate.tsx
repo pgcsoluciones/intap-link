@@ -16,16 +16,33 @@ export default function SponsoredResumeGate(){
     const panelResume=(sessionStorage.getItem(PANEL_KEY)||localStorage.getItem(PANEL_KEY))==='1'
     if(!valid(profileCode)&&!valid(masterCode)&&!panelResume)return
     if(valid(profileCode)&&location.pathname==='/admin/sponsored/activate')return
-    if(valid(masterCode)&&location.pathname.startsWith('/admin/sponsor'))return
     if(panelResume&&location.pathname==='/admin/sponsored')return
+
+    // A Master must always pass again through SponsoredAccessEntry after login.
+    // That route calls scan/status, validates the registered sponsor email,
+    // creates the owner membership/profile when appropriate and only then opens the panel.
+    if(valid(masterCode)&&location.pathname==='/admin/sponsor'){
+      const currentMaster=String(new URLSearchParams(location.search).get('master')||'').trim().toUpperCase()
+      if(currentMaster===masterCode){
+        navigate(`/admin/sponsor/entry?public_code=${encodeURIComponent(masterCode)}`,{replace:true})
+        return
+      }
+    }
+
     let alive=true
     apiGet('/me').then((json:any)=>{
       if(!alive||!json?.ok)return
-      if(valid(masterCode)){navigate(`/admin/sponsor?master=${encodeURIComponent(masterCode)}`,{replace:true});return}
-      if(valid(profileCode)){navigate(`/admin/sponsored/activate?public_code=${encodeURIComponent(profileCode)}`,{replace:true});return}
+      if(valid(masterCode)){
+        navigate(`/admin/sponsor/entry?public_code=${encodeURIComponent(masterCode)}`,{replace:true})
+        return
+      }
+      if(valid(profileCode)){
+        navigate(`/admin/sponsored/activate?public_code=${encodeURIComponent(profileCode)}`,{replace:true})
+        return
+      }
       if(panelResume)navigate('/admin/sponsored',{replace:true})
     }).catch(()=>undefined)
     return()=>{alive=false}
-  },[location.pathname,navigate])
+  },[location.pathname,location.search,navigate])
   return null
 }
