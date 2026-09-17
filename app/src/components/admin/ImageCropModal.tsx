@@ -246,8 +246,8 @@ export default function ImageCropModal({
         </div>
 
         <div
-          className="relative mx-auto overflow-hidden rounded-xl bg-[linear-gradient(45deg,#1f2937_25%,transparent_25%),linear-gradient(-45deg,#1f2937_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#1f2937_75%),linear-gradient(-45deg,transparent_75%,#1f2937_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] select-none"
-          style={{ width: PREVIEW_W, height: previewHeight, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none', backgroundColor: '#111827' }}
+          className="relative mx-auto overflow-hidden rounded-xl bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] select-none"
+          style={{ width: PREVIEW_W, height: previewHeight, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none', backgroundColor: '#f8fafc' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
