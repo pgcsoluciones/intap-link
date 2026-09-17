@@ -26,6 +26,7 @@ KAWVO LINK · PERFIL PATROCINADO V1 · PREVIEW
 - NO toca Producción
 - NO hace merge a main
 - aplica migraciones SOLO en D1 Preview
+- valida contrato funcional patrocinado
 - compila Web/App/API antes de desplegar
 - despliega Web + App a Pages Preview
 - apunta temporalmente el Worker Preview a origins inmutables
@@ -40,6 +41,7 @@ run git pull --ff-only github "$BRANCH"
 
 run git diff --check main...HEAD
 run npm ci
+run node scripts/test-sponsored-profile-contract.mjs
 run npm run build:preview -w web
 run npm run build:preview -w app
 run bash -lc 'cd api && npx tsc --noEmit'
