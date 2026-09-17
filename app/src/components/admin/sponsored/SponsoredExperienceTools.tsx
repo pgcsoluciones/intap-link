@@ -48,7 +48,7 @@ export default function SponsoredExperienceTools(){
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <button type="button" onClick={()=>window.dispatchEvent(new Event(SPONSORED_TOUR_EVENT))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 shadow-sm">Recorrido</button>
           <button type="button" onClick={()=>void openAccount()} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Mi cuenta</button>
-          <button type="button" disabled={installed} onClick={()=>void install()} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:bg-emerald-600">{installed?'Instalada':'Descargar app'}</button>
+          <button type="button" disabled={installed} onClick={()=>void install()} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:bg-emerald-600">{installed?'Aplicación instalada':'Descargar aplicación'}</button>
         </div>
       </div>
     </header>
