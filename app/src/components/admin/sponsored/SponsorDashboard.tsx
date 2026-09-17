@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { API_BASE, apiGet, apiPatch } from '../../../lib/api'
+import { API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import SponsoredDashboard from './SponsoredDashboard'
 
 type PendingImage={file:File;kind:'logo'|'banner'}|null
 type Tab='profile'|'brand'|'codes'
+const MASTER_KEY='kawvo_sponsor_master_code'
 
 export default function SponsorDashboard(){
   const logoRef=useRef<HTMLInputElement>(null),bannerRef=useRef<HTMLInputElement>(null)
-  const[tenant,setTenant]=useState<any>(null),[items,setItems]=useState<any[]>([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[uploading,setUploading]=useState(''),[pending,setPending]=useState<PendingImage>(null),[message,setMessage]=useState(''),[error,setError]=useState(''),[form,setForm]=useState<any>({logo_url:'',banner_image_url:''}),[tab,setTab]=useState<Tab>('profile'),[query,setQuery]=useState(''),[statusFilter,setStatusFilter]=useState('all')
+  const[tenant,setTenant]=useState<any>(null),[items,setItems]=useState<any[]>([]),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[uploading,setUploading]=useState(''),[pending,setPending]=useState<PendingImage>(null),[message,setMessage]=useState(''),[error,setError]=useState(''),[form,setForm]=useState<any>({logo_url:'',banner_image_url:''}),[tab,setTab]=useState<Tab>('profile'),[query,setQuery]=useState(''),[statusFilter,setStatusFilter]=useState('all'),[switchingAccount,setSwitchingAccount]=useState(false)
   async function load(){setLoading(true);setError('');try{const[me,list]:any[]=await Promise.all([apiGet('/sponsor/me'),apiGet('/sponsor/artifacts')]);if(!me?.ok)throw new Error(me?.error||'No pudimos abrir el patrocinador.');setTenant(me.data);if(me.data)setForm({logo_url:me.data.logo_url||'',banner_image_url:me.data.banner_image_url||''});if(list?.ok)setItems(Array.isArray(list.data)?list.data:[])}catch(e){setError(e instanceof Error?e.message:'No pudimos abrir el patrocinador.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
   const beneficiaryItems=useMemo(()=>items.filter(i=>i.artifact_role!=='master'),[items])
@@ -19,8 +20,16 @@ export default function SponsorDashboard(){
   function choose(file:File|undefined,kind:'logo'|'banner'){if(!file)return;if(file.size>12*1024*1024){setError('La imagen original supera 12 MB. Elige una más liviana.');return}setError('');setMessage('');setPending({file,kind})}
   async function uploadBlob(blob:Blob,kind:'logo'|'banner'){setUploading(kind);setError('');setMessage('');try{const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='logo'?1024:1600,quality:.82,baseName:kind});const fd=new FormData();fd.append('file',optimized,optimized.name);const res=await fetch(`${API_BASE}/sponsor/media?kind=${kind}`,{method:'POST',credentials:'include',body:fd});const json:any=await res.json().catch(()=>null);if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.');setForm((v:any)=>({...v,[kind==='logo'?'logo_url':'banner_image_url']:json.url}));setMessage(kind==='logo'?'Logo optimizado y listo para guardar.':'Banner optimizado y listo para guardar.')}catch(e){setError(e instanceof Error?e.message:'No pudimos subir la imagen.')}finally{setUploading('')}}
   async function save(){setSaving(true);setMessage('');setError('');try{const json:any=await apiPatch('/sponsor/settings',{logo_url:form.logo_url,banner_image_url:form.banner_image_url});if(!json?.ok)throw new Error(json?.error||'No pudimos guardar la imagen del patrocinio.');setMessage('Imagen del patrocinio actualizada. Los enlaces y CTA permanecen protegidos.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar.')}finally{setSaving(false)}}
+  async function switchAccount(){
+    if(switchingAccount)return
+    setSwitchingAccount(true);setError('')
+    const code=String(sessionStorage.getItem(MASTER_KEY)||localStorage.getItem(MASTER_KEY)||'').trim().toUpperCase()
+    try{await apiPost('/auth/logout',{})}catch{/* La pantalla de login permite retomar el flujo aunque el logout remoto falle. */}
+    if(code){sessionStorage.setItem(MASTER_KEY,code);localStorage.setItem(MASTER_KEY,code);window.location.assign('/admin/login?resume=sponsor_master');return}
+    window.location.assign('/admin/login')
+  }
   if(loading)return<main className="min-h-screen bg-[#f7f9fc]"/>
-  if(!tenant)return<main className="min-h-screen bg-[#f7f9fc] px-5 py-10 font-['Inter']"><div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6"><h1 className="text-2xl font-black">Panel patrocinador</h1><p className="mt-2 text-slate-500">{error||'Tu cuenta no tiene un módulo de patrocinio activo.'}</p></div></main>
+  if(!tenant)return<main className="min-h-screen bg-[#f7f9fc] px-5 py-10 font-['Inter'] text-slate-950"><div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,.06)]"><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-600">KAWLINK PATROCINADO</p><h1 className="mt-2 text-2xl font-black">Esta cuenta no corresponde al patrocinador</h1><p className="mt-3 text-sm leading-6 text-slate-500">{error||'Hay una sesión iniciada, pero esta cuenta no tiene acceso al módulo de patrocinio.'}</p><p className="mt-2 text-sm leading-6 text-slate-500">Cierra esta sesión e inicia con el correo registrado para el patrocinador. Si llegaste desde el llavero Master, conservaremos el código para continuar la activación.</p><button type="button" onClick={()=>void switchAccount()} disabled={switchingAccount} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{switchingAccount?'Cerrando sesión…':'Cerrar sesión y usar cuenta patrocinador'}</button></div></main>
   const input='mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'
   const tabClass=(name:Tab)=>`rounded-2xl px-4 py-3 text-sm font-black ${tab===name?'bg-slate-950 text-white':'border border-slate-200 bg-white text-slate-600'}`
   return<main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[1100px] space-y-5">
