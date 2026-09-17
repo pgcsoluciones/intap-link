@@ -21,12 +21,12 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   const productType=String((row as any).product_type||'other')
   const currentUserId=await sessionUserId(c)
   const sponsorId=String((row as any).sponsor_id||'')
+  const sponsorMembership=currentUserId?await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,currentUserId).first():null
   const sponsor={id:sponsorId,name:String((row as any).sponsor_name||'Patrocinador'),logo_url:String((row as any).sponsor_logo_url||''),banner_title:String((row as any).banner_title||'Impulsado por'),type:String((row as any).sponsor_type||'merchant')}
   const artifact={public_code:publicCode,product_type:productType,label:productLabel(productType)}
 
   if(String((row as any).artifact_role||'beneficiary')==='master'){
-    const membership=currentUserId?await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,currentUserId).first():null
-    return c.json({ok:true,state:membership?'sponsored_master':'sponsored_master_login',artifact,sponsor,message:membership?`Este es tu llavero Master · código ${publicCode}.`:'Este llavero Master requiere iniciar sesión como patrocinador.',manage_url:membership?`${configuredAppUrl(c)}/admin/sponsor?master=${encodeURIComponent(publicCode)}`:null,login_url:membership?null:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
+    return c.json({ok:true,state:sponsorMembership?'sponsored_master':'sponsored_master_login',artifact,sponsor,message:sponsorMembership?`Este es tu llavero Master · código ${publicCode}.`:'Este llavero Master requiere iniciar sesión como patrocinador.',manage_url:sponsorMembership?`${configuredAppUrl(c)}/admin/sponsor?master=${encodeURIComponent(publicCode)}`:null,login_url:sponsorMembership?null:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
   }
 
   const sponsoredStatus=String((row as any).sponsor_artifact_status||'')
@@ -40,6 +40,12 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
     if(profileStatus==='published'&&username)return c.json({ok:true,state:'activated',artifact,sponsor,next_url:`${configuredWebUrl(c)}/p/${encodeURIComponent(username)}`})
     const isOwner=Boolean(currentUserId&&beneficiary&&currentUserId===beneficiary)
     return c.json({ok:true,state:isOwner?'sponsored_draft_owner':'sponsored_draft',artifact,sponsor,message:isOwner?'Tu presentación patrocinada todavía está en construcción.':'Esta presentación todavía está en construcción.',next_url:isOwner?`${configuredAppUrl(c)}/admin/sponsored`:null,login_url:isOwner?null:`${configuredAppUrl(c)}/admin/sponsored/entry?public_code=${encodeURIComponent(publicCode)}`})
+  }
+
+  // A sponsor who scans one of their still-unclaimed products only inspects it.
+  // This is read-only and never consumes the activation code or claims ownership.
+  if(sponsorMembership){
+    return c.json({ok:true,state:'sponsored_sponsor_inspection',artifact,sponsor,message:`Este producto pertenece a tu patrocinio. Código ${publicCode}. Estado: pendiente de activación.`,manage_url:`${configuredAppUrl(c)}/admin/sponsor?code=${encodeURIComponent(publicCode)}`})
   }
 
   if(sponsoredStatus==='inactive')return c.json({ok:true,state:'blocked',artifact,sponsor,message:'Este producto patrocinado está inactivo.'})
