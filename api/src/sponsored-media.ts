@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { resolveOwnedSponsoredProfile, sponsoredProfileScope } from './sponsored-profile-scope'
 
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=header.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));return match?decodeURIComponent(match[1]):null}
@@ -10,7 +11,7 @@ async function readImage(c:any){const fd=await c.req.formData();const raw=fd.get
 function assetUrl(c:any,key:string){const origin=new URL(c.req.url).origin;const encoded=key.split('/').map(encodeURIComponent).join('/');return `${origin}/api/v1/public/assets/${encoded}`}
 
 app.post('/api/v1/me/sponsored-profile/media',requireAuth,async(c:any)=>{
-  const requester=String(c.get('userId')||'');const profile=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE user_id=? ORDER BY created_at DESC LIMIT 1`).bind(requester).first();if(!profile)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
+  const requester=String(c.get('userId')||'');const profile=await resolveOwnedSponsoredProfile(c,requester,sponsoredProfileScope(c));if(!profile)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
   const kind=String(c.req.query('kind')||'gallery');if(!['avatar','hero','gallery'].includes(kind))return c.json({ok:false,error:'Tipo de imagen no válido.'},400)
   const read=await readImage(c);if('error' in read)return c.json({ok:false,error:read.error},read.status)
   const profileId=String((profile as any).id);const key=`sponsored/${profileId}/${kind}/${crypto.randomUUID()}.${read.ext}`
