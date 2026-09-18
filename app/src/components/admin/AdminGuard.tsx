@@ -123,6 +123,32 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         return
       }
 
+      // Resolve the authenticated account before generic Free onboarding can win.
+      // Sponsored beneficiary, sponsor owner, Free and paid/Med accounts each have
+      // their own home. This also protects direct visits to the wrong onboarding.
+      const accountHome:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
+      if (accountHome?.ok && accountHome?.data?.route) {
+        const route = String(accountHome.data.route)
+        const kind = String(accountHome.data.kind || '')
+        const path = location.pathname
+        const insideSponsor = path === '/admin/sponsor' || path.startsWith('/admin/sponsor/')
+        const insideSponsored = path === '/admin/sponsored' || path.startsWith('/admin/sponsored/')
+        const genericEntry = path === '/admin' || path === '/' || path === '/admin/free/onboarding/welcome'
+
+        if (kind === 'sponsor' && !insideSponsor) {
+          navigate(route, { replace:true })
+          return
+        }
+        if (kind === 'sponsored' && !insideSponsored) {
+          navigate(route, { replace:true })
+          return
+        }
+        if (genericEntry && route !== path) {
+          navigate(route, { replace:true })
+          return
+        }
+      }
+
       if (location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         if (scanCode) {
           let scanPending: any = await apiGet('/me/artifacts/scan/pending')
