@@ -10,7 +10,8 @@ const blank={bank_name:'Banco Popular Dominicano',account_number:'',account_type
 
 function bankInitials(name:string){return name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()).join('')||'B'}
 
-export function SponsoredBankAccountsSection(){
+export function SponsoredBankAccountsSection({mode='beneficiary'}:{mode?:'beneficiary'|'master'}={}){
+  const scopeQuery=mode==='master'?'?scope=master':''
   const[enabled,setEnabled]=useState(false)
   const[items,setItems]=useState<Bank[]>([])
   const[form,setForm]=useState<any>(blank)
@@ -20,12 +21,12 @@ export function SponsoredBankAccountsSection(){
   const[error,setError]=useState('')
   const[message,setMessage]=useState('')
   const remaining=useMemo(()=>Math.max(0,MAX_ACTIVE-items.length),[items.length])
-  async function load(){setLoading(true);setError('');try{const j:any=await apiGet('/me/sponsored-profile/bank-accounts');if(!j?.ok)throw new Error(j?.error||'No pudimos cargar las cuentas.');setEnabled(Boolean(j.data?.enabled));setItems(Array.isArray(j.data?.items)?j.data.items:[])}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar las cuentas.')}finally{setLoading(false)}}
+  async function load(){setLoading(true);setError('');try{const j:any=await apiGet(`/me/sponsored-profile/bank-accounts${scopeQuery}`);if(!j?.ok)throw new Error(j?.error||'No pudimos cargar las cuentas.');setEnabled(Boolean(j.data?.enabled));setItems(Array.isArray(j.data?.items)?j.data.items:[])}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar las cuentas.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
   function reset(){setEditingId(null);setForm(blank)}
   function startEdit(item:Bank){setEditingId(item.id);setForm({...item});document.getElementById('sponsored-bank-accounts')?.scrollIntoView({behavior:'smooth',block:'start'})}
-  async function save(){if(saving)return;setError('');setMessage('');if(!form.bank_name.trim()||String(form.account_number||'').replace(/\s+/g,'').length<4||!form.holder_name.trim()){setError('Completa banco, número de cuenta y titular.');return}setSaving(true);try{const payload={...form,account_number:String(form.account_number||'').replace(/\s+/g,'')};const j:any=editingId?await apiPatch(`/me/sponsored-profile/bank-accounts/${editingId}`,payload):await apiPost('/me/sponsored-profile/bank-accounts',payload);if(!j?.ok)throw new Error(j?.error||'No pudimos guardar la cuenta.');setMessage(editingId?'Cuenta actualizada.':'Cuenta agregada.');reset();await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar la cuenta.')}finally{setSaving(false)}}
-  async function remove(id:string){if(saving||!window.confirm('¿Eliminar esta cuenta bancaria?'))return;setSaving(true);setError('');setMessage('');try{const j:any=await apiDelete(`/me/sponsored-profile/bank-accounts/${id}`);if(!j?.ok)throw new Error(j?.error||'No pudimos eliminar la cuenta.');if(editingId===id)reset();setMessage('Cuenta eliminada.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos eliminar la cuenta.')}finally{setSaving(false)}}
+  async function save(){if(saving)return;setError('');setMessage('');if(!form.bank_name.trim()||String(form.account_number||'').replace(/\s+/g,'').length<4||!form.holder_name.trim()){setError('Completa banco, número de cuenta y titular.');return}setSaving(true);try{const payload={...form,account_number:String(form.account_number||'').replace(/\s+/g,'')};const j:any=editingId?await apiPatch(`/me/sponsored-profile/bank-accounts/${editingId}${scopeQuery}`,payload):await apiPost(`/me/sponsored-profile/bank-accounts${scopeQuery}`,payload);if(!j?.ok)throw new Error(j?.error||'No pudimos guardar la cuenta.');setMessage(editingId?'Cuenta actualizada.':'Cuenta agregada.');reset();await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar la cuenta.')}finally{setSaving(false)}}
+  async function remove(id:string){if(saving||!window.confirm('¿Eliminar esta cuenta bancaria?'))return;setSaving(true);setError('');setMessage('');try{const j:any=await apiDelete(`/me/sponsored-profile/bank-accounts/${id}${scopeQuery}`);if(!j?.ok)throw new Error(j?.error||'No pudimos eliminar la cuenta.');if(editingId===id)reset();setMessage('Cuenta eliminada.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos eliminar la cuenta.')}finally{setSaving(false)}}
   if(loading)return <section id="sponsored-bank-accounts" data-sponsored-tour="bank-accounts" className="rounded-[26px] border border-slate-200 bg-white p-5"><p className="text-sm font-semibold text-slate-400">Cargando cuentas bancarias…</p></section>
   if(!enabled)return null
   return <section id="sponsored-bank-accounts" data-sponsored-tour="bank-accounts" className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(15,23,42,.04)]">
