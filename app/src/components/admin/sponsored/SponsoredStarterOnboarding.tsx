@@ -4,7 +4,7 @@ import { FREE_PROFILE_CATEGORIES } from '../../../../../shared/free-profile-star
 
 function normalize(value:string){return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
 
-export default function SponsoredStarterOnboarding({onComplete,mode='beneficiary'}:{onComplete:()=>void|Promise<void>;mode?:'beneficiary'|'master'}){
+export default function SponsoredStarterOnboarding({onComplete,mode='beneficiary',profileId}:{onComplete:()=>void|Promise<void>;mode?:'beneficiary'|'master';profileId?:string}){
   const isMaster=mode==='master'
   const[category,setCategory]=useState('')
   const[username,setUsername]=useState('')
@@ -17,7 +17,7 @@ export default function SponsoredStarterOnboarding({onComplete,mode='beneficiary
     if((!isMaster&&!category)||!username||saving)return
     setSaving(true);setError('')
     try{
-      const json:any=await apiPost(isMaster?'/me/sponsored-profile/starter?scope=master':'/me/sponsored-profile/starter',{category,username})
+      const route=isMaster?'/me/sponsored-profile/starter?scope=master':profileId?`/me/sponsored-profile/starter?profile_id=${encodeURIComponent(profileId)}`:'/me/sponsored-profile/starter';const json:any=await apiPost(route,{category,username})
       if(!json?.ok)throw new Error(json?.error||'No pudimos preparar tu presentación.')
       await Promise.resolve(onComplete())
     }catch(e){setError(e instanceof Error?e.message:'No pudimos preparar tu presentación.')}finally{setSaving(false)}
