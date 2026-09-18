@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { listOwnedSponsoredBeneficiaryProfiles, requestedSponsoredProfileId, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -23,11 +24,23 @@ async function requireUser(c:any,next:any){
   await next()
 }
 
+app.get('/api/v1/me/sponsored-profiles',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  const allowed=await sponsoredMultiProfileAccess(c,userId)
+  if(!allowed)return c.json({ok:false,error:'No autorizado.'},403)
+  const profiles=await listOwnedSponsoredBeneficiaryProfiles(c,userId)
+  return c.json({ok:true,data:{profiles}})
+})
+
 app.get('/api/v1/me/sponsored-profile/account',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
   const user=await c.env.DB.prepare(`SELECT email FROM users WHERE id=? LIMIT 1`).bind(userId).first()
-  const profile=await c.env.DB.prepare(`SELECT sp.id,sp.username,sp.status,sp.artifact_id,a.public_code,a.product_type FROM sponsored_profiles sp LEFT JOIN intap_artifacts a ON a.id=sp.artifact_id WHERE sp.user_id=? AND sp.profile_role='beneficiary' ORDER BY sp.created_at ASC LIMIT 1`).bind(userId).first()
-  return c.json({ok:true,data:{email:String((user as any)?.email||''),profile:profile||null}})
+  const selectedId=requestedSponsoredProfileId(c)
+  const allowed=await sponsoredMultiProfileAccess(c,userId)
+  const profile=selectedId&&allowed
+    ?await c.env.DB.prepare(`SELECT sp.id,sp.username,sp.status,sp.artifact_id,a.public_code,a.product_type FROM sponsored_profiles sp LEFT JOIN intap_artifacts a ON a.id=sp.artifact_id WHERE sp.id=? AND sp.user_id=? AND sp.profile_role='beneficiary' LIMIT 1`).bind(selectedId,userId).first()
+    :await c.env.DB.prepare(`SELECT sp.id,sp.username,sp.status,sp.artifact_id,a.public_code,a.product_type FROM sponsored_profiles sp LEFT JOIN intap_artifacts a ON a.id=sp.artifact_id WHERE sp.user_id=? AND sp.profile_role='beneficiary' ORDER BY sp.created_at ASC LIMIT 1`).bind(userId).first()
+  return c.json({ok:true,data:{email:String((user as any)?.email||''),profile:profile||null,multi_profile_authorized:allowed}})
 })
 
 app.post('/api/v1/me/sponsored-profile/unlink',requireUser,async(c:any)=>{
@@ -41,7 +54,11 @@ app.post('/api/v1/me/sponsored-profile/unlink',requireUser,async(c:any)=>{
   const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
   if(!accountEmail||confirmEmail!==accountEmail)return c.json({ok:false,error:'El correo debe coincidir con el correo de acceso de esta cuenta.',code:'unlink_email_mismatch'},422)
 
-  const profile=await c.env.DB.prepare(`SELECT id,artifact_id,username FROM sponsored_profiles WHERE user_id=? AND profile_role='beneficiary' ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
+  const selectedId=requestedSponsoredProfileId(c)
+  const allowed=await sponsoredMultiProfileAccess(c,userId)
+  const profile=selectedId&&allowed
+    ?await c.env.DB.prepare(`SELECT id,artifact_id,username FROM sponsored_profiles WHERE id=? AND user_id=? AND profile_role='beneficiary' LIMIT 1`).bind(selectedId,userId).first()
+    :await c.env.DB.prepare(`SELECT id,artifact_id,username FROM sponsored_profiles WHERE user_id=? AND profile_role='beneficiary' ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
   if(!profile)return c.json({ok:false,error:'Esta cuenta no tiene un dispositivo patrocinado beneficiario vinculado.'},404)
 
   const profileId=String((profile as any).id||'')
