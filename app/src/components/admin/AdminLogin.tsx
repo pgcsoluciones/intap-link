@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { apiPost } from '../../lib/api'
+import { apiGet, apiPost } from '../../lib/api'
 
 type Mode = 'login' | 'register'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
@@ -88,7 +88,12 @@ export default function AdminLogin() {
         const json: any = await apiPost('/auth/password/login', { email, password })
         if (json.ok) {
           persistAuthMode(mode)
-          window.location.assign(isSponsorMasterResume ? `/admin/sponsor/entry?public_code=${encodeURIComponent(storedSponsorMasterCode)}` : '/admin')
+          if (isSponsorMasterResume) {
+            window.location.assign(`/admin/sponsor/entry?public_code=${encodeURIComponent(storedSponsorMasterCode)}`)
+          } else {
+            const home:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
+            window.location.assign(home?.ok && home?.data?.route ? String(home.data.route) : '/admin')
+          }
         } else {
           setError(json.error || 'Correo o contraseña incorrectos.')
         }
