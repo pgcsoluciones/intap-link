@@ -262,7 +262,9 @@ has(banks,"/api/v1/public/sponsored/:username/bank-accounts/:id/holder-id",'iden
 has(publicBanks,'BANK_LOGO_FILES','presentación patrocinada usa logos bancarios como Free')
 has(publicBanks,'display_number','presentación patrocinada respeta número oculto o visible')
 has(publicBanks,'copyHolderId','presentación patrocinada copia Cédula/RNC sin mostrarla')
-if(/CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+profile_bank_accounts\b/i.test(bankMigration))throw new Error('El módulo bancario patrocinado no debe crear ni reutilizar la tabla de Free/Plus/Team')
+has(publicBanks,'Enviar por WhatsApp','presentación patrocinada comparte cuentas como Free')
+has(publicBanks,"copied==='bank-link'",'presentación patrocinada copia enlace directo de bancos como Free')
+if(/CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+profile_bank_accounts\b/i.test(bankMigration+'\n'+bankParityMigration))throw new Error('El módulo bancario patrocinado no debe crear ni reutilizar la tabla de Free/Plus/Team')
 
 has(multiprofile,"SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL='intapcard@gmail.com'",'correo autorizado QA/presentación es explícito y server-side')
 has(multiprofile,'listOwnedSponsoredBeneficiaryProfiles','cuenta autorizada puede enumerar sus perfiles patrocinados')
