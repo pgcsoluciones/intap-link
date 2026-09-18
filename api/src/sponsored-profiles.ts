@@ -31,6 +31,51 @@ app.patch('/api/v1/me/sponsored-profile',requireUser,async(c:any)=>{const userId
 app.post('/api/v1/me/sponsored-profile/publish',requireUser,async(c:any)=>{const row=await c.env.DB.prepare(`SELECT * FROM sponsored_profiles WHERE user_id=? ORDER BY created_at DESC LIMIT 1`).bind(c.get('userId')).first();if(!row)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404);const missing:string[]=[];if(!cleanUsername((row as any).username))missing.push('usuario');if(!cleanText((row as any).business_name))missing.push('nombre');if(!cleanText((row as any).specialization))missing.push('especialización');if(!cleanText((row as any).what_we_do))missing.push('qué hacemos');if(!cleanText((row as any).whatsapp)&&!cleanText((row as any).phone))missing.push('contacto');if(missing.length)return c.json({ok:false,error:'Completa los datos requeridos antes de publicar.',missing},422);await c.env.DB.prepare(`UPDATE sponsored_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=?`).bind(String((row as any).id)).run();return c.json({ok:true,data:{public_path:`/p/${encodeURIComponent(String((row as any).username))}`}})})
 app.post('/api/v1/me/sponsored-profile/unpublish',requireUser,async(c:any)=>{await c.env.DB.prepare(`UPDATE sponsored_profiles SET status='draft',updated_at=datetime('now') WHERE user_id=?`).bind(c.get('userId')).run();return c.json({ok:true})})
 
+app.get('/api/v1/superadmin/sponsors/:id/artifacts',requireSuperAdmin('viewer'),async(c:any)=>{
+  const sponsorId=String(c.req.param('id')||'')
+  const sponsor=await c.env.DB.prepare(`SELECT id FROM sponsor_tenants WHERE id=? LIMIT 1`).bind(sponsorId).first()
+  if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
+
+  const rawPage=Math.floor(Number(c.req.query('page')||1))
+  const rawPageSize=Math.floor(Number(c.req.query('page_size')||10))
+  const page=Number.isFinite(rawPage)&&rawPage>0?rawPage:1
+  const pageSize=Number.isFinite(rawPageSize)?Math.max(5,Math.min(50,rawPageSize)):10
+  const offset=(page-1)*pageSize
+  const q=cleanText(c.req.query('q')||'',80).toUpperCase()
+  const status=cleanText(c.req.query('status')||'',24)
+  const role=cleanText(c.req.query('role')||'',24)
+
+  const where:string[]=['sa.sponsor_id=?']
+  const binds:any[]=[sponsorId]
+  if(q){where.push(`(UPPER(a.public_code) LIKE ? OR UPPER(COALESCE(b.name,'')) LIKE ? OR UPPER(COALESCE(sp.business_name,'')) LIKE ? OR UPPER(COALESCE(sp.username,'')) LIKE ?)`);const like=`%${q}%`;binds.push(like,like,like,like)}
+  if(status&&['available','activated','inactive'].includes(status)){where.push('sa.status=?');binds.push(status)}
+  if(role&&['master','beneficiary'].includes(role)){where.push('sa.artifact_role=?');binds.push(role)}
+  const whereSql=where.join(' AND ')
+
+  const totalRow=await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE ${whereSql}`).bind(...binds).first()
+  const total=Number((totalRow as any)?.total||0)
+  const pages=Math.max(1,Math.ceil(total/pageSize))
+  const safePage=Math.min(page,pages)
+  const safeOffset=(safePage-1)*pageSize
+
+  const result=await c.env.DB.prepare(`SELECT
+    a.public_code,a.product_type,a.status AS artifact_status,
+    sa.status,sa.artifact_role,sa.activated_at,sa.created_at,
+    sp.username,sp.business_name,sp.status AS profile_status,
+    b.name AS batch_name,b.city,b.zone
+    FROM sponsor_artifacts sa
+    JOIN intap_artifacts a ON a.id=sa.artifact_id
+    LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id
+    LEFT JOIN sponsor_batches b ON b.id=sa.batch_id
+    WHERE ${whereSql}
+    ORDER BY sa.created_at DESC
+    LIMIT ? OFFSET ?`).bind(...binds,pageSize,safeOffset).all()
+
+  const web=String(c.env.WEB_URL||'https://intaprd.com').replace(/\/$/,'')
+  const rows=(result.results||[]).map((row:any)=>({...row,public_url:`${web}/l/${encodeURIComponent(String(row.public_code||''))}`}))
+  return c.json({ok:true,data:rows,pagination:{page:safePage,page_size:pageSize,total,pages}})
+})
+
 app.get('/api/v1/sponsor/me',requireUser,async(c:any)=>{const userId=String(c.get('userId')||'');const tenant=await c.env.DB.prepare(`SELECT st.*,sm.role FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1 LIMIT 1`).bind(userId).first();if(tenant&&String((tenant as any).role||'')==='owner')await ensureSponsorOwnerProfileBase(c,String((tenant as any).id),userId);return c.json({ok:true,data:tenant||null})})
 app.get('/api/v1/sponsor/artifacts',requireUser,async(c:any)=>{const membership=await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(c.get('userId')).first();if(!membership)return c.json({ok:false,error:'No tienes acceso a un patrocinador.'},403);const result=await c.env.DB.prepare(`SELECT a.public_code,a.product_type,sa.status,sa.artifact_role,sa.activated_at,sp.username,sp.business_name,sp.status AS profile_status,b.name AS batch_name,b.city,b.zone FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE sa.sponsor_id=? ORDER BY sa.created_at DESC`).bind(String((membership as any).sponsor_id)).all();return c.json({ok:true,data:result.results||[]})})
 app.patch('/api/v1/sponsor/settings',requireUser,async(c:any)=>{const membership=await c.env.DB.prepare(`SELECT sponsor_id,role FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(c.get('userId')).first();if(!membership||!['owner','admin'].includes(String((membership as any).role)))return c.json({ok:false,error:'No tienes permiso para editar el patrocinio.'},403);const body=await c.req.json().catch(()=>({}));await c.env.DB.prepare(`UPDATE sponsor_tenants SET logo_url=?,banner_title=?,banner_image_url=?,banner_cta_label=?,banner_cta_type=?,banner_cta_value=?,whatsapp_message_template=?,contact_whatsapp=?,website_url=?,updated_at=datetime('now') WHERE id=?`).bind(cleanText(body.logo_url,800),cleanText(body.banner_title,80)||'Impulsado por',cleanText(body.banner_image_url,800),cleanText(body.banner_cta_label,60)||'Conocer más',['beneficiary_whatsapp','sponsor_whatsapp','sponsor_url','none'].includes(String(body.banner_cta_type))?String(body.banner_cta_type):'none',cleanText(body.banner_cta_value,800),cleanText(body.whatsapp_message_template,240)||'Hola, me interesa saber más sobre estos productos.',cleanText(body.contact_whatsapp,40),cleanText(body.website_url,800),String((membership as any).sponsor_id)).run();return c.json({ok:true})})
