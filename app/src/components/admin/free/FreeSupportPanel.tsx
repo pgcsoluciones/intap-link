@@ -61,7 +61,7 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('es-DO')
 }
 
-export default function FreeSupportPanel() {
+export default function FreeSupportPanel({ hideBrand=false }: { hideBrand?: boolean } = {}) {
   const panelRef = useRef<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
   const [category, setCategory] = useState('editor')
@@ -192,8 +192,8 @@ export default function FreeSupportPanel() {
       >
         <span className="flex h-11 w-11 shrink-0 items-center justify-center text-[24px] text-slate-500">?</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">KAWVO</span>
-          <span className="mt-1 block text-base font-black text-slate-950">Centro de ayuda y tickets</span>
+          {!hideBrand&&<span className="block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">KAWVO</span>}
+          <span className={`${hideBrand?'':'mt-1 '}block text-base font-black text-slate-950`}>Centro de ayuda y tickets</span>
           <span className="mt-1 block text-xs leading-5 text-slate-600">Haz una consulta y revisa aquí tus tickets y respuestas.</span>
         </span>
         <span aria-hidden="true" className={`shrink-0 text-xl font-black text-cyan-700 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>⌄</span>
