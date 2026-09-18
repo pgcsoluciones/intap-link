@@ -1,6 +1,7 @@
 import app from './index'
 import { cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { ensureSponsorOwnerProfileBase } from './sponsored-owner-profile-seed'
+import { sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 function configuredWebUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://preview.intaprd.com':'https://intaprd.com';return String(c.env.WEB_URL||fallback).replace(/\/$/,'')}
 function configuredAppUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://app.preview.intaprd.com':'https://app.intaprd.com';return String(c.env.APP_URL||fallback).replace(/\/$/,'')}
@@ -69,7 +70,9 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   if(resolvedProfileId||sponsoredStatus==='activated'||artifactStatus==='activated'){
     if(profileStatus==='published'&&username)return c.json({ok:true,state:'activated',artifact,sponsor,next_url:`${configuredWebUrl(c)}/p/${encodeURIComponent(username)}`})
     const isOwner=Boolean(currentUserId&&beneficiary&&currentUserId===beneficiary)
-    return c.json({ok:true,state:isOwner?'sponsored_draft_owner':'sponsored_draft',artifact,sponsor,message:isOwner?'Tu presentación patrocinada todavía está en construcción.':'Esta presentación todavía está en construcción.',next_url:isOwner?`${configuredAppUrl(c)}/admin/sponsored`:null,login_url:isOwner?null:`${configuredAppUrl(c)}/admin/sponsored/entry?public_code=${encodeURIComponent(publicCode)}`})
+    const multiProfileOwner=Boolean(isOwner&&resolvedProfileId&&await sponsoredMultiProfileAccess(c,String(currentUserId||'')))
+    const ownerPanelUrl=multiProfileOwner?`${configuredAppUrl(c)}/admin/sponsored?profile_id=${encodeURIComponent(resolvedProfileId)}`:`${configuredAppUrl(c)}/admin/sponsored`
+    return c.json({ok:true,state:isOwner?'sponsored_draft_owner':'sponsored_draft',artifact,sponsor,message:isOwner?'Tu presentación patrocinada todavía está en construcción.':'Esta presentación todavía está en construcción.',next_url:isOwner?ownerPanelUrl:null,login_url:isOwner?null:`${configuredAppUrl(c)}/admin/sponsored/entry?public_code=${encodeURIComponent(publicCode)}`})
   }
 
   if(sponsorMembership){
