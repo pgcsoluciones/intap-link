@@ -1,18 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiPost } from '../../../../lib/api'
+import { apiGet, apiPost } from '../../../../lib/api'
 
 const NFC_INTEREST_URL = 'https://nfc.kawvoia.com'
 
 export default function FreeOnboardingWelcome() {
   const navigate = useNavigate()
   const [leaving, setLeaving] = useState(false)
+  const [resolvingAccount, setResolvingAccount] = useState(true)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('profile_deleted') === '1') {
       navigate('/admin/artifacts', { replace: true })
+      return
     }
+
+    let alive = true
+    apiGet('/me/home-route')
+      .then((json:any) => {
+        if (!alive) return
+        const route = String(json?.data?.route || '')
+        if (json?.ok && route && route !== '/admin/free/onboarding/welcome') {
+          navigate(route, { replace:true })
+          return
+        }
+        setResolvingAccount(false)
+      })
+      .catch(() => { if (alive) setResolvingAccount(false) })
+    return () => { alive = false }
   }, [navigate])
 
   const logout = async () => {
@@ -21,6 +37,8 @@ export default function FreeOnboardingWelcome() {
     try { await apiPost('/auth/logout', {}) } catch { /* ignore */ }
     window.location.replace('/admin/login')
   }
+
+  if (resolvingAccount) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
