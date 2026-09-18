@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feature/sponsored-inline-bank-module-v1"
 EXPECTED_MAIN_SHA="db40799a07e3eb15a5c5cb7765cbf3b7a38e1ce7"
-APPROVED_PRODUCT_SHA="d59f62d68eba17f7fedbb9653d08a8ebd76a5471"
+APPROVED_PRODUCT_SHA="6b712dbd9bde54b2de2dfcf84cc9a5eebd60c06b"
 RUNNER_PATH="scripts/run-production-sponsored-inline-bank-module-v1-2026-09-18.sh"
 APP_PROJECT="intap-web2"
 LOG_DIR="$ROOT/.production-sponsored-inline-bank-module-v1-logs"
