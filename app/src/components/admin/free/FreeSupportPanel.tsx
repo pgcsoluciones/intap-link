@@ -61,7 +61,7 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('es-DO')
 }
 
-export default function FreeSupportPanel({ hideBrand=false }: { hideBrand?: boolean } = {}) {
+export default function FreeSupportPanel({ hideBrand=false, largeText=false }: { hideBrand?: boolean; largeText?: boolean } = {}) {
   const panelRef = useRef<HTMLElement | null>(null)
   const [open, setOpen] = useState(false)
   const [category, setCategory] = useState('editor')
@@ -193,18 +193,18 @@ export default function FreeSupportPanel({ hideBrand=false }: { hideBrand?: bool
         <span className="flex h-11 w-11 shrink-0 items-center justify-center text-[24px] text-slate-500">?</span>
         <span className="min-w-0 flex-1">
           {!hideBrand&&<span className="block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">KAWVO</span>}
-          <span className={`${hideBrand?'':'mt-1 '}block text-base font-black text-slate-950`}>Centro de ayuda y tickets</span>
-          <span className="mt-1 block text-xs leading-5 text-slate-600">Haz una consulta y revisa aquí tus tickets y respuestas.</span>
+          <span className={`${hideBrand?'':'mt-1 '}block ${largeText?'text-lg':'text-base'} font-black text-slate-950`}>Centro de ayuda y tickets</span>
+          <span className={`mt-1 block ${largeText?'text-sm leading-6':'text-xs leading-5'} text-slate-600`}>Haz una consulta y revisa aquí tus tickets y respuestas.</span>
         </span>
         <span aria-hidden="true" className={`shrink-0 text-xl font-black text-cyan-700 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>⌄</span>
       </button>
 
       {open && (
         <div id="kawvo-support-content" className="border-t border-slate-200 px-4 pb-4 pt-4">
-          <p className="mb-4 rounded-xl bg-white/75 px-3 py-2 text-[11px] font-semibold leading-5 text-slate-500">Antes de hacer un cambio importante o eliminar tu perfil, cuéntanos tu duda. Nuestro equipo de soporte podrá darle seguimiento.</p>
+          <p className={`mb-4 rounded-xl bg-white/75 px-3 py-2 ${largeText?'text-[13px] leading-6':'text-[11px] leading-5'} font-semibold text-slate-500`}>Antes de hacer un cambio importante o eliminar tu perfil, cuéntanos tu duda. Nuestro equipo de soporte podrá darle seguimiento.</p>
 
           <div className="space-y-3">
-            <label className="block text-xs font-black text-slate-700">
+            <label className={`block ${largeText?'text-sm':'text-xs'} font-black text-slate-700`}>
               ¿Con qué necesitas ayuda?
               <select value={category} onChange={(event) => setCategory(event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100">
                 {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -216,7 +216,7 @@ export default function FreeSupportPanel({ hideBrand=false }: { hideBrand?: bool
               <textarea key={messageResetKey} value={message} onChange={(event) => setMessage(event.target.value.slice(0, 1200))} maxLength={1200} rows={4} placeholder="Ejemplo: no sé qué debo cambiar antes de publicar mi perfil…" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100" />
             </label>
 
-            <p className="rounded-xl bg-white/80 px-3 py-2 text-[11px] font-semibold leading-5 text-slate-500">Al enviarla, tu solicitud entra en una cola de atención. El equipo de soporte la revisará por orden y te responderá lo antes posible.</p>
+            <p className={`rounded-xl bg-white/80 px-3 py-2 ${largeText?'text-[13px] leading-6':'text-[11px] leading-5'} font-semibold text-slate-500`}>Al enviarla, tu solicitud entra en una cola de atención. El equipo de soporte la revisará por orden y te responderá lo antes posible.</p>
 
             <button type="button" onClick={() => void submit()} disabled={sending} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">
               {sending ? 'Enviando…' : 'Enviar a soporte'}
