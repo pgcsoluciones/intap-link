@@ -25,6 +25,7 @@ app.post('/api/v1/me/sponsored-profile/claim',requireUser,async(c:any)=>{
   const artifactId=String((artifact as any).id)
   const linkedProfileId=String((artifact as any).sponsored_profile_id||'')
   const linkedBeneficiary=String((artifact as any).beneficiary_user_id||(artifact as any).owner_user_id||'')
+  const multiProfileAllowed=await sponsoredMultiProfileAccess(c,userId)
 
   // Resume is idempotent: once this exact device was already claimed by this
   // account, consent is not requested again and the user simply continues editing.
@@ -34,7 +35,8 @@ app.post('/api/v1/me/sponsored-profile/claim',requireUser,async(c:any)=>{
       : await c.env.DB.prepare(`SELECT id,username,status,user_id,consent_version,consent_accepted_at FROM sponsored_profiles WHERE artifact_id=? ORDER BY created_at DESC LIMIT 1`).bind(artifactId).first()
     const ownerId=String((existing as any)?.user_id||linkedBeneficiary)
     if(ownerId&&ownerId===userId){
-      return c.json({ok:true,data:{id:String((existing as any)?.id||linkedProfileId),status:String((existing as any)?.status||'draft'),username:String((existing as any)?.username||''),consent_version:String((existing as any)?.consent_version||CONSENT_VERSION),already_claimed:true,next_url:`/admin/sponsored?profile_id=${encodeURIComponent(String((existing as any)?.id||linkedProfileId))}`}})
+      const existingProfileId=String((existing as any)?.id||linkedProfileId)
+      return c.json({ok:true,data:{id:existingProfileId,status:String((existing as any)?.status||'draft'),username:String((existing as any)?.username||''),consent_version:String((existing as any)?.consent_version||CONSENT_VERSION),already_claimed:true,next_url:multiProfileAllowed?`/admin/sponsored?profile_id=${encodeURIComponent(existingProfileId)}`:'/admin/sponsored'}})
     }
     return c.json({ok:false,error:'Este dispositivo ya está vinculado a otra cuenta.',code:'sponsored_device_already_linked'},409)
   }
@@ -42,7 +44,6 @@ app.post('/api/v1/me/sponsored-profile/claim',requireUser,async(c:any)=>{
   // Regla general: una cuenta beneficiaria = un perfil/dispositivo patrocinado.
   // La cuenta autorizada para QA y presentaciones puede mantener varios perfiles
   // independientes sin alterar patrocinador, código, URL ni contenido público.
-  const multiProfileAllowed=await sponsoredMultiProfileAccess(c,userId)
   const accountProfile=await c.env.DB.prepare(`SELECT id,username,status FROM sponsored_profiles WHERE user_id=? AND profile_role='beneficiary' ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
   if(accountProfile&&!multiProfileAllowed){
     return c.json({ok:false,error:'Esta cuenta ya tiene un dispositivo patrocinado vinculado. Cada cuenta solo puede tener un dispositivo patrocinado.',code:'sponsored_account_already_linked',data:{profile_id:String((accountProfile as any).id||''),username:String((accountProfile as any).username||''),status:String((accountProfile as any).status||'draft'),next_url:'/admin/sponsored'}},409)
