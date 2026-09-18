@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames, isPreviewEnvironment } from './lib/cookies'
+import { ensureSponsorOwnerProfileBase } from './sponsored-owner-profile-seed'
 
 function configuredWebUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://preview.intaprd.com':'https://intaprd.com';return String(c.env.WEB_URL||fallback).replace(/\/$/,'')}
 function configuredAppUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://app.preview.intaprd.com':'https://app.intaprd.com';return String(c.env.APP_URL||fallback).replace(/\/$/,'')}
@@ -7,47 +8,6 @@ function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function sessionUserId(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return null;const row=await c.env.DB.prepare(`SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first();return row?String((row as any).user_id||''):null}
 function productLabel(type:string){const labels:Record<string,string>={card:'Tarjeta NFC',ping:'Ping NFC',bracelet:'Pulsera NFC',keychain:'Llavero NFC',stand:'Estación de Contacto',qr:'Código QR',other:'Producto Kawvo'};return labels[type]||labels.other}
-function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,30)}
-
-async function ensureSponsorOwnerProfile(c:any,sponsorId:string,userId:string,row:any){
-  const sponsorName=String(row.sponsor_name||'').trim().slice(0,100)
-  const sponsorType=String(row.sponsor_type||'merchant')==='brand'?'brand':'merchant'
-  const specialization=sponsorType==='brand'?'Marca':'Comercio'
-  const whatWeDo='Conoce nuestros productos, servicios y canales de contacto.'
-  const whatsapp=String(row.sponsor_contact_whatsapp||'').trim().slice(0,40)
-  const logoUrl=String(row.sponsor_logo_url||'').trim().slice(0,800)
-  const bannerUrl=String(row.sponsor_banner_image_url||'').trim().slice(0,800)
-
-  let profile=await c.env.DB.prepare(`SELECT id,username,status,business_name,specialization,what_we_do,avatar_url,hero_url,phone,whatsapp FROM sponsored_profiles WHERE sponsor_id=? AND user_id=? AND profile_role='sponsor_owner' LIMIT 1`).bind(sponsorId,userId).first()
-  if(profile){
-    await c.env.DB.prepare(`UPDATE sponsored_profiles SET
-      business_name=CASE WHEN trim(COALESCE(business_name,''))='' THEN ? ELSE business_name END,
-      specialization=CASE WHEN trim(COALESCE(specialization,''))='' THEN ? ELSE specialization END,
-      what_we_do=CASE WHEN trim(COALESCE(what_we_do,''))='' THEN ? ELSE what_we_do END,
-      avatar_url=CASE WHEN trim(COALESCE(avatar_url,''))='' THEN ? ELSE avatar_url END,
-      hero_url=CASE WHEN trim(COALESCE(hero_url,''))='' THEN ? ELSE hero_url END,
-      phone=CASE WHEN trim(COALESCE(phone,''))='' THEN ? ELSE phone END,
-      whatsapp=CASE WHEN trim(COALESCE(whatsapp,''))='' THEN ? ELSE whatsapp END,
-      updated_at=datetime('now')
-      WHERE id=?`).bind(sponsorName,specialization,whatWeDo,logoUrl,bannerUrl,whatsapp,whatsapp,String((profile as any).id)).run()
-    profile=await c.env.DB.prepare(`SELECT id,username,status FROM sponsored_profiles WHERE id=? LIMIT 1`).bind(String((profile as any).id)).first()
-    return profile
-  }
-
-  let preferred=cleanSlug(row.profile_slug)
-  if(preferred){
-    const used=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? LIMIT 1`).bind(preferred).first()
-    if(used)preferred=''
-  }
-  const id=crypto.randomUUID()
-  await c.env.DB.prepare(`INSERT INTO sponsored_profiles (
-    id,sponsor_id,user_id,username,business_name,specialization,what_we_do,avatar_url,hero_url,show_avatar,phone,whatsapp,gallery_json,gallery_title,palette_id,status,profile_role
-  ) VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?,'Catálogo','blue','draft','sponsor_owner')`).bind(
-    id,sponsorId,userId,preferred||null,sponsorName,specialization,whatWeDo,logoUrl,bannerUrl,whatsapp,whatsapp,'[]',
-  ).run()
-  return {id,username:preferred||null,status:'draft'}
-}
-
 app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   let body:any={}
   try{body=await c.req.json()}catch{return next()}
@@ -91,7 +51,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
 
     const role=String((sponsorMembership as any)?.role||'viewer')
     if(role==='owner'){
-      const profile=await ensureSponsorOwnerProfile(c,sponsorId,currentUserId,row)
+      const profile=await ensureSponsorOwnerProfileBase(c,sponsorId,currentUserId)
       return c.json({ok:true,state:'sponsored_master',artifact,sponsor,message:'Master reconocido. Tu presentación patrocinada está lista en borrador.',profile:{username:(profile as any)?.username||null,status:(profile as any)?.status||'draft'},manage_url:`${configuredAppUrl(c)}/admin/sponsored?sponsor_master=1`,sponsor_panel_url:`${configuredAppUrl(c)}/admin/sponsor`})
     }
     return c.json({ok:true,state:'sponsored_master',artifact,sponsor,message:`Este es el llavero Master · código ${publicCode}.`,manage_url:`${configuredAppUrl(c)}/admin/sponsor?master=${encodeURIComponent(publicCode)}`,login_url:null})
