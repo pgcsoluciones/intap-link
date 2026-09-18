@@ -17,7 +17,7 @@ export default function SponsoredStarterOnboarding({onComplete,mode='beneficiary
     if((!isMaster&&!category)||!username||saving)return
     setSaving(true);setError('')
     try{
-      const json:any=await apiPost('/me/sponsored-profile/starter',{category,username})
+      const json:any=await apiPost(isMaster?'/me/sponsored-profile/starter?scope=master':'/me/sponsored-profile/starter',{category,username})
       if(!json?.ok)throw new Error(json?.error||'No pudimos preparar tu presentación.')
       await Promise.resolve(onComplete())
     }catch(e){setError(e instanceof Error?e.message:'No pudimos preparar tu presentación.')}finally{setSaving(false)}
