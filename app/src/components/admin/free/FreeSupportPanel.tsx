@@ -206,35 +206,35 @@ export default function FreeSupportPanel({ hideBrand=false, largeText=false }: {
           <div className="space-y-3">
             <label className={`block ${largeText?'text-sm':'text-xs'} font-black text-slate-700`}>
               ¿Con qué necesitas ayuda?
-              <select value={category} onChange={(event) => setCategory(event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100">
+              <select value={category} onChange={(event) => setCategory(event.target.value)} className={`mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 ${largeText?'text-base':'text-sm'} font-semibold text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100`}>
                 {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
 
-            <label className="block text-xs font-black text-slate-700">
+            <label className={`block ${largeText?'text-sm':'text-xs'} font-black text-slate-700`}>
               Cuéntanos tu duda
-              <textarea key={messageResetKey} value={message} onChange={(event) => setMessage(event.target.value.slice(0, 1200))} maxLength={1200} rows={4} placeholder="Ejemplo: no sé qué debo cambiar antes de publicar mi perfil…" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100" />
+              <textarea key={messageResetKey} value={message} onChange={(event) => setMessage(event.target.value.slice(0, 1200))} maxLength={1200} rows={4} placeholder="Ejemplo: no sé qué debo cambiar antes de publicar mi perfil…" className={`mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 ${largeText?'text-base leading-7':'text-sm leading-6'} text-slate-700 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100`} />
             </label>
 
             <p className={`rounded-xl bg-white/80 px-3 py-2 ${largeText?'text-[13px] leading-6':'text-[11px] leading-5'} font-semibold text-slate-500`}>Al enviarla, tu solicitud entra en una cola de atención. El equipo de soporte la revisará por orden y te responderá lo antes posible.</p>
 
-            <button type="button" onClick={() => void submit()} disabled={sending} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-35">
+            <button type="button" onClick={() => void submit()} disabled={sending} className={`w-full rounded-xl bg-slate-950 px-4 py-3 ${largeText?'text-sm':'text-xs'} font-black text-white disabled:cursor-not-allowed disabled:opacity-35`}>
               {sending ? 'Enviando…' : 'Enviar a soporte'}
             </button>
-            {feedback && <p className={`rounded-xl px-3 py-2 text-xs font-semibold leading-5 ${feedback.startsWith('Escribe') || feedback.startsWith('No pudimos') ? 'bg-rose-50 text-rose-700' : 'bg-white text-slate-600'}`}>{feedback}</p>}
+            {feedback && <p className={`rounded-xl px-3 py-2 ${largeText?'text-sm leading-6':'text-xs leading-5'} font-semibold ${feedback.startsWith('Escribe') || feedback.startsWith('No pudimos') ? 'bg-rose-50 text-rose-700' : 'bg-white text-slate-600'}`}>{feedback}</p>}
           </div>
 
           {tickets.length > 0 && (
             <div className="mt-4 border-t border-slate-200 pt-4">
-              <p className="text-xs font-black text-slate-700">Tus solicitudes recientes</p>
+              <p className={`${largeText?'text-sm':'text-xs'} font-black text-slate-700`}>Tus solicitudes recientes</p>
               <div className="mt-2 space-y-2">
                 {tickets.slice(0, 3).map((ticket) => (
-                  <button key={ticket.id} type="button" onClick={() => void openTicketById(ticket.id)} className="block w-full rounded-xl bg-white p-3 text-left text-xs transition hover:-translate-y-0.5 hover:shadow-sm">
+                  <button key={ticket.id} type="button" onClick={() => void openTicketById(ticket.id)} className={`block w-full rounded-xl bg-white p-3 text-left ${largeText?'text-sm':'text-xs'} transition hover:-translate-y-0.5 hover:shadow-sm`}>
                     <div className="flex items-center justify-between gap-3">
                       <strong className="text-slate-800">{ticket.subject}</strong>
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-500">{statusLabel(ticket.status)}</span>
+                      <span className={`rounded-full bg-slate-100 px-2 py-1 ${largeText?'text-xs':'text-[10px]'} font-black text-slate-500`}>{statusLabel(ticket.status)}</span>
                     </div>
-                    <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-400">
+                    <div className={`mt-2 flex items-center justify-between gap-3 ${largeText?'text-xs':'text-[10px]'} font-semibold text-slate-400`}>
                       <span>{formatDate(ticket.created_at)}</span>
                       <span className="text-cyan-700">Ver solicitud →</span>
                     </div>
