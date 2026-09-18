@@ -80,14 +80,14 @@ app.patch('/api/v1/me/sponsored-profile/bank-accounts/:id',requireUser,async(c:a
   const body=await c.req.json().catch(()=>({}))
   const bankName=body.bank_name!==undefined?clean(body.bank_name,80):String((existing as any).bank_name),bankCode=body.bank_code!==undefined?(clean(body.bank_code,40)||null):((existing as any).bank_code||null),accountNumber=body.account_number!==undefined?cleanAccountNumber(body.account_number):String((existing as any).account_number),accountType=body.account_type!==undefined?normalizeAccountType(body.account_type):normalizeAccountType((existing as any).account_type),currency=body.currency!==undefined?normalizeCurrency(body.currency):normalizeCurrency((existing as any).currency),holderName=body.holder_name!==undefined?clean(body.holder_name,120):String((existing as any).holder_name),holderIdType=body.holder_id_type!==undefined?normalizeHolderIdType(body.holder_id_type):normalizeHolderIdType((existing as any).holder_id_type),holderIdNumber=body.holder_id_number!==undefined?cleanHolderId(body.holder_id_number):cleanHolderId((existing as any).holder_id_number),displayMode=body.display_mode!==undefined?normalizeDisplayMode(body.display_mode):normalizeDisplayMode((existing as any).display_mode||'masked')
   if(!bankName||accountNumber.length<4||!accountType||!currency||!holderName||!holderIdType||holderIdNumber.length<9||!displayMode)return c.json({ok:false,error:'Revisa todos los datos requeridos de la cuenta, incluyendo Cédula o RNC.'},400)
-  await c.env.DB.prepare('UPDATE sponsored_bank_accounts SET bank_code=?,bank_name=?,account_number=?,account_type=?,currency=?,holder_name=?,holder_id_type=?,holder_id_number=?,display_mode=?,updated_at=datetime("now") WHERE id=? AND sponsored_profile_id=?').bind(bankCode,bankName,accountNumber,accountType,currency,holderName,holderIdType,holderIdNumber,displayMode,id,profileId).run()
+  await c.env.DB.prepare("UPDATE sponsored_bank_accounts SET bank_code=?,bank_name=?,account_number=?,account_type=?,currency=?,holder_name=?,holder_id_type=?,holder_id_number=?,display_mode=?,updated_at=datetime('now') WHERE id=? AND sponsored_profile_id=?").bind(bankCode,bankName,accountNumber,accountType,currency,holderName,holderIdType,holderIdNumber,displayMode,id,profileId).run()
   const row=await c.env.DB.prepare('SELECT * FROM sponsored_bank_accounts WHERE id=? AND sponsored_profile_id=? LIMIT 1').bind(id,profileId).first()
   return c.json({ok:true,data:serializeOwner(row)})
 })
 
 app.delete('/api/v1/me/sponsored-profile/bank-accounts/:id',requireUser,async(c:any)=>{
   const profile=await resolveOwnedSponsoredProfile(c,String(c.get('userId')||''),sponsoredProfileScope(c));if(!profile)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
-  await c.env.DB.prepare('UPDATE sponsored_bank_accounts SET is_active=0,updated_at=datetime("now") WHERE id=? AND sponsored_profile_id=?').bind(String(c.req.param('id')||''),String((profile as any).id)).run();return c.json({ok:true})
+  await c.env.DB.prepare("UPDATE sponsored_bank_accounts SET is_active=0,updated_at=datetime('now') WHERE id=? AND sponsored_profile_id=?").bind(String(c.req.param('id')||''),String((profile as any).id)).run();return c.json({ok:true})
 })
 
 app.get('/api/v1/public/sponsored/:username/bank-accounts',async(c:any)=>{
