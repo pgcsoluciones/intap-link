@@ -39,7 +39,7 @@ const freeWelcome=read('app/src/components/admin/free/onboarding/FreeOnboardingW
 
 for(const mod of ['./sponsored-scan','./sponsored-public','./sponsored-admin-safe-assign','./sponsored-code-generation','./sponsored-consent-claim','./sponsored-owner-flow','./sponsored-brand-controls','./sponsored-profiles','./sponsored-media','./sponsored-bank-accounts','./account-home-route'])has(entry,mod,`registro API ${mod}`)
 
-has(accountHome,"kind:'sponsored'",'resolver de cuenta reconoce beneficiario patrocinado')
+has(accountHome,"route:role==='sponsor_owner'?'/admin/sponsor':'/admin/sponsored'",'resolver de cuenta reconoce beneficiario patrocinado')
 has(accountHome,"kind:'sponsor'",'resolver de cuenta reconoce patrocinador')
 has(accountHome,"kind:'free'",'resolver de cuenta reconoce Free')
 has(accountHome,"planId.includes('med')?'med':'paid'",'resolver conserva distinción Med/pago')
