@@ -47,6 +47,5 @@ export function SponsoredBankAccountsSection({mode='beneficiary'}:{mode?:'benefi
   </section>
 }
 
-export function SponsoredBankModuleLauncher(){return null}
 
 export default function SponsoredBankAccounts(){const fromSponsor=new URLSearchParams(window.location.search).get('from')==='sponsor';const backHref=fromSponsor?'/admin/sponsor':'/admin/sponsored';return <main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[820px]"><a href={backHref} className="mb-4 inline-flex text-xs font-black text-cyan-700 no-underline">← {fromSponsor?'Panel patrocinador':'Mi presentación'}</a><SponsoredBankAccountsSection/></div></main>}
