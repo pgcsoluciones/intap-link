@@ -16,7 +16,7 @@ export default function SponsoredResumeGate(){
     const panelResume=(sessionStorage.getItem(PANEL_KEY)||localStorage.getItem(PANEL_KEY))==='1'
     if(!valid(profileCode)&&!valid(masterCode)&&!panelResume)return
     if(valid(profileCode)&&location.pathname==='/admin/sponsored/activate')return
-    if(panelResume&&location.pathname==='/admin/sponsored')return
+    if(panelResume&&(location.pathname==='/admin/sponsored'||location.pathname==='/admin/sponsored/select'))return
 
     // A Master must always pass again through SponsoredAccessEntry after login.
     // That route calls scan/status, validates the registered sponsor email,
