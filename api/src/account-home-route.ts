@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -37,6 +38,13 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
 
   if(sponsorMembership){
     return c.json({ok:true,data:{kind:'sponsor',route:'/admin/sponsor',role:String((sponsorMembership as any).role||'member')}})
+  }
+
+  if(await sponsoredMultiProfileAccess(c,userId)){
+    const profiles=await listOwnedSponsoredBeneficiaryProfiles(c,userId)
+    if(profiles.length>1){
+      return c.json({ok:true,data:{kind:'sponsored',route:'/admin/sponsored/select',role:'beneficiary',profiles_count:profiles.length}})
+    }
   }
 
   const sponsored=await c.env.DB.prepare(
