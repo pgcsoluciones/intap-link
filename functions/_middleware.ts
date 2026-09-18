@@ -190,6 +190,20 @@ ${seoHeadHtml}
     return 'image/jpeg';
   };
 
+  const fetchSponsoredProfileForShare = async (username: string): Promise<any | null> => {
+    try {
+      const response = await fetch(
+        `${discoveryRuntime.apiBase}/sponsored/${encodeURIComponent(username)}`,
+        { headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } } as RequestInit,
+      );
+      if (!response.ok) return null;
+      const payload = await response.json() as any;
+      return payload?.ok === true && payload?.data ? payload.data : null;
+    } catch {
+      return null;
+    }
+  };
+
   const fetchPublicProfileForShare = async (slug: string): Promise<any | null> => {
     try {
       const response = await fetch(
@@ -586,6 +600,36 @@ ${seoHeadHtml}
       headers,
     }));
   };
+
+  // Card social server-side para perfiles patrocinados.
+  // Usa EXCLUSIVAMENTE los datos e imágenes del propio perfil compartido.
+  // Nunca usa logo, banner, nombre ni contenido del patrocinador para un
+  // beneficiario; si el perfil pertenece al patrocinador, esos datos ya son
+  // sus propios datos de perfil.
+  const sponsoredProfileMatch = url.pathname.match(/^\/p\/([^/]+)\/?$/i);
+  if (sponsoredProfileMatch) {
+    const username = decodeURIComponent(sponsoredProfileMatch[1] || '').trim().toLowerCase();
+    if (/^[a-z0-9][a-z0-9-]{2,29}$/.test(username)) {
+      const profile = await fetchSponsoredProfileForShare(username);
+      if (profile) {
+        const compact = (value: unknown, max = 180) =>
+          typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+        const businessName = compact(profile.business_name, 90) || username;
+        const specialization = compact(profile.specialization, 100);
+        const whatWeDo = compact(profile.what_we_do, 220);
+        const description = whatWeDo
+          || (specialization ? `${specialization} · Presentación digital de ${businessName}` : `Presentación digital de ${businessName}`);
+        const hero = normalizeSocialImage(profile.hero_url);
+        const image = hero || `${url.origin}/assets/og/kawvo-link-og.png`;
+        return injectSimpleSocialCard({
+          title: `${businessName} | Kawvo Link`,
+          description,
+          image,
+          canonicalUrl: `${url.origin}/p/${encodeURIComponent(username)}`,
+        });
+      }
+    }
+  }
 
   // Card general de la marca.
   if (url.pathname === '/' || url.pathname === '') {
