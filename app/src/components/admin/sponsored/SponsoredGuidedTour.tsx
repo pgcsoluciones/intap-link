@@ -10,6 +10,7 @@ const STEPS:Step[]=[
   {title:'Contáctanos',description:'Configura WhatsApp, teléfono, Instagram y ubicación para que tus clientes puedan comunicarse contigo fácilmente.',labels:['Contáctanos']},
   {title:'Nuestro horario',description:'Indica tus días y horarios de atención. Puedes agregar o quitar líneas según tu forma de trabajar.',labels:['Nuestro horario']},
   {title:'Catálogo o galería',description:'Sube hasta 10 imágenes y elige el nombre de esta sección, por ejemplo Catálogo, Portafolio, Proyectos o Mis trabajos.',labels:['Galería']},
+  {title:'Cuentas bancarias',description:'Si esta función está habilitada para tu patrocinio, agrega, edita o elimina hasta 3 cuentas para que tus clientes puedan copiar los datos de transferencia desde tu perfil.',labels:['Cuentas bancarias','Facilita las transferencias bancarias']},
   {title:'Apariencia',description:'Selecciona la combinación de colores que mejor represente tu presentación manteniendo el diseño aprobado.',labels:['Apariencia']},
   {title:'Guardar y publicar',description:'Guarda tus cambios, publica tu presentación y luego podrás verla, compartirla, copiar su enlace o descargar su QR.',labels:['Guardar cambios','Publicar presentación']},
   {title:'Ayuda y crecimiento',description:'Desde aquí puedes solicitar soporte técnico o conocer cómo convertirte también en patrocinador.',labels:['Soporte técnico','Quiero ser patrocinador']},
