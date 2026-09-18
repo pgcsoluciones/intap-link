@@ -2,6 +2,7 @@ import app from './index'
 import { cookieNames } from './lib/cookies'
 import { resolveFreeStarterContent } from '../../shared/free-profile-starter-content'
 import { FREE_PROFILE_STARTER_ASSETS } from '../../shared/free-profile-starter-assets'
+import { resolveOwnedSponsoredProfile, sponsoredProfileScope } from './sponsored-profile-scope'
 
 const USERNAME_RE=/^[a-z0-9][a-z0-9-]{2,29}$/
 const RESERVED=new Set(['admin','api','app','www','superadmin','support','demo','med','p','l'])
@@ -19,7 +20,7 @@ app.post('/api/v1/me/sponsored-profile/starter',async(c:any)=>{
   const username=cleanUsername(body.username)
   const category=String(body.category||'').trim()
   if(!USERNAME_RE.test(username)||RESERVED.has(username))return c.json({ok:false,error:'Elige un usuario válido de 3 a 30 caracteres.'},422)
-  const profile=await c.env.DB.prepare(`SELECT id,profile_role,business_name,username FROM sponsored_profiles WHERE user_id=? ORDER BY CASE WHEN profile_role='sponsor_owner' THEN 0 ELSE 1 END,created_at DESC LIMIT 1`).bind(userId).first()
+  const profile=await resolveOwnedSponsoredProfile(c,userId,sponsoredProfileScope(c))
   if(!profile)return c.json({ok:false,error:'No tienes un perfil patrocinado activo.'},404)
   const currentUsername=cleanUsername((profile as any).username)
   if(currentUsername)return c.json({ok:true,data:{username:currentUsername,already_ready:true}})
