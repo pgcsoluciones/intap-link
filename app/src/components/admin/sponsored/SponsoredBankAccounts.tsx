@@ -10,8 +10,8 @@ const blank={bank_name:'Banco Popular Dominicano',account_number:'',account_type
 
 function bankInitials(name:string){return name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()).join('')||'B'}
 
-export function SponsoredBankAccountsSection({mode='beneficiary'}:{mode?:'beneficiary'|'master'}={}){
-  const scopeQuery=mode==='master'?'?scope=master':''
+export function SponsoredBankAccountsSection({mode='beneficiary',profileId}:{mode?:'beneficiary'|'master';profileId?:string}={}){
+  const params=new URLSearchParams();if(mode==='master')params.set('scope','master');else if(profileId)params.set('profile_id',profileId);const scopeQuery=params.toString()?`?${params.toString()}`:''
   const[enabled,setEnabled]=useState(false)
   const[items,setItems]=useState<Bank[]>([])
   const[form,setForm]=useState<any>(blank)
@@ -48,4 +48,4 @@ export function SponsoredBankAccountsSection({mode='beneficiary'}:{mode?:'benefi
 }
 
 
-export default function SponsoredBankAccounts(){const fromSponsor=new URLSearchParams(window.location.search).get('from')==='sponsor';const backHref=fromSponsor?'/admin/sponsor':'/admin/sponsored';return <main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[820px]"><a href={backHref} className="mb-4 inline-flex text-xs font-black text-cyan-700 no-underline">← {fromSponsor?'Panel patrocinador':'Mi presentación'}</a><SponsoredBankAccountsSection/></div></main>}
+export default function SponsoredBankAccounts(){const params=new URLSearchParams(window.location.search);const fromSponsor=params.get('from')==='sponsor';const profileId=String(params.get('profile_id')||'');const backHref=fromSponsor?'/admin/sponsor':profileId?`/admin/sponsored?profile_id=${encodeURIComponent(profileId)}`:'/admin/sponsored';return <main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[820px]"><a href={backHref} className="mb-4 inline-flex text-xs font-black text-cyan-700 no-underline">← {fromSponsor?'Panel patrocinador':'Mi presentación'}</a><SponsoredBankAccountsSection profileId={profileId||undefined}/></div></main>}
