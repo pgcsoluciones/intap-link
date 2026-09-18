@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feature/sponsored-qa-multiprofile-v1"
 EXPECTED_MAIN_SHA="aa4805f3ee1030e41812346c5f6fbba61fbeb2d5"
-APPROVED_PRODUCT_SHA="52f7a70ab2e8a40953991718963ad5e39a528065"
+APPROVED_PRODUCT_SHA="33e3d58ad3e48dddfc51e3b8a74924b3be33b111"
 RUNNER_PATH="scripts/run-production-sponsored-qa-multiprofile-v1-2026-09-18.sh"
 APP_PROJECT="intap-web2"
 PROD_DB="intap_db"
@@ -43,7 +43,7 @@ run git switch "$BRANCH"
 run git pull --ff-only github "$BRANCH"
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 git merge-base --is-ancestor "$APPROVED_PRODUCT_SHA" HEAD || fail "Producto aprobado ya no es ancestro"
-POST_FILES="$(git diff --name-only "$APPROVED_PRODUCT_SHA"..HEAD | grep -v "^${RUNNER_PATH}$" || true)"
+POST_FILES="$(git diff --name-only "$APPROVED_PRODUCT_SHA"..HEAD | grep -Ev "^scripts/run-(preview|production)-sponsored-qa-multiprofile-v1-2026-09-18\.sh$" || true)"
 [ -z "$POST_FILES" ] || { echo "$POST_FILES"; fail "Hay cambios posteriores al producto aprobado"; }
 git merge-base --is-ancestor github/main HEAD || fail "main y feature divergieron"
 
