@@ -27,8 +27,12 @@ function publicOrigin(){const host=window.location.hostname.toLowerCase();if(hos
 
 export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'beneficiary'|'master'}){
   const isMaster=mode==='master'
-  const profileScopeQuery=isMaster?'?scope=master':''
-  const profileScopeParam=isMaster?'&scope=master':''
+  const selectedProfileId=!isMaster?String(new URLSearchParams(window.location.search).get('profile_id')||'').trim():''
+  const profileParams=new URLSearchParams()
+  if(isMaster)profileParams.set('scope','master')
+  else if(selectedProfileId)profileParams.set('profile_id',selectedProfileId)
+  const profileScopeQuery=profileParams.toString()?`?${profileParams.toString()}`:''
+  const profileScopeParam=profileParams.toString()?`&${profileParams.toString()}`:''
   const avatarRef=useRef<HTMLInputElement>(null)
   const heroRef=useRef<HTMLInputElement>(null)
   const galleryRef=useRef<HTMLInputElement>(null)
@@ -137,7 +141,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   return<main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div data-sponsored-tour-ready={hasUsername?'1':'0'} className="mx-auto max-w-[820px] space-y-5">
     <header className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(15,23,42,.04)]"><div className="flex items-center gap-4"><div className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">{form.avatar_url?<img src={form.avatar_url} alt="" className="h-full w-full object-cover"/>:<div className="grid h-full place-items-center text-2xl text-slate-400">👤</div>}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-xl font-black">{form.business_name||'Mi presentación'}</h1><span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[.08em] text-violet-700">Patrocinado</span></div><p className="mt-1 truncate text-sm font-semibold text-slate-500">{form.username?`@${form.username}`:'Usuario pendiente'}{form.specialization?` · ${form.specialization}`:''}</p><p className="mt-1 text-xs text-slate-400">{data.sponsor?.name?`Impulsado por ${data.sponsor.name}`:'Perfil patrocinado permanente'}</p></div><span className={`rounded-full px-3 py-2 text-xs font-black ${data.status==='published'?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}`}>{data.status==='published'?'Publicado':'Borrador'}</span></div></header>
 
-    {!hasUsername&&<SponsoredStarterOnboarding mode={isMaster?'master':'beneficiary'} onComplete={load}/>}
+    {!hasUsername&&<SponsoredStarterOnboarding mode={isMaster?'master':'beneficiary'} profileId={selectedProfileId||undefined} onComplete={load}/>}
 
     {hasUsername&&<>
       <section className={section}>
@@ -165,7 +169,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
 
       <section className={section}><div className="flex items-center justify-between gap-3"><div><h2 className={heading}>Galería / Catálogo</h2><p className="mt-1 text-sm text-slate-500">Hasta 10 imágenes. Las primeras imágenes son ejemplos del sector: sustitúyelas por trabajos reales.</p></div><span className="text-xs font-black text-slate-400">{form.gallery.length}/10</span></div><label className="mt-4 block rounded-2xl bg-amber-50/50 p-3"><span className="text-sm font-bold">Título de la sección</span><input className={field} value={form.gallery_title||'Catálogo'} onChange={e=>setForm({...form,gallery_title:e.target.value})}/></label><div className="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" onClick={()=>galleryRef.current?.click()} disabled={form.gallery.length>=10||Boolean(uploading)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black disabled:opacity-40">{uploading==='gallery'?'Subiendo…':'Agregar imagen'}</button><button type="button" onClick={()=>galleryBatchRef.current?.click()} disabled={form.gallery.length>=10||Boolean(uploading)} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-40">{uploading==='gallery-batch'?(galleryBatchProgress||'Subiendo lote…'):'Agregar varias'}</button></div>{feedback('gallery')}<input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';chooseImage(f,'gallery')}}/><input ref={galleryBatchRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const files=Array.from(e.target.files||[]);e.target.value='';void uploadGalleryBatch(files)}}/><div className="mt-4 grid gap-3 sm:grid-cols-2">{form.gallery.map((item:any,index:number)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={item.url} alt="" className="h-32 w-full rounded-xl object-cover"/><input className={field} value={item.title||''} onChange={e=>{const g=[...form.gallery];g[index]={...g[index],title:e.target.value};setForm({...form,gallery:g})}} placeholder="Título de la imagen"/><button type="button" onClick={()=>setForm({...form,gallery:form.gallery.filter((_:any,i:number)=>i!==index)})} className="mt-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Quitar</button></div>)}</div></section>
 
-      <SponsoredBankAccountsSection mode={isMaster?'master':'beneficiary'}/>
+      <SponsoredBankAccountsSection mode={isMaster?'master':'beneficiary'} profileId={selectedProfileId||undefined}/>
 
       <section className={section}><h2 className={heading}>Apariencia</h2><p className="mt-1 text-sm text-slate-500">La plantilla patrocinada es universal. Solo eliges la gama de colores disponible.</p><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{palettes.map(([id,name,accent,soft])=><button type="button" key={id} onClick={()=>setForm({...form,palette_id:id})} className={`overflow-hidden rounded-2xl border text-left ${form.palette_id===id?'border-cyan-500 ring-2 ring-cyan-100':'border-slate-200'}`}><div className="h-10" style={{background:`linear-gradient(90deg,${accent},${soft})`}}/><div className="px-3 py-2 text-xs font-black text-slate-700">{name}</div></button>)}</div></section>
 
