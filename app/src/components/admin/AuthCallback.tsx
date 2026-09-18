@@ -83,6 +83,12 @@ export default function AuthCallback() {
           return
         }
 
+        const home:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
+        if (home?.ok && home?.data?.route) {
+          navigate(String(home.data.route), { replace:true })
+          return
+        }
+
         navigate(authMode === 'register' ? '/admin/free/onboarding/welcome' : '/admin', { replace: true })
       })
       .catch(() => setError('Error de conexión. Inténtalo de nuevo.'))
