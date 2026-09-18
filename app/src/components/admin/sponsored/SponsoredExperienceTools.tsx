@@ -44,7 +44,7 @@ export default function SponsoredExperienceTools(){
   return <>
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur">
       <div className="mx-auto flex w-full max-w-[820px] items-center justify-between gap-3">
-        <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-600">KAWVO LINK</p><p className="truncate text-sm font-black text-slate-900">Mi panel patrocinado</p></div>
+        <div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">Mi panel patrocinado</p></div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <button type="button" onClick={()=>window.dispatchEvent(new Event(SPONSORED_TOUR_EVENT))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 shadow-sm">Recorrido</button>
           <button type="button" onClick={()=>void openAccount()} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Mi cuenta</button>
