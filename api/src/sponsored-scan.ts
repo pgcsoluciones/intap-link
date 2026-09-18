@@ -10,8 +10,29 @@ function productLabel(type:string){const labels:Record<string,string>={card:'Tar
 function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,30)}
 
 async function ensureSponsorOwnerProfile(c:any,sponsorId:string,userId:string,row:any){
-  let profile=await c.env.DB.prepare(`SELECT id,username,status FROM sponsored_profiles WHERE sponsor_id=? AND user_id=? AND profile_role='sponsor_owner' LIMIT 1`).bind(sponsorId,userId).first()
-  if(profile)return profile
+  const sponsorName=String(row.sponsor_name||'').trim().slice(0,100)
+  const sponsorType=String(row.sponsor_type||'merchant')==='brand'?'brand':'merchant'
+  const specialization=sponsorType==='brand'?'Marca':'Comercio'
+  const whatWeDo='Conoce nuestros productos, servicios y canales de contacto.'
+  const whatsapp=String(row.sponsor_contact_whatsapp||'').trim().slice(0,40)
+  const logoUrl=String(row.sponsor_logo_url||'').trim().slice(0,800)
+  const bannerUrl=String(row.sponsor_banner_image_url||'').trim().slice(0,800)
+
+  let profile=await c.env.DB.prepare(`SELECT id,username,status,business_name,specialization,what_we_do,avatar_url,hero_url,phone,whatsapp FROM sponsored_profiles WHERE sponsor_id=? AND user_id=? AND profile_role='sponsor_owner' LIMIT 1`).bind(sponsorId,userId).first()
+  if(profile){
+    await c.env.DB.prepare(`UPDATE sponsored_profiles SET
+      business_name=CASE WHEN trim(COALESCE(business_name,''))='' THEN ? ELSE business_name END,
+      specialization=CASE WHEN trim(COALESCE(specialization,''))='' THEN ? ELSE specialization END,
+      what_we_do=CASE WHEN trim(COALESCE(what_we_do,''))='' THEN ? ELSE what_we_do END,
+      avatar_url=CASE WHEN trim(COALESCE(avatar_url,''))='' THEN ? ELSE avatar_url END,
+      hero_url=CASE WHEN trim(COALESCE(hero_url,''))='' THEN ? ELSE hero_url END,
+      phone=CASE WHEN trim(COALESCE(phone,''))='' THEN ? ELSE phone END,
+      whatsapp=CASE WHEN trim(COALESCE(whatsapp,''))='' THEN ? ELSE whatsapp END,
+      updated_at=datetime('now')
+      WHERE id=?`).bind(sponsorName,specialization,whatWeDo,logoUrl,bannerUrl,whatsapp,whatsapp,String((profile as any).id)).run()
+    profile=await c.env.DB.prepare(`SELECT id,username,status FROM sponsored_profiles WHERE id=? LIMIT 1`).bind(String((profile as any).id)).first()
+    return profile
+  }
 
   let preferred=cleanSlug(row.profile_slug)
   if(preferred){
@@ -19,8 +40,10 @@ async function ensureSponsorOwnerProfile(c:any,sponsorId:string,userId:string,ro
     if(used)preferred=''
   }
   const id=crypto.randomUUID()
-  await c.env.DB.prepare(`INSERT INTO sponsored_profiles (id,sponsor_id,user_id,username,business_name,phone,whatsapp,status,profile_role) VALUES (?,?,?,?,?,?,?,'draft','sponsor_owner')`).bind(
-    id,sponsorId,userId,preferred||null,String(row.sponsor_name||'').trim().slice(0,100),String(row.sponsor_contact_whatsapp||'').trim().slice(0,40),String(row.sponsor_contact_whatsapp||'').trim().slice(0,40),
+  await c.env.DB.prepare(`INSERT INTO sponsored_profiles (
+    id,sponsor_id,user_id,username,business_name,specialization,what_we_do,avatar_url,hero_url,show_avatar,phone,whatsapp,gallery_json,gallery_title,palette_id,status,profile_role
+  ) VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?,'Catálogo','blue','draft','sponsor_owner')`).bind(
+    id,sponsorId,userId,preferred||null,sponsorName,specialization,whatWeDo,logoUrl,bannerUrl,whatsapp,whatsapp,'[]',
   ).run()
   return {id,username:preferred||null,status:'draft'}
 }
@@ -30,7 +53,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   try{body=await c.req.json()}catch{return next()}
   const publicCode=String(body?.public_code||'').trim().toUpperCase()
   if(!publicCode)return next()
-  const row=await c.env.DB.prepare(`SELECT a.id,a.public_code,a.product_type,a.status AS artifact_status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,sa.beneficiary_user_id,sa.sponsored_profile_id,sp.id AS sponsored_profile_id_resolved,sp.username,sp.status AS sponsored_profile_status,sp.user_id AS sponsored_user_id,st.name AS sponsor_name,st.logo_url AS sponsor_logo_url,st.banner_title,st.sponsor_type,st.is_active AS sponsor_is_active,st.contact_email AS sponsor_contact_email,st.contact_whatsapp AS sponsor_contact_whatsapp,st.profile_slug FROM intap_artifacts a JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id LEFT JOIN sponsored_profiles sp ON sp.id=COALESCE(sa.sponsored_profile_id,(SELECT sp2.id FROM sponsored_profiles sp2 WHERE sp2.artifact_id=a.id ORDER BY sp2.created_at DESC LIMIT 1)) WHERE a.public_code=? LIMIT 1`).bind(publicCode).first().catch(()=>null)
+  const row=await c.env.DB.prepare(`SELECT a.id,a.public_code,a.product_type,a.status AS artifact_status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,sa.beneficiary_user_id,sa.sponsored_profile_id,sp.id AS sponsored_profile_id_resolved,sp.username,sp.status AS sponsored_profile_status,sp.user_id AS sponsored_user_id,st.name AS sponsor_name,st.logo_url AS sponsor_logo_url,st.banner_image_url AS sponsor_banner_image_url,st.banner_title,st.sponsor_type,st.is_active AS sponsor_is_active,st.contact_email AS sponsor_contact_email,st.contact_whatsapp AS sponsor_contact_whatsapp,st.profile_slug FROM intap_artifacts a JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id LEFT JOIN sponsored_profiles sp ON sp.id=COALESCE(sa.sponsored_profile_id,(SELECT sp2.id FROM sponsored_profiles sp2 WHERE sp2.artifact_id=a.id ORDER BY sp2.created_at DESC LIMIT 1)) WHERE a.public_code=? LIMIT 1`).bind(publicCode).first().catch(()=>null)
   if(!row)return next()
 
   const artifactId=String((row as any).id||'')
