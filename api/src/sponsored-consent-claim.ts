@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 const CONSENT_VERSION='sponsored-v1.1-2026-09-17'
 
@@ -33,15 +34,17 @@ app.post('/api/v1/me/sponsored-profile/claim',requireUser,async(c:any)=>{
       : await c.env.DB.prepare(`SELECT id,username,status,user_id,consent_version,consent_accepted_at FROM sponsored_profiles WHERE artifact_id=? ORDER BY created_at DESC LIMIT 1`).bind(artifactId).first()
     const ownerId=String((existing as any)?.user_id||linkedBeneficiary)
     if(ownerId&&ownerId===userId){
-      return c.json({ok:true,data:{id:String((existing as any)?.id||linkedProfileId),status:String((existing as any)?.status||'draft'),username:String((existing as any)?.username||''),consent_version:String((existing as any)?.consent_version||CONSENT_VERSION),already_claimed:true,next_url:'/admin/sponsored'}})
+      return c.json({ok:true,data:{id:String((existing as any)?.id||linkedProfileId),status:String((existing as any)?.status||'draft'),username:String((existing as any)?.username||''),consent_version:String((existing as any)?.consent_version||CONSENT_VERSION),already_claimed:true,next_url:`/admin/sponsored?profile_id=${encodeURIComponent(String((existing as any)?.id||linkedProfileId))}`}})
     }
     return c.json({ok:false,error:'Este dispositivo ya está vinculado a otra cuenta.',code:'sponsored_device_already_linked'},409)
   }
 
-  // One beneficiary account = one sponsored device/profile. Master sponsor-owner
-  // profiles are separate and intentionally excluded from this rule.
+  // Regla general: una cuenta beneficiaria = un perfil/dispositivo patrocinado.
+  // La cuenta autorizada para QA y presentaciones puede mantener varios perfiles
+  // independientes sin alterar patrocinador, código, URL ni contenido público.
+  const multiProfileAllowed=await sponsoredMultiProfileAccess(c,userId)
   const accountProfile=await c.env.DB.prepare(`SELECT id,username,status FROM sponsored_profiles WHERE user_id=? AND profile_role='beneficiary' ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
-  if(accountProfile){
+  if(accountProfile&&!multiProfileAllowed){
     return c.json({ok:false,error:'Esta cuenta ya tiene un dispositivo patrocinado vinculado. Cada cuenta solo puede tener un dispositivo patrocinado.',code:'sponsored_account_already_linked',data:{profile_id:String((accountProfile as any).id||''),username:String((accountProfile as any).username||''),status:String((accountProfile as any).status||'draft'),next_url:'/admin/sponsored'}},409)
   }
 
@@ -69,7 +72,7 @@ app.post('/api/v1/me/sponsored-profile/claim',requireUser,async(c:any)=>{
     throw error
   }
 
-  return c.json({ok:true,data:{id:profileId,sponsor_name:sponsorName,status:'draft',consent_version:CONSENT_VERSION,next_url:'/admin/sponsored'}},201)
+  return c.json({ok:true,data:{id:profileId,sponsor_name:sponsorName,status:'draft',consent_version:CONSENT_VERSION,next_url:multiProfileAllowed?`/admin/sponsored?profile_id=${encodeURIComponent(profileId)}`:'/admin/sponsored'}},201)
 })
 
 export default app
