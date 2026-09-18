@@ -29,6 +29,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   const avatarRef=useRef<HTMLInputElement>(null)
   const heroRef=useRef<HTMLInputElement>(null)
   const galleryRef=useRef<HTMLInputElement>(null)
+  const galleryBatchRef=useRef<HTMLInputElement>(null)
   const[data,setData]=useState<any>(null)
   const[loading,setLoading]=useState(true)
   const[saving,setSaving]=useState(false)
@@ -41,6 +42,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   const[selectedLocation,setSelectedLocation]=useState(false)
   const[locating,setLocating]=useState(false)
   const[viewMode,setViewMode]=useState<'edit'|'preview'>('edit')
+  const[galleryBatchProgress,setGalleryBatchProgress]=useState('')
   const[form,setForm]=useState<any>({username:'',business_name:'',specialization:'',what_we_do:'',avatar_url:'',hero_url:'',map_url:'',show_avatar:true,phone:'',whatsapp:'',instagram:'',address:'',schedule:emptySchedule,gallery:[],gallery_title:'Catálogo',palette_id:'blue'})
 
   function beginFeedback(target:FeedbackTarget){setFeedbackTarget(target);setError('');setMessage('')}
@@ -77,6 +79,38 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     }catch(e){setError(e instanceof Error?e.message:'No pudimos subir la imagen.')}finally{setUploading('')}
   }
   function chooseImage(file:File|undefined,kind:'avatar'|'hero'|'gallery'){if(!file)return;beginFeedback(kind==='gallery'?'gallery':'identity');if(file.size>12*1024*1024){setError('La imagen original supera 12 MB. Elige una más liviana.');return}if(kind==='gallery'&&form.gallery.length>=10)return;setPending({file,kind})}
+  async function uploadGalleryBatch(files:File[]){
+    beginFeedback('gallery')
+    const available=Math.max(0,10-(form.gallery?.length||0))
+    if(available<=0){setError('La galería ya alcanzó el máximo de 10 imágenes.');return}
+    const selected=files.slice(0,available)
+    if(!selected.length)return
+    const tooLarge=selected.find(file=>file.size>12*1024*1024)
+    if(tooLarge){setError(`${tooLarge.name} supera 12 MB. Retírala del lote e intenta nuevamente.`);return}
+    setUploading('gallery-batch')
+    const uploaded:{url:string;title:string}[]=[]
+    const failed:string[]=[]
+    try{
+      for(let i=0;i<selected.length;i++){
+        const file=selected[i]
+        setGalleryBatchProgress(`Subiendo ${i+1} de ${selected.length}`)
+        try{
+          const optimized=await optimizeImageBlobForUpload(file,{maxDimension:1400,quality:.82,baseName:`gallery-${i+1}`})
+          const fd=new FormData();fd.append('file',optimized,optimized.name)
+          const res=await fetch(`${API_BASE}/me/sponsored-profile/media?kind=gallery`,{method:'POST',credentials:'include',body:fd})
+          const json:any=await res.json().catch(()=>null)
+          if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.')
+          uploaded.push({url:String(json.url||''),title:''})
+        }catch{failed.push(file.name)}
+      }
+      if(uploaded.length)setForm((v:any)=>({...v,gallery:[...(v.gallery||[]),...uploaded].slice(0,10)}))
+      if(failed.length)setError(`Se subieron ${uploaded.length} imagen${uploaded.length===1?'':'es'}. Fallaron: ${failed.join(', ')}.`)
+      else setMessage(`${uploaded.length} imagen${uploaded.length===1?'':'es'} agregada${uploaded.length===1?'':'s'} a la galería.`)
+    }finally{
+      setUploading('')
+      setGalleryBatchProgress('')
+    }
+  }
 
   function searchLocation(){beginFeedback('location');const query=String(form.address||'').trim();if(!query){setError('Escribe el nombre del negocio o una dirección.');return}setSelectedLocation(false);setForm((v:any)=>({...v,map_url:''}));setPreviewQuery(query)}
   function usePreviewLocation(){if(!previewQuery)return;beginFeedback('location');setForm((v:any)=>({...v,map_url:mapsSearchUrl(previewQuery)}));setSelectedLocation(true);setMessage('Ubicación seleccionada.')}
@@ -126,7 +160,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
 
       <section className={section}><h2 className={heading}>Nuestro horario</h2><p className="mt-1 text-sm text-slate-500">Muestra cuándo atiende la empresa.</p><div className="mt-4 space-y-3">{(form.schedule||[]).map((item:any,index:number)=><div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><input className={field} value={item.day||''} onChange={e=>{const s=[...form.schedule];s[index]={...s[index],day:e.target.value};setForm({...form,schedule:s})}}/><input className={field} value={item.hours||''} onChange={e=>{const s=[...form.schedule];s[index]={...s[index],hours:e.target.value};setForm({...form,schedule:s})}}/><button type="button" onClick={()=>setForm({...form,schedule:form.schedule.filter((_:any,i:number)=>i!==index)})} className="self-end rounded-xl border border-slate-200 px-3 py-3 text-xs font-black text-slate-500">Quitar</button></div>)}</div><button type="button" disabled={(form.schedule||[]).length>=7} onClick={()=>setForm({...form,schedule:[...(form.schedule||[]),{day:'',hours:''}].slice(0,7)})} className="mt-4 rounded-xl border border-slate-200 px-4 py-2 text-xs font-black disabled:opacity-40">Agregar horario</button></section>
 
-      <section className={section}><div className="flex items-center justify-between gap-3"><div><h2 className={heading}>Galería / Catálogo</h2><p className="mt-1 text-sm text-slate-500">Hasta 10 imágenes. Las primeras imágenes son ejemplos del sector: sustitúyelas por trabajos reales.</p></div><span className="text-xs font-black text-slate-400">{form.gallery.length}/10</span></div><label className="mt-4 block rounded-2xl bg-amber-50/50 p-3"><span className="text-sm font-bold">Título de la sección</span><input className={field} value={form.gallery_title||'Catálogo'} onChange={e=>setForm({...form,gallery_title:e.target.value})}/></label><button type="button" onClick={()=>galleryRef.current?.click()} disabled={form.gallery.length>=10||uploading==='gallery'} className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black disabled:opacity-40">{uploading==='gallery'?'Subiendo…':'Agregar imagen'}</button>{feedback('gallery')}<input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';chooseImage(f,'gallery')}}/><div className="mt-4 grid gap-3 sm:grid-cols-2">{form.gallery.map((item:any,index:number)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={item.url} alt="" className="h-32 w-full rounded-xl object-cover"/><input className={field} value={item.title||''} onChange={e=>{const g=[...form.gallery];g[index]={...g[index],title:e.target.value};setForm({...form,gallery:g})}} placeholder="Título de la imagen"/><button type="button" onClick={()=>setForm({...form,gallery:form.gallery.filter((_:any,i:number)=>i!==index)})} className="mt-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Quitar</button></div>)}</div></section>
+      <section className={section}><div className="flex items-center justify-between gap-3"><div><h2 className={heading}>Galería / Catálogo</h2><p className="mt-1 text-sm text-slate-500">Hasta 10 imágenes. Las primeras imágenes son ejemplos del sector: sustitúyelas por trabajos reales.</p></div><span className="text-xs font-black text-slate-400">{form.gallery.length}/10</span></div><label className="mt-4 block rounded-2xl bg-amber-50/50 p-3"><span className="text-sm font-bold">Título de la sección</span><input className={field} value={form.gallery_title||'Catálogo'} onChange={e=>setForm({...form,gallery_title:e.target.value})}/></label><div className="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" onClick={()=>galleryRef.current?.click()} disabled={form.gallery.length>=10||Boolean(uploading)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black disabled:opacity-40">{uploading==='gallery'?'Subiendo…':'Agregar imagen'}</button><button type="button" onClick={()=>galleryBatchRef.current?.click()} disabled={form.gallery.length>=10||Boolean(uploading)} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-40">{uploading==='gallery-batch'?(galleryBatchProgress||'Subiendo lote…'):'Agregar varias'}</button></div>{feedback('gallery')}<input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const f=e.target.files?.[0];e.target.value='';chooseImage(f,'gallery')}}/><input ref={galleryBatchRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const files=Array.from(e.target.files||[]);e.target.value='';void uploadGalleryBatch(files)}}/><div className="mt-4 grid gap-3 sm:grid-cols-2">{form.gallery.map((item:any,index:number)=><div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={item.url} alt="" className="h-32 w-full rounded-xl object-cover"/><input className={field} value={item.title||''} onChange={e=>{const g=[...form.gallery];g[index]={...g[index],title:e.target.value};setForm({...form,gallery:g})}} placeholder="Título de la imagen"/><button type="button" onClick={()=>setForm({...form,gallery:form.gallery.filter((_:any,i:number)=>i!==index)})} className="mt-2 rounded-xl border border-rose-200 px-3 py-2 text-xs font-black text-rose-600">Quitar</button></div>)}</div></section>
 
       <section className={section}><h2 className={heading}>Apariencia</h2><p className="mt-1 text-sm text-slate-500">La plantilla patrocinada es universal. Solo eliges la gama de colores disponible.</p><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{palettes.map(([id,name,accent,soft])=><button type="button" key={id} onClick={()=>setForm({...form,palette_id:id})} className={`overflow-hidden rounded-2xl border text-left ${form.palette_id===id?'border-cyan-500 ring-2 ring-cyan-100':'border-slate-200'}`}><div className="h-10" style={{background:`linear-gradient(90deg,${accent},${soft})`}}/><div className="px-3 py-2 text-xs font-black text-slate-700">{name}</div></button>)}</div></section>
 
