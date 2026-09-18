@@ -48,7 +48,85 @@ POST_FILES="$(git diff --name-only "$APPROVED_PRODUCT_SHA"..HEAD | grep -Ev "^sc
 [ -z "$POST_FILES" ] || { echo "$POST_FILES"; fail "Hay cambios posteriores al producto aprobado"; }
 git merge-base --is-ancestor github/main HEAD || fail "main y feature divergieron"
 
-ALLOWED='^(api/migrations(-preview)?/0069_sponsored_authorized_multiprofile\.sql|api/src/(account-home-route|sponsored-account-controls|sponsored-consent-claim|sponsored-multiprofile-access|sponsored-profile-scope|sponsored-scan)\.ts|app/src/App\.tsx|app/src/components/admin/sponsored/(SponsoredActivation|SponsoredBankAccounts|SponsoredDashboard|SponsoredExperienceTools|SponsoredProfileSelector|SponsoredResumeGate|SponsoredStarterOnboarding)\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-qa-multiprofile-v1-2026-09-18\.sh)$'
+ALLOWED='^(api/migrations(-preview)?/0069_sponsored_authorized_multiprofile\.sql|api/src/(account-home-route|sponsored-account-controls|sponsored-consent-claim|sponsored-multiprofile-access|sponsored-profile-scope|sponsored-scan)\.ts|app/src/App\.tsx|app/src/components/admin/sponsored/(SponsoredActivation|SponsoredBankAccounts|SponsoredDashboard|SponsoredExperienceTools|SponsoredProfileSelector|SponsoredResumeGate|SponsoredStarterOnboarding)\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-(preview|production)-sponsored-qa-multiprofile-v1-2026-09-18\.sh)
+UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
+[ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
+
+run git diff --check github/main...HEAD
+run npm ci
+run node scripts/test-sponsored-profile-contract.mjs
+run npm run build:preview -w app
+run bash -lc 'cd api && npx tsc --noEmit'
+run bash -lc 'cd api && npx wrangler deploy --config wrangler.preview.toml --dry-run'
+
+echo; echo "▶ Migraciones pendientes D1 Preview"
+(cd api && npx wrangler d1 migrations list "$PREVIEW_DB" --remote --config wrangler.preview.toml) || fail "No se pudieron listar migraciones Preview"
+
+echo; echo "▶ Aplicar migración 0069 SOLO D1 Preview"
+(
+  cd api
+  npx wrangler d1 migrations apply "$PREVIEW_DB" --remote --config wrangler.preview.toml
+) || fail "Migraciones D1 Preview"
+
+echo; echo "▶ Deploy App Pages Preview"
+(npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch "$BRANCH") 2>&1 | tee "$APP_LOG"
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Preview"
+APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$APP_LOG" | tail -1)"
+[ -n "$APP_ORIGIN" ] || fail "No pude detectar origin App Preview"
+
+cp "$PREVIEW_CFG" "$PREVIEW_CFG_BAK"
+restore_cfg(){ cp "$PREVIEW_CFG_BAK" "$PREVIEW_CFG" 2>/dev/null || true; }
+trap restore_cfg EXIT
+python3 - "$PREVIEW_CFG" "$APP_ORIGIN" <<'PY'
+from pathlib import Path
+import re,sys
+p=Path(sys.argv[1]); app=sys.argv[2]
+s=p.read_text()
+s,n=re.subn(r'APP_PAGES_ORIGIN\s*=\s*"[^"]+"',f'APP_PAGES_ORIGIN = "{app}"',s,count=1)
+if n != 1: raise SystemExit("No pude actualizar APP_PAGES_ORIGIN")
+p.write_text(s)
+PY
+
+echo; echo "▶ Deploy Worker Preview"
+(
+ cd api
+ npx wrangler deploy --config wrangler.preview.toml --dry-run
+ npx wrangler deploy --config wrangler.preview.toml
+) 2>&1 | tee "$WORKER_LOG"
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Worker Preview"
+restore_cfg
+trap - EXIT
+
+sleep 5
+for url in \
+ "https://app.preview.intaprd.com/admin/login" \
+ "https://app.preview.intaprd.com/admin/sponsored/select" \
+ "https://app.preview.intaprd.com/admin/sponsored"
+do
+ code="$(curl -sS -L -o /dev/null -w '%{http_code}' "$url")"
+ echo "✓ $url -> HTTP $code"
+ [ "$code" = "200" ] || fail "$url respondió HTTP $code"
+done
+
+code="$(curl -sS -o /dev/null -w '%{http_code}' https://app.preview.intaprd.com/api/v1/me/sponsored-profiles)"
+echo "✓ /api/v1/me/sponsored-profiles sin sesión -> HTTP $code"
+[ "$code" = "401" ] || fail "Endpoint multiperfil no protegió autenticación"
+
+rm -rf "$LOG_DIR"
+[ -z "$(git status --porcelain)" ] || { git status --short; fail "Runner dejó cambios locales"; }
+
+cat <<EOF
+============================================================
+✓ MULTIPERFIL AUTORIZADO DESPLEGADO EN PREVIEW
+============================================================
+Feature SHA: $(git rev-parse HEAD)
+App origin:  $APP_ORIGIN
+QA: https://app.preview.intaprd.com/admin/login
+D1 Preview: migración 0069 aplicada
+Producción: NO TOCADA
+============================================================
+EOF
+
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
