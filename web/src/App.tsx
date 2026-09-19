@@ -35,10 +35,6 @@ const SponsoredProfile = lazy(
   () => import('./components/sponsored/SponsoredProfile'),
 )
 
-const SponsoredBankAccounts = lazy(
-  () => import('./components/sponsored/SponsoredBankAccounts'),
-)
-
 const SponsoredAwareArtifactResolver = lazy(
   () => import('./components/sponsored/SponsoredAwareArtifactResolver'),
 )
@@ -118,12 +114,7 @@ function PublicProfileRoute() {
 }
 
 function SponsoredProfileRoute() {
-  return (
-    <>
-      <SponsoredProfile />
-      <SponsoredBankAccounts />
-    </>
-  )
+  return <SponsoredProfile />
 }
 
 function LegacyBankRoute() {
