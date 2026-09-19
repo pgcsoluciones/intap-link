@@ -36,10 +36,14 @@ run git fetch github main
 run git checkout "$BRANCH"
 run git pull --ff-only github main
 
-[ -z "$(git status --porcelain)" ] || {
-  git status --short
-  fail "El árbol de trabajo no está limpio"
+DIRTY="$(git status --porcelain | grep -v '^?? web/public/assets/welcome/' || true)"
+[ -z "$DIRTY" ] || {
+  printf '%s\n' "$DIRTY"
+  fail "El árbol de trabajo tiene cambios no permitidos"
 }
+if git status --porcelain | grep -q '^?? web/public/assets/welcome/'; then
+  echo "✓ Ignorando recurso local pausado: web/public/assets/welcome/"
+fi
 
 LOCAL_SHA="$(git rev-parse HEAD)"
 REMOTE_SHA="$(git rev-parse github/main)"
@@ -177,9 +181,10 @@ echo "▶ Confirmar que no quedan migraciones Trial pendientes"
   npx wrangler d1 migrations list "$PROD_DB" --remote --config wrangler.toml
 )
 
-[ -z "$(git status --porcelain)" ] || {
-  git status --short
-  fail "El runner dejó cambios locales"
+DIRTY_END="$(git status --porcelain | grep -v '^?? web/public/assets/welcome/' || true)"
+[ -z "$DIRTY_END" ] || {
+  printf '%s\n' "$DIRTY_END"
+  fail "El runner dejó cambios locales no permitidos"
 }
 
 rm -rf "$LOG_DIR"
