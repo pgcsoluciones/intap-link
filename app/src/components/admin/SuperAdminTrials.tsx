@@ -11,7 +11,7 @@ type Trial={
   duration_hours:number;prospect:Prospect;activated_at:string|null;expires_at:string|null;created_at:string;updated_at:string
 }
 type EventRow={id:string;event_type:string;details:any;created_at:string}
-type Analytics={summary:{events:number;views:number;unique_visitors:number;interactions:number};events:any[];locations:any[];actions:any[];daily:any[];devices:any[];pagination:{page:number;page_size:number;total:number;pages:number}}
+type Analytics={summary:{events:number;views:number;unique_visitors:number;interactions:number};locations:any[];actions:any[];daily:any[];devices:any[];visitors:any[];visitor_pagination:{page:number;page_size:number;total:number;pages:number}}
 
 const sourceOptions=[
   ['', 'Todos los orígenes'],
@@ -62,7 +62,7 @@ export default function SuperAdminTrials(){
   const [prospect,setProspect]=useState<Prospect|null>(null)
   const [events,setEvents]=useState<EventRow[]>([])
   const [analytics,setAnalytics]=useState<Analytics|null>(null)
-  const [analyticsPage,setAnalyticsPage]=useState(1)
+  const [visitorPage,setVisitorPage]=useState(1)
   const [saving,setSaving]=useState(false)
   const [message,setMessage]=useState('')
   const [extendHours,setExtendHours]=useState(72)
@@ -88,12 +88,12 @@ export default function SuperAdminTrials(){
   useEffect(()=>{void load()},[page,status,source,debouncedQ])
 
   async function loadAnalytics(trialId:string,nextPage=1){
-    const stats:any=await apiGet(`/superadmin/trials/${trialId}/analytics?page=${nextPage}&page_size=20`)
-    if(stats?.ok){setAnalytics(stats.data);setAnalyticsPage(Number(stats.data?.pagination?.page||1))}
+    const stats:any=await apiGet(`/superadmin/trials/${trialId}/analytics?visitor_page=${nextPage}&visitor_page_size=10`)
+    if(stats?.ok){setAnalytics(stats.data);setVisitorPage(Number(stats.data?.visitor_pagination?.page||1))}
   }
 
   async function selectTrial(item:Trial){
-    setSelected(item);setProspect(item.prospect);setMessage('');setAnalyticsPage(1)
+    setSelected(item);setProspect(item.prospect);setMessage('');setVisitorPage(1)
     const [json]:any[]=await Promise.all([apiGet(`/superadmin/trials/${item.id}/events`),loadAnalytics(item.id,1)])
     setEvents(json?.ok?(json.data||[]):[])
   }
@@ -257,9 +257,9 @@ export default function SuperAdminTrials(){
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {[
               ['Visitas',analytics?.summary?.views||0,'Aperturas del perfil'],
-              ['Personas aprox.',analytics?.summary?.unique_visitors||0,'Visitantes distintos estimados'],
+              ['Personas únicas',analytics?.summary?.unique_visitors||0,'Visitantes distintos estimados'],
               ['Acciones',analytics?.summary?.interactions||0,'Clics y acciones realizadas'],
-              ['Actividad total',analytics?.summary?.events||0,'Todas las acciones registradas'],
+              ['Actividad global',analytics?.summary?.events||0,'Visitas y acciones acumuladas'],
             ].map(([title,value,caption])=><div key={String(title)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><small className="font-black uppercase tracking-wide text-slate-400">{title}</small><strong className="mt-1 block text-3xl font-black text-slate-950">{value}</strong><span className="mt-1 block text-xs text-slate-400">{caption}</span></div>)}
           </div>
 
@@ -280,9 +280,22 @@ export default function SuperAdminTrials(){
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><div><strong className="text-sm">Qué hicieron en el perfil</strong><p className="text-xs text-slate-400">Acciones acumuladas de los visitantes.</p></div></div><div className="mt-3 grid gap-2">{(analytics?.actions||[]).map((x:any)=><div key={x.event_type} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm"><span className="font-semibold text-slate-600">{eventLabels[x.event_type]||x.event_type}</span><b className="rounded-full bg-white px-2 py-0.5 text-slate-900">{x.n}</b></div>)}{!(analytics?.actions||[]).length&&<span className="text-sm text-slate-400">Sin interacciones todavía.</span>}</div></div>
 
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3"><div><strong className="text-sm">Actividad reciente</strong><p className="text-xs text-slate-400">Historial de visitas y acciones, organizado por páginas.</p></div><span className="text-xs font-black text-slate-400">{analytics?.pagination?.total||0} registros</span></div>
-              <div className="overflow-x-auto"><table className="min-w-full text-left text-xs"><thead className="bg-slate-50 uppercase tracking-wide text-slate-400"><tr><th className="px-3 py-2">Actividad</th><th className="px-3 py-2">Detalle</th><th className="px-3 py-2">Ubicación</th><th className="px-3 py-2">Cómo llegó</th><th className="px-3 py-2">Fecha</th></tr></thead><tbody className="divide-y divide-slate-100">{(analytics?.events||[]).map((ev:any,i:number)=><tr key={i}><td className="px-3 py-2 font-black">{eventLabels[ev.event_type]||ev.event_type}</td><td className="px-3 py-2 text-slate-600">{ev.event_label||'—'}</td><td className="px-3 py-2 text-slate-600">{[ev.city,ev.region,ev.country].filter(Boolean).join(', ')||'—'}</td><td className="px-3 py-2 text-slate-600">{ev.utm_source||ev.referrer_host||'—'}{ev.utm_campaign&&<small className="block text-slate-400">{ev.utm_campaign}</small>}</td><td className="whitespace-nowrap px-3 py-2 text-slate-500">{formatDate(ev.created_at)}</td></tr>)}{!(analytics?.events||[]).length&&<tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Sin actividad pública registrada todavía.</td></tr>}</tbody></table></div>
-              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3"><button disabled={analyticsPage<=1} onClick={()=>selected&&void loadAnalytics(selected.id,analyticsPage-1)} className="rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-30">Anterior</button><span className="text-xs font-bold text-slate-500">Página {analytics?.pagination?.page||1} de {analytics?.pagination?.pages||1}</span><button disabled={analyticsPage>=(analytics?.pagination?.pages||1)} onClick={()=>selected&&void loadAnalytics(selected.id,analyticsPage+1)} className="rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-30">Siguiente</button></div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3"><div><strong className="text-sm">Personas que visitaron el perfil</strong><p className="text-xs text-slate-400">Cada persona aparece una sola vez, con sus acciones totalizadas.</p></div><span className="text-xs font-black text-slate-400">{analytics?.visitor_pagination?.total||0} personas aprox.</span></div>
+              <div className="divide-y divide-slate-100">
+                {(analytics?.visitors||[]).map((visitor:any,index:number)=><div key={visitor.visitor_id||index} className="p-4">
+                  <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2"><strong className="text-sm text-slate-950">Visitante {String(visitor.visitor_id||"").slice(0,8).toUpperCase()}</strong><span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500">{deviceLabels[visitor.device_type]||"Otro dispositivo"}</span></div>
+                      <p className="mt-1 text-xs text-slate-500">{[visitor.city,visitor.region,visitor.country].filter(Boolean).join(", ")||"Ubicación no disponible"} · Última visita: {formatDate(visitor.last_seen)}</p>
+                      {(visitor.utm_source||visitor.referrer_host)&&<p className="mt-1 text-xs text-slate-400">Llegó desde: <b className="text-slate-600">{visitor.utm_source||visitor.referrer_host}</b>{visitor.utm_campaign&&<span> · {visitor.utm_campaign}</span>}</p>}
+                    </div>
+                    <div className="flex gap-2"><span className="rounded-xl bg-slate-50 px-3 py-2 text-center"><small className="block text-[10px] font-black uppercase text-slate-400">Visitas</small><b>{visitor.visits||0}</b></span><span className="rounded-xl bg-slate-50 px-3 py-2 text-center"><small className="block text-[10px] font-black uppercase text-slate-400">Acciones</small><b>{visitor.interactions||0}</b></span></div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">{(visitor.actions||[]).map((action:any)=><span key={action.event_type} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">{eventLabels[action.event_type]||action.event_type} <b className="ml-1 text-slate-950">{action.n}</b></span>)}{!(visitor.actions||[]).length&&<span className="text-xs text-slate-400">Solo visitó el perfil, sin otras acciones.</span>}</div>
+                </div>)}
+                {!(analytics?.visitors||[]).length&&<p className="px-4 py-8 text-center text-sm text-slate-400">Aún no hay visitantes identificados.</p>}
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3"><button disabled={visitorPage<=1} onClick={()=>selected&&void loadAnalytics(selected.id,visitorPage-1)} className="rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-30">Anterior</button><span className="text-xs font-bold text-slate-500">Página {analytics?.visitor_pagination?.page||1} de {analytics?.visitor_pagination?.pages||1}</span><button disabled={visitorPage>=(analytics?.visitor_pagination?.pages||1)} onClick={()=>selected&&void loadAnalytics(selected.id,visitorPage+1)} className="rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-30">Siguiente</button></div>
             </div>
           </div>
 
