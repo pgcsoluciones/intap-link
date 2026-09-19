@@ -13,7 +13,7 @@ export default function SponsoredExperienceTools(){
   const selectedProfileId=String(new URLSearchParams(window.location.search).get('profile_id')||'').trim()
   const profileQuery=selectedProfileId?`?profile_id=${encodeURIComponent(selectedProfileId)}`:''
   const[promptEvent,setPromptEvent]=useState<InstallPromptEvent|null>(null);const[installed,setInstalled]=useState(false);const[help,setHelp]=useState(false)
-  const[accountOpen,setAccountOpen]=useState(false);const[accountTab,setAccountTab]=useState<AccountTab>('credentials');const[accountEmail,setAccountEmail]=useState('');const[profiles,setProfiles]=useState<any[]>([]);const[phrase,setPhrase]=useState('');const[emailConfirm,setEmailConfirm]=useState('');const[ack,setAck]=useState(false);const[unlinking,setUnlinking]=useState(false);const[unlinkError,setUnlinkError]=useState('')
+  const[accountOpen,setAccountOpen]=useState(false);const[accountTab,setAccountTab]=useState<AccountTab>('credentials');const[accountEmail,setAccountEmail]=useState('');const[profiles,setProfiles]=useState<any[]>([]);const[phrase,setPhrase]=useState('');const[emailConfirm,setEmailConfirm]=useState('');const[ack,setAck]=useState(false);const[unlinking,setUnlinking]=useState(false);const[loggingOut,setLoggingOut]=useState(false);const[unlinkError,setUnlinkError]=useState('')
   useEffect(()=>{
     setInstalled(isStandalone())
     const before=(event:Event)=>{event.preventDefault();setPromptEvent(event as InstallPromptEvent)}
@@ -25,6 +25,16 @@ export default function SponsoredExperienceTools(){
     if(installed)return
     if(promptEvent){await promptEvent.prompt();const choice=await promptEvent.userChoice;if(choice.outcome==='accepted')setInstalled(true);setPromptEvent(null);return}
     setHelp(true)
+  }
+  async function logout(){
+    if(loggingOut)return
+    setLoggingOut(true)
+    try{await apiPost('/auth/logout',{})}catch{/* El cierre local continúa aunque falle la llamada remota. */}
+    sessionStorage.removeItem('kawvo_sponsored_public_code')
+    localStorage.removeItem('kawvo_sponsored_public_code')
+    sessionStorage.removeItem('kawvo_sponsored_panel_resume')
+    localStorage.removeItem('kawvo_sponsored_panel_resume')
+    window.location.replace('/admin/login')
   }
   async function openAccount(){
     setAccountOpen(true);setAccountTab('credentials');setUnlinkError('')
@@ -52,6 +62,7 @@ export default function SponsoredExperienceTools(){
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <button type="button" onClick={()=>window.dispatchEvent(new Event(SPONSORED_TOUR_EVENT))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 shadow-sm">Recorrido</button>
           <button type="button" onClick={()=>void openAccount()} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Mi cuenta</button>
+          <button type="button" disabled={loggingOut} onClick={()=>void logout()} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm disabled:opacity-40">{loggingOut?'Cerrando…':'Cerrar sesión'}</button>
           <button type="button" disabled={installed} onClick={()=>void install()} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:bg-emerald-600">{installed?'Aplicación instalada':'Descargar aplicación'}</button>
         </div>
       </div>
