@@ -55,18 +55,19 @@ run git diff --check
 
 echo
 echo "▶ Verificar secuencia local de migraciones 0070–0073"
-mapfile -t RELEASE_MIGRATIONS < <(find api/migrations -maxdepth 1 -type f -name '007[0-3]_*.sql' -exec basename {} \; | sort)
-EXPECTED_MIGRATIONS=(
-  "0070_sponsored_bank_free_parity.sql"
-  "0071_trial_profiles_72h.sql"
-  "0072_trial_crm_traceability.sql"
-  "0073_trial_lifecycle_analytics.sql"
-)
-[ "${#RELEASE_MIGRATIONS[@]}" -eq 4 ] || fail "La secuencia 0070–0073 no contiene exactamente 4 migraciones"
-for i in 0 1 2 3; do
-  [ "${RELEASE_MIGRATIONS[$i]}" = "${EXPECTED_MIGRATIONS[$i]}" ] || fail "Migración inesperada en secuencia 0070–0073: ${RELEASE_MIGRATIONS[$i]}"
-done
-printf '✓ %s\n' "${RELEASE_MIGRATIONS[@]}"
+RELEASE_MIGRATIONS="$(find api/migrations -maxdepth 1 -type f -name '007[0-3]_*.sql' -exec basename {} \; | sort)"
+EXPECTED_MIGRATIONS="$(printf '%s\n' \
+  '0070_sponsored_bank_free_parity.sql' \
+  '0071_trial_profiles_72h.sql' \
+  '0072_trial_crm_traceability.sql' \
+  '0073_trial_lifecycle_analytics.sql')"
+
+[ "$RELEASE_MIGRATIONS" = "$EXPECTED_MIGRATIONS" ] || {
+  echo "Migraciones encontradas:"
+  printf '%s\n' "$RELEASE_MIGRATIONS"
+  fail "La secuencia local 0070–0073 no coincide con la aprobada"
+}
+printf '✓ %s\n' "$RELEASE_MIGRATIONS"
 
 run npm ci
 run node scripts/test-trial-contract.mjs
