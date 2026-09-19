@@ -45,6 +45,7 @@ run npm run build:preview -w web
 run npm run build:preview -w app
 run bash -lc 'cd api && npx tsc --noEmit'
 run bash -lc 'npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-trial-preview-api.mjs'
+run bash -lc 'npx esbuild api/src/preview-frontdoor-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-trial-preview-frontdoor.mjs'
 
 echo; echo "▶ Aplicar migraciones SOLO en D1 Preview"
 (cd api && npx wrangler d1 migrations apply "$PREVIEW_DB" --remote --config wrangler.preview.toml) || fail "Migraciones D1 Preview"
