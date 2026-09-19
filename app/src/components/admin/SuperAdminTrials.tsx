@@ -27,6 +27,8 @@ const sourceOptions=[
 ] as const
 
 const sourceLabels=Object.fromEntries(sourceOptions)
+const WEB_ORIGIN=(import.meta.env.VITE_WEB_URL??'https://intaprd.com').replace(/\/$/,'')
+const companyTypes=['Servicios profesionales','Automotriz / Taller','Belleza / Estética','Construcción / Ferretería','Salud','Gastronomía','Tecnología','Comercio / Retail','Educación','Inmobiliaria']
 const statusLabels:any={draft:'Borrador',active:'Activo',expired:'Expirado'}
 
 function formatDate(value:string|null){
@@ -122,7 +124,7 @@ export default function SuperAdminTrials(){
           <h1 className="mt-1 text-3xl font-black text-slate-950">Gestión de Trials</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Prospectos, duración, estado y seguimiento comercial. Los Trials vencidos se conservan; no se eliminan.</p>
         </div>
-        <a href="https://preview.intaprd.com/trial" target="_blank" rel="noreferrer" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">+ Crear Trial</a>
+        <a href={`${WEB_ORIGIN}/trial`} target="_blank" rel="noreferrer" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">+ Crear Trial</a>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -172,8 +174,8 @@ export default function SuperAdminTrials(){
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><p className="text-xs font-black uppercase tracking-wide text-cyan-700">Ficha de prospecto</p><h2 className="text-2xl font-black">{prospect.contact_name||selected.name||'Trial'}</h2><p className="text-sm text-slate-500">{selected.slug?'/trial/'+selected.slug:'Borrador'} · {statusLabels[selected.status]}</p></div>
           <div className="flex flex-wrap gap-2">
-            {selected.slug&&<a className="rounded-lg border px-3 py-2 text-xs font-black" href={`https://preview.intaprd.com/trial/${selected.slug}`} target="_blank" rel="noreferrer">Abrir Trial</a>}
-            <a className="rounded-lg border px-3 py-2 text-xs font-black" href={`https://preview.intaprd.com/trial/edit/${selected.id}`} target="_blank" rel="noreferrer">Editar perfil</a>
+            {selected.slug&&<a className="rounded-lg border px-3 py-2 text-xs font-black" href={`${WEB_ORIGIN}/trial/${selected.slug}`} target="_blank" rel="noreferrer">Abrir Trial</a>}
+            <a className="rounded-lg border px-3 py-2 text-xs font-black" href={`${WEB_ORIGIN}/trial/edit/${selected.id}`} target="_blank" rel="noreferrer">Editar perfil</a>
             <button className="rounded-lg border px-3 py-2 text-xs font-black" onClick={()=>setSelected(null)}>Cerrar</button>
           </div>
         </div>
@@ -185,8 +187,8 @@ export default function SuperAdminTrials(){
           <label className={label}>Correo<input className={field} value={prospect.email} onChange={e=>setProspect({...prospect,email:e.target.value})}/></label>
           <label className={label}>Instagram<input className={field} value={prospect.instagram} onChange={e=>setProspect({...prospect,instagram:e.target.value})}/></label>
           <label className={label}>Empresa<input className={field} value={prospect.company_name} onChange={e=>setProspect({...prospect,company_name:e.target.value})}/></label>
-          <label className={label}>Tipo de empresa / actividad<input className={field} value={prospect.company_type} onChange={e=>setProspect({...prospect,company_type:e.target.value})}/></label>
-          <label className={label}>Origen<select className={field} value={prospect.source} onChange={e=>setProspect({...prospect,source:e.target.value})}>{sourceOptions.slice(1).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
+          <label className={label}>Tipo de empresa / actividad<input list="trial-company-types" className={field} value={prospect.company_type} onChange={e=>setProspect({...prospect,company_type:e.target.value})}/><datalist id="trial-company-types">{companyTypes.map(x=><option key={x} value={x}/>)}</datalist></label>
+          <label className={label}>Origen<select className={field} value={prospect.source} onChange={e=>setProspect({...prospect,source:e.target.value})}>{sourceOptions.map(([v,l])=><option key={v} value={v}>{v?l:'Sin especificar'}</option>)}</select></label>
           <label className={label}>Detalle del origen<input className={field} placeholder="Ej. Expo Cibao Santiago 2026" value={prospect.source_detail} onChange={e=>setProspect({...prospect,source_detail:e.target.value})}/></label>
           <label className={label+' md:col-span-2 lg:col-span-3'}>Notas<textarea className={field+' min-h-24'} value={prospect.notes} onChange={e=>setProspect({...prospect,notes:e.target.value})}/></label>
         </div>
