@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FaCamera, FaCheck, FaCopy, FaPalette, FaPlus, FaQrcode, FaShareAlt, FaTimes, FaUniversity } from 'react-icons/fa'
+import { FaBars, FaCamera, FaCheck, FaCopy, FaPalette, FaPlus, FaQrcode, FaShareAlt, FaTimes, FaUniversity } from 'react-icons/fa'
 import IntapLinkGratisProfile from '../free-profile/IntapLinkGratisProfile'
 import TrialImageCrop from './TrialImageCrop'
 import { TrialBanks, TrialBanksEditor, TrialLocationButton, TrialLocationPanel, TrialPalettePanel, type TrialBank } from './TrialPanels'
@@ -52,6 +52,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   const [cropIndex,setCropIndex]=useState<number|null>(null)
   const [serviceCropIndex,setServiceCropIndex]=useState<number|null>(null)
   const [saving,setSaving]=useState<'idle'|'saving'|'saved'|'error'>('idle')
+  const [toolsOpen,setToolsOpen]=useState(false)
   const [finish,setFinish]=useState(false)
   const [trialName,setTrialName]=useState('')
   const [trialSlug,setTrialSlug]=useState('')
@@ -135,7 +136,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
 
   const trialInterestMessage='Hola, me dejaste una versión trial de mi presentación digital y me interesa activarla. Quiero esta presentación. ¿Cómo puedo obtenerla?'
   const trialInterestUrl='https://wa.me/18097059802?text='+encodeURIComponent(trialInterestMessage)
-  const editorTop=mode==='editor'?<div className="trial-adminbar"><strong>TRIAL · Editando</strong><button className="trial-tool" onClick={()=>openSection("appearance")}><FaPalette/> Colores</button><button className="trial-tool" onClick={()=>openSection("links")}><FaPlus/> Enlaces</button><button className="trial-tool" onClick={()=>openSection("banks")}><FaPlus/> Módulos</button><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span><button className="trial-primary" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/> Finalizar Trial</button></div>:undefined
+  const editorTop=mode==='editor'?<div className="trial-adminbar"><div className="trial-adminbar-main"><strong>TRIAL · Editando</strong><button className="trial-tools-menu" aria-label="Opciones de edición" aria-expanded={toolsOpen} onClick={()=>setToolsOpen(v=>!v)}><FaBars/><span>Opciones</span></button><div className={`trial-tools ${toolsOpen?'open':''}`}><button className="trial-tool" onClick={()=>{openSection("appearance");setToolsOpen(false)}}><FaPalette/> Colores</button><button className="trial-tool" onClick={()=>{openSection("links");setToolsOpen(false)}}><FaPlus/> Enlaces</button><button className="trial-tool" onClick={()=>{openSection("banks");setToolsOpen(false)}}><FaPlus/> Módulos</button></div><button className="trial-primary trial-finish-btn" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/><span>Finalizar</span></button></div><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span></div>:undefined
 
   if(loading)return <div className="trial-state">Cargando Trial…</div>
   if(error && !trial && mode!=='master')return <div className="trial-state"><h1>No pudimos abrir este Trial</h1><p>{error}</p></div>
@@ -143,7 +144,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
 
   return <>
     <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} footerSecondaryLabel="Quiero esta presentación" footerSecondaryHref={trialInterestUrl} beforeShareContent={snapshot.modules?.banks?.enabled?<TrialBanks banks={snapshot.modules.banks.items} editMode={mode==='editor'} onEdit={()=>openSection("banks")} publicSlug={mode==='public'?(trial?.slug||slug):undefined}/>:undefined} editMode={mode==='editor'} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{openSection(s)}}}/>
-    {mode==='editor'&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
+    {mode==='editor'&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
     {mode==='master'&&admin&&<button className="trial-create" onClick={()=>setCreateConfig(true)}>+ Crear Trial</button>}
     {mode==='public'&&admin&&trial&&<div className="trial-public-admin"><strong>⚙️ Trial</strong><span>Vence: {isoDisplay(trial.expires_at)}</span><button onClick={()=>navigate('/trial')}>Volver a Trial</button><button onClick={()=>navigate('/trial/edit/'+trial.id)}>Editar en vivo</button><button onClick={()=>copy(window.location.href)}>Copiar enlace</button></div>}
 
