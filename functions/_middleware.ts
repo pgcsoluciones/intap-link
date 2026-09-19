@@ -218,6 +218,20 @@ ${seoHeadHtml}
     }
   };
 
+  const fetchTrialForShare = async (slug: string): Promise<any | null> => {
+    try {
+      const response = await fetch(
+        `${discoveryRuntime.apiBase}/trials/${encodeURIComponent(slug)}`,
+        { headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } } as RequestInit,
+      );
+      if (!response.ok) return null;
+      const payload = await response.json() as any;
+      return payload?.ok === true && payload?.data ? payload.data : null;
+    } catch {
+      return null;
+    }
+  };
+
   const fetchTeamPolicyForShare = async (slug: string): Promise<any | null> => {
     try {
       const response = await fetch(
@@ -699,6 +713,30 @@ ${seoHeadHtml}
       }
     } catch {
       // Si la API temporal no responde, la SPA conserva su pantalla de error/expiración.
+    }
+  }
+
+  const trialShareMatch = url.pathname.match(/^\/trial\/([^/]+)\/?$/i);
+  if (trialShareMatch) {
+    const trialSlug = decodeURIComponent(trialShareMatch[1] || '').trim().toLowerCase();
+    if (/^[a-z0-9][a-z0-9-]{1,59}$/.test(trialSlug)) {
+      const trial = await fetchTrialForShare(trialSlug);
+      if (trial?.profile?.profile) {
+        const p = trial.profile.profile;
+        const clean = (value: unknown, max = 180) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+        const name = clean(p.name, 90) || trialSlug;
+        const role = clean(p.role, 120);
+        const hero = normalizeSocialImage(p.hero);
+        const portrait = normalizeSocialImage(p.portrait);
+        const image = hero || portrait || `${url.origin}/assets/og/kawvo-link-og.png`;
+        return injectSimpleSocialCard({
+          title: `${name} | Kawvo Link`,
+          description: role ? `${role}. Presentación digital creada con Kawvo Link.` : `Presentación digital de ${name} creada con Kawvo Link.`,
+          image,
+          canonicalUrl: `${url.origin}/trial/${encodeURIComponent(trialSlug)}?share=perfil&card=3`,
+          noIndex: true,
+        });
+      }
     }
   }
 
