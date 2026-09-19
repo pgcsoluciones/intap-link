@@ -68,6 +68,46 @@ async function proxyPublicProfileWithMeta(request: Request, env: PreviewEnv) {
   return proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
 }
 
+// QA temporal y estrictamente de solo lectura para /jlprince.
+// Preview no tiene este perfil en D1, por lo que esta ruta exacta reutiliza
+// únicamente el endpoint público de Producción. No se permiten escrituras.
+async function proxyJlPrinceProductionProfile(request: Request) {
+  const method = request.method.toUpperCase()
+  if (method !== 'GET' && method !== 'HEAD') {
+    return new Response(JSON.stringify({ ok: false, error: 'method_not_allowed' }), {
+      status: 405,
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        'allow': 'GET, HEAD',
+      },
+    })
+  }
+
+  const upstreamUrl = 'https://api.intaprd.com/api/v1/public/profiles/jlprince'
+  const headers = new Headers(request.headers)
+  headers.delete('host')
+  headers.delete('cookie')
+  headers.delete('authorization')
+  headers.set('x-kawvo-preview-source', 'production-public-jlprince')
+
+  const upstream = await fetch(upstreamUrl, {
+    method,
+    headers,
+    redirect: 'manual',
+  })
+
+  const responseHeaders = new Headers(upstream.headers)
+  responseHeaders.set('cache-control', 'no-store')
+  responseHeaders.set('x-kawvo-preview-profile-source', 'production-public-readonly')
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: responseHeaders,
+  })
+}
+
 async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
   const response = await proxyPagesPreview(request, env.WEB_PAGES_ORIGIN, 'web-custom-domain')
   if (request.method.toUpperCase() !== 'GET' || response.status !== 200) return response
@@ -100,6 +140,14 @@ export default {
   async fetch(request: Request, env: PreviewEnv, ctx: ExecutionContext) {
     const url = new URL(request.url)
     const isDraftPreviewRequest = url.searchParams.get('preview') === '1'
+
+    if (
+      url.hostname === 'preview.intaprd.com' &&
+      url.pathname === '/api/v1/public/profiles/jlprince' &&
+      !isDraftPreviewRequest
+    ) {
+      return proxyJlPrinceProductionProfile(request)
+    }
     if (url.hostname === 'preview.intaprd.com' && !url.pathname.startsWith('/api/') && isDraftPreviewRequest) {
       const slug=slugFromPath(url.pathname),embedded=url.searchParams.get('embedded')==='1'
       const valid=await validatePreviewSession(request,env,slug)
