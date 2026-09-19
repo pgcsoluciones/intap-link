@@ -24,6 +24,7 @@ const IntapProfileV2 = lazy(
     ),
 )
 import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
+import JlPrinceWelcomeIntro from './welcome/JlPrinceWelcomeIntro'
 import { adaptPublicProfileApiResponse } from './free-profile/IntapLinkGratis.adapter'
 import { renderRegisteredProfileTemplate } from './profile-templates/registry'
 
