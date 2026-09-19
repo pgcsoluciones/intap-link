@@ -5,6 +5,7 @@ const api=fs.readFileSync('api/src/trial-profiles.ts','utf8')
 const app=fs.readFileSync('web/src/App.tsx','utf8')
 const ui=fs.readFileSync('web/src/components/trial/KawvoTrial.tsx','utf8')
 const migration=fs.readFileSync('api/migrations/0070_trial_profiles_72h.sql','utf8')
+const profile=fs.readFileSync('web/src/components/free-profile/IntapLinkGratisProfile.tsx','utf8')
 
 for(const route of ['/trial','/trial/edit/:id','/trial/:slug']) assert.ok(app.includes(route),`missing route ${route}`)
 assert.ok(api.includes("requireSuperAdmin('super_admin')"),'trial mutations must require super_admin')
