@@ -324,7 +324,8 @@ app.get('/starter-preview/:slug', requirePreviewAuth, async (c: any) => {
     .transform(response)
 })
 
-app.all('*', async (c: any) => {
+export function registerPreviewAppFallback(target:any){
+target.all('*', async (c: any) => {
   const requestUrl = new URL(c.req.url)
   if (requestUrl.pathname.startsWith('/api/')) {
     return c.json({ ok: false, error: 'API route not found' }, 404)
@@ -348,5 +349,7 @@ app.all('*', async (c: any) => {
     redirect: 'manual',
   })
 })
+}
+
 
 export default app
