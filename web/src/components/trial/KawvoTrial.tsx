@@ -9,7 +9,7 @@ import './KawvoTrial.css'
 
 type Snapshot={layout:FreeProfileLayoutId;colors:FreeProfileAppearanceColors;profile:FreeProfileData;modules?:{banks?:{enabled:boolean;items:TrialBank[]}}}
 type Prospect={contact_name:string;phone:string;whatsapp:string;email:string;instagram:string;company_name:string;company_type:string;source:string;source_detail:string;notes:string}
-type Trial={id:string;slug:string|null;name:string|null;status:'draft'|'active'|'expired';profile:Snapshot;duration_hours:number;prospect?:Prospect;activated_at:string|null;expires_at:string|null}
+type Trial={id:string;slug:string|null;name:string|null;status:'draft'|'active'|'inactive'|'expired';profile:Snapshot;duration_hours:number;prospect?:Prospect;activated_at:string|null;expires_at:string|null}
 type Mode='master'|'editor'|'public'
 
 const FALLBACK:Snapshot={
@@ -74,6 +74,27 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   },[mode,id,slug])
 
   useEffect(()=>()=>{if(saveTimer.current)window.clearTimeout(saveTimer.current)},[])
+
+  function analyticsIds(){
+    let visitorId=localStorage.getItem('kawvo_trial_visitor_id')||''
+    if(!visitorId){visitorId=crypto.randomUUID();localStorage.setItem('kawvo_trial_visitor_id',visitorId)}
+    let sessionId=sessionStorage.getItem('kawvo_trial_session_id')||''
+    if(!sessionId){sessionId=crypto.randomUUID();sessionStorage.setItem('kawvo_trial_session_id',sessionId)}
+    return {visitorId,sessionId}
+  }
+  function trackTrialEvent(eventType:string,eventLabel=''){
+    if(mode!=='public'||!trial?.slug||trial.status!=='active')return
+    const {visitorId,sessionId}=analyticsIds()
+    const params=new URLSearchParams(window.location.search)
+    fetch('/api/v1/public/trials/'+encodeURIComponent(trial.slug)+'/events',{
+      method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,
+      body:JSON.stringify({
+        event_type:eventType,event_label:eventLabel,visitor_id:visitorId,session_id:sessionId,
+        referrer:document.referrer||'',utm_source:params.get('utm_source')||'',utm_medium:params.get('utm_medium')||'',utm_campaign:params.get('utm_campaign')||''
+      })
+    }).catch(()=>undefined)
+  }
+  useEffect(()=>{if(mode==='public'&&trial?.slug&&trial.status==='active')trackTrialEvent('visit','Perfil abierto')},[mode,trial?.id])
 
   function rebuildContacts(profile:FreeProfileData){
     const phone=cleanPhone(profile.phone||'');const whatsapp=cleanPhone(profile.whatsapp||'');const instagram=cleanInstagram(profile.instagram||'');const email=String(profile.email||'').trim()
@@ -156,10 +177,11 @@ export default function KawvoTrial({mode}:{mode:Mode}){
 
   if(loading)return <div className="trial-state">Cargando Trial…</div>
   if(error && !trial && mode!=='master')return <div className="trial-state"><h1>No pudimos abrir este Trial</h1><p>{error}</p></div>
-  if(mode==='public'&&trial?.status==='expired')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración ha finalizado.</h1><p>El período de prueba de 72 horas terminó. El enlace se mantiene para informarte que esta presentación era una demostración de Kawvo Link.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a><a className="secondary" href="https://nfc.kawvoia.com" target="_blank" rel="noreferrer">Conocer Kawvo Link</a></div></div>
+  if(mode==='public'&&trial?.status==='expired')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración ha finalizado.</h1><p>El período de prueba terminó. El enlace se mantiene para informarte que esta presentación era una demostración de Kawvo Link.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a><a className="secondary" href="https://nfc.kawvoia.com" target="_blank" rel="noreferrer">Conocer Kawvo Link</a></div></div>
+  if(mode==='public'&&trial?.status==='inactive')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración está desactivada.</h1><p>El perfil Trial fue pausado por el administrador y conserva su enlace para una posible reactivación.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a></div></div>
 
   return <>
-    <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} footerSecondaryLabel="Quiero esta presentación" footerSecondaryHref={trialInterestUrl} beforeShareContent={snapshot.modules?.banks?.enabled?<TrialBanks banks={snapshot.modules.banks.items} editMode={mode==='editor'} onEdit={()=>openSection("banks")} publicSlug={mode==='public'?(trial?.slug||slug):undefined}/>:undefined} editMode={mode==='editor'} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{openSection(s)}}}/>
+    <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} footerSecondaryLabel="Quiero esta presentación" footerSecondaryHref={trialInterestUrl} beforeShareContent={snapshot.modules?.banks?.enabled?<TrialBanks banks={snapshot.modules.banks.items} editMode={mode==='editor'} onEdit={()=>openSection("banks")} publicSlug={mode==='public'?(trial?.slug||slug):undefined}/>:undefined} editMode={mode==='editor'} onTrackEvent={mode==='public'?trackTrialEvent:undefined} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{openSection(s)}}}/>
     {mode==='editor'&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
     {mode==='master'&&admin&&<button className="trial-create" onClick={()=>setCreateConfig(true)}>+ Crear Trial</button>}
     {mode==='public'&&admin&&trial&&<div className="trial-public-admin"><strong>⚙️ Trial</strong><span>Vence: {isoDisplay(trial.expires_at)}</span><button onClick={()=>navigate('/trial')}>Volver a Trial</button><button onClick={()=>void openProspect()}>Ficha prospecto</button><button onClick={()=>window.location.href=adminOrigin()+'/superadmin/trials'}>Gestionar</button><button onClick={()=>navigate('/trial/edit/'+trial.id)}>Editar en vivo</button><button onClick={()=>copy(window.location.href)}>Copiar enlace</button></div>}
