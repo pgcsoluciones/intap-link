@@ -32,6 +32,8 @@ assert.ok(ui.includes("portfolio.length>=5"),'Free portfolio max 5 guard missing
 assert.ok(ui.includes("services.length>=3"),'Free services max 3 guard missing')
 assert.ok(ui.includes("Reemplazar"),'image replacement flow missing')
 assert.ok(ui.includes("section==='links'"),'Free links live management missing')
+assert.ok(ui.includes('toggleQuickAction'),'Free quick actions management missing')
+assert.ok(ui.includes("serviceCropIndex!==null?1:4/3"),'Free service square crop missing')
 assert.ok(api.includes("/banks/:bankId/holder-id"),'public bank ID copy endpoint missing')
 assert.ok(api.includes("delete item.holder_id_number"),'public bank holder ID sanitization missing')
 console.log('trial contract: ok')
