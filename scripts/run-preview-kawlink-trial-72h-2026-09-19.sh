@@ -101,6 +101,14 @@ code="$(curl -sS -o "$LOG_DIR/notfound.json" -w '%{http_code}' https://preview.i
 [ "$code" = "404" ] || fail "Trial inexistente debe responder 404, respondió $code"
 echo "✓ Trial inexistente: 404 controlado"
 
+# Regression guard: Mauro is the first persisted published Trial used to verify
+# that a deploy cannot make an existing slug disappear from the public API.
+code="$(curl -sS -o "$LOG_DIR/mauro.json" -w '%{http_code}' https://preview.intaprd.com/api/v1/public/trials/mauro)"
+[ "$code" = "200" ] || fail "Regresión: /api/v1/public/trials/mauro respondió HTTP $code"
+grep -q '"slug":"mauro"' "$LOG_DIR/mauro.json" || fail "Regresión: Mauro existe en D1 pero no fue resuelto por la API pública"
+! grep -q 'API route not found' "$LOG_DIR/mauro.json" || fail "Regresión de routing: Mauro cayó en el catch-all API"
+echo "✓ Trial persistente Mauro: slug público resuelto correctamente"
+
 rm -rf "$LOG_DIR"
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "El runner dejó cambios locales"; }
 
