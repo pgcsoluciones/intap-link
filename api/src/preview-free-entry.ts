@@ -48,10 +48,11 @@ import { registerTrialRoutes, expireDueTrials } from './trial-profiles'
 import { refreshDueInstagramConnections } from './instagram-token-refresh'
 import { cleanupExpiredTeamCodes } from './team-v2'
 import { registerDemoAiRoutes } from './routes/demo-ai'
-import app from './preview-free-actions'
+import app, { registerPreviewAppFallback } from './preview-free-actions'
 
 registerDemoAiRoutes(app)
 registerTrialRoutes(app)
+registerPreviewAppFallback(app)
 
 ;(app as any).scheduled = (_event: ScheduledEvent, env: any, ctx: ExecutionContext) => {
   ctx.waitUntil(Promise.all([
