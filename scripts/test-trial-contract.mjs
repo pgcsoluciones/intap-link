@@ -28,6 +28,7 @@ assert.ok(crmMigration.includes('duration_hours'),'Trial duration migration miss
 assert.ok(crmMigration.includes('contact_source'),'prospect source migration missing')
 assert.ok(crmMigration.includes('CREATE TABLE IF NOT EXISTS trial_events'),'Trial traceability table missing')
 assert.ok(previewEntry.includes('registerTrialRoutes(app)'),'Trial routes must be registered on fully assembled Preview app')
+assert.ok(previewEntry.indexOf('registerTrialRoutes(app)') < previewEntry.indexOf('registerPreviewAppFallback(app)'),'Trial routes must register before Preview catch-all')
 assert.ok(superLayout.includes("{ key: 'trials', label: 'Trials' }"),'Trials menu item missing in Super Admin')
 assert.ok(superAdmin.includes('Gestión de Trials'),'Super Admin Trial module missing')
 assert.ok(superAdmin.includes('Extender Trial'),'Trial extension UI missing')
