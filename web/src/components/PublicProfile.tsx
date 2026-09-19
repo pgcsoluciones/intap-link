@@ -2116,14 +2116,25 @@ export default function PublicProfile() {
 
   if (data.planId === 'free') {
     const freeProfile = adaptPublicProfileApiResponse(data)
-
-    return (
+    const freeProfileView = (
       <IntapLinkGratisProfile
         profile={freeProfile.profile}
         layout={freeProfile.layout}
         colors={freeProfile.colors}
       />
     )
+
+    // Bienvenida experimental, aislada al perfil público /jlprince.
+    // No se ejecuta en preview autenticado (?preview=1), ni en otros slugs/planes.
+    if (normalize(slug) === 'jlprince' && !isPreview) {
+      return (
+        <JlPrinceWelcomeIntro>
+          {freeProfileView}
+        </JlPrinceWelcomeIntro>
+      )
+    }
+
+    return freeProfileView
   }
 
   return (
