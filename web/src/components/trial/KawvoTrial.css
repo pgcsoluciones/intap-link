@@ -28,3 +28,27 @@
 @media(max-width:640px){.trial-link-edit{grid-template-columns:1fr}.trial-link-edit .trial-delete{justify-self:start}}
 
 .trial-quick-editor{display:grid;gap:8px;margin-top:14px}.trial-quick-option{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;border:1px solid #e2e8f0;border-radius:14px;padding:10px}.trial-quick-option>button{width:30px;height:30px;border-radius:50%;border:1px solid #cbd5e1;background:#fff;font-weight:900}.trial-quick-option>button.active{background:#0891b2;border-color:#0891b2;color:#fff}.trial-quick-option input{grid-column:2;width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:9px}
+
+/* Mobile editor toolbar: compact, sticky, no viewport takeover */
+.trial-adminbar{position:sticky!important;top:0!important;z-index:120!important;background:#0f172a!important;padding:10px 12px!important;box-shadow:0 8px 22px rgba(15,23,42,.18)}
+.trial-adminbar-main{display:flex;align-items:center;gap:8px;min-width:0}.trial-adminbar-main>strong{white-space:nowrap}
+.trial-tools{display:flex;gap:8px;align-items:center}.trial-tools-menu{display:none;border:1px solid #334155;background:#172033;color:#fff;border-radius:10px;padding:8px 10px;font-weight:900;align-items:center;gap:6px}
+.trial-finish-btn{margin-left:auto!important;min-height:38px!important;padding:8px 12px!important;font-size:13px!important;border-radius:10px!important;white-space:nowrap}
+.trial-save{display:block;margin-top:6px;font-size:12px!important;line-height:1.2}
+@media(max-width:700px){
+  .trial-adminbar{padding:8px 10px!important}
+  .trial-adminbar-main{gap:6px}
+  .trial-adminbar-main>strong{font-size:12px!important}
+  .trial-tools-menu{display:inline-flex}
+  .trial-tools{display:none;position:absolute;left:10px;right:10px;top:52px;background:#0f172a;border:1px solid #334155;border-radius:14px;padding:10px;box-shadow:0 18px 40px rgba(15,23,42,.35);z-index:125}
+  .trial-tools.open{display:grid;grid-template-columns:1fr}
+  .trial-tool{width:100%;justify-content:flex-start}
+  .trial-finish-btn{padding:8px 10px!important;font-size:12px!important}
+  .trial-finish-btn span{display:inline}
+  .trial-save{margin-top:4px;font-size:11px!important}
+}
+@media(max-width:390px){
+  .trial-tools-menu span{display:none}
+  .trial-finish-btn span{display:none}
+  .trial-finish-btn{width:38px!important;height:38px!important;padding:0!important;display:grid!important;place-items:center!important}
+}
