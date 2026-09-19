@@ -254,6 +254,15 @@ export default function SuperAdminTrials(){
             <div className="rounded-xl border border-slate-100 p-3"><strong className="text-sm">Clics / acciones</strong><div className="mt-2 grid gap-2">{(analytics?.actions||[]).map((x:any)=><div key={x.event_type} className="flex justify-between gap-3 text-sm"><span>{x.event_type}</span><b>{x.n}</b></div>)}{!(analytics?.actions||[]).length&&<span className="text-sm text-slate-400">Sin interacciones todavía.</span>}</div></div>
           </div>
           <div className="mt-5">
+            <h3 className="font-black">Actividad reciente</h3>
+            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-100">
+              <table className="min-w-full text-left text-xs">
+                <thead className="bg-slate-50 uppercase tracking-wide text-slate-400"><tr><th className="px-3 py-2">Evento</th><th className="px-3 py-2">Detalle</th><th className="px-3 py-2">Ubicación</th><th className="px-3 py-2">Origen campaña</th><th className="px-3 py-2">Fecha</th></tr></thead>
+                <tbody className="divide-y divide-slate-100">{(analytics?.events||[]).slice(0,20).map((ev:any,i:number)=><tr key={i}><td className="px-3 py-2 font-black">{ev.event_type}</td><td className="px-3 py-2 text-slate-600">{ev.event_label||'—'}</td><td className="px-3 py-2 text-slate-600">{[ev.city,ev.region,ev.country].filter(Boolean).join(', ')||'—'}</td><td className="px-3 py-2 text-slate-600">{ev.utm_source||ev.referrer_host||'—'}{ev.utm_campaign&&<small className="block text-slate-400">{ev.utm_campaign}</small>}</td><td className="px-3 py-2 text-slate-500">{formatDate(ev.created_at)}</td></tr>)}{!(analytics?.events||[]).length&&<tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">Sin actividad pública registrada todavía.</td></tr>}</tbody>
+              </table>
+            </div>
+          </div>
+          <div className="mt-5">
             <h3 className="font-black">Trazabilidad administrativa</h3>
             <div className="mt-3 grid gap-2">{events.map(ev=><div key={ev.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"><strong className="text-sm">{ev.event_type}</strong><span className="ml-2 text-xs text-slate-400">{formatDate(ev.created_at)}</span></div>)}{!events.length&&<p className="text-sm text-slate-400">Los Trials existentes antes de esta función no tienen eventos históricos retroactivos.</p>}</div>
           </div>
