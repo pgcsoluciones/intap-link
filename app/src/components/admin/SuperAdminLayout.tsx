@@ -12,7 +12,6 @@ export type SuperAdminSection =
   | 'audit'
   | 'admins'
   | 'settings'
-  | 'trials'
 
 type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'trials' | 'resources' | 'promotions' | 'sponsors' | 'sponsorBrand'
 
