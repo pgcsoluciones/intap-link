@@ -122,11 +122,27 @@ app.post('/api/v1/superadmin/trials/:id/media', requireSuperAdmin('super_admin')
   return c.json({ok:true,url:assetUrl(c,key),key})
 })
 
+app.get('/api/v1/public/trials/:slug/banks/:bankId/holder-id', async c => {
+  const slug=normalizeSlug(c.req.param('slug')); if(!validSlug(slug))return c.json({ok:false,error:'Trial no encontrado.'},404)
+  const row=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE slug=? LIMIT 1').bind(slug).first()
+  if(!row || (row as any).status==='draft')return c.json({ok:false,error:'Trial no encontrado.'},404)
+  const snapshot=parseJson((row as any).profile_json)
+  const banks=Array.isArray(snapshot?.modules?.banks?.items)?snapshot.modules.banks.items:[]
+  const account=banks.find((item:any)=>String(item?.id||'')===c.req.param('bankId'))
+  const value=String(account?.holder_id_number||'').replace(/\D/g,'')
+  if(!account || !value)return c.json({ok:false,error:'Dato no disponible.'},404)
+  return c.json({ok:true,data:{copy_value:value}})
+})
+
 app.get('/api/v1/public/trials/:slug', async c => {
   const slug=normalizeSlug(c.req.param('slug')); if(!validSlug(slug))return c.json({ok:false,error:'Trial no encontrado.'},404)
   const row=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE slug=? LIMIT 1').bind(slug).first()
   if(!row || (row as any).status==='draft')return c.json({ok:false,error:'Trial no encontrado.'},404)
   const data=rowOut(row)
+  const publicProfile=JSON.parse(JSON.stringify(data.profile||{}))
+  const bankItems=publicProfile?.modules?.banks?.items
+  if(Array.isArray(bankItems))for(const item of bankItems)delete item.holder_id_number
+  data.profile=publicProfile
   if(data.status==='expired' && (row as any).status!=='expired')c.executionCtx.waitUntil(c.env.DB.prepare(`UPDATE trial_profiles SET status='expired',updated_at=datetime('now') WHERE id=? AND status='active'`).bind((row as any).id).run())
   return c.json({ok:true,data})
 })
