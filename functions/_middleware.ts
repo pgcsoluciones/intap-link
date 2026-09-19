@@ -721,7 +721,7 @@ ${seoHeadHtml}
     const trialSlug = decodeURIComponent(trialShareMatch[1] || '').trim().toLowerCase();
     if (/^[a-z0-9][a-z0-9-]{1,59}$/.test(trialSlug)) {
       const trial = await fetchTrialForShare(trialSlug);
-      if (trial?.profile?.profile) {
+      if (trial?.status === 'active' && trial?.profile?.profile) {
         const p = trial.profile.profile;
         const clean = (value: unknown, max = 180) => typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
         const name = clean(p.name, 90) || trialSlug;
