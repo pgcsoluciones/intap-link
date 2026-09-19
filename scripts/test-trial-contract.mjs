@@ -16,6 +16,8 @@ assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS trial_profiles"),'isola
 assert.ok(!migration.includes('ALTER TABLE profiles'),'must not mutate Free profile schema')
 assert.ok(!migration.includes('sponsored_profiles'),'must not mutate Sponsored profile schema')
 assert.ok(ui.includes('Los cambios se guardan automáticamente.'),'autosave UX missing')
+assert.ok(ui.includes("https://app.preview.intaprd.com"),'preview superadmin calls must use host-only authenticated app origin')
+assert.ok(ui.includes("path.startsWith('/api/v1/superadmin/')"),'protected Trial API must be routed through authenticated app origin')
 assert.ok(ui.includes('Esta demostración ha finalizado.'),'expiration UX missing')
 assert.ok(ui.includes('intaprd.com/trial/'),'final slug prefix missing')
 assert.ok(!ui.includes('/demo/'),'trial UI must not depend on /demo namespace')
