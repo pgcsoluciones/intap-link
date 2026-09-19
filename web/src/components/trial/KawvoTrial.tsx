@@ -65,8 +65,12 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   const [published,setPublished]=useState<any>(null)
   const [qr,setQr]=useState('')
   const saveTimer=useRef<number|undefined>()
+  const anonymousVisitorRef=useRef(crypto.randomUUID())
+  const anonymousSessionRef=useRef(crypto.randomUUID())
+  const [privacyChoice,setPrivacyChoice]=useState<'accepted'|'essential'|null>(null)
 
   useEffect(()=>{api('/api/v1/superadmin/trials/context').then(()=>setAdmin(true)).catch(()=>setAdmin(false))},[])
+  useEffect(()=>{if(mode!=='public')return;const saved=localStorage.getItem('kawvo_trial_privacy_v1');setPrivacyChoice(saved==='accepted'||saved==='essential'?saved:null)},[mode])
   useEffect(()=>{
     if(mode==='master'){api('/api/v1/public/trials/master').then(r=>setSnapshot(r.data)).catch(()=>setSnapshot(FALLBACK));return}
     const path=mode==='editor'?'/api/v1/superadmin/trials/'+encodeURIComponent(id):'/api/v1/public/trials/'+encodeURIComponent(slug)
@@ -76,11 +80,20 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   useEffect(()=>()=>{if(saveTimer.current)window.clearTimeout(saveTimer.current)},[])
 
   function analyticsIds(){
+    if(privacyChoice!=='accepted')return {visitorId:anonymousVisitorRef.current,sessionId:anonymousSessionRef.current}
     let visitorId=localStorage.getItem('kawvo_trial_visitor_id')||''
     if(!visitorId){visitorId=crypto.randomUUID();localStorage.setItem('kawvo_trial_visitor_id',visitorId)}
     let sessionId=sessionStorage.getItem('kawvo_trial_session_id')||''
     if(!sessionId){sessionId=crypto.randomUUID();sessionStorage.setItem('kawvo_trial_session_id',sessionId)}
     return {visitorId,sessionId}
+  }
+  function choosePrivacy(choice:'accepted'|'essential'){
+    localStorage.setItem('kawvo_trial_privacy_v1',choice)
+    if(choice==='essential'){
+      localStorage.removeItem('kawvo_trial_visitor_id')
+      sessionStorage.removeItem('kawvo_trial_session_id')
+    }
+    setPrivacyChoice(choice)
   }
   function trackTrialEvent(eventType:string,eventLabel=''){
     if(mode!=='public'||!trial?.slug||trial.status!=='active')return
@@ -94,7 +107,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
       })
     }).catch(()=>undefined)
   }
-  useEffect(()=>{if(mode==='public'&&trial?.slug&&trial.status==='active')trackTrialEvent('visit','Perfil abierto')},[mode,trial?.id])
+  useEffect(()=>{if(mode==='public'&&trial?.slug&&trial.status==='active'&&privacyChoice!==null)trackTrialEvent('visit','Perfil abierto')},[mode,trial?.id,privacyChoice])
 
   function rebuildContacts(profile:FreeProfileData){
     const phone=cleanPhone(profile.phone||'');const whatsapp=cleanPhone(profile.whatsapp||'');const instagram=cleanInstagram(profile.instagram||'');const email=String(profile.email||'').trim()
@@ -204,6 +217,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
 
     {published&&<div className="trial-sheet-backdrop"><section className="trial-sheet trial-success"><FaCheck className="trial-success-icon"/><h2>Trial creado</h2><p>Activo hasta {isoDisplay(published.expires_at)}.</p>{qr&&<img src={qr} alt="Código QR del Trial"/>}<strong>{window.location.origin}{published.url}</strong><div className="trial-success-actions"><button onClick={()=>copy(window.location.origin+published.url)}><FaCopy/> Copiar enlace</button><button onClick={()=>share(window.location.origin+published.url)}><FaShareAlt/> Compartir</button><button onClick={()=>window.open(published.url,'_blank')}><FaQrcode/> Abrir perfil</button></div><button className="trial-publish" onClick={()=>navigate(published.url)}>Ver Trial publicado</button></section></div>}
     {prospectOpen&&prospectDraft&&<div className="trial-sheet-backdrop"><section className="trial-sheet trial-create-sheet"><header><div><strong>Ficha de prospecto</strong><small>Información comercial privada. No aparece en el perfil público.</small></div><button onClick={()=>setProspectOpen(false)}><FaTimes/></button></header><div className="trial-grid"><label>Nombre<input value={prospectDraft.contact_name} onChange={e=>setProspectDraft({...prospectDraft,contact_name:e.target.value})}/></label><label>WhatsApp<input value={prospectDraft.whatsapp} onChange={e=>setProspectDraft({...prospectDraft,whatsapp:e.target.value})}/></label><label>Teléfono<input value={prospectDraft.phone} onChange={e=>setProspectDraft({...prospectDraft,phone:e.target.value})}/></label><label>Correo<input value={prospectDraft.email} onChange={e=>setProspectDraft({...prospectDraft,email:e.target.value})}/></label><label>Instagram<input value={prospectDraft.instagram} onChange={e=>setProspectDraft({...prospectDraft,instagram:e.target.value})}/></label><label>Empresa<input value={prospectDraft.company_name} onChange={e=>setProspectDraft({...prospectDraft,company_name:e.target.value})}/></label><label>Tipo de empresa / actividad<input list="trial-company-types-prospect" value={prospectDraft.company_type} onChange={e=>setProspectDraft({...prospectDraft,company_type:e.target.value})}/><datalist id="trial-company-types-prospect">{companyTypes.map(x=><option key={x} value={x}/>)}</datalist></label><label>Origen<select value={prospectDraft.source} onChange={e=>setProspectDraft({...prospectDraft,source:e.target.value})}>{sourceOptions.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label></div><label>Detalle del origen<input value={prospectDraft.source_detail} onChange={e=>setProspectDraft({...prospectDraft,source_detail:e.target.value})}/></label><label>Notas<textarea rows={3} value={prospectDraft.notes} onChange={e=>setProspectDraft({...prospectDraft,notes:e.target.value})}/></label><button className="trial-publish" onClick={()=>void saveProspect()}>Guardar ficha</button></section></div>}
+    {mode==='public'&&privacyChoice===null&&<div className="trial-privacy-banner" role="dialog" aria-label="Privacidad y medición"><div><strong>Privacidad y medición</strong><p>Usamos medición propia para conocer visitas e interacciones del perfil. Puedes permitir almacenamiento local para reconocer visitas repetidas. No compartimos estos datos con terceros.</p><small>Si más adelante se activan herramientas publicitarias de terceros, se solicitará consentimiento específico antes de enviarles datos.</small></div><div className="trial-privacy-actions"><button className="secondary" onClick={()=>choosePrivacy('essential')}>Continuar sin cookies</button><button onClick={()=>choosePrivacy('accepted')}>Aceptar</button></div></div>}
     {error&&<div className="trial-toast" onClick={()=>setError('')}>{error}</div>}
   </>
 }
