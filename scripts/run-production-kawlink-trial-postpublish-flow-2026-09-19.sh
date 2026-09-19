@@ -17,7 +17,7 @@ KAWVO LINK · FLUJO POST-PUBLICACIÓN TRIAL · PRODUCCIÓN
 ============================================================
 - X y clic fuera llevan al Trial recién publicado
 - sale del modo edición
-- "Crear nuevo Trial" abre directamente el formulario nuevo
+- "Volver a base Trial" regresa a la plantilla/base Trial
 - NO toca D1
 - NO despliega App ni Worker/API
 - despliega únicamente Web Producción
