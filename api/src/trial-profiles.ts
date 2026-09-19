@@ -158,17 +158,16 @@ export function registerTrialRoutes(app:any){
     const id=c.req.param('id')
     const trial=await c.env.DB.prepare('SELECT id FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
     if(!trial)return c.json({ok:false,error:'Trial no encontrado.'},404)
-    const page=Math.max(1,Number(c.req.query('page')||1))
-    const pageSize=Math.min(50,Math.max(10,Number(c.req.query('page_size')||20)))
-    const [summary,eventCount,events,locations,actions,daily,devices]=await Promise.all([
+
+    const visitorPage=Math.max(1,Number(c.req.query('visitor_page')||1))
+    const visitorPageSize=Math.min(50,Math.max(5,Number(c.req.query('visitor_page_size')||10)))
+
+    const [summary,locations,actions,daily,devices,visitorCount,visitorRows]=await Promise.all([
       c.env.DB.prepare(`SELECT COUNT(*) AS events,
         SUM(CASE WHEN event_type='visit' THEN 1 ELSE 0 END) AS views,
         COUNT(DISTINCT CASE WHEN event_type='visit' AND visitor_id<>'' THEN visitor_id END) AS unique_visitors,
         SUM(CASE WHEN event_type<>'visit' THEN 1 ELSE 0 END) AS interactions
         FROM trial_analytics_events WHERE trial_id=?`).bind(id).first(),
-      c.env.DB.prepare('SELECT COUNT(*) AS n FROM trial_analytics_events WHERE trial_id=?').bind(id).first(),
-      c.env.DB.prepare(`SELECT event_type,event_label,country,region,city,device_type,referrer_host,utm_source,utm_medium,utm_campaign,created_at
-        FROM trial_analytics_events WHERE trial_id=? ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(id,pageSize,(page-1)*pageSize).all(),
       c.env.DB.prepare(`SELECT country,region,city,COUNT(*) AS views
         FROM trial_analytics_events WHERE trial_id=? AND event_type='visit'
         GROUP BY country,region,city ORDER BY views DESC LIMIT 15`).bind(id).all(),
@@ -181,12 +180,51 @@ export function registerTrialRoutes(app:any){
         GROUP BY date(created_at) ORDER BY day ASC`).bind(id).all(),
       c.env.DB.prepare(`SELECT device_type,COUNT(*) AS n FROM trial_analytics_events
         WHERE trial_id=? AND event_type='visit' GROUP BY device_type ORDER BY n DESC`).bind(id).all(),
+      c.env.DB.prepare(`SELECT COUNT(DISTINCT visitor_id) AS n FROM trial_analytics_events
+        WHERE trial_id=? AND visitor_id<>''`).bind(id).first(),
+      c.env.DB.prepare(`SELECT visitor_id,
+        MIN(created_at) AS first_seen,MAX(created_at) AS last_seen,
+        SUM(CASE WHEN event_type='visit' THEN 1 ELSE 0 END) AS visits,
+        SUM(CASE WHEN event_type<>'visit' THEN 1 ELSE 0 END) AS interactions,
+        MAX(country) AS country,MAX(region) AS region,MAX(city) AS city,MAX(device_type) AS device_type,
+        MAX(referrer_host) AS referrer_host,MAX(utm_source) AS utm_source,MAX(utm_campaign) AS utm_campaign
+        FROM trial_analytics_events
+        WHERE trial_id=? AND visitor_id<>''
+        GROUP BY visitor_id
+        ORDER BY last_seen DESC
+        LIMIT ? OFFSET ?`).bind(id,visitorPageSize,(visitorPage-1)*visitorPageSize).all(),
     ])
-    const total=Number((eventCount as any)?.n||0)
+
+    const visitorIds=(visitorRows.results||[]).map((x:any)=>String(x.visitor_id||'')).filter(Boolean)
+    let visitorActionRows:any[]=[]
+    if(visitorIds.length){
+      const placeholders=visitorIds.map(()=>'?').join(',')
+      const rows=await c.env.DB.prepare(`SELECT visitor_id,event_type,COUNT(*) AS n
+        FROM trial_analytics_events
+        WHERE trial_id=? AND visitor_id IN (${placeholders}) AND event_type<>'visit'
+        GROUP BY visitor_id,event_type ORDER BY visitor_id,n DESC`).bind(id,...visitorIds).all()
+      visitorActionRows=rows.results||[]
+    }
+    const groupedActions=new Map<string,any[]>()
+    for(const row of visitorActionRows){
+      const key=String((row as any).visitor_id||'')
+      const list=groupedActions.get(key)||[]
+      list.push({event_type:(row as any).event_type,n:Number((row as any).n||0)})
+      groupedActions.set(key,list)
+    }
+    const visitors=(visitorRows.results||[]).map((row:any)=>({
+      ...row,
+      visits:Number(row.visits||0),
+      interactions:Number(row.interactions||0),
+      actions:groupedActions.get(String(row.visitor_id||''))||[]
+    }))
+    const uniqueTotal=Number((visitorCount as any)?.n||0)
+
     return c.json({ok:true,data:{
       summary:{events:Number((summary as any)?.events||0),views:Number((summary as any)?.views||0),unique_visitors:Number((summary as any)?.unique_visitors||0),interactions:Number((summary as any)?.interactions||0)},
-      events:events.results||[],locations:locations.results||[],actions:actions.results||[],daily:daily.results||[],devices:devices.results||[],
-      pagination:{page,page_size:pageSize,total,pages:Math.max(1,Math.ceil(total/pageSize))}
+      locations:locations.results||[],actions:actions.results||[],daily:daily.results||[],devices:devices.results||[],
+      visitors,
+      visitor_pagination:{page:visitorPage,page_size:visitorPageSize,total:uniqueTotal,pages:Math.max(1,Math.ceil(uniqueTotal/visitorPageSize))}
     }})
   })
 
