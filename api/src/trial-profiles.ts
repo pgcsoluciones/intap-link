@@ -55,7 +55,9 @@ app.get('/api/v1/public/trials/master', c => c.json({ok:true,data:MASTER}))
 
 app.post('/api/v1/superadmin/trials', requireSuperAdmin('super_admin'), async c => {
   const id=crypto.randomUUID(); const adminUserId=String(c.get('adminUserId')||'')
+  let body:any={}; try{body=await c.req.json()}catch{body={}}
   const snapshot=JSON.parse(JSON.stringify(MASTER)); snapshot.profile.id=id; snapshot.profile.slug=''
+  snapshot.modules={banks:{enabled:Boolean(body?.modules?.banks),items:[]}}
   await c.env.DB.prepare(`INSERT INTO trial_profiles(id,status,profile_json,created_by_admin_user_id) VALUES(?,'draft',?,?)`).bind(id,JSON.stringify(snapshot),adminUserId).run()
   await logAdminAction({db:c.env.DB,adminUserId,action:'trial.create',targetType:'profile',targetId:id,after:{status:'draft'}}).catch(()=>undefined)
   return c.json({ok:true,data:{id,status:'draft'}},201)
