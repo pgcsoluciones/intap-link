@@ -11,7 +11,7 @@ type Trial={
   duration_hours:number;prospect:Prospect;activated_at:string|null;expires_at:string|null;created_at:string;updated_at:string
 }
 type EventRow={id:string;event_type:string;details:any;created_at:string}
-type Analytics={summary:{events:number;views:number;unique_visitors:number;interactions:number};events:any[];locations:any[];actions:any[]}
+type Analytics={summary:{events:number;views:number;unique_visitors:number;interactions:number};events:any[];locations:any[];actions:any[];daily:any[];devices:any[];pagination:{page:number;page_size:number;total:number;pages:number}}
 
 const sourceOptions=[
   ['', 'Todos los orígenes'],
@@ -31,6 +31,7 @@ const sourceLabels=Object.fromEntries(sourceOptions)
 const WEB_ORIGIN=(import.meta.env.VITE_WEB_URL??'https://intaprd.com').replace(/\/$/,'')
 const companyTypes=['Servicios profesionales','Automotriz / Taller','Belleza / Estética','Construcción / Ferretería','Salud','Gastronomía','Tecnología','Comercio / Retail','Educación','Inmobiliaria']
 const statusLabels:any={draft:'Borrador',active:'Activo',inactive:'Desactivado',expired:'Expirado'}
+const eventLabels:any={visit:'Visita',whatsapp:'WhatsApp',quick_call:'Llamar',quick_instagram:'Instagram',quick_location:'Ubicación',quick_email:'Correo',quick_tiktok:'TikTok',save_contact:'Guardar contacto',portfolio_open:'Portafolio',service_open:'Servicio',custom_link:'Enlace',share:'Compartir',copy_link:'Copiar enlace',qr_open:'Abrir QR',qr_download:'Descargar QR',qr_save_photo:'Guardar QR',interest_click:'Interés'}
 
 function formatDate(value:string|null){
   if(!value)return '—'
@@ -59,6 +60,7 @@ export default function SuperAdminTrials(){
   const [prospect,setProspect]=useState<Prospect|null>(null)
   const [events,setEvents]=useState<EventRow[]>([])
   const [analytics,setAnalytics]=useState<Analytics|null>(null)
+  const [analyticsPage,setAnalyticsPage]=useState(1)
   const [saving,setSaving]=useState(false)
   const [message,setMessage]=useState('')
   const [extendHours,setExtendHours]=useState(72)
@@ -83,11 +85,15 @@ export default function SuperAdminTrials(){
   }
   useEffect(()=>{void load()},[page,status,source,debouncedQ])
 
+  async function loadAnalytics(trialId:string,nextPage=1){
+    const stats:any=await apiGet(`/superadmin/trials/${trialId}/analytics?page=${nextPage}&page_size=20`)
+    if(stats?.ok){setAnalytics(stats.data);setAnalyticsPage(Number(stats.data?.pagination?.page||1))}
+  }
+
   async function selectTrial(item:Trial){
-    setSelected(item);setProspect(item.prospect);setMessage('')
-    const [json,stats]:any[]=await Promise.all([apiGet(`/superadmin/trials/${item.id}/events`),apiGet(`/superadmin/trials/${item.id}/analytics`)])
+    setSelected(item);setProspect(item.prospect);setMessage('');setAnalyticsPage(1)
+    const [json]:any[]=await Promise.all([apiGet(`/superadmin/trials/${item.id}/events`),loadAnalytics(item.id,1)])
     setEvents(json?.ok?(json.data||[]):[])
-    setAnalytics(stats?.ok?stats.data:null)
   }
 
   async function saveProspect(){
@@ -240,33 +246,50 @@ export default function SuperAdminTrials(){
           </div>
         </div>
 
-        <div className="mt-7">
-          <h3 className="font-black">Actividad del perfil</h3>
-          <p className="mt-1 text-sm text-slate-500">Las métricas comienzan a registrarse desde esta versión; no se reconstruyen visitas anteriores.</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-4">
-            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Visitas</small><strong className="block text-2xl">{analytics?.summary?.views||0}</strong></div>
-            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Visitantes</small><strong className="block text-2xl">{analytics?.summary?.unique_visitors||0}</strong></div>
-            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Interacciones</small><strong className="block text-2xl">{analytics?.summary?.interactions||0}</strong></div>
-            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Eventos</small><strong className="block text-2xl">{analytics?.summary?.events||0}</strong></div>
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-xs font-black uppercase tracking-[.12em] text-cyan-700">Rendimiento del Trial</p><h3 className="mt-1 text-xl font-black text-slate-950">Actividad del perfil</h3><p className="mt-1 text-sm text-slate-500">Métricas desde la activación de esta función. No se reconstruyen visitas históricas.</p></div>
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-500 shadow-sm">Últimos 7 días + histórico</span>
           </div>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-xl border border-slate-100 p-3"><strong className="text-sm">Ubicación aproximada</strong><div className="mt-2 grid gap-2">{(analytics?.locations||[]).map((x:any,i:number)=><div key={i} className="flex justify-between gap-3 text-sm"><span>{[x.city,x.region,x.country].filter(Boolean).join(', ')||'No disponible'}</span><b>{x.views}</b></div>)}{!(analytics?.locations||[]).length&&<span className="text-sm text-slate-400">Sin datos todavía.</span>}</div></div>
-            <div className="rounded-xl border border-slate-100 p-3"><strong className="text-sm">Clics / acciones</strong><div className="mt-2 grid gap-2">{(analytics?.actions||[]).map((x:any)=><div key={x.event_type} className="flex justify-between gap-3 text-sm"><span>{x.event_type}</span><b>{x.n}</b></div>)}{!(analytics?.actions||[]).length&&<span className="text-sm text-slate-400">Sin interacciones todavía.</span>}</div></div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              ['Visitas',analytics?.summary?.views||0,'Aperturas del perfil'],
+              ['Visitantes',analytics?.summary?.unique_visitors||0,'Navegadores identificados'],
+              ['Interacciones',analytics?.summary?.interactions||0,'Clics y acciones'],
+              ['Eventos',analytics?.summary?.events||0,'Actividad total'],
+            ].map(([title,value,caption])=><div key={String(title)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><small className="font-black uppercase tracking-wide text-slate-400">{title}</small><strong className="mt-1 block text-3xl font-black text-slate-950">{value}</strong><span className="mt-1 block text-xs text-slate-400">{caption}</span></div>)}
           </div>
-          <div className="mt-5">
-            <h3 className="font-black">Actividad reciente</h3>
-            <div className="mt-3 overflow-x-auto rounded-xl border border-slate-100">
-              <table className="min-w-full text-left text-xs">
-                <thead className="bg-slate-50 uppercase tracking-wide text-slate-400"><tr><th className="px-3 py-2">Evento</th><th className="px-3 py-2">Detalle</th><th className="px-3 py-2">Ubicación</th><th className="px-3 py-2">Origen campaña</th><th className="px-3 py-2">Fecha</th></tr></thead>
-                <tbody className="divide-y divide-slate-100">{(analytics?.events||[]).slice(0,20).map((ev:any,i:number)=><tr key={i}><td className="px-3 py-2 font-black">{ev.event_type}</td><td className="px-3 py-2 text-slate-600">{ev.event_label||'—'}</td><td className="px-3 py-2 text-slate-600">{[ev.city,ev.region,ev.country].filter(Boolean).join(', ')||'—'}</td><td className="px-3 py-2 text-slate-600">{ev.utm_source||ev.referrer_host||'—'}{ev.utm_campaign&&<small className="block text-slate-400">{ev.utm_campaign}</small>}</td><td className="px-3 py-2 text-slate-500">{formatDate(ev.created_at)}</td></tr>)}{!(analytics?.events||[]).length&&<tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">Sin actividad pública registrada todavía.</td></tr>}</tbody>
-              </table>
+
+          <div className="mt-4 grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3"><div><strong className="text-sm">Actividad por día</strong><p className="text-xs text-slate-400">Visitas e interacciones de los últimos 7 días.</p></div></div>
+              <div className="mt-4 grid gap-3">{(analytics?.daily||[]).map((d:any)=>{const max=Math.max(1,...(analytics?.daily||[]).map((x:any)=>Number(x.views||0)+Number(x.interactions||0)));const totalDay=Number(d.views||0)+Number(d.interactions||0);return <div key={d.day} className="grid grid-cols-[84px_1fr_78px] items-center gap-3 text-xs"><span className="font-bold text-slate-500">{new Date(d.day+'T12:00:00').toLocaleDateString('es-DO',{weekday:'short',day:'numeric'})}</span><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-cyan-600" style={{width:`${Math.max(4,(totalDay/max)*100)}%`}}/></div><span className="text-right font-black text-slate-700">{d.views||0} / {d.interactions||0}</span></div>})}{!(analytics?.daily||[]).length&&<p className="py-6 text-center text-sm text-slate-400">Aún no hay datos suficientes.</p>}</div>
+              <div className="mt-3 flex gap-4 text-[11px] text-slate-400"><span><b className="text-slate-700">Izq.</b> día</span><span><b className="text-slate-700">Der.</b> visitas / interacciones</span></div>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><strong className="text-sm">Dispositivos</strong><div className="mt-3 grid gap-2">{(analytics?.devices||[]).map((x:any)=><div key={x.device_type} className="flex items-center justify-between text-sm"><span className="capitalize text-slate-600">{x.device_type||'desconocido'}</span><b>{x.n}</b></div>)}{!(analytics?.devices||[]).length&&<span className="text-sm text-slate-400">Sin datos todavía.</span>}</div></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><strong className="text-sm">Ubicación aproximada</strong><div className="mt-3 grid gap-2">{(analytics?.locations||[]).slice(0,5).map((x:any,i:number)=><div key={i} className="flex items-start justify-between gap-3 text-sm"><span className="text-slate-600">{[x.city,x.region,x.country].filter(Boolean).join(', ')||'No disponible'}</span><b>{x.views}</b></div>)}{!(analytics?.locations||[]).length&&<span className="text-sm text-slate-400">Sin datos todavía.</span>}</div></div>
             </div>
           </div>
-          <div className="mt-5">
-            <h3 className="font-black">Trazabilidad administrativa</h3>
-            <div className="mt-3 grid gap-2">{events.map(ev=><div key={ev.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"><strong className="text-sm">{ev.event_type}</strong><span className="ml-2 text-xs text-slate-400">{formatDate(ev.created_at)}</span></div>)}{!events.length&&<p className="text-sm text-slate-400">Los Trials existentes antes de esta función no tienen eventos históricos retroactivos.</p>}</div>
+
+          <div className="mt-4 grid gap-4 xl:grid-cols-[.75fr_1.25fr]">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><div><strong className="text-sm">Acciones principales</strong><p className="text-xs text-slate-400">Interacciones acumuladas.</p></div></div><div className="mt-3 grid gap-2">{(analytics?.actions||[]).map((x:any)=><div key={x.event_type} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm"><span className="font-semibold text-slate-600">{eventLabels[x.event_type]||x.event_type}</span><b className="rounded-full bg-white px-2 py-0.5 text-slate-900">{x.n}</b></div>)}{!(analytics?.actions||[]).length&&<span className="text-sm text-slate-400">Sin interacciones todavía.</span>}</div></div>
+
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3"><div><strong className="text-sm">Actividad reciente</strong><p className="text-xs text-slate-400">Eventos paginados para facilitar lectura y seguimiento.</p></div><span className="text-xs font-black text-slate-400">{analytics?.pagination?.total||0} registros</span></div>
+              <div className="overflow-x-auto"><table className="min-w-full text-left text-xs"><thead className="bg-slate-50 uppercase tracking-wide text-slate-400"><tr><th className="px-3 py-2">Evento</th><th className="px-3 py-2">Detalle</th><th className="px-3 py-2">Ubicación</th><th className="px-3 py-2">Campaña</th><th className="px-3 py-2">Fecha</th></tr></thead><tbody className="divide-y divide-slate-100">{(analytics?.events||[]).map((ev:any,i:number)=><tr key={i}><td className="px-3 py-2 font-black">{eventLabels[ev.event_type]||ev.event_type}</td><td className="px-3 py-2 text-slate-600">{ev.event_label||'—'}</td><td className="px-3 py-2 text-slate-600">{[ev.city,ev.region,ev.country].filter(Boolean).join(', ')||'—'}</td><td className="px-3 py-2 text-slate-600">{ev.utm_source||ev.referrer_host||'—'}{ev.utm_campaign&&<small className="block text-slate-400">{ev.utm_campaign}</small>}</td><td className="whitespace-nowrap px-3 py-2 text-slate-500">{formatDate(ev.created_at)}</td></tr>)}{!(analytics?.events||[]).length&&<tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Sin actividad pública registrada todavía.</td></tr>}</tbody></table></div>
+              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3"><button disabled={analyticsPage<=1} onClick={()=>selected&&void loadAnalytics(selected.id,analyticsPage-1)} className="rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-30">Anterior</button><span className="text-xs font-bold text-slate-500">Página {analytics?.pagination?.page||1} de {analytics?.pagination?.pages||1}</span><button disabled={analyticsPage>=(analytics?.pagination?.pages||1)} onClick={()=>selected&&void loadAnalytics(selected.id,analyticsPage+1)} className="rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-30">Siguiente</button></div>
+            </div>
           </div>
-          <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4"><strong className="text-sm">Píxeles publicitarios</strong><p className="mt-1 text-sm text-slate-500">Arquitectura preparada para una etapa posterior: Meta Pixel / Conversions API y Google Ads. No se activan todavía para evitar enviar datos externos sin configuración y consentimiento definidos.</p></div>
+
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="font-black">Trazabilidad administrativa</h3>
+            <div className="mt-3 grid gap-2">{events.map(ev=><div key={ev.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"><strong className="text-sm">{ev.event_type}</strong><span className="text-xs text-slate-400">{formatDate(ev.created_at)}</span></div>)}{!events.length&&<p className="text-sm text-slate-400">Los Trials existentes antes de esta función no tienen eventos históricos retroactivos.</p>}</div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-4"><strong className="text-sm">Medición publicitaria</strong><p className="mt-1 text-sm text-slate-500">La medición propia permanece disponible sin cookies publicitarias. Meta Pixel, Conversions API y Google Ads se habilitarán más adelante con configuración y consentimiento específico para terceros.</p></div>
         </div>
       </section>}
     </div>
