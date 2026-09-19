@@ -43,8 +43,9 @@ export type IntapLinkGratisProfileProps = {
   layout: FreeProfileLayoutId
   colors: FreeProfileAppearanceColors
   topContent?: ReactNode
+  beforeShareContent?: ReactNode
   editMode?: boolean
-  onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio') => void
+  onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio' | 'services' | 'appearance') => void
 }
 
 type DetailModal =
@@ -172,10 +173,11 @@ function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layou
   if (layout === 'personal') {
     return (
       <section className="ilx-identity ilx-personal">
-        <div className="ilx-personal-image">
+        <div className="ilx-personal-image ilx-live-editable">
           <img src={profile.portrait} alt={profile.name} />
+          <EditPencil label="Cambiar avatar" onClick={onEdit ? ()=>onEdit("avatar") : undefined} />
           <div className="ilx-personal-fade" />
-          <div className="ilx-personal-text"><h1>{profile.name}</h1><p>{profile.role}</p></div>
+          <div className="ilx-personal-text ilx-live-editable"><h1>{profile.name}</h1><p>{profile.role}</p><EditPencil label="Editar nombre y cargo" onClick={onEdit ? ()=>onEdit("identity") : undefined} /></div>
         </div>
       </section>
     )
@@ -183,13 +185,13 @@ function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layou
 
   return (
     <section className="ilx-identity ilx-essential">
-      <div className="ilx-essential-image"><img src={profile.portrait} alt={profile.name} /></div>
-      <div className="ilx-essential-name"><h1>{profile.name}</h1><p>{profile.role}</p></div>
+      <div className="ilx-essential-image ilx-live-editable"><img src={profile.portrait} alt={profile.name} /><EditPencil label="Cambiar avatar" onClick={onEdit ? ()=>onEdit("avatar") : undefined} /></div>
+      <div className="ilx-essential-name ilx-live-editable"><h1>{profile.name}</h1><p>{profile.role}</p><EditPencil label="Editar nombre y cargo" onClick={onEdit ? ()=>onEdit("identity") : undefined} /></div>
     </section>
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, editMode=false, onEditSection }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, editMode=false, onEditSection }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -369,8 +371,9 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           {services.length > 0 && (
             <section className="ilx-section ilx-services-section">
-              <div className="ilx-services-heading">
+              <div className="ilx-services-heading ilx-live-editable">
                 <h2>{profile.servicesTitle}</h2>
+                {editMode && <EditPencil label="Editar servicios" onClick={()=>onEditSection?.("services")} />}
                 {profile.servicesDescription && <p>{profile.servicesDescription}</p>}
               </div>
               <div className="ilx-services" data-service-count={Math.max(1, services.length)} style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
@@ -394,6 +397,8 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
               {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
             </section>
           )}
+
+          {beforeShareContent}
 
           <section className="ilx-share">
             <button type="button" onClick={shareProfile}><FaShareAlt /><span>Compartir</span></button>
