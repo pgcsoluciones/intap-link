@@ -316,12 +316,38 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   function downloadProfileQr() {
     if (!qrDataUrl) return
+    onTrackEvent?.('qr_download','Descargar QR PNG')
     const link = document.createElement('a')
     link.href = qrDataUrl
     link.download = `${profile.slug || 'kawvo-link'}-qr.png`
     document.body.appendChild(link)
     link.click()
     link.remove()
+  }
+
+  async function saveProfileQrToPhotos() {
+    if (!qrDataUrl) return
+    onTrackEvent?.('qr_save_photo','Guardar QR en fotos')
+    try {
+      const response = await fetch(qrDataUrl)
+      const blob = await response.blob()
+      const file = new File([blob], `${profile.slug || 'kawvo-link'}-qr.png`, { type: 'image/png' })
+      const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
+      if (navigator.share && nav.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Código QR de ${profile.name}` })
+        return
+      }
+    } catch { /* fallback below */ }
+    const imageWindow = window.open(qrDataUrl, '_blank', 'noopener,noreferrer')
+    if (!imageWindow) {
+      const link = document.createElement('a')
+      link.href = qrDataUrl
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    }
   }
 
   function shareProfileQrWhatsApp() {
@@ -424,7 +450,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
         <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQrOpen(false) }}>
           <article className="ilx-qr-modal" role="dialog" aria-modal="true" aria-labelledby="ilx-qr-title">
             <button type="button" className="ilx-modal-close" onClick={() => setQrOpen(false)} aria-label="Cerrar"><FaTimes /></button>
-            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">KAWVO LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar QR</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
+            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">KAWVO LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar PNG</span></button><button type="button" onClick={saveProfileQrToPhotos}><FaAddressCard /><span>Guardar en Fotos</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
           </article>
         </div>
       )}
