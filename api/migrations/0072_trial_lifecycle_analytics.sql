@@ -30,3 +30,12 @@ CREATE INDEX IF NOT EXISTS idx_trial_analytics_trial_created
 
 CREATE INDEX IF NOT EXISTS idx_trial_analytics_trial_event
   ON trial_analytics_events(trial_id, event_type);
+
+-- Give pre-existing Trials a truthful baseline administrative event.
+-- This does not invent visits or clicks; it only records the state already present.
+INSERT INTO trial_events(id,trial_id,event_type,details_json,created_by_admin_user_id,created_at)
+SELECT lower(hex(randomblob(16))),p.id,'trial.history_baseline',
+       json_object('status',p.status,'slug',p.slug,'activated_at',p.activated_at,'expires_at',p.expires_at),
+       NULL,COALESCE(p.activated_at,p.created_at)
+FROM trial_profiles p
+WHERE NOT EXISTS (SELECT 1 FROM trial_events e WHERE e.trial_id=p.id);
