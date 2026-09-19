@@ -158,23 +158,35 @@ export function registerTrialRoutes(app:any){
     const id=c.req.param('id')
     const trial=await c.env.DB.prepare('SELECT id FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
     if(!trial)return c.json({ok:false,error:'Trial no encontrado.'},404)
-    const [summary,events,locations,actions]=await Promise.all([
+    const page=Math.max(1,Number(c.req.query('page')||1))
+    const pageSize=Math.min(50,Math.max(10,Number(c.req.query('page_size')||20)))
+    const [summary,eventCount,events,locations,actions,daily,devices]=await Promise.all([
       c.env.DB.prepare(`SELECT COUNT(*) AS events,
         SUM(CASE WHEN event_type='visit' THEN 1 ELSE 0 END) AS views,
-        COUNT(DISTINCT CASE WHEN event_type='visit' THEN visitor_id END) AS unique_visitors,
+        COUNT(DISTINCT CASE WHEN event_type='visit' AND visitor_id<>'' THEN visitor_id END) AS unique_visitors,
         SUM(CASE WHEN event_type<>'visit' THEN 1 ELSE 0 END) AS interactions
         FROM trial_analytics_events WHERE trial_id=?`).bind(id).first(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM trial_analytics_events WHERE trial_id=?').bind(id).first(),
       c.env.DB.prepare(`SELECT event_type,event_label,country,region,city,device_type,referrer_host,utm_source,utm_medium,utm_campaign,created_at
-        FROM trial_analytics_events WHERE trial_id=? ORDER BY created_at DESC LIMIT 80`).bind(id).all(),
+        FROM trial_analytics_events WHERE trial_id=? ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(id,pageSize,(page-1)*pageSize).all(),
       c.env.DB.prepare(`SELECT country,region,city,COUNT(*) AS views
         FROM trial_analytics_events WHERE trial_id=? AND event_type='visit'
         GROUP BY country,region,city ORDER BY views DESC LIMIT 15`).bind(id).all(),
       c.env.DB.prepare(`SELECT event_type,COUNT(*) AS n FROM trial_analytics_events
         WHERE trial_id=? AND event_type<>'visit' GROUP BY event_type ORDER BY n DESC`).bind(id).all(),
+      c.env.DB.prepare(`SELECT date(created_at) AS day,
+        SUM(CASE WHEN event_type='visit' THEN 1 ELSE 0 END) AS views,
+        SUM(CASE WHEN event_type<>'visit' THEN 1 ELSE 0 END) AS interactions
+        FROM trial_analytics_events WHERE trial_id=? AND created_at>=datetime('now','-6 days')
+        GROUP BY date(created_at) ORDER BY day ASC`).bind(id).all(),
+      c.env.DB.prepare(`SELECT device_type,COUNT(*) AS n FROM trial_analytics_events
+        WHERE trial_id=? AND event_type='visit' GROUP BY device_type ORDER BY n DESC`).bind(id).all(),
     ])
+    const total=Number((eventCount as any)?.n||0)
     return c.json({ok:true,data:{
       summary:{events:Number((summary as any)?.events||0),views:Number((summary as any)?.views||0),unique_visitors:Number((summary as any)?.unique_visitors||0),interactions:Number((summary as any)?.interactions||0)},
-      events:events.results||[],locations:locations.results||[],actions:actions.results||[]
+      events:events.results||[],locations:locations.results||[],actions:actions.results||[],daily:daily.results||[],devices:devices.results||[],
+      pagination:{page,page_size:pageSize,total,pages:Math.max(1,Math.ceil(total/pageSize))}
     }})
   })
 
