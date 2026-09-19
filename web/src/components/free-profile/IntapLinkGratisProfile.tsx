@@ -10,6 +10,7 @@ import {
   FaChartLine,
   FaChevronDown,
   FaExternalLinkAlt,
+  FaEdit,
   FaHandshake,
   FaHome,
   FaInstagram,
@@ -42,6 +43,8 @@ export type IntapLinkGratisProfileProps = {
   layout: FreeProfileLayoutId
   colors: FreeProfileAppearanceColors
   topContent?: ReactNode
+  editMode?: boolean
+  onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio') => void
 }
 
 type DetailModal =
@@ -146,18 +149,21 @@ function quickActionIcon(action: FreeProfileQuickAction) {
   }
 }
 
-function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeProfileLayoutId }) {
+function EditPencil({label,onClick}:{label:string;onClick?:()=>void}){return onClick?<button type="button" className="ilx-live-edit" aria-label={label} onClick={(e)=>{e.preventDefault();e.stopPropagation();onClick()}}><FaEdit /></button>:null}
+
+function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layout: FreeProfileLayoutId; onEdit?: (section:'hero'|'avatar'|'identity')=>void }) {
   if (layout === 'impacto') {
     return (
       <section className="ilx-identity ilx-impact">
-        <div className="ilx-impact-cover">
+        <div className="ilx-impact-cover ilx-live-editable">
           {profile.hero ? (
             <img src={profile.hero} alt="" style={{ objectPosition: `${profile.heroPositionX}% ${profile.heroPositionY}%`, transform: `scale(${profile.heroZoom})` }} />
           ) : <div className="ilx-impact-fallback" aria-hidden="true" />}
+          <EditPencil label="Cambiar portada" onClick={onEdit ? ()=>onEdit('hero') : undefined} />
         </div>
         <div className="ilx-impact-person">
-          <div className="ilx-impact-avatar"><img src={profile.portrait} alt={profile.name} /></div>
-          <div className="ilx-impact-name"><h1>{profile.name}</h1><p>{profile.role}</p></div>
+          <div className="ilx-impact-avatar ilx-live-editable"><img src={profile.portrait} alt={profile.name} /><EditPencil label="Cambiar avatar" onClick={onEdit ? ()=>onEdit("avatar") : undefined} /></div>
+          <div className="ilx-impact-name ilx-live-editable"><h1>{profile.name}</h1><p>{profile.role}</p><EditPencil label="Editar nombre y cargo" onClick={onEdit ? ()=>onEdit("identity") : undefined} /></div>
         </div>
       </section>
     )
@@ -183,7 +189,7 @@ function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeP
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, editMode=false, onEditSection }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -328,8 +334,9 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
       {topContent}
       <div className="ilx-shell">
-        <Identity profile={profile} layout={layout} />
+        <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
         <div className="ilx-body">
+          {editMode && <div className="ilx-live-contact-edit"><EditPencil label="Editar datos de contacto" onClick={()=>onEditSection?.("contact")} /></div>}
           {hasWhatsapp && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
 
           {quickActions.length > 0 && (
@@ -344,11 +351,11 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           <button type="button" className="ilx-save-contact" onClick={downloadVCard}><FaAddressCard /><strong>Guardar contacto</strong></button>
 
-          <section className="ilx-section ilx-about"><h2>{profile.aboutTitle}</h2><p className="ilx-copy">{profile.bio}</p></section>
+          <section className="ilx-section ilx-about ilx-live-editable"><h2>{profile.aboutTitle}</h2><p className="ilx-copy">{profile.bio}</p>{editMode && <EditPencil label="Editar sobre mí" onClick={()=>onEditSection?.("about")} />}</section>
 
           {portfolio.length > 0 && (
-            <section className="ilx-section ilx-portfolio">
-              <h2>{profile.portfolioTitle}</h2>
+            <section className="ilx-section ilx-portfolio ilx-live-editable">
+              <h2>{profile.portfolioTitle}</h2>{editMode && <EditPencil label="Editar portafolio" onClick={()=>onEditSection?.("portfolio")} />}
               <div className="ilx-portfolio-marquee"><div className="ilx-portfolio-track">
                 {[...portfolio.map((item) => ({ item, duplicate: false })), ...portfolio.map((item) => ({ item, duplicate: true }))].map(({ item, duplicate }, index) => (
                   <button key={`${duplicate ? 'copy' : 'original'}-${item.id}-${index}`} type="button" className="ilx-portfolio-item" tabIndex={duplicate ? -1 : 0} aria-hidden={duplicate ? true : undefined} onClick={() => setModal({ kind: 'portfolio', item })}>
