@@ -15,8 +15,15 @@ const FALLBACK:Snapshot={
   profile:{id:'trial-master',slug:'trial',name:'Laura Gómez',role:'Profesional independiente',personalBadge:'Trial Kawvo Link',aboutTitle:'Sobre mí',portfolioTitle:'Mis trabajos',servicesTitle:'Mis servicios',servicesDescription:'Una muestra de lo que puedo hacer por ti.',bio:'Ayudo a mis clientes con soluciones prácticas, atención personalizada y un servicio pensado para sus necesidades.',phone:'18090000000',whatsapp:'18090000000',email:'',whatsappGreetingName:'Laura',whatsappCtaLabel:'Hablar por WhatsApp',instagram:'kawvolink',location:'Parque Duarte, Samaná',portrait:'/assets/free-starter/servicios-profesionales/servicios-profesionales-01.webp',hero:'/assets/free-starter/servicios-profesionales/servicios-profesionales-01.webp',heroPositionX:50,heroPositionY:50,heroZoom:1,category:'Trial',vcardFileName:'kawvo-trial.vcf',quickActions:[{type:'call',label:'Llamar',url:'tel:+18090000000'},{type:'instagram',label:'Instagram',url:'https://instagram.com/kawvolink'},{type:'location',label:'Ubicación',url:'https://www.google.com/maps/search/?api=1&query=Parque+Duarte+Samana'}],services:[],portfolio:[],customLinks:[]}
 }
 
+function adminOrigin(){
+  const host=window.location.hostname.toLowerCase()
+  if(host==='preview.intaprd.com'||host.includes('preview')||host.endsWith('.pages.dev'))return 'https://app.preview.intaprd.com'
+  return 'https://app.intaprd.com'
+}
+function protectedPath(path:string){return path.startsWith('/api/v1/superadmin/')?adminOrigin()+path:path}
+
 async function api(path:string,init?:RequestInit){
-  const response=await fetch(path,{credentials:'include',...init,headers:{...(init?.body instanceof FormData?{}:{'Content-Type':'application/json'}),...(init?.headers||{})}})
+  const response=await fetch(protectedPath(path),{credentials:'include',...init,headers:{...(init?.body instanceof FormData?{}:{'Content-Type':'application/json'}),...(init?.headers||{})}})
   const body=await response.json().catch(()=>({ok:false,error:'Respuesta inválida'}))
   if(!response.ok)throw new Error(body.error||'No se pudo completar la operación.')
   return body
