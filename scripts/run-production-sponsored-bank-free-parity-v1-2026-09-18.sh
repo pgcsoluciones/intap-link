@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feature/sponsored-bank-free-parity-v1"
 EXPECTED_MAIN_SHA="3b175f2b84c60ea605d53ed65f29813a5c1ce5e1"
-APPROVED_PRODUCT_SHA="aaa2a04417f493bdd0d917106c285fea40257ba2"
+APPROVED_PRODUCT_SHA="56ff0c2473e13f7266d5ee525b0f8a01d5d7a01f"
 WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
 PROD_DB="intap_db"
