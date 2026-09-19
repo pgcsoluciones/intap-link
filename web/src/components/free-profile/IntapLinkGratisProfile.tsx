@@ -10,6 +10,7 @@ import {
   FaChartLine,
   FaChevronDown,
   FaExternalLinkAlt,
+  FaEdit,
   FaHandshake,
   FaHome,
   FaInstagram,
@@ -42,6 +43,12 @@ export type IntapLinkGratisProfileProps = {
   layout: FreeProfileLayoutId
   colors: FreeProfileAppearanceColors
   topContent?: ReactNode
+  beforeShareContent?: ReactNode
+  footerSecondaryLabel?: string
+  footerSecondaryHref?: string
+  editMode?: boolean
+  onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio' | 'services' | 'links' | 'appearance') => void
+  onTrackEvent?: (eventType: string, eventLabel?: string) => void
 }
 
 type DetailModal =
@@ -146,18 +153,21 @@ function quickActionIcon(action: FreeProfileQuickAction) {
   }
 }
 
-function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeProfileLayoutId }) {
+function EditPencil({label,onClick}:{label:string;onClick?:()=>void}){return onClick?<button type="button" className="ilx-live-edit" aria-label={label} onClick={(e)=>{e.preventDefault();e.stopPropagation();onClick()}}><FaEdit /></button>:null}
+
+function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layout: FreeProfileLayoutId; onEdit?: (section:'hero'|'avatar'|'identity')=>void }) {
   if (layout === 'impacto') {
     return (
       <section className="ilx-identity ilx-impact">
-        <div className="ilx-impact-cover">
+        <div className="ilx-impact-cover ilx-live-editable">
           {profile.hero ? (
             <img src={profile.hero} alt="" style={{ objectPosition: `${profile.heroPositionX}% ${profile.heroPositionY}%`, transform: `scale(${profile.heroZoom})` }} />
           ) : <div className="ilx-impact-fallback" aria-hidden="true" />}
+          <EditPencil label="Cambiar portada" onClick={onEdit ? ()=>onEdit('hero') : undefined} />
         </div>
         <div className="ilx-impact-person">
-          <div className="ilx-impact-avatar"><img src={profile.portrait} alt={profile.name} /></div>
-          <div className="ilx-impact-name"><h1>{profile.name}</h1><p>{profile.role}</p></div>
+          <div className="ilx-impact-avatar ilx-live-editable"><img src={profile.portrait} alt={profile.name} /><EditPencil label="Cambiar avatar" onClick={onEdit ? ()=>onEdit("avatar") : undefined} /></div>
+          <div className="ilx-impact-name ilx-live-editable"><h1>{profile.name}</h1><p>{profile.role}</p><EditPencil label="Editar nombre y cargo" onClick={onEdit ? ()=>onEdit("identity") : undefined} /></div>
         </div>
       </section>
     )
@@ -166,10 +176,11 @@ function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeP
   if (layout === 'personal') {
     return (
       <section className="ilx-identity ilx-personal">
-        <div className="ilx-personal-image">
+        <div className="ilx-personal-image ilx-live-editable">
           <img src={profile.portrait} alt={profile.name} />
+          <EditPencil label="Cambiar avatar" onClick={onEdit ? ()=>onEdit("avatar") : undefined} />
           <div className="ilx-personal-fade" />
-          <div className="ilx-personal-text"><h1>{profile.name}</h1><p>{profile.role}</p></div>
+          <div className="ilx-personal-text ilx-live-editable"><h1>{profile.name}</h1><p>{profile.role}</p><EditPencil label="Editar nombre y cargo" onClick={onEdit ? ()=>onEdit("identity") : undefined} /></div>
         </div>
       </section>
     )
@@ -177,13 +188,13 @@ function Identity({ profile, layout }: { profile: FreeProfileData; layout: FreeP
 
   return (
     <section className="ilx-identity ilx-essential">
-      <div className="ilx-essential-image"><img src={profile.portrait} alt={profile.name} /></div>
-      <div className="ilx-essential-name"><h1>{profile.name}</h1><p>{profile.role}</p></div>
+      <div className="ilx-essential-image ilx-live-editable"><img src={profile.portrait} alt={profile.name} /><EditPencil label="Cambiar avatar" onClick={onEdit ? ()=>onEdit("avatar") : undefined} /></div>
+      <div className="ilx-essential-name ilx-live-editable"><h1>{profile.name}</h1><p>{profile.role}</p><EditPencil label="Editar nombre y cargo" onClick={onEdit ? ()=>onEdit("identity") : undefined} /></div>
     </section>
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -243,6 +254,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   async function downloadVCard() {
+    onTrackEvent?.('save_contact','Guardar contacto')
     const canonicalUrl = `${window.location.origin}${window.location.pathname}`
     const escapeVCard = (value: string) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
     const phone = String(profile.phone || '').trim()
@@ -285,6 +297,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   async function copyProfileLink() {
+    onTrackEvent?.('copy_link','Copiar enlace')
     try {
       await navigator.clipboard.writeText(canonicalProfileUrl())
       setCopied(true)
@@ -293,6 +306,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   async function openQrModal() {
+    onTrackEvent?.('qr_open','Código QR')
     try {
       const QRCode = await import('qrcode')
       setQrDataUrl(await QRCode.toDataURL(canonicalProfileUrl(), { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
@@ -302,6 +316,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   function downloadProfileQr() {
     if (!qrDataUrl) return
+    onTrackEvent?.('qr_download','Descargar QR PNG')
     const link = document.createElement('a')
     link.href = qrDataUrl
     link.download = `${profile.slug || 'kawvo-link'}-qr.png`
@@ -310,12 +325,38 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     link.remove()
   }
 
+  async function saveProfileQrToPhotos() {
+    if (!qrDataUrl) return
+    onTrackEvent?.('qr_save_photo','Guardar QR en fotos')
+    try {
+      const response = await fetch(qrDataUrl)
+      const blob = await response.blob()
+      const file = new File([blob], `${profile.slug || 'kawvo-link'}-qr.png`, { type: 'image/png' })
+      const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
+      if (navigator.share && nav.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Código QR de ${profile.name}` })
+        return
+      }
+    } catch { /* fallback below */ }
+    const imageWindow = window.open(qrDataUrl, '_blank', 'noopener,noreferrer')
+    if (!imageWindow) {
+      const link = document.createElement('a')
+      link.href = qrDataUrl
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    }
+  }
+
   function shareProfileQrWhatsApp() {
     const message = `Conoce el perfil de ${profile.name} en Kawvo Link:\n${socialShareProfileUrl()}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
   async function shareProfile() {
+    onTrackEvent?.('share','Compartir perfil')
     try {
       if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: socialShareProfileUrl() })
       else await copyProfileLink()
@@ -328,14 +369,15 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
       {topContent}
       <div className="ilx-shell">
-        <Identity profile={profile} layout={layout} />
+        <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
         <div className="ilx-body">
-          {hasWhatsapp && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
+          {editMode && <div className="ilx-live-contact-edit"><EditPencil label="Editar datos de contacto" onClick={()=>onEditSection?.("contact")} /></div>}
+          {hasWhatsapp && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('whatsapp','CTA principal')}><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
 
           {quickActions.length > 0 && (
             <nav className="ilx-quick" aria-label="Acciones rápidas">
               {quickActions.map((actionItem) => (
-                <a key={`${actionItem.type}-${actionItem.url}`} href={actionItem.url} target={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : '_blank'} rel={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : 'noopener noreferrer'}>
+                <a key={`${actionItem.type}-${actionItem.url}`} href={actionItem.url} target={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : '_blank'} rel={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : 'noopener noreferrer'} onClick={()=>onTrackEvent?.(`quick_${actionItem.type}`,actionItem.label)}>
                   <span>{quickActionIcon(actionItem)}</span><strong>{actionItem.label}</strong>
                 </a>
               ))}
@@ -344,14 +386,14 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           <button type="button" className="ilx-save-contact" onClick={downloadVCard}><FaAddressCard /><strong>Guardar contacto</strong></button>
 
-          <section className="ilx-section ilx-about"><h2>{profile.aboutTitle}</h2><p className="ilx-copy">{profile.bio}</p></section>
+          <section className="ilx-section ilx-about ilx-live-editable"><h2>{profile.aboutTitle}</h2><p className="ilx-copy">{profile.bio}</p>{editMode && <EditPencil label="Editar sobre mí" onClick={()=>onEditSection?.("about")} />}</section>
 
           {portfolio.length > 0 && (
-            <section className="ilx-section ilx-portfolio">
-              <h2>{profile.portfolioTitle}</h2>
+            <section className="ilx-section ilx-portfolio ilx-live-editable">
+              <h2>{profile.portfolioTitle}</h2>{editMode && <EditPencil label="Editar portafolio" onClick={()=>onEditSection?.("portfolio")} />}
               <div className="ilx-portfolio-marquee"><div className="ilx-portfolio-track">
                 {[...portfolio.map((item) => ({ item, duplicate: false })), ...portfolio.map((item) => ({ item, duplicate: true }))].map(({ item, duplicate }, index) => (
-                  <button key={`${duplicate ? 'copy' : 'original'}-${item.id}-${index}`} type="button" className="ilx-portfolio-item" tabIndex={duplicate ? -1 : 0} aria-hidden={duplicate ? true : undefined} onClick={() => setModal({ kind: 'portfolio', item })}>
+                  <button key={`${duplicate ? 'copy' : 'original'}-${item.id}-${index}`} type="button" className="ilx-portfolio-item" tabIndex={duplicate ? -1 : 0} aria-hidden={duplicate ? true : undefined} onClick={() => {onTrackEvent?.('portfolio_open',item.title);setModal({ kind: 'portfolio', item })}}>
                     <img src={item.image} alt={duplicate ? '' : item.title} loading="lazy" decoding="async" />
                     <span className="ilx-portfolio-title">{item.title}</span>
                   </button>
@@ -362,13 +404,14 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           {services.length > 0 && (
             <section className="ilx-section ilx-services-section">
-              <div className="ilx-services-heading">
+              <div className="ilx-services-heading ilx-live-editable">
                 <h2>{profile.servicesTitle}</h2>
+                {editMode && <EditPencil label="Editar servicios" onClick={()=>onEditSection?.("services")} />}
                 {profile.servicesDescription && <p>{profile.servicesDescription}</p>}
               </div>
               <div className="ilx-services" data-service-count={Math.max(1, services.length)} style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
                 {services.map((service) => (
-                  <button key={service.id} type="button" className="ilx-service" onClick={() => setModal({ kind: 'service', item: service })}>
+                  <button key={service.id} type="button" className="ilx-service" onClick={() => {onTrackEvent?.('service_open',service.title);setModal({ kind: 'service', item: service })}}>
                     <div className="ilx-service-media">{service.image ? <img src={service.image} alt={service.title} loading="lazy" decoding="async" /> : <span>{serviceIcon(service.iconKey)}</span>}</div>
                     <div className="ilx-service-copy">
                       <h3>{service.title}</h3>
@@ -382,11 +425,13 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           )}
 
           {customLinks.length > 0 && (
-            <section className="ilx-section ilx-links">
-              <button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
-              {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
+            <section className="ilx-section ilx-links ilx-live-editable">
+              {editMode && <EditPencil label="Editar enlaces" onClick={()=>onEditSection?.("links")} />}<button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
+              {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('custom_link',link.label)}><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
             </section>
           )}
+
+          {beforeShareContent}
 
           <section className="ilx-share">
             <button type="button" onClick={shareProfile}><FaShareAlt /><span>Compartir</span></button>
@@ -396,7 +441,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           <footer className="ilx-footer">
             <a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">Creado con <strong>Kawvo Link</strong> · Crea el tuyo <strong>Gratis</strong></a>
-            <a className="ilx-footer-login" href={loginUrl()}>Iniciar sesión</a>
+            <a className="ilx-footer-login" href={footerSecondaryHref || loginUrl()} target={footerSecondaryHref ? "_blank" : undefined} rel={footerSecondaryHref ? "noopener noreferrer" : undefined} onClick={()=>footerSecondaryHref&&onTrackEvent?.('interest_click',footerSecondaryLabel||'Interés')}>{footerSecondaryLabel || "Iniciar sesión"}</a>
           </footer>
         </div>
       </div>
@@ -405,7 +450,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
         <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQrOpen(false) }}>
           <article className="ilx-qr-modal" role="dialog" aria-modal="true" aria-labelledby="ilx-qr-title">
             <button type="button" className="ilx-modal-close" onClick={() => setQrOpen(false)} aria-label="Cerrar"><FaTimes /></button>
-            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">KAWVO LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar QR</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
+            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">KAWVO LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar PNG</span></button><button type="button" onClick={saveProfileQrToPhotos}><FaAddressCard /><span>Guardar en Fotos</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
           </article>
         </div>
       )}
@@ -415,7 +460,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           <article className="ilx-modal" role="dialog" aria-modal="true" aria-label={modal.item.title}>
             <button type="button" className="ilx-modal-close" onClick={() => setModal(null)} aria-label="Cerrar"><FaTimes /></button>
             <div className="ilx-modal-media">{modal.kind === 'portfolio' ? <img src={modal.item.image} alt={modal.item.title} /> : modal.item.image ? <img src={modal.item.image} alt={modal.item.title} /> : <span className="ilx-modal-service-icon">{serviceIcon(modal.item.iconKey)}</span>}</div>
-            <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasWhatsapp && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
+            <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasWhatsapp && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('whatsapp',modal.item.title)}><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
           </article>
         </div>
       )}
