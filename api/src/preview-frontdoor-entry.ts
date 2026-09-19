@@ -1,6 +1,7 @@
 import app from './preview-free-entry'
 import { refreshDueInstagramConnections } from './instagram-token-refresh'
 import { cleanupExpiredTeamCodes } from './team-v2'
+import { expireDueTrials } from './trial-profiles'
 
 type PreviewEnv = {
   WEB_PAGES_ORIGIN?: string
@@ -123,6 +124,7 @@ export default {
     ctx.waitUntil(Promise.all([
       refreshDueInstagramConnections(env as any),
       cleanupExpiredTeamCodes(env as any),
+      expireDueTrials(env as any),
     ]))
   },
 }

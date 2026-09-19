@@ -35,7 +35,6 @@ const SponsoredProfile = lazy(
   () => import('./components/sponsored/SponsoredProfile'),
 )
 
-
 const SponsoredAwareArtifactResolver = lazy(
   () => import('./components/sponsored/SponsoredAwareArtifactResolver'),
 )
@@ -50,6 +49,10 @@ const KawvoLinkDemoAi = lazy(
 
 const KawvoLinkDemoShared = lazy(
   () => import('./components/demo/KawvoLinkDemoShared'),
+)
+
+const KawvoTrial = lazy(
+  () => import('./components/trial/KawvoTrial'),
 )
 
 const IntapProfileBioPestsManager = lazy(
@@ -157,6 +160,21 @@ function App() {
           <Route
             path="/demo/s/:token"
             element={<KawvoLinkDemoShared />}
+          />
+
+          <Route
+            path="/trial"
+            element={<KawvoTrial mode="master" />}
+          />
+
+          <Route
+            path="/trial/edit/:id"
+            element={<KawvoTrial mode="editor" />}
+          />
+
+          <Route
+            path="/trial/:slug"
+            element={<KawvoTrial mode="public" />}
           />
 
           <Route
