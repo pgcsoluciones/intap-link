@@ -27,7 +27,7 @@ run git fetch github main
 run git checkout main
 run git pull --ff-only github main
 
-DIRTY="$(git status --porcelain | grep -v '^?? web/public/assets/welcome/' | grep -v '^?? .production-kawlink-trial-create-hotfix-logs/' || true)"
+DIRTY="$(git status --porcelain | grep -v '^?? web/public/assets/welcome/' | grep -v '^?? .production-kawlink-trial-logs/' | grep -v '^?? .production-kawlink-trial-create-hotfix-logs/' || true)"
 [ -z "$DIRTY" ] || {
   printf '%s\n' "$DIRTY"
   fail "El árbol tiene cambios locales no permitidos"
@@ -79,7 +79,7 @@ echo "✓ POST crear Trial sigue protegido -> HTTP 401"
 
 rm -rf "$LOG_DIR"
 
-DIRTY_END="$(git status --porcelain | grep -v '^?? web/public/assets/welcome/' || true)"
+DIRTY_END="$(git status --porcelain | grep -v '^?? web/public/assets/welcome/' | grep -v '^?? .production-kawlink-trial-logs/' || true)"
 [ -z "$DIRTY_END" ] || {
   printf '%s\n' "$DIRTY_END"
   fail "El hotfix dejó cambios locales no permitidos"
