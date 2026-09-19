@@ -1799,7 +1799,7 @@ export default function PublicProfile() {
 
   // ── Fetch profile ───────────────────────────────────────────────────────────
   useEffect(() => {
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    const configuredApiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
     if (!slug) {
       setLoading(false)
@@ -1807,7 +1807,23 @@ export default function PublicProfile() {
       return
     }
 
-    const profileUrl = isPreview
+    const currentHost = window.location.hostname
+    const isNonProductionHost =
+      currentHost === 'preview.intaprd.com' ||
+      currentHost.endsWith('.pages.dev')
+
+    // QA temporal y de solo lectura para /jlprince:
+    // Preview reutiliza el perfil público real de Producción sin escribir en D1/R2.
+    // Esto evita duplicar o alterar el perfil Free únicamente para probar la intro.
+    const apiUrl =
+      normalize(slug) === 'jlprince' && isNonProductionHost
+        ? 'https://intaprd.com'
+        : configuredApiUrl
+
+    const useAuthenticatedPreview =
+      isPreview && !(normalize(slug) === 'jlprince' && isNonProductionHost)
+
+    const profileUrl = useAuthenticatedPreview
       ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}?preview=1`
       : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`
 
