@@ -45,7 +45,7 @@ export type IntapLinkGratisProfileProps = {
   topContent?: ReactNode
   beforeShareContent?: ReactNode
   editMode?: boolean
-  onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio' | 'services' | 'appearance') => void
+  onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio' | 'services' | 'links' | 'appearance') => void
 }
 
 type DetailModal =
@@ -392,8 +392,8 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           )}
 
           {customLinks.length > 0 && (
-            <section className="ilx-section ilx-links">
-              <button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
+            <section className="ilx-section ilx-links ilx-live-editable">
+              {editMode && <EditPencil label="Editar enlaces" onClick={()=>onEditSection?.("links")} />}<button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
               {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
             </section>
           )}
