@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="release/sponsored-pending-bundle-v1"
 EXPECTED_MAIN_SHA="443e544e899c0f827f69a78f9613cf3dfc99f602"
-APPROVED_PRODUCT_SHA="6efe341474523e4d85bf9ff6e78ea89f357925b2"
+APPROVED_PRODUCT_SHA="0e82b496abd3c0e458f76a8092e8281bf6be5a17"
 WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
 PREVIEW_DB="intap_db_preview"
