@@ -52,3 +52,9 @@
   .trial-finish-btn span{display:none}
   .trial-finish-btn{width:38px!important;height:38px!important;padding:0!important;display:grid!important;place-items:center!important}
 }
+
+/* Published Trial admin controls: compact and fixed at top, matching editor behavior */
+.trial-public-admin{position:sticky!important;top:0!important;left:auto!important;right:auto!important;bottom:auto!important;z-index:120!important;display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:nowrap!important;margin:0!important;padding:8px 10px!important;border-radius:0!important;background:#0f172a!important;box-shadow:0 8px 22px rgba(15,23,42,.18)!important}
+.trial-public-admin strong{white-space:nowrap;font-size:13px}.trial-public-admin span{width:auto!important;order:initial!important;margin-right:auto!important;font-size:11px!important;white-space:nowrap!important}
+.trial-public-admin button{padding:8px 10px!important;border-radius:9px!important;background:#172033!important;color:#fff!important;font-size:12px!important;white-space:nowrap!important}
+@media(max-width:640px){.trial-public-admin{overflow-x:auto!important;-webkit-overflow-scrolling:touch}.trial-public-admin::-webkit-scrollbar{display:none}.trial-public-admin span{display:none}.trial-public-admin button{font-size:11px!important;padding:7px 9px!important}}
