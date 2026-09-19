@@ -3,6 +3,7 @@ import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 const RESERVED = new Set(['edit','admin','api','ia','s','demo','new','nuevo','crear','master'])
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const SOURCE_TYPES = new Set(['fair_event','commercial_visit','street_direct','whatsapp','instagram','web','referral','call','point_of_sale','other'])
+const ANALYTICS_TYPES = new Set(['visit','whatsapp','quick_call','quick_instagram','quick_location','quick_email','quick_tiktok','save_contact','portfolio_open','service_open','custom_link','share','copy_link','qr_open','interest_click'])
 
 const MASTER = {
   layout: 'impacto',
@@ -74,11 +75,13 @@ function normalizeProspect(input:any){
 }
 function rowOut(row:any){
   const expired = row.status === 'expired' || (row.status === 'active' && row.expires_at && Date.parse(String(row.expires_at).replace(' ','T')+'Z') <= Date.now())
+  const inactive = Boolean(Number(row.is_disabled||0)) && !expired && row.status!=='draft'
   return {
-    id:row.id,slug:row.slug,name:row.name,status:expired?'expired':row.status,
+    id:row.id,slug:row.slug,name:row.name,status:inactive?'inactive':(expired?'expired':row.status),
     profile:parseJson(row.profile_json),
     duration_hours:durationHours(row.duration_hours,72),
     prospect:prospectFromRow(row),
+    is_disabled:Boolean(Number(row.is_disabled||0)),deactivated_at:row.deactivated_at,
     activated_at:row.activated_at,expires_at:row.expires_at,created_at:row.created_at,updated_at:row.updated_at
   }
 }
@@ -110,7 +113,9 @@ export function registerTrialRoutes(app:any){
     const source=str(c.req.query('source'),60)
     const companyType=str(c.req.query('company_type'),120)
     const where:string[]=[]; const binds:any[]=[]
-    if(['draft','active','expired'].includes(status)){where.push('status=?');binds.push(status)}
+    if(status==='inactive'){where.push("is_disabled=1 AND status<>'draft'")}
+    else if(status==='active'){where.push("status='active' AND is_disabled=0")}
+    else if(['draft','expired'].includes(status)){where.push('status=?');binds.push(status)}
     if(source){where.push('contact_source=?');binds.push(source)}
     if(companyType){where.push('lower(company_type) LIKE ?');binds.push(`%${companyType.toLowerCase()}%`)}
     if(q){
@@ -147,6 +152,30 @@ export function registerTrialRoutes(app:any){
   app.get('/api/v1/superadmin/trials/:id/events', requireSuperAdmin('super_admin'), async (c:any) => {
     const rows=await c.env.DB.prepare('SELECT id,event_type,details_json,created_at FROM trial_events WHERE trial_id=? ORDER BY created_at DESC LIMIT 100').bind(c.req.param('id')).all()
     return c.json({ok:true,data:(rows.results||[]).map((r:any)=>({...r,details:parseJson(r.details_json)}))})
+  })
+
+  app.get('/api/v1/superadmin/trials/:id/analytics', requireSuperAdmin('super_admin'), async (c:any) => {
+    const id=c.req.param('id')
+    const trial=await c.env.DB.prepare('SELECT id FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
+    if(!trial)return c.json({ok:false,error:'Trial no encontrado.'},404)
+    const [summary,events,locations,actions]=await Promise.all([
+      c.env.DB.prepare(`SELECT COUNT(*) AS events,
+        SUM(CASE WHEN event_type='visit' THEN 1 ELSE 0 END) AS views,
+        COUNT(DISTINCT CASE WHEN event_type='visit' THEN visitor_id END) AS unique_visitors,
+        SUM(CASE WHEN event_type<>'visit' THEN 1 ELSE 0 END) AS interactions
+        FROM trial_analytics_events WHERE trial_id=?`).bind(id).first(),
+      c.env.DB.prepare(`SELECT event_type,event_label,country,region,city,device_type,referrer_host,utm_source,utm_medium,utm_campaign,created_at
+        FROM trial_analytics_events WHERE trial_id=? ORDER BY created_at DESC LIMIT 80`).bind(id).all(),
+      c.env.DB.prepare(`SELECT country,region,city,COUNT(*) AS views
+        FROM trial_analytics_events WHERE trial_id=? AND event_type='visit'
+        GROUP BY country,region,city ORDER BY views DESC LIMIT 15`).bind(id).all(),
+      c.env.DB.prepare(`SELECT event_type,COUNT(*) AS n FROM trial_analytics_events
+        WHERE trial_id=? AND event_type<>'visit' GROUP BY event_type ORDER BY n DESC`).bind(id).all(),
+    ])
+    return c.json({ok:true,data:{
+      summary:{events:Number((summary as any)?.events||0),views:Number((summary as any)?.views||0),unique_visitors:Number((summary as any)?.unique_visitors||0),interactions:Number((summary as any)?.interactions||0)},
+      events:events.results||[],locations:locations.results||[],actions:actions.results||[]
+    }})
   })
 
   app.get('/api/v1/superadmin/trials/:id', requireSuperAdmin('super_admin'), async (c:any) => {
@@ -224,6 +253,49 @@ export function registerTrialRoutes(app:any){
     return c.json({ok:true,data:{id,slug,name,status:Date.parse(expiresAt.replace(' ','T')+'Z')<=Date.now()?'expired':'active',activated_at:activatedAt,expires_at:expiresAt,url:`/trial/${slug}`}})
   })
 
+  app.delete('/api/v1/superadmin/trials/:id', requireSuperAdmin('super_admin'), async (c:any) => {
+    const id=c.req.param('id')
+    const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
+    if(!existing)return c.json({ok:false,error:'Trial no encontrado.'},404)
+    if((existing as any).status!=='draft' || (existing as any).activated_at)return c.json({ok:false,error:'Solo se pueden eliminar definitivamente Trials en borrador.'},409)
+    let cursor:string|undefined
+    do{
+      const page=await c.env.BUCKET.list({prefix:`trials/${id}/`,cursor})
+      const keys=(page.objects||[]).map((x:any)=>x.key)
+      if(keys.length)await c.env.BUCKET.delete(keys)
+      cursor=page.truncated?page.cursor:undefined
+    }while(cursor)
+    await c.env.DB.batch([
+      c.env.DB.prepare('DELETE FROM trial_events WHERE trial_id=?').bind(id),
+      c.env.DB.prepare('DELETE FROM trial_analytics_events WHERE trial_id=?').bind(id),
+      c.env.DB.prepare('DELETE FROM trial_profiles WHERE id=?').bind(id),
+    ])
+    return c.json({ok:true,data:{id,deleted:true}})
+  })
+
+  app.post('/api/v1/superadmin/trials/:id/deactivate', requireSuperAdmin('super_admin'), async (c:any) => {
+    const id=c.req.param('id')
+    const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
+    if(!existing)return c.json({ok:false,error:'Trial no encontrado.'},404)
+    const current=rowOut(existing)
+    if(current.status!=='active')return c.json({ok:false,error:'Solo un Trial activo puede desactivarse.'},409)
+    await c.env.DB.prepare(`UPDATE trial_profiles SET is_disabled=1,deactivated_at=datetime('now'),updated_at=datetime('now') WHERE id=?`).bind(id).run()
+    await addEvent(c,id,'trial.deactivated',{expires_at:(existing as any).expires_at}).catch(()=>undefined)
+    return c.json({ok:true,data:{id,status:'inactive',expires_at:(existing as any).expires_at}})
+  })
+
+  app.post('/api/v1/superadmin/trials/:id/reactivate', requireSuperAdmin('super_admin'), async (c:any) => {
+    const id=c.req.param('id')
+    const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
+    if(!existing)return c.json({ok:false,error:'Trial no encontrado.'},404)
+    if(!Number((existing as any).is_disabled||0))return c.json({ok:false,error:'El Trial no está desactivado.'},409)
+    const expiry=Date.parse(String((existing as any).expires_at||'').replace(' ','T')+'Z')
+    if(!expiry || expiry<=Date.now())return c.json({ok:false,error:'El Trial ya venció. Extiéndelo antes de reactivarlo.'},409)
+    await c.env.DB.prepare(`UPDATE trial_profiles SET is_disabled=0,deactivated_at=NULL,status='active',updated_at=datetime('now') WHERE id=?`).bind(id).run()
+    await addEvent(c,id,'trial.reactivated',{expires_at:(existing as any).expires_at}).catch(()=>undefined)
+    return c.json({ok:true,data:{id,status:'active',expires_at:(existing as any).expires_at}})
+  })
+
   app.post('/api/v1/superadmin/trials/:id/extend', requireSuperAdmin('super_admin'), async (c:any) => {
     const id=c.req.param('id'); const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
     if(!existing)return c.json({ok:false,error:'Trial no encontrado.'},404)
@@ -246,6 +318,31 @@ export function registerTrialRoutes(app:any){
     return c.json({ok:true,data:{id,status:'active',expires_at:next}})
   })
 
+  app.post('/api/v1/public/trials/:slug/events', async (c:any) => {
+    const slug=normalizeSlug(c.req.param('slug'))
+    if(!validSlug(slug))return c.json({ok:false,error:'Trial no encontrado.'},404)
+    const row=await c.env.DB.prepare('SELECT id,status,is_disabled,expires_at FROM trial_profiles WHERE slug=? LIMIT 1').bind(slug).first()
+    if(!row || (row as any).status==='draft' || Number((row as any).is_disabled||0))return c.json({ok:false,error:'Trial no disponible.'},404)
+    if((row as any).expires_at && Date.parse(String((row as any).expires_at).replace(' ','T')+'Z')<=Date.now())return c.json({ok:false,error:'Trial finalizado.'},410)
+    let body:any={};try{body=await c.req.json()}catch{body={}}
+    const eventType=str(body?.event_type,40)
+    if(!ANALYTICS_TYPES.has(eventType))return c.json({ok:false,error:'Evento no permitido.'},400)
+    const requestAny=c.req.raw as any
+    const cf=requestAny.cf||{}
+    let referrerHost=''
+    try{referrerHost=body?.referrer?new URL(String(body.referrer)).hostname.slice(0,120):''}catch{}
+    const ua=str(c.req.header('user-agent'),300).toLowerCase()
+    const deviceType=/mobile|iphone|android/.test(ua)?'mobile':(/ipad|tablet/.test(ua)?'tablet':'desktop')
+    await c.env.DB.prepare(`INSERT INTO trial_analytics_events(
+      id,trial_id,event_type,event_label,visitor_id,session_id,country,region,city,device_type,referrer_host,utm_source,utm_medium,utm_campaign
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
+      crypto.randomUUID(),(row as any).id,eventType,str(body?.event_label,120),str(body?.visitor_id,80),str(body?.session_id,80),
+      str(cf.country,80),str(cf.region,120),str(cf.city,120),deviceType,referrerHost,
+      str(body?.utm_source,120),str(body?.utm_medium,120),str(body?.utm_campaign,160)
+    ).run()
+    return c.json({ok:true},201)
+  })
+
   app.post('/api/v1/superadmin/trials/:id/media', requireSuperAdmin('super_admin'), async (c:any) => {
     const id=c.req.param('id'); const row=await c.env.DB.prepare('SELECT id FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
     if(!row)return c.json({ok:false,error:'Trial no encontrado.'},404)
@@ -266,6 +363,7 @@ export function registerTrialRoutes(app:any){
     if(!row || (row as any).status==='draft')return c.json({ok:false,error:'Trial no encontrado.'},404)
     const data=rowOut(row)
     if(data.status==='expired')return c.json({ok:false,error:'Trial finalizado.'},410)
+    if(data.status==='inactive')return c.json({ok:false,error:'Trial desactivado.'},410)
     const snapshot=parseJson((row as any).profile_json)
     const banks=Array.isArray(snapshot?.modules?.banks?.items)?snapshot.modules.banks.items:[]
     const account=banks.find((item:any)=>String(item?.id||'')===c.req.param('bankId'))
