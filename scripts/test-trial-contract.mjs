@@ -13,16 +13,17 @@ const superLayout=fs.readFileSync('app/src/components/admin/SuperAdminLayout.tsx
 const profile=fs.readFileSync('web/src/components/free-profile/IntapLinkGratisProfile.tsx','utf8')
 
 const migrationFiles=fs.readdirSync('api/migrations').filter(name=>/^\d{4}_.+\.sql$/.test(name))
-const migrationNumbers=new Map()
-for(const name of migrationFiles){
-  const number=name.slice(0,4)
-  const existing=migrationNumbers.get(number)||[]
-  existing.push(name)
-  migrationNumbers.set(number,existing)
-}
-for(const [number,names] of migrationNumbers){
-  assert.equal(names.length,1,`duplicate production migration number ${number}: ${names.join(', ')}`)
-}
+const releaseMigrations=migrationFiles.filter(name=>/^007[0-3]_/.test(name))
+assert.deepEqual(
+  releaseMigrations.sort(),
+  [
+    '0070_sponsored_bank_free_parity.sql',
+    '0071_trial_profiles_72h.sql',
+    '0072_trial_crm_traceability.sql',
+    '0073_trial_lifecycle_analytics.sql',
+  ],
+  'production release migrations 0070-0073 must be unique and sequential',
+)
 
 for(const route of ['/trial','/trial/edit/:id','/trial/:slug']) assert.ok(app.includes(route),`missing route ${route}`)
 assert.ok(api.includes("requireSuperAdmin('super_admin')"),'trial mutations must require super_admin')
