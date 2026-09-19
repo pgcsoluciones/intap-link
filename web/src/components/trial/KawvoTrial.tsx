@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FaCamera, FaCheck, FaCopy, FaEdit, FaQrcode, FaShareAlt, FaTimes } from 'react-icons/fa'
 import IntapLinkGratisProfile from '../free-profile/IntapLinkGratisProfile'
+import TrialImageCrop from './TrialImageCrop'
 import type { FreeProfileAppearanceColors, FreeProfileData, FreeProfileLayoutId } from '../free-profile/IntapLinkGratis.types'
 import './KawvoTrial.css'
 
@@ -41,6 +42,8 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   const [loading,setLoading]=useState(mode!=='master')
   const [error,setError]=useState('')
   const [panel,setPanel]=useState(false)
+  const [section,setSection]=useState<'identity'|'contact'|'about'|'portfolio'|null>(null)
+  const [crop,setCrop]=useState<{kind:'avatar'|'hero'|'gallery';file:File}|null>(null)
   const [saving,setSaving]=useState<'idle'|'saving'|'saved'|'error'>('idle')
   const [finish,setFinish]=useState(false)
   const [trialName,setTrialName]=useState('')
@@ -79,6 +82,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   async function createTrial(){
     try{const r=await api('/api/v1/superadmin/trials',{method:'POST',body:'{}'});navigate('/trial/edit/'+r.data.id)}catch(e:any){setError(e.message)}
   }
+  function chooseImage(kind:'avatar'|'hero'|'gallery',file?:File){if(file)setCrop({kind,file})}
   async function upload(kind:'avatar'|'hero'|'gallery',file?:File){
     if(!file||mode!=='editor')return
     const fd=new FormData();fd.append('file',file)
@@ -86,7 +90,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
       if(kind==='avatar')change('portrait',r.url)
       else if(kind==='hero')change('hero',r.url)
       else {const item={id:crypto.randomUUID(),title:'Nuevo trabajo',description:'',image:r.url};change('portfolio',[...snapshot.profile.portfolio,item].slice(0,5))}
-    }catch(e:any){setError(e.message);setSaving('error')}
+    }catch(e:any){setError(e.message);setSaving('error');throw e}
   }
   function removePortfolio(itemId:string){change('portfolio',snapshot.profile.portfolio.filter(x=>x.id!==itemId))}
   async function checkSlug(value:string){
@@ -105,32 +109,26 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   async function copy(text:string){await navigator.clipboard.writeText(text)}
   async function share(url:string){if(navigator.share)await navigator.share({title:trialName||'Trial Kawvo Link',url});else await copy(url)}
 
-  const editorTop=mode==='editor'?<div className="trial-adminbar"><strong>TRIAL · Editando</strong><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span><button onClick={()=>setPanel(true)}><FaEdit/> Editar</button><button className="trial-primary" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/> Finalizar Trial</button></div>:undefined
+  const editorTop=mode==='editor'?<div className="trial-adminbar"><strong>TRIAL · Editando</strong><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span><button className="trial-primary" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/> Finalizar Trial</button></div>:undefined
 
   if(loading)return <div className="trial-state">Cargando Trial…</div>
   if(error && !trial && mode!=='master')return <div className="trial-state"><h1>No pudimos abrir este Trial</h1><p>{error}</p></div>
   if(mode==='public'&&trial?.status==='expired')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración ha finalizado.</h1><p>El período de prueba de 72 horas terminó. El enlace se mantiene para informarte que esta presentación era una demostración de Kawvo Link.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a><a className="secondary" href="https://nfc.kawvoia.com" target="_blank" rel="noreferrer">Conocer Kawvo Link</a></div></div>
 
   return <>
-    <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop}/>
+    <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} editMode={mode==='editor'} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{setSection(s);setPanel(true)}}}/>
+    {mode==='editor'&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
     {mode==='master'&&admin&&<button className="trial-create" onClick={createTrial}>+ Crear Trial</button>}
     {mode==='public'&&admin&&trial&&<div className="trial-public-admin"><strong>⚙️ Trial</strong><span>Vence: {isoDisplay(trial.expires_at)}</span><button onClick={()=>navigate('/trial/edit/'+trial.id)}>Editar en vivo</button><button onClick={()=>copy(window.location.href)}>Copiar enlace</button></div>}
 
-    {panel&&<div className="trial-sheet-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setPanel(false)}}><section className="trial-sheet">
-      <header><div><strong>Editar Trial</strong><small>Los cambios se guardan automáticamente.</small></div><button onClick={()=>setPanel(false)} aria-label="Cerrar"><FaTimes/></button></header>
-      <label>Portada <span className="trial-upload"><FaCamera/> Cambiar<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e=>upload('hero',e.target.files?.[0])}/></span></label>
-      <label>Avatar / logo <span className="trial-upload"><FaCamera/> Cambiar<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>upload('avatar',e.target.files?.[0])}/></span></label>
-      <label>Nombre<input value={snapshot.profile.name} onChange={e=>change('name',e.target.value)}/></label>
-      <label>Cargo / especialidad<input value={snapshot.profile.role} onChange={e=>change('role',e.target.value)}/></label>
-      <label>Quién soy / Qué hago<textarea rows={4} value={snapshot.profile.bio} onChange={e=>change('bio',e.target.value)}/></label>
-      <div className="trial-grid"><label>Teléfono<input inputMode="tel" value={snapshot.profile.phone} onChange={e=>change('phone',e.target.value)}/></label><label>WhatsApp<input inputMode="tel" value={snapshot.profile.whatsapp} onChange={e=>change('whatsapp',e.target.value)}/></label></div>
-      <label>Correo<input type="email" value={snapshot.profile.email} onChange={e=>change('email',e.target.value)}/></label>
-      <label>Instagram<input value={snapshot.profile.instagram} onChange={e=>change('instagram',e.target.value)}/></label>
-      <label>Ubicación<input value={snapshot.profile.location} onChange={e=>change('location',e.target.value)}/></label>
-      <div className="trial-gallery-head"><strong>Portafolio</strong><span className="trial-upload"><FaCamera/> Agregar<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e=>upload('gallery',e.target.files?.[0])}/></span></div>
-      {snapshot.profile.portfolio.map((item,index)=><div className="trial-work" key={item.id}><img src={item.image} alt=""/><div><input value={item.title} onChange={e=>change('portfolio',snapshot.profile.portfolio.map((x,i)=>i===index?{...x,title:e.target.value}:x))}/><textarea rows={2} value={item.description} onChange={e=>change('portfolio',snapshot.profile.portfolio.map((x,i)=>i===index?{...x,description:e.target.value}:x))}/></div><button onClick={()=>removePortfolio(item.id)}>Eliminar</button></div>)}
+    {panel&&section&&<div className="trial-sheet-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setPanel(false)}}><section className="trial-sheet trial-context-sheet">
+      <header><div><strong>{section==='identity'?'Nombre y especialidad':section==='contact'?'Datos de contacto':section==='about'?'Quién soy / Qué hago':'Portafolio'}</strong><small>Ves el cambio inmediatamente en el perfil.</small></div><button onClick={()=>setPanel(false)} aria-label="Cerrar"><FaTimes/></button></header>
+      {section==='identity'&&<><label>Nombre<input autoFocus value={snapshot.profile.name} onChange={e=>change('name',e.target.value)}/></label><label>Cargo / especialidad<input value={snapshot.profile.role} onChange={e=>change('role',e.target.value)}/></label></>}
+      {section==='about'&&<label>Quién soy / Qué hago<textarea autoFocus rows={4} value={snapshot.profile.bio} onChange={e=>change('bio',e.target.value)}/></label>}
+      {section==='contact'&&<><div className="trial-grid"><label>Teléfono<input inputMode="tel" value={snapshot.profile.phone} onChange={e=>change('phone',e.target.value)}/></label><label>WhatsApp<input inputMode="tel" value={snapshot.profile.whatsapp} onChange={e=>change('whatsapp',e.target.value)}/></label></div><label>Correo<input type="email" value={snapshot.profile.email} onChange={e=>change('email',e.target.value)}/></label><label>Instagram<input value={snapshot.profile.instagram} onChange={e=>change('instagram',e.target.value)}/></label><label>Ubicación<input value={snapshot.profile.location} onChange={e=>change('location',e.target.value)}/></label></>}
+      {section==='portfolio'&&<><div className="trial-gallery-head"><strong>Imágenes</strong><span className="trial-upload"><FaCamera/> Agregar<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={e=>chooseImage('gallery',e.target.files?.[0])}/></span></div>{snapshot.profile.portfolio.map((item,index)=><div className="trial-work" key={item.id}><img src={item.image} alt=""/><div><input value={item.title} onChange={e=>change('portfolio',snapshot.profile.portfolio.map((z,i)=>i===index?{...z,title:e.target.value}:z))}/><textarea rows={2} value={item.description} onChange={e=>change('portfolio',snapshot.profile.portfolio.map((z,i)=>i===index?{...z,description:e.target.value}:z))}/></div><button onClick={()=>removePortfolio(item.id)}>Eliminar</button></div>)}</>}
     </section></div>}
-
+    {crop&&<TrialImageCrop file={crop.file} aspectRatio={crop.kind==='hero'?16/7:crop.kind==='avatar'?1:4/3} outputWidth={crop.kind==='hero'?1280:crop.kind==='avatar'?640:960} onCancel={()=>setCrop(null)} onSave={async file=>{await upload(crop.kind,file);setCrop(null)}}/>}
     {finish&&<div className="trial-sheet-backdrop"><section className="trial-sheet trial-finish"><header><strong>Finalizar Trial</strong><button onClick={()=>setFinish(false)}><FaTimes/></button></header><p>Las 72 horas comienzan únicamente al publicar.</p><label>Nombre del Trial<input value={trialName} onChange={e=>{setTrialName(e.target.value);checkSlug(e.target.value)}}/></label><label>Enlace<div className="trial-slug-row"><span>intaprd.com/trial/</span><input value={trialSlug} onChange={e=>checkSlug(e.target.value)}/></div><small>{slugState}</small></label><button className="trial-publish" onClick={publish}>Publicar Trial · 72 horas</button></section></div>}
 
     {published&&<div className="trial-sheet-backdrop"><section className="trial-sheet trial-success"><FaCheck className="trial-success-icon"/><h2>Trial creado</h2><p>Activo durante 72 horas desde este momento.</p>{qr&&<img src={qr} alt="Código QR del Trial"/>}<strong>{window.location.origin}{published.url}</strong><div className="trial-success-actions"><button onClick={()=>copy(window.location.origin+published.url)}><FaCopy/> Copiar enlace</button><button onClick={()=>share(window.location.origin+published.url)}><FaShareAlt/> Compartir</button><button onClick={()=>window.open(published.url,'_blank')}><FaQrcode/> Abrir perfil</button></div><button className="trial-publish" onClick={()=>navigate(published.url)}>Ver Trial publicado</button></section></div>}
