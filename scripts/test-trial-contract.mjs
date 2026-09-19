@@ -4,13 +4,25 @@ import assert from 'node:assert/strict'
 const api=fs.readFileSync('api/src/trial-profiles.ts','utf8')
 const app=fs.readFileSync('web/src/App.tsx','utf8')
 const ui=fs.readFileSync('web/src/components/trial/KawvoTrial.tsx','utf8')
-const migration=fs.readFileSync('api/migrations/0070_trial_profiles_72h.sql','utf8')
-const crmMigration=fs.readFileSync('api/migrations/0071_trial_crm_traceability.sql','utf8')
-const analyticsMigration=fs.readFileSync('api/migrations/0072_trial_lifecycle_analytics.sql','utf8')
+const migration=fs.readFileSync('api/migrations/0071_trial_profiles_72h.sql','utf8')
+const crmMigration=fs.readFileSync('api/migrations/0072_trial_crm_traceability.sql','utf8')
+const analyticsMigration=fs.readFileSync('api/migrations/0073_trial_lifecycle_analytics.sql','utf8')
 const previewEntry=fs.readFileSync('api/src/preview-free-entry.ts','utf8')
 const superAdmin=fs.readFileSync('app/src/components/admin/SuperAdminTrials.tsx','utf8')
 const superLayout=fs.readFileSync('app/src/components/admin/SuperAdminLayout.tsx','utf8')
 const profile=fs.readFileSync('web/src/components/free-profile/IntapLinkGratisProfile.tsx','utf8')
+
+const migrationFiles=fs.readdirSync('api/migrations').filter(name=>/^\d{4}_.+\.sql$/.test(name))
+const migrationNumbers=new Map()
+for(const name of migrationFiles){
+  const number=name.slice(0,4)
+  const existing=migrationNumbers.get(number)||[]
+  existing.push(name)
+  migrationNumbers.set(number,existing)
+}
+for(const [number,names] of migrationNumbers){
+  assert.equal(names.length,1,`duplicate production migration number ${number}: ${names.join(', ')}`)
+}
 
 for(const route of ['/trial','/trial/edit/:id','/trial/:slug']) assert.ok(app.includes(route),`missing route ${route}`)
 assert.ok(api.includes("requireSuperAdmin('super_admin')"),'trial mutations must require super_admin')
