@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { apiGet, apiPatch, apiPost } from '../../lib/api'
+import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api'
 import SuperAdminLayout from './SuperAdminLayout'
 
 type Prospect={
@@ -7,10 +7,11 @@ type Prospect={
   company_name:string;company_type:string;source:string;source_detail:string;notes:string
 }
 type Trial={
-  id:string;slug:string|null;name:string|null;status:'draft'|'active'|'expired';
+  id:string;slug:string|null;name:string|null;status:'draft'|'active'|'inactive'|'expired';
   duration_hours:number;prospect:Prospect;activated_at:string|null;expires_at:string|null;created_at:string;updated_at:string
 }
 type EventRow={id:string;event_type:string;details:any;created_at:string}
+type Analytics={summary:{events:number;views:number;unique_visitors:number;interactions:number};events:any[];locations:any[];actions:any[]}
 
 const sourceOptions=[
   ['', 'Todos los orígenes'],
@@ -29,7 +30,7 @@ const sourceOptions=[
 const sourceLabels=Object.fromEntries(sourceOptions)
 const WEB_ORIGIN=(import.meta.env.VITE_WEB_URL??'https://intaprd.com').replace(/\/$/,'')
 const companyTypes=['Servicios profesionales','Automotriz / Taller','Belleza / Estética','Construcción / Ferretería','Salud','Gastronomía','Tecnología','Comercio / Retail','Educación','Inmobiliaria']
-const statusLabels:any={draft:'Borrador',active:'Activo',expired:'Expirado'}
+const statusLabels:any={draft:'Borrador',active:'Activo',inactive:'Desactivado',expired:'Expirado'}
 
 function formatDate(value:string|null){
   if(!value)return '—'
@@ -57,6 +58,7 @@ export default function SuperAdminTrials(){
   const [selected,setSelected]=useState<Trial|null>(null)
   const [prospect,setProspect]=useState<Prospect|null>(null)
   const [events,setEvents]=useState<EventRow[]>([])
+  const [analytics,setAnalytics]=useState<Analytics|null>(null)
   const [saving,setSaving]=useState(false)
   const [message,setMessage]=useState('')
   const [extendHours,setExtendHours]=useState(72)
@@ -83,8 +85,9 @@ export default function SuperAdminTrials(){
 
   async function selectTrial(item:Trial){
     setSelected(item);setProspect(item.prospect);setMessage('')
-    const json:any=await apiGet(`/superadmin/trials/${item.id}/events`)
+    const [json,stats]:any[]=await Promise.all([apiGet(`/superadmin/trials/${item.id}/events`),apiGet(`/superadmin/trials/${item.id}/analytics`)])
     setEvents(json?.ok?(json.data||[]):[])
+    setAnalytics(stats?.ok?stats.data:null)
   }
 
   async function saveProspect(){
@@ -112,6 +115,33 @@ export default function SuperAdminTrials(){
     await load()
   }
 
+  async function deactivateTrial(){
+    if(!selected||selected.status!=='active')return
+    if(!window.confirm('¿Desactivar este Trial? El enlace se conservará, pero el perfil dejará de estar disponible públicamente.'))return
+    setSaving(true);const json:any=await apiPost(`/superadmin/trials/${selected.id}/deactivate`,{});setSaving(false)
+    if(!json?.ok){setMessage(json?.error||'No se pudo desactivar.');return}
+    const detail:any=await apiGet(`/superadmin/trials/${selected.id}`)
+    if(detail?.ok){setSelected(detail.data);setProspect(detail.data.prospect)}
+    setMessage('Trial desactivado.');await load()
+  }
+
+  async function reactivateTrial(){
+    if(!selected||selected.status!=='inactive')return
+    setSaving(true);const json:any=await apiPost(`/superadmin/trials/${selected.id}/reactivate`,{});setSaving(false)
+    if(!json?.ok){setMessage(json?.error||'No se pudo reactivar.');return}
+    const detail:any=await apiGet(`/superadmin/trials/${selected.id}`)
+    if(detail?.ok){setSelected(detail.data);setProspect(detail.data.prospect)}
+    setMessage('Trial reactivado.');await load()
+  }
+
+  async function deleteDraft(){
+    if(!selected||selected.status!=='draft')return
+    if(!window.confirm('Eliminar definitivamente este borrador y sus recursos? Esta acción no se puede deshacer.'))return
+    setSaving(true);const json:any=await apiDelete(`/superadmin/trials/${selected.id}`);setSaving(false)
+    if(!json?.ok){setMessage(json?.error||'No se pudo eliminar.');return}
+    setSelected(null);setProspect(null);setEvents([]);setAnalytics(null);await load()
+  }
+
   const activeCount=useMemo(()=>items.filter(x=>x.status==='active').length,[items])
   const field='w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-500'
   const label='grid gap-1.5 text-xs font-black uppercase tracking-wide text-slate-500'
@@ -137,7 +167,7 @@ export default function SuperAdminTrials(){
         <div className="grid gap-3 lg:grid-cols-[1.4fr_.6fr_.8fr]">
           <input className={field} placeholder="Buscar nombre, empresa, teléfono, correo o slug…" value={q} onChange={e=>setQ(e.target.value)}/>
           <select className={field} value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}>
-            <option value="">Todos los estados</option><option value="draft">Borrador</option><option value="active">Activo</option><option value="expired">Expirado</option>
+            <option value="">Todos los estados</option><option value="draft">Borrador</option><option value="active">Activo</option><option value="inactive">Desactivado</option><option value="expired">Expirado</option>
           </select>
           <select className={field} value={source} onChange={e=>{setSource(e.target.value);setPage(1)}}>
             {sourceOptions.map(([value,labelText])=><option key={value} value={value}>{labelText}</option>)}
@@ -154,8 +184,8 @@ export default function SuperAdminTrials(){
             <tbody className="divide-y divide-slate-100">
               {items.map(item=><tr key={item.id} className="align-top">
                 <td className="px-4 py-4"><strong className="block text-slate-950">{item.prospect.contact_name||item.name||'Sin nombre'}</strong><span className="block text-xs text-slate-500">{item.prospect.company_name||item.prospect.company_type||'Sin empresa'}</span><code className="mt-1 block text-[11px] text-slate-400">{item.slug?'/trial/'+item.slug:'Borrador sin slug'}</code></td>
-                <td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-black ${item.status==='active'?'bg-emerald-100 text-emerald-800':item.status==='expired'?'bg-rose-100 text-rose-800':'bg-amber-100 text-amber-800'}`}>{statusLabels[item.status]}</span></td>
-                <td className="px-4 py-4 text-slate-600">{sourceLabels[item.prospect.source]||'—'}{item.prospect.source_detail&&<small className="block text-slate-400">{item.prospect.source_detail}</small>}</td>
+                <td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-black ${item.status==='active'?'bg-emerald-100 text-emerald-800':item.status==='inactive'?'bg-slate-200 text-slate-700':item.status==='expired'?'bg-rose-100 text-rose-800':'bg-amber-100 text-amber-800'}`}>{statusLabels[item.status]}</span></td>
+                <td className="px-4 py-4 text-slate-600">{item.prospect.source?(sourceLabels[item.prospect.source]||item.prospect.source):'—'}{item.prospect.source_detail&&<small className="block text-slate-400">{item.prospect.source_detail}</small>}</td>
                 <td className="px-4 py-4 text-slate-600">{formatDate(item.expires_at)}<small className="block font-bold text-slate-400">{remaining(item.expires_at)}</small></td>
                 <td className="px-4 py-4"><button onClick={()=>void selectTrial(item)} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-black text-white">Gestionar</button></td>
               </tr>)}
@@ -176,6 +206,9 @@ export default function SuperAdminTrials(){
           <div className="flex flex-wrap gap-2">
             {selected.slug&&<a className="rounded-lg border px-3 py-2 text-xs font-black" href={`${WEB_ORIGIN}/trial/${selected.slug}`} target="_blank" rel="noreferrer">Abrir Trial</a>}
             <a className="rounded-lg border px-3 py-2 text-xs font-black" href={`${WEB_ORIGIN}/trial/edit/${selected.id}`} target="_blank" rel="noreferrer">Editar perfil</a>
+            {selected.status==='active'&&<button className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800" onClick={()=>void deactivateTrial()}>Desactivar</button>}
+            {selected.status==='inactive'&&<button className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800" onClick={()=>void reactivateTrial()}>Reactivar</button>}
+            {selected.status==='draft'&&<button className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" onClick={()=>void deleteDraft()}>Eliminar definitivamente</button>}
             <button className="rounded-lg border px-3 py-2 text-xs font-black" onClick={()=>setSelected(null)}>Cerrar</button>
           </div>
         </div>
@@ -198,7 +231,7 @@ export default function SuperAdminTrials(){
           <div className="rounded-2xl bg-slate-50 p-4">
             <h3 className="font-black">Duración y vencimiento</h3>
             <p className="mt-1 text-sm text-slate-500">Duración inicial: {selected.duration_hours} horas · Vence: {formatDate(selected.expires_at)}</p>
-            {selected.activated_at?<div className="mt-4 flex flex-wrap gap-2"><select className={field+' max-w-48'} value={extendHours} onChange={e=>setExtendHours(Number(e.target.value))}><option value={24}>+24 horas</option><option value={48}>+48 horas</option><option value={72}>+72 horas</option><option value={120}>+5 días</option><option value={168}>+7 días</option></select><button onClick={()=>void extendTrial()} disabled={saving} className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-black text-white">Extender Trial</button></div>:<div className="mt-4 flex flex-wrap gap-2"><select className={field+' max-w-48'} value={selected.duration_hours} onChange={async e=>{const duration_hours=Number(e.target.value);const json:any=await apiPatch(`/superadmin/trials/${selected.id}`,{duration_hours});if(json?.ok){setSelected({...selected,duration_hours});setMessage('Duración inicial actualizada.');await load()}else setMessage(json?.error||'No se pudo actualizar.')}}><option value={24}>24 horas</option><option value={48}>48 horas</option><option value={72}>72 horas</option><option value={120}>5 días</option><option value={168}>7 días</option></select><span className="self-center text-xs font-bold text-amber-700">Comienza al publicar.</span></div>}
+            {selected.activated_at?<div className="mt-4 flex flex-wrap gap-2"><select className={field+' max-w-48'} value={extendHours} onChange={e=>setExtendHours(Number(e.target.value))}><option value={24}>+1 día</option><option value={48}>+2 días</option><option value={72}>+3 días</option><option value={96}>+4 días</option><option value={120}>+5 días</option><option value={144}>+6 días</option><option value={168}>+7 días</option></select><button onClick={()=>void extendTrial()} disabled={saving} className="rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-black text-white">Extender Trial</button></div>:<div className="mt-4 flex flex-wrap gap-2"><select className={field+' max-w-48'} value={selected.duration_hours} onChange={async e=>{const duration_hours=Number(e.target.value);const json:any=await apiPatch(`/superadmin/trials/${selected.id}`,{duration_hours});if(json?.ok){setSelected({...selected,duration_hours});setMessage('Duración inicial actualizada.');await load()}else setMessage(json?.error||'No se pudo actualizar.')}}><option value={24}>1 día</option><option value={48}>2 días</option><option value={72}>3 días</option><option value={96}>4 días</option><option value={120}>5 días</option><option value={144}>6 días</option><option value={168}>7 días</option></select><span className="self-center text-xs font-bold text-amber-700">Comienza al publicar.</span></div>}
           </div>
           <div className="rounded-2xl bg-slate-50 p-4">
             <h3 className="font-black">Conversión</h3>
@@ -208,8 +241,23 @@ export default function SuperAdminTrials(){
         </div>
 
         <div className="mt-7">
-          <h3 className="font-black">Trazabilidad</h3>
-          <div className="mt-3 grid gap-2">{events.map(ev=><div key={ev.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"><strong className="text-sm">{ev.event_type}</strong><span className="ml-2 text-xs text-slate-400">{formatDate(ev.created_at)}</span></div>)}{!events.length&&<p className="text-sm text-slate-400">Todavía no hay eventos registrados.</p>}</div>
+          <h3 className="font-black">Actividad del perfil</h3>
+          <p className="mt-1 text-sm text-slate-500">Las métricas comienzan a registrarse desde esta versión; no se reconstruyen visitas anteriores.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-4">
+            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Visitas</small><strong className="block text-2xl">{analytics?.summary?.views||0}</strong></div>
+            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Visitantes</small><strong className="block text-2xl">{analytics?.summary?.unique_visitors||0}</strong></div>
+            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Interacciones</small><strong className="block text-2xl">{analytics?.summary?.interactions||0}</strong></div>
+            <div className="rounded-xl bg-slate-50 p-3"><small className="font-black uppercase text-slate-400">Eventos</small><strong className="block text-2xl">{analytics?.summary?.events||0}</strong></div>
+          </div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-100 p-3"><strong className="text-sm">Ubicación aproximada</strong><div className="mt-2 grid gap-2">{(analytics?.locations||[]).map((x:any,i:number)=><div key={i} className="flex justify-between gap-3 text-sm"><span>{[x.city,x.region,x.country].filter(Boolean).join(', ')||'No disponible'}</span><b>{x.views}</b></div>)}{!(analytics?.locations||[]).length&&<span className="text-sm text-slate-400">Sin datos todavía.</span>}</div></div>
+            <div className="rounded-xl border border-slate-100 p-3"><strong className="text-sm">Clics / acciones</strong><div className="mt-2 grid gap-2">{(analytics?.actions||[]).map((x:any)=><div key={x.event_type} className="flex justify-between gap-3 text-sm"><span>{x.event_type}</span><b>{x.n}</b></div>)}{!(analytics?.actions||[]).length&&<span className="text-sm text-slate-400">Sin interacciones todavía.</span>}</div></div>
+          </div>
+          <div className="mt-5">
+            <h3 className="font-black">Trazabilidad administrativa</h3>
+            <div className="mt-3 grid gap-2">{events.map(ev=><div key={ev.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"><strong className="text-sm">{ev.event_type}</strong><span className="ml-2 text-xs text-slate-400">{formatDate(ev.created_at)}</span></div>)}{!events.length&&<p className="text-sm text-slate-400">Los Trials existentes antes de esta función no tienen eventos históricos retroactivos.</p>}</div>
+          </div>
+          <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4"><strong className="text-sm">Píxeles publicitarios</strong><p className="mt-1 text-sm text-slate-500">Arquitectura preparada para una etapa posterior: Meta Pixel / Conversions API y Google Ads. No se activan todavía para evitar enviar datos externos sin configuración y consentimiento definidos.</p></div>
         </div>
       </section>}
     </div>
