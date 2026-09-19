@@ -1537,3 +1537,7 @@
 
 /* Opt-in live editor affordances. Inert unless a consumer passes editMode. */
 .ilx-live-editable{position:relative}.ilx-live-edit{position:absolute;z-index:8;right:10px;top:10px;width:38px;height:38px;border:2px solid #fff;border-radius:999px;background:#0f172a;color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px #0005;cursor:pointer}.ilx-impact-avatar .ilx-live-edit{right:-8px;top:auto;bottom:-4px;width:34px;height:34px}.ilx-impact-name .ilx-live-edit{right:-48px;top:2px;width:34px;height:34px}.ilx-live-contact-edit{position:relative;height:0;z-index:9}.ilx-live-contact-edit .ilx-live-edit{top:8px;right:8px}.ilx-portfolio>.ilx-live-edit,.ilx-about>.ilx-live-edit{top:12px;right:8px}@media(max-width:520px){.ilx-impact-name .ilx-live-edit{right:8px;top:-4px}.ilx-live-edit{width:36px;height:36px}}
+
+/* Trial live edit: avatar control must remain visible outside circular crop */
+.ilx-impact-avatar.ilx-live-editable{overflow:visible!important;position:relative;z-index:12}.ilx-impact-avatar.ilx-live-editable>img{border-radius:50%;overflow:hidden}.ilx-impact-avatar.ilx-live-editable>.ilx-live-edit{right:-8px!important;bottom:4px!important;top:auto!important;z-index:20!important}
+.ilx-personal-image.ilx-live-editable,.ilx-essential-image.ilx-live-editable{overflow:visible!important;position:relative}
