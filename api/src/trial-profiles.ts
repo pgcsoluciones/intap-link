@@ -139,7 +139,7 @@ export function registerTrialRoutes(app:any){
       id,status,profile_json,created_by_admin_user_id,duration_hours,
       contact_name,contact_phone,contact_whatsapp,contact_email,contact_instagram,
       company_name,company_type,contact_source,contact_source_detail,prospect_notes
-    ) VALUES(?,'draft',?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
+    ) VALUES(?,'draft',?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
       id,JSON.stringify(snapshot),adminUserId,duration,
       prospect.contact_name,prospect.phone,prospect.whatsapp,prospect.email,prospect.instagram,
       prospect.company_name,prospect.company_type,prospect.source,prospect.source_detail,prospect.notes
