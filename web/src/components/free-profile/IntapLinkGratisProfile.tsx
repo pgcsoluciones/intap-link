@@ -48,6 +48,7 @@ export type IntapLinkGratisProfileProps = {
   footerSecondaryHref?: string
   editMode?: boolean
   onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio' | 'services' | 'links' | 'appearance') => void
+  onTrackEvent?: (eventType: string, eventLabel?: string) => void
 }
 
 type DetailModal =
@@ -193,7 +194,7 @@ function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layou
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -253,6 +254,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   async function downloadVCard() {
+    onTrackEvent?.('save_contact','Guardar contacto')
     const canonicalUrl = `${window.location.origin}${window.location.pathname}`
     const escapeVCard = (value: string) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;')
     const phone = String(profile.phone || '').trim()
@@ -295,6 +297,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   async function copyProfileLink() {
+    onTrackEvent?.('copy_link','Copiar enlace')
     try {
       await navigator.clipboard.writeText(canonicalProfileUrl())
       setCopied(true)
@@ -303,6 +306,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   async function openQrModal() {
+    onTrackEvent?.('qr_open','Código QR')
     try {
       const QRCode = await import('qrcode')
       setQrDataUrl(await QRCode.toDataURL(canonicalProfileUrl(), { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
@@ -326,6 +330,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   }
 
   async function shareProfile() {
+    onTrackEvent?.('share','Compartir perfil')
     try {
       if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: socialShareProfileUrl() })
       else await copyProfileLink()
@@ -341,12 +346,12 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
         <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
         <div className="ilx-body">
           {editMode && <div className="ilx-live-contact-edit"><EditPencil label="Editar datos de contacto" onClick={()=>onEditSection?.("contact")} /></div>}
-          {hasWhatsapp && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
+          {hasWhatsapp && <a className="ilx-main-cta" href={whatsappUrl(profile)} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('whatsapp','CTA principal')}><FaWhatsapp /><span>Hablar por WhatsApp</span></a>}
 
           {quickActions.length > 0 && (
             <nav className="ilx-quick" aria-label="Acciones rápidas">
               {quickActions.map((actionItem) => (
-                <a key={`${actionItem.type}-${actionItem.url}`} href={actionItem.url} target={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : '_blank'} rel={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : 'noopener noreferrer'}>
+                <a key={`${actionItem.type}-${actionItem.url}`} href={actionItem.url} target={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : '_blank'} rel={actionItem.type === 'call' || actionItem.type === 'email' ? undefined : 'noopener noreferrer'} onClick={()=>onTrackEvent?.(`quick_${actionItem.type}`,actionItem.label)}>
                   <span>{quickActionIcon(actionItem)}</span><strong>{actionItem.label}</strong>
                 </a>
               ))}
@@ -362,7 +367,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
               <h2>{profile.portfolioTitle}</h2>{editMode && <EditPencil label="Editar portafolio" onClick={()=>onEditSection?.("portfolio")} />}
               <div className="ilx-portfolio-marquee"><div className="ilx-portfolio-track">
                 {[...portfolio.map((item) => ({ item, duplicate: false })), ...portfolio.map((item) => ({ item, duplicate: true }))].map(({ item, duplicate }, index) => (
-                  <button key={`${duplicate ? 'copy' : 'original'}-${item.id}-${index}`} type="button" className="ilx-portfolio-item" tabIndex={duplicate ? -1 : 0} aria-hidden={duplicate ? true : undefined} onClick={() => setModal({ kind: 'portfolio', item })}>
+                  <button key={`${duplicate ? 'copy' : 'original'}-${item.id}-${index}`} type="button" className="ilx-portfolio-item" tabIndex={duplicate ? -1 : 0} aria-hidden={duplicate ? true : undefined} onClick={() => {onTrackEvent?.('portfolio_open',item.title);setModal({ kind: 'portfolio', item })}}>
                     <img src={item.image} alt={duplicate ? '' : item.title} loading="lazy" decoding="async" />
                     <span className="ilx-portfolio-title">{item.title}</span>
                   </button>
@@ -380,7 +385,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
               </div>
               <div className="ilx-services" data-service-count={Math.max(1, services.length)} style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
                 {services.map((service) => (
-                  <button key={service.id} type="button" className="ilx-service" onClick={() => setModal({ kind: 'service', item: service })}>
+                  <button key={service.id} type="button" className="ilx-service" onClick={() => {onTrackEvent?.('service_open',service.title);setModal({ kind: 'service', item: service })}}>
                     <div className="ilx-service-media">{service.image ? <img src={service.image} alt={service.title} loading="lazy" decoding="async" /> : <span>{serviceIcon(service.iconKey)}</span>}</div>
                     <div className="ilx-service-copy">
                       <h3>{service.title}</h3>
@@ -396,7 +401,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           {customLinks.length > 0 && (
             <section className="ilx-section ilx-links ilx-live-editable">
               {editMode && <EditPencil label="Editar enlaces" onClick={()=>onEditSection?.("links")} />}<button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
-              {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer"><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
+              {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('custom_link',link.label)}><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
             </section>
           )}
 
@@ -410,7 +415,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           <footer className="ilx-footer">
             <a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">Creado con <strong>Kawvo Link</strong> · Crea el tuyo <strong>Gratis</strong></a>
-            <a className="ilx-footer-login" href={footerSecondaryHref || loginUrl()} target={footerSecondaryHref ? "_blank" : undefined} rel={footerSecondaryHref ? "noopener noreferrer" : undefined}>{footerSecondaryLabel || "Iniciar sesión"}</a>
+            <a className="ilx-footer-login" href={footerSecondaryHref || loginUrl()} target={footerSecondaryHref ? "_blank" : undefined} rel={footerSecondaryHref ? "noopener noreferrer" : undefined} onClick={()=>footerSecondaryHref&&onTrackEvent?.('interest_click',footerSecondaryLabel||'Interés')}>{footerSecondaryLabel || "Iniciar sesión"}</a>
           </footer>
         </div>
       </div>
@@ -429,7 +434,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           <article className="ilx-modal" role="dialog" aria-modal="true" aria-label={modal.item.title}>
             <button type="button" className="ilx-modal-close" onClick={() => setModal(null)} aria-label="Cerrar"><FaTimes /></button>
             <div className="ilx-modal-media">{modal.kind === 'portfolio' ? <img src={modal.item.image} alt={modal.item.title} /> : modal.item.image ? <img src={modal.item.image} alt={modal.item.title} /> : <span className="ilx-modal-service-icon">{serviceIcon(modal.item.iconKey)}</span>}</div>
-            <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasWhatsapp && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer"><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
+            <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasWhatsapp && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('whatsapp',modal.item.title)}><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
           </article>
         </div>
       )}
