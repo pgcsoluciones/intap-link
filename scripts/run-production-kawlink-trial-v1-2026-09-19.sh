@@ -182,13 +182,13 @@ echo "▶ Confirmar que no quedan migraciones Trial pendientes"
   npx wrangler d1 migrations list "$PROD_DB" --remote --config wrangler.toml
 )
 
+rm -rf "$LOG_DIR"
+
 DIRTY_END="$(git status --porcelain | grep -v '^?? web/public/assets/welcome/' || true)"
 [ -z "$DIRTY_END" ] || {
   printf '%s\n' "$DIRTY_END"
   fail "El runner dejó cambios locales no permitidos"
 }
-
-rm -rf "$LOG_DIR"
 
 cat <<EOF
 ============================================================
