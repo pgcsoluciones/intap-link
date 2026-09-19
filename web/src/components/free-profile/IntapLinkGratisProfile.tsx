@@ -44,6 +44,8 @@ export type IntapLinkGratisProfileProps = {
   colors: FreeProfileAppearanceColors
   topContent?: ReactNode
   beforeShareContent?: ReactNode
+  footerSecondaryLabel?: string
+  footerSecondaryHref?: string
   editMode?: boolean
   onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio' | 'services' | 'links' | 'appearance') => void
 }
@@ -191,7 +193,7 @@ function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layou
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, editMode=false, onEditSection }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -408,7 +410,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           <footer className="ilx-footer">
             <a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">Creado con <strong>Kawvo Link</strong> · Crea el tuyo <strong>Gratis</strong></a>
-            <a className="ilx-footer-login" href={loginUrl()}>Iniciar sesión</a>
+            <a className="ilx-footer-login" href={footerSecondaryHref || loginUrl()} target={footerSecondaryHref ? "_blank" : undefined} rel={footerSecondaryHref ? "noopener noreferrer" : undefined}>{footerSecondaryLabel || "Iniciar sesión"}</a>
           </footer>
         </div>
       </div>
