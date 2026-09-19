@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BRANCH="feature/kawlink-trial-72h"
 WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
