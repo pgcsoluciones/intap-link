@@ -9,8 +9,8 @@ import './KawvoTrial.css'
 
 type Snapshot={layout:FreeProfileLayoutId;colors:FreeProfileAppearanceColors;profile:FreeProfileData;modules?:{banks?:{enabled:boolean;items:TrialBank[]}}}
 type Prospect={contact_name:string;phone:string;whatsapp:string;email:string;instagram:string;company_name:string;company_type:string;source:string;source_detail:string;notes:string}
-type Trial={id:string;slug:string|null;name:string|null;status:'draft'|'active'|'inactive'|'expired';profile:Snapshot;duration_hours:number;prospect?:Prospect;activated_at:string|null;expires_at:string|null}
-type Mode='master'|'editor'|'public'
+type Trial={id:string;slug:string|null;name:string|null;status:'draft'|'active'|'inactive'|'expired';profile:Snapshot;duration_hours:number;prospect?:Prospect;started_at?:string|null;activated_at:string|null;expires_at:string|null}
+type Mode='master'|'editor'|'owner'|'public'
 
 const FALLBACK:Snapshot={
   layout:'impacto',
@@ -23,7 +23,7 @@ function adminOrigin(){
   if(host==='preview.intaprd.com'||host.includes('preview')||host.endsWith('.pages.dev'))return 'https://app.preview.intaprd.com'
   return 'https://app.intaprd.com'
 }
-function protectedPath(path:string){return path.startsWith('/api/v1/superadmin/')?adminOrigin()+path:path}
+function protectedPath(path:string){return path.startsWith('/api/v1/superadmin/')||path.startsWith('/api/v1/me/trials/online')?adminOrigin()+path:path}
 
 async function api(path:string,init?:RequestInit){
   const response=await fetch(protectedPath(path),{credentials:'include',...init,headers:{...(init?.body instanceof FormData?{}:{'Content-Type':'application/json'}),...(init?.headers||{})}})
@@ -81,7 +81,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
       }
       return
     }
-    const path=mode==='editor'?'/api/v1/superadmin/trials/'+encodeURIComponent(id):'/api/v1/public/trials/'+encodeURIComponent(slug)
+    const path=mode==='editor'?'/api/v1/superadmin/trials/'+encodeURIComponent(id):mode==='owner'?'/api/v1/me/trials/online/'+encodeURIComponent(id):'/api/v1/public/trials/'+encodeURIComponent(slug)
     api(path).then(r=>{setTrial(r.data);setSnapshot(r.data.profile);setTrialName(r.data.name||r.data.profile?.profile?.name||'');setTrialSlug(r.data.slug||suggestedSlug(r.data.profile?.profile?.name||''))}).catch(e=>setError(e.message)).finally(()=>setLoading(false))
   },[mode,id,slug])
 
@@ -140,9 +140,10 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   }
   function setQuickActionUrl(type:'tiktok',url:string){setSnapshot(current=>{const next={...current,profile:{...current.profile,quickActions:current.profile.quickActions.map(a=>a.type===type?{...a,url}:a)}};queueSave(next);return next})}
   function queueSave(next:Snapshot){
-    if(mode!=='editor'||!id)return
+    if((mode!=='editor'&&mode!=='owner')||!id)return
     setSaving('saving');if(saveTimer.current)window.clearTimeout(saveTimer.current)
-    saveTimer.current=window.setTimeout(()=>api('/api/v1/superadmin/trials/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({profile:next})}).then(()=>setSaving('saved')).catch(()=>setSaving('error')),450)
+    const endpoint=mode==='owner'?'/api/v1/me/trials/online/'+encodeURIComponent(id):'/api/v1/superadmin/trials/'+encodeURIComponent(id)
+    saveTimer.current=window.setTimeout(()=>api(endpoint,{method:'PATCH',body:JSON.stringify({profile:next})}).then(()=>setSaving('saved')).catch(()=>setSaving('error')),450)
   }
   async function createTrial(){
     try{const r=await api('/api/v1/superadmin/trials',{method:'POST',body:JSON.stringify({modules:{banks:createBanks},duration_hours:createDuration,prospect:createProspect})});setCreateConfig(false);navigate('/trial/edit/'+r.data.id)}catch(e:any){setError(e.message)}
@@ -164,9 +165,9 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   function removeBank(index:number){setSnapshot(current=>{const bank=current.modules?.banks||{enabled:true,items:[]};const next={...current,modules:{...current.modules,banks:{...bank,items:bank.items.filter((_,i)=>i!==index)}}};queueSave(next);return next})}
   function chooseImage(kind:'avatar'|'hero'|'gallery',file?:File){if(file)setCrop({kind,file})}
   async function upload(kind:'avatar'|'hero'|'gallery',file?:File){
-    if(!file||mode!=='editor')return
+    if(!file||(mode!=='editor'&&mode!=='owner'))return
     const fd=new FormData();fd.append('file',file)
-    try{setSaving('saving');const r=await api(`/api/v1/superadmin/trials/${encodeURIComponent(id)}/media?kind=${kind}`,{method:'POST',body:fd})
+    try{setSaving('saving');const mediaEndpoint=mode==='owner'?`/api/v1/me/trials/online/${encodeURIComponent(id)}/media?kind=${kind}`:`/api/v1/superadmin/trials/${encodeURIComponent(id)}/media?kind=${kind}`;const r=await api(mediaEndpoint,{method:'POST',body:fd})
       if(kind==='avatar')change('portrait',r.url)
       else if(kind==='hero')change('hero',r.url)
       else {if(serviceCropIndex!==null){change('services',snapshot.profile.services.map((p,i)=>i===serviceCropIndex?{...p,image:r.url}:p));setServiceCropIndex(null)}else if(cropIndex!==null){change('portfolio',snapshot.profile.portfolio.map((p,i)=>i===cropIndex?{...p,image:r.url}:p));setCropIndex(null)}else if(snapshot.profile.portfolio.length<5){const item={id:crypto.randomUUID(),title:'Nuevo trabajo',description:'',image:r.url};change('portfolio',[...snapshot.profile.portfolio,item])}}
@@ -175,13 +176,13 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   function removePortfolio(itemId:string){change('portfolio',snapshot.profile.portfolio.filter(x=>x.id!==itemId))}
   async function checkSlug(value:string){
     const next=suggestedSlug(value);setTrialSlug(next);if(next.length<2){setSlugState('Slug no válido');return}
-    try{const r=await api('/api/v1/superadmin/trials/slug/'+encodeURIComponent(next)+(id?'?trial_id='+encodeURIComponent(id):''));setSlugState(r.available?'Disponible':'No disponible')}catch(e:any){setSlugState(e.message)}
+    try{const endpoint=mode==='owner'?'/api/v1/me/trials/online/slug/'+encodeURIComponent(next):'/api/v1/superadmin/trials/slug/'+encodeURIComponent(next)+(id?'?trial_id='+encodeURIComponent(id):'');const r=await api(endpoint);setSlugState(r.available?'Disponible':'No disponible')}catch(e:any){setSlugState(e.message)}
   }
   async function publish(){
     if(saveTimer.current){window.clearTimeout(saveTimer.current);saveTimer.current=undefined}
     try{
-      setSaving('saving');await api('/api/v1/superadmin/trials/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify({profile:snapshot})})
-      const r=await api('/api/v1/superadmin/trials/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify({name:trialName,slug:trialSlug})})
+      setSaving('saving');const saveEndpoint=mode==='owner'?'/api/v1/me/trials/online/'+encodeURIComponent(id):'/api/v1/superadmin/trials/'+encodeURIComponent(id);const publishEndpoint=mode==='owner'?'/api/v1/me/trials/online/'+encodeURIComponent(id)+'/publish':'/api/v1/superadmin/trials/'+encodeURIComponent(id)+'/publish';await api(saveEndpoint,{method:'PATCH',body:JSON.stringify({profile:snapshot})})
+      const r=await api(publishEndpoint,{method:'POST',body:JSON.stringify({name:trialName,slug:trialSlug})})
       setPublished(r.data);setSaving('saved');setFinish(false)
       const QRCode=await import('qrcode');setQr(await QRCode.toDataURL(window.location.origin+r.data.url,{width:900,margin:3,errorCorrectionLevel:'H'}))
     }catch(e:any){setError(e.message);setSaving('error')}
@@ -205,16 +206,16 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   const trialInterestUrl='https://wa.me/18097059802?text='+encodeURIComponent(trialInterestMessage)
   const sourceOptions=[['fair_event','Feria / Evento'],['commercial_visit','Visita comercial'],['street_direct','Calle / contacto directo'],['whatsapp','WhatsApp'],['instagram','Instagram'],['web','Web'],['referral','Referido'],['call','Llamada'],['point_of_sale','Punto de venta'],['other','Otro']] as const
   const companyTypes=['Servicios profesionales','Automotriz / Taller','Belleza / Estética','Construcción / Ferretería','Salud','Gastronomía','Tecnología','Comercio / Retail','Educación','Inmobiliaria']
-  const editorTop=mode==='editor'?<div className="trial-adminbar"><div className="trial-adminbar-main"><strong>TRIAL · Editando</strong><button className="trial-tools-menu" aria-label="Opciones de edición" aria-expanded={toolsOpen} onClick={()=>setToolsOpen(v=>!v)}><FaBars/><span>Opciones</span></button><div className={`trial-tools ${toolsOpen?'open':''}`}><button className="trial-tool" onClick={()=>{openSection("appearance");setToolsOpen(false)}}><FaPalette/> Colores</button><button className="trial-tool" onClick={()=>{openSection("links");setToolsOpen(false)}}><FaPlus/> Enlaces</button><button className="trial-tool" onClick={()=>{openSection("banks");setToolsOpen(false)}}><FaPlus/> Módulos</button><button className="trial-tool" onClick={()=>{void openProspect();setToolsOpen(false)}}><FaPlus/> Prospecto</button></div><button className="trial-primary trial-finish-btn" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/><span>Finalizar</span></button></div><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span></div>:undefined
+  const editorTop=(mode==='editor'||mode==='owner')?<div className="trial-adminbar"><div className="trial-adminbar-main"><strong>{mode==='owner'?'MI TRIAL · Editando':'TRIAL · Editando'}</strong><button className="trial-tools-menu" aria-label="Opciones de edición" aria-expanded={toolsOpen} onClick={()=>setToolsOpen(v=>!v)}><FaBars/><span>Opciones</span></button><div className={`trial-tools ${toolsOpen?'open':''}`}><button className="trial-tool" onClick={()=>{openSection("appearance");setToolsOpen(false)}}><FaPalette/> Colores</button><button className="trial-tool" onClick={()=>{openSection("links");setToolsOpen(false)}}><FaPlus/> Enlaces</button><button className="trial-tool" onClick={()=>{openSection("banks");setToolsOpen(false)}}><FaPlus/> Módulos</button>{mode==='editor'&&<button className="trial-tool" onClick={()=>{void openProspect();setToolsOpen(false)}}><FaPlus/> Prospecto</button>}</div><button className="trial-primary trial-finish-btn" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/><span>Finalizar</span></button></div><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span></div>:undefined
 
   if(loading)return <div className="trial-state">Cargando Trial…</div>
   if(error && !trial && mode!=='master')return <div className="trial-state"><h1>No pudimos abrir este Trial</h1><p>{error}</p></div>
-  if(mode==='public'&&trial?.status==='expired')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración ha finalizado.</h1><p>El período de prueba terminó. El enlace se mantiene para informarte que esta presentación era una demostración de Kawvo Link.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a><a className="secondary" href="https://nfc.kawvoia.com" target="_blank" rel="noreferrer">Conocer Kawvo Link</a></div></div>
+  if(mode==='public'&&trial?.status==='expired')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta presentación no está disponible temporalmente.</h1></div></div>
   if(mode==='public'&&trial?.status==='inactive')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración está desactivada.</h1><p>El perfil Trial fue pausado por el administrador y conserva su enlace para una posible reactivación.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a></div></div>
 
   return <>
-    <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} footerSecondaryLabel="Quiero esta presentación" footerSecondaryHref={trialInterestUrl} beforeShareContent={snapshot.modules?.banks?.enabled?<TrialBanks banks={snapshot.modules.banks.items} editMode={mode==='editor'} onEdit={()=>openSection("banks")} publicSlug={mode==='public'?(trial?.slug||slug):undefined}/>:undefined} editMode={mode==='editor'} onTrackEvent={mode==='public'?trackTrialEvent:undefined} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{openSection(s)}}}/>
-    {mode==='editor'&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
+    <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} footerSecondaryLabel="Quiero esta presentación" footerSecondaryHref={trialInterestUrl} beforeShareContent={snapshot.modules?.banks?.enabled?<TrialBanks banks={snapshot.modules.banks.items} editMode={mode==='editor'||mode==='owner'} onEdit={()=>openSection("banks")} publicSlug={mode==='public'?(trial?.slug||slug):undefined}/>:undefined} editMode={mode==='editor'||mode==='owner'} onTrackEvent={mode==='public'?trackTrialEvent:undefined} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{openSection(s)}}}/>
+    {(mode==='editor'||mode==='owner')&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
     {mode==='master'&&admin&&<button className="trial-create" onClick={()=>setCreateConfig(true)}>+ Crear Trial</button>}
     {mode==='public'&&admin&&trial&&<div className="trial-public-admin"><strong>⚙️ Trial</strong><span>Vence: {isoDisplay(trial.expires_at)}</span><button onClick={()=>navigate('/trial')}>Volver a Trial</button><button onClick={()=>void openProspect()}>Ficha prospecto</button><button onClick={()=>window.location.href=adminOrigin()+'/superadmin/trials'}>Gestionar</button><button onClick={()=>navigate('/trial/edit/'+trial.id)}>Editar en vivo</button><button onClick={()=>copy(window.location.href)}>Copiar enlace</button></div>}
 
