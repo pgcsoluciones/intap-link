@@ -157,6 +157,8 @@ export function registerTrialOnlineRoutes(app:any){
     let body:any={};try{body=await c.req.json()}catch{body={}}
     const leadToken=str(body?.lead_token,128)
     const lead:any=leadToken?await leadFromToken(c.env,leadToken):null
+    if(leadToken&&!lead)return c.json({ok:false,error:'El enlace de activación ya no es válido. Vuelve a iniciar desde la solicitud de prueba.',code:'trial_lead_invalid'},410)
+    if(lead?.linked_user_id&&String(lead.linked_user_id)!==userId)return c.json({ok:false,error:'Esta solicitud ya fue vinculada a otra cuenta.',code:'trial_lead_already_linked'},409)
 
     const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE owner_user_id=? ORDER BY created_at DESC LIMIT 1').bind(userId).first()
     if(existing){
@@ -169,6 +171,10 @@ export function registerTrialOnlineRoutes(app:any){
 
     const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
     const authEmail=normalizeEmail((user as any)?.email||body?.email)
+    const registrationEmail=normalizeEmail(lead?.email)
+    if(lead&&registrationEmail&&authEmail!==registrationEmail){
+      return c.json({ok:false,error:'Para activar esta presentación debes iniciar sesión con el mismo correo que usaste en el formulario de registro.',code:'trial_email_mismatch'},409)
+    }
     const prospectName=str(lead?.name||body?.name,120)
     const prospectPhone=normalizePhone(lead?.phone||body?.phone||body?.whatsapp)
     const prospectEmail=normalizeEmail(lead?.email||body?.email||authEmail)
