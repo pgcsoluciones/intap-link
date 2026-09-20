@@ -8,7 +8,7 @@ type Prospect={
 }
 type Trial={
   id:string;slug:string|null;name:string|null;status:'draft'|'active'|'inactive'|'expired';
-  duration_hours:number;prospect:Prospect;activated_at:string|null;expires_at:string|null;created_at:string;updated_at:string
+  duration_hours:number;prospect:Prospect;profile?:any;activated_at:string|null;expires_at:string|null;created_at:string;updated_at:string
 }
 type EventRow={id:string;event_type:string;details:any;created_at:string}
 type Analytics={summary:{events:number;views:number;unique_visitors:number;interactions:number};locations:any[];actions:any[];daily:any[];devices:any[];visitors:any[];visitor_pagination:{page:number;page_size:number;total:number;pages:number}}
@@ -238,7 +238,7 @@ export default function SuperAdminTrials(){
 
       {selected&&prospect&&<section className="rounded-2xl border border-slate-300 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><p className="text-xs font-black uppercase tracking-wide text-cyan-700">Ficha de prospecto</p><h2 className="text-2xl font-black">{prospect.contact_name||selected.name||'Trial'}</h2><p className="text-sm text-slate-500">{selected.slug?'/trial/'+selected.slug:'Borrador'} · {statusLabels[selected.status]}</p></div>
+          <div><p className="text-xs font-black uppercase tracking-wide text-cyan-700">Ficha CRM del registro</p><h2 className="text-2xl font-black">{prospect.contact_name||selected.name||'Trial'}</h2><p className="text-sm text-slate-500">{selected.slug?'/trial/'+selected.slug:'Borrador'} · {statusLabels[selected.status]}</p><p className="mt-1 text-xs text-slate-400">Estos datos provienen del formulario de acceso o del seguimiento comercial. No se reemplazan con la información pública del perfil.</p></div>
           <div className="flex flex-wrap gap-2">
             {selected.slug&&<a className="rounded-lg border px-3 py-2 text-xs font-black" href={`${WEB_ORIGIN}/trial/${selected.slug}`} target="_blank" rel="noreferrer">Abrir Trial</a>}
             <a className="rounded-lg border px-3 py-2 text-xs font-black" href={`${WEB_ORIGIN}/trial/edit/${selected.id}`} target="_blank" rel="noreferrer">Editar perfil</a>
@@ -261,7 +261,24 @@ export default function SuperAdminTrials(){
           <label className={label}>Detalle del origen<input className={field} placeholder="Ej. Expo Cibao Santiago 2026" value={prospect.source_detail} onChange={e=>setProspect({...prospect,source_detail:e.target.value})}/></label>
           <label className={label+' md:col-span-2 lg:col-span-3'}>Notas<textarea className={field+' min-h-24'} value={prospect.notes} onChange={e=>setProspect({...prospect,notes:e.target.value})}/></label>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3"><button onClick={()=>void saveProspect()} disabled={saving} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-40">{saving?'Guardando…':'Guardar ficha'}</button>{message&&<span className="text-sm font-bold text-slate-600">{message}</span>}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-3"><button onClick={()=>void saveProspect()} disabled={saving} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-40">{saving?'Guardando…':'Guardar ficha CRM'}</button>{message&&<span className="text-sm font-bold text-slate-600">{message}</span>}</div>
+
+        <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.12em] text-slate-500">Datos del perfil</p>
+            <h3 className="mt-1 text-lg font-black text-slate-950">Información pública de la presentación</h3>
+            <p className="mt-1 text-sm text-slate-500">Se muestra aparte del CRM. Puede ser distinta a la información personal usada para solicitar la prueba.</p>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-slate-200 bg-white p-3"><span className="block text-[11px] font-black uppercase tracking-wide text-slate-400">Nombre del perfil</span><strong className="mt-1 block text-sm text-slate-900">{selected.profile?.profile?.name||'—'}</strong></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3"><span className="block text-[11px] font-black uppercase tracking-wide text-slate-400">Cargo / especialidad</span><strong className="mt-1 block text-sm text-slate-900">{selected.profile?.profile?.role||'—'}</strong></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3"><span className="block text-[11px] font-black uppercase tracking-wide text-slate-400">Teléfono</span><strong className="mt-1 block text-sm text-slate-900">{selected.profile?.profile?.phone||'—'}</strong></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3"><span className="block text-[11px] font-black uppercase tracking-wide text-slate-400">WhatsApp</span><strong className="mt-1 block text-sm text-slate-900">{selected.profile?.profile?.whatsapp||'—'}</strong></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3"><span className="block text-[11px] font-black uppercase tracking-wide text-slate-400">Correo</span><strong className="mt-1 block break-all text-sm text-slate-900">{selected.profile?.profile?.email||'—'}</strong></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3"><span className="block text-[11px] font-black uppercase tracking-wide text-slate-400">Instagram</span><strong className="mt-1 block text-sm text-slate-900">{selected.profile?.profile?.instagram||'—'}</strong></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3 md:col-span-2 lg:col-span-3"><span className="block text-[11px] font-black uppercase tracking-wide text-slate-400">Ubicación</span><strong className="mt-1 block text-sm text-slate-900">{selected.profile?.profile?.location||'—'}</strong></div>
+          </div>
+        </div>
 
         <div className="mt-7 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
