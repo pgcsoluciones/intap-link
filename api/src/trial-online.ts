@@ -2,7 +2,7 @@ import { requireSuperAdmin } from './lib/admin-auth'
 import { cookieNames } from './lib/cookies'
 import { TRIAL_MASTER } from './trial-profiles'
 
-const RESERVED = new Set(['edit','mi','admin','api','ia','s','demo','new','nuevo','crear','master'])
+const RESERVED = new Set(['edit','mi','login','activate','check-email','admin','api','ia','s','demo','new','nuevo','crear','master'])
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 function normalizeSlug(input: unknown) {
