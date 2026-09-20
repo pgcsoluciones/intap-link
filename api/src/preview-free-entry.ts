@@ -45,6 +45,7 @@ import './ai-profile-assistant-access'
 import './ai-profile-assistant'
 import './instagram-preview'
 import { registerTrialRoutes, expireDueTrials } from './trial-profiles'
+import { registerTrialOnlineRoutes } from './trial-online'
 import { refreshDueInstagramConnections } from './instagram-token-refresh'
 import { cleanupExpiredTeamCodes } from './team-v2'
 import { registerDemoAiRoutes } from './routes/demo-ai'
@@ -52,6 +53,7 @@ import app, { registerPreviewAppFallback } from './preview-free-actions'
 
 registerDemoAiRoutes(app)
 registerTrialRoutes(app)
+registerTrialOnlineRoutes(app)
 registerPreviewAppFallback(app)
 
 ;(app as any).scheduled = (_event: ScheduledEvent, env: any, ctx: ExecutionContext) => {
