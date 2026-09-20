@@ -15,6 +15,39 @@ function normalizeInstagram(value:any){return String(value||'').trim().toLowerCa
 function sqlDate(d:Date){return d.toISOString().replace('T',' ').replace('Z','')}
 function parseJson(value:any){try{return JSON.parse(String(value||'{}'))}catch{return {}}}
 function str(value:any,max=180){return String(value||'').trim().slice(0,max)}
+function prospectSyncFromSnapshot(snapshot:any){
+  const p=snapshot?.profile||{}
+  const name=str(p.name,120)
+  const phone=normalizePhone(p.phone)
+  const whatsapp=normalizePhone(p.whatsapp||p.phone)
+  const email=normalizeEmail(p.email)
+  const instagram=normalizeInstagram(p.instagram)
+  const role=str(p.role,120)
+  return {
+    contact_name:name&&name.toLowerCase()!=='laura gómez'?name:'',
+    phone:phone&&phone!=='18090000000'?phone:'',
+    whatsapp:whatsapp&&whatsapp!=='18090000000'?whatsapp:'',
+    email,
+    instagram:instagram&&instagram!=='kawvolink'?instagram:'',
+    company_type:role&&role.toLowerCase()!=='profesional independiente'?role:'',
+  }
+}
+async function syncProspectFromSnapshot(env:any,id:string,userId:string,snapshot:any){
+  const s=prospectSyncFromSnapshot(snapshot)
+  await env.DB.prepare(`UPDATE trial_profiles SET
+    contact_name=CASE WHEN ?<>'' THEN ? ELSE contact_name END,
+    contact_phone=CASE WHEN ?<>'' THEN ? ELSE contact_phone END,
+    contact_whatsapp=CASE WHEN ?<>'' THEN ? ELSE contact_whatsapp END,
+    contact_email=CASE WHEN ?<>'' THEN ? ELSE contact_email END,
+    contact_instagram=CASE WHEN ?<>'' THEN ? ELSE contact_instagram END,
+    company_type=CASE WHEN ?<>'' THEN ? ELSE company_type END,
+    updated_at=datetime('now')
+    WHERE id=? AND owner_user_id=?`).bind(
+      s.contact_name,s.contact_name,s.phone,s.phone,s.whatsapp,s.whatsapp,
+      s.email,s.email,s.instagram,s.instagram,s.company_type,s.company_type,id,userId
+    ).run()
+  return s
+}
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function generateOpaqueToken(bytes=32){const a=new Uint8Array(bytes);crypto.getRandomValues(a);return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function leadFromToken(env:any,rawToken:string){
@@ -231,6 +264,7 @@ export function registerTrialOnlineRoutes(app:any){
     if(encoded.length>180000)return c.json({ok:false,error:'El perfil supera el tamaño permitido.'},413)
     const userId=String(c.get('userId')||'')
     await c.env.DB.prepare("UPDATE trial_profiles SET profile_json=?,updated_at=datetime('now') WHERE id=? AND owner_user_id=?").bind(encoded,id,userId).run()
+    await syncProspectFromSnapshot(c.env,id,userId,body.profile)
     const instagram=normalizeInstagram(body?.profile?.profile?.instagram)
     if(instagram)await claimIdentity(c.env,id,userId,'instagram',instagram)
     return c.json({ok:true,data:{id,updated_at:new Date().toISOString()}})
@@ -262,6 +296,7 @@ export function registerTrialOnlineRoutes(app:any){
     const userId=String(c.get('userId')||'')
     await c.env.DB.prepare("UPDATE trial_profiles SET slug=?,name=?,status='active',profile_json=?,activated_at=?,updated_at=datetime('now') WHERE id=? AND owner_user_id=?")
       .bind(slug,name,JSON.stringify(snapshot),activatedAt,id,userId).run()
+    await syncProspectFromSnapshot(c.env,id,userId,snapshot)
     const instagram=normalizeInstagram(snapshot.profile.instagram)
     if(instagram)await claimIdentity(c.env,id,userId,'instagram',instagram)
     await addEvent(c,id,'trial.published',{slug,activated_at:activatedAt,expires_at:expiresAt,online:true})
