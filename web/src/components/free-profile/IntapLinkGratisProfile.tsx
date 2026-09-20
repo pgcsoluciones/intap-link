@@ -116,12 +116,21 @@ function ensureReadableColor(foreground: string, background: string, minimum = 4
   return target
 }
 
+function normalizeWhatsAppNumber(value: string) {
+  let digits = String(value || '').replace(/\D/g, '')
+  if (digits.startsWith('00')) digits = digits.slice(2)
+  if (digits.length === 10 && /^(809|829|849)/.test(digits)) digits = `1${digits}`
+  return digits
+}
+
 function whatsappUrl(profile: FreeProfileData, subject?: string) {
   if (!profile.whatsapp) return ''
+  const whatsapp = normalizeWhatsAppNumber(profile.whatsapp)
+  if (!whatsapp) return ''
   const message = subject
     ? `Hola ${profile.whatsappGreetingName}, vi "${subject}" en tu perfil de Kawvo Link y me gustaría recibir más información.`
     : `Hola ${profile.whatsappGreetingName}, vi tu perfil en Kawvo Link y me gustaría recibir más información.`
-  return `https://wa.me/${profile.whatsapp}?text=${encodeURIComponent(message)}`
+  return `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`
 }
 
 function loginUrl() {
