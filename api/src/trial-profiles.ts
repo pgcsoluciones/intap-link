@@ -1,6 +1,6 @@
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 
-const RESERVED = new Set(['edit','admin','api','ia','s','demo','new','nuevo','crear','master'])
+const RESERVED = new Set(['edit','mi','admin','api','ia','s','demo','new','nuevo','crear','master'])
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const SOURCE_TYPES = new Set(['fair_event','commercial_visit','street_direct','whatsapp','instagram','web','referral','call','point_of_sale','other'])
 const ANALYTICS_TYPES = new Set(['visit','whatsapp','quick_call','quick_instagram','quick_location','quick_email','quick_tiktok','save_contact','portfolio_open','service_open','custom_link','share','copy_link','qr_open','qr_download','qr_save_photo','interest_click'])
