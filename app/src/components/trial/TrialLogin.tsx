@@ -15,8 +15,12 @@ export default function TrialLogin(){
   const [error,setError]=useState('')
 
   useEffect(()=>{
-    const queryToken=new URLSearchParams(window.location.search).get('lead_token')||''
+    const params=new URLSearchParams(window.location.search)
+    const queryToken=params.get('lead_token')||''
+    const queryError=params.get('error')||''
     if(validLeadToken(queryToken))sessionStorage.setItem(LEAD_TOKEN_KEY,queryToken)
+    if(queryError==='trial_email_mismatch')setError('Debes usar el mismo correo que colocaste en el formulario para activar esta presentación.')
+    else if(queryError==='trial_lead_invalid')setError('El enlace de activación ya no es válido. Vuelve a iniciar desde la solicitud de prueba.')
     const leadToken=validLeadToken(queryToken)?queryToken:(sessionStorage.getItem(LEAD_TOKEN_KEY)||'')
     apiGet('/me/trials/online').then((json:any)=>{
       if(json?.ok&&json?.data?.id){
@@ -30,7 +34,8 @@ export default function TrialLogin(){
     e.preventDefault();setError('');setLoading(true)
     try{
       if(mode==='login'&&loginMethod==='password'){
-        const json:any=await apiPost('/auth/password/login',{email,password})
+        const leadToken=sessionStorage.getItem(LEAD_TOKEN_KEY)||''
+        const json:any=await apiPost('/auth/password/login',{email,password,lead_token:validLeadToken(leadToken)?leadToken:undefined})
         if(!json?.ok){setError(json?.error||'Correo o contraseña incorrectos.');return}
         const leadToken=sessionStorage.getItem(LEAD_TOKEN_KEY)||''
         window.location.assign('/trial/activate'+(validLeadToken(leadToken)?'?lead_token='+encodeURIComponent(leadToken):''))
@@ -74,6 +79,7 @@ export default function TrialLogin(){
           <form onSubmit={submit} className="space-y-4">
             <label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">Correo electrónico
               <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email" placeholder="nombre@email.com" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"/>
+              {validLeadToken(sessionStorage.getItem(LEAD_TOKEN_KEY)||'')&&<span className="mt-2 block rounded-xl bg-cyan-50 px-3 py-2 text-[11px] font-bold leading-5 text-cyan-800">Usa el mismo correo que colocaste en el formulario de registro. Ese correo será el que autoriza la activación y el acceso a tu Trial.</span>}
             </label>
             {!register&&loginMethod==='password'&&<label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">Contraseña Kawvo
               <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required autoComplete="current-password" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100"/>
