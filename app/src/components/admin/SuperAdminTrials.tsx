@@ -12,6 +12,7 @@ type Trial={
 }
 type EventRow={id:string;event_type:string;details:any;created_at:string}
 type Analytics={summary:{events:number;views:number;unique_visitors:number;interactions:number};locations:any[];actions:any[];daily:any[];devices:any[];visitors:any[];visitor_pagination:{page:number;page_size:number;total:number;pages:number}}
+type TrialNotification={id:string;title:string;body:string;cta_label?:string|null;cta_url?:string|null;starts_at?:string|null;ends_at?:string|null;is_active:number|boolean;read_at?:string|null;created_at:string}
 
 const sourceOptions=[
   ['', 'Todos los orígenes'],
@@ -66,6 +67,11 @@ export default function SuperAdminTrials(){
   const [saving,setSaving]=useState(false)
   const [message,setMessage]=useState('')
   const [extendHours,setExtendHours]=useState(72)
+  const [notifications,setNotifications]=useState<TrialNotification[]>([])
+  const [notificationTitle,setNotificationTitle]=useState('')
+  const [notificationBody,setNotificationBody]=useState('')
+  const [notificationCtaLabel,setNotificationCtaLabel]=useState('')
+  const [notificationCtaUrl,setNotificationCtaUrl]=useState('')
 
   useEffect(()=>{const t=window.setTimeout(()=>{setDebouncedQ(q);setPage(1)},250);return()=>window.clearTimeout(t)},[q])
 
@@ -94,8 +100,9 @@ export default function SuperAdminTrials(){
 
   async function selectTrial(item:Trial){
     setSelected(item);setProspect(item.prospect);setMessage('');setVisitorPage(1)
-    const [json]:any[]=await Promise.all([apiGet(`/superadmin/trials/${item.id}/events`),loadAnalytics(item.id,1)])
+    const [json,notificationJson]:any[]=await Promise.all([apiGet(`/superadmin/trials/${item.id}/events`),apiGet(`/superadmin/trials/${item.id}/notifications`),loadAnalytics(item.id,1)])
     setEvents(json?.ok?(json.data||[]):[])
+    setNotifications(notificationJson?.ok?(notificationJson.data||[]):[])
   }
 
   async function saveProspect(){
@@ -140,6 +147,27 @@ export default function SuperAdminTrials(){
     const detail:any=await apiGet(`/superadmin/trials/${selected.id}`)
     if(detail?.ok){setSelected(detail.data);setProspect(detail.data.prospect)}
     setMessage('Trial reactivado.');await load()
+  }
+
+  async function createNotification(){
+    if(!selected||!notificationTitle.trim()||!notificationBody.trim())return
+    setSaving(true);setMessage('')
+    const json:any=await apiPost(`/superadmin/trials/${selected.id}/notifications`,{
+      title:notificationTitle,body:notificationBody,cta_label:notificationCtaLabel,cta_url:notificationCtaUrl
+    })
+    setSaving(false)
+    if(!json?.ok){setMessage(json?.error||'No se pudo enviar la notificación.');return}
+    setNotificationTitle('');setNotificationBody('');setNotificationCtaLabel('');setNotificationCtaUrl('')
+    const list:any=await apiGet(`/superadmin/trials/${selected.id}/notifications`)
+    setNotifications(list?.ok?(list.data||[]):[])
+    setMessage('Notificación programada para este Trial.')
+  }
+
+  async function toggleNotification(item:TrialNotification){
+    if(!selected)return
+    const json:any=await apiPost(`/superadmin/trials/${selected.id}/notifications/${item.id}/toggle`,{is_active:!Boolean(item.is_active)})
+    if(!json?.ok){setMessage(json?.error||'No se pudo actualizar la notificación.');return}
+    setNotifications(current=>current.map(n=>n.id===item.id?{...n,is_active:!Boolean(item.is_active)}:n))
   }
 
   async function deleteDraft(){
@@ -234,6 +262,20 @@ export default function SuperAdminTrials(){
           <label className={label+' md:col-span-2 lg:col-span-3'}>Notas<textarea className={field+' min-h-24'} value={prospect.notes} onChange={e=>setProspect({...prospect,notes:e.target.value})}/></label>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3"><button onClick={()=>void saveProspect()} disabled={saving} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-40">{saving?'Guardando…':'Guardar ficha'}</button>{message&&<span className="text-sm font-bold text-slate-600">{message}</span>}</div>
+
+        <div className="mt-7 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><p className="text-xs font-black uppercase tracking-[.12em] text-cyan-700">Campana del usuario</p><h3 className="mt-1 text-lg font-black text-slate-950">Notificaciones del Trial</h3><p className="mt-1 text-sm text-slate-500">Envía mensajes visibles únicamente al propietario autenticado dentro de su Trial.</p></div>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <label className={label}>Título<input className={field} maxLength={120} value={notificationTitle} onChange={e=>setNotificationTitle(e.target.value)} placeholder="Ej. Te quedan 2 días de prueba"/></label>
+            <label className={label}>CTA opcional<input className={field} maxLength={80} value={notificationCtaLabel} onChange={e=>setNotificationCtaLabel(e.target.value)} placeholder="Ej. Quiero esta presentación"/></label>
+            <label className={label+' lg:col-span-2'}>Mensaje<textarea className={field+' min-h-24'} maxLength={600} value={notificationBody} onChange={e=>setNotificationBody(e.target.value)} placeholder="Escribe el mensaje que verá el usuario en su campana."/></label>
+            <label className={label+' lg:col-span-2'}>Enlace CTA opcional<input className={field} value={notificationCtaUrl} onChange={e=>setNotificationCtaUrl(e.target.value)} placeholder="https://..."/></label>
+          </div>
+          <button onClick={()=>void createNotification()} disabled={saving||!notificationTitle.trim()||!notificationBody.trim()} className="mt-3 rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-40">Enviar a la campana</button>
+          <div className="mt-4 grid gap-2">{notifications.map(n=><div key={n.id} className="rounded-xl border border-slate-200 bg-white p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><strong className="text-sm">{n.title}</strong><p className="mt-1 text-sm text-slate-500">{n.body}</p><small className="mt-1 block text-slate-400">{formatDate(n.created_at)}{n.read_at?' · Leída':' · Sin leer'}</small></div><button onClick={()=>void toggleNotification(n)} className="rounded-lg border px-3 py-1.5 text-xs font-black">{Boolean(n.is_active)?'Desactivar':'Activar'}</button></div></div>)}{!notifications.length&&<p className="text-sm text-slate-400">Aún no hay notificaciones para este Trial.</p>}</div>
+        </div>
 
         <div className="mt-7 grid gap-5 lg:grid-cols-2">
           <div className="rounded-2xl bg-slate-50 p-4">
