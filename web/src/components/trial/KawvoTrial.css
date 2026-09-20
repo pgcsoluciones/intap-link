@@ -118,10 +118,14 @@
 .trial-copy-toast{position:fixed;z-index:220;left:50%;bottom:24px;transform:translateX(-50%);background:#0f172a;color:#fff;border-radius:999px;padding:10px 16px;font-size:12px;font-weight:900;box-shadow:0 12px 32px rgba(15,23,42,.28)}
 .trial-public-ownerbar{position:sticky;top:0;z-index:121;display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0f172a;color:#fff;box-shadow:0 8px 22px rgba(15,23,42,.18)}
 .trial-public-ownerbar strong{margin-right:auto;font-size:12px}
+.trial-owner-new-message{border:0;background:transparent;color:#fff;padding:4px 8px;font-size:12px;font-weight:800;cursor:pointer;animation:trial-owner-message-pulse 1.8s ease-in-out infinite}
+@keyframes trial-owner-message-pulse{0%,100%{opacity:1}50%{opacity:.58}}
+@media (prefers-reduced-motion:reduce){.trial-owner-new-message{animation:none}}
 .trial-public-ownerbar>button:not(.trial-owner-bell){border:0;border-radius:9px;background:#06b6d4;color:#06202a;padding:8px 12px;font-size:12px;font-weight:900;cursor:pointer}
 @media(max-width:700px){
   .trial-adminbar-main>strong{max-width:118px;overflow:hidden;text-overflow:ellipsis}
   .trial-owner-interest{max-width:132px!important}
+  .trial-owner-new-message{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
   .trial-extras-menu{position:static;margin-top:5px}
   .trial-copy-toast{bottom:max(18px,env(safe-area-inset-bottom))}
 }
