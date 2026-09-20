@@ -31,6 +31,7 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const token = searchParams.get('token')
+    const authFlow = searchParams.get('flow')
     if (!token) {
       setError('Enlace inválido: falta el token')
       return
@@ -47,6 +48,11 @@ export default function AuthCallback() {
         const authMode = sessionStorage.getItem('kawvo_auth_mode') || localStorage.getItem('kawvo_auth_mode') || 'login'
         sessionStorage.removeItem('kawvo_auth_mode')
         localStorage.removeItem('kawvo_auth_mode')
+
+        if (authFlow === 'trial') {
+          navigate('/trial/activate', { replace: true })
+          return
+        }
 
         const sponsorMasterCode = readSponsorMasterCode()
         if (sponsorMasterCode) {
@@ -103,7 +109,7 @@ export default function AuthCallback() {
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-rose-500">KAWVO LINK</p>
               <h1 className="mt-3 text-xl font-black">No pudimos abrir este enlace</h1>
               <p className="mt-2 text-sm leading-6 text-slate-500">{error}</p>
-              <a href="/admin/login" className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">Solicitar nuevo acceso</a>
+              <a href={searchParams.get('flow')==='trial'?'/trial/login':'/admin/login'} className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">Solicitar nuevo acceso</a>
             </>
           ) : (
             <>
