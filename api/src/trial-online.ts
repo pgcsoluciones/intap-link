@@ -99,7 +99,7 @@ export function registerTrialOnlineRoutes(app:any){
       contact_name,contact_phone,contact_whatsapp,contact_email,contact_instagram,
       company_name,company_type,contact_source,contact_source_detail,prospect_notes,
       owner_user_id,started_at,origin,email_normalized,phone_normalized,expires_at
-    ) VALUES(?,'draft',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'online',?,?,?)`).bind(
+    ) VALUES(?,'draft',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'online',?,?,?)`).bind(
       id,JSON.stringify(snapshot),'online:'+userId,96,
       str(body?.name,120),str(body?.phone,40),str(body?.whatsapp||body?.phone,40),email,'',
       '',str(body?.sector,120),'web','KawLink Trial Online','',
