@@ -249,6 +249,15 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
 
+  if (leadToken) {
+    const lead = await c.env.DB.prepare(
+      `SELECT email FROM trial_leads WHERE token_hash=? AND status IN ('received','linked') AND expires_at>datetime('now') LIMIT 1`
+    ).bind(await sha256Hex(leadToken)).first().catch(() => null)
+    if (!lead) return c.json({ ok: false, error: 'El enlace de activación ya no es válido. Vuelve a iniciar desde la solicitud de prueba.', code: 'trial_lead_invalid' }, 410)
+    if (String((lead as any).email || '').trim().toLowerCase() !== email)
+      return c.json({ ok: false, error: 'Usa el mismo correo que colocaste en el formulario para activar tu presentación.', code: 'trial_email_mismatch' }, 409)
+  }
+
   // Rate limit: max 5 solicitudes por email por 10 minutos
   const rlRow = await c.env.DB.prepare(
     `SELECT COUNT(*) as cnt FROM auth_magic_links
@@ -413,6 +422,15 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const googleUser: any = await userInfoRes.json()
   const email = (googleUser.email || '').toLowerCase().trim()
   if (!email) return c.redirect(`${appUrl}${loginPath}?error=oauth_no_email`)
+
+  if (authFlow === 'trial' && /^[a-f0-9]{64}$/i.test(trialLeadToken)) {
+    const lead = await c.env.DB.prepare(
+      `SELECT email FROM trial_leads WHERE token_hash=? AND status IN ('received','linked') AND expires_at>datetime('now') LIMIT 1`
+    ).bind(await sha256Hex(trialLeadToken)).first().catch(() => null)
+    if (!lead) return c.redirect(`${appUrl}/trial/login?error=trial_lead_invalid&lead_token=${encodeURIComponent(trialLeadToken)}`)
+    if (String((lead as any).email || '').trim().toLowerCase() !== email)
+      return c.redirect(`${appUrl}/trial/login?error=trial_email_mismatch&lead_token=${encodeURIComponent(trialLeadToken)}`)
+  }
 
   // Resolver identidad Google estable. El correo principal puede cambiar sin romper Google.
   const googleSubject = String(googleUser.id || '').trim()
