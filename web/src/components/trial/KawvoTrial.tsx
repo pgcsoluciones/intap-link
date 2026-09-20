@@ -74,6 +74,7 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   const [notifications,setNotifications]=useState<TrialNotification[]>([])
   const [notificationsOpen,setNotificationsOpen]=useState(false)
   const [conversionRequested,setConversionRequested]=useState(false)
+  const [publicOwner,setPublicOwner]=useState(false)
   const [copiedMessage,setCopiedMessage]=useState('')
 
   useEffect(()=>{api('/api/v1/superadmin/trials/context').then(()=>setAdmin(true)).catch(()=>setAdmin(false))},[])
@@ -97,6 +98,19 @@ export default function KawvoTrial({mode}:{mode:Mode}){
     try{const r=await api('/api/v1/me/trials/online/'+encodeURIComponent(id)+'/notifications');setNotifications(r.data||[])}catch{/* owner editor remains usable */}
   }
   useEffect(()=>{void loadOwnerNotifications()},[mode,id])
+  async function detectPublicOwner(){
+    if(mode!=='public'||!trial?.id)return
+    try{
+      const r=await api('/api/v1/me/trials/online')
+      const mine=r?.data
+      if(mine?.id&&String(mine.id)===String(trial.id)){
+        setPublicOwner(true)
+        const notices=await api('/api/v1/me/trials/online/'+encodeURIComponent(trial.id)+'/notifications').catch(()=>({data:[]}))
+        setNotifications(notices?.data||[])
+      }else setPublicOwner(false)
+    }catch{setPublicOwner(false)}
+  }
+  useEffect(()=>{void detectPublicOwner()},[mode,trial?.id])
 
   function analyticsIds(){
     if(privacyChoice!=='accepted')return {visitorId:anonymousVisitorRef.current,sessionId:anonymousSessionRef.current}
@@ -203,8 +217,9 @@ export default function KawvoTrial({mode}:{mode:Mode}){
     try{await api('/api/v1/me/trials/online/'+encodeURIComponent(id)+'/conversion-request',{method:'POST',body:'{}'});setConversionRequested(true)}catch(e:any){setError(e.message)}
   }
   async function readNotification(item:TrialNotification){
-    if(mode!=='owner'||!id||item.read_at)return
-    try{await api('/api/v1/me/trials/online/'+encodeURIComponent(id)+'/notifications/'+encodeURIComponent(item.id)+'/read',{method:'POST',body:'{}'});setNotifications(current=>current.map(n=>n.id===item.id?{...n,read_at:new Date().toISOString()}:n))}catch{/* non blocking */}
+    const ownerTrialId=mode==='owner'?id:publicOwner&&trial?.id?trial.id:''
+    if(!ownerTrialId||item.read_at)return
+    try{await api('/api/v1/me/trials/online/'+encodeURIComponent(ownerTrialId)+'/notifications/'+encodeURIComponent(item.id)+'/read',{method:'POST',body:'{}'});setNotifications(current=>current.map(n=>n.id===item.id?{...n,read_at:new Date().toISOString()}:n))}catch{/* non blocking */}
   }
   function flashMessage(message:string){setCopiedMessage(message);window.setTimeout(()=>setCopiedMessage(''),1800)}
   async function copy(text:string,message='Enlace copiado'){await navigator.clipboard.writeText(text);flashMessage(message)}
@@ -265,7 +280,8 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   if(mode==='public'&&trial?.status==='inactive')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración está desactivada.</h1><p>El perfil Trial fue pausado por el administrador y conserva su enlace para una posible reactivación.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a></div></div>
 
   return <>
-    {mode==='owner'&&notificationsOpen&&<div className="trial-notification-popover"><header><strong>Notificaciones</strong><button onClick={()=>setNotificationsOpen(false)} aria-label="Cerrar"><FaTimes/></button></header><div>{notifications.map(n=><article key={n.id} className={n.read_at?'read':''} onClick={()=>void readNotification(n)}><strong>{n.title}</strong><p>{n.body}</p>{n.cta_label&&n.cta_url&&<a href={n.cta_url} target="_blank" rel="noreferrer">{n.cta_label}</a>}</article>)}{!notifications.length&&<p className="trial-empty-notifications">No tienes notificaciones nuevas.</p>}</div></div>}
+    {mode==='public'&&publicOwner&&trial&&<div className="trial-public-ownerbar"><strong>Mi presentación</strong><button onClick={()=>navigate('/trial/mi/'+trial.id)}>Editar</button><button className="trial-owner-bell" aria-label="Notificaciones" onClick={()=>setNotificationsOpen(v=>!v)}><FaBell/>{unreadNotifications>0&&<b>{unreadNotifications}</b>}</button></div>}
+    {(mode==='owner'||(mode==='public'&&publicOwner))&&notificationsOpen&&<div className="trial-notification-popover"><header><strong>Notificaciones</strong><button onClick={()=>setNotificationsOpen(false)} aria-label="Cerrar"><FaTimes/></button></header><div>{notifications.map(n=><article key={n.id} className={n.read_at?'read':''} onClick={()=>void readNotification(n)}><strong>{n.title}</strong><p>{n.body}</p>{n.cta_label&&n.cta_url&&<a href={n.cta_url} target="_blank" rel="noreferrer">{n.cta_label}</a>}</article>)}{!notifications.length&&<p className="trial-empty-notifications">No tienes notificaciones nuevas.</p>}</div></div>}
     <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} footerSecondaryLabel="Quiero esta presentación" footerSecondaryHref={trialInterestUrl} beforeShareContent={snapshot.modules?.banks?.enabled?<TrialBanks banks={snapshot.modules.banks.items} editMode={mode==='editor'||mode==='owner'} onEdit={()=>openSection("banks")} publicSlug={mode==='public'?(trial?.slug||slug):undefined}/>:undefined} editMode={mode==='editor'||mode==='owner'} onTrackEvent={mode==='public'?trackTrialEvent:undefined} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{openSection(s)}}}/>
     {(mode==='editor'||mode==='owner')&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
     {mode==='master'&&admin&&<button className="trial-create" onClick={()=>setCreateConfig(true)}>+ Crear Trial</button>}
