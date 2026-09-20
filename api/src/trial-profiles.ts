@@ -36,6 +36,8 @@ const MASTER = {
   }
 }
 
+export { MASTER as TRIAL_MASTER }
+
 function normalizeSlug(input: unknown) {
   return String(input || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)
 }
@@ -291,7 +293,9 @@ export function registerTrialRoutes(app:any){
     const firstPublish=!activatedAt
     if(firstPublish){
       const now=new Date(); activatedAt=sqlDate(now)
-      expiresAt=sqlDate(new Date(now.getTime()+durationHours((existing as any).duration_hours,72)*60*60*1000))
+      if(!(existing as any).started_at || !expiresAt){
+        expiresAt=sqlDate(new Date(now.getTime()+durationHours((existing as any).duration_hours,72)*60*60*1000))
+      }
     }
     const snapshot=parseJson((existing as any).profile_json)
     if(snapshot.profile){snapshot.profile.slug=slug;snapshot.profile.vcardFileName=`${slug}.vcf`}
