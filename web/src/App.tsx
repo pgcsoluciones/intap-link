@@ -173,6 +173,11 @@ function App() {
           />
 
           <Route
+            path="/trial/mi/:id"
+            element={<KawvoTrial mode="owner" />}
+          />
+
+          <Route
             path="/trial/:slug"
             element={<KawvoTrial mode="public" />}
           />
