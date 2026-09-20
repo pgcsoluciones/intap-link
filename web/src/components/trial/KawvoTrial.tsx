@@ -32,7 +32,12 @@ async function api(path:string,init?:RequestInit){
   if(!response.ok)throw new Error(body.error||'No se pudo completar la operación.')
   return body
 }
-function cleanPhone(v:string){return v.replace(/\D/g,'').slice(0,15)}
+function cleanPhone(v:string){
+  let digits=v.replace(/\D/g,'').slice(0,15)
+  if(digits.startsWith('00'))digits=digits.slice(2)
+  if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits
+  return digits
+}
 function cleanInstagram(v:string){return v.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i,'').replace(/^@/,'').replace(/\/$/,'').slice(0,40)}
 function suggestedSlug(v:string){return v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)}
 function isoDisplay(v:string|null){if(!v)return '—';const d=new Date(v.includes('T')?v:v.replace(' ','T')+'Z');return Number.isNaN(d.getTime())?'—':d.toLocaleString('es-DO',{dateStyle:'medium',timeStyle:'short'})}
