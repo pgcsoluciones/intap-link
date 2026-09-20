@@ -242,6 +242,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const email = String(body.email || '').trim().toLowerCase()
+  const authFlow = body?.flow === 'trial' ? 'trial' : ''
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
 
@@ -266,7 +267,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   // El callback se construye desde APP_URL server-side: producción usa
   // app.intaprd.com y Preview usa app.preview.intaprd.com.
   const appUrl = configuredAppUrl(c)
-  const magicLink = `${appUrl}/auth/callback?token=${rawToken}`
+  const magicLink = `${appUrl}/auth/callback?token=${rawToken}${authFlow === 'trial' ? '&flow=trial' : ''}`
   const resendKey = (c.env as any).RESEND_API_KEY
   const resendFrom = (c.env as any).RESEND_FROM
 
@@ -332,6 +333,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
   if (!clientId) return c.json({ ok: false, error: 'Google OAuth no configurado' }, 503)
 
   const state = generateToken(16)
+  const authFlow = c.req.query('flow') === 'trial' ? 'trial' : ''
   const apiUrl = new URL(c.req.url).origin
   const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
@@ -351,6 +353,9 @@ app.get('/api/v1/auth/google/start', async (c) => {
     'Set-Cookie',
     buildScopedCookie(c.env, configuredAppUrl(c), cookieNames(c.env).oauthState, state, 600, '/api/v1/auth/google'),
   )
+  if (authFlow === 'trial') {
+    headers.append('Set-Cookie', buildScopedCookie(c.env, configuredAppUrl(c), 'kawvo_trial_oauth_flow', 'trial', 600, '/api/v1/auth/google'))
+  }
   return new Response(null, { status: 302, headers })
 })
 
@@ -360,15 +365,17 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const oauthError = c.req.query('error') || ''
 
   const appUrl = configuredAppUrl(c)
+  const cookieHeader = c.req.header('Cookie') || ''
+  const authFlow = parseCookie(cookieHeader, 'kawvo_trial_oauth_flow') === 'trial' ? 'trial' : ''
+  const loginPath = authFlow === 'trial' ? '/trial/login' : '/admin/login'
 
   if (oauthError || !code)
-    return c.redirect(`${appUrl}/admin/login?error=oauth_denied`)
+    return c.redirect(`${appUrl}${loginPath}?error=oauth_denied`)
 
   // Validar state anti-CSRF
-  const cookieHeader = c.req.header('Cookie') || ''
   const savedState = parseCookie(cookieHeader, cookieNames(c.env).oauthState)
   if (!savedState || savedState !== state)
-    return c.redirect(`${appUrl}/admin/login?error=oauth_state`)
+    return c.redirect(`${appUrl}${loginPath}?error=oauth_state`)
 
   const clientId = (c.env as any).GOOGLE_CLIENT_ID
   const clientSecret = (c.env as any).GOOGLE_CLIENT_SECRET
@@ -387,7 +394,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
       grant_type: 'authorization_code',
     }),
   })
-  if (!tokenRes.ok) return c.redirect(`${appUrl}/admin/login?error=oauth_token`)
+  if (!tokenRes.ok) return c.redirect(`${appUrl}${loginPath}?error=oauth_token`)
 
   const tokenData: any = await tokenRes.json()
 
@@ -395,11 +402,11 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: { 'Authorization': `Bearer ${tokenData.access_token}` },
   })
-  if (!userInfoRes.ok) return c.redirect(`${appUrl}/admin/login?error=oauth_userinfo`)
+  if (!userInfoRes.ok) return c.redirect(`${appUrl}${loginPath}?error=oauth_userinfo`)
 
   const googleUser: any = await userInfoRes.json()
   const email = (googleUser.email || '').toLowerCase().trim()
-  if (!email) return c.redirect(`${appUrl}/admin/login?error=oauth_no_email`)
+  if (!email) return c.redirect(`${appUrl}${loginPath}?error=oauth_no_email`)
 
   // Resolver identidad Google estable. El correo principal puede cambiar sin romper Google.
   const googleSubject = String(googleUser.id || '').trim()
@@ -417,7 +424,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
     ).bind(crypto.randomUUID(), email).run()
     user = await c.env.DB.prepare(`SELECT id FROM users WHERE email = ? LIMIT 1`).bind(email).first()
   }
-  if (!user) return c.redirect(`${appUrl}/admin/login?error=user_error`)
+  if (!user) return c.redirect(`${appUrl}${loginPath}?error=user_error`)
 
   const userId = (user as any).id
   if (googleSubject) {
@@ -448,12 +455,14 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
   const sessionCookie = buildSessionCookie(sessionRaw, c, 30 * 24 * 60 * 60)
   const clearState = buildScopedCookie(c.env, appUrl, cookieNames(c.env).oauthState, '', 0, '/api/v1/auth/google')
+  const clearTrialFlow = buildScopedCookie(c.env, appUrl, 'kawvo_trial_oauth_flow', '', 0, '/api/v1/auth/google')
 
   const headers = new Headers()
   const resumeActivation = await hasPendingActivationIntent(c)
-  headers.set('Location', `${appUrl}${resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
+  headers.set('Location', `${appUrl}${authFlow === 'trial' ? '/trial/activate' : resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
   headers.append('Set-Cookie', sessionCookie)
   headers.append('Set-Cookie', clearState)
+  headers.append('Set-Cookie', clearTrialFlow)
   return new Response(null, { status: 302, headers })
 })
 
