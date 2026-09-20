@@ -119,6 +119,8 @@ type DynamicPublicProfile = {
   name?: string;
   bio?: string;
   avatarUrl?: string | null;
+  heroUrl?: string | null;
+  hero_url?: string | null;
   category?: string | null;
   subcategory?: string | null;
   updatedAt?: string | null;
