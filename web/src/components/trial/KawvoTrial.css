@@ -121,7 +121,7 @@
 .trial-owner-new-message{border:0;background:#dc2626;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer;animation:trial-owner-message-pulse 1.8s ease-in-out infinite}
 @keyframes trial-owner-message-pulse{0%,100%{opacity:1}50%{opacity:.58}}
 @media (prefers-reduced-motion:reduce){.trial-owner-new-message{animation:none}}
-.trial-public-ownerbar>button:not(.trial-owner-bell){border:0;border-radius:9px;background:#06b6d4;color:#06202a;padding:8px 12px;font-size:12px;font-weight:900;cursor:pointer}
+.trial-public-ownerbar>button:not(.trial-owner-bell):not(.trial-owner-new-message){border:0;border-radius:9px;background:#06b6d4;color:#06202a;padding:8px 12px;font-size:12px;font-weight:900;cursor:pointer}
 @media(max-width:700px){
   .trial-adminbar-main>strong{max-width:118px;overflow:hidden;text-overflow:ellipsis}
   .trial-owner-interest{max-width:132px!important}
