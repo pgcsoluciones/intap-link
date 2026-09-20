@@ -65,6 +65,12 @@ export function registerTrialOnlineRoutes(app:any){
     return c.json({ok:true,data:row?output(row):null})
   })
 
+  app.get('/api/v1/me/trials/online/:id', requireOwner, async(c:any)=>{
+    const row=await owned(c,c.req.param('id'))
+    if(!row)return c.json({ok:false,error:'Trial no encontrado.'},404)
+    return c.json({ok:true,data:output(row)})
+  })
+
   app.post('/api/v1/me/trials/online/start', requireOwner, async(c:any)=>{
     const userId=String(c.get('userId')||'')
     const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE owner_user_id=? ORDER BY created_at DESC LIMIT 1').bind(userId).first()
