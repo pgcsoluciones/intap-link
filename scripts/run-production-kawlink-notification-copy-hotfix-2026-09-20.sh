@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="hotfix/kawlink-whatsapp-rd-normalization"
-APPROVED_SHA="53e0efd164740eab170dc1b5f4be84032101607d"
+APPROVED_SHA="a327cbf39e0c97b5ffee15b3c2c12901ae6f8768"
 EXPECTED_MAIN="3ea20a6cd8f5996f00a923b1cd94fb031c288f39"
 RUNNER="scripts/run-production-kawlink-notification-copy-hotfix-2026-09-20.sh"
 LOG_DIR="$ROOT/.production-kawlink-notification-copy-hotfix-logs"
