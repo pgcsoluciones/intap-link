@@ -121,6 +121,17 @@ function SponsoredProfileRoute() {
   return <SponsoredProfile />
 }
 
+function TrialLoginRedirect() {
+  useEffect(() => {
+    const host=window.location.hostname.toLowerCase()
+    const appOrigin=(host==='preview.intaprd.com'||host.includes('preview')||host.endsWith('.pages.dev'))
+      ? 'https://app.preview.intaprd.com'
+      : 'https://app.intaprd.com'
+    window.location.replace(appOrigin+'/trial/login'+window.location.search)
+  },[])
+  return <RouteLoader />
+}
+
 function LegacyBankRoute() {
   const { slug = '' } = useParams()
   return <Navigate to={`/${encodeURIComponent(slug)}#bancos`} replace />
@@ -165,6 +176,11 @@ function App() {
           <Route
             path="/trial"
             element={<KawvoTrial mode="master" />}
+          />
+
+          <Route
+            path="/trial/login"
+            element={<TrialLoginRedirect />}
           />
 
           <Route
