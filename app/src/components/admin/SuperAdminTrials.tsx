@@ -170,12 +170,22 @@ export default function SuperAdminTrials(){
     setNotifications(current=>current.map(n=>n.id===item.id?{...n,is_active:!Boolean(item.is_active)}:n))
   }
 
+  function closeSelectedTrial(){
+    setSelected(null)
+    setProspect(null)
+    setEvents([])
+    setAnalytics(null)
+    setNotifications([])
+    setMessage('')
+    setVisitorPage(1)
+  }
+
   async function deleteDraft(){
     if(!selected||selected.status!=='draft')return
     if(!window.confirm('Eliminar definitivamente este borrador y sus recursos? Esta acción no se puede deshacer.'))return
     setSaving(true);const json:any=await apiDelete(`/superadmin/trials/${selected.id}`);setSaving(false)
     if(!json?.ok){setMessage(json?.error||'No se pudo eliminar.');return}
-    setSelected(null);setProspect(null);setEvents([]);setAnalytics(null);await load()
+    closeSelectedTrial();await load()
   }
 
   const activeCount=useMemo(()=>items.filter(x=>x.status==='active').length,[items])
@@ -245,7 +255,7 @@ export default function SuperAdminTrials(){
             {selected.status==='active'&&<button className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800" onClick={()=>void deactivateTrial()}>Desactivar</button>}
             {selected.status==='inactive'&&<button className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800" onClick={()=>void reactivateTrial()}>Reactivar</button>}
             {selected.status==='draft'&&<button className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700" onClick={()=>void deleteDraft()}>Eliminar definitivamente</button>}
-            <button className="rounded-lg border px-3 py-2 text-xs font-black" onClick={()=>setSelected(null)}>Cerrar</button>
+            <button type="button" className="rounded-lg border px-3 py-2 text-xs font-black" onClick={closeSelectedTrial}>Cerrar</button>
           </div>
         </div>
 
