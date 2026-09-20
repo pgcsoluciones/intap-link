@@ -252,7 +252,13 @@ app.post('/api/v1/auth/password/reset/complete', async (c:any) => {
 app.post('/api/v1/auth/password/login', async (c:any) => {
   let body:any={}; try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
   const email=String(body?.email||'').trim().toLowerCase(), password=String(body?.password||'')
+  const leadToken=/^[a-f0-9]{64}$/i.test(String(body?.lead_token||''))?String(body.lead_token):''
   if (!email || !password) return c.json({ok:false,error:'Completa correo y contraseña.'},400)
+  if (leadToken) {
+    const lead=await c.env.DB.prepare(`SELECT email FROM trial_leads WHERE token_hash=? AND status IN ('received','linked') AND expires_at>datetime('now') LIMIT 1`).bind(await sha256Hex(leadToken)).first().catch(()=>null)
+    if(!lead)return c.json({ok:false,error:'El enlace de activación ya no es válido. Vuelve a iniciar desde la solicitud de prueba.',code:'trial_lead_invalid'},410)
+    if(String((lead as any).email||'').trim().toLowerCase()!==email)return c.json({ok:false,error:'Usa el mismo correo que colocaste en el formulario para activar tu presentación.',code:'trial_email_mismatch'},409)
+  }
   const row=await c.env.DB.prepare(`SELECT u.id user_id,pc.password_salt,pc.password_hash,pc.failed_attempts,pc.locked_until FROM users u JOIN user_password_credentials pc ON pc.user_id=u.id WHERE lower(u.email)=? LIMIT 1`).bind(email).first()
   if (!row) return c.json({ok:false,error:'Correo o contraseña incorrectos.'},401)
   if ((row as any).locked_until && new Date(String((row as any).locked_until)+'Z').getTime() > Date.now()) return c.json({ok:false,error:'Acceso temporalmente bloqueado. Intenta más tarde.'},423)
