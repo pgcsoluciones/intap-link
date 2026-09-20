@@ -16,6 +16,12 @@ function sqlDate(d:Date){return d.toISOString().replace('T',' ').replace('Z','')
 function parseJson(value:any){try{return JSON.parse(String(value||'{}'))}catch{return {}}}
 function str(value:any,max=180){return String(value||'').trim().slice(0,max)}
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+function generateOpaqueToken(bytes=32){const a=new Uint8Array(bytes);crypto.getRandomValues(a);return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('')}
+async function leadFromToken(env:any,rawToken:string){
+  const token=String(rawToken||'').trim()
+  if(!/^[a-f0-9]{64}$/i.test(token))return null
+  return env.DB.prepare(`SELECT * FROM trial_leads WHERE token_hash=? AND status IN ('received','linked') AND expires_at>datetime('now') LIMIT 1`).bind(await sha256Hex(token)).first()
+}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+escaped+'=([^;]*)'));return match?decodeURIComponent(match[1]):null}
 async function sessionUserId(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return null;const row=await c.env.DB.prepare("SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1").bind(await sha256Hex(raw)).first();return row?String((row as any).user_id||''):null}
 async function requireOwner(c:any,next:any){const id=await sessionUserId(c);if(!id)return c.json({ok:false,error:'Unauthorized'},401);c.set('userId',id);await next()}
@@ -60,6 +66,33 @@ async function addEvent(c:any,trialId:string,eventType:string,details:any={}){
 }
 
 export function registerTrialOnlineRoutes(app:any){
+  app.post('/api/v1/public/trial-leads', async(c:any)=>{
+    let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+    const name=str(body?.name,120)
+    const phone=normalizePhone(body?.phone||body?.whatsapp)
+    const email=normalizeEmail(body?.email)
+    const sector=str(body?.sector,120)
+    if(!name||!phone||!email||!sector)return c.json({ok:false,error:'Nombre, teléfono, correo y sector son obligatorios.'},422)
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return c.json({ok:false,error:'Correo inválido.'},422)
+    if(phone.length<7)return c.json({ok:false,error:'Teléfono inválido.'},422)
+
+    const rawToken=generateOpaqueToken(32)
+    const tokenHash=await sha256Hex(rawToken)
+    const id=crypto.randomUUID()
+    const source=str(body?.source||'kawvo_trial_landing',80)||'kawvo_trial_landing'
+    await c.env.DB.prepare(`INSERT INTO trial_leads(
+      id,token_hash,name,phone,email,sector,source,
+      utm_source,utm_medium,utm_campaign,utm_content,landing_variant,
+      referrer,page_url,campaign_id,status,expires_at
+    ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'received',datetime('now','+7 days'))`).bind(
+      id,tokenHash,name,phone,email,sector,source,
+      str(body?.utm_source,120)||null,str(body?.utm_medium,120)||null,str(body?.utm_campaign,160)||null,
+      str(body?.utm_content,160)||null,str(body?.landing_variant,120)||null,
+      str(body?.referrer,500)||null,str(body?.page_url,500)||null,str(body?.campaign_id,160)||null
+    ).run()
+    return c.json({ok:true,lead_token:rawToken,next:'/trial/login'},201)
+  })
+
   app.get('/api/v1/superadmin/trials/:id/notifications', requireSuperAdmin('super_admin'), async(c:any)=>{
     const id=c.req.param('id')
     const trial=await c.env.DB.prepare('SELECT id FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
@@ -110,14 +143,26 @@ export function registerTrialOnlineRoutes(app:any){
 
   app.post('/api/v1/me/trials/online/start', requireOwner, async(c:any)=>{
     const userId=String(c.get('userId')||'')
-    const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE owner_user_id=? ORDER BY created_at DESC LIMIT 1').bind(userId).first()
-    if(existing)return c.json({ok:true,data:output(existing),reused:true})
-
     let body:any={};try{body=await c.req.json()}catch{body={}}
+    const leadToken=str(body?.lead_token,128)
+    const lead:any=leadToken?await leadFromToken(c.env,leadToken):null
+
+    const existing=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE owner_user_id=? ORDER BY created_at DESC LIMIT 1').bind(userId).first()
+    if(existing){
+      if(lead && (!lead.linked_user_id || String(lead.linked_user_id)===userId)){
+        await c.env.DB.prepare(`UPDATE trial_leads SET status='linked',linked_user_id=?,trial_id=?,consumed_at=COALESCE(consumed_at,datetime('now')),updated_at=datetime('now') WHERE id=?`)
+          .bind(userId,(existing as any).id,lead.id).run()
+      }
+      return c.json({ok:true,data:output(existing),reused:true})
+    }
+
     const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
-    const email=normalizeEmail((user as any)?.email||body?.email)
-    const phone=normalizePhone(body?.phone||body?.whatsapp)
-    const conflict=await identityConflict(c.env,userId,email,phone)
+    const authEmail=normalizeEmail((user as any)?.email||body?.email)
+    const prospectName=str(lead?.name||body?.name,120)
+    const prospectPhone=normalizePhone(lead?.phone||body?.phone||body?.whatsapp)
+    const prospectEmail=normalizeEmail(lead?.email||body?.email||authEmail)
+    const prospectSector=str(lead?.sector||body?.sector,120)
+    const conflict=await identityConflict(c.env,userId,authEmail,prospectPhone)
     if(conflict){
       const previous=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE id=? LIMIT 1').bind(String((conflict as any).trial_id||'')).first()
       return c.json({ok:false,error:'Esta identidad ya utilizó una prueba gratuita de KawLink.',code:'trial_already_used',data:previous?output(previous):null},409)
@@ -127,6 +172,17 @@ export function registerTrialOnlineRoutes(app:any){
     const snapshot=JSON.parse(JSON.stringify(TRIAL_MASTER))
     snapshot.profile.id=id
     snapshot.profile.slug=''
+    if(prospectName){
+      snapshot.profile.name=prospectName
+      snapshot.profile.whatsappGreetingName=prospectName.split(/\s+/)[0]||prospectName
+    }
+    if(prospectSector)snapshot.profile.role=prospectSector
+    if(prospectPhone){
+      snapshot.profile.phone=prospectPhone
+      snapshot.profile.whatsapp=prospectPhone
+      snapshot.profile.quickActions=(snapshot.profile.quickActions||[]).map((item:any)=>item?.type==='call'?{...item,url:`tel:+${prospectPhone}`}:item)
+    }
+    if(prospectEmail)snapshot.profile.email=prospectEmail
     snapshot.modules={banks:{enabled:false,items:[]}}
     const now=new Date()
     const startedAt=sqlDate(now)
@@ -138,14 +194,18 @@ export function registerTrialOnlineRoutes(app:any){
       owner_user_id,started_at,origin,email_normalized,phone_normalized,expires_at
     ) VALUES(?,'draft',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'online',?,?,?)`).bind(
       id,JSON.stringify(snapshot),'online:'+userId,96,
-      str(body?.name,120),str(body?.phone,40),str(body?.whatsapp||body?.phone,40),email,'',
-      '',str(body?.sector,120),'web','KawLink Trial Online','',
-      userId,startedAt,email,phone,expiresAt
+      prospectName,prospectPhone,prospectPhone,prospectEmail,'',
+      '',prospectSector,'web','KawLink Trial Online','',
+      userId,startedAt,authEmail,prospectPhone,expiresAt
     ).run()
     await claimIdentity(c.env,id,userId,'user',userId)
-    if(email)await claimIdentity(c.env,id,userId,'email',email)
-    if(phone)await claimIdentity(c.env,id,userId,'phone',phone)
-    await addEvent(c,id,'trial.online_started',{started_at:startedAt,expires_at:expiresAt,duration_hours:96})
+    if(authEmail)await claimIdentity(c.env,id,userId,'email',authEmail)
+    if(prospectPhone)await claimIdentity(c.env,id,userId,'phone',prospectPhone)
+    if(lead){
+      await c.env.DB.prepare(`UPDATE trial_leads SET status='linked',linked_user_id=?,trial_id=?,consumed_at=datetime('now'),updated_at=datetime('now') WHERE id=?`)
+        .bind(userId,id,lead.id).run()
+    }
+    await addEvent(c,id,'trial.online_started',{started_at:startedAt,expires_at:expiresAt,duration_hours:96,lead_id:lead?.id||null,source:lead?.source||'direct'})
     const row=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
     return c.json({ok:true,data:output(row),reused:false},201)
   })
