@@ -63,6 +63,8 @@ function isAllowedOrigin(origin: string): boolean {
       (
         u.hostname === 'intaprd.com' ||
         u.hostname.endsWith('.intaprd.com') ||
+        u.hostname === 'kawvoia.com' ||
+        u.hostname.endsWith('.kawvoia.com') ||
         u.hostname === 'intap-link.pages.dev' ||
         u.hostname.endsWith('.intap-link.pages.dev') ||
         u.hostname === 'intap-web2.pages.dev' ||
@@ -243,6 +245,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
 
   const email = String(body.email || '').trim().toLowerCase()
   const authFlow = body?.flow === 'trial' ? 'trial' : ''
+  const leadToken = authFlow === 'trial' && /^[a-f0-9]{64}$/i.test(String(body?.lead_token||'')) ? String(body.lead_token) : ''
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
 
@@ -267,7 +270,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   // El callback se construye desde APP_URL server-side: producción usa
   // app.intaprd.com y Preview usa app.preview.intaprd.com.
   const appUrl = configuredAppUrl(c)
-  const magicLink = `${appUrl}/auth/callback?token=${rawToken}${authFlow === 'trial' ? '&flow=trial' : ''}`
+  const magicLink = `${appUrl}/auth/callback?token=${rawToken}${authFlow === 'trial' ? '&flow=trial' : ''}${leadToken ? `&lead_token=${encodeURIComponent(leadToken)}` : ''}`
   const resendKey = (c.env as any).RESEND_API_KEY
   const resendFrom = (c.env as any).RESEND_FROM
 
@@ -334,6 +337,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
 
   const state = generateToken(16)
   const authFlow = c.req.query('flow') === 'trial' ? 'trial' : ''
+  const leadToken = authFlow === 'trial' && /^[a-f0-9]{64}$/i.test(String(c.req.query('lead_token')||'')) ? String(c.req.query('lead_token')) : ''
   const apiUrl = new URL(c.req.url).origin
   const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
@@ -355,6 +359,7 @@ app.get('/api/v1/auth/google/start', async (c) => {
   )
   if (authFlow === 'trial') {
     headers.append('Set-Cookie', buildScopedCookie(c.env, configuredAppUrl(c), 'kawvo_trial_oauth_flow', 'trial', 600, '/api/v1/auth/google'))
+    if (leadToken) headers.append('Set-Cookie', buildScopedCookie(c.env, configuredAppUrl(c), 'kawvo_trial_lead_token', leadToken, 600, '/api/v1/auth/google'))
   }
   return new Response(null, { status: 302, headers })
 })
@@ -367,6 +372,7 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const appUrl = configuredAppUrl(c)
   const cookieHeader = c.req.header('Cookie') || ''
   const authFlow = parseCookie(cookieHeader, 'kawvo_trial_oauth_flow') === 'trial' ? 'trial' : ''
+  const trialLeadToken = authFlow === 'trial' ? String(parseCookie(cookieHeader, 'kawvo_trial_lead_token')||'') : ''
   const loginPath = authFlow === 'trial' ? '/trial/login' : '/admin/login'
 
   if (oauthError || !code)
@@ -456,13 +462,15 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const sessionCookie = buildSessionCookie(sessionRaw, c, 30 * 24 * 60 * 60)
   const clearState = buildScopedCookie(c.env, appUrl, cookieNames(c.env).oauthState, '', 0, '/api/v1/auth/google')
   const clearTrialFlow = buildScopedCookie(c.env, appUrl, 'kawvo_trial_oauth_flow', '', 0, '/api/v1/auth/google')
+  const clearTrialLead = buildScopedCookie(c.env, appUrl, 'kawvo_trial_lead_token', '', 0, '/api/v1/auth/google')
 
   const headers = new Headers()
   const resumeActivation = await hasPendingActivationIntent(c)
-  headers.set('Location', `${appUrl}${authFlow === 'trial' ? '/trial/activate' : resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
+  headers.set('Location', `${appUrl}${authFlow === 'trial' ? `/trial/activate${/^[a-f0-9]{64}$/i.test(trialLeadToken)?`?lead_token=${encodeURIComponent(trialLeadToken)}`:''}` : resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
   headers.append('Set-Cookie', sessionCookie)
   headers.append('Set-Cookie', clearState)
   headers.append('Set-Cookie', clearTrialFlow)
+  headers.append('Set-Cookie', clearTrialLead)
   return new Response(null, { status: 302, headers })
 })
 
