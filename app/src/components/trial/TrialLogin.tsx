@@ -3,6 +3,8 @@ import { apiGet, apiPost } from '../../lib/api'
 
 type Mode='login'|'register'
 const WEB_ORIGIN=(import.meta.env.VITE_WEB_URL??'https://intaprd.com').replace(/\/$/,'')
+const LEAD_TOKEN_KEY='kawlink_trial_lead_token'
+function validLeadToken(value:string){return /^[a-f0-9]{64}$/i.test(value)}
 
 export default function TrialLogin(){
   const [mode,setMode]=useState<Mode>('register')
@@ -13,8 +15,12 @@ export default function TrialLogin(){
   const [error,setError]=useState('')
 
   useEffect(()=>{
+    const queryToken=new URLSearchParams(window.location.search).get('lead_token')||''
+    if(validLeadToken(queryToken))sessionStorage.setItem(LEAD_TOKEN_KEY,queryToken)
+    const leadToken=validLeadToken(queryToken)?queryToken:(sessionStorage.getItem(LEAD_TOKEN_KEY)||'')
     apiGet('/me/trials/online').then((json:any)=>{
       if(json?.ok&&json?.data?.id){
+        if(validLeadToken(leadToken)){window.location.replace('/trial/activate?lead_token='+encodeURIComponent(leadToken));return}
         window.location.replace(`${WEB_ORIGIN}/trial/mi/${encodeURIComponent(json.data.id)}`)
       }
     }).catch(()=>undefined)
@@ -26,10 +32,12 @@ export default function TrialLogin(){
       if(mode==='login'&&loginMethod==='password'){
         const json:any=await apiPost('/auth/password/login',{email,password})
         if(!json?.ok){setError(json?.error||'Correo o contraseña incorrectos.');return}
-        window.location.assign('/trial/activate')
+        const leadToken=sessionStorage.getItem(LEAD_TOKEN_KEY)||''
+        window.location.assign('/trial/activate'+(validLeadToken(leadToken)?'?lead_token='+encodeURIComponent(leadToken):''))
         return
       }
-      const json:any=await apiPost('/auth/magic-link/start',{email,mode,flow:'trial'})
+      const leadToken=sessionStorage.getItem(LEAD_TOKEN_KEY)||''
+      const json:any=await apiPost('/auth/magic-link/start',{email,mode,flow:'trial',lead_token:validLeadToken(leadToken)?leadToken:undefined})
       if(!json?.ok){setError(json?.error||'No pudimos enviar el acceso.');return}
       sessionStorage.setItem('trial_magic_link_email',email)
       window.location.assign('/trial/check-email')
@@ -38,7 +46,8 @@ export default function TrialLogin(){
   }
 
   function google(){
-    window.location.assign('/api/v1/auth/google/start?flow=trial')
+    const leadToken=sessionStorage.getItem(LEAD_TOKEN_KEY)||''
+    window.location.assign('/api/v1/auth/google/start?flow=trial'+(validLeadToken(leadToken)?'&lead_token='+encodeURIComponent(leadToken):''))
   }
 
   const register=mode==='register'
