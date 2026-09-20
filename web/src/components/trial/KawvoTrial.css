@@ -93,3 +93,35 @@
 .trial-notification-popover article a{display:inline-flex;margin-top:9px;border-radius:9px;background:#0f172a;color:#fff;padding:7px 9px;text-decoration:none;font-size:11px;font-weight:900}
 .trial-empty-notifications{margin:0;padding:22px 15px;color:#94a3b8;font-size:12px;text-align:center}
 @media(max-width:640px){.trial-owner-actions{gap:5px}.trial-owner-interest{max-width:145px;overflow:hidden;text-overflow:ellipsis;padding:9px 10px;font-size:10px}.trial-owner-bell{width:34px;height:34px}.trial-notification-popover{top:52px;right:8px;width:calc(100% - 16px)}}
+
+
+/* Trial Online UX refinement 2026-09-20 */
+.trial-adminbar{padding:7px 10px!important}
+.trial-adminbar-main{gap:6px!important}
+.trial-adminbar-main>strong{font-size:12px!important;letter-spacing:.01em}
+.trial-save{margin:0 0 0 2px!important;font-size:10px!important;color:#94a3b8!important;white-space:nowrap}
+.trial-tool{min-height:34px!important;padding:7px 9px!important}
+.trial-extras-wrap{position:relative}
+.trial-extras-menu{position:absolute;top:42px;left:0;z-index:140;min-width:205px;border:1px solid #334155;border-radius:12px;background:#0f172a;box-shadow:0 18px 38px rgba(15,23,42,.38);padding:7px}
+.trial-extras-menu button{width:100%;display:flex;align-items:center;gap:9px;border:0;border-radius:9px;background:transparent;color:#fff;padding:10px;font-size:12px;font-weight:800;text-align:left}
+.trial-extras-menu button:hover{background:#1e293b}
+.trial-completion-list{display:grid;gap:7px;margin:12px 0 16px;padding:12px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc}
+.trial-completion-list>strong{font-size:12px}
+.trial-completion-list button{display:flex;align-items:center;gap:8px;border:0;border-radius:9px;padding:8px 9px;background:#fff;text-align:left;font-size:12px;font-weight:800;color:#334155}
+.trial-completion-list button span{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#e2e8f0;font-size:11px}
+.trial-completion-list button.ok span{background:#dcfce7;color:#166534}
+.trial-completion-list button.pending span{background:#fee2e2;color:#b91c1c}
+.trial-completion-list button.recommended span{background:#e0f2fe;color:#0369a1}
+.trial-recommended-title{margin-top:5px;color:#64748b}
+.trial-finish-warning{display:block;margin-top:8px;color:#b45309;font-weight:800;text-align:center}
+.trial-success-invite{width:100%;margin-top:10px;border:1px solid #bae6fd;border-radius:12px;background:#ecfeff;color:#0369a1;font-weight:900;padding:12px 14px;cursor:pointer}
+.trial-copy-toast{position:fixed;z-index:220;left:50%;bottom:24px;transform:translateX(-50%);background:#0f172a;color:#fff;border-radius:999px;padding:10px 16px;font-size:12px;font-weight:900;box-shadow:0 12px 32px rgba(15,23,42,.28)}
+.trial-public-ownerbar{position:sticky;top:0;z-index:121;display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0f172a;color:#fff;box-shadow:0 8px 22px rgba(15,23,42,.18)}
+.trial-public-ownerbar strong{margin-right:auto;font-size:12px}
+.trial-public-ownerbar>button:not(.trial-owner-bell){border:0;border-radius:9px;background:#06b6d4;color:#06202a;padding:8px 12px;font-size:12px;font-weight:900;cursor:pointer}
+@media(max-width:700px){
+  .trial-adminbar-main>strong{max-width:118px;overflow:hidden;text-overflow:ellipsis}
+  .trial-owner-interest{max-width:132px!important}
+  .trial-extras-menu{position:static;margin-top:5px}
+  .trial-copy-toast{bottom:max(18px,env(safe-area-inset-bottom))}
+}
