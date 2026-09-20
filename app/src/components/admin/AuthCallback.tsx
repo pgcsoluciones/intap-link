@@ -5,6 +5,7 @@ import { API_BASE, apiGet } from '../../lib/api'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 const TEAM_CODE_KEY = 'kawvo_team_join_code'
 const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
+const TRIAL_LEAD_TOKEN_KEY = 'kawlink_trial_lead_token'
 
 function readScanCode(): string {
   const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
@@ -32,6 +33,8 @@ export default function AuthCallback() {
   useEffect(() => {
     const token = searchParams.get('token')
     const authFlow = searchParams.get('flow')
+    const leadToken = searchParams.get('lead_token') || ''
+    if (/^[a-f0-9]{64}$/i.test(leadToken)) sessionStorage.setItem(TRIAL_LEAD_TOKEN_KEY, leadToken)
     if (!token) {
       setError('Enlace inválido: falta el token')
       return
@@ -50,7 +53,8 @@ export default function AuthCallback() {
         localStorage.removeItem('kawvo_auth_mode')
 
         if (authFlow === 'trial') {
-          navigate('/trial/activate', { replace: true })
+          const storedLead=sessionStorage.getItem(TRIAL_LEAD_TOKEN_KEY)||''
+          navigate('/trial/activate'+(/^[a-f0-9]{64}$/i.test(storedLead)?'?lead_token='+encodeURIComponent(storedLead):''), { replace: true })
           return
         }
 
@@ -109,7 +113,7 @@ export default function AuthCallback() {
               <p className="text-[11px] font-black uppercase tracking-[0.22em] text-rose-500">KAWVO LINK</p>
               <h1 className="mt-3 text-xl font-black">No pudimos abrir este enlace</h1>
               <p className="mt-2 text-sm leading-6 text-slate-500">{error}</p>
-              <a href={searchParams.get('flow')==='trial'?'/trial/login':'/admin/login'} className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">Solicitar nuevo acceso</a>
+              <a href={searchParams.get('flow')==='trial'?'/trial/login'+(searchParams.get('lead_token')?'?lead_token='+encodeURIComponent(searchParams.get('lead_token')||''):''):'/admin/login'} className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-extrabold text-white">Solicitar nuevo acceso</a>
             </>
           ) : (
             <>
