@@ -96,7 +96,7 @@ async function addEvent(c:any,trialId:string,eventType:string,details:any={}){
 }
 export async function expireDueTrials(env:any){
   if(!env?.DB)return
-  await env.DB.prepare(`UPDATE trial_profiles SET status='expired',updated_at=datetime('now') WHERE status='active' AND expires_at IS NOT NULL AND expires_at<=datetime('now')`).run()
+  await env.DB.prepare(`UPDATE trial_profiles SET status='expired',updated_at=datetime('now') WHERE (status='active' OR (origin='online' AND status='draft')) AND expires_at IS NOT NULL AND expires_at<=datetime('now')`).run()
 }
 
 export function registerTrialRoutes(app:any){
