@@ -73,3 +73,23 @@
 .trial-success-close{position:absolute;top:14px;right:14px;width:38px;height:38px;border:0;border-radius:999px;background:#f3f5f9;color:#0f172a;display:grid;place-items:center;cursor:pointer}
 .trial-success-dismiss{width:100%;margin-top:10px;border:1px solid #d9deea;border-radius:12px;background:#fff;color:#0f172a;font-weight:700;padding:12px 14px;cursor:pointer}
 .trial-success-dismiss:hover,.trial-success-close:hover{background:#eef2f7}
+
+
+/* Trial Online owner controls */
+.trial-owner-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.trial-owner-bell{position:relative;width:38px;height:38px;border:1px solid #334155;border-radius:11px;background:#172033;color:#fff;display:grid;place-items:center;cursor:pointer}
+.trial-owner-bell b{position:absolute;right:-5px;top:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:10px;line-height:18px;text-align:center}
+.trial-owner-interest{border:0;border-radius:11px;background:#06b6d4;color:#06202a;padding:10px 12px;font-size:12px;font-weight:900;cursor:pointer;white-space:nowrap}
+.trial-owner-interest:disabled{opacity:.65;cursor:default}
+.trial-notification-popover{position:fixed;z-index:175;top:58px;right:14px;width:min(390px,calc(100% - 28px));max-height:min(70vh,620px);overflow:hidden;border:1px solid #dbe3ee;border-radius:16px;background:#fff;color:#0f172a;box-shadow:0 22px 55px rgba(15,23,42,.26)}
+.trial-notification-popover>header{display:flex;align-items:center;justify-content:space-between;padding:14px 15px;border-bottom:1px solid #eef2f7}
+.trial-notification-popover>header strong{font-size:15px}
+.trial-notification-popover>header button{width:32px;height:32px;border:0;border-radius:50%;background:#f1f5f9;display:grid;place-items:center;color:#0f172a}
+.trial-notification-popover>div{max-height:calc(min(70vh,620px) - 62px);overflow:auto}
+.trial-notification-popover article{padding:13px 15px;border-bottom:1px solid #eef2f7;background:#f8fdff;cursor:pointer}
+.trial-notification-popover article.read{background:#fff}
+.trial-notification-popover article strong{display:block;font-size:13px}
+.trial-notification-popover article p{margin:5px 0 0;color:#475569;font-size:12px;line-height:1.45}
+.trial-notification-popover article a{display:inline-flex;margin-top:9px;border-radius:9px;background:#0f172a;color:#fff;padding:7px 9px;text-decoration:none;font-size:11px;font-weight:900}
+.trial-empty-notifications{margin:0;padding:22px 15px;color:#94a3b8;font-size:12px;text-align:center}
+@media(max-width:640px){.trial-owner-actions{gap:5px}.trial-owner-interest{max-width:145px;overflow:hidden;text-overflow:ellipsis;padding:9px 10px;font-size:10px}.trial-owner-bell{width:34px;height:34px}.trial-notification-popover{top:52px;right:8px;width:calc(100% - 16px)}}
