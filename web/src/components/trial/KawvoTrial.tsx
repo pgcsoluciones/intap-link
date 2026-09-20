@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { FaBars, FaCamera, FaCheck, FaCopy, FaPalette, FaPlus, FaQrcode, FaShareAlt, FaTimes, FaUniversity } from 'react-icons/fa'
+import { FaBars, FaBell, FaCamera, FaCheck, FaCopy, FaPalette, FaPlus, FaQrcode, FaShareAlt, FaTimes, FaUniversity } from 'react-icons/fa'
 import IntapLinkGratisProfile from '../free-profile/IntapLinkGratisProfile'
 import TrialImageCrop from './TrialImageCrop'
 import { TrialBanks, TrialBanksEditor, TrialLocationButton, TrialLocationPanel, TrialPalettePanel, type TrialBank } from './TrialPanels'
@@ -11,6 +11,7 @@ type Snapshot={layout:FreeProfileLayoutId;colors:FreeProfileAppearanceColors;pro
 type Prospect={contact_name:string;phone:string;whatsapp:string;email:string;instagram:string;company_name:string;company_type:string;source:string;source_detail:string;notes:string}
 type Trial={id:string;slug:string|null;name:string|null;status:'draft'|'active'|'inactive'|'expired';profile:Snapshot;duration_hours:number;prospect?:Prospect;started_at?:string|null;activated_at:string|null;expires_at:string|null}
 type Mode='master'|'editor'|'owner'|'public'
+type TrialNotification={id:string;title:string;body:string;cta_label?:string|null;cta_url?:string|null;read_at?:string|null;created_at:string}
 
 const FALLBACK:Snapshot={
   layout:'impacto',
@@ -69,6 +70,9 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   const anonymousSessionRef=useRef(crypto.randomUUID())
   const [privacyChoice,setPrivacyChoice]=useState<'accepted'|'essential'|null>(null)
   const [privacyManage,setPrivacyManage]=useState(false)
+  const [notifications,setNotifications]=useState<TrialNotification[]>([])
+  const [notificationsOpen,setNotificationsOpen]=useState(false)
+  const [conversionRequested,setConversionRequested]=useState(false)
 
   useEffect(()=>{api('/api/v1/superadmin/trials/context').then(()=>setAdmin(true)).catch(()=>setAdmin(false))},[])
   useEffect(()=>{if(mode!=='public')return;const saved=localStorage.getItem('kawvo_trial_privacy_v1');setPrivacyChoice(saved==='accepted'||saved==='essential'?saved:null)},[mode])
@@ -86,6 +90,11 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   },[mode,id,slug])
 
   useEffect(()=>()=>{if(saveTimer.current)window.clearTimeout(saveTimer.current)},[])
+  async function loadOwnerNotifications(){
+    if(mode!=='owner'||!id)return
+    try{const r=await api('/api/v1/me/trials/online/'+encodeURIComponent(id)+'/notifications');setNotifications(r.data||[])}catch{/* owner editor remains usable */}
+  }
+  useEffect(()=>{void loadOwnerNotifications()},[mode,id])
 
   function analyticsIds(){
     if(privacyChoice!=='accepted')return {visitorId:anonymousVisitorRef.current,sessionId:anonymousSessionRef.current}
@@ -187,6 +196,14 @@ export default function KawvoTrial({mode}:{mode:Mode}){
       const QRCode=await import('qrcode');setQr(await QRCode.toDataURL(window.location.origin+r.data.url,{width:900,margin:3,errorCorrectionLevel:'H'}))
     }catch(e:any){setError(e.message);setSaving('error')}
   }
+  async function requestConversion(){
+    if(mode!=='owner'||!id||conversionRequested)return
+    try{await api('/api/v1/me/trials/online/'+encodeURIComponent(id)+'/conversion-request',{method:'POST',body:'{}'});setConversionRequested(true)}catch(e:any){setError(e.message)}
+  }
+  async function readNotification(item:TrialNotification){
+    if(mode!=='owner'||!id||item.read_at)return
+    try{await api('/api/v1/me/trials/online/'+encodeURIComponent(id)+'/notifications/'+encodeURIComponent(item.id)+'/read',{method:'POST',body:'{}'});setNotifications(current=>current.map(n=>n.id===item.id?{...n,read_at:new Date().toISOString()}:n))}catch{/* non blocking */}
+  }
   async function copy(text:string){await navigator.clipboard.writeText(text)}
   async function share(url:string){if(navigator.share)await navigator.share({title:trialName||'Trial Kawvo Link',url});else await copy(url)}
   function closePublished(){
@@ -206,14 +223,17 @@ export default function KawvoTrial({mode}:{mode:Mode}){
   const trialInterestUrl='https://wa.me/18097059802?text='+encodeURIComponent(trialInterestMessage)
   const sourceOptions=[['fair_event','Feria / Evento'],['commercial_visit','Visita comercial'],['street_direct','Calle / contacto directo'],['whatsapp','WhatsApp'],['instagram','Instagram'],['web','Web'],['referral','Referido'],['call','Llamada'],['point_of_sale','Punto de venta'],['other','Otro']] as const
   const companyTypes=['Servicios profesionales','Automotriz / Taller','Belleza / Estética','Construcción / Ferretería','Salud','Gastronomía','Tecnología','Comercio / Retail','Educación','Inmobiliaria']
-  const editorTop=(mode==='editor'||mode==='owner')?<div className="trial-adminbar"><div className="trial-adminbar-main"><strong>{mode==='owner'?'MI TRIAL · Editando':'TRIAL · Editando'}</strong><button className="trial-tools-menu" aria-label="Opciones de edición" aria-expanded={toolsOpen} onClick={()=>setToolsOpen(v=>!v)}><FaBars/><span>Opciones</span></button><div className={`trial-tools ${toolsOpen?'open':''}`}><button className="trial-tool" onClick={()=>{openSection("appearance");setToolsOpen(false)}}><FaPalette/> Colores</button><button className="trial-tool" onClick={()=>{openSection("links");setToolsOpen(false)}}><FaPlus/> Enlaces</button><button className="trial-tool" onClick={()=>{openSection("banks");setToolsOpen(false)}}><FaPlus/> Módulos</button>{mode==='editor'&&<button className="trial-tool" onClick={()=>{void openProspect();setToolsOpen(false)}}><FaPlus/> Prospecto</button>}</div><button className="trial-primary trial-finish-btn" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/><span>Finalizar</span></button></div><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span></div>:undefined
+  const unreadNotifications=notifications.filter(n=>!n.read_at).length
+  const editorTop=(mode==='editor'||mode==='owner')?<div className="trial-adminbar"><div className="trial-adminbar-main"><strong>{mode==='owner'?'MI TRIAL · Editando':'TRIAL · Editando'}</strong><button className="trial-tools-menu" aria-label="Opciones de edición" aria-expanded={toolsOpen} onClick={()=>setToolsOpen(v=>!v)}><FaBars/><span>Opciones</span></button><div className={`trial-tools ${toolsOpen?'open':''}`}><button className="trial-tool" onClick={()=>{openSection("appearance");setToolsOpen(false)}}><FaPalette/> Colores</button><button className="trial-tool" onClick={()=>{openSection("links");setToolsOpen(false)}}><FaPlus/> Enlaces</button><button className="trial-tool" onClick={()=>{openSection("banks");setToolsOpen(false)}}><FaPlus/> Módulos</button>{mode==='editor'&&<button className="trial-tool" onClick={()=>{void openProspect();setToolsOpen(false)}}><FaPlus/> Prospecto</button>}</div>{mode==='owner'&&<div className="trial-owner-actions"><button className="trial-owner-bell" aria-label="Notificaciones" onClick={()=>setNotificationsOpen(v=>!v)}><FaBell/>{unreadNotifications>0&&<b>{unreadNotifications}</b>}</button><button className="trial-owner-interest" onClick={()=>void requestConversion()} disabled={conversionRequested}>{conversionRequested?'Solicitud enviada':'Quiero esta presentación'}</button></div>}<button className="trial-primary trial-finish-btn" onClick={()=>{setTrialName(snapshot.profile.name);setTrialSlug(trial?.slug||suggestedSlug(snapshot.profile.name));setFinish(true)}}><FaCheck/><span>Finalizar</span></button></div><span className={`trial-save ${saving}`}>{saving==='saving'?'Guardando…':saving==='error'?'Error al guardar':'Guardado'}</span></div>:undefined
 
+  if(mode==='owner'&&trial?.status==='expired')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Tu prueba gratuita ha finalizado.</h1><p>Tu presentación y su información permanecen guardadas. Puedes solicitar la activación definitiva para continuar utilizándola.</p><button className="trial-primary" onClick={()=>void requestConversion()} disabled={conversionRequested}>{conversionRequested?'Solicitud enviada':'Quiero esta presentación'}</button></div></div>
   if(loading)return <div className="trial-state">Cargando Trial…</div>
   if(error && !trial && mode!=='master')return <div className="trial-state"><h1>No pudimos abrir este Trial</h1><p>{error}</p></div>
   if(mode==='public'&&trial?.status==='expired')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta presentación no está disponible temporalmente.</h1></div></div>
   if(mode==='public'&&trial?.status==='inactive')return <div className="trial-expired"><div><span>KAWVO LINK</span><h1>Esta demostración está desactivada.</h1><p>El perfil Trial fue pausado por el administrador y conserva su enlace para una posible reactivación.</p><a href="https://wa.me/18095368224" target="_blank" rel="noreferrer">Contactar a Kawvo Link</a></div></div>
 
   return <>
+    {mode==='owner'&&notificationsOpen&&<div className="trial-notification-popover"><header><strong>Notificaciones</strong><button onClick={()=>setNotificationsOpen(false)} aria-label="Cerrar"><FaTimes/></button></header><div>{notifications.map(n=><article key={n.id} className={n.read_at?'read':''} onClick={()=>void readNotification(n)}><strong>{n.title}</strong><p>{n.body}</p>{n.cta_label&&n.cta_url&&<a href={n.cta_url} target="_blank" rel="noreferrer">{n.cta_label}</a>}</article>)}{!notifications.length&&<p className="trial-empty-notifications">No tienes notificaciones nuevas.</p>}</div></div>}
     <IntapLinkGratisProfile profile={snapshot.profile} layout={snapshot.layout} colors={snapshot.colors} topContent={editorTop} footerSecondaryLabel="Quiero esta presentación" footerSecondaryHref={trialInterestUrl} beforeShareContent={snapshot.modules?.banks?.enabled?<TrialBanks banks={snapshot.modules.banks.items} editMode={mode==='editor'||mode==='owner'} onEdit={()=>openSection("banks")} publicSlug={mode==='public'?(trial?.slug||slug):undefined}/>:undefined} editMode={mode==='editor'||mode==='owner'} onTrackEvent={mode==='public'?trackTrialEvent:undefined} onEditSection={(s)=>{if(s==='hero'||s==='avatar'){document.getElementById('trial-'+s+'-input')?.click()}else{openSection(s)}}}/>
     {(mode==='editor'||mode==='owner')&&<><input id="trial-hero-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('hero',e.target.files?.[0])}/><input id="trial-avatar-input" hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>chooseImage('avatar',e.target.files?.[0])}/></>}
     {mode==='master'&&admin&&<button className="trial-create" onClick={()=>setCreateConfig(true)}>+ Crear Trial</button>}
