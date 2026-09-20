@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { apiPost } from '../../lib/api'
 const WEB_ORIGIN=(import.meta.env.VITE_WEB_URL??'https://intaprd.com').replace(/\/$/,'')
+const LEAD_TOKEN_KEY='kawlink_trial_lead_token'
 export default function TrialActivate(){
   const [error,setError]=useState('')
   useEffect(()=>{
-    apiPost('/me/trials/online/start',{}).then((json:any)=>{
-      if(json?.ok&&json?.data?.id){window.location.replace(`${WEB_ORIGIN}/trial/mi/${encodeURIComponent(json.data.id)}`);return}
+    const queryToken=new URLSearchParams(window.location.search).get('lead_token')||''
+    if(/^[a-f0-9]{64}$/i.test(queryToken))sessionStorage.setItem(LEAD_TOKEN_KEY,queryToken)
+    const leadToken=/^[a-f0-9]{64}$/i.test(queryToken)?queryToken:(sessionStorage.getItem(LEAD_TOKEN_KEY)||'')
+    apiPost('/me/trials/online/start',{lead_token:/^[a-f0-9]{64}$/i.test(leadToken)?leadToken:undefined}).then((json:any)=>{
+      if(json?.ok&&json?.data?.id){sessionStorage.removeItem(LEAD_TOKEN_KEY);window.location.replace(`${WEB_ORIGIN}/trial/mi/${encodeURIComponent(json.data.id)}`);return}
       if(json?.code==='trial_already_used'){setError('Esta cuenta ya utilizó su prueba gratuita. Inicia sesión para recuperar tu presentación o solicitar su activación.');return}
       setError(json?.error||'No pudimos activar tu prueba.')
     }).catch(()=>setError('No pudimos conectar con KawLink. Inténtalo nuevamente.'))
