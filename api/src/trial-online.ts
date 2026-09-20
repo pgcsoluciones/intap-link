@@ -1,3 +1,4 @@
+import { requireSuperAdmin } from './lib/admin-auth'
 import { cookieNames } from './lib/cookies'
 import { TRIAL_MASTER } from './trial-profiles'
 
@@ -59,6 +60,42 @@ async function addEvent(c:any,trialId:string,eventType:string,details:any={}){
 }
 
 export function registerTrialOnlineRoutes(app:any){
+  app.get('/api/v1/superadmin/trials/:id/notifications', requireSuperAdmin('super_admin'), async(c:any)=>{
+    const id=c.req.param('id')
+    const trial=await c.env.DB.prepare('SELECT id FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
+    if(!trial)return c.json({ok:false,error:'Trial no encontrado.'},404)
+    const rows=await c.env.DB.prepare('SELECT id,title,body,cta_label,cta_url,starts_at,ends_at,is_active,read_at,created_at FROM trial_notifications WHERE trial_id=? ORDER BY created_at DESC LIMIT 50').bind(id).all()
+    return c.json({ok:true,data:rows.results||[]})
+  })
+
+  app.post('/api/v1/superadmin/trials/:id/notifications', requireSuperAdmin('super_admin'), async(c:any)=>{
+    const id=c.req.param('id')
+    const trial=await c.env.DB.prepare('SELECT id FROM trial_profiles WHERE id=? LIMIT 1').bind(id).first()
+    if(!trial)return c.json({ok:false,error:'Trial no encontrado.'},404)
+    let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+    const title=str(body?.title,120)
+    const message=str(body?.body,600)
+    if(!title||!message)return c.json({ok:false,error:'Título y mensaje son obligatorios.'},422)
+    const notificationId=crypto.randomUUID()
+    const ctaLabel=str(body?.cta_label,80)
+    const ctaUrl=str(body?.cta_url,500)
+    const startsAt=body?.starts_at?str(body.starts_at,40):null
+    const endsAt=body?.ends_at?str(body.ends_at,40):null
+    const adminUserId=String(c.get('adminUserId')||'')
+    await c.env.DB.prepare('INSERT INTO trial_notifications(id,trial_id,title,body,cta_label,cta_url,starts_at,ends_at,is_active,created_by_admin_user_id) VALUES(?,?,?,?,?,?,?,?,1,?)')
+      .bind(notificationId,id,title,message,ctaLabel||null,ctaUrl||null,startsAt||null,endsAt||null,adminUserId||null).run()
+    await addEvent(c,id,'trial.notification_created',{notification_id:notificationId,title})
+    return c.json({ok:true,data:{id:notificationId}},201)
+  })
+
+  app.post('/api/v1/superadmin/trials/:id/notifications/:notificationId/toggle', requireSuperAdmin('super_admin'), async(c:any)=>{
+    const id=c.req.param('id')
+    let body:any={};try{body=await c.req.json()}catch{body={}}
+    const active=body?.is_active===false?0:1
+    await c.env.DB.prepare('UPDATE trial_notifications SET is_active=? WHERE id=? AND trial_id=?').bind(active,c.req.param('notificationId'),id).run()
+    return c.json({ok:true,data:{is_active:Boolean(active)}})
+  })
+
   app.get('/api/v1/me/trials/online', requireOwner, async(c:any)=>{
     const userId=String(c.get('userId')||'')
     const row=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE owner_user_id=? ORDER BY created_at DESC LIMIT 1').bind(userId).first()
