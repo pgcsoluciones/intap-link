@@ -37,7 +37,6 @@ export default function TrialLogin(){
         const leadToken=sessionStorage.getItem(LEAD_TOKEN_KEY)||''
         const json:any=await apiPost('/auth/password/login',{email,password,lead_token:validLeadToken(leadToken)?leadToken:undefined})
         if(!json?.ok){setError(json?.error||'Correo o contraseña incorrectos.');return}
-        const leadToken=sessionStorage.getItem(LEAD_TOKEN_KEY)||''
         window.location.assign('/trial/activate'+(validLeadToken(leadToken)?'?lead_token='+encodeURIComponent(leadToken):''))
         return
       }
