@@ -128,7 +128,7 @@ function whatsappUrl(profile: FreeProfileData, subject?: string) {
   const whatsapp = normalizeWhatsAppNumber(profile.whatsapp)
   if (!whatsapp) return ''
   const message = subject
-    ? `Hola ${profile.whatsappGreetingName}, vi "${subject}" en tu perfil de Kawvo Link y me gustaría recibir más información.`
+    ? `Hola ${profile.whatsappGreetingName}, vi "${subject}" en tu presentación de KawLink y me gustaría recibir más información.`
     : `Hola ${profile.whatsappGreetingName}, vi tu perfil en Kawvo Link y me gustaría recibir más información.`
   return `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`
 }
