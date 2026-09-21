@@ -1749,9 +1749,15 @@ function BentoLayout({
 
 export default function PublicProfile() {
   const params = useParams()
+  const host = window.location.hostname.toLowerCase()
+  const customDomainSlug =
+    host === 'argenisgrullon.com' || host === 'www.argenisgrullon.com'
+      ? 'argenisg'
+      : ''
   const slug =
     (params.slug as string | undefined) ||
     new URLSearchParams(window.location.search).get('slug') ||
+    customDomainSlug ||
     ''
   const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
 
