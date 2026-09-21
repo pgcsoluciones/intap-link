@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feat/argenisg-custom-domain"
 EXPECTED_MAIN="6eef430f2f427aef587c7ed64fbbced2f63fcdda"
-APPROVED_SHA="afd6c022f153d2b7a05f1d48d4d7189c88a189b3"
+APPROVED_SHA="65ec431484dc8f90a70636074c202c7ff1ee2c12"
 RUNNER="scripts/run-production-argenisg-custom-domain-2026-09-20.sh"
 LOG_DIR="$ROOT/.production-argenisg-custom-domain-logs"
 fail(){ echo; echo "✗ ERROR: $1"; exit 1; }
