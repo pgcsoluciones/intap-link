@@ -10,6 +10,7 @@ import {
   FaFileAlt,
   FaHeartbeat,
   FaInstagram,
+  FaGlobe,
   FaLeaf,
   FaLightbulb,
   FaMapMarkerAlt,
@@ -34,6 +35,8 @@ const BIOPESTS = {
   phoneSecondaryRaw: '18292469777',
   whatsappRaw: '18297500908',
   email: 'grupomatyse@gmail.com',
+  website: 'https://biopestsrd.com/',
+  websiteLabel: 'biopestsrd.com',
   instagramUrl: 'https://www.instagram.com/biopestsrd/',
   address:
     'Av. Gustavo Mejía Ricart #226, Piso 4, Oficina 405, Distrito Nacional, República Dominicana.',
@@ -1464,6 +1467,19 @@ export default function IntapProfileBioPests() {
               <span>
                 <small>Correo</small>
                 <strong>{BIOPESTS.email}</strong>
+              </span>
+            </a>
+
+            <a
+              href={BIOPESTS.website}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FaGlobe aria-hidden="true" />
+
+              <span>
+                <small>Sitio web</small>
+                <strong>{BIOPESTS.websiteLabel}</strong>
               </span>
             </a>
 
