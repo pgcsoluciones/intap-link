@@ -211,8 +211,10 @@ ${seoHeadHtml}
         : url.pathname.endsWith('/facts.json')
           ? '/facts.json'
           : '';
+    const target = new URL(`${ARGENIS_CANONICAL_ORIGIN}${suffix}`);
+    target.search = url.search;
     return withSecurityHeaders(
-      Response.redirect(`${ARGENIS_CANONICAL_ORIGIN}${suffix}`, 308)
+      Response.redirect(target.toString(), 308)
     );
   }
 
