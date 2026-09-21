@@ -61,6 +61,7 @@ export type DiscoveryRuntime = {
   apiBase: string;
   isPreview: boolean;
   language: 'es' | 'en';
+  customProfileSlug?: string;
 };
 
 function normalizeOrigin(value: string): string {
@@ -72,7 +73,30 @@ function normalizeOrigin(value: string): string {
 }
 
 function isProductionHost(hostname: string): boolean {
-  return hostname === 'intaprd.com' || hostname === 'www.intaprd.com';
+  return [
+    'intaprd.com',
+    'www.intaprd.com',
+    'argenisgrullon.com',
+    'www.argenisgrullon.com',
+    'alestilodeargenis.com',
+    'www.alestilodeargenis.com',
+  ].includes(hostname);
+}
+
+function customProfileForHost(hostname: string): { slug: string; baseUrl: string } | null {
+  if (
+    hostname === 'argenisgrullon.com' ||
+    hostname === 'www.argenisgrullon.com' ||
+    hostname === 'alestilodeargenis.com' ||
+    hostname === 'www.alestilodeargenis.com'
+  ) {
+    return {
+      slug: 'argenisg',
+      baseUrl: 'https://argenisgrullon.com',
+    };
+  }
+
+  return null;
 }
 
 export function createDiscoveryRuntime(
@@ -84,6 +108,7 @@ export function createDiscoveryRuntime(
       ? new URL(input)
       : new URL(BASE_URL);
   const production = isProductionHost(url.hostname);
+  const customProfile = customProfileForHost(url.hostname);
   const isPreview = !production;
   // Fase actual:
   // SEO, GEO y AI Discovery permanecen en español.
@@ -92,10 +117,15 @@ export function createDiscoveryRuntime(
   const language: 'es' = 'es';
 
   return {
-    baseUrl: production ? BASE_URL : normalizeOrigin(url.origin),
+    baseUrl: customProfile
+      ? customProfile.baseUrl
+      : production
+        ? BASE_URL
+        : normalizeOrigin(url.origin),
     apiBase: production ? PRODUCTION_API_BASE : PREVIEW_API_BASE,
     isPreview,
     language,
+    customProfileSlug: customProfile?.slug,
   };
 }
 
@@ -186,6 +216,10 @@ function publicProfileUrl(
   const suffix = language === 'en' && slug === 'aycdom'
     ? '?lang=en'
     : '';
+  if (runtime.customProfileSlug === slug) {
+    return `${runtime.baseUrl}${suffix}`;
+  }
+
   return `${runtime.baseUrl}/${encodeURIComponent(slug)}${suffix}`;
 }
 
@@ -2493,6 +2527,7 @@ function buildSitemapXml(
   >();
 
   for (const slug of Object.keys(STATIC_PROFILE_DISCOVERY)) {
+    if (runtime.customProfileSlug && slug !== runtime.customProfileSlug) continue;
     const profile = getStaticProfileDiscovery(slug, runtime);
     if (!profile) continue;
     entries.set(profile.slug, {
@@ -2503,6 +2538,7 @@ function buildSitemapXml(
   }
 
   for (const profile of dynamicProfiles) {
+    if (runtime.customProfileSlug && profile.slug !== runtime.customProfileSlug) continue;
     if (entries.has(profile.slug)) continue;
 
     entries.set(profile.slug, {
@@ -2553,6 +2589,7 @@ function buildLlmsTxt(
   >();
 
   for (const slug of Object.keys(STATIC_PROFILE_DISCOVERY)) {
+    if (runtime.customProfileSlug && slug !== runtime.customProfileSlug) continue;
     const profile = getStaticProfileDiscovery(slug, runtime);
     if (!profile) continue;
     entries.set(profile.slug, {
@@ -2564,6 +2601,7 @@ function buildLlmsTxt(
   }
 
   for (const profile of dynamicProfiles) {
+    if (runtime.customProfileSlug && profile.slug !== runtime.customProfileSlug) continue;
     if (entries.has(profile.slug)) continue;
 
     entries.set(profile.slug, {
@@ -2702,9 +2740,20 @@ export async function handleDiscoveryRequest(
     );
   }
 
-  const match = normalized.match(
+  let match = normalized.match(
     /^\/([^/]+)\/(ai\.md|facts\.json)$/
   );
+
+  if (!match && runtime.customProfileSlug) {
+    const rootResource = normalized.match(/^\/(ai\.md|facts\.json)$/);
+    if (rootResource) {
+      match = [
+        rootResource[0],
+        runtime.customProfileSlug,
+        rootResource[1],
+      ] as RegExpMatchArray;
+    }
+  }
 
   if (!match) return null;
 
