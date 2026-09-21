@@ -23,9 +23,14 @@ export async function onRequest(context: {
     const headers = new Headers(response.headers);
     const requestUrl = new URL(context.request.url);
     const isPreviewHost = requestUrl.hostname === 'preview.intaprd.com';
-    const isProductionHost =
-      requestUrl.hostname === 'intaprd.com' ||
-      requestUrl.hostname === 'www.intaprd.com';
+    const isProductionHost = [
+      'intaprd.com',
+      'www.intaprd.com',
+      'argenisgrullon.com',
+      'www.argenisgrullon.com',
+      'alestilodeargenis.com',
+      'www.alestilodeargenis.com',
+    ].includes(requestUrl.hostname);
 
     const isEmbeddedProfile =
       requestUrl.searchParams.get('embed') === '1' &&
@@ -171,6 +176,53 @@ ${seoHeadHtml}
   };
 
   const url = new URL(context.request.url);
+  const ARGENIS_CANONICAL_ORIGIN = 'https://argenisgrullon.com';
+  const isArgenisCanonicalHost =
+    url.hostname === 'argenisgrullon.com' ||
+    url.hostname === 'www.argenisgrullon.com';
+  const isArgenisAliasHost =
+    url.hostname === 'alestilodeargenis.com' ||
+    url.hostname === 'www.alestilodeargenis.com';
+  const customProfileSlug = isArgenisCanonicalHost ? 'argenisg' : '';
+
+  if (url.hostname === 'www.argenisgrullon.com') {
+    const target = new URL(ARGENIS_CANONICAL_ORIGIN);
+    target.pathname = url.pathname;
+    target.search = url.search;
+    return withSecurityHeaders(Response.redirect(target.toString(), 308));
+  }
+
+  if (isArgenisAliasHost) {
+    return withSecurityHeaders(Response.redirect(ARGENIS_CANONICAL_ORIGIN, 308));
+  }
+
+  if (
+    (url.hostname === 'intaprd.com' || url.hostname === 'www.intaprd.com') &&
+    (
+      url.pathname === '/argenisg' ||
+      url.pathname === '/argenisg/' ||
+      url.pathname === '/argenisg/ai.md' ||
+      url.pathname === '/argenisg/facts.json'
+    )
+  ) {
+    const suffix =
+      url.pathname.endsWith('/ai.md')
+        ? '/ai.md'
+        : url.pathname.endsWith('/facts.json')
+          ? '/facts.json'
+          : '';
+    return withSecurityHeaders(
+      Response.redirect(`${ARGENIS_CANONICAL_ORIGIN}${suffix}`, 308)
+    );
+  }
+
+  if (
+    isArgenisCanonicalHost &&
+    (url.pathname === '/argenisg' || url.pathname === '/argenisg/')
+  ) {
+    return withSecurityHeaders(Response.redirect(ARGENIS_CANONICAL_ORIGIN, 308));
+  }
+
   const discoveryRuntime = createDiscoveryRuntime(url);
 
   const normalizeSocialImage = (value: unknown): string => {
@@ -400,9 +452,14 @@ ${seoHeadHtml}
   const enrichDiscoveryResourceWithPortfolio = async (response: Response): Promise<Response> => {
     if (response.status !== 200 || context.request.method.toUpperCase() !== 'GET') return response;
     const match = url.pathname.match(/^\/([^/]+)\/(ai\.md|facts\.json)\/?$/i);
-    if (!match) return response;
+    const rootResource = customProfileSlug
+      ? url.pathname.match(/^\/(ai\.md|facts\.json)\/?$/i)
+      : null;
+    if (!match && !rootResource) return response;
 
-    const slug = decodeURIComponent(match[1] || '').trim();
+    const slug = match
+      ? decodeURIComponent(match[1] || '').trim()
+      : customProfileSlug;
     if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) return response;
     const profile = await fetchPublicProfileForShare(slug);
     if (!profile) return response;
@@ -449,7 +506,9 @@ ${seoHeadHtml}
     });
   };
 
-  const directoryResponse = await handlePublicProfileDirectory(url, discoveryRuntime);
+  const directoryResponse = customProfileSlug
+    ? null
+    : await handlePublicProfileDirectory(url, discoveryRuntime);
   if (directoryResponse) {
     return withSecurityHeaders(directoryResponse);
   }
@@ -540,6 +599,8 @@ ${seoHeadHtml}
       'intaprd.com',
       'www.intaprd.com',
       'link.intaprd.com',
+      'argenisgrullon.com',
+      'www.argenisgrullon.com',
     ]);
 
     if (productionPublicHosts.has(url.hostname)) {
@@ -644,7 +705,8 @@ ${seoHeadHtml}
   }
 
   // Card general de la marca.
-  if (url.pathname === '/' || url.pathname === '') {
+  // El dominio personalizado de Argenis usa la raíz como su perfil canónico.
+  if (!customProfileSlug && (url.pathname === '/' || url.pathname === '')) {
     return injectSimpleSocialCard({
       title: 'Crea tu Perfil Digital con Kawvo Link',
       description: 'Muestra lo que haces, comparte tus servicios y destaca tu negocio con un perfil digital moderno, editable y listo para compartir por QR, NFC o enlace.',
@@ -740,7 +802,10 @@ ${seoHeadHtml}
     }
   }
 
-  const slug = url.pathname.replace(/^\/+|\/+$/g, '');
+  const slug =
+    customProfileSlug && (url.pathname === '/' || url.pathname === '')
+      ? customProfileSlug
+      : url.pathname.replace(/^\/+|\/+$/g, '');
 
   // share=bancos: social card bancaria aprobada para WhatsApp y redes.
   if (url.searchParams.get('share') === 'bancos' && /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) {
@@ -757,7 +822,10 @@ ${seoHeadHtml}
         const cleanName = bankMeta.title.split('|')[0].trim();
         const teamName = teamPolicy?.team_member === true ? String(teamPolicy?.team_name || '').replace(/\s+/g, ' ').trim() : '';
         const cardName = teamName || cleanName;
-        const pageUrl = `${url.origin}/${encodeURIComponent(slug)}?share=bancos`;
+        const pageUrl =
+          customProfileSlug === slug
+            ? `${ARGENIS_CANONICAL_ORIGIN}?share=bancos`
+            : `${url.origin}/${encodeURIComponent(slug)}?share=bancos`;
         const image = profile ? profileShareImage(profile) : bankMeta.image;
         const isTeam = Boolean(teamName);
         const updatedHtml = injectHeadMetadata(html, {
