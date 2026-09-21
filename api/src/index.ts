@@ -65,6 +65,10 @@ function isAllowedOrigin(origin: string): boolean {
         u.hostname.endsWith('.intaprd.com') ||
         u.hostname === 'kawvoia.com' ||
         u.hostname.endsWith('.kawvoia.com') ||
+        u.hostname === 'argenisgrullon.com' ||
+        u.hostname.endsWith('.argenisgrullon.com') ||
+        u.hostname === 'alestilodeargenis.com' ||
+        u.hostname.endsWith('.alestilodeargenis.com') ||
         u.hostname === 'intap-link.pages.dev' ||
         u.hostname.endsWith('.intap-link.pages.dev') ||
         u.hostname === 'intap-web2.pages.dev' ||
