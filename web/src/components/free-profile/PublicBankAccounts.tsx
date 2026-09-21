@@ -31,7 +31,11 @@ function bankLogoUrl(code: string | null) { if (!code) return null; const file =
 function teamCompanyName() { return String(document.documentElement.dataset.kawvoTeamName || '').trim() }
 
 export default function PublicBankAccounts() {
-  const { slug = '' } = useParams()
+  const params = useParams()
+  const host = window.location.hostname.toLowerCase()
+  const slug =
+    String(params.slug || '') ||
+    ((host === 'argenisgrullon.com' || host === 'www.argenisgrullon.com') ? 'argenisg' : '')
   const [items, setItems] = useState<PublicBankAccount[]>([])
   const [enabled, setEnabled] = useState(false)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
