@@ -84,6 +84,14 @@ function RouteLoader() {
 
 function RootRoute() {
   const location = useLocation()
+  const host = window.location.hostname.toLowerCase()
+  const isArgenisCustomDomain =
+    host === 'argenisgrullon.com' ||
+    host === 'www.argenisgrullon.com'
+
+  if (isArgenisCustomDomain) {
+    return <PublicProfileRoute />
+  }
 
   const slug =
     new URLSearchParams(
