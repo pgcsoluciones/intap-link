@@ -7,7 +7,9 @@ export async function onRequest(context: PagesContext): Promise<Response> {
   const requestUrl = new URL(context.request.url)
   const isProduction =
     requestUrl.hostname === 'intaprd.com' ||
-    requestUrl.hostname === 'www.intaprd.com'
+    requestUrl.hostname === 'www.intaprd.com' ||
+    requestUrl.hostname === 'argenisgrullon.com' ||
+    requestUrl.hostname === 'www.argenisgrullon.com'
   const apiBase = isProduction
     ? 'https://api.intaprd.com'
     : 'https://intap-api-preview.fliaprince.workers.dev'
