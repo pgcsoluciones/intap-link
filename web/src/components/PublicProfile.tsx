@@ -24,6 +24,7 @@ const IntapProfileV2 = lazy(
     ),
 )
 import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
+import JlPrinceWelcomeIntro from './welcome/JlPrinceWelcomeIntro'
 import { adaptPublicProfileApiResponse } from './free-profile/IntapLinkGratis.adapter'
 import { renderRegisteredProfileTemplate } from './profile-templates/registry'
 
@@ -1804,7 +1805,7 @@ export default function PublicProfile() {
 
   // ── Fetch profile ───────────────────────────────────────────────────────────
   useEffect(() => {
-    const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+    const configuredApiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
     if (!slug) {
       setLoading(false)
@@ -1812,7 +1813,23 @@ export default function PublicProfile() {
       return
     }
 
-    const profileUrl = isPreview
+    const currentHost = window.location.hostname
+    const isNonProductionHost =
+      currentHost === 'preview.intaprd.com' ||
+      currentHost.endsWith('.pages.dev')
+
+    // QA temporal y de solo lectura para /jlprince:
+    // Preview reutiliza el perfil público real de Producción sin escribir en D1/R2.
+    // Esto evita duplicar o alterar el perfil Free únicamente para probar la intro.
+    const apiUrl =
+      normalize(slug) === 'jlprince' && isNonProductionHost
+        ? 'https://intaprd.com'
+        : configuredApiUrl
+
+    const useAuthenticatedPreview =
+      isPreview && !(normalize(slug) === 'jlprince' && isNonProductionHost)
+
+    const profileUrl = useAuthenticatedPreview
       ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}?preview=1`
       : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}`
 
@@ -2122,14 +2139,25 @@ export default function PublicProfile() {
 
   if (data.planId === 'free') {
     const freeProfile = adaptPublicProfileApiResponse(data)
-
-    return (
+    const freeProfileView = (
       <IntapLinkGratisProfile
         profile={freeProfile.profile}
         layout={freeProfile.layout}
         colors={freeProfile.colors}
       />
     )
+
+    // Bienvenida experimental, aislada al perfil público /jlprince.
+    // No se ejecuta en preview autenticado (?preview=1), ni en otros slugs/planes.
+    if (normalize(slug) === 'jlprince' && !isPreview) {
+      return (
+        <JlPrinceWelcomeIntro>
+          {freeProfileView}
+        </JlPrinceWelcomeIntro>
+      )
+    }
+
+    return freeProfileView
   }
 
   return (
