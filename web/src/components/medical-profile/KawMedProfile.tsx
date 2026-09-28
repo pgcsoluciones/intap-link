@@ -6,7 +6,6 @@ import {
   FiBriefcase,
   FiCalendar,
   FiChevronRight,
-  FiClock,
   FiMapPin,
   FiNavigation,
   FiPhone,
@@ -208,7 +207,13 @@ export default function KawMedProfile() {
       `N:${profile.name};;;;`,
       profile.specialty ? `TITLE:${profile.specialty}` : '',
       profile.organization ? `ORG:${profile.organization}` : '',
-      profile.phone ? `TEL;TYPE=CELL:${profile.phone}` : '',
+      profile.phone ? `TEL;TYPE=CELL,VOICE:${profile.phone}` : '',
+      profile.whatsapp && profile.whatsapp.replace(/\D/g, '') !== (profile.phone || '').replace(/\D/g, '')
+        ? `item1.TEL:${profile.whatsapp}`
+        : '',
+      profile.whatsapp && profile.whatsapp.replace(/\D/g, '') !== (profile.phone || '').replace(/\D/g, '')
+        ? 'item1.X-ABLabel:WhatsApp'
+        : '',
       profile.email ? `EMAIL:${profile.email}` : '',
       `URL:${publicOrigin()}/m/${profile.slug}`,
       'END:VCARD',
@@ -328,7 +333,18 @@ export default function KawMedProfile() {
           {menuItems.map((item) => {
             const Icon = item.icon
             return (
-              <button type="button" className="kawmed-menu-item" key={item.key} onClick={() => setModal(item.key)}>
+              <button
+                type="button"
+                className="kawmed-menu-item"
+                key={item.key}
+                onClick={() => {
+                  if (item.key === 'location' && profile.centers.length === 1) {
+                    openMap(profile.centers[0])
+                    return
+                  }
+                  setModal(item.key)
+                }}
+              >
                 <span className="kawmed-menu-item__icon"><Icon /></span>
                 <span className="kawmed-menu-item__copy">
                   <strong>{item.title}</strong>
