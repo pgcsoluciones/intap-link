@@ -6,13 +6,13 @@ function parseArray(value:unknown){try{const parsed=JSON.parse(String(value||'[]
 function rowToProfile(row:any){
   return {
     id:row.id,username:row.username,business_name:row.business_name,specialization:row.specialization,what_we_do:row.what_we_do,
-    avatar_url:row.avatar_url,hero_url:row.hero_url,map_url:row.map_url,show_avatar:Number(row.show_avatar)===1,cover_variant:row.cover_variant||'standard',phone:row.phone,whatsapp:row.whatsapp,email:row.email,instagram:row.instagram,address:row.address,
+    avatar_url:row.avatar_url,hero_url:row.hero_url,map_url:row.map_url,show_avatar:Number(row.show_avatar)===1,cover_variant:row.cover_variant||'standard',phone:row.phone,whatsapp:row.whatsapp,email:row.email,quote_email:row.quote_email,instagram:row.instagram,address:row.address,
     schedule:parseArray(row.schedule_json),gallery:parseArray(row.gallery_json),gallery_title:row.gallery_title||'Catálogo',palette_id:row.palette_id||'blue',status:row.status,
     modules:parseArray(row.modules_json),
     sponsor:{id:row.sponsor_id,name:row.sponsor_name,type:row.sponsor_type,logo_url:row.sponsor_logo_url,banner_title:row.banner_title||'Impulsado por',banner_image_url:row.banner_image_url,banner_cta_label:row.banner_cta_label||'Conocer más',banner_cta_type:row.banner_cta_type||'none',banner_cta_value:row.banner_cta_value,whatsapp_message_template:row.whatsapp_message_template,website_url:row.sponsor_website_url,contact_whatsapp:row.sponsor_contact_whatsapp,banner_enabled:Number(row.sponsor_banner_enabled??1)!==0}
   }
 }
-const SELECT=`SELECT sp.*,st.name AS sponsor_name,st.sponsor_type,st.logo_url AS sponsor_logo_url,st.banner_title,st.banner_image_url,st.banner_cta_label,st.banner_cta_type,st.banner_cta_value,st.whatsapp_message_template,st.website_url AS sponsor_website_url,st.contact_whatsapp AS sponsor_contact_whatsapp,COALESCE(sa.banner_enabled,1) AS sponsor_banner_enabled FROM sponsored_profiles sp JOIN sponsor_tenants st ON st.id=sp.sponsor_id LEFT JOIN sponsor_artifacts sa ON sa.artifact_id=sp.artifact_id AND sa.sponsor_id=sp.sponsor_id`
+const SELECT=`SELECT sp.*,COALESCE(NULLIF(TRIM(sp.email),''),NULLIF(TRIM(pc.email),''),NULLIF(TRIM(u.email),'')) AS quote_email,st.name AS sponsor_name,st.sponsor_type,st.logo_url AS sponsor_logo_url,st.banner_title,st.banner_image_url,st.banner_cta_label,st.banner_cta_type,st.banner_cta_value,st.whatsapp_message_template,st.website_url AS sponsor_website_url,st.contact_whatsapp AS sponsor_contact_whatsapp,COALESCE(sa.banner_enabled,1) AS sponsor_banner_enabled FROM sponsored_profiles sp JOIN sponsor_tenants st ON st.id=sp.sponsor_id LEFT JOIN sponsor_artifacts sa ON sa.artifact_id=sp.artifact_id AND sa.sponsor_id=sp.sponsor_id LEFT JOIN users u ON u.id=sp.user_id LEFT JOIN profiles p ON p.user_id=sp.user_id LEFT JOIN profile_contact pc ON pc.profile_id=p.id`
 
 // A claimed sponsored presentation is permanent for the beneficiary. Sponsor
 // commercial inactivity is intentionally NOT a publication condition here.
