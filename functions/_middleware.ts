@@ -694,12 +694,12 @@ ${seoHeadHtml}
         const whatWeDo = compact(profile.what_we_do, 220);
         const isQuoteLink = url.searchParams.get('cotizar') === '1';
         const description = isQuoteLink
-          ? `Puedes solicitar tu cotización o preordenar por esta vía con ${businessName}. Completa los datos y envía tu solicitud por WhatsApp.`
+          ? `Puedes solicitar una cotización o pedir más información a ${businessName}. Completa el formulario y envía tu solicitud por WhatsApp o correo.`
           : (whatWeDo || (specialization ? `${specialization} · Presentación digital de ${businessName}` : `Presentación digital de ${businessName}`));
         const hero = normalizeSocialImage(profile.hero_url);
         const image = hero || `${url.origin}/assets/og/kawvo-link-og.png`;
         return injectSimpleSocialCard({
-          title: isQuoteLink ? `Solicita tu cotización | ${businessName}` : `${businessName} | Kawvo Link`,
+          title: isQuoteLink ? `Cotización / información | ${businessName}` : `${businessName} | Kawvo Link`,
           description,
           image,
           canonicalUrl: isQuoteLink
