@@ -728,3 +728,416 @@
     text-align: left;
   }
 }
+
+
+/* KawMed V2 — layout abierto y modular */
+.kawmed-shell {
+  padding: 0;
+  background: #f4f8fc;
+}
+
+.kawmed-profile {
+  width: min(100%, 560px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 0 0 34px;
+  background: #fff;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.kawmed-brandbar {
+  padding: 16px 18px 12px;
+}
+
+.kawmed-hero {
+  width: 100%;
+  aspect-ratio: 1.72 / 1;
+  border-radius: 0;
+}
+
+.kawmed-identity {
+  position: relative;
+  display: block;
+  padding: 0 20px 18px;
+  text-align: center;
+}
+
+.kawmed-avatar-wrap {
+  height: 62px;
+  margin-bottom: 6px;
+}
+
+.kawmed-avatar {
+  width: 112px;
+  height: 112px;
+  margin: -56px auto 0;
+  display: grid;
+  place-items: center;
+  border: 5px solid #fff;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #edf5ff;
+  color: #55749b;
+  box-shadow: 0 12px 30px rgba(34, 69, 112, .14);
+}
+
+.kawmed-avatar--fallback {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  color: #7b8da8;
+}
+
+.kawmed-identity h1 {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 40px);
+}
+
+.kawmed-specialty {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.kawmed-subtitle {
+  max-width: 430px;
+  margin: 7px auto 0;
+  font-size: 13px;
+}
+
+.kawmed-meta {
+  justify-content: center;
+  padding: 12px 0 0;
+  gap: 8px 18px;
+}
+
+.kawmed-primary-actions {
+  grid-template-columns: 1.2fr .8fr;
+  gap: 10px;
+  padding: 0 18px 22px;
+  margin: 0;
+}
+
+.kawmed-section {
+  margin: 0;
+  padding: 24px 18px;
+  border-top: 1px solid #e5edf5;
+}
+
+.kawmed-section--quick {
+  background: #fbfdff;
+}
+
+.kawmed-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.kawmed-section-heading h2 {
+  margin: 0;
+  color: #13213a;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.kawmed-section-heading p {
+  margin: 5px 0 0;
+  color: #7a8aa1;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.kawmed-section-icon {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font-size: 18px;
+}
+
+.kawmed-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+}
+
+.kawmed-quick-grid button {
+  min-width: 0;
+  min-height: 78px;
+  padding: 10px 6px;
+  border: 1px solid #dce7f4;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  background: #fff;
+  color: #1c2c45;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kawmed-quick-grid button svg {
+  color: var(--kawmed-blue);
+  font-size: 22px;
+}
+
+.kawmed-quick-grid button span {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kawmed-about-text {
+  margin: 0;
+  color: #596b85;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.kawmed-about-chip {
+  width: fit-content;
+  margin-top: 14px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #f0f6ff;
+  color: #315f98;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kawmed-text-link {
+  min-height: 40px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--kawmed-blue);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kawmed-text-link svg {
+  font-size: 15px;
+}
+
+.kawmed-schedule-preview {
+  display: grid;
+  gap: 0;
+}
+
+.kawmed-schedule-preview__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.kawmed-schedule-preview__row:first-child {
+  padding-top: 2px;
+}
+
+.kawmed-schedule-preview__row:last-child {
+  border-bottom: 0;
+}
+
+.kawmed-schedule-preview__day {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.kawmed-schedule-preview__day strong {
+  color: #14223a;
+  font-size: 14px;
+}
+
+.kawmed-schedule-preview__day span {
+  color: #263d61;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.kawmed-schedule-preview__time {
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+  text-align: right;
+}
+
+.kawmed-schedule-preview__time strong {
+  color: #4d6385;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.kawmed-centers-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.kawmed-center-preview {
+  padding: 15px;
+  border: 1px solid #dfe8f2;
+  border-radius: 18px;
+  display: grid;
+  gap: 12px;
+  background: #fff;
+}
+
+.kawmed-center-preview > div {
+  display: grid;
+  gap: 5px;
+}
+
+.kawmed-center-preview strong {
+  color: #14223a;
+  font-size: 15px;
+}
+
+.kawmed-center-preview span {
+  color: #78889f;
+  font-size: 12px;
+}
+
+.kawmed-center-preview button {
+  width: fit-content;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kawmed-services-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.kawmed-service-tile {
+  min-width: 0;
+  min-height: 128px;
+  padding: 14px;
+  border: 1px solid #e1e9f2;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.kawmed-service-tile__icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+}
+
+.kawmed-service-tile strong {
+  display: block;
+  color: #15243b;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.kawmed-service-tile p {
+  margin: 7px 0 0;
+  color: #73839a;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.kawmed-footer {
+  border-top: 1px solid #e5edf5;
+  margin-top: 0;
+  padding: 22px 18px 4px;
+}
+
+@media (min-width: 560px) {
+  .kawmed-shell {
+    padding: 0;
+  }
+
+  .kawmed-profile {
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .kawmed-primary-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kawmed-button {
+    min-height: 52px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
+  .kawmed-quick-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kawmed-quick-grid button {
+    min-height: 66px;
+    grid-template-columns: auto 1fr;
+    justify-items: start;
+    padding: 10px 12px;
+  }
+
+  .kawmed-quick-grid button span {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .kawmed-primary-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-services-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-schedule-preview__row {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-schedule-preview__time {
+    justify-items: start;
+    text-align: left;
+  }
+}
