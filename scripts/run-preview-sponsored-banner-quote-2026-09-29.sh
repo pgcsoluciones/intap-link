@@ -41,7 +41,7 @@ run git pull --ff-only github "$BRANCH"
 git restore -- scripts/run-preview-sponsored-banner-quote-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
-ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
+ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh|api/migrations-preview/0078_sponsored_quote_media\.sql)
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
@@ -67,6 +67,8 @@ BANNER_SCHEMA="$(cd api && npx wrangler d1 execute intap_db_preview --remote --c
 EMAIL_SCHEMA="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsored_profiles') WHERE name='email';" 2>/dev/null || true)"
 echo "$BANNER_SCHEMA" | grep -F 'banner_enabled' >/dev/null || fail "D1 Preview no tiene sponsor_artifacts.banner_enabled"
 echo "$EMAIL_SCHEMA" | grep -F 'email' >/dev/null || fail "D1 Preview no tiene sponsored_profiles.email"
+QUOTE_MEDIA_TABLE="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='sponsored_quote_media';" 2>/dev/null || true)"
+echo "$QUOTE_MEDIA_TABLE" | grep -F 'sponsored_quote_media' >/dev/null || fail "D1 Preview no tiene sponsored_quote_media"
 echo "✓ Esquema D1 Preview verificado"
 
 echo; echo "▶ Deploy App Pages Preview"
