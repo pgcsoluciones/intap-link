@@ -128,12 +128,12 @@ Validar:
 2. Master muestra "No aplica".
 3. Desactivar cintillo oculta solo patrocinio del perfil público.
 4. "Desarrollado por KawLink" permanece visible.
-5. Debajo del horario aparece "Solicitar cotización".
-6. "Compartir cotizador" genera un enlace con ?cotizar=1.
-7. "Enviar cotizador por WhatsApp" comparte ese enlace y al abrirlo muestra el formulario listo.
-8. Modal pide nombre, teléfono, correo opcional y pedido/cotización.
+5. Debajo del horario aparece "Solicitar cotización / información".
+6. "Compartir formulario" genera un enlace con ?cotizar=1.
+7. "Compartir formulario por WhatsApp" comparte ese enlace y al abrirlo muestra el formulario listo.
+8. Modal pide nombre, teléfono, correo opcional y cotización / información.
 9. Entrega, sector y forma de pago son opcionales.
-10. Al completar nombre, teléfono y pedido/cotización aparece el selector de envío.
+10. Al completar nombre, teléfono y cotización / información aparece el selector de envío.
 11. Si el negocio tiene WhatsApp y correo, permite elegir; si solo tiene uno, usa ese canal.
 12. Correo abre la aplicación predeterminada con destinatario, asunto y solicitud precargados.
 13. Al enviar, el navegador vuelve al home limpio del perfil.
