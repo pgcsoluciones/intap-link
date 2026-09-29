@@ -42,7 +42,7 @@ run git pull --ff-only github "$BRANCH"
 git restore -- scripts/run-preview-sponsored-quote-media-ux-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
-ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
+ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations-preview/0079_sponsored_quote_media_batch\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/migrations/0079_sponsored_quote_media_batch\.sql|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
@@ -70,6 +70,8 @@ echo "$BANNER_SCHEMA" | grep -F 'banner_enabled' >/dev/null || fail "D1 Preview 
 echo "$EMAIL_SCHEMA" | grep -F 'email' >/dev/null || fail "D1 Preview no tiene sponsored_profiles.email"
 QUOTE_MEDIA_TABLE="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='sponsored_quote_media';" 2>/dev/null || true)"
 echo "$QUOTE_MEDIA_TABLE" | grep -F 'sponsored_quote_media' >/dev/null || fail "D1 Preview no tiene sponsored_quote_media"
+QUOTE_MEDIA_BATCH="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsored_quote_media') WHERE name='batch_id';" 2>/dev/null || true)"
+echo "$QUOTE_MEDIA_BATCH" | grep -F 'batch_id' >/dev/null || fail "D1 Preview no tiene sponsored_quote_media.batch_id"
 echo "✓ Esquema D1 Preview verificado"
 
 echo; echo "▶ Deploy App Pages Preview"
@@ -148,13 +150,17 @@ Validar:
 12. Al enviar, el navegador vuelve al home limpio del perfil.
 13. CRM del patrocinador muestra el correo del patrocinado.
 14. Super Admin muestra el correo del patrocinado.
-15. Adjuntar media permite hasta 3 imágenes O 1 audio O 2 archivos por solicitud, sin mezclar tipos.
-16. Las imágenes del lote se optimizan antes de subir.
-17. Un mismo visitante puede adjuntar como máximo 9 imágenes por perfil en una ventana de 24 horas.
-18. La solicitud puede enviarse con texto + media o solo media.
-19. Los adjuntos se agregan al mensaje con enlaces temporales disponibles por 3 días.
-20. Al enviar, formulario y adjuntos quedan limpios.
-21. El endpoint efímero rechaza archivos vencidos y el cron los elimina de R2/D1.
-22. Producción NO tocada.
+15. El modal permanece centrado, sin scroll horizontal.
+16. Adjuntar media permite hasta 3 imágenes O 1 audio O 2 archivos por solicitud, sin mezclar tipos.
+17. Las imágenes del lote se optimizan antes de subir.
+18. Un mismo visitante puede adjuntar como máximo 9 imágenes por perfil en una ventana de 24 horas.
+19. Un lote de imágenes llega al mensaje con un solo enlace.
+20. Ese enlace abre las imágenes como galería navegable.
+21. "Descargar paquete" baja el lote completo en ZIP.
+22. Los enlaces temporales de media no muestran la tarjeta gráfica de Kawvo Link.
+23. La solicitud puede enviarse con texto + media o solo media.
+24. Al enviar, formulario y adjuntos quedan limpios.
+25. El endpoint efímero rechaza archivos vencidos y el cron los elimina de R2/D1.
+26. Producción NO tocada.
 ============================================================
 EOF
