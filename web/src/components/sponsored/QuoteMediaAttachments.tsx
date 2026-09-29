@@ -75,7 +75,7 @@ export default function QuoteMediaAttachments({files,onChange,onError}:Props){
         </div>)}
       </div>
     </div>}
-    <p style={{margin:'9px 0 0',fontSize:11.5,lineHeight:1.45,color:'#64748b'}}>Por solicitud: hasta 3 imágenes, 1 audio o 2 archivos. No se mezclan tipos. Las imágenes se optimizan antes de subir.</p>
+    <p style={{margin:'9px 0 0',fontSize:11.5,lineHeight:1.45,color:'#64748b'}}>Por solicitud: hasta 3 imágenes, 1 audio o 2 archivos. No se mezclan tipos. Las imágenes se optimizan antes de subir. Los adjuntos están disponibles por 3 días.</p>
   </div>
 }
 
