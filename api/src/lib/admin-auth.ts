@@ -82,30 +82,28 @@ export function requireSuperAdmin(minRole: AdminRole = 'viewer') {
 
     let resolvedRole: AdminRole | null = adminRow?.role ?? null
 
-    // 3. Fallback: ADMIN_EMAILS env var → treat as super_admin (transition period)
-    if (!resolvedRole) {
-      const userRow = await c.env.DB.prepare(
-        `SELECT email FROM users WHERE id = ? LIMIT 1`
-      ).bind(userId).first() as {
-        email: string
-      } | null
+    // 3. ADMIN_EMAILS is the root-admin allowlist.
+    // A stale/lower admin_users row must never downgrade an explicitly configured root admin.
+    const userRow = await c.env.DB.prepare(
+      `SELECT email FROM users WHERE id = ? LIMIT 1`
+    ).bind(userId).first() as {
+      email: string
+    } | null
 
-      if (userRow?.email) {
-        const adminEmailsRaw: string = c.env.ADMIN_EMAILS || ''
-        const adminList = adminEmailsRaw
-          .split(',')
-          .map((e: string) => e.trim().toLowerCase())
-          .filter(Boolean)
+    if (userRow?.email) {
+      const adminEmailsRaw: string = c.env.ADMIN_EMAILS || ''
+      const adminList = adminEmailsRaw
+        .split(',')
+        .map((e: string) => e.trim().toLowerCase())
+        .filter(Boolean)
 
-        if (adminList.includes(userRow.email.toLowerCase())) {
-          resolvedRole = 'super_admin'
-          // Auto-upsert into admin_users so future requests skip the fallback
-          c.env.DB.prepare(
-            `INSERT INTO admin_users (user_id, role, notes)
-             VALUES (?, 'super_admin', 'Auto-seeded from ADMIN_EMAILS')
-             ON CONFLICT(user_id) DO NOTHING`
-          ).bind(userId).run().catch(() => {})
-        }
+      if (adminList.includes(userRow.email.toLowerCase())) {
+        resolvedRole = 'super_admin'
+        c.env.DB.prepare(
+          `INSERT INTO admin_users (user_id, role, notes)
+           VALUES (?, 'super_admin', 'Synced from ADMIN_EMAILS')
+           ON CONFLICT(user_id) DO UPDATE SET role='super_admin', notes='Synced from ADMIN_EMAILS'`
+        ).bind(userId).run().catch(() => {})
       }
     }
 
