@@ -518,8 +518,10 @@
 }
 
 .kawmed-schedule-row > div:first-child span {
-  color: #7c8ba0;
-  font-size: 11px;
+  color: #263d61;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .kawmed-schedule-row__time {
