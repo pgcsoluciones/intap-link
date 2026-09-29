@@ -156,7 +156,7 @@ Validar:
 18. Un mismo visitante puede adjuntar como máximo 9 imágenes por perfil en una ventana de 24 horas.
 19. Un lote de imágenes llega al mensaje con un solo enlace.
 20. Ese enlace abre las imágenes como galería navegable.
-21. "Descargar paquete" baja el lote completo en ZIP.
+21. En la galería, cada imagen se descarga individualmente desde la imagen visible.
 22. Los enlaces temporales de media no muestran la tarjeta gráfica de Kawvo Link.
 23. La solicitud puede enviarse con texto + media o solo media.
 24. Al enviar, formulario y adjuntos quedan limpios.
