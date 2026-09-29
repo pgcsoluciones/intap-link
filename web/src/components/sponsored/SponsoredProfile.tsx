@@ -51,7 +51,7 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
   async function openQr(){try{const QRCode=await import('qrcode');setQrData(await QRCode.toDataURL(publicUrl,{width:1000,margin:3,errorCorrectionLevel:'H'}));setQrOpen(true)}catch{setToast('No pudimos generar el QR')}}
   function downloadQr(){if(!qrData)return;const a=document.createElement('a');a.href=qrData;a.download=`${data?.username||'kawlink'}-qr.png`;a.click()}
   function sponsorCta(){const s=data?.sponsor;if(!s)return;let href='';if(s.banner_cta_type==='beneficiary_whatsapp'){const number=cleanPhone(data?.whatsapp||data?.phone);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más sobre estos productos.')}`}if(s.banner_cta_type==='sponsor_whatsapp'){const number=cleanPhone(s.contact_whatsapp);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más.')}`}if(s.banner_cta_type==='sponsor_url')href=String(s.banner_cta_value||s.website_url||'');if(href)window.open(href,'_blank','noopener,noreferrer')}
-  function quoteMessageLines(mediaUrl=''){
+  function quoteMessageLines(media?:{url:string;kind:string}|null){
     const name=quote.name.trim(),phone=quote.phone.trim(),request=quote.request.trim()
     const delivery=quote.delivery==='Pasar a retirar'
       ? 'Sería para pasar a retirar.'
@@ -61,7 +61,11 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     const payment=quote.payment?`Pagaría ${quote.payment.toLowerCase()==='tarjeta'?'con tarjeta':quote.payment.toLowerCase()==='transferencia'?'por transferencia':'en efectivo'}.`:''
     const detailLines:string[]=[]
     if(request)detailLines.push(request)
-    if(mediaUrl)detailLines.push(`Adjuntar media (disponible por 3 días): ${mediaUrl}`)
+    if(media?.url){
+      if(request)detailLines.push('')
+      const mediaLabel=media.kind==='audio'?'Audio adjunto':media.kind==='image'?'Imagen adjunta':'Archivo adjunto'
+      detailLines.push(`${mediaLabel} (disponible por 3 días): ${media.url}`)
+    }
     return [
       `Hola, mi nombre es ${name}.`,
       `Mi teléfono es ${phone}.`,
@@ -95,7 +99,7 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     setQuoteMedia(file)
   }
   async function uploadQuoteMedia(){
-    if(!quoteMedia)return''
+    if(!quoteMedia)return null
     let file=quoteMedia
     if(String(file.type||'').startsWith('image/')){
       try{file=await optimizeQuoteImage(file)}catch{}
@@ -105,7 +109,7 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     const res=await fetch(`/api/v1/public/sponsored/${encodeURIComponent(data?.username||username)}/quote-media`,{method:'POST',body:fd})
     const json:any=await res.json().catch(()=>null)
     if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos adjuntar el media.')
-    return String(json.data?.url||'')
+    return {url:String(json.data?.url||''),kind:String(json.data?.kind||'document')}
   }
   async function sendQuoteRequest(){
     const name=quote.name.trim(),phone=quote.phone.trim(),request=quote.request.trim()
@@ -119,8 +123,8 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     if(popup)popup.opener=null
     setQuoteSending(true)
     try{
-      const mediaUrl=await uploadQuoteMedia()
-      const lines=quoteMessageLines(mediaUrl)
+      const media=await uploadQuoteMedia()
+      const lines=quoteMessageLines(media)
       if(channel==='whatsapp'){
         if(!number){popup?.close();setToast('Este perfil no tiene WhatsApp disponible');return}
         const url=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(lines.join('\n'))}`
