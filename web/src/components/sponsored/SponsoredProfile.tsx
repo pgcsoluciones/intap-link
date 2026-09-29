@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { FaAddressCard, FaCalendarAlt, FaClock, FaFileInvoiceDollar, FaInstagram, FaMapMarkerAlt, FaWhatsapp } from 'react-icons/fa'
 import SponsoredBankAccounts from './SponsoredBankAccounts'
@@ -11,10 +11,31 @@ const palettes:Record<string,{accent:string;accentSoft:string;text:string}>={blu
 const RD_AREA_CODES=/^(809|829|849)/
 function cleanPhone(value?:string){const input=String(value||'').trim();if(!input)return'';const hadPlus=input.startsWith('+');const digits=input.replace(/\D/g,'');if(digits.length===10&&RD_AREA_CODES.test(digits))return`+1${digits}`;if(digits.length===11&&digits.startsWith('1')&&RD_AREA_CODES.test(digits.slice(1)))return`+${digits}`;if(hadPlus&&digits.length>=7&&digits.length<=15)return`+${digits}`;return digits.length>=7&&digits.length<=15?digits:''}
 function galleryUrl(item:GalleryItem){return String(item.url||item.image_url||'')}
+async function optimizeQuoteImage(file:File){
+  if(!String(file.type||'').startsWith('image/'))return file
+  if(typeof createImageBitmap!=='function')return file
+  const bitmap=await createImageBitmap(file)
+  const max=1600,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height))
+  const width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale))
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height
+  const ctx=canvas.getContext('2d');if(!ctx){bitmap.close();return file}
+  ctx.drawImage(bitmap,0,0,width,height);bitmap.close()
+  const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/webp',.82))
+  if(!blob)return file
+  const name=(String(file.name||'media').replace(/\.[^.]+$/,'')||'media')+'.webp'
+  return new File([blob],name,{type:'image/webp',lastModified:Date.now()})
+}
+function humanMediaKind(file:File){
+  const type=String(file.type||'')
+  if(type.startsWith('image/'))return'Imagen'
+  if(type.startsWith('audio/'))return'Audio'
+  if(type==='application/pdf'||/\.pdf$/i.test(file.name))return'PDF'
+  return'Archivo'
+}
 function appOrigin(){const host=window.location.hostname.toLowerCase();if(host==='preview.intaprd.com')return'https://app.preview.intaprd.com';if(host==='intaprd.com'||host==='www.intaprd.com'||host==='link.intaprd.com')return'https://app.intaprd.com';const configured=String(import.meta.env.VITE_APP_URL||'').replace(/\/$/,'');return configured||'https://app.intaprd.com'}
 
 export default function SponsoredProfile(){
-  const{username=''}=useParams();const[data,setData]=useState<SponsoredData|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const[modalIndex,setModalIndex]=useState<number|null>(null);const[qrOpen,setQrOpen]=useState(false);const[qrData,setQrData]=useState('');const[toast,setToast]=useState('');const[quoteOpen,setQuoteOpen]=useState(false);const[quoteChannel,setQuoteChannel]=useState<'whatsapp'|'email'|''>('');const[quote,setQuote]=useState({name:'',phone:'',email:'',request:'',delivery:'',sector:'',payment:''})
+  const{username=''}=useParams();const[data,setData]=useState<SponsoredData|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const[modalIndex,setModalIndex]=useState<number|null>(null);const[qrOpen,setQrOpen]=useState(false);const[qrData,setQrData]=useState('');const[toast,setToast]=useState('');const[quoteOpen,setQuoteOpen]=useState(false);const[quoteChannel,setQuoteChannel]=useState<'whatsapp'|'email'|''>('');const[quote,setQuote]=useState({name:'',phone:'',email:'',request:'',delivery:'',sector:'',payment:''});const[quoteMedia,setQuoteMedia]=useState<File|null>(null);const[quoteSending,setQuoteSending]=useState(false);const[recording,setRecording]=useState(false);const quoteFileRef=useRef<HTMLInputElement>(null);const quoteCameraRef=useRef<HTMLInputElement>(null);const recorderRef=useRef<MediaRecorder|null>(null);const recorderStreamRef=useRef<MediaStream|null>(null);const recorderChunksRef=useRef<Blob[]>([])
   useEffect(()=>{let alive=true;(async()=>{setLoading(true);setError('');try{const res=await fetch(`/api/v1/public/sponsored/${encodeURIComponent(username)}`);const json:any=await res.json().catch(()=>null);if(!alive)return;if(!res.ok||!json?.ok){setError(json?.error||'Perfil no disponible.');return}setData(json.data)}catch{if(alive)setError('No pudimos cargar este perfil.')}finally{if(alive)setLoading(false)}})();return()=>{alive=false}},[username])
   const gallery=useMemo(()=>Array.isArray(data?.gallery)?data!.gallery!.filter(item=>galleryUrl(item)).slice(0,10):[],[data]);const schedule=useMemo(()=>Array.isArray(data?.schedule)?data!.schedule!.slice(0,7):[],[data]);const palette=palettes[data?.palette_id||'blue']||palettes.blue;const publicUrl=typeof window!=='undefined'?window.location.href:''
 useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800);return()=>window.clearTimeout(id)},[toast])
@@ -25,7 +46,7 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
   async function openQr(){try{const QRCode=await import('qrcode');setQrData(await QRCode.toDataURL(publicUrl,{width:1000,margin:3,errorCorrectionLevel:'H'}));setQrOpen(true)}catch{setToast('No pudimos generar el QR')}}
   function downloadQr(){if(!qrData)return;const a=document.createElement('a');a.href=qrData;a.download=`${data?.username||'kawlink'}-qr.png`;a.click()}
   function sponsorCta(){const s=data?.sponsor;if(!s)return;let href='';if(s.banner_cta_type==='beneficiary_whatsapp'){const number=cleanPhone(data?.whatsapp||data?.phone);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más sobre estos productos.')}`}if(s.banner_cta_type==='sponsor_whatsapp'){const number=cleanPhone(s.contact_whatsapp);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más.')}`}if(s.banner_cta_type==='sponsor_url')href=String(s.banner_cta_value||s.website_url||'');if(href)window.open(href,'_blank','noopener,noreferrer')}
-  function quoteMessageLines(){
+  function quoteMessageLines(mediaUrl=''){
     const name=quote.name.trim(),phone=quote.phone.trim(),request=quote.request.trim()
     const delivery=quote.delivery==='Pasar a retirar'
       ? 'Sería para pasar a retirar.'
@@ -33,13 +54,16 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
         ? (quote.sector.trim()?`Sería para enviar a ${quote.sector.trim()}.`:'Sería para enviar.')
         : (quote.sector.trim()?`La ubicación o zona sería ${quote.sector.trim()}.`:'')
     const payment=quote.payment?`Pagaría ${quote.payment.toLowerCase()==='tarjeta'?'con tarjeta':quote.payment.toLowerCase()==='transferencia'?'por transferencia':'en efectivo'}.`:''
+    const detailLines:string[]=[]
+    if(request)detailLines.push(request)
+    if(mediaUrl)detailLines.push(`Adjuntar media (disponible por 3 días): ${mediaUrl}`)
     return [
       `Hola, mi nombre es ${name}.`,
       `Mi teléfono es ${phone}.`,
       ...(quote.email.trim()?[`Mi correo es ${quote.email.trim()}.`]:[]),
       'Quisiera cotizar / solicitar información:',
       '',
-      request,
+      ...detailLines,
       '',
       ...(delivery?[delivery]:[]),
       ...(payment?[payment]:[]),
@@ -47,35 +71,94 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
       'Quedo atento/a a su respuesta. Entiendo que las solicitudes se responden según el orden de trabajo en cola.'
     ]
   }
+  function resetQuote(){
+    setQuote({name:'',phone:'',email:'',request:'',delivery:'',sector:'',payment:''})
+    setQuoteMedia(null)
+    setQuoteChannel('')
+  }
   function finishQuoteFlow(){
     setQuoteOpen(false)
-    setQuoteChannel('')
-    setQuote({name:'',phone:'',email:'',request:'',delivery:'',sector:'',payment:''})
+    resetQuote()
     window.history.replaceState({},'',`/p/${encodeURIComponent(data?.username||username)}`)
   }
-  function sendQuoteRequest(){
+  function chooseQuoteMedia(file?:File){
+    if(!file)return
+    const isImage=String(file.type||'').startsWith('image/')
+    if(file.size>(isImage?15:10)*1024*1024){setToast(isImage?'La imagen original supera 15 MB.':'El archivo supera 10 MB.');return}
+    const allowed=isImage||String(file.type||'').startsWith('audio/')||file.type==='application/pdf'||/\.pdf$/i.test(file.name)
+    if(!allowed){setToast('Usa una imagen, PDF o audio.');return}
+    setQuoteMedia(file)
+  }
+  async function startAudioRecording(){
+    if(recording){recorderRef.current?.stop();return}
+    if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){setToast('Este navegador no permite grabar audio aquí.');return}
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true})
+      const preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(type=>MediaRecorder.isTypeSupported(type))
+      const recorder=new MediaRecorder(stream,preferred?{mimeType:preferred}:undefined)
+      recorderChunksRef.current=[]
+      recorderStreamRef.current=stream
+      recorderRef.current=recorder
+      recorder.ondataavailable=event=>{if(event.data.size)recorderChunksRef.current.push(event.data)}
+      recorder.onstop=()=>{
+        const type=recorder.mimeType||'audio/webm'
+        const blob=new Blob(recorderChunksRef.current,{type})
+        const ext=type.includes('mp4')?'m4a':'webm'
+        if(blob.size>10*1024*1024)setToast('El audio supera 10 MB. Graba uno más corto.')
+        else setQuoteMedia(new File([blob],`audio-cotizacion.${ext}`,{type,lastModified:Date.now()}))
+        recorderStreamRef.current?.getTracks().forEach(track=>track.stop())
+        recorderStreamRef.current=null;recorderRef.current=null;recorderChunksRef.current=[];setRecording(false)
+      }
+      recorder.start();setRecording(true)
+    }catch{setToast('No pudimos acceder al micrófono.')}
+  }
+  async function uploadQuoteMedia(){
+    if(!quoteMedia)return''
+    let file=quoteMedia
+    if(String(file.type||'').startsWith('image/')){
+      try{file=await optimizeQuoteImage(file)}catch{}
+    }
+    if(file.size>10*1024*1024)throw new Error('El archivo optimizado supera 10 MB.')
+    const fd=new FormData();fd.append('file',file,file.name)
+    const res=await fetch(`/api/v1/public/sponsored/${encodeURIComponent(data?.username||username)}/quote-media`,{method:'POST',body:fd})
+    const json:any=await res.json().catch(()=>null)
+    if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos adjuntar el media.')
+    return String(json.data?.url||'')
+  }
+  async function sendQuoteRequest(){
     const name=quote.name.trim(),phone=quote.phone.trim(),request=quote.request.trim()
-    if(!name||!phone||!request){setToast('Completa nombre, teléfono y cotización / información');return}
+    if(!name||!phone||(!request&&!quoteMedia)){setToast('Completa nombre, teléfono y una solicitud o adjunta media');return}
     const number=cleanPhone(data?.whatsapp||data?.phone)
     const businessEmail=String(data?.quote_email||data?.email||'').trim()
     const canWhatsapp=Boolean(number),canEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail)
     const channel=quoteChannel||(canWhatsapp&&!canEmail?'whatsapp':canEmail&&!canWhatsapp?'email':'')
     if(!channel){setToast('Selecciona cómo deseas enviar la solicitud');return}
-    const lines=quoteMessageLines()
-    if(channel==='whatsapp'){
-      if(!number){setToast('Este perfil no tiene WhatsApp disponible');return}
+    const popup=channel==='whatsapp'?window.open('about:blank','_blank'):null
+    if(popup)popup.opener=null
+    setQuoteSending(true)
+    try{
+      const mediaUrl=await uploadQuoteMedia()
+      const lines=quoteMessageLines(mediaUrl)
+      if(channel==='whatsapp'){
+        if(!number){popup?.close();setToast('Este perfil no tiene WhatsApp disponible');return}
+        const url=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(lines.join('\n'))}`
+        finishQuoteFlow()
+        if(popup)popup.location.href=url
+        else window.location.href=url
+        return
+      }
+      if(!canEmail){popup?.close();setToast('Este perfil no tiene correo comercial disponible');return}
+      const subject=`Solicitud de cotización – ${quote.name.trim()}`
       finishQuoteFlow()
-      window.open(`https://wa.me/${number.replace(/^\\+/,'')}?text=${encodeURIComponent(lines.join('\n'))}`,'_blank','noopener,noreferrer')
-      return
-    }
-    if(!canEmail){setToast('Este perfil no tiene correo comercial disponible');return}
-    const subject=`Solicitud de cotización – ${quote.name.trim()}`
-    finishQuoteFlow()
-    window.location.href=`mailto:${encodeURIComponent(businessEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`
+      window.location.href=`mailto:${encodeURIComponent(businessEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`
+    }catch(error){
+      popup?.close()
+      setToast(error instanceof Error?error.message:'No pudimos adjuntar el media.')
+    }finally{setQuoteSending(false)}
   }
   if(loading)return<main style={{minHeight:'100vh',background:'#fff'}}/>;if(error||!data)return<main style={{minHeight:'100vh',display:'grid',placeItems:'center',padding:24,fontFamily:'Inter,system-ui,sans-serif',background:'#f8fafc'}}><div style={{maxWidth:420,textAlign:'center'}}><h1 style={{fontSize:24}}>Perfil no disponible</h1><p style={{color:'#64748b'}}>{error||'No pudimos cargar este perfil.'}</p></div></main>
 
-  const quoteReady=Boolean(quote.name.trim()&&quote.phone.trim()&&quote.request.trim());const quoteBusinessWhatsapp=cleanPhone(data.whatsapp||data.phone);const quoteBusinessEmail=String(data.quote_email||data.email||'').trim();const quoteCanWhatsapp=Boolean(quoteBusinessWhatsapp);const quoteCanEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quoteBusinessEmail);
+  const quoteReady=Boolean(quote.name.trim()&&quote.phone.trim()&&(quote.request.trim()||quoteMedia));const quoteBusinessWhatsapp=cleanPhone(data.whatsapp||data.phone);const quoteBusinessEmail=String(data.quote_email||data.email||'').trim();const quoteCanWhatsapp=Boolean(quoteBusinessWhatsapp);const quoteCanEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quoteBusinessEmail);
   const whatsapp=cleanPhone(data.whatsapp||data.phone);const instagram=String(data.instagram||'').trim();const instagramHref=instagram?(instagram.startsWith('http')?instagram:`https://instagram.com/${instagram.replace(/^@/,'')}`):'';const mapsHref=String(data.map_url||'').trim()||(data.address?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.address)}`:'');const vcardHref=`/api/v1/public/sponsored/${encodeURIComponent(data.username)}/vcard`
   const contactCard=(icon:ReactNode,title:string,subtitle:string,onClick:()=>void,primary=false)=><button type="button" onClick={onClick} onMouseEnter={event=>{event.currentTarget.style.transform='translateY(-2px)';event.currentTarget.style.background=primary?palette.text:palette.accentSoft;event.currentTarget.style.boxShadow=`0 10px 22px ${palette.accent}20`}} onMouseLeave={event=>{event.currentTarget.style.transform='translateY(0)';event.currentTarget.style.background=primary?palette.accent:'#fff';event.currentTarget.style.boxShadow='none'}} style={{display:'grid',gridTemplateColumns:'48px minmax(0,1fr)',alignItems:'center',minHeight:62,padding:'6px 14px 6px 7px',border:`1.5px solid ${palette.accent}`,borderRadius:999,background:primary?palette.accent:'#fff',textAlign:'center',cursor:'pointer',boxShadow:'none',minWidth:0,color:primary?'#fff':palette.text,transition:'transform .18s ease, background .18s ease, box-shadow .18s ease'}}><span style={{width:44,height:44,borderRadius:'50%',fontSize:24,color:primary?'#fff':palette.accent,display:'grid',placeItems:'center',background:primary?'rgba(255,255,255,.16)':palette.accentSoft,border:primary?'1px solid rgba(255,255,255,.18)':`1px solid ${palette.accent}22`}}>{icon}</span><span style={{minWidth:0,padding:'0 6px'}}><strong style={{display:'block',fontSize:15.5,fontWeight:900,color:primary?'#fff':palette.text,lineHeight:1.1}}>{title}</strong><small style={{display:'block',marginTop:3,fontSize:11.2,lineHeight:1.15,color:primary?'rgba(255,255,255,.82)':'#64748b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{subtitle}</small></span></button>
   const sectionTitle:React.CSSProperties={margin:'0 0 12px',fontSize:19,lineHeight:1.2,fontWeight:800,color:palette.text,textAlign:'left'};const section:React.CSSProperties={padding:'24px 22px 0',marginTop:20,borderTop:'1px solid #e2e8f0'};const cover=`linear-gradient(135deg,${palette.accent} 0%,#0f172a 100%)`;const modalItem=modalIndex===null?null:gallery[modalIndex]
@@ -94,7 +177,7 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     {data.sponsor?.banner_enabled!==false&&<section style={{padding:'18px 22px 0'}}><div style={{textAlign:'center',fontSize:13,color:'#64748b',marginBottom:9}}>{data.sponsor?.banner_title||'Impulsado por'}: <strong style={{color:palette.text}}>{data.sponsor?.name}</strong></div>{data.sponsor?.banner_image_url?<button type="button" onClick={sponsorCta} disabled={!data.sponsor?.banner_cta_type||data.sponsor?.banner_cta_type==='none'} style={{display:'block',width:'100%',padding:0,border:0,background:'transparent',cursor:data.sponsor?.banner_cta_type==='none'?'default':'pointer'}}><img src={data.sponsor.banner_image_url} alt={data.sponsor.name||'Patrocinador'} style={{display:'block',width:'100%',height:'auto',aspectRatio:'3.2 / 1',objectFit:'contain',background:'transparent'}}/></button>:<button type="button" onClick={sponsorCta} disabled={!data.sponsor?.banner_cta_type||data.sponsor?.banner_cta_type==='none'} style={{display:'flex',width:'100%',alignItems:'center',justifyContent:'center',gap:12,padding:'12px 0',border:0,background:'transparent',cursor:data.sponsor?.banner_cta_type==='none'?'default':'pointer'}}><strong style={{color:palette.text,fontSize:16}}>{data.sponsor?.name}</strong></button>}</section>}
     <div style={{padding:'10px 22px 0',textAlign:'center',fontSize:13,fontWeight:650,color:'#94a3b8'}}>Desarrollado por <a href="https://nfc.kawvoia.com" target="_blank" rel="noreferrer" style={{color:palette.accent,fontWeight:850,textDecoration:'underline',textUnderlineOffset:3}}>KawLink</a></div>
   </article>
-  {quoteOpen&&<div role="dialog" aria-modal="true" aria-label="Solicitar cotización / información" onClick={()=>setQuoteOpen(false)} style={overlay}><div onClick={e=>e.stopPropagation()} style={{width:'min(520px,100%)',maxHeight:'90vh',overflowY:'auto',background:'#fff',borderRadius:24,padding:22,boxShadow:'0 24px 70px rgba(15,23,42,.28)'}}><div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16}}><div><h3 style={{margin:0,fontSize:22,color:palette.text}}>Solicitar cotización / información</h3><p style={{margin:'7px 0 0',fontSize:13.5,lineHeight:1.5,color:'#64748b'}}>Describe el producto o servicio y la cantidad que necesitas. Los campos marcados con * son obligatorios.</p></div><button type="button" onClick={()=>setQuoteOpen(false)} aria-label="Cerrar" style={{border:0,background:'#f1f5f9',width:36,height:36,borderRadius:'50%',fontSize:20,cursor:'pointer'}}>×</button></div><div style={{display:'grid',gap:14,marginTop:18}}><label style={quoteLabel}>Nombre *<input style={quoteField} value={quote.name} onChange={e=>setQuote({...quote,name:e.target.value})} autoComplete="name" placeholder="Tu nombre"/></label><label style={quoteLabel}>Teléfono *<input style={quoteField} value={quote.phone} onChange={e=>setQuote({...quote,phone:e.target.value})} inputMode="tel" autoComplete="tel" placeholder="809-000-0000"/></label><label style={quoteLabel}>Correo <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><input style={quoteField} type="email" value={quote.email} onChange={e=>setQuote({...quote,email:e.target.value})} autoComplete="email" placeholder="correo@ejemplo.com"/></label><label style={quoteLabel}>Cotización / información *<textarea style={{...quoteField,minHeight:112,resize:'vertical'}} maxLength={1200} value={quote.request} onChange={e=>setQuote({...quote,request:e.target.value})} placeholder="Ej.: 10 unidades de..., 2 sacos de..., servicio de..."/></label><p style={{margin:'-6px 0 0',fontSize:12,color:'#64748b'}}>Incluye el nombre o descripción del producto/servicio y la cantidad solicitada.</p><label style={quoteLabel}>Tipo de entrega <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><select style={quoteField} value={quote.delivery} onChange={e=>setQuote({...quote,delivery:e.target.value})}><option value="">Seleccionar</option><option value="Pasar a retirar">Pasar a retirar</option><option value="Enviar">Solicitar envío</option></select></label><label style={quoteLabel}>Sector o zona <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><input style={quoteField} value={quote.sector} onChange={e=>setQuote({...quote,sector:e.target.value})} placeholder="Sector o zona de entrega"/></label><label style={quoteLabel}>Forma de pago <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><select style={quoteField} value={quote.payment} onChange={e=>setQuote({...quote,payment:e.target.value})}><option value="">Seleccionar</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Tarjeta">Tarjeta</option></select></label></div>{quoteReady&&<div style={{marginTop:16}}><div style={{fontSize:12,fontWeight:900,color:'#334155',marginBottom:8}}>¿Cómo deseas enviar esta solicitud?</div>{quoteCanWhatsapp&&quoteCanEmail?<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><button type="button" onClick={()=>setQuoteChannel('whatsapp')} aria-pressed={quoteChannel==='whatsapp'} style={{...channelBtn,borderColor:quoteChannel==='whatsapp'?palette.accent:'#dbe4ef',background:quoteChannel==='whatsapp'?palette.accentSoft:'#fff',color:quoteChannel==='whatsapp'?palette.text:'#475569'}}><FaWhatsapp/>WhatsApp</button><button type="button" onClick={()=>setQuoteChannel('email')} aria-pressed={quoteChannel==='email'} style={{...channelBtn,borderColor:quoteChannel==='email'?palette.accent:'#dbe4ef',background:quoteChannel==='email'?palette.accentSoft:'#fff',color:quoteChannel==='email'?palette.text:'#475569'}}>✉ Correo</button></div>:<div style={{borderRadius:14,padding:'11px 13px',background:palette.accentSoft,color:palette.text,fontSize:12.5,fontWeight:800}}>{quoteCanWhatsapp?'Se enviará por WhatsApp.':quoteCanEmail?'Se enviará por correo.':'Este negocio todavía no ha configurado un canal para recibir cotizaciones.'}</div>}</div>}<div style={{marginTop:16,borderRadius:16,padding:'12px 14px',background:palette.accentSoft,color:palette.text,fontSize:12.5,lineHeight:1.5}}>Tu solicitud será respondida según el orden de trabajo en cola.</div>{quoteReady&&(quoteCanWhatsapp||quoteCanEmail)&&<button type="button" onClick={sendQuoteRequest} style={{display:'flex',width:'100%',alignItems:'center',justifyContent:'center',gap:9,marginTop:16,border:0,borderRadius:16,padding:'14px 18px',background:palette.accent,color:'#fff',fontSize:15,fontWeight:900,cursor:'pointer'}}>{(quoteChannel==='email'||(!quoteCanWhatsapp&&quoteCanEmail))?'✉ Enviar solicitud por correo':<><FaWhatsapp/>Enviar solicitud por WhatsApp</>}</button>}</div></div>}
+  {quoteOpen&&<div role="dialog" aria-modal="true" aria-label="Solicitar cotización / información" onClick={()=>setQuoteOpen(false)} style={overlay}><div onClick={e=>e.stopPropagation()} style={{width:'min(520px,100%)',maxHeight:'90vh',overflowY:'auto',background:'#fff',borderRadius:24,padding:22,boxShadow:'0 24px 70px rgba(15,23,42,.28)'}}><div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16}}><div><h3 style={{margin:0,fontSize:22,color:palette.text}}>Solicitar cotización / información</h3><p style={{margin:'7px 0 0',fontSize:13.5,lineHeight:1.5,color:'#64748b'}}>Describe el producto o servicio y la cantidad que necesitas. Los campos marcados con * son obligatorios.</p></div><button type="button" onClick={()=>setQuoteOpen(false)} aria-label="Cerrar" style={{border:0,background:'#f1f5f9',width:36,height:36,borderRadius:'50%',fontSize:20,cursor:'pointer'}}>×</button></div><div style={{display:'grid',gap:14,marginTop:18}}><label style={quoteLabel}>Nombre *<input style={quoteField} value={quote.name} onChange={e=>setQuote({...quote,name:e.target.value})} autoComplete="name" placeholder="Tu nombre"/></label><label style={quoteLabel}>Teléfono *<input style={quoteField} value={quote.phone} onChange={e=>setQuote({...quote,phone:e.target.value})} inputMode="tel" autoComplete="tel" placeholder="809-000-0000"/></label><label style={quoteLabel}>Correo <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><input style={quoteField} type="email" value={quote.email} onChange={e=>setQuote({...quote,email:e.target.value})} autoComplete="email" placeholder="correo@ejemplo.com"/></label><label style={quoteLabel}>Cotización / información <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional si adjuntas media)</span><textarea style={{...quoteField,minHeight:112,resize:'vertical'}} maxLength={1200} value={quote.request} onChange={e=>setQuote({...quote,request:e.target.value})} placeholder="Ej.: 10 unidades de..., 2 sacos de..., servicio de..."/></label><p style={{margin:'-6px 0 0',fontSize:12,color:'#64748b'}}>Puedes escribir la solicitud, adjuntar media o usar ambas opciones.</p><div style={{border:'1px solid #dbe4ef',borderRadius:16,padding:13,background:'#f8fafc'}}><div style={{fontSize:12,fontWeight:900,color:'#334155'}}>Adjuntar media <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span></div><div style={{display:'grid',gridTemplateColumns:'repeat(3,minmax(0,1fr))',gap:7,marginTop:10}}><button type="button" onClick={()=>quoteCameraRef.current?.click()} style={miniBtn}>Tomar foto</button><button type="button" onClick={()=>quoteFileRef.current?.click()} style={miniBtn}>Elegir archivo</button><button type="button" onClick={()=>void startAudioRecording()} style={{...miniBtn,background:recording?'#fee2e2':'#f8fafc',color:recording?'#b91c1c':'#334155'}}>{recording?'Detener audio':'Grabar audio'}</button></div><input ref={quoteCameraRef} type="file" accept="image/*" capture="environment" style={{display:'none'}} onChange={e=>{const file=e.target.files?.[0];e.target.value='';chooseQuoteMedia(file)}}/><input ref={quoteFileRef} type="file" accept="image/*,application/pdf,audio/*" style={{display:'none'}} onChange={e=>{const file=e.target.files?.[0];e.target.value='';chooseQuoteMedia(file)}}/>{quoteMedia&&<div style={{marginTop:10,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,borderRadius:12,background:'#fff',padding:'10px 11px'}}><div style={{minWidth:0}}><strong style={{display:'block',fontSize:12,color:'#334155'}}>{humanMediaKind(quoteMedia)} seleccionada</strong><span style={{display:'block',marginTop:3,fontSize:11,color:'#64748b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{quoteMedia.name} · {(quoteMedia.size/1024/1024).toFixed(1)} MB</span></div><button type="button" onClick={()=>setQuoteMedia(null)} style={{...miniBtn,padding:'8px 10px',flexShrink:0}}>Quitar</button></div>}<p style={{margin:'9px 0 0',fontSize:11.5,lineHeight:1.45,color:'#64748b'}}>Imagen, PDF o audio · máximo 10 MB · disponible por 3 días.</p></div><label style={quoteLabel}>Tipo de entrega <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><select style={quoteField} value={quote.delivery} onChange={e=>setQuote({...quote,delivery:e.target.value})}><option value="">Seleccionar</option><option value="Pasar a retirar">Pasar a retirar</option><option value="Enviar">Solicitar envío</option></select></label><label style={quoteLabel}>Sector o zona <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><input style={quoteField} value={quote.sector} onChange={e=>setQuote({...quote,sector:e.target.value})} placeholder="Sector o zona de entrega"/></label><label style={quoteLabel}>Forma de pago <span style={{fontWeight:600,color:'#94a3b8'}}>(opcional)</span><select style={quoteField} value={quote.payment} onChange={e=>setQuote({...quote,payment:e.target.value})}><option value="">Seleccionar</option><option value="Efectivo">Efectivo</option><option value="Transferencia">Transferencia</option><option value="Tarjeta">Tarjeta</option></select></label></div>{quoteReady&&<div style={{marginTop:16}}><div style={{fontSize:12,fontWeight:900,color:'#334155',marginBottom:8}}>¿Cómo deseas enviar esta solicitud?</div>{quoteCanWhatsapp&&quoteCanEmail?<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><button type="button" onClick={()=>setQuoteChannel('whatsapp')} aria-pressed={quoteChannel==='whatsapp'} style={{...channelBtn,borderColor:quoteChannel==='whatsapp'?palette.accent:'#dbe4ef',background:quoteChannel==='whatsapp'?palette.accentSoft:'#fff',color:quoteChannel==='whatsapp'?palette.text:'#475569'}}><FaWhatsapp/>WhatsApp</button><button type="button" onClick={()=>setQuoteChannel('email')} aria-pressed={quoteChannel==='email'} style={{...channelBtn,borderColor:quoteChannel==='email'?palette.accent:'#dbe4ef',background:quoteChannel==='email'?palette.accentSoft:'#fff',color:quoteChannel==='email'?palette.text:'#475569'}}>✉ Correo</button></div>:<div style={{borderRadius:14,padding:'11px 13px',background:palette.accentSoft,color:palette.text,fontSize:12.5,fontWeight:800}}>{quoteCanWhatsapp?'Se enviará por WhatsApp.':quoteCanEmail?'Se enviará por correo.':'Este negocio todavía no ha configurado un canal para recibir cotizaciones.'}</div>}</div>}<div style={{marginTop:16,borderRadius:16,padding:'12px 14px',background:palette.accentSoft,color:palette.text,fontSize:12.5,lineHeight:1.5}}>Tu solicitud será respondida según el orden de trabajo en cola.</div>{quoteReady&&(quoteCanWhatsapp||quoteCanEmail)&&<button type="button" disabled={quoteSending} onClick={()=>void sendQuoteRequest()} style={{display:'flex',width:'100%',alignItems:'center',justifyContent:'center',gap:9,marginTop:16,border:0,borderRadius:16,padding:'14px 18px',background:palette.accent,color:'#fff',fontSize:15,fontWeight:900,cursor:quoteSending?'wait':'pointer',opacity:quoteSending?.72:1}}>{quoteSending?'Preparando solicitud…':(quoteChannel==='email'||(!quoteCanWhatsapp&&quoteCanEmail))?'✉ Enviar solicitud por correo':<><FaWhatsapp/>Enviar solicitud por WhatsApp</>}</button>}</div></div>}
   {modalItem&&modalIndex!==null&&<div role="dialog" aria-modal="true" aria-label="Galería completa" onClick={()=>setModalIndex(null)} style={overlay}><div onClick={e=>e.stopPropagation()} style={{width:'min(760px,100%)',background:'#fff',borderRadius:22,overflow:'hidden',position:'relative'}}><div style={{position:'relative',background:'linear-gradient(45deg,#f8fafc 25%,#eef2f7 25%,#eef2f7 50%,#f8fafc 50%,#f8fafc 75%,#eef2f7 75%)',backgroundSize:'18px 18px',minHeight:260,display:'grid',placeItems:'center'}}><img src={galleryUrl(modalItem)} alt={modalItem.title||modalItem.label||'Galería'} style={{display:'block',width:'100%',maxHeight:'72vh',objectFit:'contain'}}/>{gallery.length>1&&<><button type="button" aria-label="Imagen anterior" onClick={()=>setModalIndex((modalIndex-1+gallery.length)%gallery.length)} style={{...modalArrow,left:14}}>‹</button><button type="button" aria-label="Imagen siguiente" onClick={()=>setModalIndex((modalIndex+1)%gallery.length)} style={{...modalArrow,right:14}}>›</button></>}</div><div style={{padding:18}}><div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16}}><div><strong style={{fontSize:18,color:palette.text}}>{modalItem.title||modalItem.label||'Detalle'}</strong>{modalItem.description&&<p style={{margin:'8px 0 0',color:'#64748b',lineHeight:1.5}}>{modalItem.description}</p>}</div><span style={{flexShrink:0,fontSize:12,fontWeight:800,color:'#64748b'}}>{modalIndex+1} de {gallery.length}</span></div>{gallery.length>1&&<div style={{display:'flex',justifyContent:'center',gap:6,marginTop:14}}>{gallery.map((_,index)=><button key={index} type="button" aria-label={`Ir a imagen ${index+1}`} onClick={()=>setModalIndex(index)} style={{border:0,padding:0,width:index===modalIndex?20:7,height:7,borderRadius:99,background:index===modalIndex?palette.accent:'#dbe4ef',cursor:'pointer'}}/>)}</div>}<button onClick={()=>setModalIndex(null)} style={{...miniBtn,width:'100%',marginTop:14}}>Cerrar</button></div></div></div>}
   {qrOpen&&<div role="dialog" aria-modal="true" onClick={()=>setQrOpen(false)} style={overlay}><div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:22,padding:22,width:'min(360px,100%)',textAlign:'center'}}><h3 style={{margin:'0 0 12px'}}>QR de mi perfil</h3>{qrData&&<img src={qrData} alt="QR" style={{width:'100%',maxWidth:280}}/>}<button onClick={downloadQr} style={{...miniBtn,width:'100%',marginTop:12}}>Descargar QR</button><button onClick={()=>setQrOpen(false)} style={{...miniBtn,width:'100%',marginTop:8,background:'#fff'}}>Cerrar</button></div></div>}
   {toast&&<div style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',background:'#0f172a',color:'#fff',padding:'10px 14px',borderRadius:999,fontSize:13,zIndex:80}}>{toast}</div>}
