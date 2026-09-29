@@ -9,8 +9,11 @@ type QuoteMediaKind='image'|'document'|'audio'
 function cleanUsername(value:unknown){return String(value??'').trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'')}
 function cleanName(value:unknown){return String(value??'media').replace(/[\r\n"\\/]/g,' ').trim().slice(0,120)||'media'}
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-function randomToken(bytes=24){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return Array.from(data).map(b=>b.toString(16).padStart(2,'0')).join('')}
+function randomCodePart(bytes=16){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return btoa(String.fromCharCode(...data)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function safeIp(c:any){return String(c.req.header('CF-Connecting-IP')||c.req.header('X-Forwarded-For')||'unknown').split(',')[0].trim().slice(0,100)}
+function kindPrefix(kind:QuoteMediaKind){return kind==='audio'?'AUD':kind==='image'?'IMG':'AR'}
+function isModernCode(value:string){return /^(AUD|IMG|AR)-[A-Za-z0-9_-]{20,24}$/.test(value)}
+function isLegacyToken(value:string){return /^[a-f0-9]{48}$/i.test(value)}
 
 function mediaSpec(file:File):{kind:QuoteMediaKind;ext:string;contentType:string}|null{
   const type=String(file.type||'').toLowerCase()
@@ -27,9 +30,27 @@ function mediaSpec(file:File):{kind:QuoteMediaKind;ext:string;contentType:string
   return null
 }
 
-function mediaUrl(c:any,token:string){
+function mediaUrl(c:any,code:string){
   const origin=new URL(c.req.url).origin
-  return `${origin}/api/v1/public/sponsored/quote-media/${encodeURIComponent(token)}`
+  return `${origin}/media/${encodeURIComponent(code)}`
+}
+
+async function mediaRow(c:any,code:string){
+  if(!isModernCode(code)&&!isLegacyToken(code))return null
+  const tokenHash=await sha256Hex(code)
+  return c.env.DB.prepare(`SELECT r2_key,media_kind,content_type,original_name,size_bytes,expires_at FROM sponsored_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first()
+}
+
+function fileHeaders(row:any,download=false){
+  const headers=new Headers()
+  const contentType=String(row?.content_type||'application/octet-stream')
+  const filename=cleanName(row?.original_name)
+  headers.set('Content-Type',contentType)
+  headers.set('Content-Disposition',`${download?'attachment':'inline'}; filename="${filename}"`)
+  headers.set('Cache-Control','private, no-store, max-age=0')
+  headers.set('X-Content-Type-Options','nosniff')
+  headers.set('X-Kawvo-Expires-At',String(row?.expires_at||''))
+  return headers
 }
 
 app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
@@ -53,8 +74,8 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
   const recent=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_quote_media WHERE profile_id=? AND ip_hash=? AND created_at>datetime('now','-1 hour')`).bind(profileId,ipHash).first()
   if(Number((recent as any)?.n||0)>=MAX_UPLOADS_PER_HOUR)return c.json({ok:false,error:'Has realizado varios adjuntos recientemente. Intenta nuevamente más tarde.'},429)
 
-  const token=randomToken()
-  const tokenHash=await sha256Hex(token)
+  const code=`${kindPrefix(spec.kind)}-${randomCodePart()}`
+  const tokenHash=await sha256Hex(code)
   const id=crypto.randomUUID()
   const datePrefix=new Date().toISOString().slice(0,10)
   const key=`quote-media/${profileId}/${datePrefix}/${id}.${spec.ext}`
@@ -71,24 +92,52 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
     await c.env.BUCKET.delete(key).catch(()=>undefined)
     throw error
   }
-  return c.json({ok:true,data:{url:mediaUrl(c,token),kind:spec.kind,name:originalName,size_bytes:size,expires_at:expiresAt}})
+  return c.json({ok:true,data:{url:mediaUrl(c,code),code,kind:spec.kind,name:originalName,size_bytes:size,expires_at:expiresAt}})
 })
 
-app.get('/api/v1/public/sponsored/quote-media/:token',async(c:any)=>{
-  const token=String(c.req.param('token')||'')
-  if(!/^[a-f0-9]{48}$/i.test(token))return c.body(null,404)
-  const tokenHash=await sha256Hex(token)
-  const row=await c.env.DB.prepare(`SELECT r2_key,content_type,original_name,expires_at FROM sponsored_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first()
+app.get('/api/v1/public/sponsored/quote-media/:code/meta',async(c:any)=>{
+  const code=String(c.req.param('code')||'')
+  const row=await mediaRow(c,code)
+  if(!row)return c.json({ok:false,error:'Este media no está disponible o ya venció.'},404)
+  return c.json({ok:true,data:{
+    code,
+    kind:String((row as any).media_kind||'document'),
+    content_type:String((row as any).content_type||'application/octet-stream'),
+    name:cleanName((row as any).original_name),
+    size_bytes:Number((row as any).size_bytes||0),
+    expires_at:String((row as any).expires_at||''),
+    file_url:`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/file`,
+    download_url:`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/download`,
+  }})
+})
+
+app.get('/api/v1/public/sponsored/quote-media/:code/file',async(c:any)=>{
+  const code=String(c.req.param('code')||'')
+  const row=await mediaRow(c,code)
   if(!row)return c.body(null,404)
   const object=await c.env.BUCKET.get(String((row as any).r2_key||''))
   if(!object)return c.body(null,404)
-  const headers=new Headers()
-  headers.set('Content-Type',String((row as any).content_type||object.httpMetadata?.contentType||'application/octet-stream'))
-  headers.set('Content-Disposition',`inline; filename="${cleanName((row as any).original_name)}"`)
-  headers.set('Cache-Control','private, no-store, max-age=0')
-  headers.set('X-Content-Type-Options','nosniff')
-  headers.set('X-Kawvo-Expires-At',String((row as any).expires_at||''))
-  return new Response(object.body,{headers})
+  return new Response(object.body,{headers:fileHeaders(row,false)})
+})
+
+app.get('/api/v1/public/sponsored/quote-media/:code/download',async(c:any)=>{
+  const code=String(c.req.param('code')||'')
+  const row=await mediaRow(c,code)
+  if(!row)return c.body(null,404)
+  const object=await c.env.BUCKET.get(String((row as any).r2_key||''))
+  if(!object)return c.body(null,404)
+  return new Response(object.body,{headers:fileHeaders(row,true)})
+})
+
+// Compatibility for links created during Preview before the short /media/CODE viewer existed.
+app.get('/api/v1/public/sponsored/quote-media/:token',async(c:any)=>{
+  const token=String(c.req.param('token')||'')
+  if(!isLegacyToken(token))return c.body(null,404)
+  const row=await mediaRow(c,token)
+  if(!row)return c.body(null,404)
+  const object=await c.env.BUCKET.get(String((row as any).r2_key||''))
+  if(!object)return c.body(null,404)
+  return new Response(object.body,{headers:fileHeaders(row,false)})
 })
 
 export async function cleanupExpiredSponsoredQuoteMedia(env:any){
