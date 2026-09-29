@@ -42,7 +42,7 @@ run git pull --ff-only github "$BRANCH"
 git restore -- scripts/run-preview-sponsored-quote-media-ux-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
-ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations-preview/0079_sponsored_quote_media_batch\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/migrations/0079_sponsored_quote_media_batch\.sql|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
+ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations-preview/0079_sponsored_quote_media_batch\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/migrations/0079_sponsored_quote_media_batch\.sql|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredAppointmentModal\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
@@ -157,10 +157,14 @@ Validar:
 19. Un lote de imágenes llega al mensaje con un solo enlace.
 20. Ese enlace abre las imágenes como galería navegable.
 21. En la galería, cada imagen se descarga individualmente desde la imagen visible.
-22. Los enlaces temporales de media no muestran la tarjeta gráfica de Kawvo Link.
-23. La solicitud puede enviarse con texto + media o solo media.
-24. Al enviar, formulario y adjuntos quedan limpios.
-25. El endpoint efímero rechaza archivos vencidos y el cron los elimina de R2/D1.
-26. Producción NO tocada.
+22. Los enlaces temporales de media no muestran imagen, favicon ni tarjeta gráfica de Kawvo Link.
+23. Junto a Cotizar / información aparece Agendar.
+24. Agenda pide nombre, teléfono, correo opcional, fecha, hora, motivo y detalles.
+25. Agenda ofrece motivos universales: visita, llamada, reunión/cita, evaluación/chequeo, compra/retiro, servicio/atención u otro.
+26. Agenda se envía únicamente por WhatsApp y queda pendiente de confirmación.
+27. La solicitud de cotización puede enviarse con texto + media o solo media.
+28. Al enviar cotización, formulario y adjuntos quedan limpios.
+29. El endpoint efímero rechaza archivos vencidos y el cron los elimina de R2/D1.
+30. Producción NO tocada.
 ============================================================
 EOF
