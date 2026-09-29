@@ -147,6 +147,11 @@ Validar:
 12. Al enviar, el navegador vuelve al home limpio del perfil.
 13. CRM del patrocinador muestra el correo del patrocinado.
 14. Super Admin muestra el correo del patrocinado.
-15. Producción NO tocada.
+15. Adjuntar media permite tomar foto, elegir imagen/PDF/audio o grabar audio.
+16. La solicitud puede enviarse con texto + media o solo media.
+17. El media se agrega al mensaje como enlace temporal disponible por 3 días.
+18. Al enviar, formulario y media seleccionada quedan limpios.
+19. El endpoint efímero rechaza el archivo al vencer y el cron lo elimina de R2/D1.
+20. Producción NO tocada.
 ============================================================
 EOF
