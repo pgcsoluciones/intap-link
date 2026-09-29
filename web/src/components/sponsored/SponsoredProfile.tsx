@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { FaAddressCard, FaCalendarAlt, FaClock, FaFileInvoiceDollar, FaInstagram, FaMapMarkerAlt, FaMicrophone, FaStop, FaWhatsapp } from 'react-icons/fa'
+import { FaAddressCard, FaCalendarAlt, FaClock, FaFileInvoiceDollar, FaInstagram, FaMapMarkerAlt, FaWhatsapp } from 'react-icons/fa'
 import SponsoredBankAccounts from './SponsoredBankAccounts'
 import QuoteAudioRecorder from './QuoteAudioRecorder'
 
@@ -89,29 +89,6 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     const allowed=isImage||String(file.type||'').startsWith('audio/')||file.type==='application/pdf'||/\.pdf$/i.test(file.name)
     if(!allowed){setToast('Usa una imagen, PDF o audio.');return}
     setQuoteMedia(file)
-  }
-  async function startAudioRecording(){
-    if(recording){recorderRef.current?.stop();return}
-    if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){setToast('Este navegador no permite grabar audio aquí.');return}
-    try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:true})
-      const preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(type=>MediaRecorder.isTypeSupported(type))
-      const recorder=new MediaRecorder(stream,preferred?{mimeType:preferred}:undefined)
-      recorderChunksRef.current=[]
-      recorderStreamRef.current=stream
-      recorderRef.current=recorder
-      recorder.ondataavailable=event=>{if(event.data.size)recorderChunksRef.current.push(event.data)}
-      recorder.onstop=()=>{
-        const type=recorder.mimeType||'audio/webm'
-        const blob=new Blob(recorderChunksRef.current,{type})
-        const ext=type.includes('mp4')?'m4a':'webm'
-        if(blob.size>10*1024*1024)setToast('El audio supera 10 MB. Graba uno más corto.')
-        else setQuoteMedia(new File([blob],`audio-cotizacion.${ext}`,{type,lastModified:Date.now()}))
-        recorderStreamRef.current?.getTracks().forEach(track=>track.stop())
-        recorderStreamRef.current=null;recorderRef.current=null;recorderChunksRef.current=[];setRecording(false)
-      }
-      recorder.start();setRecording(true)
-    }catch{setToast('No pudimos acceder al micrófono.')}
   }
   async function uploadQuoteMedia(){
     if(!quoteMedia)return''
