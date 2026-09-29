@@ -41,7 +41,7 @@ run git pull --ff-only github "$BRANCH"
 git restore -- scripts/run-preview-sponsored-banner-quote-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
-ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/src/sponsored-profiles\.ts|api/src/sponsored-public\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh)$'
+ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/src/sponsored-profiles\.ts|api/src/sponsored-public\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh)$'
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
@@ -129,7 +129,10 @@ Validar:
 7. "Enviar cotizador por WhatsApp" comparte ese enlace y al abrirlo muestra el formulario listo.
 8. Modal pide nombre, teléfono, correo opcional y pedido/cotización.
 9. Entrega, sector y forma de pago son opcionales.
-10. Al enviar la solicitud, WhatsApp recibe el mensaje conversacional y el navegador vuelve al home limpio del perfil.
-11. Producción NO tocada.
+10. Al completar nombre, teléfono y pedido/cotización aparece el selector de envío.
+11. Si el negocio tiene WhatsApp y correo, permite elegir; si solo tiene uno, usa ese canal.
+12. Correo abre la aplicación predeterminada con destinatario, asunto y solicitud precargados.
+13. Al enviar, el navegador vuelve al home limpio del perfil.
+14. Producción NO tocada.
 ============================================================
 EOF
