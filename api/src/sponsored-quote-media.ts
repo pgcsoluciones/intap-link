@@ -27,9 +27,9 @@ function mediaSpec(file:File):{kind:QuoteMediaKind;ext:string;contentType:string
   return null
 }
 
-function mediaUrl(c:any,username:string,token:string){
+function mediaUrl(c:any,token:string){
   const origin=new URL(c.req.url).origin
-  return `${origin}/api/v1/public/sponsored/${encodeURIComponent(username)}/quote-media/${encodeURIComponent(token)}`
+  return `${origin}/api/v1/public/sponsored/quote-media/${encodeURIComponent(token)}`
 }
 
 app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
@@ -59,7 +59,7 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
   const datePrefix=new Date().toISOString().slice(0,10)
   const key=`quote-media/${profileId}/${datePrefix}/${id}.${spec.ext}`
   const originalName=cleanName(file.name)
-  const expiresAt=new Date(Date.now()+EXPIRY_HOURS*60*60*1000).toISOString()
+  const expiresAt=new Date(Date.now()+EXPIRY_HOURS*60*60*1000).toISOString().slice(0,19).replace('T',' ')
 
   await c.env.BUCKET.put(key,file.stream(),{
     httpMetadata:{contentType:spec.contentType},
@@ -71,15 +71,14 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
     await c.env.BUCKET.delete(key).catch(()=>undefined)
     throw error
   }
-  return c.json({ok:true,data:{url:mediaUrl(c,username,token),kind:spec.kind,name:originalName,size_bytes:size,expires_at:expiresAt}})
+  return c.json({ok:true,data:{url:mediaUrl(c,token),kind:spec.kind,name:originalName,size_bytes:size,expires_at:expiresAt}})
 })
 
-app.get('/api/v1/public/sponsored/:username/quote-media/:token',async(c:any)=>{
-  const username=cleanUsername(c.req.param('username'))
+app.get('/api/v1/public/sponsored/quote-media/:token',async(c:any)=>{
   const token=String(c.req.param('token')||'')
-  if(!username||!/^[a-f0-9]{48}$/i.test(token))return c.body(null,404)
+  if(!/^[a-f0-9]{48}$/i.test(token))return c.body(null,404)
   const tokenHash=await sha256Hex(token)
-  const row=await c.env.DB.prepare(`SELECT qm.r2_key,qm.content_type,qm.original_name,qm.expires_at FROM sponsored_quote_media qm JOIN sponsored_profiles sp ON sp.id=qm.profile_id WHERE sp.username=? AND qm.token_hash=? AND qm.expires_at>datetime('now') LIMIT 1`).bind(username,tokenHash).first()
+  const row=await c.env.DB.prepare(`SELECT r2_key,content_type,original_name,expires_at FROM sponsored_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first()
   if(!row)return c.body(null,404)
   const object=await c.env.BUCKET.get(String((row as any).r2_key||''))
   if(!object)return c.body(null,404)
@@ -100,7 +99,12 @@ export async function cleanupExpiredSponsoredQuoteMedia(env:any){
     for(const row of items){
       const id=String((row as any).id||'')
       const key=String((row as any).r2_key||'')
-      if(key)await env.BUCKET.delete(key).catch((error:any)=>console.error('[quote-media cleanup] R2',key,error))
+      try{
+        if(key)await env.BUCKET.delete(key)
+      }catch(error){
+        console.error('[quote-media cleanup] R2',key,error)
+        continue
+      }
       await env.DB.prepare(`DELETE FROM sponsored_quote_media WHERE id=? AND expires_at<=datetime('now')`).bind(id).run().catch((error:any)=>console.error('[quote-media cleanup] D1',id,error))
     }
     if(items.length<100)break
