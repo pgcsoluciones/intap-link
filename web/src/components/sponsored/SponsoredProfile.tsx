@@ -26,6 +26,16 @@ async function optimizeQuoteImage(file:File){
   const name=(String(file.name||'media').replace(/\.[^.]+$/,'')||'media')+'.webp'
   return new File([blob],name,{type:'image/webp',lastModified:Date.now()})
 }
+function quoteMediaClientId(){
+  const key='kawvo:quote-media-client-v1'
+  try{
+    const existing=window.localStorage.getItem(key)
+    if(existing)return existing
+    const created=typeof crypto.randomUUID==='function'?crypto.randomUUID():`${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
+    window.localStorage.setItem(key,created)
+    return created
+  }catch{return ''}
+}
 function appOrigin(){const host=window.location.hostname.toLowerCase();if(host==='preview.intaprd.com')return'https://app.preview.intaprd.com';if(host==='intaprd.com'||host==='www.intaprd.com'||host==='link.intaprd.com')return'https://app.intaprd.com';const configured=String(import.meta.env.VITE_APP_URL||'').replace(/\/$/,'');return configured||'https://app.intaprd.com'}
 
 export default function SponsoredProfile(){
@@ -89,6 +99,7 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     }))
     for(const file of files)if(file.size>10*1024*1024)throw new Error('Cada archivo debe pesar 10 MB o menos después de optimizarse.')
     const fd=new FormData()
+    const clientId=quoteMediaClientId();if(clientId)fd.append('client_id',clientId)
     files.forEach(file=>fd.append('file',file,file.name))
     const res=await fetch(`/api/v1/public/sponsored/${encodeURIComponent(data?.username||username)}/quote-media`,{method:'POST',body:fd})
     const json:any=await res.json().catch(()=>null)
