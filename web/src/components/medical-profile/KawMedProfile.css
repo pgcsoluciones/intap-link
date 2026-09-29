@@ -1362,3 +1362,55 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* KawMed hero framing refinement — fixed crop area + centered image */
+.kawmed-hero {
+  height: 560px;
+  aspect-ratio: auto;
+  overflow: hidden;
+  background: #f8fbff;
+}
+
+.kawmed-hero__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  background: #f8fbff;
+}
+
+.kawmed-hero__shade {
+  pointer-events: none;
+}
+
+.kawmed-identity {
+  margin-top: -72px;
+  padding-top: 0;
+}
+
+@media (max-width: 620px) {
+  .kawmed-hero {
+    height: 500px;
+    aspect-ratio: auto;
+  }
+
+  .kawmed-identity {
+    margin-top: -66px;
+  }
+}
+
+@media (max-width: 420px) {
+  .kawmed-hero {
+    height: 455px;
+    aspect-ratio: auto;
+  }
+
+  .kawmed-hero__image {
+    object-position: center center;
+  }
+
+  .kawmed-identity {
+    margin-top: -58px;
+  }
+}
