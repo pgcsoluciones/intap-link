@@ -36,18 +36,23 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
     return [
       `Hola, mi nombre es ${name}.`,
       `Mi teléfono es ${phone}.`,
-      quote.email.trim()?`Mi correo es ${quote.email.trim()}.`:'',
-      '',
+      ...(quote.email.trim()?[`Mi correo es ${quote.email.trim()}.`]:[]),
       'Quisiera cotizar / solicitar información:',
+      '',
       request,
       '',
-      delivery,
-      payment,
-      '',
+      ...(delivery?[delivery]:[]),
+      ...(payment?[payment]:[]),
+      ...((delivery||payment)?['']:[]),
       'Quedo atento/a a su respuesta. Entiendo que las solicitudes se responden según el orden de trabajo en cola.'
-    ].filter(Boolean)
+    ]
   }
-  function finishQuoteFlow(){setQuoteOpen(false);setQuoteChannel('');window.history.replaceState({},'',`/p/${encodeURIComponent(data?.username||username)}`)}
+  function finishQuoteFlow(){
+    setQuoteOpen(false)
+    setQuoteChannel('')
+    setQuote({name:'',phone:'',email:'',request:'',delivery:'',sector:'',payment:''})
+    window.history.replaceState({},'',`/p/${encodeURIComponent(data?.username||username)}`)
+  }
   function sendQuoteRequest(){
     const name=quote.name.trim(),phone=quote.phone.trim(),request=quote.request.trim()
     if(!name||!phone||!request){setToast('Completa nombre, teléfono y cotización / información');return}
