@@ -26,7 +26,7 @@ KAWVO LINK · PERFIL PATROCINADO · PREVIEW QA
 Incluye:
 - cintillo patrocinado activable/desactivable por código beneficiario
 - CTA Solicitar cotización debajo del horario
-- formulario universal con envío por WhatsApp
+- formulario universal con envío por WhatsApp o correo
 - footer KawLink siempre visible
 Producción NO se toca
 ============================================================
@@ -41,7 +41,7 @@ run git pull --ff-only github "$BRANCH"
 git restore -- scripts/run-preview-sponsored-banner-quote-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
-ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/src/sponsored-profiles\.ts|api/src/sponsored-public\.ts|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh)$'
+ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/src/sponsored-profiles\.ts|api/src/sponsored-public\.ts|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh)$'
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
@@ -129,14 +129,15 @@ Validar:
 3. Desactivar cintillo oculta solo patrocinio del perfil público.
 4. "Desarrollado por KawLink" permanece visible.
 5. Debajo del horario aparece "Solicitar cotización / información".
-6. "Compartir formulario" genera un enlace con ?cotizar=1.
-7. "Compartir formulario por WhatsApp" comparte ese enlace y al abrirlo muestra el formulario listo.
-8. Modal pide nombre, teléfono, correo opcional y cotización / información.
-9. Entrega, sector y forma de pago son opcionales.
-10. Al completar nombre, teléfono y cotización / información aparece el selector de envío.
-11. Si el negocio tiene WhatsApp y correo, permite elegir; si solo tiene uno, usa ese canal.
-12. Correo abre la aplicación predeterminada con destinatario, asunto y solicitud precargados.
-13. Al enviar, el navegador vuelve al home limpio del perfil.
-14. Producción NO tocada.
+6. No aparecen botones para compartir el formulario de cotización.
+7. Modal pide nombre, teléfono, correo opcional y cotización / información.
+8. Entrega, sector y forma de pago son opcionales.
+9. Al completar nombre, teléfono y cotización / información aparece el selector de envío.
+10. Si el negocio tiene WhatsApp y correo, permite elegir; si solo tiene uno, usa ese canal.
+11. Correo abre la aplicación predeterminada con destinatario, asunto y solicitud precargados.
+12. Al enviar, el navegador vuelve al home limpio del perfil.
+13. CRM del patrocinador muestra el correo del patrocinado.
+14. Super Admin muestra el correo del patrocinado.
+15. Producción NO tocada.
 ============================================================
 EOF
