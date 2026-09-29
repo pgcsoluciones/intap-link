@@ -2,6 +2,7 @@ import app from './preview-free-entry'
 import { refreshDueInstagramConnections } from './instagram-token-refresh'
 import { cleanupExpiredTeamCodes } from './team-v2'
 import { expireDueTrials } from './trial-profiles'
+import { cleanupExpiredSponsoredQuoteMedia } from './sponsored-quote-media'
 
 type PreviewEnv = {
   WEB_PAGES_ORIGIN?: string
@@ -120,11 +121,17 @@ export default {
     }
     return app.fetch(request,env as any,ctx)
   },
-  scheduled(_event: ScheduledEvent, env: PreviewEnv, ctx: ExecutionContext) {
+  scheduled(event: ScheduledEvent, env: PreviewEnv, ctx: ExecutionContext) {
+    const quoteCleanup=cleanupExpiredSponsoredQuoteMedia(env as any)
+    if(String((event as any)?.cron||'')==='17 * * * *'){
+      ctx.waitUntil(quoteCleanup)
+      return
+    }
     ctx.waitUntil(Promise.all([
       refreshDueInstagramConnections(env as any),
       cleanupExpiredTeamCodes(env as any),
       expireDueTrials(env as any),
+      quoteCleanup,
     ]))
   },
 }
