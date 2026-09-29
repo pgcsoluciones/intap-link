@@ -17,16 +17,17 @@ function isLegacyToken(value:string){return /^[a-f0-9]{48}$/i.test(value)}
 
 function mediaSpec(file:File):{kind:QuoteMediaKind;ext:string;contentType:string}|null{
   const type=String(file.type||'').toLowerCase()
+  const mime=type.split(';',1)[0].trim()
   const name=String(file.name||'').toLowerCase()
-  if(type==='image/jpeg'||/\.(jpe?g)$/.test(name))return{kind:'image',ext:'jpg',contentType:'image/jpeg'}
-  if(type==='image/png'||/\.png$/.test(name))return{kind:'image',ext:'png',contentType:'image/png'}
-  if(type==='image/webp'||/\.webp$/.test(name))return{kind:'image',ext:'webp',contentType:'image/webp'}
-  if(type==='application/pdf'||/\.pdf$/.test(name))return{kind:'document',ext:'pdf',contentType:'application/pdf'}
-  if(type==='audio/webm'||/\.webm$/.test(name))return{kind:'audio',ext:'webm',contentType:type||'audio/webm'}
-  if(type==='audio/ogg'||/\.ogg$/.test(name))return{kind:'audio',ext:'ogg',contentType:'audio/ogg'}
-  if(type==='audio/mpeg'||/\.mp3$/.test(name))return{kind:'audio',ext:'mp3',contentType:'audio/mpeg'}
-  if(type==='audio/mp4'||type==='audio/x-m4a'||/\.m4a$/.test(name))return{kind:'audio',ext:'m4a',contentType:type||'audio/mp4'}
-  if(type==='audio/wav'||type==='audio/x-wav'||/\.wav$/.test(name))return{kind:'audio',ext:'wav',contentType:'audio/wav'}
+  if(mime==='image/jpeg'||/\.(jpe?g)$/.test(name))return{kind:'image',ext:'jpg',contentType:'image/jpeg'}
+  if(mime==='image/png'||/\.png$/.test(name))return{kind:'image',ext:'png',contentType:'image/png'}
+  if(mime==='image/webp'||/\.webp$/.test(name))return{kind:'image',ext:'webp',contentType:'image/webp'}
+  if(mime==='application/pdf'||/\.pdf$/.test(name))return{kind:'document',ext:'pdf',contentType:'application/pdf'}
+  if(mime==='audio/webm'||/\.webm$/.test(name))return{kind:'audio',ext:'webm',contentType:type||'audio/webm'}
+  if(mime==='audio/ogg'||/\.ogg$/.test(name))return{kind:'audio',ext:'ogg',contentType:'audio/ogg'}
+  if(mime==='audio/mpeg'||/\.mp3$/.test(name))return{kind:'audio',ext:'mp3',contentType:'audio/mpeg'}
+  if(mime==='audio/mp4'||mime==='audio/x-m4a'||/\.m4a$/.test(name))return{kind:'audio',ext:'m4a',contentType:type||'audio/mp4'}
+  if(mime==='audio/wav'||mime==='audio/x-wav'||/\.wav$/.test(name))return{kind:'audio',ext:'wav',contentType:'audio/wav'}
   return null
 }
 
