@@ -82,28 +82,18 @@ export default function KawMedAppointmentModal({ open, profile, onClose }: Props
     }
 
     const lines = [
-      `Hola ${profile.display_name}.`,
+      `Hola ${profile.display_name}, deseo solicitar una cita.`,
       '',
-      'Deseo solicitar una cita.',
+      `Mi nombre es ${patientName.trim()} y mi teléfono es ${patientPhone.trim()}.`,
       '',
-      `Nombre: ${patientName.trim()}`,
-      `Teléfono: ${patientPhone.trim()}`,
-      '',
-      'Centro:',
-      center.name,
-      '',
-      'Día:',
-      schedule.day_label,
-      '',
-      'Horario:',
-      `${formatTime(schedule.start_time)} – ${formatTime(schedule.end_time)}`,
+      `Me gustaría solicitar la cita para ${center.name}, el ${schedule.day_label.toLowerCase()}, en su horario de ${formatTime(schedule.start_time)} a ${formatTime(schedule.end_time)}.`,
     ]
 
     if (note.trim()) {
       lines.push('', 'Nota:', note.trim())
     }
 
-    lines.push('', 'Quedo atento a su confirmación.')
+    lines.push('', 'Quedo pendiente de su confirmación. Muchas gracias.')
 
     const number = profile.whatsapp.replace(/\D/g, '')
     window.open(`https://wa.me/${number}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener,noreferrer')
