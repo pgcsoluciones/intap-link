@@ -36,6 +36,9 @@ run git fetch github main "$BRANCH"
 [ "$(git rev-parse github/main)" = "$EXPECTED_MAIN_SHA" ] || fail "main cambió; detener y auditar antes de desplegar"
 run git switch "$BRANCH"
 run git pull --ff-only github "$BRANCH"
+# Si el usuario ejecutó chmod +x, Git puede marcar solo el bit ejecutable del propio runner.
+# Bash ya está ejecutando el archivo, así que restauramos únicamente ese cambio de modo antes del control de limpieza.
+git restore -- scripts/run-preview-sponsored-banner-quote-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
 ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/src/sponsored-profiles\.ts|api/src/sponsored-public\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh)$'
