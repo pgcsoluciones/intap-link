@@ -60,12 +60,12 @@ app.get('/api/v1/superadmin/sponsors/:id/artifacts',requireSuperAdmin('viewer'),
 
   const where:string[]=['sa.sponsor_id=?']
   const binds:any[]=[sponsorId]
-  if(q){where.push(`(UPPER(a.public_code) LIKE ? OR UPPER(COALESCE(b.name,'')) LIKE ? OR UPPER(COALESCE(sp.business_name,'')) LIKE ? OR UPPER(COALESCE(sp.username,'')) LIKE ? OR UPPER(COALESCE(sp.email,'')) LIKE ?)`);const like=`%${q}%`;binds.push(like,like,like,like,like)}
+  if(q){where.push(`(UPPER(a.public_code) LIKE ? OR UPPER(COALESCE(b.name,'')) LIKE ? OR UPPER(COALESCE(sp.business_name,'')) LIKE ? OR UPPER(COALESCE(sp.username,'')) LIKE ? OR UPPER(COALESCE(u.email,'')) LIKE ?)`);const like=`%${q}%`;binds.push(like,like,like,like,like)}
   if(status&&['available','activated','inactive'].includes(status)){where.push('sa.status=?');binds.push(status)}
   if(role&&['master','beneficiary'].includes(role)){where.push('sa.artifact_role=?');binds.push(role)}
   const whereSql=where.join(' AND ')
 
-  const totalRow=await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE ${whereSql}`).bind(...binds).first()
+  const totalRow=await c.env.DB.prepare(`SELECT COUNT(*) AS total FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN users u ON u.id=COALESCE(sp.user_id,sa.beneficiary_user_id) LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE ${whereSql}`).bind(...binds).first()
   const total=Number((totalRow as any)?.total||0)
   const pages=Math.max(1,Math.ceil(total/pageSize))
   const safePage=Math.min(page,pages)
@@ -74,11 +74,12 @@ app.get('/api/v1/superadmin/sponsors/:id/artifacts',requireSuperAdmin('viewer'),
   const result=await c.env.DB.prepare(`SELECT
     a.public_code,a.product_type,a.status AS artifact_status,
     sa.status,sa.artifact_role,sa.banner_enabled,sa.activated_at,sa.created_at,
-    sp.username,sp.business_name,sp.email,sp.status AS profile_status,
+    sp.username,sp.business_name,u.email AS email,sp.status AS profile_status,
     b.name AS batch_name,b.city,b.zone
     FROM sponsor_artifacts sa
     JOIN intap_artifacts a ON a.id=sa.artifact_id
     LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id
+    LEFT JOIN users u ON u.id=COALESCE(sp.user_id,sa.beneficiary_user_id)
     LEFT JOIN sponsor_batches b ON b.id=sa.batch_id
     WHERE ${whereSql}
     ORDER BY sa.created_at DESC
@@ -100,7 +101,7 @@ app.patch('/api/v1/superadmin/sponsors/:id/artifacts/:code/banner',requireSuperA
   return c.json({ok:true,data:{public_code:publicCode,banner_enabled:body.enabled?1:0}})
 })
 app.get('/api/v1/sponsor/me',requireUser,async(c:any)=>{const userId=String(c.get('userId')||'');const tenant=await c.env.DB.prepare(`SELECT st.*,sm.role FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1 LIMIT 1`).bind(userId).first();if(tenant&&String((tenant as any).role||'')==='owner')await ensureSponsorOwnerProfileBase(c,String((tenant as any).id),userId);return c.json({ok:true,data:tenant||null})})
-app.get('/api/v1/sponsor/artifacts',requireUser,async(c:any)=>{const membership=await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(c.get('userId')).first();if(!membership)return c.json({ok:false,error:'No tienes acceso a un patrocinador.'},403);const result=await c.env.DB.prepare(`SELECT a.public_code,a.product_type,sa.status,sa.artifact_role,sa.activated_at,sp.username,sp.business_name,sp.email,sp.status AS profile_status,b.name AS batch_name,b.city,b.zone FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE sa.sponsor_id=? ORDER BY sa.created_at DESC`).bind(String((membership as any).sponsor_id)).all();return c.json({ok:true,data:result.results||[]})})
+app.get('/api/v1/sponsor/artifacts',requireUser,async(c:any)=>{const membership=await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(c.get('userId')).first();if(!membership)return c.json({ok:false,error:'No tienes acceso a un patrocinador.'},403);const result=await c.env.DB.prepare(`SELECT a.public_code,a.product_type,sa.status,sa.artifact_role,sa.activated_at,sp.username,sp.business_name,u.email AS email,sp.status AS profile_status,b.name AS batch_name,b.city,b.zone FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN users u ON u.id=COALESCE(sp.user_id,sa.beneficiary_user_id) LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE sa.sponsor_id=? ORDER BY sa.created_at DESC`).bind(String((membership as any).sponsor_id)).all();return c.json({ok:true,data:result.results||[]})})
 app.patch('/api/v1/sponsor/settings',requireUser,async(c:any)=>{const membership=await c.env.DB.prepare(`SELECT sponsor_id,role FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(c.get('userId')).first();if(!membership||!['owner','admin'].includes(String((membership as any).role)))return c.json({ok:false,error:'No tienes permiso para editar el patrocinio.'},403);const body=await c.req.json().catch(()=>({}));await c.env.DB.prepare(`UPDATE sponsor_tenants SET logo_url=?,banner_title=?,banner_image_url=?,banner_cta_label=?,banner_cta_type=?,banner_cta_value=?,whatsapp_message_template=?,contact_whatsapp=?,website_url=?,updated_at=datetime('now') WHERE id=?`).bind(cleanText(body.logo_url,800),cleanText(body.banner_title,80)||'Impulsado por',cleanText(body.banner_image_url,800),cleanText(body.banner_cta_label,60)||'Conocer más',['beneficiary_whatsapp','sponsor_whatsapp','sponsor_url','none'].includes(String(body.banner_cta_type))?String(body.banner_cta_type):'none',cleanText(body.banner_cta_value,800),cleanText(body.whatsapp_message_template,240)||'Hola, me interesa saber más sobre estos productos.',normalizeContactNumber(body.contact_whatsapp),cleanText(body.website_url,800),String((membership as any).sponsor_id)).run();return c.json({ok:true})})
 
 app.get('/api/v1/superadmin/sponsors',requireSuperAdmin('viewer'),async(c:any)=>{const result=await c.env.DB.prepare(`SELECT st.*, (SELECT COUNT(*) FROM sponsor_artifacts sa WHERE sa.sponsor_id=st.id) AS products_total,(SELECT COUNT(*) FROM sponsor_artifacts sa WHERE sa.sponsor_id=st.id AND sa.status='activated') AS products_activated,(SELECT COUNT(*) FROM sponsored_profiles sp WHERE sp.sponsor_id=st.id AND sp.status='published') AS profiles_published FROM sponsor_tenants st ORDER BY st.created_at DESC`).all();return c.json({ok:true,data:result.results||[]})})
