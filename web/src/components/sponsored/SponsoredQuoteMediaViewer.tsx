@@ -20,7 +20,6 @@ type MediaMeta={
   expires_at:string
   file_url:string
   download_url:string
-  download_batch_url?:string
   items?:MediaItem[]
 }
 
@@ -72,7 +71,6 @@ export default function SponsoredQuoteMediaViewer(){
   const label=current.kind==='audio'?'Audio':current.kind==='image'?'Imagen':'Archivo'
   const prev=()=>setIndex(value=>(value-1+items.length)%items.length)
   const next=()=>setIndex(value=>(value+1)%items.length)
-  const batchDownload=items.length>1&&data.download_batch_url?data.download_batch_url:current.download_url
 
   return <main style={{minHeight:'100vh',background:'#111827',fontFamily:'Inter,system-ui,sans-serif',color:'#fff',overflowX:'hidden'}}>
     <div style={{position:'sticky',top:0,zIndex:10,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,padding:'12px 14px',background:'rgba(17,24,39,.94)',backdropFilter:'blur(12px)',borderBottom:'1px solid rgba(255,255,255,.08)'}}>
@@ -81,7 +79,7 @@ export default function SponsoredQuoteMediaViewer(){
         <span style={{display:'block',marginTop:2,fontSize:11.5,color:'#cbd5e1'}}>{label}{current.size_bytes?' · '+formatSize(current.size_bytes):''} · disponible por 3 días</span>
       </div>
       <div style={{display:'flex',gap:8,flexShrink:0}}>
-        <a href={batchDownload} download style={{...iconButton,textDecoration:'none'}} aria-label={items.length>1?'Descargar paquete':'Descargar'} title={items.length>1?'Descargar paquete':'Descargar'}><FaDownload/></a>
+        <a href={current.download_url} download style={{...iconButton,textDecoration:'none'}} aria-label={current.kind==='image'?'Descargar imagen':'Descargar'} title={current.kind==='image'?'Descargar imagen':'Descargar'}><FaDownload/></a>
         <button type="button" onClick={closeViewer} style={iconButton} aria-label="Cerrar"><FaTimes/></button>
       </div>
     </div>
@@ -100,7 +98,7 @@ export default function SponsoredQuoteMediaViewer(){
     </div>
 
     <div style={{position:'fixed',left:0,right:0,bottom:0,display:'flex',justifyContent:'center',padding:'10px 14px calc(10px + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
-      <a href={batchDownload} download style={{...buttonStyle,textDecoration:'none',pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:8}}><FaDownload/>{items.length>1?'Descargar paquete':'Descargar'}</a>
+      <a href={current.download_url} download style={{...buttonStyle,textDecoration:'none',pointerEvents:'auto',display:'inline-flex',alignItems:'center',gap:8}}><FaDownload/>{current.kind==='image'&&items.length>1?'Descargar imagen '+String(index+1)+' de '+String(items.length):'Descargar'}</a>
     </div>
   </main>
 }
