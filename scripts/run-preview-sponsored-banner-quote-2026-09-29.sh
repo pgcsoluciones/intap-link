@@ -52,11 +52,15 @@ run npm run build:preview -w app
 run npm run build -w web
 run bash -lc 'cd api && npx tsc --noEmit'
 
-echo; echo "▶ Aplicar migraciones SOLO D1 Preview"
-(
-  cd api
-  npx wrangler d1 migrations apply intap_db_preview --remote --config wrangler.preview.toml
-) || fail "Migraciones D1 Preview"
+if [ "${SKIP_MIGRATIONS:-0}" = "1" ]; then
+  echo; echo "▶ Migraciones D1 Preview omitidas por SKIP_MIGRATIONS=1"
+else
+  echo; echo "▶ Aplicar migraciones SOLO D1 Preview"
+  (
+    cd api
+    npx wrangler d1 migrations apply intap_db_preview --remote --config wrangler.preview.toml
+  ) || fail "Migraciones D1 Preview"
+fi
 
 echo; echo "▶ Deploy App Pages Preview"
 (npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch "$BRANCH") 2>&1 | tee "$APP_LOG"
