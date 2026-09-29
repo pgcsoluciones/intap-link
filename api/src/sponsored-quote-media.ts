@@ -11,6 +11,7 @@ function cleanName(value:unknown){return String(value??'media').replace(/[\r\n"\
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function randomCodePart(bytes=16){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return btoa(String.fromCharCode(...data)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function safeIp(c:any){return String(c.req.header('CF-Connecting-IP')||c.req.header('X-Forwarded-For')||'unknown').split(',')[0].trim().slice(0,100)}
+function safeClientId(value:unknown){const id=String(value??'').trim();return /^[A-Za-z0-9_-]{16,80}$/.test(id)?id:''}
 function kindPrefix(kind:QuoteMediaKind){return kind==='audio'?'AUD':kind==='image'?'IMG':'AR'}
 function mediaBatchLimit(kind:QuoteMediaKind){return kind==='image'?3:kind==='document'?2:1}
 function isModernCode(value:string){return /^(AUD|IMG|AR)-[A-Za-z0-9_-]{20,24}$/.test(value)}
@@ -84,7 +85,8 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
   }
 
   const profileId=String((profile as any).id)
-  const ipHash=await sha256Hex(safeIp(c))
+  const clientId=safeClientId(fd?.get('client_id'))
+  const ipHash=await sha256Hex(clientId?`${safeIp(c)}|${clientId}`:safeIp(c))
   const recent=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_quote_media WHERE profile_id=? AND ip_hash=? AND created_at>datetime('now','-1 hour')`).bind(profileId,ipHash).first()
   if(Number((recent as any)?.n||0)+raws.length>MAX_UPLOADS_PER_HOUR)return c.json({ok:false,error:'Has realizado varios adjuntos recientemente. Intenta nuevamente más tarde.'},429)
 
