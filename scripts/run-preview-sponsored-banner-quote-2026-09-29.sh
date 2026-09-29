@@ -125,9 +125,11 @@ Validar:
 3. Desactivar cintillo oculta solo patrocinio del perfil público.
 4. "Desarrollado por KawLink" permanece visible.
 5. Debajo del horario aparece "Solicitar cotización".
-6. Modal pide nombre, teléfono, correo opcional y pedido/cotización.
-7. Entrega, sector y forma de pago son opcionales.
-8. WhatsApp recibe el mensaje en formato conversacional.
-9. Producción NO tocada.
+6. "Compartir cotizador" genera un enlace con ?cotizar=1.
+7. "Enviar cotizador por WhatsApp" comparte ese enlace y al abrirlo muestra el formulario listo.
+8. Modal pide nombre, teléfono, correo opcional y pedido/cotización.
+9. Entrega, sector y forma de pago son opcionales.
+10. Al enviar la solicitud, WhatsApp recibe el mensaje conversacional y el navegador vuelve al home limpio del perfil.
+11. Producción NO tocada.
 ============================================================
 EOF
