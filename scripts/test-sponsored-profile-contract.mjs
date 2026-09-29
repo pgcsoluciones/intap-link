@@ -279,6 +279,8 @@ has(beneficiary,"data?.quote_email_source==='account'",'panel patrocinado advier
 has(beneficiary,'Define un correo comercial arriba para recibir solicitudes en la dirección que prefieras.','panel invita a definir correo comercial cuando usa fallback de cuenta')
 has(publicUi,"data?.quote_email||data?.email",'envío de cotización usa el correo resuelto aunque no sea botón rápido')
 has(publicUi,"data.quote_email||data.email",'selector de canal reconoce el correo resuelto')
+has(publicUi,"canEmail=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(businessEmail)",'envío usa regex de correo válida')
+has(publicUi,"quoteCanEmail=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(quoteBusinessEmail)",'selector reconoce correo válido sin escapes dobles')
 has(beneficiary,"['Correo comercial','email'",'panel patrocinado permite configurar correo comercial')
 has(middleware,"url.searchParams.get('cotizar') === '1'",'middleware genera social card específica del cotizador')
 has(middleware,'Cotización / información | ${businessName}','card del formulario conserva identidad del negocio')
