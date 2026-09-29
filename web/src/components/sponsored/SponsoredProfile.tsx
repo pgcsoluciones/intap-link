@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { FaAddressCard, FaCalendarAlt, FaClock, FaFileInvoiceDollar, FaInstagram, FaMapMarkerAlt, FaWhatsapp } from 'react-icons/fa'
+import { FaAddressCard, FaCalendarAlt, FaClock, FaFileInvoiceDollar, FaInstagram, FaMapMarkerAlt, FaMicrophone, FaStop, FaWhatsapp } from 'react-icons/fa'
 import SponsoredBankAccounts from './SponsoredBankAccounts'
 
 type GalleryItem={url?:string;image_url?:string;title?:string;label?:string;description?:string}
