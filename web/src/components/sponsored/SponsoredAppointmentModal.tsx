@@ -61,6 +61,11 @@ export default function SponsoredAppointmentModal({whatsapp,palette,onClose,onTo
       onToast('Completa nombre, teléfono, fecha, hora y motivo')
       return
     }
+    const requestedAt=new Date(`${form.date}T${form.time}:00`)
+    if(!Number.isFinite(requestedAt.getTime())||requestedAt.getTime()<=Date.now()){
+      onToast('Selecciona una fecha y hora futuras')
+      return
+    }
     if(!whatsapp){
       onToast('Este perfil no tiene WhatsApp disponible para agendar')
       return
