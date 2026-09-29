@@ -24,6 +24,7 @@ import './sponsored-brand-controls'
 import './sponsored-starter'
 import './sponsored-profiles'
 import './sponsored-media'
+import './sponsored-quote-media'
 import './sponsored-admin-extra'
 import './sponsored-bank-accounts'
 import './sponsored-account-controls'
@@ -48,6 +49,7 @@ import { registerTrialRoutes, expireDueTrials } from './trial-profiles'
 import { registerTrialOnlineRoutes } from './trial-online'
 import { refreshDueInstagramConnections } from './instagram-token-refresh'
 import { cleanupExpiredTeamCodes } from './team-v2'
+import { cleanupExpiredSponsoredQuoteMedia } from './sponsored-quote-media'
 import { registerDemoAiRoutes } from './routes/demo-ai'
 import app, { registerPreviewAppFallback } from './preview-free-actions'
 
@@ -56,11 +58,17 @@ registerTrialRoutes(app)
 registerTrialOnlineRoutes(app)
 registerPreviewAppFallback(app)
 
-;(app as any).scheduled = (_event: ScheduledEvent, env: any, ctx: ExecutionContext) => {
+;(app as any).scheduled = (event: ScheduledEvent, env: any, ctx: ExecutionContext) => {
+  const quoteCleanup=cleanupExpiredSponsoredQuoteMedia(env)
+  if(String((event as any)?.cron||'')==='17 * * * *'){
+    ctx.waitUntil(quoteCleanup)
+    return
+  }
   ctx.waitUntil(Promise.all([
     refreshDueInstagramConnections(env),
     cleanupExpiredTeamCodes(env),
     expireDueTrials(env),
+    quoteCleanup,
   ]))
 }
 
