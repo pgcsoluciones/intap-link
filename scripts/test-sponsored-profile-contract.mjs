@@ -225,6 +225,8 @@ has(core,"/api/v1/superadmin/sponsors/:id/artifacts/:code/banner",'endpoint de c
 has(core,'sa.banner_enabled','listado de códigos expone estado del cintillo')
 has(publicApi,'COALESCE(sa.banner_enabled,1) AS sponsor_banner_enabled','perfil público resuelve visibilidad por producto patrocinado')
 has(publicUi,'data.sponsor?.banner_enabled!==false','perfil público oculta cintillo sin dejar hueco')
+has(publicUi,"</section>}\n    <div style={{padding:'10px 22px 0'",'firma KawLink permanece visible aunque el cintillo esté oculto')
+has(superAdmin,"row.artifact_role==='beneficiary'",'control de cintillo se ofrece solo en códigos de beneficiarios')
 has(bannerMigration,'ADD COLUMN banner_enabled','migración agrega control individual de cintillo')
 has(superAdmin,'Página {codePage} de {codePages}','super admin muestra paginación de códigos')
 has(superAdmin,'Todos los estados','super admin permite filtrar códigos por estado')
