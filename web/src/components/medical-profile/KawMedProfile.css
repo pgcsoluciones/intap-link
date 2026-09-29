@@ -76,7 +76,15 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, rgba(7, 27, 47, .86) 0%, rgba(7, 27, 47, .55) 30%, rgba(7, 27, 47, .10) 62%, rgba(7, 27, 47, 0) 80%);
+    linear-gradient(
+      to top,
+      rgba(248, 251, 255, 1) 0%,
+      rgba(248, 251, 255, .97) 14%,
+      rgba(248, 251, 255, .82) 30%,
+      rgba(248, 251, 255, .42) 48%,
+      rgba(248, 251, 255, .10) 66%,
+      rgba(248, 251, 255, 0) 78%
+    );
 }
 
 .kawmed-hero__doctor {
@@ -84,7 +92,7 @@
   left: 20px;
   right: 20px;
   bottom: 22px;
-  color: #fff;
+  color: var(--kawmed-ink);
 }
 
 .kawmed-hero__doctor h1 {
@@ -95,12 +103,12 @@
   line-height: .98;
   font-weight: 600;
   letter-spacing: -.03em;
-  text-shadow: 0 2px 12px rgba(0,0,0,.2);
+  text-shadow: none;
 }
 
 .kawmed-specialty {
   margin: 8px 0 0;
-  color: #fff;
+  color: var(--kawmed-blue-dark);
   font-size: 20px;
   font-weight: 700;
 }
@@ -108,7 +116,7 @@
 .kawmed-subtitle {
   max-width: 420px;
   margin: 9px 0 0;
-  color: rgba(255,255,255,.92);
+  color: #516985;
   font-size: 13px;
   line-height: 1.45;
 }
