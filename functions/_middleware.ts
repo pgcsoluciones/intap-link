@@ -690,6 +690,7 @@ ${seoHeadHtml}
       .replace(/<meta\s+property=["']og:[^>]*>\s*/gi, '')
       .replace(/<meta\s+name=["']twitter:[^>]*>\s*/gi, '')
       .replace(/<meta\s+name=["']description["'][^>]*>\s*/gi, '')
+      .replace(/<link\b(?=[^>]*\brel=["'][^"']*icon[^"']*["'])[^>]*>\s*/gi, '')
       .replace(/<title>[\s\S]*?<\/title>/i, '<title>Adjunto temporal</title>');
     if (html.includes('</head>')) {
       html = html.replace('</head>', '<meta name="robots" content="noindex,nofollow,noarchive">\n</head>');
