@@ -33,6 +33,51 @@ function mediaSpec(file:File):{kind:QuoteMediaKind;ext:string;contentType:string
   return null
 }
 
+function crc32(input:Uint8Array){
+  let crc=0xffffffff
+  for(const byte of input){
+    crc^=byte
+    for(let i=0;i<8;i++)crc=(crc>>>1)^(0xedb88320&-(crc&1))
+  }
+  return (crc^0xffffffff)>>>0
+}
+function le16(value:number){return new Uint8Array([value&255,(value>>>8)&255])}
+function le32(value:number){return new Uint8Array([value&255,(value>>>8)&255,(value>>>16)&255,(value>>>24)&255])}
+function concatBytes(parts:Uint8Array[]){
+  const total=parts.reduce((sum,part)=>sum+part.length,0)
+  const out=new Uint8Array(total);let offset=0
+  for(const part of parts){out.set(part,offset);offset+=part.length}
+  return out
+}
+function uniqueZipName(name:string,index:number){
+  const cleaned=cleanName(name).replace(/[^a-zA-Z0-9._ -]/g,'_')
+  return `${String(index+1).padStart(2,'0')}-${cleaned||'adjunto'}`
+}
+function buildStoreZip(files:Array<{name:string;bytes:Uint8Array}>){
+  const localParts:Uint8Array[]=[]
+  const centralParts:Uint8Array[]=[]
+  let offset=0
+  files.forEach((file,index)=>{
+    const nameBytes=new TextEncoder().encode(uniqueZipName(file.name,index))
+    const size=file.bytes.length
+    const crc=crc32(file.bytes)
+    const local=concatBytes([
+      le32(0x04034b50),le16(20),le16(0x0800),le16(0),le16(0),le16(0),
+      le32(crc),le32(size),le32(size),le16(nameBytes.length),le16(0),nameBytes,file.bytes
+    ])
+    localParts.push(local)
+    const central=concatBytes([
+      le32(0x02014b50),le16(20),le16(20),le16(0x0800),le16(0),le16(0),le16(0),
+      le32(crc),le32(size),le32(size),le16(nameBytes.length),le16(0),le16(0),le16(0),le16(0),le32(0),le32(offset),nameBytes
+    ])
+    centralParts.push(central)
+    offset+=local.length
+  })
+  const central=concatBytes(centralParts)
+  const end=concatBytes([le32(0x06054b50),le16(0),le16(0),le16(files.length),le16(files.length),le32(central.length),le32(offset),le16(0)])
+  return concatBytes([...localParts,central,end])
+}
+
 function mediaUrl(c:any,code:string){
   const origin=new URL(c.req.url).origin
   return `${origin}/${encodeURIComponent(code)}`
@@ -41,9 +86,16 @@ function mediaUrl(c:any,code:string){
 async function mediaRow(c:any,code:string){
   if(!isModernCode(code)&&!isLegacyToken(code))return null
   const tokenHash=await sha256Hex(code)
-  return c.env.DB.prepare(`SELECT r2_key,media_kind,content_type,original_name,size_bytes,expires_at FROM sponsored_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first()
+  return c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at FROM sponsored_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first()
 }
 
+async function batchRows(c:any,row:any){
+  const batchId=String(row?.batch_id||'').trim()
+  if(!batchId)return [row]
+  const result=await c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at,token_hash FROM sponsored_quote_media WHERE batch_id=? AND profile_id=? AND expires_at>datetime('now') ORDER BY created_at ASC,id ASC`).bind(batchId,String(row?.profile_id||'')).all()
+  const items=Array.isArray((result as any).results)?(result as any).results:[]
+  return items.length?items:[row]
+}
 function fileHeaders(row:any,download=false){
   const headers=new Headers()
   const contentType=String(row?.content_type||'application/octet-stream')
@@ -100,6 +152,7 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
   }
 
   const datePrefix=new Date().toISOString().slice(0,10)
+  const batchId=crypto.randomUUID()
   const expiresAt=new Date(Date.now()+EXPIRY_HOURS*60*60*1000).toISOString().slice(0,19).replace('T',' ')
   const pending=raws.map((file,index)=>{
     const spec=specs[index]!
@@ -120,7 +173,7 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
     const statements=[]
     for(const item of pending){
       const tokenHash=await sha256Hex(item.code)
-      statements.push(c.env.DB.prepare(`INSERT INTO sponsored_quote_media (id,profile_id,token_hash,r2_key,media_kind,content_type,original_name,size_bytes,ip_hash,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(item.id,profileId,tokenHash,item.key,item.spec.kind,item.spec.contentType,item.originalName,Number((item.file as any).size||0),ipHash,expiresAt))
+      statements.push(c.env.DB.prepare(`INSERT INTO sponsored_quote_media (id,profile_id,token_hash,r2_key,media_kind,content_type,original_name,size_bytes,ip_hash,expires_at,batch_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(item.id,profileId,tokenHash,item.key,item.spec.kind,item.spec.contentType,item.originalName,Number((item.file as any).size||0),ipHash,expiresAt,batchId))
     }
     await c.env.DB.batch(statements)
   }catch(error){
@@ -140,6 +193,25 @@ app.get('/api/v1/public/sponsored/quote-media/:code/meta',async(c:any)=>{
   const code=String(c.req.param('code')||'')
   const row=await mediaRow(c,code)
   if(!row)return c.json({ok:false,error:'Este media no está disponible o ya venció.'},404)
+  const siblings=await batchRows(c,row)
+  const items=[]
+  for(const item of siblings){
+    let itemCode=code
+    if(String((item as any).id||'')!==String((row as any).id||'')){
+      // We never expose stored hashes; sibling codes are resolved through a compact batch route.
+      itemCode=''
+    }
+    items.push({
+      id:String((item as any).id||''),
+      kind:String((item as any).media_kind||'document'),
+      content_type:String((item as any).content_type||'application/octet-stream'),
+      name:cleanName((item as any).original_name),
+      size_bytes:Number((item as any).size_bytes||0),
+      file_url:`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/batch-file/${encodeURIComponent(String((item as any).id||''))}`,
+      download_url:`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/batch-download/${encodeURIComponent(String((item as any).id||''))}`,
+      code:itemCode,
+    })
+  }
   return c.json({ok:true,data:{
     code,
     kind:String((row as any).media_kind||'document'),
@@ -149,8 +221,11 @@ app.get('/api/v1/public/sponsored/quote-media/:code/meta',async(c:any)=>{
     expires_at:String((row as any).expires_at||''),
     file_url:`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/file`,
     download_url:`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/download`,
+    download_batch_url:siblings.length>1?`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/download-batch`:'',
+    items,
   }})
 })
+
 
 app.get('/api/v1/public/sponsored/quote-media/:code/file',async(c:any)=>{
   const code=String(c.req.param('code')||'')
@@ -168,6 +243,52 @@ app.get('/api/v1/public/sponsored/quote-media/:code/download',async(c:any)=>{
   const object=await c.env.BUCKET.get(String((row as any).r2_key||''))
   if(!object)return c.body(null,404)
   return new Response(object.body,{headers:fileHeaders(row,true)})
+})
+
+app.get('/api/v1/public/sponsored/quote-media/:code/batch-file/:id',async(c:any)=>{
+  const code=String(c.req.param('code')||''),id=String(c.req.param('id')||'')
+  const row=await mediaRow(c,code)
+  if(!row)return c.body(null,404)
+  const siblings=await batchRows(c,row)
+  const target=siblings.find((item:any)=>String(item.id||'')===id)
+  if(!target)return c.body(null,404)
+  const object=await c.env.BUCKET.get(String((target as any).r2_key||''))
+  if(!object)return c.body(null,404)
+  return new Response(object.body,{headers:fileHeaders(target,false)})
+})
+
+app.get('/api/v1/public/sponsored/quote-media/:code/batch-download/:id',async(c:any)=>{
+  const code=String(c.req.param('code')||''),id=String(c.req.param('id')||'')
+  const row=await mediaRow(c,code)
+  if(!row)return c.body(null,404)
+  const siblings=await batchRows(c,row)
+  const target=siblings.find((item:any)=>String(item.id||'')===id)
+  if(!target)return c.body(null,404)
+  const object=await c.env.BUCKET.get(String((target as any).r2_key||''))
+  if(!object)return c.body(null,404)
+  return new Response(object.body,{headers:fileHeaders(target,true)})
+})
+
+app.get('/api/v1/public/sponsored/quote-media/:code/download-batch',async(c:any)=>{
+  const code=String(c.req.param('code')||'')
+  const row=await mediaRow(c,code)
+  if(!row)return c.body(null,404)
+  const siblings=await batchRows(c,row)
+  if(siblings.length<2)return c.redirect(`/api/v1/public/sponsored/quote-media/${encodeURIComponent(code)}/download`,302)
+  const files=[]
+  for(const item of siblings){
+    const object=await c.env.BUCKET.get(String((item as any).r2_key||''))
+    if(!object)return c.json({ok:false,error:'Uno de los archivos del paquete ya no está disponible.'},404)
+    files.push({name:cleanName((item as any).original_name),bytes:new Uint8Array(await object.arrayBuffer())})
+  }
+  const zip=buildStoreZip(files)
+  const headers=new Headers({
+    'Content-Type':'application/zip',
+    'Content-Disposition':'attachment; filename="adjuntos-kawlink.zip"',
+    'Cache-Control':'private, no-store, max-age=0',
+    'X-Content-Type-Options':'nosniff',
+  })
+  return new Response(zip,{headers})
 })
 
 // Compatibility for links created during Preview before the short /media/CODE viewer existed.
