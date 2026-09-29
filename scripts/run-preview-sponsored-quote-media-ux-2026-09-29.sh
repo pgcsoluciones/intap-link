@@ -17,7 +17,6 @@ fail(){ echo; echo "✗ ERROR: $1"; exit 1; }
 run(){ echo; echo "▶ $*"; "$@" || fail "$*"; }
 
 [ "$(grep -c '^UNEXPECTED=' "$0")" -eq 1 ] || fail "Runner corrupto: bloque de validación duplicado"
-[ "$(grep -c '^✓ PERFIL PATROCINADO LISTO EN PREVIEW
 cd "$ROOT" || fail "No existe $ROOT"
 rm -rf "$LOG_DIR" && mkdir -p "$LOG_DIR"
 
