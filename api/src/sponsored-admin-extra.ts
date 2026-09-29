@@ -5,7 +5,7 @@ function clean(value:unknown,max=180){return String(value??'').trim().slice(0,ma
 
 app.get('/api/v1/superadmin/sponsors/:id/members',requireSuperAdmin('viewer'),async(c:any)=>{
   const sponsorId=String(c.req.param('id')||'')
-  const result=await c.env.DB.prepare(`SELECT sm.user_id,sm.role,sm.status,u.email,u.name FROM sponsor_members sm LEFT JOIN users u ON u.id=sm.user_id WHERE sm.sponsor_id=? ORDER BY sm.created_at ASC`).bind(sponsorId).all()
+  const result=await c.env.DB.prepare(`SELECT sm.user_id,sm.role,sm.status,u.email FROM sponsor_members sm LEFT JOIN users u ON u.id=sm.user_id WHERE sm.sponsor_id=? ORDER BY sm.created_at ASC`).bind(sponsorId).all()
   return c.json({ok:true,data:result.results||[]})
 })
 
