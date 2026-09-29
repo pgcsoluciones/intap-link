@@ -20,7 +20,7 @@ function formatSize(bytes:number){
 }
 
 export default function SponsoredQuoteMediaViewer(){
-  const{code=''}=useParams()
+  const params=useParams();const code=String(params.code||params.slug||'')
   const[data,setData]=useState<MediaMeta|null>(null)
   const[loading,setLoading]=useState(true)
   const[error,setError]=useState('')
