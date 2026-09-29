@@ -1053,3 +1053,312 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* KawMed fine-tuning — approved sponsored-profile rhythm */
+.kawmed-hero {
+  aspect-ratio: 4 / 4.75;
+  background: #f8fbff;
+}
+
+.kawmed-hero__image {
+  object-fit: contain;
+  object-position: center top;
+  background: #f8fbff;
+}
+
+.kawmed-hero__shade {
+  background:
+    linear-gradient(
+      to top,
+      rgba(248, 251, 255, 1) 0%,
+      rgba(248, 251, 255, .98) 10%,
+      rgba(248, 251, 255, .86) 22%,
+      rgba(248, 251, 255, .48) 38%,
+      rgba(248, 251, 255, .12) 54%,
+      rgba(248, 251, 255, 0) 68%
+    );
+}
+
+.kawmed-identity {
+  margin-top: -34px;
+  padding: 0 18px 12px;
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.kawmed-identity h1 {
+  margin: 0;
+  color: var(--kawmed-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 8vw, 44px);
+  line-height: 1.02;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+.kawmed-identity .kawmed-specialty {
+  margin: 7px 0 0;
+  color: var(--kawmed-blue-dark);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.kawmed-identity .kawmed-subtitle {
+  max-width: 440px;
+  margin: 7px auto 0;
+  color: #5d718a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kawmed-intro {
+  padding: 8px 20px 16px;
+  text-align: center;
+  background: #fff;
+  border-bottom: 0;
+}
+
+.kawmed-intro > p {
+  max-width: 520px;
+  margin: 0 auto;
+  color: #536981;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.kawmed-intro .kawmed-meta {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.kawmed-contact-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  padding: 10px 18px 20px;
+}
+
+.kawmed-contact-pill {
+  min-height: 62px;
+  border: 1.5px solid #9cbce8;
+  border-radius: 999px;
+  padding: 7px 14px 7px 8px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  background: #fff;
+  color: var(--kawmed-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.kawmed-contact-pill:hover {
+  transform: translateY(-2px);
+  border-color: var(--kawmed-blue);
+  background: #f7fbff;
+  box-shadow: 0 10px 22px rgba(18, 111, 232, .12);
+}
+
+.kawmed-contact-pill:active {
+  transform: translateY(0) scale(.99);
+}
+
+.kawmed-contact-pill:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.kawmed-contact-pill--primary {
+  border-color: var(--kawmed-blue);
+  background: linear-gradient(135deg, #155ac2 0%, #1d72e8 100%);
+  color: #fff;
+}
+
+.kawmed-contact-pill--primary:hover {
+  background: linear-gradient(135deg, #0f51b6 0%, #176bdd 100%);
+}
+
+.kawmed-contact-pill__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font-size: 19px;
+}
+
+.kawmed-contact-pill--primary .kawmed-contact-pill__icon {
+  background: rgba(255,255,255,.16);
+  color: #fff;
+}
+
+.kawmed-contact-pill > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.kawmed-contact-pill strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kawmed-contact-pill small {
+  color: #74869b;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.kawmed-contact-pill--primary small {
+  color: rgba(255,255,255,.82);
+}
+
+.kawmed-panels {
+  gap: 10px;
+  padding: 0 18px;
+}
+
+.kawmed-panel {
+  border-radius: 18px;
+  box-shadow: 0 7px 20px rgba(32, 69, 109, .045);
+}
+
+.kawmed-panel__trigger {
+  min-height: 76px;
+  padding: 12px 13px;
+}
+
+.kawmed-panel__title strong {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.kawmed-panel__icon--teal {
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+}
+
+.kawmed-panel__icon--service {
+  background: #eef5ff;
+  color: #2b69c9;
+}
+
+.kawmed-panel--insurance {
+  background: linear-gradient(135deg, #f7fbff 0%, #f5fbfa 100%);
+}
+
+.kawmed-panel__trigger--static {
+  cursor: default;
+}
+
+.kawmed-panel__icon--insurance {
+  background: #e9f8f2;
+  color: #16835e;
+}
+
+.kawmed-insurance-except {
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.kawmed-insurance-except:hover {
+  transform: translateY(-1px);
+  background: #dfeeff;
+}
+
+.kawmed-insurance-modal {
+  display: grid;
+  gap: 12px;
+  color: #536981;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.kawmed-insurance-modal p {
+  margin: 0;
+}
+
+.kawmed-insurance-modal ul {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.kawmed-insurance-modal li {
+  padding: 11px 12px;
+  border: 1px solid #dfe8f2;
+  border-radius: 12px;
+  background: #f9fbfd;
+  color: #233b58;
+  font-weight: 700;
+}
+
+@media (min-width: 620px) {
+  .kawmed-hero {
+    aspect-ratio: 4 / 4.5;
+  }
+}
+
+@media (max-width: 420px) {
+  .kawmed-hero {
+    aspect-ratio: 4 / 5;
+  }
+
+  .kawmed-identity {
+    margin-top: -28px;
+    padding-inline: 14px;
+  }
+
+  .kawmed-contact-pills {
+    padding-inline: 14px;
+    gap: 9px;
+  }
+
+  .kawmed-contact-pill {
+    min-height: 58px;
+    padding-right: 10px;
+  }
+
+  .kawmed-contact-pill__icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .kawmed-contact-pill strong {
+    font-size: 11px;
+  }
+
+  .kawmed-contact-pill small {
+    font-size: 8.5px;
+  }
+}
+
+@media (max-width: 350px) {
+  .kawmed-contact-pills {
+    grid-template-columns: 1fr;
+  }
+}
