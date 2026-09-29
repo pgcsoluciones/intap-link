@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="title desc">
+<title id="title">Ilustración de médica cardióloga</title>
+<desc id="desc">Médica de pie en un consultorio moderno con elementos cardiovasculares sutiles.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#dff7f4"/>
+    <stop offset=".55" stop-color="#eef7ff"/>
+    <stop offset="1" stop-color="#f9fbff"/>
+  </linearGradient>
+  <linearGradient id="coat" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#ffffff"/>
+    <stop offset="1" stop-color="#e8f0f4"/>
+  </linearGradient>
+  <linearGradient id="scrub" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#0f6b73"/>
+    <stop offset="1" stop-color="#174a63"/>
+  </linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+    <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#173b4b" flood-opacity=".16"/>
+  </filter>
+</defs>
+<rect width="1200" height="760" fill="url(#bg)"/>
+<circle cx="1010" cy="125" r="115" fill="#ffffff" opacity=".68"/>
+<circle cx="164" cy="650" r="190" fill="#c8f1eb" opacity=".5"/>
+<path d="M760 150 C825 110 900 125 945 180 C990 235 965 305 900 330 C850 350 800 325 770 290" fill="none" stroke="#ef6b6b" stroke-width="18" stroke-linecap="round" opacity=".9"/>
+<path d="M910 330 C930 275 990 260 1025 295 C1055 325 1030 380 985 410" fill="none" stroke="#ef6b6b" stroke-width="18" stroke-linecap="round" opacity=".9"/>
+<path d="M794 236 l52 0 20-42 36 88 23-46 60 0" fill="none" stroke="#2a77d4" stroke-width="10" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>
+<g filter="url(#shadow)">
+  <rect x="125" y="120" width="350" height="220" rx="28" fill="#ffffff" opacity=".94"/>
+  <rect x="160" y="160" width="280" height="140" rx="18" fill="#eef8ff"/>
+  <path d="M188 232 h54 l16-34 28 68 22-44 24 26 30-16 h50" fill="none" stroke="#2f6fed" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g transform="translate(480 118)">
+  <ellipse cx="175" cy="540" rx="190" ry="46" fill="#173b4b" opacity=".08"/>
+  <path d="M81 516 C86 390 98 302 144 260 C177 230 235 228 269 260 C315 302 330 390 333 516 Z" fill="url(#coat)"/>
+  <path d="M161 278 C181 294 228 296 251 279 L272 520 L140 520 Z" fill="url(#scrub)"/>
+  <path d="M82 516 C92 405 103 330 144 279 L174 320 L138 520 Z" fill="#ffffff"/>
+  <path d="M333 516 C322 405 314 330 270 279 L240 320 L276 520 Z" fill="#ffffff"/>
+  <path d="M154 320 C160 372 158 436 154 510" stroke="#dce5ea" stroke-width="5"/>
+  <path d="M260 320 C254 372 256 436 260 510" stroke="#dce5ea" stroke-width="5"/>
+  <ellipse cx="207" cy="170" rx="93" ry="112" fill="#d9a985"/>
+  <path d="M116 175 C111 94 151 40 212 40 C278 40 309 91 302 177 C290 130 255 104 205 104 C159 104 130 130 116 175Z" fill="#4a2f29"/>
+  <path d="M125 193 C121 250 156 294 207 294 C255 294 291 254 292 193 C270 215 245 226 207 226 C169 226 144 215 125 193Z" fill="#d9a985"/>
+  <circle cx="174" cy="178" r="7" fill="#263645"/>
+  <circle cx="242" cy="178" r="7" fill="#263645"/>
+  <path d="M182 216 C198 227 219 227 235 215" fill="none" stroke="#8b4f45" stroke-width="5" stroke-linecap="round"/>
+  <path d="M137 278 C164 314 250 318 278 278" fill="none" stroke="#154b64" stroke-width="14"/>
+  <path d="M130 300 C95 360 73 430 69 508" fill="none" stroke="#ffffff" stroke-width="46" stroke-linecap="round"/>
+  <path d="M286 300 C320 360 344 430 348 508" fill="none" stroke="#ffffff" stroke-width="46" stroke-linecap="round"/>
+  <circle cx="137" cy="308" r="12" fill="#1b6475"/>
+  <path d="M137 320 C119 344 116 372 130 391 C144 411 171 412 186 394" fill="none" stroke="#1b6475" stroke-width="6"/>
+  <circle cx="190" cy="395" r="17" fill="none" stroke="#1b6475" stroke-width="6"/>
+</g>
+<g transform="translate(875 520)">
+  <rect width="250" height="140" rx="28" fill="#ffffff" opacity=".94" filter="url(#shadow)"/>
+  <circle cx="62" cy="70" r="34" fill="#e7f6f3"/>
+  <path d="M62 93 C33 72 32 49 47 41 C57 36 67 41 73 50 C80 41 90 36 100 41 C115 50 112 73 83 93 L73 101Z" fill="#ef6b6b"/>
+  <path d="M39 71 h18 l9-17 12 33 9-18 16 0" fill="none" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+  <text x="118" y="57" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#153449">Salud</text>
+  <text x="118" y="86" font-family="Arial, sans-serif" font-size="16" fill="#5c7180">cardiovascular</text>
+</g>
+</svg>
