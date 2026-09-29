@@ -1,12 +1,13 @@
 :root {
-  --kawmed-blue: #1768d7;
-  --kawmed-blue-dark: #0b2b57;
-  --kawmed-blue-soft: #edf5ff;
-  --kawmed-ink: #0d1b34;
-  --kawmed-muted: #60708a;
-  --kawmed-line: #dce7f4;
+  --kawmed-blue: #126fe8;
+  --kawmed-blue-dark: #0f2f62;
+  --kawmed-blue-soft: #eaf4ff;
+  --kawmed-teal: #0d8290;
+  --kawmed-teal-soft: #eaf8f8;
+  --kawmed-ink: #10233f;
+  --kawmed-muted: #6f8198;
+  --kawmed-line: #dce8f3;
   --kawmed-surface: #ffffff;
-  --kawmed-background: #f4f8fc;
   --kawmed-whatsapp: #08b85a;
 }
 
@@ -18,49 +19,49 @@
 .kawmed-shell {
   min-height: 100vh;
   margin: 0;
-  padding: 0 0 40px;
-  background:
-    radial-gradient(circle at 12% 5%, rgba(23, 104, 215, .08), transparent 30%),
-    radial-gradient(circle at 88% 18%, rgba(72, 167, 255, .08), transparent 25%),
-    var(--kawmed-background);
+  background: #fff;
   color: var(--kawmed-ink);
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .kawmed-profile {
-  width: min(100%, 520px);
-  min-height: 100vh;
+  width: min(100%, 620px);
   margin: 0 auto;
-  padding: 18px 16px 28px;
-  background: var(--kawmed-surface);
-  box-shadow: 0 20px 70px rgba(27, 62, 105, .08);
+  padding-bottom: 28px;
+  background: #fff;
 }
 
 .kawmed-brandbar {
+  min-height: 46px;
+  padding: 14px 18px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 42px;
-  padding: 2px 2px 12px;
-  color: #71819b;
-  font-size: 11px;
+  background: #fff;
+  color: #7d8da4;
+  font-size: 10px;
   letter-spacing: .15em;
   text-transform: uppercase;
 }
 
 .kawmed-brandbar__mark {
-  color: var(--kawmed-ink);
+  color: #10233f;
+  font-weight: 900;
+  letter-spacing: .26em;
+}
+
+.kawmed-brandbar__product {
+  color: var(--kawmed-blue);
   font-weight: 800;
-  letter-spacing: .28em;
+  letter-spacing: .12em;
 }
 
 .kawmed-hero {
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 1.58 / 1;
-  border-radius: 22px;
-  background: linear-gradient(145deg, #dcecff 0%, #f4f9ff 52%, #e8f2fc 100%);
+  aspect-ratio: 4 / 4.25;
+  background: #dbeafa;
 }
 
 .kawmed-hero__image {
@@ -68,131 +69,111 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  object-position: center 35%;
 }
 
-.kawmed-hero__placeholder {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  color: var(--kawmed-blue-dark);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(54px, 17vw, 92px);
-  letter-spacing: -.05em;
-}
-
-.kawmed-hero__placeholder::after {
-  content: "";
+.kawmed-hero__shade {
   position: absolute;
-  inset: auto -10% -35% auto;
-  width: 78%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: rgba(255,255,255,.58);
-  filter: blur(2px);
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(7, 27, 47, .86) 0%, rgba(7, 27, 47, .55) 30%, rgba(7, 27, 47, .10) 62%, rgba(7, 27, 47, 0) 80%);
 }
 
-.kawmed-hero__pulse {
+.kawmed-hero__doctor {
   position: absolute;
-  top: 20px;
   left: 20px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.88);
-  color: var(--kawmed-blue);
-  font-size: 26px;
-  box-shadow: 0 10px 24px rgba(23,104,215,.12);
+  right: 20px;
+  bottom: 22px;
+  color: #fff;
 }
 
-.kawmed-identity {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  align-items: start;
-  padding: 20px 2px 4px;
-}
-
-.kawmed-identity__icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  margin-top: 2px;
-  border-radius: 13px;
-  background: var(--kawmed-blue-soft);
-  color: var(--kawmed-blue);
-  font-size: 20px;
-}
-
-.kawmed-identity h1 {
+.kawmed-hero__doctor h1 {
+  max-width: 90%;
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(31px, 9vw, 43px);
-  line-height: 1.02;
+  font-size: clamp(34px, 9vw, 48px);
+  line-height: .98;
   font-weight: 600;
-  letter-spacing: -.035em;
-  color: #101a32;
+  letter-spacing: -.03em;
+  text-shadow: 0 2px 12px rgba(0,0,0,.2);
 }
 
 .kawmed-specialty {
-  margin: 7px 0 0;
-  color: #49618b;
+  margin: 8px 0 0;
+  color: #fff;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .kawmed-subtitle {
-  margin: 7px 0 0;
-  color: var(--kawmed-muted);
-  font-size: 14px;
+  max-width: 420px;
+  margin: 9px 0 0;
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
   line-height: 1.45;
+}
+
+.kawmed-intro {
+  margin: -1px 0 0;
+  padding: 20px 18px 16px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f3fbfa 100%);
+  border-bottom: 1px solid var(--kawmed-line);
+}
+
+.kawmed-intro > p {
+  margin: 0;
+  color: #425b77;
+  font-size: 14px;
+  line-height: 1.65;
 }
 
 .kawmed-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px 18px;
-  padding: 10px 2px 18px 52px;
-  color: #53698d;
-  font-size: 13px;
+  gap: 8px 16px;
+  margin-top: 13px;
+  color: #506985;
+  font-size: 12px;
 }
 
 .kawmed-meta span {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  font-weight: 700;
 }
 
 .kawmed-meta svg {
   color: var(--kawmed-blue);
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .kawmed-primary-actions {
   display: grid;
+  grid-template-columns: 1.15fr .85fr;
   gap: 10px;
-  margin-bottom: 16px;
+  padding: 18px 18px 14px;
 }
 
 .kawmed-button {
-  min-height: 54px;
+  min-height: 56px;
   border: 0;
   border-radius: 17px;
-  padding: 0 18px;
-  display: inline-flex;
+  padding: 0 14px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 9px;
+  color: #fff;
   font: inherit;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.kawmed-button > svg:last-child {
+  margin-left: auto;
 }
 
 .kawmed-button:active {
@@ -200,105 +181,352 @@
 }
 
 .kawmed-button:disabled,
-.kawmed-menu-item:disabled,
+.kawmed-quick-actions button:disabled,
+.kawmed-center-preview:disabled,
 .kawmed-location-button:disabled {
   opacity: .45;
   cursor: not-allowed;
 }
 
 .kawmed-button--whatsapp {
-  color: #fff;
-  background: linear-gradient(135deg, #03b65b 0%, #0ac46a 100%);
-  box-shadow: 0 11px 24px rgba(8,184,90,.2);
+  background: linear-gradient(135deg, #08af58 0%, #12c76b 100%);
+  box-shadow: 0 12px 25px rgba(8,184,90,.19);
 }
 
 .kawmed-button--appointment {
-  color: #fff;
-  background: linear-gradient(135deg, #0f5fd0 0%, #2d7de7 100%);
-  box-shadow: 0 11px 24px rgba(23,104,215,.2);
+  background: linear-gradient(135deg, #1269d8 0%, #2a84f0 100%);
+  box-shadow: 0 12px 25px rgba(18,111,232,.19);
 }
 
 .kawmed-button--full {
   width: 100%;
 }
 
-.kawmed-menu {
+.kawmed-quick-actions {
   display: grid;
-  gap: 8px;
-  padding-top: 4px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  padding: 0 18px 18px;
 }
 
-.kawmed-menu-item {
-  width: 100%;
-  min-height: 70px;
+.kawmed-quick-actions button {
+  min-width: 0;
+  min-height: 105px;
+  padding: 12px 8px 11px;
   border: 1px solid var(--kawmed-line);
-  border-radius: 18px;
-  padding: 10px 12px;
+  border-radius: 17px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background: #fff;
+  color: var(--kawmed-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(26, 67, 108, .04);
+}
+
+.kawmed-quick-actions__icon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 10px;
+  border-radius: 50%;
   display: grid;
-  grid-template-columns: 42px 1fr auto;
-  gap: 10px;
+  place-items: center;
+  background: var(--kawmed-blue-soft);
+  color: var(--kawmed-blue);
+  font-size: 21px;
+}
+
+.kawmed-quick-actions button:nth-child(2) .kawmed-quick-actions__icon {
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+}
+
+.kawmed-quick-actions button:nth-child(3) .kawmed-quick-actions__icon {
+  background: #eef3ff;
+  color: #405bd8;
+}
+
+.kawmed-quick-actions button:nth-child(4) .kawmed-quick-actions__icon {
+  background: #eef8ff;
+  color: #1684d8;
+}
+
+.kawmed-quick-actions strong {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.kawmed-quick-actions small {
+  margin-top: 4px;
+  color: var(--kawmed-muted);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.kawmed-panels {
+  display: grid;
+  gap: 11px;
+  padding: 0 18px;
+}
+
+.kawmed-panel {
+  overflow: hidden;
+  border: 1px solid #dce7f1;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(26, 67, 108, .045);
+}
+
+.kawmed-panel.is-open {
+  border-color: #cfe0ef;
+}
+
+.kawmed-panel__trigger {
+  width: 100%;
+  min-height: 82px;
+  border: 0;
+  padding: 13px 14px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  background: linear-gradient(135deg, #ffffff 0%, #fbfdff 100%);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kawmed-panel__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eaf4ff;
+  color: var(--kawmed-blue);
+  font-size: 21px;
+}
+
+.kawmed-panel:nth-child(3) .kawmed-panel__icon {
+  background: #e9f8f7;
+  color: var(--kawmed-teal);
+}
+
+.kawmed-panel__title {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.kawmed-panel__title strong {
+  color: #122744;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+.kawmed-panel__title small {
+  color: var(--kawmed-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.kawmed-panel__chevron {
+  color: #68829e;
+  font-size: 19px;
+  transition: transform .18s ease;
+}
+
+.kawmed-panel.is-open .kawmed-panel__chevron {
+  transform: rotate(180deg);
+}
+
+.kawmed-panel__body {
+  padding: 0 13px 14px;
+  border-top: 1px solid #edf2f6;
+}
+
+.kawmed-panel__body > p {
+  margin: 13px 2px 0;
+  color: #536981;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.kawmed-panel__link {
+  min-height: 38px;
+  margin-top: 10px;
+  border: 0;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--kawmed-blue);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.kawmed-centers-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding-top: 13px;
+}
+
+.kawmed-center-preview {
+  min-width: 0;
+  min-height: 86px;
+  border: 1px solid #e1e9f1;
+  border-radius: 15px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 9px;
   align-items: center;
   background: #fff;
   color: inherit;
   text-align: left;
+  font: inherit;
   cursor: pointer;
-  box-shadow: 0 5px 17px rgba(37,72,117,.035);
 }
 
-.kawmed-menu-item__icon {
-  width: 42px;
-  height: 42px;
+.kawmed-center-preview__visual {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-  background: var(--kawmed-blue-soft);
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+  font-size: 18px;
+}
+
+.kawmed-center-preview__copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.kawmed-center-preview__copy strong {
+  color: #162b47;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.kawmed-center-preview__copy small {
+  color: #7a8b9e;
+  font-size: 10px;
+}
+
+.kawmed-center-preview > svg {
+  color: var(--kawmed-blue);
+}
+
+.kawmed-services-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 13px;
+}
+
+.kawmed-service-preview {
+  min-width: 0;
+  min-height: 128px;
+  border: 1px solid #e0e9f1;
+  border-radius: 15px;
+  padding: 11px 9px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-content: start;
+  gap: 6px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kawmed-service-preview__icon {
+  grid-column: 1 / -1;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 3px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eaf4ff;
   color: var(--kawmed-blue);
   font-size: 20px;
 }
 
-.kawmed-menu-item__copy {
+.kawmed-service-preview > span:nth-child(2) {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
-.kawmed-menu-item__copy strong {
-  font-size: 14px;
-  line-height: 1.2;
+.kawmed-service-preview strong {
+  color: #152b47;
+  font-size: 11px;
+  line-height: 1.25;
 }
 
-.kawmed-menu-item__copy small {
-  overflow: hidden;
-  color: #73829a;
-  font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.kawmed-service-preview small {
+  color: #77899d;
+  font-size: 9px;
+  line-height: 1.3;
 }
 
-.kawmed-menu-item__chevron {
-  color: #8191aa;
-  font-size: 18px;
+.kawmed-service-preview > svg {
+  align-self: center;
+  color: var(--kawmed-blue);
+}
+
+.kawmed-share-footer {
+  min-height: 44px;
+  margin: 14px 18px 0;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: #5c7189;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .kawmed-footer {
+  margin-top: 5px;
+  padding: 14px 18px 2px;
   display: grid;
   justify-items: center;
   gap: 3px;
-  padding: 28px 0 6px;
-  color: #8291a7;
+  color: #91a0b2;
 }
 
 .kawmed-footer span {
-  color: #4e607c;
-  font-weight: 800;
+  color: #526983;
+  font-size: 12px;
+  font-weight: 900;
   letter-spacing: .14em;
   text-transform: uppercase;
 }
 
 .kawmed-footer small {
-  font-size: 10px;
+  font-size: 9px;
 }
 
+/* States */
 .kawmed-state {
   width: min(92%, 480px);
   margin: 15vh auto;
@@ -307,7 +535,6 @@
   border-radius: 24px;
   background: #fff;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(29,65,106,.08);
 }
 
 .kawmed-state > svg {
@@ -327,6 +554,7 @@
   color: var(--kawmed-muted);
 }
 
+/* Shared modals */
 .kawmed-modal-backdrop {
   position: fixed;
   z-index: 10050;
@@ -392,6 +620,7 @@
   border-top: 1px solid #edf2f8;
 }
 
+/* Appointment form */
 .kawmed-form {
   display: grid;
   gap: 14px;
@@ -401,7 +630,7 @@
   margin: 0 0 2px;
   padding: 12px 13px;
   border-radius: 14px;
-  background: #f1f7ff;
+  background: linear-gradient(135deg, #eef8ff 0%, #eef9f7 100%);
   color: #526786;
   font-size: 12px;
   line-height: 1.55;
@@ -463,6 +692,7 @@
   text-align: center;
 }
 
+/* Modal content */
 .kawmed-copy-block {
   display: grid;
   gap: 14px;
@@ -485,7 +715,7 @@
   align-items: center;
   gap: 7px;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: 999px;
   background: #eef5ff;
   color: var(--kawmed-blue);
   font-size: 12px;
@@ -548,7 +778,7 @@
 
 .kawmed-detail-card {
   display: grid;
-  grid-template-columns: 38px 1fr;
+  grid-template-columns: 42px 1fr;
   gap: 11px;
   padding: 13px;
   border: 1px solid #e3ebf4;
@@ -557,13 +787,14 @@
 }
 
 .kawmed-detail-card > span {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 50%;
   background: #eef5ff;
   color: var(--kawmed-blue);
+  font-size: 20px;
 }
 
 .kawmed-detail-card strong {
@@ -596,8 +827,8 @@
   display: grid;
   place-items: center;
   border-radius: 13px;
-  background: #eef5ff;
-  color: var(--kawmed-blue);
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
 }
 
 .kawmed-center-card__copy {
@@ -629,8 +860,8 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  background: #eef5ff;
-  color: var(--kawmed-blue);
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
   font-weight: 700;
   cursor: pointer;
 }
@@ -686,19 +917,13 @@
   text-align: center;
 }
 
-@media (min-width: 560px) {
-  .kawmed-shell {
-    padding: 28px 0 56px;
-  }
-
+@media (min-width: 620px) {
   .kawmed-profile {
-    min-height: auto;
-    border: 1px solid rgba(213,225,239,.8);
-    border-radius: 30px;
+    width: min(100%, 680px);
   }
 
-  .kawmed-primary-actions {
-    grid-template-columns: 1fr 1fr;
+  .kawmed-hero {
+    aspect-ratio: 16 / 11;
   }
 
   .kawmed-modal-backdrop {
@@ -706,17 +931,103 @@
   }
 }
 
-@media (max-width: 389px) {
-  .kawmed-profile {
-    padding-inline: 12px;
+@media (max-width: 520px) {
+  .kawmed-primary-actions {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .kawmed-identity h1 {
-    font-size: 30px;
+  .kawmed-button {
+    min-height: 54px;
+    font-size: 13px;
   }
 
-  .kawmed-meta {
-    padding-left: 0;
+  .kawmed-quick-actions {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    padding-inline: 14px;
+  }
+
+  .kawmed-quick-actions button {
+    min-height: 98px;
+    padding-inline: 7px;
+  }
+
+  .kawmed-quick-actions strong {
+    font-size: 11px;
+  }
+
+  .kawmed-panels {
+    padding-inline: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .kawmed-brandbar {
+    padding-inline: 14px;
+  }
+
+  .kawmed-hero {
+    aspect-ratio: 4 / 4.6;
+  }
+
+  .kawmed-hero__doctor {
+    left: 16px;
+    right: 16px;
+    bottom: 18px;
+  }
+
+  .kawmed-intro {
+    padding-inline: 16px;
+  }
+
+  .kawmed-primary-actions {
+    padding-inline: 14px;
+  }
+
+  .kawmed-quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kawmed-quick-actions button {
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 9px;
+    align-items: center;
+  }
+
+  .kawmed-quick-actions__icon {
+    grid-row: 1 / 3;
+    margin: 0;
+  }
+
+  .kawmed-quick-actions strong,
+  .kawmed-quick-actions small {
+    align-self: end;
+  }
+
+  .kawmed-quick-actions small {
+    align-self: start;
+  }
+
+  .kawmed-centers-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-services-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-service-preview {
+    min-height: 82px;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .kawmed-service-preview__icon {
+    grid-column: 1;
+    margin: 0;
   }
 
   .kawmed-schedule-row {
@@ -726,5 +1037,11 @@
   .kawmed-schedule-row__time {
     justify-items: start;
     text-align: left;
+  }
+}
+
+@media (max-width: 350px) {
+  .kawmed-primary-actions {
+    grid-template-columns: 1fr;
   }
 }
