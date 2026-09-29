@@ -86,7 +86,7 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
 
   const profileId=String((profile as any).id)
   const clientId=safeClientId(fd?.get('client_id'))
-  const ipHash=await sha256Hex(clientId?`${safeIp(c)}|${clientId}`:safeIp(c))
+  const ipHash=await sha256Hex(clientId?`client:${clientId}`:`ip:${safeIp(c)}`)
   const recent=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_quote_media WHERE profile_id=? AND ip_hash=? AND created_at>datetime('now','-1 hour')`).bind(profileId,ipHash).first()
   if(Number((recent as any)?.n||0)+raws.length>MAX_UPLOADS_PER_HOUR)return c.json({ok:false,error:'Has realizado varios adjuntos recientemente. Intenta nuevamente más tarde.'},429)
 
