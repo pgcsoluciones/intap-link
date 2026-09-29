@@ -325,6 +325,7 @@ has(publicUi,"fd.append('client_id',clientId)",'lote envía identidad anónima p
 has(quoteMedia,"clientId?\`client:\${clientId}\`:\`ip:\${safeIp(c)}\`",'backend aplica cuota por visitante y usa IP solo como fallback')
 has(quoteMedia,"kinds.some(item=>item!==kind)",'backend rechaza mezcla de tipos aunque se evada la UI')
 has(quoteMedia,'batch_id','backend persiste agrupación de archivos de una misma solicitud')
+has(quoteMedia,'ORDER BY rowid ASC','galería conserva el orden de carga de las imágenes')
 has(publicUi,"kind==='image'&&media.length>1",'mensaje usa un solo enlace para abrir la galería de imágenes')
 has(publicUi,"files.forEach(file=>fd.append('file',file,file.name))",'frontend envía el lote en una sola solicitud')
 has(publicUi,'Promise.all(quoteMedia.map','frontend optimiza todas las imágenes del lote antes del upload')
