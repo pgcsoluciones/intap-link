@@ -1,15 +1,12 @@
 :root {
-  --kawmed-navy: #13243a;
-  --kawmed-blue: #2f6fed;
-  --kawmed-blue-soft: #eaf2ff;
-  --kawmed-teal: #0f6b73;
-  --kawmed-teal-soft: #e4f6f3;
-  --kawmed-coral: #ef6b6b;
-  --kawmed-coral-soft: #fff0ef;
-  --kawmed-ink: #17263d;
-  --kawmed-muted: #667991;
-  --kawmed-line: #dfe8f1;
+  --kawmed-blue: #1768d7;
+  --kawmed-blue-dark: #0b2b57;
+  --kawmed-blue-soft: #edf5ff;
+  --kawmed-ink: #0d1b34;
+  --kawmed-muted: #60708a;
+  --kawmed-line: #dce7f4;
   --kawmed-surface: #ffffff;
+  --kawmed-background: #f4f8fc;
   --kawmed-whatsapp: #08b85a;
 }
 
@@ -21,33 +18,39 @@
 .kawmed-shell {
   min-height: 100vh;
   margin: 0;
-  background: #fff;
+  padding: 0 0 40px;
+  background:
+    radial-gradient(circle at 12% 5%, rgba(23, 104, 215, .08), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(72, 167, 255, .08), transparent 25%),
+    var(--kawmed-background);
   color: var(--kawmed-ink);
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .kawmed-profile {
-  width: min(100%, 760px);
+  width: min(100%, 520px);
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 0 0 32px;
-  background: #fff;
+  padding: 18px 16px 28px;
+  background: var(--kawmed-surface);
+  box-shadow: 0 20px 70px rgba(27, 62, 105, .08);
 }
 
 .kawmed-brandbar {
-  min-height: 48px;
-  padding: 15px 18px 11px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #7d8da2;
-  font-size: 10px;
-  letter-spacing: .18em;
+  min-height: 42px;
+  padding: 2px 2px 12px;
+  color: #71819b;
+  font-size: 11px;
+  letter-spacing: .15em;
   text-transform: uppercase;
 }
 
 .kawmed-brandbar__mark {
-  color: var(--kawmed-navy);
-  font-weight: 900;
+  color: var(--kawmed-ink);
+  font-weight: 800;
   letter-spacing: .28em;
 }
 
@@ -55,12 +58,9 @@
   position: relative;
   overflow: hidden;
   width: 100%;
-  min-height: 390px;
-  background: linear-gradient(135deg, #dff7f4 0%, #edf5ff 100%);
-}
-
-.kawmed-hero--portrait {
-  aspect-ratio: 4 / 4.25;
+  aspect-ratio: 1.58 / 1;
+  border-radius: 22px;
+  background: linear-gradient(145deg, #dcecff 0%, #f4f9ff 52%, #e8f2fc 100%);
 }
 
 .kawmed-hero__image {
@@ -68,137 +68,131 @@
   height: 100%;
   display: block;
   object-fit: cover;
-  object-position: center;
 }
 
-.kawmed-hero__overlay {
+.kawmed-hero__placeholder {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--kawmed-blue-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(54px, 17vw, 92px);
+  letter-spacing: -.05em;
+}
+
+.kawmed-hero__placeholder::after {
+  content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 82px 20px 22px;
-  background: linear-gradient(to bottom, rgba(8, 24, 39, 0) 0%, rgba(8, 24, 39, .72) 64%, rgba(8, 24, 39, .88) 100%);
-  color: #fff;
+  inset: auto -10% -35% auto;
+  width: 78%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255,255,255,.58);
+  filter: blur(2px);
 }
 
-.kawmed-hero__eyebrow {
-  display: inline-flex;
-  margin-bottom: 7px;
-  padding: 6px 10px;
-  border: 1px solid rgba(255,255,255,.28);
-  border-radius: 999px;
-  background: rgba(255,255,255,.14);
-  backdrop-filter: blur(8px);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .04em;
+.kawmed-hero__pulse {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.88);
+  color: var(--kawmed-blue);
+  font-size: 26px;
+  box-shadow: 0 10px 24px rgba(23,104,215,.12);
 }
 
-.kawmed-hero__overlay h1 {
+.kawmed-identity {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 20px 2px 4px;
+}
+
+.kawmed-identity__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-top: 2px;
+  border-radius: 13px;
+  background: var(--kawmed-blue-soft);
+  color: var(--kawmed-blue);
+  font-size: 20px;
+}
+
+.kawmed-identity h1 {
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(34px, 8.8vw, 50px);
-  line-height: .98;
+  font-size: clamp(31px, 9vw, 43px);
+  line-height: 1.02;
   font-weight: 600;
   letter-spacing: -.035em;
+  color: #101a32;
 }
 
-.kawmed-hero__overlay p {
-  max-width: 540px;
-  margin: 9px 0 0;
-  color: rgba(255,255,255,.86);
-  font-size: 13px;
-  line-height: 1.45;
+.kawmed-specialty {
+  margin: 7px 0 0;
+  color: #49618b;
+  font-size: 20px;
+  font-weight: 600;
 }
 
-.kawmed-intro {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(150px, .8fr);
-  gap: 18px;
-  align-items: center;
-  margin: 0;
-  padding: 22px 18px;
-  background: linear-gradient(135deg, #f4fbfa 0%, #f4f8ff 100%);
-  border-bottom: 1px solid #dfe9f0;
-}
-
-.kawmed-intro__copy {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-}
-
-.kawmed-intro__label {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--kawmed-teal);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: .13em;
-  text-transform: uppercase;
-}
-
-.kawmed-intro__copy > p {
-  margin: 0;
-  color: #52667c;
+.kawmed-subtitle {
+  margin: 7px 0 0;
+  color: var(--kawmed-muted);
   font-size: 14px;
-  line-height: 1.66;
-}
-
-.kawmed-intro__visual {
-  width: 100%;
-  max-width: 220px;
-  justify-self: end;
-  border-radius: 22px;
+  line-height: 1.45;
 }
 
 .kawmed-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 15px;
-  color: #536a82;
-  font-size: 12px;
-}
-
-.kawmed-meta--intro {
-  margin-top: 14px;
+  gap: 9px 18px;
+  padding: 10px 2px 18px 52px;
+  color: #53698d;
+  font-size: 13px;
 }
 
 .kawmed-meta span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 650;
+  gap: 7px;
 }
 
 .kawmed-meta svg {
   color: var(--kawmed-blue);
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .kawmed-primary-actions {
   display: grid;
-  grid-template-columns: 1.15fr .85fr;
   gap: 10px;
-  padding: 18px;
+  margin-bottom: 16px;
 }
 
 .kawmed-button {
   min-height: 54px;
   border: 0;
-  border-radius: 16px;
-  padding: 0 16px;
+  border-radius: 17px;
+  padding: 0 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 10px;
   font: inherit;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform .15s ease, opacity .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 
 .kawmed-button:active {
@@ -206,8 +200,7 @@
 }
 
 .kawmed-button:disabled,
-.kawmed-quickbar button:disabled,
-.kawmed-center-preview button:disabled,
+.kawmed-menu-item:disabled,
 .kawmed-location-button:disabled {
   opacity: .45;
   cursor: not-allowed;
@@ -215,375 +208,90 @@
 
 .kawmed-button--whatsapp {
   color: #fff;
-  background: linear-gradient(135deg, #08ad57 0%, #12c46a 100%);
-  box-shadow: 0 12px 24px rgba(8,184,90,.18);
+  background: linear-gradient(135deg, #03b65b 0%, #0ac46a 100%);
+  box-shadow: 0 11px 24px rgba(8,184,90,.2);
 }
 
 .kawmed-button--appointment {
   color: #fff;
-  background: linear-gradient(135deg, #225fd4 0%, #2f7cf0 100%);
-  box-shadow: 0 12px 24px rgba(47,111,237,.18);
+  background: linear-gradient(135deg, #0f5fd0 0%, #2d7de7 100%);
+  box-shadow: 0 11px 24px rgba(23,104,215,.2);
 }
 
 .kawmed-button--full {
   width: 100%;
 }
 
-.kawmed-quickbar {
+.kawmed-menu {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  padding: 0 18px 20px;
+  padding-top: 4px;
 }
 
-.kawmed-quickbar button {
-  min-width: 0;
-  min-height: 70px;
-  border: 1px solid #dce7f1;
-  border-radius: 15px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 7px;
-  background: #fff;
-  color: var(--kawmed-navy);
-  font: inherit;
-  cursor: pointer;
-}
-
-.kawmed-quickbar button:nth-child(1) {
-  background: #f7fbff;
-}
-
-.kawmed-quickbar button:nth-child(2) {
-  background: #f4fbfa;
-}
-
-.kawmed-quickbar button:nth-child(3) {
-  background: #fff9f7;
-}
-
-.kawmed-quickbar button:nth-child(4) {
-  background: #f8f6ff;
-}
-
-.kawmed-quickbar svg {
-  color: var(--kawmed-blue);
-  font-size: 20px;
-}
-
-.kawmed-quickbar button:nth-child(2) svg {
-  color: var(--kawmed-teal);
-}
-
-.kawmed-quickbar button:nth-child(3) svg {
-  color: var(--kawmed-coral);
-}
-
-.kawmed-quickbar span {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 11px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.kawmed-accordion-zone {
-  padding: 5px 18px 10px;
-  display: grid;
-  gap: 11px;
-}
-
-.kawmed-accordion {
-  overflow: hidden;
-  border: 1px solid #dce6ef;
-  border-radius: 19px;
-  background: #fff;
-}
-
-.kawmed-accordion.is-open {
-  border-color: #c8d9ea;
-  box-shadow: 0 10px 24px rgba(25,61,92,.07);
-}
-
-.kawmed-accordion__trigger {
+.kawmed-menu-item {
   width: 100%;
-  min-height: 78px;
-  border: 0;
-  padding: 12px 14px;
+  min-height: 70px;
+  border: 1px solid var(--kawmed-line);
+  border-radius: 18px;
+  padding: 10px 12px;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  gap: 11px;
+  grid-template-columns: 42px 1fr auto;
+  gap: 10px;
   align-items: center;
   background: #fff;
   color: inherit;
   text-align: left;
-  font: inherit;
   cursor: pointer;
+  box-shadow: 0 5px 17px rgba(37,72,117,.035);
 }
 
-.kawmed-accordion__icon {
-  width: 44px;
-  height: 44px;
+.kawmed-menu-item__icon {
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   border-radius: 14px;
+  background: var(--kawmed-blue-soft);
+  color: var(--kawmed-blue);
   font-size: 20px;
 }
 
-.kawmed-accordion__icon--blue {
-  color: var(--kawmed-blue);
-  background: var(--kawmed-blue-soft);
-}
-
-.kawmed-accordion__icon--teal {
-  color: var(--kawmed-teal);
-  background: var(--kawmed-teal-soft);
-}
-
-.kawmed-accordion__icon--coral {
-  color: var(--kawmed-coral);
-  background: var(--kawmed-coral-soft);
-}
-
-.kawmed-accordion__title {
+.kawmed-menu-item__copy {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
-.kawmed-accordion__title strong {
-  color: #16263d;
+.kawmed-menu-item__copy strong {
   font-size: 14px;
   line-height: 1.2;
 }
 
-.kawmed-accordion__title small {
-  color: #7a8ba0;
-  font-size: 11px;
-  line-height: 1.3;
-}
-
-.kawmed-accordion__chevron {
-  color: #7890aa;
-  font-size: 18px;
-  transition: transform .18s ease;
-}
-
-.kawmed-accordion.is-open .kawmed-accordion__chevron {
-  transform: rotate(180deg);
-}
-
-.kawmed-accordion__content {
-  padding: 0 14px 15px;
-  border-top: 1px solid #edf2f6;
-  background: linear-gradient(to bottom, #fbfdff 0%, #fff 100%);
-}
-
-.kawmed-schedule-preview {
-  display: grid;
-}
-
-.kawmed-schedule-preview__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  padding: 13px 0;
-  border-bottom: 1px solid #e9eff5;
-}
-
-.kawmed-schedule-preview__row:last-child {
-  border-bottom: 0;
-}
-
-.kawmed-schedule-preview__day {
-  min-width: 0;
-  display: grid;
-  gap: 5px;
-}
-
-.kawmed-schedule-preview__day strong {
-  color: #17263b;
-  font-size: 13px;
-}
-
-.kawmed-schedule-preview__day span {
-  color: #244464;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.kawmed-schedule-preview__time {
-  display: grid;
-  justify-items: end;
-  gap: 6px;
-  text-align: right;
-}
-
-.kawmed-schedule-preview__time strong {
-  color: #506985;
-  font-size: 11px;
+.kawmed-menu-item__copy small {
+  overflow: hidden;
+  color: #73829a;
+  font-size: 12px;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.kawmed-pill {
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: #e8f2ff;
-  color: #2367d9;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.kawmed-centers-preview {
-  display: grid;
-  gap: 9px;
-  padding-top: 12px;
-}
-
-.kawmed-center-preview {
-  padding: 13px;
-  border: 1px solid #dfe8ef;
-  border-radius: 15px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  background: #fff;
-}
-
-.kawmed-center-preview > div {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.kawmed-center-preview strong {
-  color: #16263d;
-  font-size: 13px;
-}
-
-.kawmed-center-preview span {
-  color: #75869b;
-  font-size: 11px;
-}
-
-.kawmed-center-preview button {
-  min-height: 38px;
-  border: 0;
-  border-radius: 11px;
-  padding: 0 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--kawmed-teal-soft);
-  color: var(--kawmed-teal);
-  font: inherit;
-  font-size: 10px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.kawmed-services-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-  padding-top: 12px;
-}
-
-.kawmed-service-tile {
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid #e3e9ef;
-  border-radius: 15px;
-  background: #fff;
-}
-
-.kawmed-service-tile__icon {
-  width: 32px;
-  height: 32px;
-  margin-bottom: 10px;
-  display: grid;
-  place-items: center;
-  border-radius: 11px;
-  background: var(--kawmed-coral-soft);
-  color: var(--kawmed-coral);
-}
-
-.kawmed-service-tile strong {
-  display: block;
-  color: #17263b;
-  font-size: 12px;
-  line-height: 1.25;
-}
-
-.kawmed-service-tile p {
-  margin: 6px 0 0;
-  color: #76879b;
-  font-size: 10px;
-  line-height: 1.4;
-}
-
-.kawmed-text-link {
-  min-height: 38px;
-  margin-top: 9px;
-  border: 0;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  color: var(--kawmed-blue);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.kawmed-about-more {
-  width: calc(100% - 36px);
-  min-height: 50px;
-  margin: 8px 18px 18px;
-  padding: 0 14px;
-  border: 1px solid #dfe7ef;
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: linear-gradient(135deg, #f8fbff 0%, #f7fbfa 100%);
-  color: var(--kawmed-navy);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.kawmed-about-more span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.kawmed-about-more span svg {
-  color: var(--kawmed-teal);
+.kawmed-menu-item__chevron {
+  color: #8191aa;
+  font-size: 18px;
 }
 
 .kawmed-footer {
-  padding: 22px 18px 4px;
-  border-top: 1px solid #e7edf3;
   display: grid;
   justify-items: center;
   gap: 3px;
-  color: #8a99aa;
+  padding: 28px 0 6px;
+  color: #8291a7;
 }
 
 .kawmed-footer span {
-  color: #50647e;
-  font-weight: 900;
-  letter-spacing: .16em;
+  color: #4e607c;
+  font-weight: 800;
+  letter-spacing: .14em;
   text-transform: uppercase;
 }
 
@@ -599,6 +307,7 @@
   border-radius: 24px;
   background: #fff;
   text-align: center;
+  box-shadow: 0 20px 60px rgba(29,65,106,.08);
 }
 
 .kawmed-state > svg {
@@ -618,7 +327,6 @@
   color: var(--kawmed-muted);
 }
 
-/* Shared modals */
 .kawmed-modal-backdrop {
   position: fixed;
   z-index: 10050;
@@ -627,7 +335,7 @@
   align-items: flex-end;
   justify-content: center;
   padding: 16px;
-  background: rgba(10, 27, 43, .52);
+  background: rgba(8, 21, 41, .5);
   backdrop-filter: blur(8px);
 }
 
@@ -637,8 +345,8 @@
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  border: 1px solid rgba(255,255,255,.7);
-  border-radius: 25px;
+  border: 1px solid rgba(255,255,255,.65);
+  border-radius: 26px;
   background: #fff;
   box-shadow: 0 30px 90px rgba(6,22,45,.24);
 }
@@ -648,27 +356,27 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px;
-  border-bottom: 1px solid #edf2f6;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid #edf2f8;
 }
 
 .kawmed-modal__header h2 {
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  color: #14243a;
   font-size: 24px;
   font-weight: 600;
 }
 
 .kawmed-icon-button {
+  flex: 0 0 auto;
   width: 38px;
   height: 38px;
-  border: 0;
-  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #f0f5fa;
-  color: #17304b;
+  border: 0;
+  border-radius: 50%;
+  background: #f2f6fb;
+  color: var(--kawmed-ink);
   font-size: 21px;
   cursor: pointer;
 }
@@ -681,7 +389,7 @@
 
 .kawmed-modal__footer {
   padding: 12px 18px 18px;
-  border-top: 1px solid #edf2f6;
+  border-top: 1px solid #edf2f8;
 }
 
 .kawmed-form {
@@ -693,8 +401,8 @@
   margin: 0 0 2px;
   padding: 12px 13px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #eef8f6 0%, #eef5ff 100%);
-  color: #526b80;
+  background: #f1f7ff;
+  color: #526786;
   font-size: 12px;
   line-height: 1.55;
 }
@@ -702,13 +410,13 @@
 .kawmed-form label {
   display: grid;
   gap: 7px;
-  color: #25364d;
+  color: #25354f;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .kawmed-form label small {
-  color: #8a98aa;
+  color: #8997aa;
   font-weight: 500;
 }
 
@@ -717,7 +425,7 @@
 .kawmed-form textarea {
   width: 100%;
   min-height: 46px;
-  border: 1px solid #d9e4ed;
+  border: 1px solid #d9e4f0;
   border-radius: 13px;
   padding: 11px 12px;
   outline: none;
@@ -734,8 +442,8 @@
 .kawmed-form input:focus,
 .kawmed-form select:focus,
 .kawmed-form textarea:focus {
-  border-color: #76a6e8;
-  box-shadow: 0 0 0 3px rgba(47,111,237,.1);
+  border-color: #7aadef;
+  box-shadow: 0 0 0 3px rgba(23,104,215,.1);
 }
 
 .kawmed-form__error {
@@ -749,7 +457,7 @@
 
 .kawmed-form__privacy {
   margin: -1px 0 0;
-  color: #8794a5;
+  color: #8491a5;
   font-size: 10px;
   line-height: 1.5;
   text-align: center;
@@ -758,7 +466,7 @@
 .kawmed-copy-block {
   display: grid;
   gap: 14px;
-  color: #53667f;
+  color: #53647f;
   font-size: 14px;
   line-height: 1.65;
 }
@@ -777,11 +485,11 @@
   align-items: center;
   gap: 7px;
   padding: 8px 10px;
-  border-radius: 999px;
-  background: var(--kawmed-teal-soft);
-  color: var(--kawmed-teal);
-  font-size: 11px;
-  font-weight: 800;
+  border-radius: 12px;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .kawmed-schedule-list,
@@ -797,7 +505,7 @@
   gap: 12px;
   align-items: center;
   padding: 13px 0;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid #edf2f8;
 }
 
 .kawmed-schedule-row:last-child {
@@ -810,9 +518,9 @@
 }
 
 .kawmed-schedule-row > div:first-child span {
-  color: #244464;
+  color: #263d61;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.3;
 }
 
@@ -824,9 +532,18 @@
 }
 
 .kawmed-schedule-row__time strong {
-  color: #4f6784;
+  color: #4f6384;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.kawmed-pill {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #edf6ff;
+  color: var(--kawmed-blue);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .kawmed-detail-card {
@@ -834,7 +551,7 @@
   grid-template-columns: 38px 1fr;
   gap: 11px;
   padding: 13px;
-  border: 1px solid #e1e9f0;
+  border: 1px solid #e3ebf4;
   border-radius: 16px;
   background: #fff;
 }
@@ -845,8 +562,8 @@
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: var(--kawmed-coral-soft);
-  color: var(--kawmed-coral);
+  background: #eef5ff;
+  color: var(--kawmed-blue);
 }
 
 .kawmed-detail-card strong {
@@ -858,7 +575,7 @@
 .kawmed-detail-card p,
 .kawmed-center-card p {
   margin: 0;
-  color: #6d7f93;
+  color: #6d7c92;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -868,7 +585,7 @@
   grid-template-columns: 40px 1fr;
   gap: 11px;
   padding: 14px;
-  border: 1px solid #e1e9f0;
+  border: 1px solid #e2eaf4;
   border-radius: 17px;
   background: #fff;
 }
@@ -879,8 +596,8 @@
   display: grid;
   place-items: center;
   border-radius: 13px;
-  background: var(--kawmed-teal-soft);
-  color: var(--kawmed-teal);
+  background: #eef5ff;
+  color: var(--kawmed-blue);
 }
 
 .kawmed-center-card__copy {
@@ -912,16 +629,16 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  background: var(--kawmed-teal-soft);
-  color: var(--kawmed-teal);
-  font-weight: 800;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font-weight: 700;
   cursor: pointer;
 }
 
 .kawmed-location-button {
   width: 100%;
   min-height: 68px;
-  border: 1px solid #e1e9f0;
+  border: 1px solid #e1eaf5;
   border-radius: 16px;
   padding: 10px 12px;
   display: grid;
@@ -940,7 +657,7 @@
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: var(--kawmed-blue-soft);
+  background: #eef5ff;
   color: var(--kawmed-blue);
 }
 
@@ -954,7 +671,7 @@
 }
 
 .kawmed-location-button small {
-  color: #78889c;
+  color: #78879d;
   font-size: 11px;
 }
 
@@ -965,17 +682,23 @@
 .kawmed-empty {
   margin: 0;
   padding: 20px 0;
-  color: #7c8b9f;
+  color: #7c8a9f;
   text-align: center;
 }
 
-@media (min-width: 720px) {
-  .kawmed-profile {
-    width: min(100%, 820px);
+@media (min-width: 560px) {
+  .kawmed-shell {
+    padding: 28px 0 56px;
   }
 
-  .kawmed-hero--portrait {
-    aspect-ratio: 16 / 10;
+  .kawmed-profile {
+    min-height: auto;
+    border: 1px solid rgba(213,225,239,.8);
+    border-radius: 30px;
+  }
+
+  .kawmed-primary-actions {
+    grid-template-columns: 1fr 1fr;
   }
 
   .kawmed-modal-backdrop {
@@ -983,100 +706,23 @@
   }
 }
 
-@media (max-width: 520px) {
-  .kawmed-brandbar {
-    padding-inline: 16px;
-  }
-
-  .kawmed-hero {
-    min-height: 350px;
-  }
-
-  .kawmed-hero--portrait {
-    aspect-ratio: 4 / 4.55;
-  }
-
-  .kawmed-intro {
-    grid-template-columns: minmax(0, 1fr) 112px;
-    gap: 10px;
-    padding-inline: 16px;
-  }
-
-  .kawmed-intro__visual {
-    border-radius: 18px;
-  }
-
-  .kawmed-primary-actions {
-    padding-inline: 16px;
-  }
-
-  .kawmed-quickbar,
-  .kawmed-accordion-zone {
-    padding-inline: 16px;
-  }
-
-  .kawmed-quickbar {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .kawmed-quickbar button {
-    min-height: 66px;
-    padding: 8px 4px;
-  }
-
-  .kawmed-quickbar span {
-    font-size: 10px;
-  }
-
-  .kawmed-services-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .kawmed-center-preview {
-    grid-template-columns: 1fr;
-  }
-
-  .kawmed-center-preview button {
-    width: fit-content;
-  }
-}
-
-@media (max-width: 390px) {
-  .kawmed-primary-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .kawmed-quickbar {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .kawmed-quickbar button {
-    grid-template-columns: auto 1fr;
-    justify-items: start;
+@media (max-width: 389px) {
+  .kawmed-profile {
     padding-inline: 12px;
   }
 
-  .kawmed-quickbar span {
-    font-size: 12px;
+  .kawmed-identity h1 {
+    font-size: 30px;
   }
 
-  .kawmed-intro {
-    grid-template-columns: 1fr;
+  .kawmed-meta {
+    padding-left: 0;
   }
 
-  .kawmed-intro__visual {
-    width: 56%;
-    max-width: 190px;
-    justify-self: end;
-    margin-top: -4px;
-  }
-
-  .kawmed-schedule-preview__row,
   .kawmed-schedule-row {
     grid-template-columns: 1fr;
   }
 
-  .kawmed-schedule-preview__time,
   .kawmed-schedule-row__time {
     justify-items: start;
     text-align: left;
