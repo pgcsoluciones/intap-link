@@ -35,6 +35,11 @@ export interface KawMedService {
   sort_order: number
 }
 
+export interface KawMedInsurancePolicy {
+  accepts_all: boolean
+  excluded: string[]
+}
+
 export interface KawMedProfileData {
   id: string
   slug: string
@@ -57,4 +62,5 @@ export interface KawMedProfileData {
   centers: KawMedCenter[]
   schedules: KawMedSchedule[]
   services: KawMedService[]
+  insurance_policy: KawMedInsurancePolicy
 }
