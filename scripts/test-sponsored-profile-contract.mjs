@@ -296,7 +296,7 @@ has(quoteRecorder,"audio/mp4;codecs=mp4a.40.2",'grabador prioriza M4A/MP4 cuando
 has(quoteAttachments,"accept=\"image/*,application/pdf,audio/*\"",'selector media limita tipos esperados')
 has(publicUi,'optimizeQuoteImage','imágenes de cotización se optimizan antes de subir')
 has(publicUi,"quote.request.trim()||quoteMedia.length",'texto puede sustituirse por media manteniendo nombre y teléfono obligatorios')
-has(publicUi,'disponible por 3 días','UI comunica expiración del media')
+has(quoteAttachments,'disponibles por 3 días','UI comunica expiración de los adjuntos')
 has(publicUi,"kind==='audio'?'Audio adjunto'",'mensaje identifica claramente audio, imagen o archivo adjunto')
 has(quoteMedia,"MAX_MEDIA_BYTES=10*1024*1024",'API limita adjuntos a 10 MB')
 has(quoteMedia,'audio/ogg','API acepta OGG como audio adjunto')
