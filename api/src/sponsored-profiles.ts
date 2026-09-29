@@ -73,7 +73,7 @@ app.get('/api/v1/superadmin/sponsors/:id/artifacts',requireSuperAdmin('viewer'),
 
   const result=await c.env.DB.prepare(`SELECT
     a.public_code,a.product_type,a.status AS artifact_status,
-    sa.status,sa.artifact_role,sa.activated_at,sa.created_at,
+    sa.status,sa.artifact_role,sa.banner_enabled,sa.activated_at,sa.created_at,
     sp.username,sp.business_name,sp.status AS profile_status,
     b.name AS batch_name,b.city,b.zone
     FROM sponsor_artifacts sa
@@ -89,6 +89,16 @@ app.get('/api/v1/superadmin/sponsors/:id/artifacts',requireSuperAdmin('viewer'),
   return c.json({ok:true,data:rows,pagination:{page:safePage,page_size:pageSize,total,pages}})
 })
 
+app.patch('/api/v1/superadmin/sponsors/:id/artifacts/:code/banner',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const sponsorId=String(c.req.param('id')||'')
+  const publicCode=cleanText(c.req.param('code')||'',64).toUpperCase()
+  const body=await c.req.json().catch(()=>({}))
+  if(typeof body.enabled!=='boolean')return c.json({ok:false,error:'Estado del cintillo requerido.'},422)
+  const row=await c.env.DB.prepare(`SELECT sa.artifact_id FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id WHERE sa.sponsor_id=? AND a.public_code=? LIMIT 1`).bind(sponsorId,publicCode).first()
+  if(!row)return c.json({ok:false,error:'Código patrocinado no encontrado.'},404)
+  await c.env.DB.prepare(`UPDATE sponsor_artifacts SET banner_enabled=? WHERE sponsor_id=? AND artifact_id=?`).bind(body.enabled?1:0,sponsorId,String((row as any).artifact_id)).run()
+  return c.json({ok:true,data:{public_code:publicCode,banner_enabled:body.enabled?1:0}})
+})
 app.get('/api/v1/sponsor/me',requireUser,async(c:any)=>{const userId=String(c.get('userId')||'');const tenant=await c.env.DB.prepare(`SELECT st.*,sm.role FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1 LIMIT 1`).bind(userId).first();if(tenant&&String((tenant as any).role||'')==='owner')await ensureSponsorOwnerProfileBase(c,String((tenant as any).id),userId);return c.json({ok:true,data:tenant||null})})
 app.get('/api/v1/sponsor/artifacts',requireUser,async(c:any)=>{const membership=await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(c.get('userId')).first();if(!membership)return c.json({ok:false,error:'No tienes acceso a un patrocinador.'},403);const result=await c.env.DB.prepare(`SELECT a.public_code,a.product_type,sa.status,sa.artifact_role,sa.activated_at,sp.username,sp.business_name,sp.status AS profile_status,b.name AS batch_name,b.city,b.zone FROM sponsor_artifacts sa JOIN intap_artifacts a ON a.id=sa.artifact_id LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id LEFT JOIN sponsor_batches b ON b.id=sa.batch_id WHERE sa.sponsor_id=? ORDER BY sa.created_at DESC`).bind(String((membership as any).sponsor_id)).all();return c.json({ok:true,data:result.results||[]})})
 app.patch('/api/v1/sponsor/settings',requireUser,async(c:any)=>{const membership=await c.env.DB.prepare(`SELECT sponsor_id,role FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(c.get('userId')).first();if(!membership||!['owner','admin'].includes(String((membership as any).role)))return c.json({ok:false,error:'No tienes permiso para editar el patrocinio.'},403);const body=await c.req.json().catch(()=>({}));await c.env.DB.prepare(`UPDATE sponsor_tenants SET logo_url=?,banner_title=?,banner_image_url=?,banner_cta_label=?,banner_cta_type=?,banner_cta_value=?,whatsapp_message_template=?,contact_whatsapp=?,website_url=?,updated_at=datetime('now') WHERE id=?`).bind(cleanText(body.logo_url,800),cleanText(body.banner_title,80)||'Impulsado por',cleanText(body.banner_image_url,800),cleanText(body.banner_cta_label,60)||'Conocer más',['beneficiary_whatsapp','sponsor_whatsapp','sponsor_url','none'].includes(String(body.banner_cta_type))?String(body.banner_cta_type):'none',cleanText(body.banner_cta_value,800),cleanText(body.whatsapp_message_template,240)||'Hola, me interesa saber más sobre estos productos.',normalizeContactNumber(body.contact_whatsapp),cleanText(body.website_url,800),String((membership as any).sponsor_id)).run();return c.json({ok:true})})
