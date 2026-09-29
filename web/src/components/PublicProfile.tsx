@@ -26,6 +26,7 @@ const IntapProfileV2 = lazy(
 import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
 import { adaptPublicProfileApiResponse } from './free-profile/IntapLinkGratis.adapter'
 import { renderRegisteredProfileTemplate } from './profile-templates/registry'
+import SponsoredQuoteMediaViewer from './sponsored/SponsoredQuoteMediaViewer'
 
 declare global {
   interface Window {
@@ -1747,7 +1748,7 @@ function BentoLayout({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PublicProfile() {
+function StandardPublicProfile() {
   const params = useParams()
   const host = window.location.hostname.toLowerCase()
   const customDomainSlug =
@@ -2188,4 +2189,13 @@ function NotFound() {
       </div>
     </div>
   )
+}
+
+
+export default function PublicProfile() {
+  const { slug = '' } = useParams()
+  if (/^(AUD|IMG|AR)-[A-Za-z0-9_-]{20,24}$/.test(String(slug))) {
+    return <SponsoredQuoteMediaViewer />
+  }
+  return <StandardPublicProfile />
 }
