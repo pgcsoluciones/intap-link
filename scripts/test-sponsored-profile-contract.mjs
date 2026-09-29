@@ -226,7 +226,7 @@ has(superAdmin,"toggleBanner(row",'super admin permite activar/desactivar cintil
 has(superAdmin,"'Activo':'Inactivo'",'estado de cintillo visible junto al código')
 has(core,"/api/v1/superadmin/sponsors/:id/artifacts/:code/banner",'endpoint de cintillo individual por código')
 has(core,'sa.banner_enabled','listado de códigos expone estado del cintillo')
-has(core,'sp.email,sp.status AS profile_status','CRM patrocinado expone correo del beneficiario')
+has(core,'u.email AS email,sp.status AS profile_status','CRM patrocinado expone correo de cuenta del beneficiario')
 if(sponsoredEmailPreviewMigration.includes('\\n'))throw new Error('Migración Preview de correo contiene saltos escapados literales')
 if(sponsoredEmailProdMigration.includes('\\n'))throw new Error('Migración Producción de correo contiene saltos escapados literales')
 has(sponsoredEmailPreviewRepair,'ALTER TABLE sponsored_profiles ADD COLUMN email TEXT;','Preview incluye reparación real de columna email')
