@@ -678,6 +678,35 @@ ${seoHeadHtml}
     }));
   };
 
+  // Los adjuntos de cotización son contenido operativo y efímero.
+  // No deben generar la tarjeta gráfica/OG de Kawvo Link al compartirse.
+  const quoteMediaShareMatch = url.pathname.match(/^\/(?:AUD|IMG|AR)-[A-Za-z0-9_-]{20,24}\/?$/);
+  if (quoteMediaShareMatch && isHtmlNavigation()) {
+    const response = await fetchSpaShell();
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return withSecurityHeaders(response);
+    let html = await response.text();
+    html = html
+      .replace(/<meta\s+property=["']og:[^>]*>\s*/gi, '')
+      .replace(/<meta\s+name=["']twitter:[^>]*>\s*/gi, '')
+      .replace(/<meta\s+name=["']description["'][^>]*>\s*/gi, '')
+      .replace(/<title>[\s\S]*?<\/title>/i, '<title>Adjunto temporal</title>');
+    if (html.includes('</head>')) {
+      html = html.replace('</head>', '<meta name="robots" content="noindex,nofollow,noarchive">\n</head>');
+    }
+    const headers = new Headers(response.headers);
+    headers.delete('content-length');
+    headers.delete('content-encoding');
+    headers.set('content-type', 'text/html; charset=UTF-8');
+    headers.set('cache-control', 'private, no-store, max-age=0');
+    headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
+    return withSecurityHeaders(new Response(html, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    }));
+  }
+
   // Card social server-side para perfiles patrocinados.
   // Usa EXCLUSIVAMENTE datos e imágenes del propio perfil compartido.
   // Nunca usa logo, banner, nombre ni contenido del patrocinador para un beneficiario.
