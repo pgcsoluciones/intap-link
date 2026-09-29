@@ -47,7 +47,7 @@ async function mediaRow(c:any,code:string){
 async function batchRows(c:any,row:any){
   const batchId=String(row?.batch_id||'').trim()
   if(!batchId)return [row]
-  const result=await c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at,token_hash FROM sponsored_quote_media WHERE batch_id=? AND profile_id=? AND expires_at>datetime('now') ORDER BY created_at ASC,id ASC`).bind(batchId,String(row?.profile_id||'')).all()
+  const result=await c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at,token_hash FROM sponsored_quote_media WHERE batch_id=? AND profile_id=? AND expires_at>datetime('now') ORDER BY rowid ASC`).bind(batchId,String(row?.profile_id||'')).all()
   const items=Array.isArray((result as any).results)?(result as any).results:[]
   return items.length?items:[row]
 }
