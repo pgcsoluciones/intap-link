@@ -1,7 +1,7 @@
 import app from './index'
 
 const MAX_MEDIA_BYTES=10*1024*1024
-const MAX_UPLOADS_PER_HOUR=8
+const MAX_UPLOADS_PER_HOUR=12
 const EXPIRY_HOURS=72
 
 type QuoteMediaKind='image'|'document'|'audio'
@@ -12,6 +12,7 @@ async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SH
 function randomCodePart(bytes=16){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return btoa(String.fromCharCode(...data)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function safeIp(c:any){return String(c.req.header('CF-Connecting-IP')||c.req.header('X-Forwarded-For')||'unknown').split(',')[0].trim().slice(0,100)}
 function kindPrefix(kind:QuoteMediaKind){return kind==='audio'?'AUD':kind==='image'?'IMG':'AR'}
+function mediaBatchLimit(kind:QuoteMediaKind){return kind==='image'?3:kind==='document'?2:1}
 function isModernCode(value:string){return /^(AUD|IMG|AR)-[A-Za-z0-9_-]{20,24}$/.test(value)}
 function isLegacyToken(value:string){return /^[a-f0-9]{48}$/i.test(value)}
 
@@ -61,39 +62,76 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
 
   const fd=await c.req.formData().catch(()=>null)
-  const raw=fd?.get('file')
-  if(!(raw&&typeof raw==='object'&&'stream' in (raw as any)))return c.json({ok:false,error:'Adjunta una foto, PDF o audio.'},400)
-  const file=raw as File
-  const spec=mediaSpec(file)
-  if(!spec)return c.json({ok:false,error:'Formato no permitido. Usa imagen, PDF o audio.'},415)
-  const size=Number((file as any).size||0)
-  if(size<=0)return c.json({ok:false,error:'El archivo está vacío.'},400)
-  if(size>MAX_MEDIA_BYTES)return c.json({ok:false,error:'El archivo supera el límite de 10 MB.'},413)
+  const raws=(fd?.getAll('file')||[]).filter((item:any)=>item&&typeof item==='object'&&'stream' in item) as File[]
+  if(!raws.length)return c.json({ok:false,error:'Adjunta una imagen, PDF o audio.'},400)
+
+  const specs=raws.map(file=>mediaSpec(file))
+  if(specs.some(spec=>!spec))return c.json({ok:false,error:'Formato no permitido. Usa imagen, PDF o audio.'},415)
+  const kinds=specs.map(spec=>spec!.kind)
+  const kind=kinds[0] as QuoteMediaKind
+  if(kinds.some(item=>item!==kind))return c.json({ok:false,error:'Adjunta un solo tipo de media por solicitud.'},400)
+
+  const batchLimit=mediaBatchLimit(kind)
+  if(raws.length>batchLimit){
+    const error=kind==='image'?'Puedes adjuntar hasta 3 imágenes por solicitud.':kind==='document'?'Puedes adjuntar hasta 2 archivos por solicitud.':'Puedes adjuntar un solo audio por solicitud.'
+    return c.json({ok:false,error},400)
+  }
+
+  for(const file of raws){
+    const size=Number((file as any).size||0)
+    if(size<=0)return c.json({ok:false,error:'Uno de los archivos está vacío.'},400)
+    if(size>MAX_MEDIA_BYTES)return c.json({ok:false,error:'Cada archivo debe pesar 10 MB o menos después de optimizarse.'},413)
+  }
 
   const profileId=String((profile as any).id)
   const ipHash=await sha256Hex(safeIp(c))
   const recent=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_quote_media WHERE profile_id=? AND ip_hash=? AND created_at>datetime('now','-1 hour')`).bind(profileId,ipHash).first()
-  if(Number((recent as any)?.n||0)>=MAX_UPLOADS_PER_HOUR)return c.json({ok:false,error:'Has realizado varios adjuntos recientemente. Intenta nuevamente más tarde.'},429)
+  if(Number((recent as any)?.n||0)+raws.length>MAX_UPLOADS_PER_HOUR)return c.json({ok:false,error:'Has realizado varios adjuntos recientemente. Intenta nuevamente más tarde.'},429)
 
-  const code=`${kindPrefix(spec.kind)}-${randomCodePart()}`
-  const tokenHash=await sha256Hex(code)
-  const id=crypto.randomUUID()
+  if(kind==='image'){
+    const daily=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_quote_media WHERE profile_id=? AND ip_hash=? AND media_kind='image' AND created_at>datetime('now','-24 hours')`).bind(profileId,ipHash).first()
+    const used=Number((daily as any)?.n||0)
+    if(used+raws.length>9){
+      const remaining=Math.max(0,9-used)
+      return c.json({ok:false,error:remaining? `Puedes adjuntar hasta ${remaining} imagen${remaining===1?'':'es'} más durante este período de 24 horas.`:'Ya alcanzaste el máximo de 9 imágenes en 24 horas para este perfil.'},429)
+    }
+  }
+
   const datePrefix=new Date().toISOString().slice(0,10)
-  const key=`quote-media/${profileId}/${datePrefix}/${id}.${spec.ext}`
-  const originalName=cleanName(file.name)
   const expiresAt=new Date(Date.now()+EXPIRY_HOURS*60*60*1000).toISOString().slice(0,19).replace('T',' ')
-
-  await c.env.BUCKET.put(key,file.stream(),{
-    httpMetadata:{contentType:spec.contentType},
-    customMetadata:{expires_at:expiresAt,kind:spec.kind}
+  const pending=raws.map((file,index)=>{
+    const spec=specs[index]!
+    const code=`${kindPrefix(spec.kind)}-${randomCodePart()}`
+    const id=crypto.randomUUID()
+    const key=`quote-media/${profileId}/${datePrefix}/${id}.${spec.ext}`
+    return {file,spec,code,id,key,originalName:cleanName(file.name)}
   })
+  const uploaded:string[]=[]
   try{
-    await c.env.DB.prepare(`INSERT INTO sponsored_quote_media (id,profile_id,token_hash,r2_key,media_kind,content_type,original_name,size_bytes,ip_hash,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(id,profileId,tokenHash,key,spec.kind,spec.contentType,originalName,size,ipHash,expiresAt).run()
+    for(const item of pending){
+      await c.env.BUCKET.put(item.key,item.file.stream(),{
+        httpMetadata:{contentType:item.spec.contentType},
+        customMetadata:{expires_at:expiresAt,kind:item.spec.kind}
+      })
+      uploaded.push(item.key)
+    }
+    const statements=[]
+    for(const item of pending){
+      const tokenHash=await sha256Hex(item.code)
+      statements.push(c.env.DB.prepare(`INSERT INTO sponsored_quote_media (id,profile_id,token_hash,r2_key,media_kind,content_type,original_name,size_bytes,ip_hash,expires_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(item.id,profileId,tokenHash,item.key,item.spec.kind,item.spec.contentType,item.originalName,Number((item.file as any).size||0),ipHash,expiresAt))
+    }
+    await c.env.DB.batch(statements)
   }catch(error){
-    await c.env.BUCKET.delete(key).catch(()=>undefined)
+    await Promise.all(uploaded.map(key=>c.env.BUCKET.delete(key).catch(()=>undefined)))
+    if(pending.length){
+      const ids=pending.map(item=>item.id)
+      for(const id of ids)await c.env.DB.prepare(`DELETE FROM sponsored_quote_media WHERE id=?`).bind(id).run().catch(()=>undefined)
+    }
     throw error
   }
-  return c.json({ok:true,data:{url:mediaUrl(c,code),code,kind:spec.kind,name:originalName,size_bytes:size,expires_at:expiresAt}})
+
+  const items=pending.map(item=>({url:mediaUrl(c,item.code),code:item.code,kind:item.spec.kind,name:item.originalName,size_bytes:Number((item.file as any).size||0),expires_at:expiresAt}))
+  return c.json({ok:true,data:{items,...(items.length===1?items[0]:{})}})
 })
 
 app.get('/api/v1/public/sponsored/quote-media/:code/meta',async(c:any)=>{
