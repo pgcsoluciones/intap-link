@@ -31,7 +31,7 @@ export default function QuoteAudioRecorder({onRecorded,onError}:Props){
     }
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true})
-      const preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(type=>MediaRecorder.isTypeSupported(type))
+      const preferred=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'].find(type=>MediaRecorder.isTypeSupported(type))
       const recorder=new MediaRecorder(stream,preferred?{mimeType:preferred}:undefined)
       chunksRef.current=[]
       streamRef.current=stream
