@@ -302,6 +302,7 @@ if(appointmentModal.includes('mailto:'))throw new Error('Agenda no debe ofrecer 
 has(appointmentModal,'Fecha solicitada:','mensaje de agenda incluye fecha')
 has(appointmentModal,'Hora solicitada:','mensaje de agenda incluye hora')
 has(appointmentModal,'Quedo atento/a a la confirmación de disponibilidad.','agenda se comunica como solicitud pendiente de confirmación')
+has(appointmentModal,"requestedAt.getTime()<=Date.now()",'agenda rechaza fechas y horas pasadas')
 has(publicUi,"setQuote({name:'',phone:'',email:'',request:'',delivery:'',sector:'',payment:''})",'formulario se limpia después de enviar la solicitud')
 has(publicUi,"if(request)detailLines.push('')",'mensaje separa visualmente el texto de la solicitud y el media')
 if(publicUi.includes("].filter(Boolean)"))throw new Error('El mensaje no debe eliminar los separadores de línea del cuerpo de la solicitud')
