@@ -271,7 +271,7 @@ export default function KawMedProfile() {
     )
   }
 
-  const heroImage = profile.cover_url || profile.avatar_url || '/assets/kawmed/demo-doctor-reference.jpg'
+  const heroImage = profile.cover_url || profile.avatar_url || '/assets/kawmed/laura-mendez-hero.jpg'
   const primaryCenter = profile.centers[0] || null
   const visibleCenters = profile.centers.slice(0, 2)
   const visibleServices = profile.services.slice(0, 3)
