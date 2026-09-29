@@ -249,16 +249,7 @@ export default function KawMedProfile() {
     }
   }, [profile])
 
-  const menuItems = useMemo(() => {
-    if (!profile) return []
-    return [
-      { key: 'about' as const, icon: FiUser, title: 'Sobre mí', subtitle: 'Formación, enfoque y compromiso' },
-      { key: 'schedule' as const, icon: FiCalendar, title: 'Horarios y centros de consulta', subtitle: 'Días, tandas y disponibilidad' },
-      { key: 'services' as const, icon: FiActivity, title: 'Servicios / Especialidades', subtitle: 'Áreas de atención profesional' },
-      { key: 'centers' as const, icon: FiBriefcase, title: 'Centros de atención', subtitle: `${profile.centers.length} ${profile.centers.length === 1 ? 'centro disponible' : 'centros disponibles'}` },
-      { key: 'location' as const, icon: FiMapPin, title: 'Ubicación', subtitle: 'Elige el centro al que deseas llegar' },
-    ]
-  }, [profile])
+
 
   if (loading) {
     return <main className="kawmed-shell"><div className="kawmed-state">Cargando perfil médico…</div></main>
@@ -276,6 +267,10 @@ export default function KawMedProfile() {
     )
   }
 
+  const visibleSchedules = profile.schedules.slice(0, 3)
+  const visibleCenters = profile.centers.slice(0, 2)
+  const visibleServices = profile.services.slice(0, 4)
+
   return (
     <main className="kawmed-shell">
       <div className="kawmed-profile">
@@ -285,12 +280,8 @@ export default function KawMedProfile() {
         </div>
 
         <section className="kawmed-hero">
-          {profile.cover_url || profile.avatar_url ? (
-            <img
-              className="kawmed-hero__image"
-              src={profile.cover_url || profile.avatar_url || ''}
-              alt={profile.display_name}
-            />
+          {profile.cover_url ? (
+            <img className="kawmed-hero__image" src={profile.cover_url} alt="" />
           ) : (
             <div className="kawmed-hero__placeholder" aria-hidden="true">
               <span className="kawmed-hero__pulse"><FiActivity /></span>
@@ -300,18 +291,21 @@ export default function KawMedProfile() {
         </section>
 
         <section className="kawmed-identity">
-          <div className="kawmed-identity__icon"><FiActivity /></div>
-          <div>
-            <h1>{profile.display_name}</h1>
-            <p className="kawmed-specialty">{profile.specialty}</p>
-            {profile.subspecialty ? <p className="kawmed-subtitle">{profile.subspecialty}</p> : null}
+          <div className="kawmed-avatar-wrap">
+            {profile.avatar_url ? (
+              <img className="kawmed-avatar" src={profile.avatar_url} alt={profile.display_name} />
+            ) : (
+              <div className="kawmed-avatar kawmed-avatar--fallback">{initials(profile.name)}</div>
+            )}
+          </div>
+          <h1>{profile.display_name}</h1>
+          <p className="kawmed-specialty">{profile.specialty}</p>
+          {profile.subspecialty ? <p className="kawmed-subtitle">{profile.subspecialty}</p> : null}
+          <div className="kawmed-meta">
+            {primaryCenter ? <span><FiBriefcase /> {primaryCenter.name}</span> : null}
+            {profile.city ? <span><FiMapPin /> {profile.city}</span> : null}
           </div>
         </section>
-
-        <div className="kawmed-meta">
-          {primaryCenter ? <span><FiBriefcase /> {primaryCenter.name}</span> : null}
-          {profile.city ? <span><FiMapPin /> {profile.city}</span> : null}
-        </div>
 
         <section className="kawmed-primary-actions">
           <button
@@ -329,60 +323,128 @@ export default function KawMedProfile() {
           </button>
         </section>
 
-        <section className="kawmed-menu" aria-label="Información del perfil">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <button
-                type="button"
-                className="kawmed-menu-item"
-                key={item.key}
-                onClick={() => {
-                  if (item.key === 'location' && profile.centers.length === 1) {
-                    openMap(profile.centers[0])
-                    return
-                  }
-                  setModal(item.key)
-                }}
-              >
-                <span className="kawmed-menu-item__icon"><Icon /></span>
-                <span className="kawmed-menu-item__copy">
-                  <strong>{item.title}</strong>
-                  <small>{item.subtitle}</small>
-                </span>
-                <FiChevronRight className="kawmed-menu-item__chevron" />
-              </button>
-            )
-          })}
+        <section className="kawmed-section kawmed-section--quick">
+          <div className="kawmed-section-heading">
+            <h2>Contacto rápido</h2>
+          </div>
+          <div className="kawmed-quick-grid">
+            <button type="button" onClick={() => {
+              if (profile.phone) window.location.href = `tel:${profile.phone.replace(/[^+\\d]/g, '')}`
+            }} disabled={!profile.phone}>
+              <FiPhone />
+              <span>Llamar</span>
+            </button>
+            <button type="button" onClick={() => {
+              if (profile.centers.length === 1) openMap(profile.centers[0])
+              else setModal('location')
+            }} disabled={!profile.centers.length}>
+              <FiMapPin />
+              <span>Ubicación</span>
+            </button>
+            <button type="button" onClick={downloadVCard}>
+              <FiBookmark />
+              <span>Guardar</span>
+            </button>
+            <button type="button" onClick={shareProfile}>
+              <FiShare2 />
+              <span>{shareNotice || 'Compartir'}</span>
+            </button>
+          </div>
+        </section>
 
-          <button type="button" className="kawmed-menu-item" onClick={() => {
-            if (profile.phone) window.location.href = `tel:${profile.phone.replace(/[^+\d]/g, '')}`
-          }} disabled={!profile.phone}>
-            <span className="kawmed-menu-item__icon"><FiPhone /></span>
-            <span className="kawmed-menu-item__copy">
-              <strong>Llamar</strong>
-              <small>{profile.phone || 'No disponible'}</small>
-            </span>
-            <FiChevronRight className="kawmed-menu-item__chevron" />
+        <section className="kawmed-section kawmed-section--about">
+          <div className="kawmed-section-heading">
+            <h2>Sobre mí</h2>
+            <span className="kawmed-section-icon"><FiUser /></span>
+          </div>
+          <p className="kawmed-about-text">{profile.bio || 'Información profesional no disponible.'}</p>
+          {profile.subspecialty ? (
+            <div className="kawmed-about-chip"><FiActivity /> {profile.subspecialty}</div>
+          ) : null}
+          <button type="button" className="kawmed-text-link" onClick={() => setModal('about')}>
+            Ver perfil profesional <FiChevronRight />
           </button>
+        </section>
 
-          <button type="button" className="kawmed-menu-item" onClick={downloadVCard}>
-            <span className="kawmed-menu-item__icon"><FiBookmark /></span>
-            <span className="kawmed-menu-item__copy">
-              <strong>Guardar contacto</strong>
-              <small>Agregar a tu teléfono</small>
-            </span>
-            <FiChevronRight className="kawmed-menu-item__chevron" />
-          </button>
+        <section className="kawmed-section">
+          <div className="kawmed-section-heading">
+            <div>
+              <h2>Horarios de consulta</h2>
+              <p>Días, centros y tandas disponibles</p>
+            </div>
+            <span className="kawmed-section-icon"><FiCalendar /></span>
+          </div>
+          <div className="kawmed-schedule-preview">
+            {visibleSchedules.map((schedule) => (
+              <article key={schedule.id} className="kawmed-schedule-preview__row">
+                <div className="kawmed-schedule-preview__day">
+                  <strong>{schedule.day_label}</strong>
+                  <span>{schedule.center_name}</span>
+                </div>
+                <div className="kawmed-schedule-preview__time">
+                  {schedule.shift ? <span className="kawmed-pill">{schedule.shift}</span> : null}
+                  <strong>{formatTime(schedule.start_time)} – {formatTime(schedule.end_time)}</strong>
+                </div>
+              </article>
+            ))}
+          </div>
+          {profile.schedules.length > visibleSchedules.length ? (
+            <button type="button" className="kawmed-text-link" onClick={() => setModal('schedule')}>
+              Ver todos los horarios <FiChevronRight />
+            </button>
+          ) : null}
+        </section>
 
-          <button type="button" className="kawmed-menu-item" onClick={shareProfile}>
-            <span className="kawmed-menu-item__icon"><FiShare2 /></span>
-            <span className="kawmed-menu-item__copy">
-              <strong>Compartir perfil</strong>
-              <small>{shareNotice || 'Enviar o copiar enlace'}</small>
-            </span>
-            <FiChevronRight className="kawmed-menu-item__chevron" />
-          </button>
+        <section className="kawmed-section">
+          <div className="kawmed-section-heading">
+            <div>
+              <h2>Centros de atención</h2>
+              <p>{profile.centers.length} {profile.centers.length === 1 ? 'centro disponible' : 'centros disponibles'}</p>
+            </div>
+            <span className="kawmed-section-icon"><FiBriefcase /></span>
+          </div>
+          <div className="kawmed-centers-preview">
+            {visibleCenters.map((center) => (
+              <article key={center.id} className="kawmed-center-preview">
+                <div>
+                  <strong>{center.name}</strong>
+                  <span>{[center.address, center.city].filter(Boolean).join(' · ')}</span>
+                </div>
+                <button type="button" onClick={() => openMap(center)} disabled={!center.map_url && (center.latitude === null || center.longitude === null)}>
+                  <FiNavigation /> Ver ubicación
+                </button>
+              </article>
+            ))}
+          </div>
+          {profile.centers.length > visibleCenters.length ? (
+            <button type="button" className="kawmed-text-link" onClick={() => setModal('centers')}>
+              Ver todos los centros <FiChevronRight />
+            </button>
+          ) : null}
+        </section>
+
+        <section className="kawmed-section">
+          <div className="kawmed-section-heading">
+            <div>
+              <h2>Servicios / Especialidades</h2>
+              <p>Áreas de atención profesional</p>
+            </div>
+            <span className="kawmed-section-icon"><FiActivity /></span>
+          </div>
+          <div className="kawmed-services-grid">
+            {visibleServices.map((service) => (
+              <article key={service.id} className="kawmed-service-tile">
+                <span className="kawmed-service-tile__icon"><FiActivity /></span>
+                <strong>{service.title}</strong>
+                {service.description ? <p>{service.description}</p> : null}
+              </article>
+            ))}
+          </div>
+          {profile.services.length > visibleServices.length ? (
+            <button type="button" className="kawmed-text-link" onClick={() => setModal('services')}>
+              Ver todos los servicios <FiChevronRight />
+            </button>
+          ) : null}
         </section>
 
         <footer className="kawmed-footer">
@@ -390,7 +452,6 @@ export default function KawMedProfile() {
           <small>by KawLink · información profesional pública</small>
         </footer>
       </div>
-
       <KawMedAppointmentModal open={appointmentOpen} profile={profile} onClose={() => setAppointmentOpen(false)} />
 
       <KawMedModal open={modal === 'about'} title="Sobre mí" onClose={() => setModal(null)}>
