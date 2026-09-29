@@ -32,7 +32,7 @@ function mediaSpec(file:File):{kind:QuoteMediaKind;ext:string;contentType:string
 
 function mediaUrl(c:any,code:string){
   const origin=new URL(c.req.url).origin
-  return `${origin}/media/${encodeURIComponent(code)}`
+  return `${origin}/${encodeURIComponent(code)}`
 }
 
 async function mediaRow(c:any,code:string){
