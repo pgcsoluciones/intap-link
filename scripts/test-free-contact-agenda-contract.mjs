@@ -80,7 +80,6 @@ has(settings,'Guardar horario','Mi cuenta edita y guarda horario independiente d
 has(settings,'Configurar disponibilidad de Agenda','Agenda conserva su configuración separada del horario público')
 has(settings,'Cotizar / información','control Cotizar en Mi cuenta')
 has(settings,'Agenda','control Agenda en Mi cuenta')
-has(settings,'Configurar horario y agenda','acceso a configuración completa')
 has(settings,'Nombre de Catálogo / Portafolio','nombre editable de catálogo/portafolio')
 
 has(app,'path="/admin/free/agenda"','ruta privada de Agenda Free')
