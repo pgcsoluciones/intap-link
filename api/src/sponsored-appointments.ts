@@ -85,7 +85,6 @@ async function appointmentManageUrl(c:any,profile:any){
 }
 
 async function addAppointmentNotification(c:any,request:any,profile:any){
-  if(Number((profile as any).appointment_button_visible||0)!==1)return c.json({ok:false,error:'La agenda no está disponible.'},404)
   const ownerUserId=String((profile as any).user_id||'')
   if(!ownerUserId)return
   const id=crypto.randomUUID()
@@ -127,6 +126,7 @@ app.post('/api/v1/public/sponsored/:username/appointments',async(c:any)=>{
   const username=cleanUsername(c.req.param('username'))
   const profile=await sponsoredPublicSubject(c,username)
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
+  if(Number((profile as any).appointment_button_visible||0)!==1)return c.json({ok:false,error:'La agenda no está disponible.'},404)
   const ownerUserId=String((profile as any).user_id||'')
   const whatsapp=cleanPhone((profile as any).whatsapp||(profile as any).phone)
   if(!ownerUserId||!whatsapp)return c.json({ok:false,error:'Este perfil todavía no puede recibir solicitudes de agenda.'},409)
