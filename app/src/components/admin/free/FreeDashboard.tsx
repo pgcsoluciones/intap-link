@@ -202,7 +202,6 @@ export default function FreeDashboard() {
     if (item.readinessKey === 'contact') return contactConfirmed
     if (item.readinessKey === 'quick_actions') return quickActionsConfirmed
     if (item.readinessKey === 'portfolio') return portfolioConfirmed
-    if (item.readinessKey === 'services') return servicesConfirmed
     if (item.stateKey === 'location') return locationConfigured
     return false
   }
