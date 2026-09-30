@@ -67,6 +67,18 @@ function appointmentMessage(row:any){
   ].filter(Boolean).join('\n\n')
 }
 const DAY_LABELS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+const DEFAULT_FREE_SCHEDULE=[{day:'Lunes a Viernes',hours:'8:00 AM - 6:00 PM'},{day:'Sábados',hours:'9:00 AM - 1:00 PM'}]
+function cleanSchedule(value:any){
+  if(!Array.isArray(value))return[]
+  return value.slice(0,7).map((item:any)=>({
+    day:String(item?.day||'').trim().slice(0,40),
+    hours:String(item?.hours||'').trim().slice(0,60),
+  })).filter((item:any)=>item.day&&item.hours)
+}
+function freeSchedule(template:any){
+  if(template?.free_schedule_configured===true)return cleanSchedule(template?.free_schedule)
+  return DEFAULT_FREE_SCHEDULE
+}
 function publicSchedule(rows:any[]){
   const groups=new Map<number,string[]>()
   for(const row of rows){
@@ -157,7 +169,7 @@ app.get('/api/v1/me/free/experience',requireUser,async(c:any)=>{
     quote_button_visible:quoteVisible(template),
     appointment_enabled:settings.enabled,
     portfolio_title:portfolioTitle(template),
-    schedule:template?.free_schedule_visible===true?publicSchedule(availability as any[]):[],
+    schedule:freeSchedule(template),
   }})
 })
 app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
@@ -171,13 +183,13 @@ app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
   if(!nextQuote&&!nextAgenda)return c.json({ok:false,error:'Debes mantener visible al menos Cotizar / información o Agendar.'},422)
   if(body.portfolio_title!==undefined)template.free_portfolio_title=String(body.portfolio_title||'').trim().slice(0,40)||'Portafolio'
   if(body.quote_button_visible!==undefined)template.free_quote_button_visible=nextQuote
-  if(body.appointment_enabled===true)template.free_schedule_visible=true
+  if(body.schedule!==undefined){template.free_schedule=cleanSchedule(body.schedule);template.free_schedule_configured=true}
   const statements:any[]=[
     c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),resolved.subject.id),
   ]
   if(body.appointment_enabled!==undefined)statements.push(c.env.DB.prepare("UPDATE appointment_settings SET enabled=?,updated_at=datetime('now') WHERE subject_type='free' AND subject_id=?").bind(nextAgenda?1:0,resolved.subject.id))
   await c.env.DB.batch(statements)
-  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template)}})
+  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template),schedule:freeSchedule(template)}})
 })
 
 app.get('/api/v1/me/free/appointments',requireUser,async(c:any)=>{
@@ -202,7 +214,7 @@ app.put('/api/v1/me/free/appointments/settings',requireUser,async(c:any)=>{
     const template=parseTemplateData((resolved.profile as any).template_data)
     if(!quoteVisible(template))return c.json({ok:false,error:'No puedes desactivar Agenda mientras Cotizar / información esté oculto. Activa Cotizar primero.'},422)
   }
-  try{await saveAppointmentConfiguration(c.env.DB,'free',resolved.subject.id,body);const template=parseTemplateData((resolved.profile as any).template_data);template.free_schedule_visible=true;await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),resolved.subject.id).run();return c.json({ok:true})}
+  try{await saveAppointmentConfiguration(c.env.DB,'free',resolved.subject.id,body);return c.json({ok:true})}
   catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos guardar la agenda.'},400)}
 })
 app.post('/api/v1/me/free/appointments/blocks',requireUser,async(c:any)=>{
