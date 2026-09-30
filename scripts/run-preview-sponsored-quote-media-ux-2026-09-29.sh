@@ -42,7 +42,7 @@ run git pull --ff-only github "$BRANCH"
 git restore -- scripts/run-preview-sponsored-quote-media-ux-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
-ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations-preview/0079_sponsored_quote_media_batch\.sql|api/migrations-preview/0080_appointments_core\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/migrations/0079_sponsored_quote_media_batch\.sql|api/migrations/0080_appointments_core\.sql|api/src/appointments-core\.ts|api/src/sponsored-appointments\.ts|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|api/src/account-home-route\.ts|app/public/sw\.js|app/src/components/admin/free/FreePwaHome\.tsx|app/src/components/notifications/PwaNotificationBridge\.tsx|app/src/App\.tsx|app/src/components/appointments/AppointmentManager\.tsx|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|app/src/components/admin/sponsored/SponsoredExperienceTools\.tsx|app/src/components/admin/sponsored/SponsoredAppointments\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/appointments/AppointmentRequestModal\.tsx|web/src/components/appointments/AppointmentOwnerBar\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredAppointmentModal\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
+ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations-preview/0079_sponsored_quote_media_batch\.sql|api/migrations-preview/0080_appointments_core\.sql|api/migrations-preview/0081_sponsored_public_actions\.sql|api/migrations-preview/0082_user_push_subscriptions\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/migrations/0079_sponsored_quote_media_batch\.sql|api/migrations/0080_appointments_core\.sql|api/migrations/0081_sponsored_public_actions\.sql|api/migrations/0082_user_push_subscriptions\.sql|api/src/appointments-core\.ts|api/src/sponsored-appointments\.ts|api/src/pwa-push\.ts|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/src/account-home-route\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|app/public/sw\.js|app/src/components/admin/free/FreePwaHome\.tsx|app/src/components/notifications/PwaNotificationBridge\.tsx|app/src/App\.tsx|app/src/components/appointments/AppointmentManager\.tsx|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|app/src/components/admin/sponsored/SponsoredExperienceTools\.tsx|app/src/components/admin/sponsored/SponsoredAppointments\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/appointments/AppointmentRequestModal\.tsx|web/src/components/appointments/AppointmentOwnerBar\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredAppointmentModal\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/generate-vapid-jwk\.mjs|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
@@ -52,6 +52,15 @@ run npm ci
 run npm run build:preview -w app
 run npm run build -w web
 run bash -lc 'cd api && npx tsc --noEmit'
+
+echo; echo "▶ Verificar VAPID Preview para Web Push"
+if ! (cd api && npx wrangler secret list --config wrangler.preview.toml 2>/dev/null | grep -F 'VAPID_PRIVATE_JWK' >/dev/null); then
+  echo "  Creando clave VAPID Preview estable..."
+  node scripts/generate-vapid-jwk.mjs | (cd api && npx wrangler secret put VAPID_PRIVATE_JWK --config wrangler.preview.toml) >/dev/null || fail "Configurar VAPID_PRIVATE_JWK Preview"
+  echo "✓ VAPID_PRIVATE_JWK creada en Preview"
+else
+  echo "✓ VAPID_PRIVATE_JWK ya existe en Preview"
+fi
 
 if [ "${SKIP_MIGRATIONS:-0}" = "1" ]; then
   echo; echo "▶ Migraciones D1 Preview omitidas por SKIP_MIGRATIONS=1"
@@ -76,6 +85,11 @@ APPOINTMENT_TABLES="$(cd api && npx wrangler d1 execute intap_db_preview --remot
 for table in appointment_settings appointment_availability appointment_reasons appointment_blocks appointment_requests; do
   echo "$APPOINTMENT_TABLES" | grep -F "$table" >/dev/null || fail "D1 Preview no tiene $table"
 done
+PUBLIC_ACTION_COLUMNS="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsored_profiles') WHERE name IN ('quote_button_visible','appointment_button_visible') ORDER BY name;" 2>/dev/null || true)"
+echo "$PUBLIC_ACTION_COLUMNS" | grep -F 'quote_button_visible' >/dev/null || fail "D1 Preview no tiene sponsored_profiles.quote_button_visible"
+echo "$PUBLIC_ACTION_COLUMNS" | grep -F 'appointment_button_visible' >/dev/null || fail "D1 Preview no tiene sponsored_profiles.appointment_button_visible"
+PUSH_TABLE="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='user_push_subscriptions';" 2>/dev/null || true)"
+echo "$PUSH_TABLE" | grep -F 'user_push_subscriptions' >/dev/null || fail "D1 Preview no tiene user_push_subscriptions"
 echo "✓ Esquema D1 Preview verificado"
 
 echo; echo "▶ Deploy App Pages Preview"
@@ -145,7 +159,7 @@ Validar:
 3. Desactivar cintillo oculta solo patrocinio del perfil público.
 4. "Desarrollado por KawLink" permanece visible.
 5. Debajo del horario aparece "Solicitar cotización / información".
-6. No aparecen botones para compartir el formulario de cotización.
+6. Debajo de cada acción pública visible aparece su enlace de compartir por WhatsApp.
 7. Modal pide nombre, teléfono, correo opcional y cotización / información.
 8. Entrega, sector y forma de pago son opcionales.
 9. Al completar nombre, teléfono y cotización / información aparece el selector de envío.
@@ -162,7 +176,7 @@ Validar:
 20. Ese enlace abre las imágenes como galería navegable.
 21. En la galería, cada imagen se descarga individualmente desde la imagen visible.
 22. Los enlaces temporales de media no muestran imagen, favicon ni tarjeta gráfica de Kawvo Link.
-23. Junto a Cotizar / información aparece Agendar.
+23. El dueño puede mostrar Cotizar, Agendar o ambos; nunca dejar el perfil sin una acción.
 24. Agenda pide nombre, teléfono, correo opcional, fecha, hora, motivo y detalles.
 25. Agenda ofrece motivos universales: visita, llamada, reunión/cita, evaluación/chequeo, compra/retiro, servicio/atención u otro.
 26. Agenda se envía únicamente por WhatsApp y queda pendiente de confirmación.
@@ -170,7 +184,7 @@ Validar:
 28. Al enviar cotización, formulario y adjuntos quedan limpios.
 29. El endpoint efímero rechaza archivos vencidos y el cron los elimina de R2/D1.
 30. Producción NO tocada.
-31. Agenda está inactiva por defecto y Agendar solo aparece públicamente cuando el dueño la activa.
+31. Agenda está inactiva por defecto; Agendar solo puede hacerse visible cuando el módulo está activo.
 32. El dueño configura duración, anticipación, horizonte, días y franjas horarias.
 33. Puede bloquear un día completo o una franja y volver a habilitarla.
 34. Puede usar motivos predeterminados o personalizarlos.
@@ -186,5 +200,9 @@ Validar:
 44. Nueva solicitud de agenda reproduce el sonido elegido mientras Kawvo está activa; modo sin sonido intenta vibración.
 45. PWA ofrece Agenda ascendente, Campana suave, Pulso corto y Sin sonido.
 46. Con permiso del sistema, una nueva agenda muestra notificación cuando la app está oculta y tocarla abre la acción.
+47. Web Push registra el dispositivo y entrega la solicitud aunque la PWA esté cerrada, si el navegador/SO lo soporta.
+48. Cotizar / información y Agendar tienen visibilidad configurable desde el panel.
+49. Si Cotizar se oculta, Agenda debe permanecer activa y visible; si Agenda se desactiva, Cotizar debe estar visible.
+50. Compartir formulario abre ?cotizar=1 y Compartir agenda abre ?agendar=1 mediante WhatsApp.
 ============================================================
 EOF
