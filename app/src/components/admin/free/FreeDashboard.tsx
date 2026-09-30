@@ -49,7 +49,6 @@ const freeItems: FreeItem[] = [
   { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖', help: 'Agrega la dirección real de tu negocio.', stateKey: 'location', teamPermission: 'location' },
   { title: 'Mis enlaces', text: 'Hasta 3 enlaces importantes', to: '/admin/free/links', icon: '↗', help: 'Agrega páginas, catálogos y enlaces.', available: true, teamPermission: 'links' },
   { title: 'Muestra tus trabajos realizados', text: 'Máx. 5 fotos · mínimo 3 reales para publicar', to: '/admin/free/portfolio', icon: '▧', help: 'Sustituye las imágenes de ejemplo por trabajos reales.', readinessKey: 'portfolio', teamPermission: 'portfolio' },
-  { title: 'Agrega tus servicios', text: 'Describe brevemente qué ofreces', to: '/admin/free/services', icon: '◇', help: 'Revisa los servicios y sustitúyelos por lo que realmente ofreces.', readinessKey: 'services', teamPermission: 'services' },
 ]
 
 function isStarterAsset(value: unknown) { return String(value || '').includes('/assets/free-starter/') }
@@ -73,7 +72,6 @@ export default function FreeDashboard() {
   const [contactConfirmed, setContactConfirmed] = useState(false)
   const [quickActionsConfirmed, setQuickActionsConfirmed] = useState(false)
   const [portfolioConfirmed, setPortfolioConfirmed] = useState(false)
-  const [servicesConfirmed, setServicesConfirmed] = useState(false)
   const [bankSummary, setBankSummary] = useState<BankSummary>({ allowed: false, source: null, enabled: false, count: 0 })
   const [teamContext, setTeamContext] = useState<TeamContext>({ role: 'none' })
 
@@ -85,9 +83,8 @@ export default function FreeDashboard() {
       apiGet('/me/contact').catch(() => ({ ok: false })),
       apiGet('/me/free/quick-actions').catch(() => ({ ok: false })),
       apiGet('/me/gallery').catch(() => ({ ok: false })),
-      apiGet('/me/products').catch(() => ({ ok: false })),
       apiGet('/me/team/context').catch(() => ({ ok: false })),
-    ]).then(([meJson, superAdminJson, bankJson, contactJson, quickJson, galleryJson, servicesJson, teamJson]: any[]) => {
+]).then(([meJson, superAdminJson, bankJson, contactJson, quickJson, galleryJson, teamJson]: any[]) => {
       if (meJson?.ok) setMe(meJson.data)
       setHasSuperAdminAccess(Boolean(superAdminJson?.ok))
       if (teamJson?.ok) setTeamContext(teamJson.data || { role: 'none' })
@@ -111,10 +108,6 @@ export default function FreeDashboard() {
       if (galleryJson?.ok) {
         const photos = Array.isArray(galleryJson.photos) ? galleryJson.photos : []
         setPortfolioConfirmed(photos.filter((photo: any) => !isStarterId(photo?.id) || !isStarterAsset(photo?.image_key)).length >= 3)
-      }
-      if (servicesJson?.ok) {
-        const items = Array.isArray(servicesJson.data) ? servicesJson.data : []
-        setServicesConfirmed(items.filter((item: any) => !isStarterId(item?.id) || !isStarterAsset(item?.image_url)).length >= 2)
       }
     }).finally(() => setLoading(false))
   }, [])
