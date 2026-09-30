@@ -302,7 +302,7 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       companyName,
       personalBadge: readString(templateData, 'personal_badge') || 'Marca personal',
       aboutTitle: allowedTitle(readString(templateData, 'about_section_title'), ABOUT_TITLES, 'Sobre mí'),
-      portfolioTitle: allowedTitle(readString(templateData, 'portfolio_section_title'), PORTFOLIO_TITLES, 'Portafolio'),
+      portfolioTitle: readString(templateData, 'free_portfolio_title', 'portfolio_section_title').slice(0, 40) || 'Portafolio',
       servicesTitle: readString(templateData, 'services_section_title').slice(0, 60) || starter.servicesTitle || 'Servicios',
       servicesDescription: readString(templateData, 'services_section_description').slice(0, 240) || starter.servicesDescription,
       bio: readString(data, 'bio') || starter.bio,
