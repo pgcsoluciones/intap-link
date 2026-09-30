@@ -80,7 +80,8 @@ async function addAppointmentNotification(c:any,request:any,profile:any){
   if(!ownerUserId)return
   const id=crypto.randomUUID()
   const profileId=String((profile as any).id||'')
-  const actionUrl='/admin/sponsored/agenda?profile_id='+encodeURIComponent(profileId)+'&request='+encodeURIComponent(String(request.id||''))
+  const isMaster=String((profile as any).profile_role||'')==='sponsor_owner'
+  const actionUrl=(isMaster?'/admin/sponsored/agenda?scope=master&request=':'/admin/sponsored/agenda?profile_id='+encodeURIComponent(profileId)+'&request=')+encodeURIComponent(String(request.id||''))
   const title='Nueva solicitud de agenda'
   const message=String(request.customer_name||'Cliente')+' · '+String(request.reason_label||'Cita')+' · '+humanDate(String(request.appointment_date||''),String(request.timezone||'America/Santo_Domingo'))+' · '+humanTime(String(request.start_time||''))
   await c.env.DB.prepare("INSERT INTO user_notifications(id,user_id,profile_id,type,title,message,source_type,source_id,action_label,action_url,created_at) VALUES (?,?,NULL,'sponsored_appointment_request',?,?,'appointment_request',?,'Revisar solicitud',?,datetime('now'))").bind(id,ownerUserId,title,message,String(request.id||''),actionUrl).run().catch(()=>undefined)
