@@ -44,6 +44,7 @@ ordered(profile,[
 
 has(profile,'previewMode={editMode}','editor Free conserva las nuevas secciones en vista previa')
 absent(profile,'ilx-services-section','Servicios no debe renderizarse como sección pública Free')
+absent(profile,'/>\\\\n\\\\n          {customLinks','no deben renderizarse escapes de salto de línea antes de Mis enlaces')
 absent(dashboard,"to: '/admin/free/services'",'Servicios no debe aparecer como opción del panel Free')
 absent(dashboard,'Agrega tus servicios','copy de Servicios no debe reaparecer en panel Free')
 
@@ -76,6 +77,7 @@ has(bridge,"'free_appointment_request'",'PWA avisa solicitudes Free')
 
 has(entry,"import './free-appointments'",'Worker registra endpoints Free')
 has(api,"'/api/v1/public/profiles/:slug/free-experience'",'API pública de experiencia Free')
+has(api,"SELECT id,user_id,slug,name,template_data,plan_id,is_published",'resolver público Free usa la misma fuente canónica del perfil')
 has(api,"'/api/v1/public/profiles/:slug/appointments'",'API pública de Agenda Free')
 has(api,"'/api/v1/me/free/experience'",'API privada de configuración Free')
 has(api,"'/api/v1/me/free/appointments'",'API privada de Agenda Free')
