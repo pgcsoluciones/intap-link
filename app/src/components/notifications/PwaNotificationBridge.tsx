@@ -113,7 +113,7 @@ export default function PwaNotificationBridge(){
         const unread=Number(json.data?.unread_count||items.filter(item=>!item.read_at).length||0)
         await setBadge(unread)
         window.dispatchEvent(new CustomEvent('kawvo:pwa-notifications',{detail:{unread,items}}))
-        const agendaItems=items.filter(item=>item.type==='sponsored_appointment_request'&&!item.read_at)
+        const agendaItems=items.filter(item=>['sponsored_appointment_request','free_appointment_request'].includes(item.type)&&!item.read_at)
         let alerted:string[]=[]
         try{const parsed=JSON.parse(localStorage.getItem(ALERTED_KEY)||'[]');alerted=Array.isArray(parsed)?parsed.map(String):[]}catch{}
         if(!localStorage.getItem(ALERTED_KEY)){
