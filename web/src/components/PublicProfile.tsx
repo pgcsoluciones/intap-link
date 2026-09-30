@@ -104,6 +104,11 @@ interface PublicData {
   whatsapp_number: string | null
   templateId?: string | null
   templateData?: Record<string, string>
+  freeExperience?: {
+    schedule?: Array<{ day: string; hours: string }>
+    quote_button_visible?: boolean
+    appointment_enabled?: boolean
+  } | null
   social_links: SocialLink[]
   links: ProfileLink[]
   gallery: GalleryItem[]
