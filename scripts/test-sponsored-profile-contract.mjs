@@ -524,7 +524,7 @@ if(quoteModalSource.includes('Compartir formulario')||quoteModalSource.includes(
 if(publicUi.indexOf('Compartir formulario')>quoteModalStart)throw new Error('Compartir formulario debe aparecer debajo del botón Cotizar / información antes del modal')
 has(publicUi,"params.get('cotizar')==='1'",'enlace profundo abre el formulario directamente')
 has(publicUi,"history.replaceState({},'',`/p/${encodeURIComponent(data?.username||username)}`)",'al enviar la solicitud el navegador vuelve al home limpio del perfil')
-has(beneficiary,'Solicitar cotización / información','vista previa patrocinada muestra CTA universal')
+has(beneficiary,'Cotizar / información','vista previa patrocinada muestra CTA universal vigente')
 has(publicUi,"data.gallery_title||'Catálogo'",'catálogo editable')
 has(publicUi,'Desarrollado por','firma KawLink')
 has(beneficiary,'Hasta 10 imágenes','límite galería comunicado')
