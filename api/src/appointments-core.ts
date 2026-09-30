@@ -93,6 +93,10 @@ export async function getAppointmentReasons(db:D1Database,subjectType:string,sub
   return (rows.results||[]).map((row:any)=>({id:String(row.id),code:'custom',label:String(row.label||''),enabled:bool(row.enabled),sort_order:Number(row.sort_order||0)}))
 }
 
+export async function getAppointmentCustomReasons(db:D1Database,subjectType:string,subjectId:string){
+  return getAppointmentReasons(db,subjectType,subjectId,'custom')
+}
+
 export async function getAppointmentAvailabilityRows(db:D1Database,subjectType:string,subjectId:string){
   await ensureAppointmentSubject(db,subjectType,subjectId)
   const rows=await db.prepare(`SELECT id,weekday,start_time,end_time,enabled,sort_order FROM appointment_availability WHERE subject_type=? AND subject_id=? ORDER BY weekday ASC,sort_order ASC,start_time ASC`).bind(subjectType,subjectId).all()
@@ -170,8 +174,8 @@ export async function saveAppointmentConfiguration(db:D1Database,subjectType:str
   const statements:any[]=[
     db.prepare(`UPDATE appointment_settings SET enabled=?,slot_minutes=?,min_notice_minutes=?,horizon_days=?,timezone=?,reason_mode=?,updated_at=datetime('now') WHERE subject_type=? AND subject_id=?`).bind(body?.enabled===true?1:0,slot,notice,horizon,timezone,reasonMode,subjectType,subjectId),
     db.prepare(`DELETE FROM appointment_availability WHERE subject_type=? AND subject_id=?`).bind(subjectType,subjectId),
-    db.prepare(`DELETE FROM appointment_reasons WHERE subject_type=? AND subject_id=?`).bind(subjectType,subjectId),
   ]
+  if(reasonMode==='custom')statements.push(db.prepare(`DELETE FROM appointment_reasons WHERE subject_type=? AND subject_id=?`).bind(subjectType,subjectId))
   availability.forEach((item:any)=>statements.push(db.prepare(`INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES (?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),subjectType,subjectId,item.weekday,item.start_time,item.end_time,item.enabled?1:0,item.sort_order)))
   if(reasonMode==='custom')reasons.forEach((item:any)=>statements.push(db.prepare(`INSERT INTO appointment_reasons(id,subject_type,subject_id,label,enabled,sort_order) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(),subjectType,subjectId,item.label,item.enabled?1:0,item.sort_order)))
   await db.batch(statements)
