@@ -4,7 +4,7 @@ import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
 import type { FreeProfileAppearanceColors, FreeProfileData } from './IntapLinkGratis.types'
 
 type Experience={schedule:Array<{day:string;hours:string}>;quote_button_visible:boolean;appointment_enabled:boolean;portfolio_title:string;quote_email?:string;has_whatsapp?:boolean}
-type Props={profile:FreeProfileData;colors:FreeProfileAppearanceColors}
+type Props={profile:FreeProfileData;colors:FreeProfileAppearanceColors;previewMode?:boolean}
 
 function normalizeWhatsapp(value:string){
   let digits=String(value||'').replace(/\\D/g,'')
@@ -16,7 +16,7 @@ function palette(colors:FreeProfileAppearanceColors){return{accent:colors.button
 function fieldStyle():React.CSSProperties{return{width:'100%',boxSizing:'border-box',border:'1px solid #dbe4ef',borderRadius:14,padding:'12px 13px',fontSize:14,outline:'none',background:'#fff',color:'#0f172a'}}
 const labelStyle:React.CSSProperties={display:'grid',gap:7,fontSize:12.5,fontWeight:850,color:'#334155'}
 
-export default function FreeContactActions({profile,colors}:Props){
+export default function FreeContactActions({profile,colors,previewMode=false}:Props){
   const[data,setData]=useState<Experience|null>(null)
   const[quoteOpen,setQuoteOpen]=useState(false)
   const[appointmentOpen,setAppointmentOpen]=useState(false)
@@ -27,7 +27,7 @@ export default function FreeContactActions({profile,colors}:Props){
   const apiBase='/api/v1/public/profiles/'+encodeURIComponent(profile.slug)
   const publicBase=typeof window!=='undefined'?window.location.origin+window.location.pathname:''
 
-  useEffect(()=>{let alive=true;fetch(apiBase+'/free-experience',{cache:'no-store'}).then(r=>r.json()).then((json:any)=>{if(alive&&json?.ok)setData(json.data)}).catch(()=>undefined);return()=>{alive=false}},[profile.slug])
+  useEffect(()=>{let alive=true;const preview=previewMode||new URLSearchParams(window.location.search).get('preview')==='1'||window.location.hostname.startsWith('app.');const endpoint=preview?'/api/v1/me/free/experience':apiBase+'/free-experience';fetch(endpoint,{cache:'no-store',credentials:preview?'include':'omit'}).then(r=>r.json()).then((json:any)=>{if(alive&&json?.ok)setData(json.data)}).catch(()=>undefined);return()=>{alive=false}},[profile.slug,previewMode])
   useEffect(()=>{if(!data)return;const params=new URLSearchParams(window.location.search);if(params.get('cotizar')==='1'&&data.quote_button_visible)setQuoteOpen(true);if(params.get('agendar')==='1'&&data.appointment_enabled)setAppointmentOpen(true)},[data])
   useEffect(()=>{if(!quoteOpen&&!appointmentOpen)return;const previous=document.body.style.overflow;document.body.style.overflow='hidden';return()=>{document.body.style.overflow=previous}},[quoteOpen,appointmentOpen])
   useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800);return()=>window.clearTimeout(id)},[toast])
