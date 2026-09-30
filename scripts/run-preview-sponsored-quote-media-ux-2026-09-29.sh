@@ -203,6 +203,6 @@ Validar:
 47. Web Push registra el dispositivo y entrega la solicitud aunque la PWA esté cerrada, si el navegador/SO lo soporta.
 48. Cotizar / información y Agendar tienen visibilidad configurable desde el panel.
 49. Si Cotizar se oculta, Agenda debe permanecer activa y visible; si Agenda se desactiva, Cotizar debe estar visible.
-50. Compartir formulario abre ?cotizar=1 y Compartir agenda abre ?agendar=1 mediante WhatsApp.
+50. Compartir formulario abre ?cotizar=1 y Compartir agendar abre ?agendar=1 mediante WhatsApp.
 ============================================================
 EOF
