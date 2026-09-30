@@ -25,7 +25,7 @@ async function syncPushSubscription():Promise<boolean>{
   try{
     const keyJson:any=await apiGet('/me/push/public-key')
     const publicKey=String(keyJson?.data?.public_key||'')
-    if(!keyJson?.ok||!keyJson.data?.enabled||!publicKey)return
+    if(!keyJson?.ok||!keyJson.data?.enabled||!publicKey)return false
     const registration=await navigator.serviceWorker.ready
     let subscription=await registration.pushManager.getSubscription()
     if(!subscription){
