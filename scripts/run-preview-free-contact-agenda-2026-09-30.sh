@@ -94,8 +94,8 @@ run node scripts/test-free-contact-agenda-contract.mjs
 echo; echo "▶ Build App Preview"
 run npm run build:preview -w app
 
-echo; echo "▶ Build Web"
-run npm run build -w web
+echo; echo "▶ Build Web Preview"
+run npm run build:preview -w web
 
 echo; echo "▶ TypeScript API"
 run bash -lc 'cd api && npx tsc --noEmit'
@@ -172,19 +172,37 @@ do
   [ "$code" = "200" ] || fail "$url respondió HTTP $code"
 done
 
-echo; echo "▶ Smoke canónico de perfil Free real"
-curl -sS -f "https://preview.intaprd.com/api/v1/public/profiles/jlprince" -o "$LOG_DIR/jlprince-profile.json" || fail "No se pudo consultar el perfil Free real"
-python3 - "$LOG_DIR/jlprince-profile.json" <<'PY'
+echo; echo "▶ Descubrir perfil Free publicado REAL en D1 Preview"
+FREE_SLUG="$(
+  cd api
+  npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --json --command "SELECT slug FROM profiles WHERE lower(COALESCE(plan_id,'free'))='free' AND COALESCE(is_published,0)=1 ORDER BY updated_at DESC, created_at DESC LIMIT 1;" 2>/dev/null |
+  python3 -c "import json,sys; d=json.load(sys.stdin); rows=((d[0].get('results') if isinstance(d,list) and d else []) or []); print((rows[0].get('slug') if rows else '') or '')"
+)"
+[ -n "$FREE_SLUG" ] || fail "No hay un perfil Free publicado en D1 Preview. Crea/activa uno en app.preview.intaprd.com antes de validar la UI pública."
+echo "✓ Perfil Free Preview detectado: /$FREE_SLUG"
+
+echo; echo "▶ Smoke canónico del perfil Free de Preview"
+curl -sS -f "https://preview.intaprd.com/api/v1/public/profiles/$FREE_SLUG" -o "$LOG_DIR/free-profile.json" || fail "El perfil Free de D1 Preview no responde por el endpoint canónico"
+python3 - "$LOG_DIR/free-profile.json" "$FREE_SLUG" <<'PY'
 import json,sys
 p=json.load(open(sys.argv[1]))
+slug=sys.argv[2]
 d=p.get('data') or {}
+assert d.get('slug')==slug, f"slug inesperado: {d.get('slug')!r} != {slug!r}"
 assert d.get('planId')=='free', f"planId inesperado: {d.get('planId')}"
 x=d.get('freeExperience')
 assert isinstance(x,dict), f"freeExperience ausente: {x!r}"
 assert x.get('quote_button_visible') is True, f"Cotizar no viene activo: {x!r}"
 assert isinstance(x.get('schedule'),list), f"schedule inválido: {x!r}"
-print("✓ Payload canónico Free: Cotizar activo + schedule presente")
+print(f"✓ Payload canónico Free real /{slug}: Cotizar activo + experiencia integrada")
 PY
+
+echo; echo "▶ Verificar que Web Preview fue compilada contra Preview, no Producción"
+grep -R -F "https://preview.intaprd.com" web/dist/assets >/dev/null || fail "El bundle Web no contiene el API de Preview"
+if grep -R -F "https://api.intaprd.com" web/dist/assets >/dev/null; then
+  fail "El bundle Web Preview contiene el API de Producción. Riesgo de cruce de entornos."
+fi
+echo "✓ Bundle Web aislado en Preview"
 
 echo; echo "▶ Smoke perfil Free inexistente"
 code="$(curl -sS -o "$LOG_DIR/free404.json" -w '%{http_code}' "https://preview.intaprd.com/api/v1/public/profiles/kawvo-release-smoke-no-existe")"
