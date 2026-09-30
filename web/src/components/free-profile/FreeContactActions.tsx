@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { FaCalendarAlt, FaClock, FaFileInvoiceDollar, FaWhatsapp } from 'react-icons/fa'
 import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
 import type { FreeProfileAppearanceColors, FreeProfileData } from './IntapLinkGratis.types'
@@ -7,14 +7,14 @@ type Experience={schedule:Array<{day:string;hours:string}>;quote_button_visible:
 type Props={profile:FreeProfileData;colors:FreeProfileAppearanceColors;previewMode?:boolean}
 
 function normalizeWhatsapp(value:string){
-  let digits=String(value||'').replace(/\\D/g,'')
+  let digits=String(value||'').replace(/\D/g,'')
   if(digits.startsWith('00'))digits=digits.slice(2)
   if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits
   return digits
 }
 function palette(colors:FreeProfileAppearanceColors){return{accent:colors.button||colors.accent||colors.primary,accentSoft:colors.surface||'#ffffff',text:colors.text||'#111827'}}
-function fieldStyle():React.CSSProperties{return{width:'100%',boxSizing:'border-box',border:'1px solid #dbe4ef',borderRadius:14,padding:'12px 13px',fontSize:14,outline:'none',background:'#fff',color:'#0f172a'}}
-const labelStyle:React.CSSProperties={display:'grid',gap:7,fontSize:12.5,fontWeight:850,color:'#334155'}
+function fieldStyle():CSSProperties{return{width:'100%',boxSizing:'border-box',border:'1px solid #dbe4ef',borderRadius:14,padding:'12px 13px',fontSize:14,outline:'none',background:'#fff',color:'#0f172a'}}
+const labelStyle:CSSProperties={display:'grid',gap:7,fontSize:12.5,fontWeight:850,color:'#334155'}
 
 export default function FreeContactActions({profile,colors,previewMode=false}:Props){
   const[data,setData]=useState<Experience|null>(null)
@@ -36,7 +36,7 @@ export default function FreeContactActions({profile,colors,previewMode=false}:Pr
   const whatsapp=normalizeWhatsapp(profile.whatsapp||profile.phone)
   const email=String(data.quote_email||profile.email||'').trim()
   const canWhatsapp=Boolean(whatsapp)
-  const canEmail=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)
+  const canEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const effectiveChannel=quoteChannel||(canWhatsapp?'whatsapp':canEmail?'email':'')
   const quoteReady=Boolean(quote.name.trim()&&quote.phone.trim()&&quote.request.trim())
 
@@ -61,8 +61,8 @@ export default function FreeContactActions({profile,colors,previewMode=false}:Pr
       '',
       'Quedo atento/a a su respuesta.',
     ]
-    if(effectiveChannel==='whatsapp'&&canWhatsapp){const url='https://wa.me/'+whatsapp+'?text='+encodeURIComponent(lines.join('\\n'));setQuoteOpen(false);resetQuote();window.open(url,'_blank','noopener,noreferrer');return}
-    if(canEmail){const subject='Solicitud de cotización – '+quote.name.trim();setQuoteOpen(false);resetQuote();window.location.href='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(lines.join('\\n'));return}
+    if(effectiveChannel==='whatsapp'&&canWhatsapp){const url='https://wa.me/'+whatsapp+'?text='+encodeURIComponent(lines.join('\n'));setQuoteOpen(false);resetQuote();window.open(url,'_blank','noopener,noreferrer');return}
+    if(canEmail){const subject='Solicitud de cotización – '+quote.name.trim();setQuoteOpen(false);resetQuote();window.location.href='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(lines.join('\n'));return}
     setToast('Este perfil no tiene un canal disponible para cotizaciones.')
   }
 
