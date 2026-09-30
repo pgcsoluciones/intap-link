@@ -67,6 +67,7 @@ app/src/components/admin/free/FreeDashboard.tsx
 app/src/components/admin/free/FreeExperienceSettings.tsx
 app/src/components/admin/free/FreePwaHome.tsx
 app/src/components/notifications/PwaNotificationBridge.tsx
+scripts/create-preview-free-activation-code.mjs
 scripts/run-preview-free-contact-agenda-2026-09-30.sh
 scripts/test-free-contact-agenda-contract.mjs
 web/src/components/free-profile/FreeContactActions.tsx
