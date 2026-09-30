@@ -40,14 +40,14 @@ async function requireUser(c:any,next:any){
 }
 function cleanUsername(value:unknown){return String(value??'').trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'')}
 function cleanPhone(value:unknown){let digits=String(value??'').replace(/\D/g,'').slice(0,15);if(digits.startsWith('00'))digits=digits.slice(2);if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits;return digits}
-function humanDate(value:string,timeZone:string){
+function humanDate(value:string,_timeZone:string){
   const parts=value.split('-').map(Number),y=parts[0],m=parts[1],d=parts[2]
-  try{return new Intl.DateTimeFormat('es-DO',{timeZone,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(Date.UTC(y,m-1,d,12)))}
+  try{return new Intl.DateTimeFormat('es-DO',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(Date.UTC(y,m-1,d,12)))}
   catch{return value}
 }
 function humanTime(value:string){
   const parts=value.split(':').map(Number),h=parts[0],m=parts[1]
-  try{return new Intl.DateTimeFormat('es-DO',{hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(2000,0,1,h,m))}
+  try{return new Intl.DateTimeFormat('es-DO',{timeZone:'UTC',hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(Date.UTC(2000,0,1,h,m)))}
   catch{return value}
 }
 function appointmentMessage(row:any){
