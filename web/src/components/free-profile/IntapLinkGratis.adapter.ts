@@ -24,7 +24,6 @@ const QUICK_ACTION_LABELS: Record<FreeProfileQuickActionType, string> = {
 }
 const QUICK_ACTION_TYPES = new Set<FreeProfileQuickActionType>(['call', 'instagram', 'location', 'email', 'tiktok'])
 const ABOUT_TITLES = new Set(['Sobre mí', 'Quién soy', 'Conóceme'])
-const PORTFOLIO_TITLES = new Set(['Portafolio', 'Mis trabajos', 'Proyectos'])
 const STARTER_PHONE = '18090000000'
 const STARTER_INSTAGRAM = 'https://www.instagram.com/intaprd/'
 const STARTER_LOCATION = 'https://www.google.com/maps/search/?api=1&query=Santo%20Domingo%2C%20Rep%C3%BAblica%20Dominicana'
