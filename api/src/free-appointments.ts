@@ -83,12 +83,13 @@ async function ownedFreeProfile(c:any,userId:string){
   return c.env.DB.prepare("SELECT id,user_id,slug,name,template_data FROM profiles WHERE user_id=? AND lower(COALESCE(plan_id,'free'))='free' ORDER BY created_at ASC LIMIT 1").bind(userId).first()
 }
 async function publicFreeProfile(c:any,slug:string){
-  return c.env.DB.prepare(`SELECT p.id,p.user_id,p.slug,p.name,p.template_data,pc.whatsapp,pc.phone,pc.email,u.email AS account_email
-    FROM profiles p
-    LEFT JOIN profile_contact pc ON pc.profile_id=p.id
-    LEFT JOIN users u ON u.id=p.user_id
-    WHERE lower(p.slug)=? AND lower(COALESCE(p.plan_id,'free'))='free' AND COALESCE(p.is_published,0)=1 AND COALESCE(p.is_active,1)=1
+  const profile=await c.env.DB.prepare(`SELECT id,user_id,slug,name,template_data,plan_id,is_published
+    FROM profiles
+    WHERE lower(slug)=? AND lower(COALESCE(plan_id,'free'))='free' AND COALESCE(is_published,0)=1
     LIMIT 1`).bind(slug).first()
+  if(!profile)return null
+  const contact=await c.env.DB.prepare('SELECT whatsapp,phone,email FROM profile_contact WHERE profile_id=? LIMIT 1').bind(String((profile as any).id||'')).first().catch(()=>null)
+  return {...(profile as any),whatsapp:(contact as any)?.whatsapp??null,phone:(contact as any)?.phone??null,email:(contact as any)?.email??null}
 }
 async function ownerContext(c:any){
   const userId=String(c.get('userId')||'')
