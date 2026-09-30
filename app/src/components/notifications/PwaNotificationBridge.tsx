@@ -24,6 +24,7 @@ export function playAgendaNotificationCue(kind:string){
     const AudioCtx=(window.AudioContext||(window as any).webkitAudioContext)
     if(!AudioCtx){vibrate();return}
     const ctx=new AudioCtx()
+    if(ctx.state==='suspended')void ctx.resume().catch(()=>vibrate())
     const now=ctx.currentTime
     const plans:Record<string,Array<[number,number,number]>>={
       soft:[[740,0,.10],[988,.14,.12]],
