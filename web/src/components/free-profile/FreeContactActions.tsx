@@ -49,7 +49,7 @@ export default function FreeContactActions({profile,colors}:Props){
   const[quoteMedia,setQuoteMedia]=useState<File[]>([])
   const[quoteSending,setQuoteSending]=useState(false)
   const p=useMemo(()=>palette(colors),[colors])
-  const experience=profile.experience??{schedule:[],quoteButtonVisible:false,appointmentEnabled:false}
+  const experience=profile.experience??{schedule:[],quoteButtonVisible:false,appointmentEnabled:false,quoteEmail:''}
   const apiBase='/api/v1/public/profiles/'+encodeURIComponent(profile.slug)
   const publicBase=typeof window!=='undefined'?window.location.origin+window.location.pathname:''
 
@@ -58,7 +58,7 @@ export default function FreeContactActions({profile,colors}:Props){
   useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800);return()=>window.clearTimeout(id)},[toast])
 
   const whatsapp=normalizeWhatsapp(profile.whatsapp||profile.phone)
-  const email=String(profile.email||'').trim()
+  const email=String(experience.quoteEmail||profile.email||'').trim()
   const canWhatsapp=Boolean(whatsapp)
   const canEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const effectiveChannel=quoteChannel||(canWhatsapp?'whatsapp':canEmail?'email':'')
