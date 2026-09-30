@@ -186,10 +186,10 @@ assert isinstance(x.get('schedule'),list), f"schedule inválido: {x!r}"
 print("✓ Payload canónico Free: Cotizar activo + schedule presente")
 PY
 
-echo; echo "▶ Smoke API Free inexistente"
-code="$(curl -sS -o "$LOG_DIR/free404.json" -w '%{http_code}' "https://preview.intaprd.com/api/v1/public/profiles/kawvo-release-smoke-no-existe/free-experience")"
+echo; echo "▶ Smoke perfil Free inexistente"
+code="$(curl -sS -o "$LOG_DIR/free404.json" -w '%{http_code}' "https://preview.intaprd.com/api/v1/public/profiles/kawvo-release-smoke-no-existe")"
 echo "✓ Free inexistente -> HTTP $code"
-[ "$code" = "404" ] || fail "Endpoint Free experience respondió HTTP $code; esperaba 404"
+[ "$code" = "404" ] || fail "Perfil Free inexistente respondió HTTP $code; esperaba 404"
 
 rm -rf "$LOG_DIR"
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Runner dejó cambios locales"; }
