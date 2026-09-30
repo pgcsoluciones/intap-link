@@ -366,7 +366,9 @@ export default function FreeAccount() {
           {avatarError && <p className="mt-2 text-xs font-semibold text-rose-600">{avatarError}</p>}
 
           <div className="mt-8">
-            <SectionTitle>MI KAWVO</SectionTitle>
+            <FreeExperienceSettings />
+
+          <SectionTitle>MI KAWVO</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
               <SettingsRow tour="install-app" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label={pwaInstalled ? "Kawvo está instalada" : "Instalar app Kawvo"} detail={pwaInstalled ? "La estás usando como app en este dispositivo" : (pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app")} onClick={() => pwaInstalled ? undefined : void installPwa()} />
               <SettingsRow tour="products" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts?from=account')} />
