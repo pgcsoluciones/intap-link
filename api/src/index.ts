@@ -3521,7 +3521,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   const FREE_DAY_LABELS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
   const formatFreeTime = (value: unknown) => {
-    const match = String(value || '').trim().match(/^(\\d{2}):(\\d{2})/)
+    const match = String(value || '').trim().match(/^(\d{2}):(\d{2})/)
     if (!match) return String(value || '')
     const hour = Number(match[1]), minute = Number(match[2])
     const suffix = hour >= 12 ? 'p. m.' : 'a. m.'
@@ -3541,7 +3541,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const freeSchedule = Array.from(freeScheduleGroups.entries())
     .sort((a,b)=>a[0]-b[0])
     .map(([weekday,hours])=>({ day: FREE_DAY_LABELS[weekday], hours: hours.join(' · ') }))
-  const freeWhatsapp = String((rawContact as any)?.whatsapp || (rawContact as any)?.phone || (profile as any).whatsapp_number || '').replace(/\\D/g,'')
+  const freeWhatsapp = String((rawContact as any)?.whatsapp || (rawContact as any)?.phone || (profile as any).whatsapp_number || '').replace(/\D/g,'')
   const freeExperience = isFreeProfile ? {
     schedule: freeScheduleVisible ? freeSchedule : [],
     quote_button_visible: publicTemplateData.free_quote_button_visible !== false,
