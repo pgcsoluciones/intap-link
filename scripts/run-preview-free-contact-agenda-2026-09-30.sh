@@ -223,12 +223,12 @@ Web origin:  $WEB_ORIGIN
 QA:
 1. Nombre/cargo, botón destacado y botones rápidos conservan su posición.
 2. Quién soy permanece debajo de esos botones.
-3. Horario aparece debajo de Quién soy después de configurarlo.
+3. Horario aparece debajo de Quién soy aunque Agenda esté apagada; puede editarse en Mi cuenta.
 4. Cotizar / información aparece activo por defecto.
 5. Agenda está inactiva por defecto.
 6. Mi cuenta permite activar/desactivar Cotizar y Agenda sin dejar ambas apagadas.
-7. Mi cuenta abre Configurar horario y agenda.
-8. Horarios, bloqueos, motivos, confirmar/rechazar/liberar funcionan con el motor reutilizable.
+7. Mi cuenta edita el horario público y abre por separado Configurar disponibilidad de Agenda.
+8. La disponibilidad de Agenda, bloqueos, motivos, confirmar/rechazar/liberar funcionan con el motor reutilizable sin controlar el horario público.
 9. Compartir formulario abre ?cotizar=1.
 10. Compartir agendar abre ?agendar=1.
 11. Catálogo/Portafolio aparece después de los botones y conserva su galería.
