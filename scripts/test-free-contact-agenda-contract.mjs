@@ -28,6 +28,9 @@ const publicApi=read('api/src/index.ts')
 const entry=read('api/src/preview-free-entry.ts')
 const homeRoute=read('api/src/account-home-route.ts')
 const core=read('api/src/appointments-core.ts')
+const types=read('web/src/components/free-profile/IntapLinkGratis.types.ts')
+
+has(types,'experience?: FreeProfileExperience','experiencia Free es compatible con Demo/Trial que reutilizan la plantilla base')
 
 // Lo aprobado arriba de la plantilla Free no se mueve.
 ordered(profile,[
@@ -61,8 +64,9 @@ has(actions,"apiBase+'/appointments'",'Agenda pública Free reutiliza Appointmen
 has(actions,"params.get('cotizar')==='1'",'deep link Cotizar Free')
 has(actions,"params.get('agendar')==='1'",'deep link Agenda Free')
 absent(actions,'free-experience','la UI Free no debe depender de un segundo fetch silencioso')
-has(actions,'profile.experience.quoteButtonVisible','Cotizar se renderiza desde el payload canónico')
-has(actions,'profile.experience.appointmentEnabled','Agenda se renderiza desde el payload canónico')
+has(actions,'const experience=profile.experience??{schedule:[],quoteButtonVisible:false,appointmentEnabled:false}','consumidores Demo/Trial no reciben acciones Free por omisión')
+has(actions,'experience.quoteButtonVisible','Cotizar se renderiza desde el payload canónico')
+has(actions,'experience.appointmentEnabled','Agenda se renderiza desde el payload canónico')
 
 has(adapter,"readString(templateData, 'free_portfolio_title', 'portfolio_section_title')",'nombre Catálogo/Portafolio editable')
 has(banks,"document.getElementById('ilx-bank-slot')",'cuentas bancarias usan la posición definida dentro de la plantilla')
