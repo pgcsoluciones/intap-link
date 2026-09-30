@@ -68,7 +68,7 @@ function appointmentMessage(row:any){
   return lines.join('\n')
 }
 async function sponsoredPublicSubject(c:any,username:string){
-  return c.env.DB.prepare("SELECT id,user_id,username,business_name,whatsapp,phone,status,profile_role FROM sponsored_profiles WHERE username=? AND status='published' LIMIT 1").bind(username).first()
+  return c.env.DB.prepare("SELECT id,user_id,username,business_name,whatsapp,phone,status,profile_role,appointment_button_visible FROM sponsored_profiles WHERE username=? AND status='published' LIMIT 1").bind(username).first()
 }
 async function ownedSubject(c:any){
   const userId=String(c.get('userId')||'')
@@ -85,6 +85,7 @@ async function appointmentManageUrl(c:any,profile:any){
 }
 
 async function addAppointmentNotification(c:any,request:any,profile:any){
+  if(Number((profile as any).appointment_button_visible||0)!==1)return c.json({ok:false,error:'La agenda no está disponible.'},404)
   const ownerUserId=String((profile as any).user_id||'')
   if(!ownerUserId)return
   const id=crypto.randomUUID()
@@ -107,6 +108,7 @@ app.get('/api/v1/public/sponsored/:username/appointments',async(c:any)=>{
   const username=cleanUsername(c.req.param('username'))
   const profile=await sponsoredPublicSubject(c,username)
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
+  if(Number((profile as any).appointment_button_visible||0)!==1)return c.json({ok:false,error:'La agenda no está disponible.'},404)
   const config=await publicAppointmentConfig(c.env.DB,'sponsored',String((profile as any).id))
   const whatsapp=cleanPhone((profile as any).whatsapp||(profile as any).phone)
   return c.json({ok:true,data:{...config,enabled:config.enabled&&Boolean(whatsapp),business_name:String((profile as any).business_name||''),has_whatsapp:Boolean(whatsapp)}})
@@ -116,6 +118,7 @@ app.get('/api/v1/public/sponsored/:username/appointments/availability',async(c:a
   const username=cleanUsername(c.req.param('username')),date=String(c.req.query('date')||'')
   const profile=await sponsoredPublicSubject(c,username)
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
+  if(Number((profile as any).appointment_button_visible||0)!==1)return c.json({ok:false,error:'La agenda no está disponible.'},404)
   const slots=await availableAppointmentSlots(c.env.DB,'sponsored',String((profile as any).id),date)
   return c.json({ok:true,data:{date,slots}})
 })
@@ -161,7 +164,7 @@ app.put('/api/v1/me/sponsored-profile/appointments/settings',requireUser,async(c
     const actions=await c.env.DB.prepare('SELECT quote_button_visible FROM sponsored_profiles WHERE id=? LIMIT 1').bind(resolved.subject.id).first()
     if(Number((actions as any)?.quote_button_visible??1)!==1)return c.json({ok:false,error:'No puedes desactivar Agenda mientras Cotizar / información esté oculto. Activa Cotizar primero.'},422)
   }
-  try{await saveAppointmentConfiguration(c.env.DB,resolved.subject.type,resolved.subject.id,body);return c.json({ok:true})}
+  try{await saveAppointmentConfiguration(c.env.DB,resolved.subject.type,resolved.subject.id,body);if(body?.enabled===false)await c.env.DB.prepare('UPDATE sponsored_profiles SET appointment_button_visible=0,updated_at=datetime(\'now\') WHERE id=?').bind(resolved.subject.id).run();return c.json({ok:true})}
   catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos guardar la agenda.'},400)}
 })
 
