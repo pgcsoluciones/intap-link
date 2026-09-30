@@ -20,8 +20,8 @@ function base64UrlToUint8Array(value:string){
   const raw=atob(base64)
   return Uint8Array.from(raw,ch=>ch.charCodeAt(0))
 }
-async function syncPushSubscription(){
-  if(typeof Notification==='undefined'||Notification.permission!=='granted'||!('serviceWorker' in navigator)||!('PushManager' in window))return
+async function syncPushSubscription():Promise<boolean>{
+  if(typeof Notification==='undefined'||Notification.permission!=='granted'||!('serviceWorker' in navigator)||!('PushManager' in window))return false
   try{
     const keyJson:any=await apiGet('/me/push/public-key')
     const publicKey=String(keyJson?.data?.public_key||'')
@@ -32,8 +32,9 @@ async function syncPushSubscription(){
       subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToUint8Array(publicKey)})
     }
     const json=subscription.toJSON()
-    await apiPost('/me/push/subscribe',{endpoint:subscription.endpoint,keys:json.keys||{}})
-  }catch{/* push remains optional; polling still works */}
+    const saved:any=await apiPost('/me/push/subscribe',{endpoint:subscription.endpoint,keys:json.keys||{}})
+    return Boolean(saved?.ok)
+  }catch{return false}
 }
 export function syncServiceWorkerPreference(kind:string){
   try{navigator.serviceWorker?.controller?.postMessage({type:'kawvo:agenda-sound',value:kind})}catch{}
@@ -96,10 +97,11 @@ async function showSystemNotification(item:NotificationItem){
 
 export default function PwaNotificationBridge(){
   const running=useRef(false)
+  const pushReady=useRef(false)
 
   useEffect(()=>{
     let active=true
-    void syncPushSubscription()
+    void syncPushSubscription().then(value=>{pushReady.current=value})
     syncServiceWorkerPreference(localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
     async function poll(){
       if(running.current)return
@@ -121,8 +123,11 @@ export default function PwaNotificationBridge(){
           const fresh=agendaItems.filter(item=>!known.has(item.id)).reverse()
           for(let i=0;i<fresh.length;i++){
             if(i)await new Promise(resolve=>window.setTimeout(resolve,650))
-            playAgendaNotificationCue(localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
-            await showSystemNotification(fresh[i])
+            if(document.visibilityState==='visible'){
+              playAgendaNotificationCue(localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
+            }else if(!pushReady.current){
+              await showSystemNotification(fresh[i])
+            }
             known.add(fresh[i].id)
           }
           const next=[...agendaItems.map(item=>item.id),...Array.from(known)].filter((id,index,array)=>array.indexOf(id)===index).slice(0,60)
@@ -134,7 +139,7 @@ export default function PwaNotificationBridge(){
     void poll()
     const timer=window.setInterval(()=>void poll(),20000)
     const refresh=()=>void poll()
-    const syncPush=()=>void syncPushSubscription()
+    const syncPush=()=>void syncPushSubscription().then(value=>{pushReady.current=value})
     window.addEventListener('focus',refresh)
     window.addEventListener('kawvo:notifications-changed',refresh)
     window.addEventListener('kawvo:push-permission-changed',syncPush)
