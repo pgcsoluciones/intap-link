@@ -9,6 +9,7 @@ import {
   createAppointmentRequest,
   getAppointmentAvailabilityRows,
   getAppointmentBlocks,
+  getAppointmentCustomReasons,
   getAppointmentReasons,
   getAppointmentSettings,
   listAppointmentRequests,
@@ -130,10 +131,12 @@ app.get('/api/v1/me/sponsored-profile/appointments',requireUser,async(c:any)=>{
   const results=await Promise.all([
     getAppointmentAvailabilityRows(c.env.DB,subject.type,subject.id),
     getAppointmentReasons(c.env.DB,subject.type,subject.id,settings.reason_mode),
+    getAppointmentReasons(c.env.DB,subject.type,subject.id,'default'),
+    getAppointmentCustomReasons(c.env.DB,subject.type,subject.id),
     getAppointmentBlocks(c.env.DB,subject.type,subject.id),
     listAppointmentRequests(c.env.DB,subject.type,subject.id,100),
   ])
-  return c.json({ok:true,data:{settings,availability:results[0],reasons:results[1],blocks:results[2],requests:results[3],profile:{id:subject.id,username:String((resolved.profile as any).username||''),business_name:String((resolved.profile as any).business_name||'')}}})
+  return c.json({ok:true,data:{settings,availability:results[0],reasons:results[1],default_reasons:results[2],custom_reasons:results[3],blocks:results[4],requests:results[5],profile:{id:subject.id,username:String((resolved.profile as any).username||''),business_name:String((resolved.profile as any).business_name||'')}}})
 })
 
 app.put('/api/v1/me/sponsored-profile/appointments/settings',requireUser,async(c:any)=>{
@@ -182,8 +185,11 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
   const subjectId=String((profile as any).id||'')
   const settings=await getAppointmentSettings(c.env.DB,'sponsored',subjectId)
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
+  const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending'").bind(subjectId).first()
   const pending=rows.results||[]
-  return c.json({ok:true,data:{is_owner:true,enabled:settings.enabled,pending_count:pending.length,pending,manage_url:'/admin/sponsored/agenda?profile_id='+encodeURIComponent(subjectId)}})
+  const isMaster=String((profile as any).profile_role||'')==='sponsor_owner'
+  const manageUrl=isMaster?'/admin/sponsored/agenda?scope=master':'/admin/sponsored/agenda?profile_id='+encodeURIComponent(subjectId)
+  return c.json({ok:true,data:{is_owner:true,enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending,manage_url:manageUrl}})
 })
 
 export default app
