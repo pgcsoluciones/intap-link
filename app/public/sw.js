@@ -97,6 +97,11 @@ self.addEventListener('push', (event) => {
         await self.navigator.setAppBadge(Math.max(1, unread))
       }
     } catch {}
+    if (silent) {
+      try {
+        if (self.navigator && typeof self.navigator.vibrate === 'function') self.navigator.vibrate([160, 80, 160])
+      } catch {}
+    }
     await self.registration.showNotification(String(payload.title || 'Nueva solicitud de agenda'), {
       body: String(payload.body || 'Tienes una nueva solicitud.'),
       icon: '/kawvo-icon-192.png',
@@ -104,7 +109,6 @@ self.addEventListener('push', (event) => {
       tag: String(payload.tag || 'kawvo-agenda'),
       renotify: true,
       silent,
-      vibrate: silent ? [160, 80, 160] : undefined,
       data: { url: String(payload.url || '/admin/free/home?source=pwa') },
     })
   })())
