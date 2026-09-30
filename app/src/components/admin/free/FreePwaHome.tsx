@@ -84,6 +84,7 @@ export default function FreePwaHome() {
   const agendaRoute=home?.agenda_route||''
   const displayName = String(me?.name || '').trim() || String(me?.email || '').trim() || 'Kawvo'
   const agendaUnread=useMemo(()=>notifications.filter(item=>item.type==='sponsored_appointment_request'&&!item.read_at).length,[notifications])
+  const agendaNotifications=useMemo(()=>notifications.filter(item=>item.type==='sponsored_appointment_request'&&!item.read_at).slice(0,3),[notifications])
 
   async function requestNotificationPermission(){
     if(typeof Notification==='undefined'){setPermission('unsupported');return}
@@ -134,13 +135,22 @@ export default function FreePwaHome() {
               </div>
             </button>
 
-            {agendaRoute&&<button type="button" onClick={()=>navigate(agendaRoute)} className="relative w-full rounded-[22px] border border-emerald-200 bg-emerald-50 p-4 text-left transition active:scale-[0.99]">
-              {agendaUnread>0&&<span className="absolute right-3 top-3 grid min-w-7 h-7 place-items-center rounded-full bg-red-600 px-2 text-[11px] font-black text-white">{agendaUnread}</span>}
-              <div className="flex items-center gap-3 pr-8">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-xl text-white">📅</span>
-                <div><p className="text-base font-black text-slate-950">Agenda</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">{agendaUnread>0?`Tienes ${agendaUnread} solicitud${agendaUnread===1?'':'es'} pendiente${agendaUnread===1?'':'s'}.`:'Gestiona citas, horarios, bloqueos y solicitudes.'}</p></div>
-              </div>
-            </button>}
+            {agendaRoute&&<>
+              <button type="button" onClick={()=>navigate(agendaRoute)} className="relative w-full rounded-[22px] border border-emerald-200 bg-emerald-50 p-4 text-left transition active:scale-[0.99]">
+                {agendaUnread>0&&<span className="absolute right-3 top-3 grid min-w-7 h-7 place-items-center rounded-full bg-red-600 px-2 text-[11px] font-black text-white">{agendaUnread}</span>}
+                <div className="flex items-center gap-3 pr-8">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-xl text-white">📅</span>
+                  <div><p className="text-base font-black text-slate-950">Agenda</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">{agendaUnread>0?`Tienes ${agendaUnread} solicitud${agendaUnread===1?'':'es'} pendiente${agendaUnread===1?'':'s'}.`:'Gestiona citas, horarios, bloqueos y solicitudes.'}</p></div>
+                </div>
+              </button>
+              {agendaNotifications.length>0&&<div className="overflow-hidden rounded-[20px] border border-rose-100 bg-rose-50/60">
+                <div className="border-b border-rose-100 px-4 py-2 text-[11px] font-black uppercase tracking-[.12em] text-rose-700">Nuevas solicitudes</div>
+                {agendaNotifications.map(item=><button key={item.id} type="button" onClick={()=>window.location.assign(item.action_url||agendaRoute)} className="flex w-full items-start gap-3 border-b border-rose-100 px-4 py-3 text-left last:border-b-0">
+                  <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-600"/>
+                  <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-slate-900">{item.title}</strong><span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-600">{item.message}</span></span><span className="text-lg text-slate-400">›</span>
+                </button>)}
+              </div>}
+            </>}
           </div>
 
           {agendaRoute&&<section className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
