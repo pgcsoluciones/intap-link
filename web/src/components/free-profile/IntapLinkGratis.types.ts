@@ -90,7 +90,7 @@ export type FreeProfileData = {
   services: FreeProfileService[]
   portfolio: FreeProfilePortfolioItem[]
   customLinks: FreeProfileCustomLink[]
-  experience: FreeProfileExperience
+  experience?: FreeProfileExperience
   teamMember?: boolean
   teamAccessRole?: 'member' | 'editor' | 'subadmin' | null
 }
