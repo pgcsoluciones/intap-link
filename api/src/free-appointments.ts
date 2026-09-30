@@ -161,10 +161,7 @@ app.get('/api/v1/me/free/experience',requireUser,async(c:any)=>{
   const resolved=await ownerContext(c)
   if(!resolved)return c.json({ok:false,error:'Perfil Free no encontrado.'},404)
   const template=parseTemplateData((resolved.profile as any).template_data)
-  const [settings,availability]=await Promise.all([
-    getAppointmentSettings(c.env.DB,'free',resolved.subject.id,false),
-    getAppointmentAvailabilityRows(c.env.DB,'free',resolved.subject.id),
-  ])
+  const settings=await getAppointmentSettings(c.env.DB,'free',resolved.subject.id,false)
   return c.json({ok:true,data:{
     quote_button_visible:quoteVisible(template),
     appointment_enabled:settings.enabled,
