@@ -82,8 +82,17 @@ async function encryptPayload(payload:string,p256dh:string,auth:string){
   const clientPublic=b64urlToBytes(p256dh),authSecret=b64urlToBytes(auth)
   const clientKey=await crypto.subtle.importKey('raw',clientPublic,{name:'ECDH',namedCurve:'P-256'},false,[])
   const ephemeral=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits']) as CryptoKeyPair
-  const shared=new Uint8Array(await crypto.subtle.deriveBits({name:'ECDH',public:clientKey},ephemeral.privateKey,256))
-  const serverPublic=new Uint8Array(await crypto.subtle.exportKey('raw',ephemeral.publicKey))
+
+  // Cloudflare Workers implements the standard Web Crypto ECDH shape at runtime,
+  // but the pinned @cloudflare/workers-types version models this overload with a
+  // non-standard "$public" property and gives exportKey() a broad union return.
+  // Keep the compatibility cast isolated to these two standard Web Crypto calls.
+  const ecdhSubtle=crypto.subtle as unknown as {
+    deriveBits(algorithm:{name:'ECDH';public:CryptoKey},baseKey:CryptoKey,length:number):Promise<ArrayBuffer>
+    exportKey(format:'raw',key:CryptoKey):Promise<ArrayBuffer>
+  }
+  const shared=new Uint8Array(await ecdhSubtle.deriveBits({name:'ECDH',public:clientKey},ephemeral.privateKey,256))
+  const serverPublic=new Uint8Array(await ecdhSubtle.exportKey('raw',ephemeral.publicKey))
   const prkKey=await hmac(authSecret,shared)
   const keyInfo=concat(textBytes('WebPush: info\0'),clientPublic,serverPublic)
   const ikm=await hkdfExpand(prkKey,keyInfo,32)
