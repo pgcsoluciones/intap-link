@@ -379,7 +379,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           <section className="ilx-section ilx-about ilx-live-editable"><h2>{profile.aboutTitle}</h2><p className="ilx-copy">{profile.bio}</p>{editMode && <EditPencil label="Editar sobre mí" onClick={()=>onEditSection?.("about")} />}</section>
 
-          <FreeContactActions profile={profile} colors={colors} />
+          <FreeContactActions profile={profile} colors={colors} previewMode={editMode} />
 
           {portfolio.length > 0 && (
             <section className="ilx-section ilx-portfolio ilx-live-editable">
