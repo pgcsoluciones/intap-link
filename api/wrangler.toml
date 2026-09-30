@@ -48,6 +48,7 @@ FREE_MAX_SERVICES = "3"
 # Pasos: 1) Verificar intaprd.com en resend.com/domains  2) Hacer deploy
 RESEND_FROM = "noreply@intaprd.com"
 ADMIN_EMAILS = "fliaprince@gmail.com"
+VAPID_SUBJECT = "mailto:noreply@intaprd.com"
 
 [[d1_databases]]
 binding = "DB"
