@@ -58,6 +58,7 @@ export type FreeProfileExperience = {
   schedule: Array<{ day: string; hours: string }>
   quoteButtonVisible: boolean
   appointmentEnabled: boolean
+  quoteEmail?: string
 }
 
 export type FreeProfileData = {
