@@ -74,8 +74,8 @@ export async function ensureAppointmentSubject(db:D1Database,subjectType:string,
   }
 }
 
-export async function getAppointmentSettings(db:D1Database,subjectType:string,subjectId:string):Promise<AppointmentSettings>{
-  await ensureAppointmentSubject(db,subjectType,subjectId)
+export async function getAppointmentSettings(db:D1Database,subjectType:string,subjectId:string,ensure=true):Promise<AppointmentSettings>{
+  if(ensure)await ensureAppointmentSubject(db,subjectType,subjectId)
   const row=await db.prepare(`SELECT enabled,slot_minutes,min_notice_minutes,horizon_days,timezone,reason_mode FROM appointment_settings WHERE subject_type=? AND subject_id=? LIMIT 1`).bind(subjectType,subjectId).first()
   return{
     enabled:bool((row as any)?.enabled),
@@ -110,7 +110,7 @@ export async function getAppointmentBlocks(db:D1Database,subjectType:string,subj
 }
 
 export async function availableAppointmentSlots(db:D1Database,subjectType:string,subjectId:string,date:string){
-  const settings=await getAppointmentSettings(db,subjectType,subjectId)
+  const settings=await getAppointmentSettings(db,subjectType,subjectId,false)
   if(!settings.enabled||!validAppointmentDate(date))return[]
   const today=localDateNow(settings.timezone)
   if(date<today||date>addDays(today,settings.horizon_days))return[]
@@ -137,11 +137,11 @@ export async function availableAppointmentSlots(db:D1Database,subjectType:string
       slots.push({time:slotStart,end_time:slotEnd})
     }
   }
-  return slots
+  return Array.from(new Map(slots.map(slot=>[slot.time,slot])).values()).sort((a,b)=>a.time.localeCompare(b.time))
 }
 
 export async function publicAppointmentConfig(db:D1Database,subjectType:string,subjectId:string){
-  const settings=await getAppointmentSettings(db,subjectType,subjectId)
+  const settings=await getAppointmentSettings(db,subjectType,subjectId,false)
   const today=localDateNow(settings.timezone)
   const reasons=(await getAppointmentReasons(db,subjectType,subjectId,settings.reason_mode)).filter((item:any)=>item.enabled)
   return{
