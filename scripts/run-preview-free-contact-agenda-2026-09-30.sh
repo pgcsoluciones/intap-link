@@ -119,7 +119,36 @@ echo; echo "▶ Verificar migraciones Preview pendientes"
 
 PENDING_FILES="$(grep -Eo '[0-9]{4}_[A-Za-z0-9._-]+\.sql' "$LOG_DIR/migrations-before.log" | sort -u || true)"
 if [ -n "$PENDING_FILES" ]; then
-  UNEXPECTED_MIGRATIONS="$(printf '%s\n' "$PENDING_FILES" | grep -v '^0083_free_quote_media\.sql
+  while IFS= read -r migration; do
+    [ -z "$migration" ] && continue
+    [ "$migration" = "0083_free_quote_media.sql" ] || fail "Migración Preview pendiente fuera del alcance aprobado: $migration"
+  done <<< "$PENDING_FILES"
+
+  echo "✓ Única migración pendiente permitida: 0083_free_quote_media.sql"
+  echo; echo "▶ Aplicar migración Free quote media en D1 Preview"
+  (
+    cd api
+    npx wrangler d1 migrations apply intap_db_preview --remote --config wrangler.preview.toml
+  ) || fail "No se pudo aplicar 0083_free_quote_media.sql en Preview"
+else
+  echo "✓ No hay migraciones Preview pendientes"
+fi
+
+echo; echo "▶ Verificar D1 Preview después de migrar"
+(
+  cd api
+  npx wrangler d1 migrations list intap_db_preview --remote --config wrangler.preview.toml
+) 2>&1 | tee "$LOG_DIR/migrations-after.log"
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "No se pudieron verificar migraciones Preview"
+if grep -Eq '[0-9]{4}_[A-Za-z0-9._-]+\.sql' "$LOG_DIR/migrations-after.log"; then
+  cat "$LOG_DIR/migrations-after.log"
+  fail "Quedaron migraciones Preview pendientes"
+fi
+
+TABLE_FREE_MEDIA="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='free_quote_media';" 2>/dev/null || true)"
+echo "$TABLE_FREE_MEDIA" | grep -F "free_quote_media" >/dev/null || fail "No existe free_quote_media después de migrar"
+echo "✓ free_quote_media verificada en D1 Preview"
+
 echo; echo "▶ Deploy App Pages Preview"
 (npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch "$BRANCH") 2>&1 | tee "$APP_LOG"
 [ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Preview"
@@ -246,155 +275,7 @@ QA:
 15. Servicios no aparece en el perfil público ni como opción del panel Free.
 16. Colores de las nuevas secciones siguen la paleta del perfil Free.
 17. PWA/Home muestra Agenda y solicitudes Free.
-18. Producción NO fue tocada.
-================================================================
-EOF
- || true)"
-  [ -z "$UNEXPECTED_MIGRATIONS" ] || { echo "$UNEXPECTED_MIGRATIONS"; fail "Hay migraciones Preview pendientes fuera del alcance aprobado"; }
-  echo "✓ Única migración pendiente permitida: 0083_free_quote_media.sql"
-  echo; echo "▶ Aplicar migración Free quote media en D1 Preview"
-  (
-    cd api
-    npx wrangler d1 migrations apply intap_db_preview --remote --config wrangler.preview.toml
-  ) || fail "No se pudo aplicar 0083_free_quote_media.sql en Preview"
-else
-  echo "✓ 0083 ya estaba aplicada o no hay migraciones pendientes"
-fi
-
-echo; echo "▶ Verificar D1 Preview después de migrar"
-(
-  cd api
-  npx wrangler d1 migrations list intap_db_preview --remote --config wrangler.preview.toml
-) 2>&1 | tee "$LOG_DIR/migrations-after.log"
-[ "${PIPESTATUS[0]}" -eq 0 ] || fail "No se pudieron verificar migraciones Preview"
-if grep -Eq '[0-9]{4}_[A-Za-z0-9._-]+\.sql' "$LOG_DIR/migrations-after.log"; then
-  cat "$LOG_DIR/migrations-after.log"
-  fail "Quedaron migraciones Preview pendientes"
-fi
-TABLE_FREE_MEDIA="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='free_quote_media';" 2>/dev/null || true)"
-echo "$TABLE_FREE_MEDIA" | grep -F "free_quote_media" >/dev/null || fail "No existe free_quote_media después de migrar"
-echo "✓ free_quote_media verificada en D1 Preview"
-
-echo; echo "▶ Deploy App Pages Preview"
-(npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch "$BRANCH") 2>&1 | tee "$APP_LOG"
-[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Preview"
-APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$APP_LOG" | tail -1)"
-[ -n "$APP_ORIGIN" ] || fail "No pude detectar App origin"
-
-echo; echo "▶ Deploy Web Pages Preview"
-(npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH") 2>&1 | tee "$WEB_LOG"
-[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Web Preview"
-WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$WEB_LOG" | tail -1)"
-[ -n "$WEB_ORIGIN" ] || fail "No pude detectar Web origin"
-
-cp "$PREVIEW_CFG" "$PREVIEW_CFG_BAK"
-restore_cfg(){
-  if [ -f "$PREVIEW_CFG_BAK" ]; then
-    cp "$PREVIEW_CFG_BAK" "$PREVIEW_CFG" 2>/dev/null || true
-    rm -f "$PREVIEW_CFG_BAK"
-  fi
-}
-trap restore_cfg EXIT
-
-python3 - "$PREVIEW_CFG" "$APP_ORIGIN" "$WEB_ORIGIN" <<'PY'
-from pathlib import Path
-import re,sys
-p=Path(sys.argv[1]); app=sys.argv[2]; web=sys.argv[3]
-s=p.read_text()
-s,n1=re.subn(r'APP_PAGES_ORIGIN\s*=\s*"[^"]+"',f'APP_PAGES_ORIGIN = "{app}"',s,count=1)
-s,n2=re.subn(r'WEB_PAGES_ORIGIN\s*=\s*"[^"]+"',f'WEB_PAGES_ORIGIN = "{web}"',s,count=1)
-if n1 != 1 or n2 != 1:
-    raise SystemExit(f"No pude fijar origins Preview: APP={n1} WEB={n2}")
-p.write_text(s)
-PY
-
-echo; echo "▶ Deploy Worker Preview"
-(
-  cd api
-  npx wrangler deploy --config wrangler.preview.toml --dry-run
-  npx wrangler deploy --config wrangler.preview.toml
-) 2>&1 | tee "$WORKER_LOG"
-[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Worker Preview"
-
-restore_cfg
-trap - EXIT
-
-sleep 4
-
-echo; echo "▶ Smoke Preview"
-for url in   "https://app.preview.intaprd.com/admin/login"   "https://app.preview.intaprd.com/admin/free/agenda"   "https://preview.intaprd.com"
-do
-  code="$(curl -sS -L -o /dev/null -w '%{http_code}' "$url")"
-  echo "✓ $url -> HTTP $code"
-  [ "$code" = "200" ] || fail "$url respondió HTTP $code"
-done
-
-echo; echo "▶ Descubrir perfil Free publicado REAL en D1 Preview"
-FREE_SLUG="$(
-  cd api
-  npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --json --command "SELECT slug FROM profiles WHERE lower(COALESCE(plan_id,'free'))='free' AND COALESCE(is_published,0)=1 ORDER BY updated_at DESC, created_at DESC LIMIT 1;" 2>/dev/null |
-  python3 -c "import json,sys; d=json.load(sys.stdin); rows=((d[0].get('results') if isinstance(d,list) and d else []) or []); print((rows[0].get('slug') if rows else '') or '')"
-)"
-[ -n "$FREE_SLUG" ] || fail "No hay un perfil Free publicado en D1 Preview. Crea/activa uno en app.preview.intaprd.com antes de validar la UI pública."
-echo "✓ Perfil Free Preview detectado: /$FREE_SLUG"
-
-echo; echo "▶ Smoke canónico del perfil Free de Preview"
-curl -sS -f "https://preview.intaprd.com/api/v1/public/profiles/$FREE_SLUG" -o "$LOG_DIR/free-profile.json" || fail "El perfil Free de D1 Preview no responde por el endpoint canónico"
-python3 - "$LOG_DIR/free-profile.json" "$FREE_SLUG" <<'PY'
-import json,sys
-p=json.load(open(sys.argv[1]))
-slug=sys.argv[2]
-d=p.get('data') or {}
-assert d.get('slug')==slug, f"slug inesperado: {d.get('slug')!r} != {slug!r}"
-assert d.get('planId')=='free', f"planId inesperado: {d.get('planId')}"
-x=d.get('freeExperience')
-assert isinstance(x,dict), f"freeExperience ausente: {x!r}"
-assert x.get('quote_button_visible') is True, f"Cotizar no viene activo: {x!r}"
-assert isinstance(x.get('schedule'),list) and len(x.get('schedule'))>0, f"Horario Free ausente: {x!r}"
-print(f"✓ Payload canónico Free real /{slug}: horario presente + Cotizar activo + experiencia integrada")
-PY
-
-echo; echo "▶ Verificar que Web Preview fue compilada contra Preview, no Producción"
-grep -R -F "https://preview.intaprd.com" web/dist/assets >/dev/null || fail "El bundle Web no contiene el API de Preview"
-if grep -R -F "https://api.intaprd.com" web/dist/assets >/dev/null; then
-  fail "El bundle Web Preview contiene el API de Producción. Riesgo de cruce de entornos."
-fi
-echo "✓ Bundle Web aislado en Preview"
-
-echo; echo "▶ Smoke perfil Free inexistente"
-code="$(curl -sS -o "$LOG_DIR/free404.json" -w '%{http_code}' "https://preview.intaprd.com/api/v1/public/profiles/kawvo-release-smoke-no-existe")"
-echo "✓ Free inexistente -> HTTP $code"
-[ "$code" = "404" ] || fail "Perfil Free inexistente respondió HTTP $code; esperaba 404"
-
-rm -rf "$LOG_DIR"
-[ -z "$(git status --porcelain)" ] || { git status --short; fail "Runner dejó cambios locales"; }
-
-cat <<EOF
-================================================================
-✓ FREE HORARIO + COTIZACIÓN + AGENDA LISTO EN PREVIEW
-================================================================
-Feature SHA: $(git rev-parse HEAD)
-App origin:  $APP_ORIGIN
-Web origin:  $WEB_ORIGIN
-
-QA:
-1. Nombre/cargo, botón destacado y botones rápidos conservan su posición.
-2. Quién soy permanece debajo de esos botones.
-3. Horario aparece debajo de Quién soy aunque Agenda esté apagada; puede editarse en Mi cuenta.
-4. Cotizar / información aparece activo por defecto.
-5. Agenda está inactiva por defecto.
-6. Mi cuenta permite activar/desactivar Cotizar y Agenda sin dejar ambas apagadas.
-7. Mi cuenta edita el horario público y abre por separado Configurar disponibilidad de Agenda.
-8. La disponibilidad de Agenda, bloqueos, motivos, confirmar/rechazar/liberar funcionan con el motor reutilizable sin controlar el horario público.
-9. Compartir formulario abre ?cotizar=1.
-10. Compartir agendar abre ?agendar=1.
-11. Catálogo/Portafolio aparece después de los botones y conserva su galería.
-12. El nombre Catálogo/Portafolio se puede cambiar desde Mi cuenta.
-13. Cuentas bancarias aparecen debajo de Catálogo/Portafolio.
-14. Mis enlaces aparecen debajo de cuentas bancarias.
-15. Servicios no aparece en el perfil público ni como opción del panel Free.
-16. Colores de las nuevas secciones siguen la paleta del perfil Free.
-17. PWA/Home muestra Agenda y solicitudes Free.
-18. Producción NO fue tocada.
+18. Cotización Free reutiliza el flujo aprobado: hasta 3 imágenes, 2 archivos o 1 audio, con expiración de 72 horas.
+19. Producción NO fue tocada.
 ================================================================
 EOF
