@@ -126,7 +126,7 @@ app.get('/api/v1/public/profiles/:slug/free-experience',async(c:any)=>{
   const whatsapp=cleanPhone((profile as any).whatsapp||(profile as any).phone)
   return c.json({ok:true,data:{
     profile_id:id,
-    schedule:publicSchedule(availability as any[]),
+    schedule:template?.free_schedule_visible===true?publicSchedule(availability as any[]):[],
     quote_button_visible:quoteVisible(template),
     appointment_enabled:settings.enabled&&Boolean(whatsapp),
     portfolio_title:portfolioTitle(template),
@@ -179,7 +179,7 @@ app.get('/api/v1/me/free/experience',requireUser,async(c:any)=>{
     quote_button_visible:quoteVisible(template),
     appointment_enabled:settings.enabled,
     portfolio_title:portfolioTitle(template),
-    schedule:publicSchedule(availability as any[]),
+    schedule:template?.free_schedule_visible===true?publicSchedule(availability as any[]):[],
   }})
 })
 app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
@@ -193,6 +193,7 @@ app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
   if(!nextQuote&&!nextAgenda)return c.json({ok:false,error:'Debes mantener visible al menos Cotizar / información o Agendar.'},422)
   if(body.portfolio_title!==undefined)template.free_portfolio_title=String(body.portfolio_title||'').trim().slice(0,40)||'Portafolio'
   if(body.quote_button_visible!==undefined)template.free_quote_button_visible=nextQuote
+  if(body.appointment_enabled===true)template.free_schedule_visible=true
   const statements:any[]=[
     c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),resolved.subject.id),
   ]
@@ -223,7 +224,7 @@ app.put('/api/v1/me/free/appointments/settings',requireUser,async(c:any)=>{
     const template=parseTemplateData((resolved.profile as any).template_data)
     if(!quoteVisible(template))return c.json({ok:false,error:'No puedes desactivar Agenda mientras Cotizar / información esté oculto. Activa Cotizar primero.'},422)
   }
-  try{await saveAppointmentConfiguration(c.env.DB,'free',resolved.subject.id,body);return c.json({ok:true})}
+  try{await saveAppointmentConfiguration(c.env.DB,'free',resolved.subject.id,body);const template=parseTemplateData((resolved.profile as any).template_data);template.free_schedule_visible=true;await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),resolved.subject.id).run();return c.json({ok:true})}
   catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos guardar la agenda.'},400)}
 })
 app.post('/api/v1/me/free/appointments/blocks',requireUser,async(c:any)=>{
