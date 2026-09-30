@@ -315,6 +315,8 @@ has(core,"Debes mantener visible al menos Cotizar / información o Agendar.",'pe
 has(core,"Activa primero el módulo Agenda antes de mostrar el botón Agendar.",'no se puede mostrar Agendar con módulo inactivo')
 has(sponsoredAppointments,"No puedes desactivar Agenda mientras Cotizar / información esté oculto.",'no se puede desactivar Agenda si dejaría el perfil sin acción')
 has(sponsoredAppointments,"appointment_button_visible=0",'desactivar Agenda limpia su botón público para evitar estado incoherente')
+has(sponsoredAppointments,"body?.enabled===true&&!before.enabled",'activar Agenda por primera vez detecta transición real')
+has(sponsoredAppointments,"appointment_button_visible=1",'primera activación de Agenda hace visible Agendar automáticamente')
 if((sponsoredAppointments.match(/appointment_button_visible\|\|0/g)||[]).length<3)throw new Error('Config, disponibilidad y creación pública de Agenda deben respetar appointment_button_visible')
 has(beneficiary,'Botones principales del perfil','panel permite controlar acciones públicas')
 has(beneficiary,'Cotizar / información','panel permite mostrar u ocultar Cotizar')
