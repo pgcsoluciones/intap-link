@@ -1,5 +1,6 @@
 const CACHE_NAME = 'kawvo-shell-v2'
 const SHELL = ['/admin/free/home?source=pwa', '/manifest.webmanifest', '/kawvo-icon.svg']
+const AGENDA_PREF_CACHE = 'kawvo-agenda-preferences-v1'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)).catch(() => undefined))
@@ -60,4 +61,51 @@ self.addEventListener('notificationclick', (event) => {
       return self.clients.openWindow ? self.clients.openWindow(target) : undefined
     }),
   )
+})
+
+
+self.addEventListener('message', (event) => {
+  const data = event.data || {}
+  if (data.type !== 'kawvo:agenda-sound') return
+  const value = ['agenda', 'soft', 'pulse', 'silent'].includes(String(data.value || '')) ? String(data.value) : 'agenda'
+  event.waitUntil(
+    caches.open(AGENDA_PREF_CACHE).then((cache) => cache.put('/__kawvo/agenda-sound', new Response(value))).catch(() => undefined),
+  )
+})
+
+async function agendaSoundPreference() {
+  try {
+    const cache = await caches.open(AGENDA_PREF_CACHE)
+    const response = await cache.match('/__kawvo/agenda-sound')
+    return response ? await response.text() : 'agenda'
+  } catch {
+    return 'agenda'
+  }
+}
+
+self.addEventListener('push', (event) => {
+  event.waitUntil((async () => {
+    let payload = {}
+    try { payload = event.data ? event.data.json() : {} } catch {
+      try { payload = { body: event.data ? event.data.text() : '' } } catch { payload = {} }
+    }
+    const preference = await agendaSoundPreference()
+    const silent = preference === 'silent'
+    const unread = Number(payload.unread_count || 1)
+    try {
+      if (self.navigator && typeof self.navigator.setAppBadge === 'function') {
+        await self.navigator.setAppBadge(Math.max(1, unread))
+      }
+    } catch {}
+    await self.registration.showNotification(String(payload.title || 'Nueva solicitud de agenda'), {
+      body: String(payload.body || 'Tienes una nueva solicitud.'),
+      icon: '/kawvo-icon-192.png',
+      badge: '/kawvo-icon-192.png',
+      tag: String(payload.tag || 'kawvo-agenda'),
+      renotify: true,
+      silent,
+      vibrate: silent ? [160, 80, 160] : undefined,
+      data: { url: String(payload.url || '/admin/free/home?source=pwa') },
+    })
+  })())
 })
