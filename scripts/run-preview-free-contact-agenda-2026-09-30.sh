@@ -193,8 +193,8 @@ assert d.get('planId')=='free', f"planId inesperado: {d.get('planId')}"
 x=d.get('freeExperience')
 assert isinstance(x,dict), f"freeExperience ausente: {x!r}"
 assert x.get('quote_button_visible') is True, f"Cotizar no viene activo: {x!r}"
-assert isinstance(x.get('schedule'),list), f"schedule inválido: {x!r}"
-print(f"✓ Payload canónico Free real /{slug}: Cotizar activo + experiencia integrada")
+assert isinstance(x.get('schedule'),list) and len(x.get('schedule'))>0, f"Horario Free ausente: {x!r}"
+print(f"✓ Payload canónico Free real /{slug}: horario presente + Cotizar activo + experiencia integrada")
 PY
 
 echo; echo "▶ Verificar que Web Preview fue compilada contra Preview, no Producción"
