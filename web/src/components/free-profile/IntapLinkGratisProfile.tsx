@@ -23,6 +23,7 @@ import {
 import './IntapLinkGratisRebuilt.css'
 import './IntapLinkGratisPublicEnhancements.css'
 import FreeContactActions from './FreeContactActions'
+import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
 
 import {
   FREE_PROFILE_LIMITS,
@@ -125,6 +126,13 @@ function whatsappUrl(profile: FreeProfileData, subject?: string) {
   return `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`
 }
 
+function appOrigin() {
+  if (typeof window === 'undefined') return 'https://app.intaprd.com'
+  const host = window.location.hostname.toLowerCase()
+  if (host === 'preview.intaprd.com' || host.endsWith('.pages.dev')) return 'https://app.preview.intaprd.com'
+  return 'https://app.intaprd.com'
+}
+
 function loginUrl() {
   if (typeof window === 'undefined') return 'https://app.intaprd.com/admin/login'
   const host = window.location.hostname
@@ -192,8 +200,14 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [linksOpen, setLinksOpen] = useState(false)
   const [modal, setModal] = useState<DetailModal>(null)
+  const [ownerToast, setOwnerToast] = useState('')
 
   useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }) }, [])
+  useEffect(() => {
+    if (!ownerToast) return
+    const timer = window.setTimeout(() => setOwnerToast(''), 2200)
+    return () => window.clearTimeout(timer)
+  }, [ownerToast])
   useEffect(() => {
     if (!modal && !qrOpen) return
     const previousOverflow = document.body.style.overflow
@@ -358,6 +372,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   return (
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
+      {profile.experience && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
       {topContent}
       <div className="ilx-shell">
         <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
@@ -418,6 +433,8 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
           </footer>
         </div>
       </div>
+
+      {ownerToast && <div style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',background:'#0f172a',color:'#fff',padding:'10px 14px',borderRadius:999,fontSize:13,zIndex:120}}>{ownerToast}</div>}
 
       {qrOpen && (
         <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQrOpen(false) }}>
