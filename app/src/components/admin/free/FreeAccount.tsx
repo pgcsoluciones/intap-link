@@ -8,6 +8,7 @@ import FreeNotificationBell from './FreeNotificationBell'
 import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeSupportPanel from './FreeSupportPanel'
 import FreeAccountGuidedTour from './FreeAccountGuidedTour'
+import FreeExperienceSettings from './FreeExperienceSettings'
 
 type MeData = {
   email?: string | null
