@@ -7,14 +7,10 @@ import {
 
 import {
   FaAddressCard,
-  FaChartLine,
   FaChevronDown,
   FaExternalLinkAlt,
   FaEdit,
-  FaHandshake,
-  FaHome,
   FaInstagram,
-  FaKey,
   FaLink,
   FaMapMarkerAlt,
   FaPhoneAlt,
@@ -26,6 +22,7 @@ import {
 
 import './IntapLinkGratisRebuilt.css'
 import './IntapLinkGratisPublicEnhancements.css'
+import FreeContactActions from './FreeContactActions'
 
 import {
   FREE_PROFILE_LIMITS,
@@ -34,8 +31,6 @@ import {
   type FreeProfileLayoutId,
   type FreeProfilePortfolioItem,
   type FreeProfileQuickAction,
-  type FreeProfileService,
-  type FreeProfileServiceIconKey,
 } from './IntapLinkGratis.types'
 
 export type IntapLinkGratisProfileProps = {
@@ -51,10 +46,7 @@ export type IntapLinkGratisProfileProps = {
   onTrackEvent?: (eventType: string, eventLabel?: string) => void
 }
 
-type DetailModal =
-  | { kind: 'portfolio'; item: FreeProfilePortfolioItem }
-  | { kind: 'service'; item: FreeProfileService }
-  | null
+type DetailModal = { kind: 'portfolio'; item: FreeProfilePortfolioItem } | null
 
 function normalizeHex(value: string, fallback: string) {
   const normalized = value.trim().toUpperCase()
@@ -141,15 +133,6 @@ function loginUrl() {
     : 'https://app.intaprd.com/admin/login'
 }
 
-function serviceIcon(key: FreeProfileServiceIconKey) {
-  switch (key) {
-    case 'home': return <FaHome />
-    case 'key': return <FaKey />
-    case 'chart-line': return <FaChartLine />
-    case 'handshake': return <FaHandshake />
-    default: return <FaHandshake />
-  }
-}
 
 function quickActionIcon(action: FreeProfileQuickAction) {
   switch (action.type) {
@@ -225,7 +208,6 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   const portfolio = profile.portfolio.slice(0, FREE_PROFILE_LIMITS.maxPortfolioImages)
   const customLinks = profile.customLinks.slice(0, FREE_PROFILE_LIMITS.maxCustomLinks)
   const quickActions = profile.quickActions.slice(0, FREE_PROFILE_LIMITS.maxQuickActions)
-  const services = profile.services.slice(0, FREE_PROFILE_LIMITS.maxServices)
 
   const surface = normalizeHex(colors.surface, '#FFFFFF')
   const pageBackground = normalizeHex(colors.background, '#F8FAFC')
@@ -397,6 +379,8 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
           <section className="ilx-section ilx-about ilx-live-editable"><h2>{profile.aboutTitle}</h2><p className="ilx-copy">{profile.bio}</p>{editMode && <EditPencil label="Editar sobre mí" onClick={()=>onEditSection?.("about")} />}</section>
 
+          <FreeContactActions profile={profile} colors={colors} />
+
           {portfolio.length > 0 && (
             <section className="ilx-section ilx-portfolio ilx-live-editable">
               <h2>{profile.portfolioTitle}</h2>{editMode && <EditPencil label="Editar portafolio" onClick={()=>onEditSection?.("portfolio")} />}
@@ -411,29 +395,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
             </section>
           )}
 
-          {services.length > 0 && (
-            <section className="ilx-section ilx-services-section">
-              <div className="ilx-services-heading ilx-live-editable">
-                <h2>{profile.servicesTitle}</h2>
-                {editMode && <EditPencil label="Editar servicios" onClick={()=>onEditSection?.("services")} />}
-                {profile.servicesDescription && <p>{profile.servicesDescription}</p>}
-              </div>
-              <div className="ilx-services" data-service-count={Math.max(1, services.length)} style={{ '--ilx-service-count': Math.max(1, services.length) } as CSSProperties}>
-                {services.map((service) => (
-                  <button key={service.id} type="button" className="ilx-service" onClick={() => {onTrackEvent?.('service_open',service.title);setModal({ kind: 'service', item: service })}}>
-                    <div className="ilx-service-media">{service.image ? <img src={service.image} alt={service.title} loading="lazy" decoding="async" /> : <span>{serviceIcon(service.iconKey)}</span>}</div>
-                    <div className="ilx-service-copy">
-                      <h3>{service.title}</h3>
-                      <p>{service.description}</p>
-                      <span className="ilx-service-more">Ver detalles</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {customLinks.length > 0 && (
+          <div id="ilx-bank-slot" />\n\n          {customLinks.length > 0 && (
             <section className="ilx-section ilx-links ilx-live-editable">
               {editMode && <EditPencil label="Editar enlaces" onClick={()=>onEditSection?.("links")} />}<button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
               {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('custom_link',link.label)}><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
@@ -468,7 +430,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
         <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(null) }}>
           <article className="ilx-modal" role="dialog" aria-modal="true" aria-label={modal.item.title}>
             <button type="button" className="ilx-modal-close" onClick={() => setModal(null)} aria-label="Cerrar"><FaTimes /></button>
-            <div className="ilx-modal-media">{modal.kind === 'portfolio' ? <img src={modal.item.image} alt={modal.item.title} /> : modal.item.image ? <img src={modal.item.image} alt={modal.item.title} /> : <span className="ilx-modal-service-icon">{serviceIcon(modal.item.iconKey)}</span>}</div>
+            <div className="ilx-modal-media"><img src={modal.item.image} alt={modal.item.title} /></div>
             <div className="ilx-modal-body"><h2>{modal.item.title}</h2><p>{modal.item.description}</p>{hasWhatsapp && <a className="ilx-modal-cta" href={whatsappUrl(profile, modal.item.title)} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('whatsapp',modal.item.title)}><FaWhatsapp /><span>Consultar por WhatsApp</span></a>}</div>
           </article>
         </div>
