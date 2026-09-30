@@ -73,7 +73,7 @@ async function resolveQuoteMediaProfile(c:any,kind:'sponsored'|'free',value:stri
     if(!username)return null
     return c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? AND status='published' LIMIT 1`).bind(username).first()
   }
-  const slug=String(value||'').trim().toLowerCase().replace(/^\\/+|\\/+$/g,'')
+  const slug=String(value||'').trim().toLowerCase().replace(/^\/+|\/+$/g,'')
   if(!slug)return null
   return c.env.DB.prepare(`SELECT id FROM profiles WHERE lower(slug)=? AND lower(COALESCE(plan_id,'free'))='free' AND COALESCE(is_published,0)=1 LIMIT 1`).bind(slug).first()
 }
