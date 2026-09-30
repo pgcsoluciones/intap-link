@@ -55,7 +55,7 @@ export default function AppointmentRequestModal({apiBase,palette,onClose,onToast
     ;(async()=>{
       setSlotsLoading(true);setForm(current=>({...current,time:''}))
       try{
-        const res=await fetch(apiBase+'/availability?date='+encodeURIComponent(form.date),{cache:'no-store'})
+        const res=await fetch(apiBase+'/availability?date='+encodeURIComponent(form.date)+'&_ts='+Date.now(),{cache:'no-store'})
         const json:any=await res.json().catch(()=>null)
         if(!alive)return
         setSlots(res.ok&&json?.ok&&Array.isArray(json.data?.slots)?json.data.slots:[])
@@ -71,6 +71,11 @@ export default function AppointmentRequestModal({apiBase,palette,onClose,onToast
 
   async function send(){
     if(!ready)return
+    let whatsappWindow:Window|null=null
+    try{
+      whatsappWindow=window.open('about:blank','_blank')
+      if(whatsappWindow)whatsappWindow.opener=null
+    }catch{whatsappWindow=null}
     setSending(true)
     try{
       const res=await fetch(apiBase,{
@@ -82,9 +87,12 @@ export default function AppointmentRequestModal({apiBase,palette,onClose,onToast
       const url=String(json.data?.whatsapp_url||'')
       if(!url)throw new Error('No pudimos preparar WhatsApp.')
       onClose()
-      window.location.href=url
-    }catch(error){onToast(error instanceof Error?error.message:'No pudimos registrar la solicitud.')}
-    finally{setSending(false)}
+      if(whatsappWindow)whatsappWindow.location.replace(url)
+      else window.location.href=url
+    }catch(error){
+      try{whatsappWindow?.close()}catch{}
+      onToast(error instanceof Error?error.message:'No pudimos registrar la solicitud.')
+    }finally{setSending(false)}
   }
 
   return <div role="dialog" aria-modal="true" aria-label="Agendar" onClick={onClose} style={overlay}>

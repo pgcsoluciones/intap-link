@@ -39,6 +39,11 @@ export function validAppointmentTime(value:unknown){
   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(text))return false
   return true
 }
+function normalizeStoredAppointmentTime(value:unknown){
+  const text=String(value??'').trim()
+  const match=text.match(/^([01]\d|2[0-3]):[0-5]\d/)
+  return match?match[0]:''
+}
 function timeMinutes(value:string){const[h,m]=value.split(':').map(Number);return h*60+m}
 function minutesTime(value:number){const h=Math.floor(value/60),m=value%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}
 function weekdayOf(date:string){return new Date(date+'T12:00:00Z').getUTCDay()}
@@ -121,17 +126,17 @@ export async function availableAppointmentSlots(db:D1Database,subjectType:string
   const blocked=(blocks.results||[]) as any[],booked=(confirmed.results||[]) as any[]
   const slots:{time:string;end_time:string}[]=[]
   for(const window of windows.results||[]){
-    const start=String((window as any).start_time||''),end=String((window as any).end_time||'')
+    const start=normalizeStoredAppointmentTime((window as any).start_time),end=normalizeStoredAppointmentTime((window as any).end_time)
     if(!validAppointmentTime(start)||!validAppointmentTime(end))continue
     for(let minute=timeMinutes(start);minute+settings.slot_minutes<=timeMinutes(end);minute+=settings.slot_minutes){
       const slotStart=minutesTime(minute),slotEnd=minutesTime(minute+settings.slot_minutes)
       const manuallyBlocked=blocked.some((item:any)=>{
-        const bs=String(item.start_time||''),be=String(item.end_time||'')
+        const bs=normalizeStoredAppointmentTime(item.start_time),be=normalizeStoredAppointmentTime(item.end_time)
         if(!bs&&!be)return true
         return validAppointmentTime(bs)&&validAppointmentTime(be)&&overlaps(slotStart,slotEnd,bs,be)
       })
       if(manuallyBlocked)continue
-      if(booked.some((item:any)=>overlaps(slotStart,slotEnd,String(item.start_time||''),String(item.end_time||''))))continue
+      if(booked.some((item:any)=>overlaps(slotStart,slotEnd,normalizeStoredAppointmentTime(item.start_time),normalizeStoredAppointmentTime(item.end_time))))continue
       const startEpoch=zonedEpoch(date,slotStart,settings.timezone)
       if(startEpoch-Date.now()<settings.min_notice_minutes*60000)continue
       slots.push({time:slotStart,end_time:slotEnd})
@@ -225,7 +230,7 @@ export async function confirmAppointmentRequest(db:D1Database,subjectType:string
   if(String((row as any).status)==='confirmed')return{ok:true,already:true}
   if(String((row as any).status)!=='pending')throw new Error('Esta solicitud ya no está pendiente.')
   const date=String((row as any).appointment_date),start=String((row as any).start_time),end=String((row as any).end_time)
-  const blocked=await db.prepare(`SELECT id FROM appointment_blocks WHERE subject_type=? AND subject_id=? AND block_date=? AND ((start_time IS NULL AND end_time IS NULL) OR (start_time<? AND end_time>?)) LIMIT 1`).bind(subjectType,subjectId,date,end,start).first()
+  const blocked=await db.prepare(`SELECT id FROM appointment_blocks WHERE subject_type=? AND subject_id=? AND block_date=? AND ((start_time IS NULL AND end_time IS NULL) OR (substr(trim(start_time),1,5)<? AND substr(trim(end_time),1,5)>?)) LIMIT 1`).bind(subjectType,subjectId,date,end,start).first()
   if(blocked)throw new Error('Ese horario está bloqueado actualmente.')
   const result=await db.prepare(`UPDATE appointment_requests SET status='confirmed',confirmed_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND subject_type=? AND subject_id=? AND status='pending' AND NOT EXISTS (SELECT 1 FROM appointment_requests other WHERE other.subject_type=? AND other.subject_id=? AND other.appointment_date=? AND other.status='confirmed' AND other.id<>? AND other.start_time<? AND other.end_time>?)`).bind(requestId,subjectType,subjectId,subjectType,subjectId,date,requestId,end,start).run()
   if(Number((result as any)?.meta?.changes||0)!==1)throw new Error('Ese horario acaba de ser ocupado. Selecciona otra hora para esta solicitud.')

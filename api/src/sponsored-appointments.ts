@@ -52,20 +52,22 @@ function humanTime(value:string){
   catch{return value}
 }
 function appointmentMessage(row:any){
-  const lines=[
+  const contact=[
     'Hola, mi nombre es '+String(row.customer_name||'').trim()+'.',
     'Mi teléfono es '+String(row.customer_phone||'').trim()+'.',
     ...(String(row.customer_email||'').trim()?['Mi correo es '+String(row.customer_email||'').trim()+'.']:[]),
+  ].join('\n')
+  const intent=['Estoy interesado/a en agendar:',String(row.reason_label||'Cita')].join('\n')
+  const schedule=[
+    'Fecha solicitada:',
+    humanDate(String(row.appointment_date||''),String(row.timezone||'America/Santo_Domingo')),
     '',
-    'Estoy interesado/a en agendar: '+String(row.reason_label||'Cita')+'.',
-    '',
-    'Fecha solicitada: '+humanDate(String(row.appointment_date||''),String(row.timezone||'America/Santo_Domingo'))+'.',
-    'Hora solicitada: '+humanTime(String(row.start_time||''))+'.',
-    ...(String(row.details||'').trim()?['','Detalles:',String(row.details||'').trim()]:[]),
-    '',
-    'Quedo atento/a a la confirmación de disponibilidad.',
-  ]
-  return lines.join('\n')
+    'Hora solicitada:',
+    humanTime(String(row.start_time||'')),
+  ].join('\n')
+  const details=String(row.details||'').trim()
+  const sections=[contact,intent,schedule,details?['Detalles:',details].join('\n'):'','Quedo atento/a a la confirmación de disponibilidad.']
+  return sections.filter(Boolean).join('\n\n')
 }
 async function sponsoredPublicSubject(c:any,username:string){
   return c.env.DB.prepare("SELECT id,user_id,username,business_name,whatsapp,phone,status,profile_role,appointment_button_visible FROM sponsored_profiles WHERE username=? AND status='published' LIMIT 1").bind(username).first()
@@ -104,6 +106,7 @@ async function markRequestNotificationRead(c:any,userId:string,requestId:string)
 }
 
 app.get('/api/v1/public/sponsored/:username/appointments',async(c:any)=>{
+  c.header('Cache-Control','no-store, max-age=0')
   const username=cleanUsername(c.req.param('username'))
   const profile=await sponsoredPublicSubject(c,username)
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
@@ -114,6 +117,7 @@ app.get('/api/v1/public/sponsored/:username/appointments',async(c:any)=>{
 })
 
 app.get('/api/v1/public/sponsored/:username/appointments/availability',async(c:any)=>{
+  c.header('Cache-Control','no-store, max-age=0')
   const username=cleanUsername(c.req.param('username')),date=String(c.req.query('date')||'')
   const profile=await sponsoredPublicSubject(c,username)
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
