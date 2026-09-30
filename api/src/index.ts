@@ -3429,7 +3429,6 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   let publicTemplateData: Record<string, any> = {}
   try { publicTemplateData = JSON.parse(String((profile as any).template_data || '{}')) || {} } catch { publicTemplateData = {} }
   const isFreeProfile = String((profile as any).plan_id || 'free').trim().toLowerCase() === 'free'
-  const freeScheduleVisible = publicTemplateData.free_schedule_visible === true
 
   const [links, rawGallery, rawFaqs, rawProducts, rawVideos, entitlements, rawSocialLinks, rawContact, freeAppointmentSettings, rawFreeAvailability] = await Promise.all([
     c.env.DB.prepare(
@@ -3471,9 +3470,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     isFreeProfile
       ? c.env.DB.prepare("SELECT enabled FROM appointment_settings WHERE subject_type='free' AND subject_id=? LIMIT 1").bind((profile as any).id).first()
       : Promise.resolve(null),
-    isFreeProfile && freeScheduleVisible
-      ? c.env.DB.prepare("SELECT weekday,start_time,end_time,enabled,sort_order FROM appointment_availability WHERE subject_type='free' AND subject_id=? ORDER BY weekday ASC,sort_order ASC,start_time ASC").bind((profile as any).id).all()
-      : Promise.resolve({ results: [] }),
+    Promise.resolve({ results: [] }),
   ])
 
   const origin = new URL(c.req.url).origin
@@ -3519,31 +3516,14 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
 
   const featured_product = products.find((p) => p.is_featured === 1) ?? null
 
-  const FREE_DAY_LABELS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
-  const formatFreeTime = (value: unknown) => {
-    const match = String(value || '').trim().match(/^(\d{2}):(\d{2})/)
-    if (!match) return String(value || '')
-    const hour = Number(match[1]), minute = Number(match[2])
-    const suffix = hour >= 12 ? 'p. m.' : 'a. m.'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${String(minute).padStart(2,'0')} ${suffix}`
-  }
-  const freeScheduleGroups = new Map<number, string[]>()
-  for (const row of ((rawFreeAvailability as any)?.results || [])) {
-    if (Number((row as any).enabled || 0) !== 1) continue
-    const weekday = Number((row as any).weekday)
-    if (weekday < 0 || weekday > 6) continue
-    const hours = `${formatFreeTime((row as any).start_time)} – ${formatFreeTime((row as any).end_time)}`
-    const list = freeScheduleGroups.get(weekday) || []
-    list.push(hours)
-    freeScheduleGroups.set(weekday, list)
-  }
-  const freeSchedule = Array.from(freeScheduleGroups.entries())
-    .sort((a,b)=>a[0]-b[0])
-    .map(([weekday,hours])=>({ day: FREE_DAY_LABELS[weekday], hours: hours.join(' · ') }))
+  const DEFAULT_FREE_SCHEDULE=[{day:'Lunes a Viernes',hours:'8:00 AM - 6:00 PM'},{day:'Sábados',hours:'9:00 AM - 1:00 PM'}]
+  const cleanFreeSchedule=(value:any)=>Array.isArray(value)?value.slice(0,7).map((item:any)=>({day:String(item?.day||'').trim().slice(0,40),hours:String(item?.hours||'').trim().slice(0,60)})).filter((item:any)=>item.day&&item.hours):[]
+  const freeSchedule = publicTemplateData.free_schedule_configured===true
+    ? cleanFreeSchedule(publicTemplateData.free_schedule)
+    : DEFAULT_FREE_SCHEDULE
   const freeWhatsapp = String((rawContact as any)?.whatsapp || (rawContact as any)?.phone || (profile as any).whatsapp_number || '').replace(/\D/g,'')
   const freeExperience = isFreeProfile ? {
-    schedule: freeScheduleVisible ? freeSchedule : [],
+    schedule: freeSchedule,
     quote_button_visible: publicTemplateData.free_quote_button_visible !== false,
     appointment_enabled: Number((freeAppointmentSettings as any)?.enabled || 0) === 1 && Boolean(freeWhatsapp),
   } : null
