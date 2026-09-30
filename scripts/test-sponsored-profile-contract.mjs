@@ -493,6 +493,7 @@ has(pwaPush,"response.status===404||response.status===410",'suscripciones expira
 has(pwaPush,"/api/v1/me/push/public-key",'PWA obtiene clave pública VAPID autenticada')
 has(pwaPush,"/api/v1/me/push/subscribe",'PWA registra suscripción del dispositivo')
 has(pwaNotificationBridge,"pushManager.subscribe",'PWA registra PushManager cuando hay permiso')
+has(pwaNotificationBridge,"if(!keyJson?.ok||!keyJson.data?.enabled||!publicKey)return false",'syncPushSubscription retorna booleano cuando Web Push no está configurado')
 has(pwaNotificationBridge,'pushReady.current','bridge distingue Web Push activo del fallback por polling')
 has(pwaNotificationBridge,"else if(!pushReady.current)",'polling no duplica notificación del sistema cuando Web Push ya está activo')
 has(pwaNotificationBridge,"kawvo:push-permission-changed",'permiso concedido activa suscripción push')
