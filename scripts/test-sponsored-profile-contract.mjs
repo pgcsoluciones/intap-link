@@ -296,7 +296,7 @@ if(/sponsoredProfileMatch[\s\S]{0,3000}(sponsor_logo_url|banner_image_url|sponso
 has(publicUi,'Nuestro horario','sección horario')
 has(publicUi,'Solicitar cotización / información','CTA público universal debajo del horario')
 has(publicUi,'SponsoredAppointmentModal','perfil público integra módulo de agenda')
-has(publicUi,'Cotizar / información','CTA de cotización usa texto compacto para compartir fila')
+has(publicUi,'Cotizar /<br/>información','CTA de cotización conserva el texto compacto en dos líneas para compartir fila')
 if((publicUi.match(/minHeight:66/g)||[]).length<2)throw new Error('Cotizar y Agendar deben conservar la misma altura visual cuando comparten fila')
 has(publicUi,'appointmentEnabled','perfil público muestra Agendar solo cuando la agenda está activa')
 has(publicUi,'showQuoteButton','perfil público respeta visibilidad de Cotizar / información')
