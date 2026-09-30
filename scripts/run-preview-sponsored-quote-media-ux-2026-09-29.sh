@@ -42,7 +42,7 @@ run git pull --ff-only github "$BRANCH"
 git restore -- scripts/run-preview-sponsored-quote-media-ux-2026-09-29.sh 2>/dev/null || true
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
-ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations-preview/0079_sponsored_quote_media_batch\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/migrations/0079_sponsored_quote_media_batch\.sql|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredAppointmentModal\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
+ALLOWED='^(api/migrations-preview/0075_sponsored_banner_per_artifact\.sql|api/migrations-preview/0076_sponsored_profile_email\.sql|api/migrations-preview/0077_sponsored_profile_email_repair\.sql|api/migrations-preview/0078_sponsored_quote_media\.sql|api/migrations-preview/0079_sponsored_quote_media_batch\.sql|api/migrations-preview/0080_appointments_core\.sql|api/migrations/0076_sponsored_banner_per_artifact\.sql|api/migrations/0077_sponsored_profile_email\.sql|api/migrations/0078_sponsored_quote_media\.sql|api/migrations/0079_sponsored_quote_media_batch\.sql|api/migrations/0080_appointments_core\.sql|api/src/appointments-core\.ts|api/src/sponsored-appointments\.ts|api/src/sponsored-profiles\.ts|api/src/lib/admin-auth\.ts|api/src/sponsored-public\.ts|api/src/sponsored-admin-extra\.ts|api/src/sponsored-quote-media\.ts|api/src/preview-free-entry\.ts|api/src/preview-frontdoor-entry\.ts|api/wrangler\.preview\.toml|api/wrangler\.toml|functions/_middleware\.ts|app/src/App\.tsx|app/src/components/appointments/AppointmentManager\.tsx|app/src/components/admin/SuperAdminSponsors\.tsx|app/src/components/admin/sponsored/SponsoredDashboard\.tsx|app/src/components/admin/sponsored/SponsorDashboard\.tsx|app/src/components/admin/sponsored/SponsoredExperienceTools\.tsx|app/src/components/admin/sponsored/SponsoredAppointments\.tsx|web/src/components/PublicProfile\.tsx|web/src/components/appointments/AppointmentRequestModal\.tsx|web/src/components/appointments/AppointmentOwnerBar\.tsx|web/src/components/sponsored/SponsoredProfile\.tsx|web/src/components/sponsored/QuoteAudioRecorder\.tsx|web/src/components/sponsored/QuoteMediaAttachments\.tsx|web/src/components/sponsored/SponsoredAppointmentModal\.tsx|web/src/components/sponsored/SponsoredQuoteMediaViewer\.tsx|scripts/test-sponsored-profile-contract\.mjs|scripts/run-preview-sponsored-banner-quote-2026-09-29\.sh|scripts/run-preview-sponsored-quote-media-ux-2026-09-29\.sh|scripts/run-production-sponsored-banner-quote-2026-09-29\.sh)$'
 UNEXPECTED="$(git diff --name-only github/main...HEAD | grep -Ev "$ALLOWED" || true)"
 [ -z "$UNEXPECTED" ] || { echo "$UNEXPECTED"; fail "Hay archivos fuera del alcance"; }
 
@@ -72,6 +72,10 @@ QUOTE_MEDIA_TABLE="$(cd api && npx wrangler d1 execute intap_db_preview --remote
 echo "$QUOTE_MEDIA_TABLE" | grep -F 'sponsored_quote_media' >/dev/null || fail "D1 Preview no tiene sponsored_quote_media"
 QUOTE_MEDIA_BATCH="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsored_quote_media') WHERE name='batch_id';" 2>/dev/null || true)"
 echo "$QUOTE_MEDIA_BATCH" | grep -F 'batch_id' >/dev/null || fail "D1 Preview no tiene sponsored_quote_media.batch_id"
+APPOINTMENT_TABLES="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('appointment_settings','appointment_availability','appointment_reasons','appointment_blocks','appointment_requests') ORDER BY name;" 2>/dev/null || true)"
+for table in appointment_settings appointment_availability appointment_reasons appointment_blocks appointment_requests; do
+  echo "$APPOINTMENT_TABLES" | grep -F "$table" >/dev/null || fail "D1 Preview no tiene $table"
+done
 echo "✓ Esquema D1 Preview verificado"
 
 echo; echo "▶ Deploy App Pages Preview"
@@ -166,5 +170,16 @@ Validar:
 28. Al enviar cotización, formulario y adjuntos quedan limpios.
 29. El endpoint efímero rechaza archivos vencidos y el cron los elimina de R2/D1.
 30. Producción NO tocada.
+31. Agenda está inactiva por defecto y Agendar solo aparece públicamente cuando el dueño la activa.
+32. El dueño configura duración, anticipación, horizonte, días y franjas horarias.
+33. Puede bloquear un día completo o una franja y volver a habilitarla.
+34. Puede usar motivos predeterminados o personalizarlos.
+35. El calendario público solo ofrece horas disponibles; solicitudes pendientes no bloquean el slot.
+36. Al enviar, la solicitud queda persistida y luego abre WhatsApp.
+37. Nueva solicitud crea notificación para el dueño del perfil.
+38. Propietario logueado ve barra rápida en su perfil público con campana y solicitudes pendientes.
+39. Confirmar desde barra o panel bloquea la hora; doble confirmación concurrente se rechaza.
+40. Rechazar no ocupa la hora; Liberar horario devuelve una cita confirmada a disponibilidad.
+41. El panel completo de Agenda vive en /admin/sponsored/agenda y usa componentes/core reutilizables para Free/Plus/Trial.
 ============================================================
 EOF
