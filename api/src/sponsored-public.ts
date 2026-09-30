@@ -7,7 +7,7 @@ function rowToProfile(row:any){
   return {
     id:row.id,username:row.username,business_name:row.business_name,specialization:row.specialization,what_we_do:row.what_we_do,
     avatar_url:row.avatar_url,hero_url:row.hero_url,map_url:row.map_url,show_avatar:Number(row.show_avatar)===1,cover_variant:row.cover_variant||'standard',phone:row.phone,whatsapp:row.whatsapp,email:row.email,quote_email:row.quote_email,quote_email_source:row.quote_email_source,instagram:row.instagram,address:row.address,
-    schedule:parseArray(row.schedule_json),gallery:parseArray(row.gallery_json),gallery_title:row.gallery_title||'Catálogo',palette_id:row.palette_id||'blue',status:row.status,
+    schedule:parseArray(row.schedule_json),gallery:parseArray(row.gallery_json),gallery_title:row.gallery_title||'Catálogo',palette_id:row.palette_id||'blue',status:row.status,quote_button_visible:Number(row.quote_button_visible??1)===1,appointment_button_visible:Number(row.appointment_button_visible??0)===1,
     modules:parseArray(row.modules_json),
     sponsor:{id:row.sponsor_id,name:row.sponsor_name,type:row.sponsor_type,logo_url:row.sponsor_logo_url,banner_title:row.banner_title||'Impulsado por',banner_image_url:row.banner_image_url,banner_cta_label:row.banner_cta_label||'Conocer más',banner_cta_type:row.banner_cta_type||'none',banner_cta_value:row.banner_cta_value,whatsapp_message_template:row.whatsapp_message_template,website_url:row.sponsor_website_url,contact_whatsapp:row.sponsor_contact_whatsapp,banner_enabled:Number(row.sponsor_banner_enabled??1)!==0}
   }
