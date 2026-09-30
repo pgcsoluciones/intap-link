@@ -63,10 +63,18 @@ function fileHeaders(row:any,download=false){
   return headers
 }
 
-app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
-  const username=cleanUsername(c.req.param('username'))
-  if(!username)return c.json({ok:false,error:'Perfil no encontrado.'},404)
-  const profile=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? AND status='published' LIMIT 1`).bind(username).first()
+async function resolveQuoteMediaProfile(c:any,kind:'sponsored'|'free',value:string){
+  if(kind==='sponsored'){
+    const username=cleanUsername(value)
+    if(!username)return null
+    return c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? AND status='published' LIMIT 1`).bind(username).first()
+  }
+  const slug=String(value||'').trim().toLowerCase().replace(/^\\/+|\\/+$/g,'')
+  if(!slug)return null
+  return c.env.DB.prepare(`SELECT id FROM profiles WHERE lower(slug)=? AND lower(COALESCE(plan_id,'free'))='free' AND COALESCE(is_published,0)=1 LIMIT 1`).bind(slug).first()
+}
+
+async function handleQuoteMediaUpload(c:any,profile:any){
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
 
   const fd=await c.req.formData().catch(()=>null)
@@ -133,15 +141,22 @@ app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
     await c.env.DB.batch(statements)
   }catch(error){
     await Promise.all(uploaded.map(key=>c.env.BUCKET.delete(key).catch(()=>undefined)))
-    if(pending.length){
-      const ids=pending.map(item=>item.id)
-      for(const id of ids)await c.env.DB.prepare(`DELETE FROM sponsored_quote_media WHERE id=?`).bind(id).run().catch(()=>undefined)
-    }
+    for(const item of pending)await c.env.DB.prepare(`DELETE FROM sponsored_quote_media WHERE id=?`).bind(item.id).run().catch(()=>undefined)
     throw error
   }
 
   const items=pending.map(item=>({url:mediaUrl(c,item.code),code:item.code,kind:item.spec.kind,name:item.originalName,size_bytes:Number((item.file as any).size||0),expires_at:expiresAt}))
   return c.json({ok:true,data:{items,...(items.length===1?items[0]:{})}})
+}
+
+app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
+  const profile=await resolveQuoteMediaProfile(c,'sponsored',c.req.param('username'))
+  return handleQuoteMediaUpload(c,profile)
+})
+
+app.post('/api/v1/public/profiles/:slug/quote-media',async(c:any)=>{
+  const profile=await resolveQuoteMediaProfile(c,'free',c.req.param('slug'))
+  return handleQuoteMediaUpload(c,profile)
 })
 
 app.get('/api/v1/public/sponsored/quote-media/:code/meta',async(c:any)=>{
