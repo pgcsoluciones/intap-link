@@ -395,7 +395,9 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
             </section>
           )}
 
-          <div id="ilx-bank-slot" />\n\n          {customLinks.length > 0 && (
+          <div id="ilx-bank-slot" />
+
+          {customLinks.length > 0 && (
             <section className="ilx-section ilx-links ilx-live-editable">
               {editMode && <EditPencil label="Editar enlaces" onClick={()=>onEditSection?.("links")} />}<button type="button" className="ilx-links-toggle" onClick={() => setLinksOpen((current) => !current)} aria-expanded={linksOpen}><strong>Mis enlaces</strong><FaChevronDown className={linksOpen ? 'ilx-chevron-open' : ''} /></button>
               {linksOpen && <div className="ilx-links-list">{customLinks.map((link) => <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" onClick={()=>onTrackEvent?.('custom_link',link.label)}><span>{link.label}</span><FaExternalLinkAlt /></a>)}</div>}
