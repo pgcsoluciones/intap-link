@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { apiGet } from '../../lib/api'
+import { apiGet, apiPost } from '../../lib/api'
 
 type NotificationItem={
   id:string
@@ -13,6 +13,31 @@ type NotificationItem={
 
 export const AGENDA_SOUND_KEY='kawvo:agenda-notification-sound'
 const LAST_KEY='kawvo:agenda-last-alerted'
+
+function base64UrlToUint8Array(value:string){
+  const padding='='.repeat((4-value.length%4)%4)
+  const base64=(value+padding).replace(/-/g,'+').replace(/_/g,'/')
+  const raw=atob(base64)
+  return Uint8Array.from(raw,ch=>ch.charCodeAt(0))
+}
+async function syncPushSubscription(){
+  if(typeof Notification==='undefined'||Notification.permission!=='granted'||!('serviceWorker' in navigator)||!('PushManager' in window))return
+  try{
+    const keyJson:any=await apiGet('/me/push/public-key')
+    const publicKey=String(keyJson?.data?.public_key||'')
+    if(!keyJson?.ok||!keyJson.data?.enabled||!publicKey)return
+    const registration=await navigator.serviceWorker.ready
+    let subscription=await registration.pushManager.getSubscription()
+    if(!subscription){
+      subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:base64UrlToUint8Array(publicKey)})
+    }
+    const json=subscription.toJSON()
+    await apiPost('/me/push/subscribe',{endpoint:subscription.endpoint,keys:json.keys||{}})
+  }catch{/* push remains optional; polling still works */}
+}
+export function syncServiceWorkerPreference(kind:string){
+  try{navigator.serviceWorker?.controller?.postMessage({type:'kawvo:agenda-sound',value:kind})}catch{}
+}
 
 function vibrate(){
   try{if('vibrate' in navigator)navigator.vibrate([120,70,120])}catch{}
@@ -74,6 +99,8 @@ export default function PwaNotificationBridge(){
 
   useEffect(()=>{
     let active=true
+    void syncPushSubscription()
+    syncServiceWorkerPreference(localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
     async function poll(){
       if(running.current)return
       running.current=true
@@ -99,9 +126,11 @@ export default function PwaNotificationBridge(){
     void poll()
     const timer=window.setInterval(()=>void poll(),20000)
     const refresh=()=>void poll()
+    const syncPush=()=>void syncPushSubscription()
     window.addEventListener('focus',refresh)
     window.addEventListener('kawvo:notifications-changed',refresh)
-    return()=>{active=false;window.clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('kawvo:notifications-changed',refresh)}
+    window.addEventListener('kawvo:push-permission-changed',syncPush)
+    return()=>{active=false;window.clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('kawvo:notifications-changed',refresh);window.removeEventListener('kawvo:push-permission-changed',syncPush)}
   },[])
 
   return null
