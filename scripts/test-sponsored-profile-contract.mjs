@@ -300,7 +300,7 @@ has(publicUi,'appointmentEnabled','perfil público muestra Agendar solo cuando l
 has(publicUi,'showQuoteButton','perfil público respeta visibilidad de Cotizar / información')
 has(publicUi,'showAgendaButton','perfil público respeta visibilidad de Agendar')
 has(publicUi,'Compartir formulario','debajo de Cotizar aparece compartir formulario')
-has(publicUi,'Compartir agenda','debajo de Agendar aparece compartir agenda')
+has(publicUi,'Compartir agendar','debajo de Agendar aparece compartir agenda')
 has(publicUi,"shareActionByWhatsapp('quote')",'formulario se comparte por WhatsApp')
 has(publicUi,"shareActionByWhatsapp('agenda')",'agenda se comparte por WhatsApp')
 has(publicUi,"?cotizar=1",'enlace compartido abre directamente formulario de cotización')
