@@ -113,28 +113,6 @@ async function markRead(c:any,userId:string,requestId:string){
   await c.env.DB.prepare("UPDATE user_notifications SET read_at=COALESCE(read_at,datetime('now')) WHERE user_id=? AND source_type='appointment_request' AND source_id=?").bind(userId,requestId).run().catch(()=>undefined)
 }
 
-app.get('/api/v1/public/profiles/:slug/free-experience',async(c:any)=>{
-  c.header('Cache-Control','no-store, max-age=0')
-  const profile=await publicFreeProfile(c,cleanSlug(c.req.param('slug')))
-  if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
-  const id=String((profile as any).id||'')
-  const template=parseTemplateData((profile as any).template_data)
-  const settings=await getAppointmentSettings(c.env.DB,'free',id,false)
-  const availability=template?.free_schedule_visible===true
-    ? await c.env.DB.prepare("SELECT weekday,start_time,end_time,enabled,sort_order FROM appointment_availability WHERE subject_type='free' AND subject_id=? ORDER BY weekday ASC,sort_order ASC").bind(id).all()
-    : {results:[]}
-  const whatsapp=cleanPhone((profile as any).whatsapp||(profile as any).phone)
-  return c.json({ok:true,data:{
-    profile_id:id,
-    schedule:template?.free_schedule_visible===true?publicSchedule((availability.results||[]) as any[]):[],
-    quote_button_visible:quoteVisible(template),
-    appointment_enabled:settings.enabled&&Boolean(whatsapp),
-    portfolio_title:portfolioTitle(template),
-    quote_email:String((profile as any).email||(profile as any).account_email||'').trim(),
-    has_whatsapp:Boolean(whatsapp),
-  }})
-})
-
 app.get('/api/v1/public/profiles/:slug/appointments',async(c:any)=>{
   c.header('Cache-Control','no-store, max-age=0')
   const profile=await publicFreeProfile(c,cleanSlug(c.req.param('slug')))
