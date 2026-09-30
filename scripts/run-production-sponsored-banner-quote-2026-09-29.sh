@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feature/sponsored-banner-per-code"
-EXPECTED_MAIN_SHA="dc7758f9b70cb8117146860b19270ff973d822bc"
-APPROVED_PRODUCT_SHA="ae72eb0ffb37f641996725fddfc843ec72954175"
+EXPECTED_MAIN_SHA="a68416bed8a136f2cc96d500453df6ab4d415e06"
+APPROVED_PRODUCT_SHA="b3b3bc75189770bdcc9a55f3a730a2d1f97f78ce"
 RUNNER_PATH="scripts/run-production-sponsored-banner-quote-2026-09-29.sh"
 PROD_DB="intap_db"
 APP_PROJECT="intap-web2"
