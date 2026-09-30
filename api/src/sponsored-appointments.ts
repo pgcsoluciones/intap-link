@@ -151,6 +151,10 @@ app.put('/api/v1/me/sponsored-profile/appointments/settings',requireUser,async(c
   const resolved=await ownedSubject(c)
   if(!resolved)return c.json({ok:false,error:'Perfil patrocinado no encontrado.'},404)
   let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  if(body?.enabled===false){
+    const actions=await c.env.DB.prepare('SELECT quote_button_visible FROM sponsored_profiles WHERE id=? LIMIT 1').bind(resolved.subject.id).first()
+    if(Number((actions as any)?.quote_button_visible??1)!==1)return c.json({ok:false,error:'No puedes desactivar Agenda mientras Cotizar / información esté oculto. Activa Cotizar primero.'},422)
+  }
   try{await saveAppointmentConfiguration(c.env.DB,resolved.subject.type,resolved.subject.id,body);return c.json({ok:true})}
   catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos guardar la agenda.'},400)}
 })
