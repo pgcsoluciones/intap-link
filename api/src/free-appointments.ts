@@ -119,7 +119,10 @@ async function addNotification(c:any,request:any,profile:any){
   const message=String(request.customer_name||'Cliente')+' · '+String(request.reason_label||'Cita')+' · '+humanDate(String(request.appointment_date||''))+' · '+humanTime(String(request.start_time||''))
   await c.env.DB.prepare("INSERT INTO user_notifications(id,user_id,profile_id,type,title,message,source_type,source_id,action_label,action_url,created_at) VALUES (?,?,?,'free_appointment_request',?,?,'appointment_request',?,'Revisar solicitud',?,datetime('now'))").bind(crypto.randomUUID(),userId,String((profile as any).id||''),title,message,String(request.id||''),actionUrl).run().catch(()=>undefined)
   const push=sendWebPushToUser(c.env,userId,{title,body:message,url:actionUrl,tag:'agenda:'+String(request.id||'')}).catch(()=>undefined)
-  if(c.executionCtx?.waitUntil)c.executionCtx.waitUntil(push)
+  try{
+    if(c.executionCtx?.waitUntil)c.executionCtx.waitUntil(push)
+    else await push
+  }catch{await push}
 }
 async function markRead(c:any,userId:string,requestId:string){
   await c.env.DB.prepare("UPDATE user_notifications SET read_at=COALESCE(read_at,datetime('now')) WHERE user_id=? AND source_type='appointment_request' AND source_id=?").bind(userId,requestId).run().catch(()=>undefined)
@@ -238,6 +241,19 @@ app.post('/api/v1/me/free/appointments/requests/:id/:action',requireUser,async(c
     const request=await c.env.DB.prepare('SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status FROM appointment_requests WHERE id=? LIMIT 1').bind(requestId).first()
     return c.json({ok:true,data:request})
   }catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos actualizar la solicitud.'},409)}
+})
+
+
+app.get('/api/v1/me/free/appointments/public-context',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||''),slug=cleanSlug(c.req.query('username'))
+  if(!slug)return c.json({ok:false,error:'Perfil inválido.'},400)
+  const profile=await c.env.DB.prepare("SELECT id,slug,name,user_id FROM profiles WHERE lower(slug)=? AND user_id=? AND lower(COALESCE(plan_id,'free'))='free' LIMIT 1").bind(slug,userId).first()
+  if(!profile)return c.json({ok:false,error:'Not owner'},403)
+  const subjectId=String((profile as any).id||'')
+  const settings=await getAppointmentSettings(c.env.DB,'free',subjectId)
+  const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='free' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
+  const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='free' AND subject_id=? AND status='pending'").bind(subjectId).first()
+  return c.json({ok:true,data:{is_owner:true,enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending:rows.results||[],manage_url:'/admin/free/agenda'}})
 })
 
 export default app
