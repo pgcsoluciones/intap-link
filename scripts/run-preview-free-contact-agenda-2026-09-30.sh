@@ -59,6 +59,7 @@ git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergi
 cat > "$LOG_DIR/allowed-files.txt" <<'EOF_ALLOWED'
 api/src/account-home-route.ts
 api/src/free-appointments.ts
+api/src/index.ts
 api/src/preview-free-entry.ts
 app/src/App.tsx
 app/src/components/admin/free/FreeAccount.tsx
@@ -74,6 +75,8 @@ web/src/components/free-profile/FreeContactActions.tsx
 web/src/components/free-profile/IntapLinkGratis.adapter.ts
 web/src/components/free-profile/IntapLinkGratisProfile.tsx
 web/src/components/free-profile/PublicBankAccounts.tsx
+web/src/components/free-profile/IntapLinkGratis.types.ts
+web/src/components/PublicProfile.tsx
 EOF_ALLOWED
 
 git diff --name-only "$REMOTE/main"...HEAD | sort > "$LOG_DIR/actual-files.txt"
@@ -168,6 +171,20 @@ do
   echo "✓ $url -> HTTP $code"
   [ "$code" = "200" ] || fail "$url respondió HTTP $code"
 done
+
+echo; echo "▶ Smoke canónico de perfil Free real"
+curl -sS -f "https://preview.intaprd.com/api/v1/public/profiles/jlprince" -o "$LOG_DIR/jlprince-profile.json" || fail "No se pudo consultar el perfil Free real"
+python3 - "$LOG_DIR/jlprince-profile.json" <<'PY'
+import json,sys
+p=json.load(open(sys.argv[1]))
+d=p.get('data') or {}
+assert d.get('planId')=='free', f"planId inesperado: {d.get('planId')}"
+x=d.get('freeExperience')
+assert isinstance(x,dict), f"freeExperience ausente: {x!r}"
+assert x.get('quote_button_visible') is True, f"Cotizar no viene activo: {x!r}"
+assert isinstance(x.get('schedule'),list), f"schedule inválido: {x!r}"
+print("✓ Payload canónico Free: Cotizar activo + schedule presente")
+PY
 
 echo; echo "▶ Smoke API Free inexistente"
 code="$(curl -sS -o "$LOG_DIR/free404.json" -w '%{http_code}' "https://preview.intaprd.com/api/v1/public/profiles/kawvo-release-smoke-no-existe/free-experience")"
