@@ -12,7 +12,7 @@ type NotificationItem={
 }
 
 export const AGENDA_SOUND_KEY='kawvo:agenda-notification-sound'
-const LAST_KEY='kawvo:agenda-last-alerted'
+const ALERTED_KEY='kawvo:agenda-alerted-ids-v1'
 
 function base64UrlToUint8Array(value:string){
   const padding='='.repeat((4-value.length%4)%4)
@@ -111,14 +111,22 @@ export default function PwaNotificationBridge(){
         const unread=Number(json.data?.unread_count||items.filter(item=>!item.read_at).length||0)
         await setBadge(unread)
         window.dispatchEvent(new CustomEvent('kawvo:pwa-notifications',{detail:{unread,items}}))
-        const latest=items.find(item=>item.type==='sponsored_appointment_request'&&!item.read_at)
-        if(latest){
-          const last=localStorage.getItem(LAST_KEY)||''
-          if(last!==latest.id){
-            localStorage.setItem(LAST_KEY,latest.id)
+        const agendaItems=items.filter(item=>item.type==='sponsored_appointment_request'&&!item.read_at)
+        let alerted:string[]=[]
+        try{const parsed=JSON.parse(localStorage.getItem(ALERTED_KEY)||'[]');alerted=Array.isArray(parsed)?parsed.map(String):[]}catch{}
+        if(!localStorage.getItem(ALERTED_KEY)){
+          localStorage.setItem(ALERTED_KEY,JSON.stringify(agendaItems.map(item=>item.id).slice(0,60)))
+        }else{
+          const known=new Set(alerted)
+          const fresh=agendaItems.filter(item=>!known.has(item.id)).reverse()
+          for(let i=0;i<fresh.length;i++){
+            if(i)await new Promise(resolve=>window.setTimeout(resolve,650))
             playAgendaNotificationCue(localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
-            await showSystemNotification(latest)
+            await showSystemNotification(fresh[i])
+            known.add(fresh[i].id)
           }
+          const next=[...agendaItems.map(item=>item.id),...Array.from(known)].filter((id,index,array)=>array.indexOf(id)===index).slice(0,60)
+          localStorage.setItem(ALERTED_KEY,JSON.stringify(next))
         }
       }catch{/* auth/temporary network errors are non-fatal */}
       finally{running.current=false}
