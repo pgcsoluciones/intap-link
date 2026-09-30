@@ -3430,7 +3430,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   try { publicTemplateData = JSON.parse(String((profile as any).template_data || '{}')) || {} } catch { publicTemplateData = {} }
   const isFreeProfile = String((profile as any).plan_id || 'free').trim().toLowerCase() === 'free'
 
-  const [links, rawGallery, rawFaqs, rawProducts, rawVideos, entitlements, rawSocialLinks, rawContact, freeAppointmentSettings, rawFreeAvailability] = await Promise.all([
+  const [links, rawGallery, rawFaqs, rawProducts, rawVideos, entitlements, rawSocialLinks, rawContact, freeAppointmentSettings] = await Promise.all([
     c.env.DB.prepare(
       'SELECT id, label, url, is_cta FROM profile_links WHERE profile_id = ? AND is_active = 1 ORDER BY sort_order ASC'
     )
@@ -3470,7 +3470,6 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     isFreeProfile
       ? c.env.DB.prepare("SELECT enabled FROM appointment_settings WHERE subject_type='free' AND subject_id=? LIMIT 1").bind((profile as any).id).first()
       : Promise.resolve(null),
-    Promise.resolve({ results: [] }),
   ])
 
   const origin = new URL(c.req.url).origin
