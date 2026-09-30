@@ -1,4 +1,5 @@
 import app from './index'
+import { sendWebPushToUser } from './pwa-push'
 import { cookieNames } from './lib/cookies'
 import { resolveOwnedSponsoredProfile, sponsoredProfileScope } from './sponsored-profile-scope'
 import {
@@ -92,6 +93,8 @@ async function addAppointmentNotification(c:any,request:any,profile:any){
   const title='Nueva solicitud de agenda'
   const message=String(request.customer_name||'Cliente')+' · '+String(request.reason_label||'Cita')+' · '+humanDate(String(request.appointment_date||''),String(request.timezone||'America/Santo_Domingo'))+' · '+humanTime(String(request.start_time||''))
   await c.env.DB.prepare("INSERT INTO user_notifications(id,user_id,profile_id,type,title,message,source_type,source_id,action_label,action_url,created_at) VALUES (?,?,NULL,'sponsored_appointment_request',?,?,'appointment_request',?,'Revisar solicitud',?,datetime('now'))").bind(id,ownerUserId,title,message,String(request.id||''),actionUrl).run().catch(()=>undefined)
+  const push=sendWebPushToUser(c.env,ownerUserId,{title,body:message,url:actionUrl,tag:'agenda:'+String(request.id||'')}).catch(()=>undefined)
+  try{c.executionCtx?.waitUntil?.(push)}catch{void push}
 }
 async function markRequestNotificationRead(c:any,userId:string,requestId:string){
   await c.env.DB.prepare("UPDATE user_notifications SET read_at=COALESCE(read_at,datetime('now')) WHERE user_id=? AND source_type='appointment_request' AND source_id=?").bind(userId,requestId).run().catch(()=>undefined)
