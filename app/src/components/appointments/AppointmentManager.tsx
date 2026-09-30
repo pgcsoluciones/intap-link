@@ -130,7 +130,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between"><div><h2 className="text-xl font-black">Horarios disponibles</h2><p className="mt-1 text-sm text-slate-500">Puedes tener más de una franja el mismo día.</p></div><button type="button" onClick={addAvailability} className={smallBtn}>+ Horario</button></div>
         <div className="mt-4 space-y-3">
-          {availability.map((row,index)=><div key={row.id||index} className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 rounded-2xl bg-slate-50 p-3">
+          {availability.map((row,index)=><div key={row.id||index} className="grid gap-2 rounded-2xl bg-slate-50 p-3 sm:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
             <label className="text-[11px] font-black text-slate-500">Día<select className={field} value={row.weekday} onChange={e=>updateAvailability(index,'weekday',Number(e.target.value))}>{DAY_NAMES.map((name,day)=><option key={day} value={day}>{name}</option>)}</select></label>
             <label className="text-[11px] font-black text-slate-500">Desde<input className={field} type="time" value={row.start_time} onChange={e=>updateAvailability(index,'start_time',e.target.value)}/></label>
             <label className="text-[11px] font-black text-slate-500">Hasta<input className={field} type="time" value={row.end_time} onChange={e=>updateAvailability(index,'end_time',e.target.value)}/></label>
