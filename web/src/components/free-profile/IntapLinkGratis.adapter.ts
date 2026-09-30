@@ -333,6 +333,7 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
         schedule: experienceSchedule,
         quoteButtonVisible: freeExperience.quote_button_visible !== false,
         appointmentEnabled: freeExperience.appointment_enabled === true || Number(freeExperience.appointment_enabled || 0) === 1,
+        quoteEmail: readString(freeExperience, 'quote_email'),
       },
       teamMember,
       teamAccessRole: teamMember ? (readString(templateData, 'team_access_role') as FreeProfileData['teamAccessRole']) || 'member' : null,
