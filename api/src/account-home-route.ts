@@ -37,13 +37,24 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   ).bind(userId).first()
 
   if(sponsorMembership){
-    return c.json({ok:true,data:{kind:'sponsor',route:'/admin/sponsor',role:String((sponsorMembership as any).role||'member')}})
+    const masterProfile=await c.env.DB.prepare(
+      `SELECT id,username,status FROM sponsored_profiles WHERE user_id=? AND profile_role='sponsor_owner' ORDER BY created_at ASC LIMIT 1`
+    ).bind(userId).first()
+    return c.json({ok:true,data:{
+      kind:'sponsor',
+      route:'/admin/sponsor',
+      role:String((sponsorMembership as any).role||'member'),
+      profile_id:masterProfile?String((masterProfile as any).id||''):null,
+      username:masterProfile?String((masterProfile as any).username||''):null,
+      public_route:masterProfile&&String((masterProfile as any).username||'')?'/p/'+String((masterProfile as any).username||''):null,
+      agenda_route:masterProfile?'/admin/sponsored/agenda?scope=master':null,
+    }})
   }
 
   if(await sponsoredMultiProfileAccess(c,userId)){
     const profiles=await listOwnedSponsoredBeneficiaryProfiles(c,userId)
     if(profiles.length>1){
-      return c.json({ok:true,data:{kind:'sponsored',route:'/admin/sponsored/select',role:'beneficiary',profiles_count:profiles.length}})
+      return c.json({ok:true,data:{kind:'sponsored',route:'/admin/sponsored/select',role:'beneficiary',profiles_count:profiles.length,multiple_profiles:true}})
     }
   }
 
@@ -57,7 +68,18 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
 
   if(sponsored){
     const role=String((sponsored as any).profile_role||'beneficiary')
-    return c.json({ok:true,data:{kind:role==='sponsor_owner'?'sponsor':'sponsored',route:role==='sponsor_owner'?'/admin/sponsor':'/admin/sponsored',role,status:String((sponsored as any).status||'draft')}})
+    const sponsoredId=String((sponsored as any).id||'')
+    const username=String((sponsored as any).username||'')
+    return c.json({ok:true,data:{
+      kind:role==='sponsor_owner'?'sponsor':'sponsored',
+      route:role==='sponsor_owner'?'/admin/sponsor':'/admin/sponsored',
+      role,
+      status:String((sponsored as any).status||'draft'),
+      profile_id:sponsoredId,
+      username,
+      public_route:username?'/p/'+username:null,
+      agenda_route:role==='sponsor_owner'?'/admin/sponsored/agenda?scope=master':'/admin/sponsored/agenda',
+    }})
   }
 
   const profile=await c.env.DB.prepare(
@@ -66,8 +88,9 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
 
   if(profile){
     const planId=String((profile as any).plan_id||'free').trim().toLowerCase()
-    if(planId==='free')return c.json({ok:true,data:{kind:'free',route:'/admin/free',plan_id:planId}})
-    return c.json({ok:true,data:{kind:planId.includes('med')?'med':'paid',route:'/admin',plan_id:planId}})
+    const slug=String((profile as any).slug||'')
+    if(planId==='free')return c.json({ok:true,data:{kind:'free',route:'/admin/free',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:null}})
+    return c.json({ok:true,data:{kind:planId.includes('med')?'med':'paid',route:'/admin',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:null}})
   }
 
   return c.json({ok:true,data:{kind:'none',route:'/admin/free/onboarding/welcome'}})
