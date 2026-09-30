@@ -11,14 +11,14 @@ type NotificationItem={
   created_at?:string|null
 }
 
-const SOUND_KEY='kawvo:agenda-notification-sound'
+export const AGENDA_SOUND_KEY='kawvo:agenda-notification-sound'
 const LAST_KEY='kawvo:agenda-last-alerted'
 
 function vibrate(){
   try{if('vibrate' in navigator)navigator.vibrate([120,70,120])}catch{}
 }
 
-function playTone(kind:string){
+export function playAgendaNotificationCue(kind:string){
   if(kind==='silent'){vibrate();return}
   try{
     const AudioCtx=(window.AudioContext||(window as any).webkitAudioContext)
@@ -88,7 +88,7 @@ export default function PwaNotificationBridge(){
           const last=localStorage.getItem(LAST_KEY)||''
           if(last!==latest.id){
             localStorage.setItem(LAST_KEY,latest.id)
-            playTone(localStorage.getItem(SOUND_KEY)||'agenda')
+            playAgendaNotificationCue(localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
             await showSystemNotification(latest)
           }
         }
