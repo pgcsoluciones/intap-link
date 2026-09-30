@@ -41,15 +41,19 @@ function mediaUrl(c:any,code:string){
 async function mediaRow(c:any,code:string){
   if(!isModernCode(code)&&!isLegacyToken(code))return null
   const tokenHash=await sha256Hex(code)
-  return c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at FROM sponsored_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first()
+  const sponsored=await c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at FROM sponsored_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first()
+  if(sponsored)return {...(sponsored as any),_storage:'sponsored'}
+  const free=await c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at FROM free_quote_media WHERE token_hash=? AND expires_at>datetime('now') LIMIT 1`).bind(tokenHash).first().catch(()=>null)
+  return free?{...(free as any),_storage:'free'}:null
 }
 
 async function batchRows(c:any,row:any){
   const batchId=String(row?.batch_id||'').trim()
   if(!batchId)return [row]
-  const result=await c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at,token_hash FROM sponsored_quote_media WHERE batch_id=? AND profile_id=? AND expires_at>datetime('now') ORDER BY rowid ASC`).bind(batchId,String(row?.profile_id||'')).all()
+  const table=String(row?._storage||'sponsored')==='free'?'free_quote_media':'sponsored_quote_media'
+  const result=await c.env.DB.prepare(`SELECT id,profile_id,batch_id,r2_key,media_kind,content_type,original_name,size_bytes,expires_at,token_hash FROM ${table} WHERE batch_id=? AND profile_id=? AND expires_at>datetime('now') ORDER BY rowid ASC`).bind(batchId,String(row?.profile_id||'')).all()
   const items=Array.isArray((result as any).results)?(result as any).results:[]
-  return items.length?items:[row]
+  return items.length?items.map((item:any)=>({...item,_storage:row?._storage||'sponsored'})):[row]
 }
 function fileHeaders(row:any,download=false){
   const headers=new Headers()
@@ -74,7 +78,7 @@ async function resolveQuoteMediaProfile(c:any,kind:'sponsored'|'free',value:stri
   return c.env.DB.prepare(`SELECT id FROM profiles WHERE lower(slug)=? AND lower(COALESCE(plan_id,'free'))='free' AND COALESCE(is_published,0)=1 LIMIT 1`).bind(slug).first()
 }
 
-async function handleQuoteMediaUpload(c:any,profile:any){
+async function handleQuoteMediaUpload(c:any,profile:any,storage:'sponsored'|'free'){
   if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
 
   const fd=await c.req.formData().catch(()=>null)
@@ -100,13 +104,14 @@ async function handleQuoteMediaUpload(c:any,profile:any){
   }
 
   const profileId=String((profile as any).id)
+  const table=storage==='free'?'free_quote_media':'sponsored_quote_media'
   const clientId=safeClientId(fd?.get('client_id'))
   const ipHash=await sha256Hex(clientId?`client:${clientId}`:`ip:${safeIp(c)}`)
-  const recent=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_quote_media WHERE profile_id=? AND ip_hash=? AND created_at>datetime('now','-1 hour')`).bind(profileId,ipHash).first()
+  const recent=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE profile_id=? AND ip_hash=? AND created_at>datetime('now','-1 hour')`).bind(profileId,ipHash).first()
   if(Number((recent as any)?.n||0)+raws.length>MAX_UPLOADS_PER_HOUR)return c.json({ok:false,error:'Has realizado varios adjuntos recientemente. Intenta nuevamente más tarde.'},429)
 
   if(kind==='image'){
-    const daily=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM sponsored_quote_media WHERE profile_id=? AND ip_hash=? AND media_kind='image' AND created_at>datetime('now','-24 hours')`).bind(profileId,ipHash).first()
+    const daily=await c.env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE profile_id=? AND ip_hash=? AND media_kind='image' AND created_at>datetime('now','-24 hours')`).bind(profileId,ipHash).first()
     const used=Number((daily as any)?.n||0)
     if(used+raws.length>9){
       const remaining=Math.max(0,9-used)
@@ -121,7 +126,7 @@ async function handleQuoteMediaUpload(c:any,profile:any){
     const spec=specs[index]!
     const code=`${kindPrefix(spec.kind)}-${randomCodePart()}`
     const id=crypto.randomUUID()
-    const key=`quote-media/${profileId}/${datePrefix}/${id}.${spec.ext}`
+    const key=`quote-media/${storage}/${profileId}/${datePrefix}/${id}.${spec.ext}`
     return {file,spec,code,id,key,originalName:cleanName(file.name)}
   })
   const uploaded:string[]=[]
@@ -136,12 +141,12 @@ async function handleQuoteMediaUpload(c:any,profile:any){
     const statements=[]
     for(const item of pending){
       const tokenHash=await sha256Hex(item.code)
-      statements.push(c.env.DB.prepare(`INSERT INTO sponsored_quote_media (id,profile_id,token_hash,r2_key,media_kind,content_type,original_name,size_bytes,ip_hash,expires_at,batch_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(item.id,profileId,tokenHash,item.key,item.spec.kind,item.spec.contentType,item.originalName,Number((item.file as any).size||0),ipHash,expiresAt,batchId))
+      statements.push(c.env.DB.prepare(`INSERT INTO ${table} (id,profile_id,token_hash,r2_key,media_kind,content_type,original_name,size_bytes,ip_hash,expires_at,batch_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(item.id,profileId,tokenHash,item.key,item.spec.kind,item.spec.contentType,item.originalName,Number((item.file as any).size||0),ipHash,expiresAt,batchId))
     }
     await c.env.DB.batch(statements)
   }catch(error){
     await Promise.all(uploaded.map(key=>c.env.BUCKET.delete(key).catch(()=>undefined)))
-    for(const item of pending)await c.env.DB.prepare(`DELETE FROM sponsored_quote_media WHERE id=?`).bind(item.id).run().catch(()=>undefined)
+    for(const item of pending)await c.env.DB.prepare(`DELETE FROM ${table} WHERE id=?`).bind(item.id).run().catch(()=>undefined)
     throw error
   }
 
@@ -151,12 +156,12 @@ async function handleQuoteMediaUpload(c:any,profile:any){
 
 app.post('/api/v1/public/sponsored/:username/quote-media',async(c:any)=>{
   const profile=await resolveQuoteMediaProfile(c,'sponsored',c.req.param('username'))
-  return handleQuoteMediaUpload(c,profile)
+  return handleQuoteMediaUpload(c,profile,'sponsored')
 })
 
 app.post('/api/v1/public/profiles/:slug/quote-media',async(c:any)=>{
   const profile=await resolveQuoteMediaProfile(c,'free',c.req.param('slug'))
-  return handleQuoteMediaUpload(c,profile)
+  return handleQuoteMediaUpload(c,profile,'free')
 })
 
 app.get('/api/v1/public/sponsored/quote-media/:code/meta',async(c:any)=>{
@@ -251,22 +256,24 @@ app.get('/api/v1/public/sponsored/quote-media/:token',async(c:any)=>{
 })
 
 export async function cleanupExpiredSponsoredQuoteMedia(env:any){
-  for(let pass=0;pass<10;pass++){
-    const rows=await env.DB.prepare(`SELECT id,r2_key FROM sponsored_quote_media WHERE expires_at<=datetime('now') ORDER BY expires_at ASC LIMIT 100`).all().catch(()=>({results:[]}))
-    const items=Array.isArray((rows as any).results)?(rows as any).results:[]
-    if(!items.length)break
-    for(const row of items){
-      const id=String((row as any).id||'')
-      const key=String((row as any).r2_key||'')
-      try{
-        if(key)await env.BUCKET.delete(key)
-      }catch(error){
-        console.error('[quote-media cleanup] R2',key,error)
-        continue
+  for(const table of ['sponsored_quote_media','free_quote_media']){
+    for(let pass=0;pass<10;pass++){
+      const rows=await env.DB.prepare(`SELECT id,r2_key FROM ${table} WHERE expires_at<=datetime('now') ORDER BY expires_at ASC LIMIT 100`).all().catch(()=>({results:[]}))
+      const items=Array.isArray((rows as any).results)?(rows as any).results:[]
+      if(!items.length)break
+      for(const row of items){
+        const id=String((row as any).id||'')
+        const key=String((row as any).r2_key||'')
+        try{
+          if(key)await env.BUCKET.delete(key)
+        }catch(error){
+          console.error('[quote-media cleanup] R2',key,error)
+          continue
+        }
+        await env.DB.prepare(`DELETE FROM ${table} WHERE id=? AND expires_at<=datetime('now')`).bind(id).run().catch((error:any)=>console.error('[quote-media cleanup] D1',table,id,error))
       }
-      await env.DB.prepare(`DELETE FROM sponsored_quote_media WHERE id=? AND expires_at<=datetime('now')`).bind(id).run().catch((error:any)=>console.error('[quote-media cleanup] D1',id,error))
+      if(items.length<100)break
     }
-    if(items.length<100)break
   }
 }
 
