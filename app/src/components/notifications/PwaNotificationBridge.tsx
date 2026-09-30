@@ -53,7 +53,7 @@ async function setBadge(count:number){
 }
 
 async function showSystemNotification(item:NotificationItem){
-  if(document.visibilityState==='visible'||Notification.permission!=='granted')return
+  if(document.visibilityState==='visible'||typeof Notification==='undefined'||Notification.permission!=='granted')return
   try{
     const reg=await navigator.serviceWorker?.ready
     if(!reg)return
