@@ -28,6 +28,7 @@ const publicApi=read('api/src/index.ts')
 const entry=read('api/src/preview-free-entry.ts')
 const homeRoute=read('api/src/account-home-route.ts')
 const core=read('api/src/appointments-core.ts')
+const previewRunner=read('scripts/run-preview-free-contact-agenda-2026-09-30.sh')
 const types=read('web/src/components/free-profile/IntapLinkGratis.types.ts')
 
 has(types,'experience?: FreeProfileExperience','experiencia Free es compatible con Demo/Trial que reutilizan la plantilla base')
@@ -98,5 +99,10 @@ has(api,'Debes mantener visible al menos Cotizar / información o Agendar.','nun
 has(api,'free_schedule_visible','Horario público requiere confirmación del dueño')
 has(core,'subject_type','motor Agenda sigue siendo reutilizable por sujeto')
 has(core,'DEFAULT_AVAILABILITY','Free reutiliza la disponibilidad genérica, sin duplicar motor')
+has(previewRunner,'run npm run build:preview -w web','Preview Web compila con .env.preview y nunca con configuración de Producción')
+absent(previewRunner,'run npm run build -w web','runner no puede compilar Web Preview en modo production')
+has(previewRunner,'https://preview.intaprd.com','runner valida contra dominio/API Preview')
+has(previewRunner,'https://api.intaprd.com','runner detecta y bloquea contaminación del bundle con API de Producción')
+has(previewRunner,'D1 Preview','runner valida un perfil real existente en la base Preview')
 
 console.log('Free Contact + Agenda contract checks: OK')
