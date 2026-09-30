@@ -45,11 +45,12 @@ export default function PublicBankAccounts() {
   useEffect(() => {
     let createdHost: HTMLElement | null = null
     const attach = () => {
+      const existing = document.getElementById('ilx-bank-slot')
+      if (existing) { setPortalHost(existing); return true }
       const shareSection = document.querySelector('.ilx-share')
       const body = shareSection?.parentElement
       if (!shareSection || !body) return false
-      let host = document.getElementById('ilx-bank-slot')
-      if (!host) { host = document.createElement('div'); host.id = 'ilx-bank-slot'; body.insertBefore(host, shareSection); createdHost = host }
+      const host = document.createElement('div'); host.id = 'ilx-bank-slot'; body.insertBefore(host, shareSection); createdHost = host
       setPortalHost(host)
       return true
     }
