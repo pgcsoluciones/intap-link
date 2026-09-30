@@ -32,7 +32,7 @@ async function hkdfExpand(prk:Uint8Array,info:Uint8Array,length:number){
   while(offset<length){
     const block=await hmac(prk,concat(previous,info,new Uint8Array([counter++])))
     const take=Math.min(block.length,length-offset)
-    out.set(block.slice(0,take),offset+=0)
+    out.set(block.slice(0,take),offset)
     offset+=take
     previous=block
   }
