@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feature/sponsored-banner-per-code"
-EXPECTED_MAIN_SHA="dc7758f9b70cb8117146860b19270ff973d822bc"
+EXPECTED_MAIN_SHA="a68416bed8a136f2cc96d500453df6ab4d415e06"
 APP_PROJECT="intap-web2"
 WEB_PROJECT="intap-link"
 LOG_DIR="$ROOT/.preview-sponsored-quote-banner-logs"
