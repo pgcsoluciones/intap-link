@@ -89,7 +89,7 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   if(profile){
     const planId=String((profile as any).plan_id||'free').trim().toLowerCase()
     const slug=String((profile as any).slug||'')
-    if(planId==='free')return c.json({ok:true,data:{kind:'free',route:'/admin/free',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:null}})
+    if(planId==='free')return c.json({ok:true,data:{kind:'free',route:'/admin/free',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:'/admin/free/agenda'}})
     return c.json({ok:true,data:{kind:planId.includes('med')?'med':'paid',route:'/admin',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:null}})
   }
 
