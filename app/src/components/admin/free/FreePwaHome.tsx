@@ -83,8 +83,8 @@ export default function FreePwaHome() {
   const manageRoute=home?.route||'/admin/free'
   const agendaRoute=home?.agenda_route||''
   const displayName = String(me?.name || '').trim() || String(me?.email || '').trim() || 'Kawvo'
-  const agendaUnread=useMemo(()=>notifications.filter(item=>item.type==='sponsored_appointment_request'&&!item.read_at).length,[notifications])
-  const agendaNotifications=useMemo(()=>notifications.filter(item=>item.type==='sponsored_appointment_request'&&!item.read_at).slice(0,3),[notifications])
+  const agendaUnread=useMemo(()=>notifications.filter(item=>['sponsored_appointment_request','free_appointment_request'].includes(item.type)&&!item.read_at).length,[notifications])
+  const agendaNotifications=useMemo(()=>notifications.filter(item=>['sponsored_appointment_request','free_appointment_request'].includes(item.type)&&!item.read_at).slice(0,3),[notifications])
 
   async function requestNotificationPermission(){
     if(typeof Notification==='undefined'){setPermission('unsupported');return}
@@ -124,7 +124,7 @@ export default function FreePwaHome() {
             <button type="button" onClick={() => navigate(manageRoute)} className="w-full rounded-[22px] border border-cyan-200 bg-cyan-50 p-4 text-left transition active:scale-[0.99]">
               <div className="flex items-center gap-3">
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-700 text-xl text-white">⚙</span>
-                <div><p className="text-base font-black text-slate-950">Administrar mi perfil</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Edita tu información, servicios, imágenes y configuración.</p></div>
+                <div><p className="text-base font-black text-slate-950">Administrar mi perfil</p><p className="mt-1 text-sm font-medium leading-5 text-slate-600">Edita tu información, imágenes, horario y configuración.</p></div>
               </div>
             </button>
 
