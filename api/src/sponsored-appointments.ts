@@ -75,13 +75,20 @@ async function ownedSubject(c:any){
   if(!profile)return null
   return{profile,userId,subject:{type:'sponsored',id:String((profile as any).id||''),ownerUserId:userId}}
 }
+async function appointmentManageUrl(c:any,profile:any){
+  const profileId=String((profile as any).id||'')
+  const userId=String((profile as any).user_id||'')
+  if(String((profile as any).profile_role||'')==='sponsor_owner')return'/admin/sponsored/agenda?scope=master'
+  const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM sponsored_profiles WHERE user_id=? AND COALESCE(profile_role,'beneficiary')='beneficiary'").bind(userId).first().catch(()=>null)
+  return Number((count as any)?.n||0)>1?'/admin/sponsored/agenda?profile_id='+encodeURIComponent(profileId):'/admin/sponsored/agenda'
+}
+
 async function addAppointmentNotification(c:any,request:any,profile:any){
   const ownerUserId=String((profile as any).user_id||'')
   if(!ownerUserId)return
   const id=crypto.randomUUID()
-  const profileId=String((profile as any).id||'')
-  const isMaster=String((profile as any).profile_role||'')==='sponsor_owner'
-  const actionUrl=(isMaster?'/admin/sponsored/agenda?scope=master&request=':'/admin/sponsored/agenda?profile_id='+encodeURIComponent(profileId)+'&request=')+encodeURIComponent(String(request.id||''))
+  const baseManageUrl=await appointmentManageUrl(c,profile)
+  const actionUrl=baseManageUrl+(baseManageUrl.includes('?')?'&':'?')+'request='+encodeURIComponent(String(request.id||''))
   const title='Nueva solicitud de agenda'
   const message=String(request.customer_name||'Cliente')+' · '+String(request.reason_label||'Cita')+' · '+humanDate(String(request.appointment_date||''),String(request.timezone||'America/Santo_Domingo'))+' · '+humanTime(String(request.start_time||''))
   await c.env.DB.prepare("INSERT INTO user_notifications(id,user_id,profile_id,type,title,message,source_type,source_id,action_label,action_url,created_at) VALUES (?,?,NULL,'sponsored_appointment_request',?,?,'appointment_request',?,'Revisar solicitud',?,datetime('now'))").bind(id,ownerUserId,title,message,String(request.id||''),actionUrl).run().catch(()=>undefined)
@@ -188,8 +195,7 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending'").bind(subjectId).first()
   const pending=rows.results||[]
-  const isMaster=String((profile as any).profile_role||'')==='sponsor_owner'
-  const manageUrl=isMaster?'/admin/sponsored/agenda?scope=master':'/admin/sponsored/agenda?profile_id='+encodeURIComponent(subjectId)
+  const manageUrl=await appointmentManageUrl(c,profile)
   return c.json({ok:true,data:{is_owner:true,enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending,manage_url:manageUrl}})
 })
 
