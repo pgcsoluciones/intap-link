@@ -160,12 +160,20 @@ app.put('/api/v1/me/sponsored-profile/appointments/settings',requireUser,async(c
   const resolved=await ownedSubject(c)
   if(!resolved)return c.json({ok:false,error:'Perfil patrocinado no encontrado.'},404)
   let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const before=await getAppointmentSettings(c.env.DB,resolved.subject.type,resolved.subject.id)
   if(body?.enabled===false){
     const actions=await c.env.DB.prepare('SELECT quote_button_visible FROM sponsored_profiles WHERE id=? LIMIT 1').bind(resolved.subject.id).first()
     if(Number((actions as any)?.quote_button_visible??1)!==1)return c.json({ok:false,error:'No puedes desactivar Agenda mientras Cotizar / información esté oculto. Activa Cotizar primero.'},422)
   }
-  try{await saveAppointmentConfiguration(c.env.DB,resolved.subject.type,resolved.subject.id,body);if(body?.enabled===false)await c.env.DB.prepare('UPDATE sponsored_profiles SET appointment_button_visible=0,updated_at=datetime(\'now\') WHERE id=?').bind(resolved.subject.id).run();return c.json({ok:true})}
-  catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos guardar la agenda.'},400)}
+  try{
+    await saveAppointmentConfiguration(c.env.DB,resolved.subject.type,resolved.subject.id,body)
+    if(body?.enabled===false){
+      await c.env.DB.prepare("UPDATE sponsored_profiles SET appointment_button_visible=0,updated_at=datetime('now') WHERE id=?").bind(resolved.subject.id).run()
+    }else if(body?.enabled===true&&!before.enabled){
+      await c.env.DB.prepare("UPDATE sponsored_profiles SET appointment_button_visible=1,updated_at=datetime('now') WHERE id=?").bind(resolved.subject.id).run()
+    }
+    return c.json({ok:true})
+  }catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos guardar la agenda.'},400)}
 })
 
 app.post('/api/v1/me/sponsored-profile/appointments/blocks',requireUser,async(c:any)=>{
