@@ -9,6 +9,7 @@ import type { AdminRole } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { registerDemoViralRoutes } from './routes/demo-viral'
 import { registerDemoAiRoutes } from './routes/demo-ai'
+import { registerMedicalProfileRoutes } from './routes/medical-profile'
 import {
   ARTIFACT_PRODUCT_TYPES,
   generateHumanCode,
@@ -89,6 +90,7 @@ app.options('*', (c) => c.body(null, 204))
 
 registerDemoViralRoutes(app)
 registerDemoAiRoutes(app)
+registerMedicalProfileRoutes(app)
 
 
 app.use('/api/*', async (c, next) => {

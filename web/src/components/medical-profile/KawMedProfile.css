@@ -1,0 +1,1670 @@
+:root {
+  --kawmed-blue: #126fe8;
+  --kawmed-blue-dark: #0f2f62;
+  --kawmed-blue-soft: #eaf4ff;
+  --kawmed-teal: #0d8290;
+  --kawmed-teal-soft: #eaf8f8;
+  --kawmed-ink: #10233f;
+  --kawmed-muted: #6f8198;
+  --kawmed-line: #dce8f3;
+  --kawmed-surface: #ffffff;
+  --kawmed-whatsapp: #08b85a;
+}
+
+.kawmed-shell,
+.kawmed-shell * {
+  box-sizing: border-box;
+}
+
+.kawmed-shell {
+  min-height: 100vh;
+  margin: 0;
+  background: #fff;
+  color: var(--kawmed-ink);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.kawmed-profile {
+  width: min(100%, 620px);
+  margin: 0 auto;
+  padding-bottom: 28px;
+  background: #fff;
+}
+
+.kawmed-brandbar {
+  min-height: 46px;
+  padding: 14px 18px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  color: #7d8da4;
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.kawmed-brandbar__mark {
+  color: #10233f;
+  font-weight: 900;
+  letter-spacing: .26em;
+}
+
+.kawmed-brandbar__product {
+  color: var(--kawmed-blue);
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.kawmed-hero {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 4 / 4.25;
+  background: #dbeafa;
+}
+
+.kawmed-hero__image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+.kawmed-hero__shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to top,
+      rgba(248, 251, 255, 1) 0%,
+      rgba(248, 251, 255, .97) 14%,
+      rgba(248, 251, 255, .82) 30%,
+      rgba(248, 251, 255, .42) 48%,
+      rgba(248, 251, 255, .10) 66%,
+      rgba(248, 251, 255, 0) 78%
+    );
+}
+
+.kawmed-hero__doctor {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 22px;
+  color: var(--kawmed-ink);
+}
+
+.kawmed-hero__doctor h1 {
+  max-width: 90%;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(34px, 9vw, 48px);
+  line-height: .98;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  text-shadow: none;
+}
+
+.kawmed-specialty {
+  margin: 8px 0 0;
+  color: var(--kawmed-blue-dark);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.kawmed-subtitle {
+  max-width: 420px;
+  margin: 9px 0 0;
+  color: #516985;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.kawmed-intro {
+  margin: -1px 0 0;
+  padding: 20px 18px 16px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f3fbfa 100%);
+  border-bottom: 1px solid var(--kawmed-line);
+}
+
+.kawmed-intro > p {
+  margin: 0;
+  color: #425b77;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.kawmed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 13px;
+  color: #506985;
+  font-size: 12px;
+}
+
+.kawmed-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.kawmed-meta svg {
+  color: var(--kawmed-blue);
+  font-size: 16px;
+}
+
+.kawmed-primary-actions {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 10px;
+  padding: 18px 18px 14px;
+}
+
+.kawmed-button {
+  min-height: 56px;
+  border: 0;
+  border-radius: 17px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.kawmed-button > svg:last-child {
+  margin-left: auto;
+}
+
+.kawmed-button:active {
+  transform: scale(.985);
+}
+
+.kawmed-button:disabled,
+.kawmed-quick-actions button:disabled,
+.kawmed-center-preview:disabled,
+.kawmed-location-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.kawmed-button--whatsapp {
+  background: linear-gradient(135deg, #08af58 0%, #12c76b 100%);
+  box-shadow: 0 12px 25px rgba(8,184,90,.19);
+}
+
+.kawmed-button--appointment {
+  background: linear-gradient(135deg, #1269d8 0%, #2a84f0 100%);
+  box-shadow: 0 12px 25px rgba(18,111,232,.19);
+}
+
+.kawmed-button--full {
+  width: 100%;
+}
+
+.kawmed-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  padding: 0 18px 18px;
+}
+
+.kawmed-quick-actions button {
+  min-width: 0;
+  min-height: 105px;
+  padding: 12px 8px 11px;
+  border: 1px solid var(--kawmed-line);
+  border-radius: 17px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background: #fff;
+  color: var(--kawmed-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(26, 67, 108, .04);
+}
+
+.kawmed-quick-actions__icon {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--kawmed-blue-soft);
+  color: var(--kawmed-blue);
+  font-size: 21px;
+}
+
+.kawmed-quick-actions button:nth-child(2) .kawmed-quick-actions__icon {
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+}
+
+.kawmed-quick-actions button:nth-child(3) .kawmed-quick-actions__icon {
+  background: #eef3ff;
+  color: #405bd8;
+}
+
+.kawmed-quick-actions button:nth-child(4) .kawmed-quick-actions__icon {
+  background: #eef8ff;
+  color: #1684d8;
+}
+
+.kawmed-quick-actions strong {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.kawmed-quick-actions small {
+  margin-top: 4px;
+  color: var(--kawmed-muted);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.kawmed-panels {
+  display: grid;
+  gap: 11px;
+  padding: 0 18px;
+}
+
+.kawmed-panel {
+  overflow: hidden;
+  border: 1px solid #dce7f1;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(26, 67, 108, .045);
+}
+
+.kawmed-panel.is-open {
+  border-color: #cfe0ef;
+}
+
+.kawmed-panel__trigger {
+  width: 100%;
+  min-height: 82px;
+  border: 0;
+  padding: 13px 14px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  background: linear-gradient(135deg, #ffffff 0%, #fbfdff 100%);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kawmed-panel__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eaf4ff;
+  color: var(--kawmed-blue);
+  font-size: 21px;
+}
+
+.kawmed-panel:nth-child(3) .kawmed-panel__icon {
+  background: #e9f8f7;
+  color: var(--kawmed-teal);
+}
+
+.kawmed-panel__title {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.kawmed-panel__title strong {
+  color: #122744;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+.kawmed-panel__title small {
+  color: var(--kawmed-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.kawmed-panel__chevron {
+  color: #68829e;
+  font-size: 19px;
+  transition: transform .18s ease;
+}
+
+.kawmed-panel.is-open .kawmed-panel__chevron {
+  transform: rotate(180deg);
+}
+
+.kawmed-panel__body {
+  padding: 0 13px 14px;
+  border-top: 1px solid #edf2f6;
+}
+
+.kawmed-panel__body > p {
+  margin: 13px 2px 0;
+  color: #536981;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.kawmed-panel__link {
+  min-height: 38px;
+  margin-top: 10px;
+  border: 0;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  color: var(--kawmed-blue);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.kawmed-centers-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding-top: 13px;
+}
+
+.kawmed-center-preview {
+  min-width: 0;
+  min-height: 86px;
+  border: 1px solid #e1e9f1;
+  border-radius: 15px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kawmed-center-preview__visual {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+  font-size: 18px;
+}
+
+.kawmed-center-preview__copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.kawmed-center-preview__copy strong {
+  color: #162b47;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.kawmed-center-preview__copy small {
+  color: #7a8b9e;
+  font-size: 10px;
+}
+
+.kawmed-center-preview > svg {
+  color: var(--kawmed-blue);
+}
+
+.kawmed-services-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 13px;
+}
+
+.kawmed-service-preview {
+  min-width: 0;
+  min-height: 128px;
+  border: 1px solid #e0e9f1;
+  border-radius: 15px;
+  padding: 11px 9px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-content: start;
+  gap: 6px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kawmed-service-preview__icon {
+  grid-column: 1 / -1;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 3px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eaf4ff;
+  color: var(--kawmed-blue);
+  font-size: 20px;
+}
+
+.kawmed-service-preview > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.kawmed-service-preview strong {
+  color: #152b47;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.kawmed-service-preview small {
+  color: #77899d;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.kawmed-service-preview > svg {
+  align-self: center;
+  color: var(--kawmed-blue);
+}
+
+.kawmed-share-footer {
+  min-height: 44px;
+  margin: 14px 18px 0;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  color: #5c7189;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.kawmed-footer {
+  margin-top: 5px;
+  padding: 14px 18px 2px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: #91a0b2;
+}
+
+.kawmed-footer span {
+  color: #526983;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.kawmed-footer small {
+  font-size: 9px;
+}
+
+/* States */
+.kawmed-state {
+  width: min(92%, 480px);
+  margin: 15vh auto;
+  padding: 42px 26px;
+  border: 1px solid var(--kawmed-line);
+  border-radius: 24px;
+  background: #fff;
+  text-align: center;
+}
+
+.kawmed-state > svg {
+  margin-bottom: 12px;
+  color: var(--kawmed-blue);
+  font-size: 32px;
+}
+
+.kawmed-state h1 {
+  margin: 0 0 8px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+}
+
+.kawmed-state p {
+  margin: 0;
+  color: var(--kawmed-muted);
+}
+
+/* Shared modals */
+.kawmed-modal-backdrop {
+  position: fixed;
+  z-index: 10050;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 21, 41, .5);
+  backdrop-filter: blur(8px);
+}
+
+.kawmed-modal {
+  width: min(100%, 520px);
+  max-height: min(88vh, 780px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border: 1px solid rgba(255,255,255,.65);
+  border-radius: 26px;
+  background: #fff;
+  box-shadow: 0 30px 90px rgba(6,22,45,.24);
+}
+
+.kawmed-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid #edf2f8;
+}
+
+.kawmed-modal__header h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.kawmed-icon-button {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f2f6fb;
+  color: var(--kawmed-ink);
+  font-size: 21px;
+  cursor: pointer;
+}
+
+.kawmed-modal__content {
+  overflow: auto;
+  padding: 17px 18px 22px;
+  overscroll-behavior: contain;
+}
+
+.kawmed-modal__footer {
+  padding: 12px 18px 18px;
+  border-top: 1px solid #edf2f8;
+}
+
+/* Appointment form */
+.kawmed-form {
+  display: grid;
+  gap: 14px;
+}
+
+.kawmed-form__intro {
+  margin: 0 0 2px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eef8ff 0%, #eef9f7 100%);
+  color: #526786;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.kawmed-form label {
+  display: grid;
+  gap: 7px;
+  color: #25354f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kawmed-form label small {
+  color: #8997aa;
+  font-weight: 500;
+}
+
+.kawmed-form input,
+.kawmed-form select,
+.kawmed-form textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #d9e4f0;
+  border-radius: 13px;
+  padding: 11px 12px;
+  outline: none;
+  background: #fff;
+  color: #17243a;
+  font: inherit;
+  font-size: 14px;
+}
+
+.kawmed-form textarea {
+  resize: vertical;
+}
+
+.kawmed-form input:focus,
+.kawmed-form select:focus,
+.kawmed-form textarea:focus {
+  border-color: #7aadef;
+  box-shadow: 0 0 0 3px rgba(23,104,215,.1);
+}
+
+.kawmed-form__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff0f0;
+  color: #a82424;
+  font-size: 12px;
+}
+
+.kawmed-form__privacy {
+  margin: -1px 0 0;
+  color: #8491a5;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* Modal content */
+.kawmed-copy-block {
+  display: grid;
+  gap: 14px;
+  color: #53647f;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.kawmed-copy-block p {
+  margin: 0;
+}
+
+.kawmed-copy-block strong {
+  color: #1a2a43;
+}
+
+.kawmed-copy-block__badge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.kawmed-schedule-list,
+.kawmed-detail-list,
+.kawmed-location-list {
+  display: grid;
+  gap: 10px;
+}
+
+.kawmed-schedule-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid #edf2f8;
+}
+
+.kawmed-schedule-row:last-child {
+  border-bottom: 0;
+}
+
+.kawmed-schedule-row > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.kawmed-schedule-row > div:first-child span {
+  color: #263d61;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.kawmed-schedule-row__time {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  text-align: right;
+}
+
+.kawmed-schedule-row__time strong {
+  color: #4f6384;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.kawmed-pill {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #edf6ff;
+  color: var(--kawmed-blue);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.kawmed-detail-card {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid #e3ebf4;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.kawmed-detail-card > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font-size: 20px;
+}
+
+.kawmed-detail-card strong {
+  display: block;
+  margin: 1px 0 5px;
+  font-size: 13px;
+}
+
+.kawmed-detail-card p,
+.kawmed-center-card p {
+  margin: 0;
+  color: #6d7c92;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kawmed-center-card {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid #e2eaf4;
+  border-radius: 17px;
+  background: #fff;
+}
+
+.kawmed-center-card__icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+}
+
+.kawmed-center-card__copy {
+  min-width: 0;
+}
+
+.kawmed-center-card__copy strong {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 13px;
+}
+
+.kawmed-center-card__copy a {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--kawmed-blue);
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.kawmed-center-card > button {
+  grid-column: 1 / -1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kawmed-location-button {
+  width: 100%;
+  min-height: 68px;
+  border: 1px solid #e1eaf5;
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kawmed-location-button > span:first-child {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+}
+
+.kawmed-location-button > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+
+.kawmed-location-button strong {
+  font-size: 13px;
+}
+
+.kawmed-location-button small {
+  color: #78879d;
+  font-size: 11px;
+}
+
+.kawmed-location-button > svg {
+  color: var(--kawmed-blue);
+}
+
+.kawmed-empty {
+  margin: 0;
+  padding: 20px 0;
+  color: #7c8a9f;
+  text-align: center;
+}
+
+@media (min-width: 620px) {
+  .kawmed-profile {
+    width: min(100%, 680px);
+  }
+
+  .kawmed-hero {
+    aspect-ratio: 16 / 11;
+  }
+
+  .kawmed-modal-backdrop {
+    align-items: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .kawmed-primary-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kawmed-button {
+    min-height: 54px;
+    font-size: 13px;
+  }
+
+  .kawmed-quick-actions {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    padding-inline: 14px;
+  }
+
+  .kawmed-quick-actions button {
+    min-height: 98px;
+    padding-inline: 7px;
+  }
+
+  .kawmed-quick-actions strong {
+    font-size: 11px;
+  }
+
+  .kawmed-panels {
+    padding-inline: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .kawmed-brandbar {
+    padding-inline: 14px;
+  }
+
+  .kawmed-hero {
+    aspect-ratio: 4 / 4.6;
+  }
+
+  .kawmed-hero__doctor {
+    left: 16px;
+    right: 16px;
+    bottom: 18px;
+  }
+
+  .kawmed-intro {
+    padding-inline: 16px;
+  }
+
+  .kawmed-primary-actions {
+    padding-inline: 14px;
+  }
+
+  .kawmed-quick-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kawmed-quick-actions button {
+    min-height: 76px;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 9px;
+    align-items: center;
+  }
+
+  .kawmed-quick-actions__icon {
+    grid-row: 1 / 3;
+    margin: 0;
+  }
+
+  .kawmed-quick-actions strong,
+  .kawmed-quick-actions small {
+    align-self: end;
+  }
+
+  .kawmed-quick-actions small {
+    align-self: start;
+  }
+
+  .kawmed-centers-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-services-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-service-preview {
+    min-height: 82px;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .kawmed-service-preview__icon {
+    grid-column: 1;
+    margin: 0;
+  }
+
+  .kawmed-schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .kawmed-schedule-row__time {
+    justify-items: start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 350px) {
+  .kawmed-primary-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* KawMed fine-tuning — approved sponsored-profile rhythm */
+.kawmed-hero {
+  aspect-ratio: 4 / 4.75;
+  background: #f8fbff;
+}
+
+.kawmed-hero__image {
+  object-fit: contain;
+  object-position: center top;
+  background: #f8fbff;
+}
+
+.kawmed-hero__shade {
+  background:
+    linear-gradient(
+      to top,
+      rgba(248, 251, 255, 1) 0%,
+      rgba(248, 251, 255, .98) 10%,
+      rgba(248, 251, 255, .86) 22%,
+      rgba(248, 251, 255, .48) 38%,
+      rgba(248, 251, 255, .12) 54%,
+      rgba(248, 251, 255, 0) 68%
+    );
+}
+
+.kawmed-identity {
+  margin-top: -34px;
+  padding: 0 18px 12px;
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.kawmed-identity h1 {
+  margin: 0;
+  color: var(--kawmed-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 8vw, 44px);
+  line-height: 1.02;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+.kawmed-identity .kawmed-specialty {
+  margin: 7px 0 0;
+  color: var(--kawmed-blue-dark);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.kawmed-identity .kawmed-subtitle {
+  max-width: 440px;
+  margin: 7px auto 0;
+  color: #5d718a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kawmed-intro {
+  padding: 8px 20px 16px;
+  text-align: center;
+  background: #fff;
+  border-bottom: 0;
+}
+
+.kawmed-intro > p {
+  max-width: 520px;
+  margin: 0 auto;
+  color: #536981;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.kawmed-intro .kawmed-meta {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.kawmed-contact-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  padding: 10px 18px 20px;
+}
+
+.kawmed-contact-pill {
+  min-height: 62px;
+  border: 1.5px solid #9cbce8;
+  border-radius: 999px;
+  padding: 7px 14px 7px 8px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  background: #fff;
+  color: var(--kawmed-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.kawmed-contact-pill:hover {
+  transform: translateY(-2px);
+  border-color: var(--kawmed-blue);
+  background: #f7fbff;
+  box-shadow: 0 10px 22px rgba(18, 111, 232, .12);
+}
+
+.kawmed-contact-pill:active {
+  transform: translateY(0) scale(.99);
+}
+
+.kawmed-contact-pill:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.kawmed-contact-pill--primary {
+  border-color: var(--kawmed-blue);
+  background: linear-gradient(135deg, #155ac2 0%, #1d72e8 100%);
+  color: #fff;
+}
+
+.kawmed-contact-pill--primary:hover {
+  background: linear-gradient(135deg, #0f51b6 0%, #176bdd 100%);
+}
+
+.kawmed-contact-pill__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font-size: 19px;
+}
+
+.kawmed-contact-pill--primary .kawmed-contact-pill__icon {
+  background: rgba(255,255,255,.16);
+  color: #fff;
+}
+
+.kawmed-contact-pill > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.kawmed-contact-pill strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kawmed-contact-pill small {
+  color: #74869b;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.kawmed-contact-pill--primary small {
+  color: rgba(255,255,255,.82);
+}
+
+.kawmed-panels {
+  gap: 10px;
+  padding: 0 18px;
+}
+
+.kawmed-panel {
+  border-radius: 18px;
+  box-shadow: 0 7px 20px rgba(32, 69, 109, .045);
+}
+
+.kawmed-panel__trigger {
+  min-height: 76px;
+  padding: 12px 13px;
+}
+
+.kawmed-panel__title strong {
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.kawmed-panel__icon--teal {
+  background: var(--kawmed-teal-soft);
+  color: var(--kawmed-teal);
+}
+
+.kawmed-panel__icon--service {
+  background: #eef5ff;
+  color: #2b69c9;
+}
+
+.kawmed-panel--insurance {
+  background: linear-gradient(135deg, #f7fbff 0%, #f5fbfa 100%);
+}
+
+.kawmed-panel__trigger--static {
+  cursor: default;
+}
+
+.kawmed-panel__icon--insurance {
+  background: #e9f8f2;
+  color: #16835e;
+}
+
+.kawmed-insurance-except {
+  min-height: 36px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #eef5ff;
+  color: var(--kawmed-blue);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.kawmed-insurance-except:hover {
+  transform: translateY(-1px);
+  background: #dfeeff;
+}
+
+.kawmed-insurance-modal {
+  display: grid;
+  gap: 12px;
+  color: #536981;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.kawmed-insurance-modal p {
+  margin: 0;
+}
+
+.kawmed-insurance-modal ul {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.kawmed-insurance-modal li {
+  padding: 11px 12px;
+  border: 1px solid #dfe8f2;
+  border-radius: 12px;
+  background: #f9fbfd;
+  color: #233b58;
+  font-weight: 700;
+}
+
+@media (min-width: 620px) {
+  .kawmed-hero {
+    aspect-ratio: 4 / 4.5;
+  }
+}
+
+@media (max-width: 420px) {
+  .kawmed-hero {
+    aspect-ratio: 4 / 5;
+  }
+
+  .kawmed-identity {
+    margin-top: -28px;
+    padding-inline: 14px;
+  }
+
+  .kawmed-contact-pills {
+    padding-inline: 14px;
+    gap: 9px;
+  }
+
+  .kawmed-contact-pill {
+    min-height: 58px;
+    padding-right: 10px;
+  }
+
+  .kawmed-contact-pill__icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .kawmed-contact-pill strong {
+    font-size: 11px;
+  }
+
+  .kawmed-contact-pill small {
+    font-size: 8.5px;
+  }
+}
+
+@media (max-width: 350px) {
+  .kawmed-contact-pills {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* KawMed hero framing refinement — fixed crop area + centered image */
+.kawmed-hero {
+  height: 560px;
+  aspect-ratio: auto;
+  overflow: hidden;
+  background: #f8fbff;
+}
+
+.kawmed-hero__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  background: #f8fbff;
+}
+
+.kawmed-hero__shade {
+  pointer-events: none;
+}
+
+.kawmed-identity {
+  margin-top: -72px;
+  padding-top: 0;
+}
+
+@media (max-width: 620px) {
+  .kawmed-hero {
+    height: 500px;
+    aspect-ratio: auto;
+  }
+
+  .kawmed-identity {
+    margin-top: -66px;
+  }
+}
+
+@media (max-width: 420px) {
+  .kawmed-hero {
+    height: 455px;
+    aspect-ratio: auto;
+  }
+
+  .kawmed-hero__image {
+    object-position: center center;
+  }
+
+  .kawmed-identity {
+    margin-top: -58px;
+  }
+}
+
+
+/* KawMed spacing + alignment refinement */
+.kawmed-contact-pills {
+  width: calc(100% - 64px);
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 10px 0 22px;
+  gap: 10px 12px;
+}
+
+.kawmed-contact-pill {
+  min-height: 58px;
+  padding: 7px 16px;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  justify-items: center;
+  column-gap: 10px;
+  text-align: center;
+}
+
+.kawmed-contact-pill__icon {
+  width: 44px;
+  height: 44px;
+  font-size: 21px;
+  flex: 0 0 44px;
+}
+
+.kawmed-contact-pill > span:last-child {
+  min-width: 0;
+  justify-items: center;
+  text-align: center;
+}
+
+.kawmed-contact-pill strong,
+.kawmed-contact-pill small {
+  width: 100%;
+  text-align: center;
+}
+
+.kawmed-panels {
+  width: calc(100% - 56px);
+  max-width: 552px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.kawmed-panel__trigger {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.kawmed-panel__icon {
+  width: 48px;
+  height: 48px;
+  font-size: 22px;
+}
+
+.kawmed-form .kawmed-button--full {
+  width: min(100%, 420px);
+  margin: 4px auto 0;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.kawmed-form .kawmed-button--full > svg:last-child {
+  margin-left: 0;
+  font-size: 21px;
+}
+
+@media (max-width: 420px) {
+  .kawmed-contact-pills {
+    width: calc(100% - 40px);
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  .kawmed-contact-pill {
+    min-height: 56px;
+    padding: 7px 12px;
+  }
+
+  .kawmed-contact-pill__icon {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+  }
+
+  .kawmed-panels {
+    width: calc(100% - 32px);
+    max-width: none;
+    padding-inline: 0;
+  }
+}
+
+
+/* KawMed sponsored-style action buttons + direct modal cards */
+.kawmed-contact-pills {
+  width: calc(100% - 92px);
+  max-width: 500px;
+  margin: 0 auto;
+  gap: 12px 14px;
+}
+
+.kawmed-contact-pill {
+  min-height: 62px;
+  padding: 7px 18px 7px 9px;
+  grid-template-columns: 46px minmax(0, 1fr);
+  justify-content: stretch;
+  justify-items: stretch;
+  column-gap: 11px;
+  text-align: center;
+}
+
+.kawmed-contact-pill__icon {
+  width: 46px;
+  height: 46px;
+  font-size: 23px;
+}
+
+.kawmed-contact-pill > span:last-child {
+  align-self: center;
+  justify-items: center;
+  text-align: center;
+}
+
+.kawmed-contact-pill strong {
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 850;
+}
+
+.kawmed-contact-pill small {
+  margin-top: 3px;
+  font-size: 10.5px;
+  line-height: 1.15;
+}
+
+.kawmed-panels {
+  width: calc(100% - 84px);
+  max-width: 508px;
+  margin: 0 auto;
+  gap: 12px;
+}
+
+.kawmed-panel--direct {
+  width: 100%;
+  min-height: 78px;
+  border: 1px solid #dce7f1;
+  border-radius: 18px;
+  padding: 13px 16px;
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 7px 20px rgba(32, 69, 109, .045);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.kawmed-panel--direct:hover {
+  transform: translateY(-2px);
+  border-color: #b8d2ee;
+  background: #fbfdff;
+  box-shadow: 0 10px 24px rgba(32, 69, 109, .09);
+}
+
+.kawmed-panel--direct:active {
+  transform: translateY(0) scale(.992);
+}
+
+.kawmed-panel--direct .kawmed-panel__icon {
+  width: 50px;
+  height: 50px;
+  font-size: 23px;
+}
+
+.kawmed-panel--direct .kawmed-panel__title strong {
+  font-size: 15px;
+}
+
+.kawmed-panel--direct .kawmed-panel__title small {
+  font-size: 11px;
+}
+
+.kawmed-panel--direct .kawmed-panel__chevron {
+  transform: none;
+  font-size: 18px;
+}
+
+.kawmed-panel--insurance {
+  width: 100%;
+}
+
+.kawmed-panel--insurance .kawmed-panel__trigger {
+  min-height: 78px;
+  padding: 13px 16px;
+}
+
+.kawmed-form .kawmed-button--full {
+  min-height: 58px;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.kawmed-form .kawmed-button--full svg {
+  font-size: 22px;
+}
+
+@media (max-width: 420px) {
+  .kawmed-contact-pills {
+    width: calc(100% - 56px);
+    max-width: none;
+    gap: 10px 12px;
+  }
+
+  .kawmed-contact-pill {
+    min-height: 60px;
+    padding: 7px 12px 7px 8px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 9px;
+  }
+
+  .kawmed-contact-pill__icon {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+  }
+
+  .kawmed-contact-pill strong {
+    font-size: 13px;
+  }
+
+  .kawmed-contact-pill small {
+    font-size: 10px;
+  }
+
+  .kawmed-panels {
+    width: calc(100% - 48px);
+    max-width: none;
+  }
+
+  .kawmed-panel--direct,
+  .kawmed-panel--insurance .kawmed-panel__trigger {
+    min-height: 76px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
