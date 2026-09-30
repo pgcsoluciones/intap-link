@@ -3396,7 +3396,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const isPreview = c.req.query('preview') === '1'
 
   const profile = await c.env.DB.prepare(
-    'SELECT id, slug, plan_id, theme_id, layout_id, free_palette_id, free_brand_color, hero_url, hero_position_x, hero_position_y, hero_zoom, is_published, name, bio, avatar_url, category, subcategory, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
+    'SELECT id, user_id, slug, plan_id, theme_id, layout_id, free_palette_id, free_brand_color, hero_url, hero_position_x, hero_position_y, hero_zoom, is_published, name, bio, avatar_url, category, subcategory, whatsapp_number, blocks_order, accent_color, button_style, template_id, template_data FROM profiles WHERE slug = ?'
   )
     .bind(slug)
     .first()
@@ -3430,7 +3430,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   try { publicTemplateData = JSON.parse(String((profile as any).template_data || '{}')) || {} } catch { publicTemplateData = {} }
   const isFreeProfile = String((profile as any).plan_id || 'free').trim().toLowerCase() === 'free'
 
-  const [links, rawGallery, rawFaqs, rawProducts, rawVideos, entitlements, rawSocialLinks, rawContact, freeAppointmentSettings] = await Promise.all([
+  const [links, rawGallery, rawFaqs, rawProducts, rawVideos, entitlements, rawSocialLinks, rawContact, freeAppointmentSettings, ownerAccount] = await Promise.all([
     c.env.DB.prepare(
       'SELECT id, label, url, is_cta FROM profile_links WHERE profile_id = ? AND is_active = 1 ORDER BY sort_order ASC'
     )
@@ -3469,6 +3469,9 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
       .first(),
     isFreeProfile
       ? c.env.DB.prepare("SELECT enabled FROM appointment_settings WHERE subject_type='free' AND subject_id=? LIMIT 1").bind((profile as any).id).first()
+      : Promise.resolve(null),
+    isFreeProfile
+      ? c.env.DB.prepare("SELECT email FROM users WHERE id=? LIMIT 1").bind(String((profile as any).user_id||'')).first()
       : Promise.resolve(null),
   ])
 
@@ -3525,6 +3528,7 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
     schedule: freeSchedule,
     quote_button_visible: publicTemplateData.free_quote_button_visible !== false,
     appointment_enabled: Number((freeAppointmentSettings as any)?.enabled || 0) === 1 && Boolean(freeWhatsapp),
+    quote_email: String((rawContact as any)?.email || (ownerAccount as any)?.email || '').trim(),
   } : null
 
   let blocksOrder: string[]
