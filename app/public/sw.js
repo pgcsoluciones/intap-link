@@ -39,3 +39,25 @@ self.addEventListener('fetch', (event) => {
     })),
   )
 })
+
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = String(event.notification?.data?.url || '/admin/free/home?source=pwa')
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          try {
+            const url = new URL(client.url)
+            if (url.origin === self.location.origin) {
+              client.navigate(target).catch(() => undefined)
+              return client.focus()
+            }
+          } catch {}
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(target) : undefined
+    }),
+  )
+})
