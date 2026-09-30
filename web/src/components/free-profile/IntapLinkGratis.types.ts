@@ -54,6 +54,12 @@ export type FreeProfileCustomLink = {
   url: string
 }
 
+export type FreeProfileExperience = {
+  schedule: Array<{ day: string; hours: string }>
+  quoteButtonVisible: boolean
+  appointmentEnabled: boolean
+}
+
 export type FreeProfileData = {
   id: string
   slug: string
@@ -84,6 +90,7 @@ export type FreeProfileData = {
   services: FreeProfileService[]
   portfolio: FreeProfilePortfolioItem[]
   customLinks: FreeProfileCustomLink[]
+  experience: FreeProfileExperience
   teamMember?: boolean
   teamAccessRole?: 'member' | 'editor' | 'subadmin' | null
 }
