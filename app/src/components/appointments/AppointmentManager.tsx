@@ -87,8 +87,11 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   const[highlightRow,setHighlightRow]=useState<number|null>(null)
   const[occupiedId,setOccupiedId]=useState<string|null>(null)
 
-  async function load(){
-    setLoading(true);setError('')
+  async function load(options:{silent?:boolean;preserveScroll?:boolean}={}){
+    const silent=options.silent===true&&Boolean(data)
+    const scrollY=options.preserveScroll===true?window.scrollY:null
+    if(!silent)setLoading(true)
+    setError('')
     try{
       const json:any=await apiGet(path(apiBase,'',query))
       if(!json?.ok)throw new Error(json?.error||'No pudimos cargar la agenda.')
@@ -97,7 +100,10 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       setAvailability((json.data.availability||[]).map((item:any)=>({...item,enabled:Number(item.enabled??1)===1||item.enabled===true})))
       setReasons((json.data.reasons||[]).map((item:any)=>({...item,enabled:item.enabled!==false&&Number(item.enabled??1)!==0})))
     }catch(e){setError(e instanceof Error?e.message:'No pudimos cargar la agenda.')}
-    finally{setLoading(false)}
+    finally{
+      if(!silent)setLoading(false)
+      if(scrollY!==null)window.requestAnimationFrame(()=>window.scrollTo({top:scrollY,left:0,behavior:'auto'}))
+    }
   }
   useEffect(()=>{void load()},[apiBase,query])
 
@@ -150,7 +156,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       const json:any=await apiPut(path(apiBase,'/settings',query),payload)
       if(!json?.ok)throw new Error(json?.error||'No pudimos guardar la agenda.')
       notice('Agenda guardada.')
-      await load()
+      await load({silent:true,preserveScroll:true})
     }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar la agenda.')}
     finally{setSaving(false)}
   }
@@ -166,7 +172,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       if(!json?.ok)throw new Error(json?.error||'No pudimos bloquear el horario.')
       setBlock({block_date:'',start_time:'',end_time:'',note:''})
       notice(block.start_time?'Horario bloqueado. Ya no se ofrecerá en la agenda pública.':'Día bloqueado. Ya no se ofrecerán horarios en esa fecha.')
-      await load()
+      await load({silent:true,preserveScroll:true})
     }catch(e){setError(e instanceof Error?e.message:'No pudimos bloquear el horario.')}
   }
   async function removeBlock(id:string){
@@ -175,7 +181,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       const json:any=await apiDelete(path(apiBase,'/blocks/'+encodeURIComponent(id),query))
       if(!json?.ok)throw new Error(json?.error||'No pudimos quitar el bloqueo.')
       notice('Bloqueo quitado. El horario vuelve a estar disponible.')
-      await load()
+      await load({silent:true,preserveScroll:true})
     }catch(e){setError(e instanceof Error?e.message:'No pudimos quitar el bloqueo.')}
   }
   async function act(item:RequestItem,action:'confirm'|'reject'|'release'){
@@ -189,7 +195,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       }
       setOccupiedId(current=>current===item.id?null:current)
       notice(action==='confirm'?'Cita confirmada. El horario dejó de estar disponible.':action==='release'?'Horario liberado nuevamente.':'Solicitud rechazada. Puedes enviar el aviso por WhatsApp desde Historial.')
-      await load()
+      await load({silent:true,preserveScroll:true})
     }catch(e){
       const detail=e instanceof Error?e.message:'No pudimos actualizar la solicitud.'
       if(action==='confirm'&&/ocupad|bloquead/i.test(detail))setOccupiedId(item.id)
