@@ -70,23 +70,36 @@ export async function unlockAgendaNotificationAudio(){
   }catch{agendaAudioUnlocked=false;return false}
 }
 
+type AgendaToneStep={frequency:number;offset:number;duration:number;gain:number;wave:OscillatorType}
+const AGENDA_TONES:Record<string,AgendaToneStep[]>={
+  agenda:[
+    {frequency:523,offset:0,duration:.11,gain:.16,wave:'triangle'},
+    {frequency:659,offset:.12,duration:.11,gain:.18,wave:'triangle'},
+    {frequency:880,offset:.25,duration:.24,gain:.20,wave:'triangle'},
+  ],
+  soft:[
+    {frequency:392,offset:0,duration:.28,gain:.10,wave:'sine'},
+    {frequency:523,offset:.30,duration:.34,gain:.09,wave:'sine'},
+  ],
+  pulse:[
+    {frequency:1047,offset:0,duration:.055,gain:.18,wave:'square'},
+    {frequency:1047,offset:.095,duration:.055,gain:.18,wave:'square'},
+    {frequency:784,offset:.19,duration:.075,gain:.15,wave:'square'},
+  ],
+}
+
 export function playAgendaNotificationCue(kind:string){
   if(kind==='silent'){vibrate();return}
   try{
     const ctx=getAgendaAudioContext()
     if(!ctx||ctx.state!=='running'||!agendaAudioUnlocked){vibrate();return}
     const now=ctx.currentTime
-    const plans:Record<string,Array<[number,number,number]>>={
-      soft:[[740,0,.10],[988,.14,.12]],
-      agenda:[[659,0,.09],[784,.11,.09],[1047,.22,.16]],
-      pulse:[[880,0,.07],[880,.12,.07]],
-    }
-    const plan=plans[kind]||plans.agenda
-    plan.forEach(([frequency,offset,duration])=>{
+    const plan=AGENDA_TONES[kind]||AGENDA_TONES.agenda
+    plan.forEach(({frequency,offset,duration,gain:peak,wave})=>{
       const osc=ctx.createOscillator(),gain=ctx.createGain()
-      osc.type='sine';osc.frequency.value=frequency
+      osc.type=wave;osc.frequency.value=frequency
       gain.gain.setValueAtTime(0.0001,now+offset)
-      gain.gain.exponentialRampToValueAtTime(.16,now+offset+.015)
+      gain.gain.exponentialRampToValueAtTime(peak,now+offset+.012)
       gain.gain.exponentialRampToValueAtTime(.0001,now+offset+duration)
       osc.connect(gain);gain.connect(ctx.destination)
       osc.start(now+offset);osc.stop(now+offset+duration+.02)
