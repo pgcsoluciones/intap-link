@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../lib/api'
-import { AGENDA_SOUND_KEY, playAgendaNotificationCue, syncServiceWorkerPreference } from '../../notifications/PwaNotificationBridge'
+import { AGENDA_SOUND_KEY, playAgendaNotificationCue, syncServiceWorkerPreference, unlockAgendaNotificationAudio } from '../../notifications/PwaNotificationBridge'
 
 type MeData = {
   name?: string | null
@@ -89,12 +89,14 @@ export default function FreePwaHome() {
   async function requestNotificationPermission(){
     if(typeof Notification==='undefined'){setPermission('unsupported');return}
     try{
+      await unlockAgendaNotificationAudio()
       const result=await Notification.requestPermission()
       setPermission(result)
       if(result==='granted'){playAgendaNotificationCue(sound);syncServiceWorkerPreference(sound);window.dispatchEvent(new Event('kawvo:push-permission-changed'))}
     }catch{/* browser decides */}
   }
   function changeSound(value:string){
+    void unlockAgendaNotificationAudio()
     localStorage.setItem(AGENDA_SOUND_KEY,value)
     setSound(value)
     syncServiceWorkerPreference(value)
