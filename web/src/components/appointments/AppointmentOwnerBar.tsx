@@ -79,6 +79,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     <div style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
       <strong style={{fontSize:12.5,color:palette.text,whiteSpace:'nowrap'}}>Mi presentación</strong>
       <div style={{display:'flex',alignItems:'center',gap:7}}>
+        <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}} />
         <button type="button" onClick={()=>window.location.assign(manageUrl)} style={{...pill,borderColor:palette.accent+'44',background:palette.accentSoft,color:palette.text}}><FaCalendarAlt/>Agenda</button>
         <div ref={popoverRef} style={{position:'relative'}}>
           <button type="button" aria-label="Solicitudes de agenda" onClick={()=>setOpen(value=>!value)} style={{...pill,position:'relative',background:context.pending_count?'#fee2e2':'#f8fafc',color:context.pending_count?'#b91c1c':'#475569',borderColor:context.pending_count?'#fecaca':'#e2e8f0'}}><FaBell/>{context.pending_count>0&&<b style={{minWidth:18,height:18,borderRadius:99,display:'grid',placeItems:'center',background:'#dc2626',color:'#fff',fontSize:10}}>{context.pending_count}</b>}</button>
