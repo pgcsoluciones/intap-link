@@ -228,8 +228,14 @@ assert d.get('planId')=='free', f"planId inesperado: {d.get('planId')}"
 x=d.get('freeExperience')
 assert isinstance(x,dict), f"freeExperience ausente: {x!r}"
 assert x.get('quote_button_visible') is True, f"Cotizar no viene activo: {x!r}"
-assert isinstance(x.get('schedule'),list) and len(x.get('schedule'))>0, f"Horario Free ausente: {x!r}"
-print(f"✓ Payload canónico Free real /{slug}: horario presente + Cotizar activo + experiencia integrada")
+assert isinstance(x.get('schedule_visible'),bool), f"schedule_visible inválido: {x!r}"
+assert isinstance(x.get('schedule'),list), f"schedule inválido: {x!r}"
+if x.get('schedule_visible'):
+    assert len(x.get('schedule'))>0, f"Horario visible pero ausente: {x!r}"
+else:
+    assert len(x.get('schedule'))==0, f"Horario oculto no debe exponerse públicamente: {x!r}"
+state='visible' if x.get('schedule_visible') else 'oculto'
+print(f"✓ Payload canónico Free real /{slug}: horario {state} coherente + Cotizar activo + experiencia integrada")
 PY
 
 echo; echo "▶ Smoke endpoint media Free"
@@ -264,7 +270,7 @@ Web origin:  $WEB_ORIGIN
 QA:
 1. Nombre/cargo, botón destacado y botones rápidos conservan su posición.
 2. Quién soy permanece debajo de esos botones.
-3. Horario aparece debajo de Quién soy aunque Agenda esté apagada; puede editarse en Mi cuenta.
+3. Horario aparece debajo de Quién soy cuando está en Mostrar; puede ocultarse públicamente y seguir editándose en Mi cuenta.
 4. Cotizar / información aparece activo por defecto.
 5. Agenda está inactiva por defecto.
 6. Mi cuenta permite activar/desactivar Cotizar y Agenda sin dejar ambas apagadas.
