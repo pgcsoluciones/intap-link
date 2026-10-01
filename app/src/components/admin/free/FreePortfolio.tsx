@@ -11,7 +11,7 @@ type Photo = {
   description?: string | null
 }
 
-const MAX_PHOTOS = 5
+const MAX_PHOTOS = 10
 const DESCRIPTION_LIMIT = 180
 const PORTFOLIO_TITLES = ['Portafolio', 'Mis trabajos', 'Proyectos'] as const
 
@@ -267,7 +267,7 @@ export default function FreePortfolio() {
           </div>
           <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-500 shadow-sm">{photos.length}/{MAX_PHOTOS}</span>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-500">Muestra hasta 5 trabajos. El límite no bloquea editar, reemplazar ni eliminar.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-500">Muestra hasta 10 trabajos. Cada imagen se optimiza antes de subir; el límite no bloquea editar, reemplazar ni eliminar.</p>
 
         <section className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
           <p className="text-xs font-black text-slate-700">Título visible de la sección</p>
