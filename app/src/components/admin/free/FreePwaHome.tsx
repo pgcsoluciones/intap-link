@@ -25,6 +25,14 @@ type NotificationItem={
   read_at?:string|null
 }
 
+function isIosDevice(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
+function isStandalonePwa(){return window.matchMedia?.('(display-mode: standalone)').matches||Boolean((navigator as any).standalone)}
+function initialNotificationState(){
+  if(typeof Notification!=='undefined')return Notification.permission
+  if(isIosDevice()&&!isStandalonePwa())return 'install-required'
+  return 'unsupported'
+}
+
 const SOUND_OPTIONS=[
   {value:'agenda',label:'Agenda ascendente',detail:'Tres tonos breves y claros'},
   {value:'soft',label:'Campana suave',detail:'Dos tonos discretos'},
@@ -40,7 +48,7 @@ export default function FreePwaHome() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [unread, setUnread] = useState(0)
   const [sound, setSound] = useState(()=>localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
-  const [permission, setPermission] = useState(()=>typeof Notification==='undefined'?'unsupported':Notification.permission)
+  const [permission, setPermission] = useState(()=>initialNotificationState())
 
   const loadNotifications=async()=>{
     try{
@@ -87,7 +95,10 @@ export default function FreePwaHome() {
   const agendaNotifications=useMemo(()=>notifications.filter(item=>['sponsored_appointment_request','free_appointment_request'].includes(item.type)&&!item.read_at).slice(0,3),[notifications])
 
   async function requestNotificationPermission(){
-    if(typeof Notification==='undefined'){setPermission('unsupported');return}
+    if(typeof Notification==='undefined'){
+      setPermission(isIosDevice()&&!isStandalonePwa()?'install-required':'unsupported')
+      return
+    }
     try{
       await unlockAgendaNotificationAudio()
       const result=await Notification.requestPermission()
@@ -156,11 +167,15 @@ export default function FreePwaHome() {
           </div>
 
           {agendaRoute&&<section className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-slate-950">Avisos de agenda</p><p className="mt-1 text-xs leading-5 text-slate-500">Elige el sonido que distinguirá una nueva solicitud mientras Kawvo esté activa.</p></div><span className={'rounded-full px-2 py-1 text-[10px] font-black '+(permission==='granted'?'bg-emerald-100 text-emerald-700':'bg-slate-200 text-slate-600')}>{permission==='granted'?'Avisos activos':permission==='denied'?'Bloqueados':permission==='unsupported'?'No compatible':'Sin permiso'}</span></div>
+            <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-black text-slate-950">Avisos de agenda</p><p className="mt-1 text-xs leading-5 text-slate-500">Elige el sonido que distinguirá una nueva solicitud mientras Kawvo esté activa.</p></div><span className={'rounded-full px-2 py-1 text-[10px] font-black '+(permission==='granted'?'bg-emerald-100 text-emerald-700':permission==='install-required'?'bg-amber-100 text-amber-800':'bg-slate-200 text-slate-600')}>{permission==='granted'?'Avisos activos':permission==='denied'?'Bloqueados':permission==='install-required'?'Instala Kawvo':permission==='unsupported'?'No compatible':'Sin permiso'}</span></div>
+            {permission==='install-required'&&<div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-semibold leading-5 text-amber-950">
+              <strong className="block text-sm">En iPhone, los avisos funcionan desde Kawvo instalada.</strong>
+              <span className="mt-1 block">Toca Compartir en Safari → <strong>Agregar a pantalla de inicio</strong>. Luego abre Kawvo desde el icono instalado y vuelve aquí para activar los avisos.</span>
+            </div>}
             <select value={sound} onChange={e=>changeSound(e.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold">
               {SOUND_OPTIONS.map(option=><option key={option.value} value={option.value}>{option.label} · {option.detail}</option>)}
             </select>
-            {permission!=='granted'&&permission!=='unsupported'&&<button type="button" onClick={()=>void requestNotificationPermission()} className="mt-3 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Activar avisos del dispositivo</button>}
+            {permission!=='granted'&&permission!=='unsupported'&&permission!=='install-required'&&<button type="button" onClick={()=>void requestNotificationPermission()} className="mt-3 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Activar avisos del dispositivo</button>}
             <p className="mt-3 text-[11px] leading-5 text-slate-500">Con sonido desactivado, Kawvo intenta vibrar cuando el dispositivo y el navegador lo permiten.</p>
           </section>}
 
