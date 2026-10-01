@@ -22,11 +22,12 @@ type Props={
   username:string
   ownerApiBase:string
   manageOrigin:string
+  settingsPath:string
   palette:Palette
   onToast:(message:string)=>void
 }
 
-export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,palette,onToast}:Props){
+export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,palette,onToast}:Props){
   const[context,setContext]=useState<Context|null>(null)
   const[open,setOpen]=useState(false)
   const[actionId,setActionId]=useState('')
@@ -74,10 +75,12 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   }
 
   if(!context)return null
-  const manageUrl=manageOrigin.replace(/\/$/,'')+String(context.manage_url||'/admin/sponsored/agenda')
+  const origin=manageOrigin.replace(/\/$/,'')
+  const manageUrl=origin+String(context.manage_url||'/admin/sponsored/agenda')
+  const settingsUrl=origin+settingsPath
   return <div style={{position:'sticky',top:0,zIndex:58,background:'rgba(255,255,255,.96)',backdropFilter:'blur(12px)',borderBottom:'1px solid #e2e8f0',fontFamily:'Inter,system-ui,sans-serif'}}>
     <div style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
-      <strong style={{fontSize:12.5,color:palette.text,whiteSpace:'nowrap'}}>Mi presentación</strong>
+      <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>Configuración</button>
       <div style={{display:'flex',alignItems:'center',gap:7}}>
         <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}} />
         <button type="button" onClick={()=>window.location.assign(manageUrl)} style={{...pill,borderColor:palette.accent+'44',background:palette.accentSoft,color:palette.text}}><FaCalendarAlt/>Agenda</button>
