@@ -70,10 +70,12 @@ app/src/components/admin/free/FreeAppointments.tsx
 app/src/components/admin/free/FreeDashboard.tsx
 app/src/components/admin/free/FreeExperienceSettings.tsx
 app/src/components/admin/free/FreePwaHome.tsx
+app/src/components/appointments/AppointmentManager.tsx
 app/src/components/notifications/PwaNotificationBridge.tsx
 scripts/create-preview-free-activation-code.mjs
 scripts/run-preview-free-contact-agenda-2026-09-30.sh
 scripts/test-free-contact-agenda-contract.mjs
+scripts/test-sponsored-profile-contract.mjs
 web/src/components/free-profile/FreeContactActions.tsx
 web/src/components/free-profile/IntapLinkGratis.adapter.ts
 web/src/components/free-profile/IntapLinkGratisProfile.tsx
