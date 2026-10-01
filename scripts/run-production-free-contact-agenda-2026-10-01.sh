@@ -20,7 +20,8 @@ fail(){ echo; echo "✗ ERROR: $1"; exit 1; }
 run(){ echo; echo "▶ $*"; "$@" || fail "$*"; }
 
 cd "$ROOT" || fail "No existe $ROOT"
-rm -rf "$LOG_DIR"
+rm -rf "$LOG_DIR" "$ROOT/.preview-free-contact-agenda-logs" "$ROOT/.production-free-contact-agenda-2026-10-01-logs"
+rm -f "$ROOT/api/wrangler.preview.toml.free-contact-agenda.bak"
 mkdir -p "$LOG_DIR"
 
 cat <<EOF
