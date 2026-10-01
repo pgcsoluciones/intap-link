@@ -44,13 +44,37 @@ function vibrate(){
   try{if('vibrate' in navigator)navigator.vibrate([120,70,120])}catch{}
 }
 
+let agendaAudioContext:AudioContext|null=null
+let agendaAudioUnlocked=false
+
+function getAgendaAudioContext(){
+  try{
+    const AudioCtx=(window.AudioContext||(window as any).webkitAudioContext)
+    if(!AudioCtx)return null
+    if(!agendaAudioContext||agendaAudioContext.state==='closed')agendaAudioContext=new AudioCtx()
+    return agendaAudioContext
+  }catch{return null}
+}
+
+export async function unlockAgendaNotificationAudio(){
+  const ctx=getAgendaAudioContext()
+  if(!ctx){vibrate();return false}
+  try{
+    if(ctx.state==='suspended')await ctx.resume()
+    const osc=ctx.createOscillator(),gain=ctx.createGain()
+    gain.gain.setValueAtTime(0.00001,ctx.currentTime)
+    osc.connect(gain);gain.connect(ctx.destination)
+    osc.start();osc.stop(ctx.currentTime+.01)
+    agendaAudioUnlocked=ctx.state==='running'
+    return agendaAudioUnlocked
+  }catch{agendaAudioUnlocked=false;return false}
+}
+
 export function playAgendaNotificationCue(kind:string){
   if(kind==='silent'){vibrate();return}
   try{
-    const AudioCtx=(window.AudioContext||(window as any).webkitAudioContext)
-    if(!AudioCtx){vibrate();return}
-    const ctx=new AudioCtx()
-    if(ctx.state==='suspended')void ctx.resume().catch(()=>vibrate())
+    const ctx=getAgendaAudioContext()
+    if(!ctx||ctx.state!=='running'||!agendaAudioUnlocked){vibrate();return}
     const now=ctx.currentTime
     const plans:Record<string,Array<[number,number,number]>>={
       soft:[[740,0,.10],[988,.14,.12]],
@@ -67,7 +91,6 @@ export function playAgendaNotificationCue(kind:string){
       osc.connect(gain);gain.connect(ctx.destination)
       osc.start(now+offset);osc.stop(now+offset+duration+.02)
     })
-    window.setTimeout(()=>void ctx.close().catch(()=>undefined),700)
   }catch{vibrate()}
 }
 
@@ -101,6 +124,10 @@ export default function PwaNotificationBridge(){
 
   useEffect(()=>{
     let active=true
+    const unlock=()=>void unlockAgendaNotificationAudio()
+    window.addEventListener('pointerdown',unlock,{passive:true})
+    window.addEventListener('touchstart',unlock,{passive:true})
+    window.addEventListener('keydown',unlock)
     void syncPushSubscription().then(value=>{pushReady.current=value})
     syncServiceWorkerPreference(localStorage.getItem(AGENDA_SOUND_KEY)||'agenda')
     async function poll(){
@@ -143,7 +170,7 @@ export default function PwaNotificationBridge(){
     window.addEventListener('focus',refresh)
     window.addEventListener('kawvo:notifications-changed',refresh)
     window.addEventListener('kawvo:push-permission-changed',syncPush)
-    return()=>{active=false;window.clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('kawvo:notifications-changed',refresh);window.removeEventListener('kawvo:push-permission-changed',syncPush)}
+    return()=>{active=false;window.clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('kawvo:notifications-changed',refresh);window.removeEventListener('kawvo:push-permission-changed',syncPush);window.removeEventListener('pointerdown',unlock);window.removeEventListener('touchstart',unlock);window.removeEventListener('keydown',unlock)}
   },[])
 
   return null
