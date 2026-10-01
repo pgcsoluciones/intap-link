@@ -4,6 +4,7 @@ import { apiGet, apiPatch } from '../../../lib/api'
 type Experience={
   quote_button_visible:boolean
   appointment_enabled:boolean
+  schedule_visible:boolean
   portfolio_title:string
   schedule:Array<{day:string;hours:string}>
 }
@@ -46,7 +47,7 @@ export default function FreeExperienceSettings(){
     <p className="mb-3 px-1 text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-400">PRESENTACIÓN Y CONTACTO</p>
     <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
       <div className="border-b border-slate-200 px-4 py-4">
-        <div className="flex items-center justify-between gap-3"><div><p className="text-[17px] font-medium text-slate-800">Nuestro horario</p><p className="mt-1 text-[13px] leading-5 text-slate-500">Se muestra siempre como parte de tu presentación y es independiente de Agenda.</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-black text-cyan-700">Público</span></div>
+        <div className="flex items-center justify-between gap-4"><div className="min-w-0"><p className="text-[17px] font-medium text-slate-800">Nuestro horario</p><p className="mt-1 text-[13px] leading-5 text-slate-500">{data.schedule_visible?'Visible públicamente en tu presentación.':'Oculto en tu presentación; puedes seguir editándolo aquí.'}</p></div><button type="button" disabled={saving} onClick={()=>void patch({schedule_visible:!data.schedule_visible})} className={'relative h-7 w-12 shrink-0 rounded-full transition '+(data.schedule_visible?'bg-cyan-600':'bg-slate-300')} aria-pressed={data.schedule_visible} aria-label="Mostrar u ocultar horario público"><span className={'absolute top-1 h-5 w-5 rounded-full bg-white shadow transition '+(data.schedule_visible?'left-6':'left-1')}/></button></div>
         <div className="mt-3 space-y-2">{data.schedule.map((item,index)=><div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><input value={item.day} onChange={e=>{const schedule=[...data.schedule];schedule[index]={...schedule[index],day:e.target.value};setData({...data,schedule})}} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-300" placeholder="Días"/><input value={item.hours} onChange={e=>{const schedule=[...data.schedule];schedule[index]={...schedule[index],hours:e.target.value};setData({...data,schedule})}} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-300" placeholder="Horario"/><button type="button" onClick={()=>setData({...data,schedule:data.schedule.filter((_,i)=>i!==index)})} className="rounded-xl border border-slate-200 px-3 text-xs font-black text-slate-500">Quitar</button></div>)}</div>
         <div className="mt-3 flex gap-2"><button type="button" disabled={data.schedule.length>=7} onClick={()=>setData({...data,schedule:[...data.schedule,{day:'',hours:''}].slice(0,7)})} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40">Agregar horario</button><button type="button" disabled={saving} onClick={()=>void patch({schedule:data.schedule})} className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:opacity-40">Guardar horario</button></div>
       </div>
