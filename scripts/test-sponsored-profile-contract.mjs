@@ -449,7 +449,7 @@ has(appointmentCore,"action:'reject'|'release'",'núcleo contempla liberar una c
 has(appointmentCore,"status='cancelled'",'liberar una cita confirmada devuelve el horario a disponibilidad')
 has(appointmentManager,'Agenda activa','gestor permite activar o desactivar agenda')
 has(appointmentManager,"load({silent:true,preserveScroll:true})",'Agenda preserva posición al guardar o ejecutar acciones')
-has(appointmentManager,'requestTargetId','notificación abre la solicitud concreta')
+has(appointmentManager,'targetRequestId','notificación abre la solicitud concreta')
 has(appointmentManager,'scrollIntoView','Agenda desplaza a la solicitud indicada')
 has(appointmentManager,'const PAGE_SIZE=3','gestor compartido pagina citas de 3 en 3')
 has(appointmentManager,'PaginationControls','gestor compartido muestra navegación entre páginas')
