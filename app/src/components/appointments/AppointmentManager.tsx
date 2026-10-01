@@ -86,7 +86,6 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   const[openDays,setOpenDays]=useState<number[]>([])
   const[highlightRow,setHighlightRow]=useState<number|null>(null)
   const[occupiedId,setOccupiedId]=useState<string|null>(null)
-  const requestTargetId=useMemo(()=>new URLSearchParams(window.location.search).get('request')||'',[])
   const[targetRequestId]=useState(()=>String(new URLSearchParams(window.location.search).get('request')||'').trim())
   const[highlightRequestId,setHighlightRequestId]=useState<string|null>(null)
 
@@ -110,10 +109,38 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   }
   useEffect(()=>{void load()},[apiBase,query])
 
+  const pending=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='pending'),[data])
+  const confirmed=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='confirmed'),[data])
+  const history=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>!['pending','confirmed'].includes(item.status)),[data])
+
+  const PAGE_SIZE=3
+  const[pendingPage,setPendingPage]=useState(1)
+  const[confirmedPage,setConfirmedPage]=useState(1)
+  const[historyPage,setHistoryPage]=useState(1)
+  const pageCount=(items:RequestItem[])=>Math.max(1,Math.ceil(items.length/PAGE_SIZE))
+  const pageItems=(items:RequestItem[],page:number)=>items.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE)
+
+  useEffect(()=>{setPendingPage(page=>Math.min(page,pageCount(pending)))},[pending.length])
+  useEffect(()=>{setConfirmedPage(page=>Math.min(page,pageCount(confirmed)))},[confirmed.length])
+  useEffect(()=>{setHistoryPage(page=>Math.min(page,pageCount(history)))},[history.length])
+
   useEffect(()=>{
     if(!targetRequestId||loading||!data)return
-    const exists=((data?.requests||[]) as RequestItem[]).some(item=>item.id===targetRequestId)
-    if(!exists)return
+    const all=((data?.requests||[]) as RequestItem[])
+    const target=all.find(item=>item.id===targetRequestId)
+    if(!target)return
+
+    if(target.status==='pending'){
+      const index=pending.findIndex(item=>item.id===targetRequestId)
+      if(index>=0)setPendingPage(Math.floor(index/PAGE_SIZE)+1)
+    }else if(target.status==='confirmed'){
+      const index=confirmed.findIndex(item=>item.id===targetRequestId)
+      if(index>=0)setConfirmedPage(Math.floor(index/PAGE_SIZE)+1)
+    }else{
+      const index=history.findIndex(item=>item.id===targetRequestId)
+      if(index>=0)setHistoryPage(Math.floor(index/PAGE_SIZE)+1)
+    }
+
     setHighlightRequestId(targetRequestId)
     let tries=0
     const focus=()=>{
@@ -123,25 +150,11 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
         window.setTimeout(()=>setHighlightRequestId(current=>current===targetRequestId?null:current),4200)
         return
       }
-      if(tries++<8)window.setTimeout(focus,80)
+      if(tries++<12)window.setTimeout(focus,90)
     }
-    window.requestAnimationFrame(focus)
-  },[targetRequestId,loading,data])
+    window.setTimeout(focus,120)
+  },[targetRequestId,loading,data,pending,confirmed,history])
 
-  const pending=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='pending'),[data])
-  const confirmed=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='confirmed'),[data])
-  const history=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>!['pending','confirmed'].includes(item.status)),[data])
-  useEffect(()=>{
-    if(!data||!requestTargetId)return
-    const timer=window.setTimeout(()=>{
-      const target=document.getElementById('appointment-request-'+requestTargetId)
-      if(!target)return
-      target.scrollIntoView({behavior:'smooth',block:'center'})
-      target.classList.add('ring-2','ring-emerald-300','shadow-lg')
-      window.setTimeout(()=>target.classList.remove('ring-2','ring-emerald-300','shadow-lg'),2200)
-    },120)
-    return()=>window.clearTimeout(timer)
-  },[data,requestTargetId])
 
   const availabilityGroups=useMemo(()=>DAY_NAMES.map((name,weekday)=>({
     name,weekday,items:availability.map((row,index)=>({row,index})).filter(item=>item.row.weekday===weekday),
@@ -310,15 +323,17 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-xl font-black">Solicitudes pendientes <span className="text-slate-400">({pending.length})</span></h2>
-        <div className="mt-4 space-y-3">{pending.map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><button type="button" onClick={()=>void act(item,'confirm')} className={'rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white '+actionFx}>Confirmar</button><button type="button" onClick={()=>void act(item,'reject')} className={'rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 '+actionFx}>Rechazar</button>{occupiedId===item.id&&<a href={whatsappOccupied(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-amber-100 px-3 py-2 text-xs font-black text-amber-800 '+actionFx}>Avisar horario ocupado</a>}</RequestCard>)}{!pending.length&&<p className="text-sm text-slate-500">No hay solicitudes pendientes.</p>}</div>
+        <div className="mt-4 space-y-3">{pageItems(pending,pendingPage).map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><button type="button" onClick={()=>void act(item,'confirm')} className={'rounded-xl bg-emerald-600 px-3 py-2 text-sm font-black text-white '+actionFx}>Confirmar</button><button type="button" onClick={()=>void act(item,'reject')} className={'rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600 '+actionFx}>Rechazar</button>{occupiedId===item.id&&<a href={whatsappOccupied(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-amber-100 px-3 py-2 text-sm font-black text-amber-800 '+actionFx}>Avisar horario ocupado</a>}</RequestCard>)}{!pending.length&&<p className="text-base text-slate-500">No hay solicitudes pendientes.</p>}</div>
+        <PaginationControls page={pendingPage} total={pending.length} pageSize={PAGE_SIZE} onPage={setPendingPage}/>
       </section>
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-xl font-black">Citas confirmadas <span className="text-slate-400">({confirmed.length})</span></h2>
-        <div className="mt-4 space-y-3">{confirmed.map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><a href={whatsappConfirmation(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 '+actionFx}>Responder por WhatsApp</a><button type="button" onClick={()=>void act(item,'release')} className={'rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-black text-amber-700 '+actionFx}>Liberar horario</button></RequestCard>)}{!confirmed.length&&<p className="text-sm text-slate-500">Aún no tienes citas confirmadas.</p>}</div>
+        <div className="mt-4 space-y-3">{pageItems(confirmed,confirmedPage).map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><a href={whatsappConfirmation(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700 '+actionFx}>Responder por WhatsApp</a><button type="button" onClick={()=>void act(item,'release')} className={'rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-black text-amber-700 '+actionFx}>Liberar horario</button></RequestCard>)}{!confirmed.length&&<p className="text-base text-slate-500">Aún no tienes citas confirmadas.</p>}</div>
+        <PaginationControls page={confirmedPage} total={confirmed.length} pageSize={PAGE_SIZE} onPage={setConfirmedPage}/>
       </section>
 
-      {history.length>0&&<section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-xl font-black">Historial</h2><div className="mt-4 space-y-2">{history.slice(0,25).map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}>{item.status==='rejected'&&<a href={whatsappRejection(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 '+actionFx}>Avisar rechazo por WhatsApp</a>}</RequestCard>)}</div></section>}
+      {history.length>0&&<section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-xl font-black">Historial <span className="text-slate-400">({history.length})</span></h2><div className="mt-4 space-y-3">{pageItems(history,historyPage).map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}>{item.status==='rejected'&&<a href={whatsappRejection(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-rose-50 px-3 py-2 text-sm font-black text-rose-700 '+actionFx}>Avisar rechazo por WhatsApp</a>}</RequestCard>)}</div><PaginationControls page={historyPage} total={history.length} pageSize={PAGE_SIZE} onPage={setHistoryPage}/></section>}
 
       <button type="button" onClick={()=>void save()} disabled={saving} className={'sticky bottom-4 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-sm font-black text-white shadow-xl disabled:opacity-50 '+actionFx}>{saving?'Guardando…':'Guardar configuración de agenda'}</button>
     </div>
@@ -326,7 +341,14 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
 }
 
 function RequestCard({item,children,targeted=false}:{item:RequestItem;children?:ReactNode;targeted?:boolean}){
-  return <article id={'appointment-request-'+item.id} className={'rounded-2xl border bg-slate-50 p-4 transition-all duration-300 '+(targeted?'border-cyan-400 ring-4 ring-cyan-100 shadow-lg':'border-slate-200')}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm font-black">{item.customer_name}</strong><p className="mt-1 text-xs font-bold text-slate-500">{item.appointment_date} · {item.start_time} · {item.reason_label}</p><p className="mt-1 text-xs text-slate-500">{item.customer_phone}{item.customer_email?' · '+item.customer_email:''}</p>{item.details&&<p className="mt-2 text-sm leading-5 text-slate-700">{item.details}</p>}</div><span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase text-slate-500">{item.status}</span></div>{children&&<div className="mt-3 flex flex-wrap gap-2">{children}</div>}</article>
+  const statusLabel:Record<string,string>={pending:'Pendiente',confirmed:'Confirmada',rejected:'Rechazada',cancelled:'Cancelada',released:'Liberada'}
+  return <article id={'appointment-request-'+item.id} className={'rounded-2xl border bg-slate-50 p-4 transition-all duration-300 '+(targeted?'border-cyan-400 ring-4 ring-cyan-100 shadow-lg':'border-slate-200')}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-lg font-black leading-tight">{item.customer_name}</strong><p className="mt-2 text-[15px] font-bold leading-6 text-slate-600">{humanDate(item.appointment_date)} · {humanTime(item.start_time)} · {item.reason_label}</p><p className="mt-1 text-[15px] leading-6 text-slate-600">{item.customer_phone}{item.customer_email?' · '+item.customer_email:''}</p>{item.details&&<p className="mt-2 text-base leading-6 text-slate-700">{item.details}</p>}</div><span className="shrink-0 rounded-full bg-white px-2.5 py-1.5 text-xs font-black uppercase text-slate-500">{statusLabel[item.status]||item.status}</span></div>{children&&<div className="mt-4 flex flex-wrap gap-2">{children}</div>}</article>
+}
+
+function PaginationControls({page,total,pageSize,onPage}:{page:number;total:number;pageSize:number;onPage:(page:number)=>void}){
+  const pages=Math.ceil(total/pageSize)
+  if(pages<=1)return null
+  return <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4"><button type="button" disabled={page<=1} onClick={()=>onPage(Math.max(1,page-1))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 disabled:opacity-35">← Anterior</button><span className="text-sm font-bold text-slate-500">Página {page} de {pages}</span><button type="button" disabled={page>=pages} onClick={()=>onPage(Math.min(pages,page+1))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 disabled:opacity-35">Siguiente →</button></div>
 }
 
 const field='mt-1 w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none transition-colors focus:border-cyan-400'
