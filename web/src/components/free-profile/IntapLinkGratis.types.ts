@@ -100,6 +100,6 @@ export type FreeProfileData = {
 export const FREE_PROFILE_LIMITS = {
   maxQuickActions: 3,
   maxCustomLinks: 3,
-  maxPortfolioImages: 5,
+  maxPortfolioImages: 10,
   maxServices: 3,
 } as const
