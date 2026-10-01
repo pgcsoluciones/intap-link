@@ -76,7 +76,9 @@ scripts/create-preview-free-activation-code.mjs
 scripts/run-preview-free-contact-agenda-2026-09-30.sh
 scripts/test-free-contact-agenda-contract.mjs
 scripts/test-sponsored-profile-contract.mjs
+web/src/components/appointments/AppointmentOwnerBar.tsx
 web/src/components/free-profile/FreeContactActions.tsx
+web/src/components/free-profile/FreePreviewEditShortcut.tsx
 web/src/components/free-profile/IntapLinkGratis.adapter.ts
 web/src/components/free-profile/IntapLinkGratisProfile.tsx
 web/src/components/free-profile/PublicBankAccounts.tsx
