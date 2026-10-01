@@ -331,6 +331,7 @@ export function adaptPublicProfileApiResponse(payload: unknown): FreeProfileAdap
       customLinks: resolveCustomLinks(data),
       experience: {
         schedule: experienceSchedule,
+        scheduleVisible: freeExperience.schedule_visible !== false,
         quoteButtonVisible: freeExperience.quote_button_visible !== false,
         appointmentEnabled: freeExperience.appointment_enabled === true || Number(freeExperience.appointment_enabled || 0) === 1,
         quoteEmail: readString(freeExperience, 'quote_email'),
