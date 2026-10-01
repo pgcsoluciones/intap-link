@@ -449,6 +449,8 @@ has(appointmentCore,"action:'reject'|'release'",'núcleo contempla liberar una c
 has(appointmentCore,"status='cancelled'",'liberar una cita confirmada devuelve el horario a disponibilidad')
 has(appointmentManager,'Agenda activa','gestor permite activar o desactivar agenda')
 has(appointmentManager,"load({silent:true,preserveScroll:true})",'Agenda preserva posición al guardar o ejecutar acciones')
+has(appointmentManager,'requestTargetId','notificación abre la solicitud concreta')
+has(appointmentManager,'scrollIntoView','Agenda desplaza a la solicitud indicada')
 has(appointmentManager,"new URLSearchParams(window.location.search).get('request')",'Agenda consume request de la notificación')
 has(appointmentManager,"node.scrollIntoView({behavior:'smooth',block:'center'})",'deep link lleva a solicitud exacta para confirmar o rechazar')
 has(appointmentManager,"if(!silent)setLoading(true)",'refresco posterior no desmonta toda la Agenda')
