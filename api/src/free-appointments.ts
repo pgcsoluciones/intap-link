@@ -79,6 +79,7 @@ function freeSchedule(template:any){
   if(template?.free_schedule_configured===true)return cleanSchedule(template?.free_schedule)
   return DEFAULT_FREE_SCHEDULE
 }
+function scheduleVisible(template:any){return template?.free_schedule_visible!==false}
 function publicSchedule(rows:any[]){
   const groups=new Map<number,string[]>()
   for(const row of rows){
@@ -169,6 +170,7 @@ app.get('/api/v1/me/free/experience',requireUser,async(c:any)=>{
     quote_button_visible:quoteVisible(template),
     appointment_enabled:settings.enabled,
     portfolio_title:portfolioTitle(template),
+    schedule_visible:scheduleVisible(template),
     schedule:freeSchedule(template),
   }})
 })
@@ -183,13 +185,14 @@ app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
   if(!nextQuote&&!nextAgenda)return c.json({ok:false,error:'Debes mantener visible al menos Cotizar / información o Agendar.'},422)
   if(body.portfolio_title!==undefined)template.free_portfolio_title=String(body.portfolio_title||'').trim().slice(0,40)||'Portafolio'
   if(body.quote_button_visible!==undefined)template.free_quote_button_visible=nextQuote
+  if(body.schedule_visible!==undefined)template.free_schedule_visible=body.schedule_visible===true
   if(body.schedule!==undefined){template.free_schedule=cleanSchedule(body.schedule);template.free_schedule_configured=true}
   const statements:any[]=[
     c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),resolved.subject.id),
   ]
   if(body.appointment_enabled!==undefined)statements.push(c.env.DB.prepare("UPDATE appointment_settings SET enabled=?,updated_at=datetime('now') WHERE subject_type='free' AND subject_id=?").bind(nextAgenda?1:0,resolved.subject.id))
   await c.env.DB.batch(statements)
-  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template),schedule:freeSchedule(template)}})
+  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template),schedule_visible:scheduleVisible(template),schedule:freeSchedule(template)}})
 })
 
 app.get('/api/v1/me/free/appointments',requireUser,async(c:any)=>{
