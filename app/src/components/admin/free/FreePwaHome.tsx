@@ -106,12 +106,13 @@ export default function FreePwaHome() {
       if(result==='granted'){playAgendaNotificationCue(sound);syncServiceWorkerPreference(sound);window.dispatchEvent(new Event('kawvo:push-permission-changed'))}
     }catch{/* browser decides */}
   }
-  function changeSound(value:string){
-    void unlockAgendaNotificationAudio()
+  async function changeSound(value:string){
     localStorage.setItem(AGENDA_SOUND_KEY,value)
     setSound(value)
     syncServiceWorkerPreference(value)
-    playAgendaNotificationCue(value)
+    if(value==='silent'){playAgendaNotificationCue(value);return}
+    const unlocked=await unlockAgendaNotificationAudio()
+    if(unlocked)playAgendaNotificationCue(value)
   }
 
   if (loading) return <div className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></div>
@@ -172,7 +173,7 @@ export default function FreePwaHome() {
               <strong className="block text-sm">En iPhone, los avisos funcionan desde Kawvo instalada.</strong>
               <span className="mt-1 block">Toca Compartir en Safari → <strong>Agregar a pantalla de inicio</strong>. Luego abre Kawvo desde el icono instalado y vuelve aquí para activar los avisos.</span>
             </div>}
-            <select value={sound} onChange={e=>changeSound(e.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold">
+            <select value={sound} onChange={e=>void changeSound(e.target.value)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold">
               {SOUND_OPTIONS.map(option=><option key={option.value} value={option.value}>{option.label} · {option.detail}</option>)}
             </select>
             {permission!=='granted'&&permission!=='unsupported'&&permission!=='install-required'&&<button type="button" onClick={()=>void requestNotificationPermission()} className="mt-3 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Activar avisos del dispositivo</button>}
