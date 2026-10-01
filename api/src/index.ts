@@ -3523,9 +3523,11 @@ app.get('/api/v1/public/profiles/:slug', async (c) => {
   const freeSchedule = publicTemplateData.free_schedule_configured===true
     ? cleanFreeSchedule(publicTemplateData.free_schedule)
     : DEFAULT_FREE_SCHEDULE
+  const freeScheduleVisible = publicTemplateData.free_schedule_visible !== false
   const freeWhatsapp = String((rawContact as any)?.whatsapp || (rawContact as any)?.phone || (profile as any).whatsapp_number || '').replace(/\D/g,'')
   const freeExperience = isFreeProfile ? {
-    schedule: freeSchedule,
+    schedule: freeScheduleVisible ? freeSchedule : [],
+    schedule_visible: freeScheduleVisible,
     quote_button_visible: publicTemplateData.free_quote_button_visible !== false,
     appointment_enabled: Number((freeAppointmentSettings as any)?.enabled || 0) === 1 && Boolean(freeWhatsapp),
     quote_email: String((rawContact as any)?.email || (ownerAccount as any)?.email || '').trim(),
