@@ -48,7 +48,7 @@ const freeItems: FreeItem[] = [
   { title: 'Botones de contacto directo', text: 'Hasta 3 botones principales', to: '/admin/free/quick-actions', icon: '◉', help: 'Elige las acciones más importantes.', readinessKey: 'quick_actions', teamPermission: 'quick_actions' },
   { title: 'Ubicación', text: 'Dirección y mapa de tu negocio', to: '/admin/free/location', icon: '⌖', help: 'Agrega la dirección real de tu negocio.', stateKey: 'location', teamPermission: 'location' },
   { title: 'Mis enlaces', text: 'Hasta 3 enlaces importantes', to: '/admin/free/links', icon: '↗', help: 'Agrega páginas, catálogos y enlaces.', available: true, teamPermission: 'links' },
-  { title: 'Muestra tus trabajos realizados', text: 'Máx. 5 fotos · mínimo 3 reales para publicar', to: '/admin/free/portfolio', icon: '▧', help: 'Sustituye las imágenes de ejemplo por trabajos reales.', readinessKey: 'portfolio', teamPermission: 'portfolio' },
+  { title: 'Muestra tus trabajos realizados', text: 'Máx. 10 fotos · mínimo 3 reales para publicar', to: '/admin/free/portfolio', icon: '▧', help: 'Sustituye las imágenes de ejemplo por trabajos reales.', readinessKey: 'portfolio', teamPermission: 'portfolio' },
 ]
 
 function isStarterAsset(value: unknown) { return String(value || '').includes('/assets/free-starter/') }
