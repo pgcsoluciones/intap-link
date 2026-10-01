@@ -86,6 +86,8 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   const[openDays,setOpenDays]=useState<number[]>([])
   const[highlightRow,setHighlightRow]=useState<number|null>(null)
   const[occupiedId,setOccupiedId]=useState<string|null>(null)
+  const[targetRequestId]=useState(()=>String(new URLSearchParams(window.location.search).get('request')||'').trim())
+  const[highlightRequestId,setHighlightRequestId]=useState<string|null>(null)
 
   async function load(options:{silent?:boolean;preserveScroll?:boolean}={}){
     const silent=options.silent===true&&Boolean(data)
@@ -106,6 +108,24 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
     }
   }
   useEffect(()=>{void load()},[apiBase,query])
+
+  useEffect(()=>{
+    if(!targetRequestId||loading||!data)return
+    const exists=((data?.requests||[]) as RequestItem[]).some(item=>item.id===targetRequestId)
+    if(!exists)return
+    setHighlightRequestId(targetRequestId)
+    let tries=0
+    const focus=()=>{
+      const node=document.getElementById('appointment-request-'+targetRequestId)
+      if(node){
+        node.scrollIntoView({behavior:'smooth',block:'center'})
+        window.setTimeout(()=>setHighlightRequestId(current=>current===targetRequestId?null:current),4200)
+        return
+      }
+      if(tries++<8)window.setTimeout(focus,80)
+    }
+    window.requestAnimationFrame(focus)
+  },[targetRequestId,loading,data])
 
   const pending=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='pending'),[data])
   const confirmed=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='confirmed'),[data])
@@ -277,23 +297,23 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-xl font-black">Solicitudes pendientes <span className="text-slate-400">({pending.length})</span></h2>
-        <div className="mt-4 space-y-3">{pending.map(item=><RequestCard key={item.id} item={item}><button type="button" onClick={()=>void act(item,'confirm')} className={'rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white '+actionFx}>Confirmar</button><button type="button" onClick={()=>void act(item,'reject')} className={'rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 '+actionFx}>Rechazar</button>{occupiedId===item.id&&<a href={whatsappOccupied(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-amber-100 px-3 py-2 text-xs font-black text-amber-800 '+actionFx}>Avisar horario ocupado</a>}</RequestCard>)}{!pending.length&&<p className="text-sm text-slate-500">No hay solicitudes pendientes.</p>}</div>
+        <div className="mt-4 space-y-3">{pending.map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><button type="button" onClick={()=>void act(item,'confirm')} className={'rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white '+actionFx}>Confirmar</button><button type="button" onClick={()=>void act(item,'reject')} className={'rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 '+actionFx}>Rechazar</button>{occupiedId===item.id&&<a href={whatsappOccupied(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-amber-100 px-3 py-2 text-xs font-black text-amber-800 '+actionFx}>Avisar horario ocupado</a>}</RequestCard>)}{!pending.length&&<p className="text-sm text-slate-500">No hay solicitudes pendientes.</p>}</div>
       </section>
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-xl font-black">Citas confirmadas <span className="text-slate-400">({confirmed.length})</span></h2>
-        <div className="mt-4 space-y-3">{confirmed.map(item=><RequestCard key={item.id} item={item}><a href={whatsappConfirmation(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 '+actionFx}>Responder por WhatsApp</a><button type="button" onClick={()=>void act(item,'release')} className={'rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-black text-amber-700 '+actionFx}>Liberar horario</button></RequestCard>)}{!confirmed.length&&<p className="text-sm text-slate-500">Aún no tienes citas confirmadas.</p>}</div>
+        <div className="mt-4 space-y-3">{confirmed.map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><a href={whatsappConfirmation(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 '+actionFx}>Responder por WhatsApp</a><button type="button" onClick={()=>void act(item,'release')} className={'rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs font-black text-amber-700 '+actionFx}>Liberar horario</button></RequestCard>)}{!confirmed.length&&<p className="text-sm text-slate-500">Aún no tienes citas confirmadas.</p>}</div>
       </section>
 
-      {history.length>0&&<section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-xl font-black">Historial</h2><div className="mt-4 space-y-2">{history.slice(0,25).map(item=><RequestCard key={item.id} item={item}>{item.status==='rejected'&&<a href={whatsappRejection(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 '+actionFx}>Avisar rechazo por WhatsApp</a>}</RequestCard>)}</div></section>}
+      {history.length>0&&<section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm"><h2 className="text-xl font-black">Historial</h2><div className="mt-4 space-y-2">{history.slice(0,25).map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}>{item.status==='rejected'&&<a href={whatsappRejection(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 '+actionFx}>Avisar rechazo por WhatsApp</a>}</RequestCard>)}</div></section>}
 
       <button type="button" onClick={()=>void save()} disabled={saving} className={'sticky bottom-4 w-full rounded-2xl bg-cyan-700 px-5 py-4 text-sm font-black text-white shadow-xl disabled:opacity-50 '+actionFx}>{saving?'Guardando…':'Guardar configuración de agenda'}</button>
     </div>
   </main>
 }
 
-function RequestCard({item,children}:{item:RequestItem;children?:ReactNode}){
-  return <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm font-black">{item.customer_name}</strong><p className="mt-1 text-xs font-bold text-slate-500">{item.appointment_date} · {item.start_time} · {item.reason_label}</p><p className="mt-1 text-xs text-slate-500">{item.customer_phone}{item.customer_email?' · '+item.customer_email:''}</p>{item.details&&<p className="mt-2 text-sm leading-5 text-slate-700">{item.details}</p>}</div><span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase text-slate-500">{item.status}</span></div>{children&&<div className="mt-3 flex flex-wrap gap-2">{children}</div>}</article>
+function RequestCard({item,children,targeted=false}:{item:RequestItem;children?:ReactNode;targeted?:boolean}){
+  return <article id={'appointment-request-'+item.id} className={'rounded-2xl border bg-slate-50 p-4 transition-all duration-300 '+(targeted?'border-cyan-400 ring-4 ring-cyan-100 shadow-lg':'border-slate-200')}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm font-black">{item.customer_name}</strong><p className="mt-1 text-xs font-bold text-slate-500">{item.appointment_date} · {item.start_time} · {item.reason_label}</p><p className="mt-1 text-xs text-slate-500">{item.customer_phone}{item.customer_email?' · '+item.customer_email:''}</p>{item.details&&<p className="mt-2 text-sm leading-5 text-slate-700">{item.details}</p>}</div><span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black uppercase text-slate-500">{item.status}</span></div>{children&&<div className="mt-3 flex flex-wrap gap-2">{children}</div>}</article>
 }
 
 const field='mt-1 w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none transition-colors focus:border-cyan-400'
