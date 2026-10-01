@@ -65,6 +65,7 @@ has(actions,"gridTemplateColumns:'44px minmax(0,1fr) auto'",'Horario Free replic
 has(actions,"background:'var(--ilx-action)'",'Horario usa la paleta propia del Free')
 has(actions,"experience.appointmentEnabled?<>Cotizar /<br/>información</>:<>Cotizar / información</>",'Cotizar usa dos líneas solo cuando comparte fila con Agenda')
 has(actions,"gridTemplateColumns:experience.quoteButtonVisible&&experience.appointmentEnabled?'minmax(0,1fr) minmax(0,1fr)':'1fr'",'Cotizar ocupa toda la fila cuando Agenda está apagada')
+absent(actions,'className="ilx-section" style={{paddingTop:0}}','acciones Free respetan el aire estándar entre líneas de sección')
 has(actions,"{experience.schedule.length>0&&<section",'Horario público no depende de Agenda')
 has(actions,"import QuoteMediaAttachments from '../sponsored/QuoteMediaAttachments'",'Free reutiliza exactamente el selector de adjuntos aprobado de Patrocinado')
 has(actions,'<QuoteMediaAttachments files={quoteMedia} onChange={setQuoteMedia} onError={setToast}/>','Formulario Free integra adjuntos media aprobados')
