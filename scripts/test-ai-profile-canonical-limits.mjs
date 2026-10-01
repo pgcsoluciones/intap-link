@@ -10,7 +10,7 @@ assert.match(identity, /maxLength=\{80\}[^\n]*placeholder="Tu nombre"/)
 assert.match(identity, /maxLength=\{80\}[^\n]*placeholder="Ej\. Asesor de ventas"/)
 assert.match(identity, /maxLength=\{300\}[^\n]*rows=\{4\}/)
 
-assert.match(portfolio, /const MAX_PHOTOS = 5/)
+assert.match(portfolio, /const MAX_PHOTOS = 10/)
 assert.match(portfolio, /const DESCRIPTION_LIMIT = 180/)
 assert.match(portfolio, /maxLength=\{80\}[^\n]*placeholder="Título de la imagen"/)
 
