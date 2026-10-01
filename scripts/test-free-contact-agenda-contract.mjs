@@ -134,7 +134,7 @@ has(settings,'Nombre de Catálogo / Portafolio','nombre editable de catálogo/po
 has(app,'path="/admin/free/agenda"','ruta privada de Agenda Free')
 const appointmentManager=read('app/src/components/appointments/AppointmentManager.tsx')
 has(appointmentManager,"load({silent:true,preserveScroll:true})",'Agenda Free preserva posición al guardar o ejecutar cambios')
-has(appointmentManager,'requestTargetId','Agenda Free reconoce la solicitud indicada por la notificación')
+has(appointmentManager,'targetRequestId','Agenda Free reconoce la solicitud indicada por la notificación')
 has(appointmentManager,'scrollIntoView','notificación lleva directamente a la solicitud pendiente')
 has(appointmentManager,'const PAGE_SIZE=3','Agenda pagina las citas de 3 en 3')
 has(appointmentManager,'PaginationControls','Agenda muestra controles de cambio de página')
