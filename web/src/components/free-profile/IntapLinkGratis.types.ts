@@ -56,6 +56,7 @@ export type FreeProfileCustomLink = {
 
 export type FreeProfileExperience = {
   schedule: Array<{ day: string; hours: string }>
+  scheduleVisible: boolean
   quoteButtonVisible: boolean
   appointmentEnabled: boolean
   quoteEmail?: string
