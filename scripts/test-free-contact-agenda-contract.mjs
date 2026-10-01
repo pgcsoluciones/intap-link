@@ -35,10 +35,15 @@ const quoteAttachments=read('web/src/components/sponsored/QuoteMediaAttachments.
 const quoteMediaApi=read('api/src/sponsored-quote-media.ts')
 const ownerBar=read('web/src/components/appointments/AppointmentOwnerBar.tsx')
 const previewShortcut=read('web/src/components/free-profile/FreePreviewEditShortcut.tsx')
+const freePortfolio=read('app/src/components/admin/free/FreePortfolio.tsx')
 const freeQuoteMediaPreviewMigration=read('api/migrations-preview/0083_free_quote_media.sql')
 const freeQuoteMediaProdMigration=read('api/migrations/0083_free_quote_media.sql')
 
 has(types,'experience?: FreeProfileExperience','experiencia Free es compatible con Demo/Trial que reutilizan la plantilla base')
+has(types,'maxPortfolioImages: 10','portafolio Free público admite hasta 10 imágenes')
+has(freePortfolio,'const MAX_PHOTOS = 10','editor Free admite hasta 10 imágenes')
+has(freePortfolio,"canvas.toBlob((result) => result ? resolve(result) : reject(new Error('No se pudo optimizar la imagen.')), 'image/webp', quality)",'portafolio Free convierte cada imagen a WebP antes de subir')
+has(freePortfolio,'const optimized = await optimizeImageForUpload(croppedFile)','portafolio Free optimiza también altas y reemplazos tras el recorte')
 
 // Lo aprobado arriba de la plantilla Free no se mueve.
 ordered(profile,[
