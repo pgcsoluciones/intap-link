@@ -86,6 +86,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   const[openDays,setOpenDays]=useState<number[]>([])
   const[highlightRow,setHighlightRow]=useState<number|null>(null)
   const[occupiedId,setOccupiedId]=useState<string|null>(null)
+  const requestTargetId=useMemo(()=>new URLSearchParams(window.location.search).get('request')||'',[])
   const[targetRequestId]=useState(()=>String(new URLSearchParams(window.location.search).get('request')||'').trim())
   const[highlightRequestId,setHighlightRequestId]=useState<string|null>(null)
 
@@ -130,6 +131,18 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   const pending=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='pending'),[data])
   const confirmed=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='confirmed'),[data])
   const history=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>!['pending','confirmed'].includes(item.status)),[data])
+  useEffect(()=>{
+    if(!data||!requestTargetId)return
+    const timer=window.setTimeout(()=>{
+      const target=document.getElementById('appointment-request-'+requestTargetId)
+      if(!target)return
+      target.scrollIntoView({behavior:'smooth',block:'center'})
+      target.classList.add('ring-2','ring-emerald-300','shadow-lg')
+      window.setTimeout(()=>target.classList.remove('ring-2','ring-emerald-300','shadow-lg'),2200)
+    },120)
+    return()=>window.clearTimeout(timer)
+  },[data,requestTargetId])
+
   const availabilityGroups=useMemo(()=>DAY_NAMES.map((name,weekday)=>({
     name,weekday,items:availability.map((row,index)=>({row,index})).filter(item=>item.row.weekday===weekday),
   })).filter(group=>group.items.length>0),[availability])
