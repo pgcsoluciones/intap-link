@@ -121,22 +121,27 @@ PY
 }
 
 echo; echo "▶ Smoke Graph Card bancaria Free/Team"
-# La Graph Card share=bancos depende del perfil público, no de que exista hoy una cuenta activa.
-# Usamos cualquier perfil publicado para validar server-side og:image/título y evitar bloquear releases
-# en instalaciones donde aún no haya cuentas bancarias activas en Producción.
+# Smoke real con perfil publicado + al menos una cuenta activa.
+# profile_bank_settings puede no tener fila; la API pública interpreta ausencia como habilitado.
+# Por eso el runner usa LEFT JOIN + COALESCE, igualando el comportamiento real del endpoint.
 FREE_BANK_SLUG="$(
   cd api
   npx wrangler d1 execute "$PROD_DB" --remote --config wrangler.toml --json --command "
     SELECT p.slug
       FROM profiles p
+      LEFT JOIN profile_bank_settings s ON s.profile_id=p.id
+      JOIN profile_bank_accounts b ON b.profile_id=p.id AND b.is_active=1
      WHERE COALESCE(p.is_published,0)=1
+       AND COALESCE(p.is_active,0)=1
+       AND COALESCE(s.is_enabled,1)=1
        AND NULLIF(TRIM(p.slug),'') IS NOT NULL
-     ORDER BY p.updated_at DESC
+     GROUP BY p.id,p.slug,p.updated_at
+     ORDER BY CASE WHEN lower(p.slug)='jlprince' THEN 0 ELSE 1 END, p.updated_at DESC
      LIMIT 1;
   " 2>/dev/null |
   python3 -c "import json,sys;d=json.load(sys.stdin);r=((d[0].get('results') if isinstance(d,list) and d else []) or []);print((r[0].get('slug') if r else '') or '')"
 )"
-[ -n "$FREE_BANK_SLUG" ] || fail "No existe perfil publicado para smoke de Graph Card bancaria"
+[ -n "$FREE_BANK_SLUG" ] || fail "No existe perfil publicado con cuentas bancarias activas para smoke social"
 
 PROFILE_HTML="$LOG_DIR/free-profile.html"
 BANK_HTML="$LOG_DIR/free-bank-share.html"
@@ -163,8 +168,12 @@ SPONSORED_BANK_USER="$(
   npx wrangler d1 execute "$PROD_DB" --remote --config wrangler.toml --json --command "
     SELECT sp.username
       FROM sponsored_profiles sp
+      LEFT JOIN sponsored_bank_settings s ON s.sponsored_profile_id=sp.id
+      JOIN sponsored_bank_accounts b ON b.sponsored_profile_id=sp.id AND b.is_active=1
      WHERE sp.status='published'
+       AND COALESCE(s.is_enabled,1)=1
        AND NULLIF(TRIM(sp.username),'') IS NOT NULL
+     GROUP BY sp.id,sp.username,sp.updated_at
      ORDER BY sp.updated_at DESC
      LIMIT 1;
   " 2>/dev/null |
