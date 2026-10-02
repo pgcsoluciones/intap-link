@@ -395,7 +395,7 @@ export default function FreeAccount() {
           </div>
 
           <div className="mt-8" id="account-support" data-account-tour="support">
-            <FreeAccountGuidedTour storageId={String(me?.slug || me?.email || 'free')} />
+            <FreeAccountGuidedTour storageId={me ? String(me.email || me.slug || '') : ''} />
       <FreeSupportPanel />
           </div>
 
