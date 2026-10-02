@@ -113,14 +113,33 @@ export default function PublicBankAccounts() {
     await writeClipboard(value)
   }
 
-  async function copyHolderId(account: PublicBankAccount) {
+  function holderIdValue(account: PublicBankAccount) {
     const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
     const endpoint = isPreview
       ? `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/preview-bank-accounts/${encodeURIComponent(account.id)}/holder-id?preview=1`
       : `${apiUrl}/api/v1/public/profiles/${encodeURIComponent(slug)}/bank-accounts/${encodeURIComponent(account.id)}/holder-id`
+    return fetch(endpoint, { headers: { Accept: 'application/json' }, credentials: isPreview ? 'include' : 'omit' })
+      .then((response) => response.json())
+      .then((json) => {
+        const value = json?.ok && json.data?.copy_value ? String(json.data.copy_value) : ''
+        if (!value || value === account.copy_value) throw new Error('Identificación no disponible')
+        return value
+      })
+  }
+
+  async function copyHolderId(account: PublicBankAccount) {
+    const valuePromise = holderIdValue(account)
     try {
-      const response = await fetch(endpoint, { headers: { Accept: 'application/json' }, credentials: isPreview ? 'include' : 'omit' })
-      const json = await response.json(); if (!json?.ok || !json.data?.copy_value) return; await copySensitive(String(json.data.copy_value))
+      if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        const item = new ClipboardItem({
+          'text/plain': valuePromise.then((value) => new Blob([value], { type: 'text/plain' })),
+        })
+        await navigator.clipboard.write([item])
+        return
+      }
+    } catch { /* fallback compatible */ }
+    try {
+      await writeClipboard(await valuePromise)
     } catch { /* identificación protegida */ }
   }
 
