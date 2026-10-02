@@ -17,7 +17,17 @@ export default function DemoBankAccounts({ holderName }: Props) {
       if (target && !sectionRef.current?.contains(target)) setExpanded(false)
     }
     document.addEventListener('pointerdown', closeOutside, true)
-    return () => document.removeEventListener('pointerdown', closeOutside, true)
+    let idleTimer = window.setTimeout(() => setExpanded(false), 8000)
+    const resetIdle = () => { window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => setExpanded(false), 8000) }
+    const section = sectionRef.current
+    section?.addEventListener('pointerdown', resetIdle)
+    section?.addEventListener('keydown', resetIdle)
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside, true)
+      section?.removeEventListener('pointerdown', resetIdle)
+      section?.removeEventListener('keydown', resetIdle)
+      window.clearTimeout(idleTimer)
+    }
   }, [expanded])
 
   async function copy(value: string) {
