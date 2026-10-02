@@ -121,13 +121,14 @@ PY
 }
 
 echo; echo "▶ Smoke Graph Card bancaria Free/Team"
+# La Graph Card share=bancos depende del perfil público, no de que exista hoy una cuenta activa.
+# Usamos cualquier perfil publicado para validar server-side og:image/título y evitar bloquear releases
+# en instalaciones donde aún no haya cuentas bancarias activas en Producción.
 FREE_BANK_SLUG="$(
   cd api
   npx wrangler d1 execute "$PROD_DB" --remote --config wrangler.toml --json --command "
     SELECT p.slug
       FROM profiles p
-      JOIN profile_bank_settings s ON s.profile_id=p.id AND s.is_enabled=1
-      JOIN profile_bank_accounts b ON b.profile_id=p.id AND b.is_active=1
      WHERE COALESCE(p.is_published,0)=1
        AND NULLIF(TRIM(p.slug),'') IS NOT NULL
      ORDER BY p.updated_at DESC
@@ -135,7 +136,7 @@ FREE_BANK_SLUG="$(
   " 2>/dev/null |
   python3 -c "import json,sys;d=json.load(sys.stdin);r=((d[0].get('results') if isinstance(d,list) and d else []) or []);print((r[0].get('slug') if r else '') or '')"
 )"
-[ -n "$FREE_BANK_SLUG" ] || fail "No existe perfil publicado con cuentas bancarias para smoke social"
+[ -n "$FREE_BANK_SLUG" ] || fail "No existe perfil publicado para smoke de Graph Card bancaria"
 
 PROFILE_HTML="$LOG_DIR/free-profile.html"
 BANK_HTML="$LOG_DIR/free-bank-share.html"
@@ -162,8 +163,6 @@ SPONSORED_BANK_USER="$(
   npx wrangler d1 execute "$PROD_DB" --remote --config wrangler.toml --json --command "
     SELECT sp.username
       FROM sponsored_profiles sp
-      JOIN sponsored_bank_settings s ON s.sponsored_profile_id=sp.id AND s.is_enabled=1
-      JOIN sponsored_bank_accounts b ON b.sponsored_profile_id=sp.id AND b.is_active=1
      WHERE sp.status='published'
        AND NULLIF(TRIM(sp.username),'') IS NOT NULL
      ORDER BY sp.updated_at DESC
