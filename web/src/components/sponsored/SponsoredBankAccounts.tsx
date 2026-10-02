@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 type HolderIdType='cedula'|'rnc'
@@ -11,44 +11,79 @@ function bankInitials(name:string){return name.split(/\s+/).filter(Boolean).slic
 function bankLogoUrl(code:string|null){if(!code)return null;const file=BANK_LOGO_FILES[code];return file?`/bank-logos/${file}`:null}
 
 export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette?:SponsoredBankPalette}){
-  const{username=''}=useParams();const[enabled,setEnabled]=useState(false);const[items,setItems]=useState<Bank[]>([]);const[copied,setCopied]=useState('')
+  const{username=''}=useParams()
+  const[enabled,setEnabled]=useState(false)
+  const[items,setItems]=useState<Bank[]>([])
+  const[expanded,setExpanded]=useState(false)
+  const[copiedLink,setCopiedLink]=useState(false)
+  const sectionRef=useRef<HTMLElement|null>(null)
+
   useEffect(()=>{let alive=true;fetch(`/api/v1/public/sponsored/${encodeURIComponent(username)}/bank-accounts`).then(r=>r.json()).then((j:any)=>{if(!alive||!j?.ok)return;setEnabled(Boolean(j.data?.enabled));setItems(Array.isArray(j.data?.items)?j.data.items:[])}).catch(()=>undefined);return()=>{alive=false}},[username])
-  async function copy(value:string,id:string){try{await navigator.clipboard.writeText(value)}catch{const t=document.createElement('textarea');t.value=value;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}setCopied(id);window.setTimeout(()=>setCopied(current=>current===id?'':current),1800)}
-  async function copyHolderId(item:Bank){try{const r=await fetch(`/api/v1/public/sponsored/${encodeURIComponent(username)}/bank-accounts/${encodeURIComponent(item.id)}/holder-id`);const j:any=await r.json();if(!j?.ok||!j.data?.copy_value)return;await copy(String(j.data.copy_value),`id:${item.id}`)}catch{/* dato protegido */}}
+
+  useEffect(()=>{
+    if(!enabled||items.length===0||window.location.hash!=='#bancos')return
+    setExpanded(true)
+    window.setTimeout(()=>document.getElementById('bancos')?.scrollIntoView({behavior:'smooth',block:'start'}),160)
+  },[enabled,items.length])
+
+  useEffect(()=>{
+    if(!expanded)return
+    const closeOutside=(event:PointerEvent)=>{const target=event.target as Node|null;if(target&&!sectionRef.current?.contains(target))setExpanded(false)}
+    const closeOnFocusAway=(event:FocusEvent)=>{const target=event.target as Node|null;if(target&&!sectionRef.current?.contains(target))setExpanded(false)}
+    document.addEventListener('pointerdown',closeOutside,true)
+    document.addEventListener('focusin',closeOnFocusAway,true)
+    const observer=sectionRef.current?new IntersectionObserver(([entry])=>{if(entry&&entry.intersectionRatio<.2)setExpanded(false)},{threshold:[0,.2,.5]}):null
+    if(observer&&sectionRef.current)observer.observe(sectionRef.current)
+    return()=>{document.removeEventListener('pointerdown',closeOutside,true);document.removeEventListener('focusin',closeOnFocusAway,true);observer?.disconnect()}
+  },[expanded])
+
+  async function writeClipboard(value:string){try{await navigator.clipboard.writeText(value)}catch{const t=document.createElement('textarea');t.value=value;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}}
+  function collapseAfterSensitiveAction(){window.setTimeout(()=>setExpanded(false),720)}
+  async function copySensitive(value:string){await writeClipboard(value);collapseAfterSensitiveAction()}
+  async function copyHolderId(item:Bank){try{const r=await fetch(`/api/v1/public/sponsored/${encodeURIComponent(username)}/bank-accounts/${encodeURIComponent(item.id)}/holder-id`);const j:any=await r.json();if(!j?.ok||!j.data?.copy_value)return;await copySensitive(String(j.data.copy_value))}catch{/* dato protegido */}}
   function bankSectionUrl(){return `${window.location.origin}/p/${encodeURIComponent(username)}?share=bancos&card=3#bancos`}
   function shareBankSectionWhatsApp(){window.open(`https://wa.me/?text=${encodeURIComponent(`Te comparto mis datos bancarios para transferencias: ${bankSectionUrl()}`)}`,'_blank','noopener,noreferrer')}
-  async function copyBankSectionLink(){await copy(bankSectionUrl(),'bank-link')}
+  async function copyBankSectionLink(){await writeClipboard(bankSectionUrl());setCopiedLink(true);window.setTimeout(()=>setCopiedLink(false),1500)}
+
   if(!enabled||items.length===0)return null
 
   const border=`${palette.accent}2f`
   const softBorder=`${palette.accent}24`
   const secondaryText='#64748b'
-  return <section id="bancos" aria-labelledby="sponsored-bank-title" style={{padding:'24px 22px 0',marginTop:20,borderTop:`1px solid ${softBorder}`}}>
-    <p style={{margin:0,fontSize:10,fontWeight:900,textTransform:'uppercase',letterSpacing:1.5,color:palette.accent}}>Datos para transferencias</p>
-    <h2 id="sponsored-bank-title" style={{margin:'5px 0 0',fontSize:21,lineHeight:1.2,fontWeight:900,color:palette.text}}>Cuentas bancarias</h2>
-    <p style={{margin:'6px 0 0',fontSize:13,color:secondaryText,lineHeight:1.45}}>Elige una cuenta y copia los datos que necesitas para transferir.</p>
 
-    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:13}}>
-      <button type="button" onClick={shareBankSectionWhatsApp} style={{border:`1px solid ${border}`,borderRadius:12,background:palette.accentSoft,padding:'10px 8px',fontSize:11,fontWeight:850,color:palette.accent,cursor:'pointer'}}>Enviar por WhatsApp</button>
-      <button type="button" onClick={()=>void copyBankSectionLink()} style={{border:`1px solid ${border}`,borderRadius:12,background:'#fff',padding:'10px 8px',fontSize:11,fontWeight:850,color:palette.text,cursor:'pointer'}}>{copied==='bank-link'?'✓ Enlace copiado':'Copiar enlace'}</button>
-    </div>
+  return <section ref={sectionRef} id="bancos" aria-labelledby="sponsored-bank-title" style={{padding:'18px 22px 0',marginTop:20,borderTop:`1px solid ${softBorder}`}}>
+    <button
+      type="button"
+      onClick={()=>setExpanded(current=>!current)}
+      aria-expanded={expanded}
+      aria-controls="sponsored-bank-content"
+      style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,border:0,background:'transparent',padding:'2px 0',textAlign:'left',cursor:'pointer'}}
+    >
+      <h2 id="sponsored-bank-title" style={{margin:0,fontSize:21,lineHeight:1.2,fontWeight:900,color:palette.text}}>Cuentas</h2>
+      <span aria-hidden="true" style={{fontSize:21,fontWeight:900,color:secondaryText,transition:'transform .2s ease',transform:expanded?'rotate(180deg)':'rotate(0deg)'}}>⌄</span>
+    </button>
 
-    <div style={{display:'grid',gap:12,marginTop:16}}>{items.map(item=>{const logo=bankLogoUrl(item.bank_code);return <article key={item.id} style={{border:`1px solid ${border}`,borderRadius:20,padding:'15px 16px',background:palette.accentSoft}}>
-      <div style={{display:'flex',gap:14,alignItems:'flex-start'}}>
-        <div style={{width:72,height:72,flex:'0 0 72px',display:'grid',placeItems:'center',overflow:'hidden',border:`1px solid ${softBorder}`,borderRadius:16,background:'#fff',padding:4}}>{logo?<img src={logo} alt={`Logo de ${item.bank_name}`} style={{width:'100%',height:'100%',objectFit:'contain'}} loading="lazy"/>:<span style={{fontSize:13,fontWeight:900,color:palette.text}}>{bankInitials(item.bank_name)}</span>}</div>
-        <div style={{minWidth:0,flex:1}}>
-          <strong style={{display:'block',fontSize:15,color:palette.text}}>{item.bank_name}</strong>
-          <span style={{display:'block',marginTop:4,fontSize:12,fontWeight:700,color:palette.accent}}>{item.account_type==='checking'?'Cuenta corriente':'Cuenta de ahorros'} · {item.currency}</span>
-          <div style={{marginTop:10,fontSize:13,fontWeight:800,color:palette.text}}>{item.holder_name}</div>
-          <div style={{marginTop:5,fontFamily:'monospace',fontSize:15,fontWeight:850,letterSpacing:.5,color:secondaryText}}>{item.display_number}</div>
-          {item.holder_id_type&&<div style={{marginTop:6,fontSize:11,fontWeight:700,color:secondaryText}}>{item.holder_id_type==='rnc'?'RNC':'Cédula'} protegido · se copia sin mostrarse</div>}
+    {expanded&&<div id="sponsored-bank-content">
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:13}}>
+        <button type="button" onClick={shareBankSectionWhatsApp} style={{border:`1px solid ${border}`,borderRadius:12,background:palette.accentSoft,padding:'10px 8px',fontSize:11,fontWeight:850,color:palette.accent,cursor:'pointer'}}>WhatsApp</button>
+        <button type="button" onClick={()=>void copyBankSectionLink()} style={{border:`1px solid ${border}`,borderRadius:12,background:'#fff',padding:'10px 8px',fontSize:11,fontWeight:850,color:palette.text,cursor:'pointer'}}>{copiedLink?'✓ Enlace copiado':'Enlace'}</button>
+      </div>
+
+      <div style={{display:'grid',gap:12,marginTop:16}}>{items.map(item=>{const logo=bankLogoUrl(item.bank_code);return <article key={item.id} style={{border:`1px solid ${border}`,borderRadius:20,padding:'15px 16px',background:palette.accentSoft}}>
+        <div style={{display:'flex',gap:14,alignItems:'flex-start'}}>
+          <div style={{width:72,height:72,flex:'0 0 72px',display:'grid',placeItems:'center',overflow:'hidden',border:`1px solid ${softBorder}`,borderRadius:16,background:'#fff',padding:4}}>{logo?<img src={logo} alt={`Logo de ${item.bank_name}`} style={{width:'100%',height:'100%',objectFit:'contain'}} loading="lazy"/>:<span style={{fontSize:13,fontWeight:900,color:palette.text}}>{bankInitials(item.bank_name)}</span>}</div>
+          <div style={{minWidth:0,flex:1}}>
+            <strong style={{display:'block',fontSize:15,color:palette.text}}>{item.bank_name}</strong>
+            <span style={{display:'block',marginTop:4,fontSize:12,fontWeight:700,color:palette.accent}}>{item.account_type==='checking'?'Cuenta corriente':'Cuenta de ahorros'} · {item.currency}</span>
+            <div style={{marginTop:10,fontSize:13,fontWeight:800,color:palette.text}}>{item.holder_name}</div>
+            <div style={{marginTop:5,fontFamily:'monospace',fontSize:15,fontWeight:850,letterSpacing:.5,color:secondaryText}}>{item.display_number}</div>
+          </div>
         </div>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:14}}>
-        <button type="button" onClick={()=>void copy(item.copy_value,`account:${item.id}`)} style={{border:0,borderRadius:12,background:copied===`account:${item.id}`?'#D1FAE5':palette.accent,padding:'11px 10px',fontSize:12,fontWeight:850,color:copied===`account:${item.id}`?'#065F46':'#fff',cursor:'pointer'}}>{copied===`account:${item.id}`?'✓ Cuenta copiada':'Copiar cuenta'}</button>
-        <button type="button" disabled={!item.holder_id_type} onClick={()=>void copyHolderId(item)} style={{border:`1px solid ${border}`,borderRadius:12,background:copied===`id:${item.id}`?'#D1FAE5':'#fff',padding:'11px 10px',fontSize:12,fontWeight:850,color:copied===`id:${item.id}`?'#065F46':palette.text,cursor:item.holder_id_type?'pointer':'default',opacity:item.holder_id_type?1:.45}}>{copied===`id:${item.id}`?`✓ ${item.holder_id_type==='rnc'?'RNC':'Cédula'} copiado`:`Copiar ${item.holder_id_type==='rnc'?'RNC':'cédula'}`}</button>
-      </div>
-    </article>})}</div>
-    <p style={{margin:'12px 0 0',textAlign:'center',fontSize:11,fontWeight:700,color:secondaryText}}>Tus datos de identificación no se muestran públicamente.</p>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:14}}>
+          <button type="button" onClick={()=>void copySensitive(item.copy_value)} className="transition active:scale-[0.96]" style={{border:0,borderRadius:12,background:palette.accent,padding:'11px 10px',fontSize:12,fontWeight:850,color:'#fff',cursor:'pointer'}} aria-label="Cuenta">Cuenta</button>
+          <button type="button" disabled={!item.holder_id_type} onClick={()=>void copyHolderId(item)} className="transition active:scale-[0.96]" style={{border:`1px solid ${border}`,borderRadius:12,background:'#fff',padding:'11px 10px',fontSize:12,fontWeight:850,color:palette.text,cursor:item.holder_id_type?'pointer':'default',opacity:item.holder_id_type?1:.45}} aria-label="RNC o cédula">RNC / CÉD.</button>
+        </div>
+      </article>})}</div>
+    </div>}
   </section>
 }
