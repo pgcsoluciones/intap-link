@@ -16,9 +16,7 @@ export default function DemoBankAccounts({ holderName }: Props) {
       const target = event.target as Node | null
       if (target && !sectionRef.current?.contains(target)) setExpanded(false)
     }
-    const closeOnScroll = () => setExpanded(false)
     document.addEventListener('pointerdown', closeOutside, true)
-    window.addEventListener('scroll', closeOnScroll, { passive: true })
     let idleTimer = window.setTimeout(() => setExpanded(false), 8000)
     const resetIdle = () => { window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => setExpanded(false), 8000) }
     const section = sectionRef.current
@@ -26,7 +24,6 @@ export default function DemoBankAccounts({ holderName }: Props) {
     section?.addEventListener('keydown', resetIdle)
     return () => {
       document.removeEventListener('pointerdown', closeOutside, true)
-      window.removeEventListener('scroll', closeOnScroll)
       section?.removeEventListener('pointerdown', resetIdle)
       section?.removeEventListener('keydown', resetIdle)
       window.clearTimeout(idleTimer)
@@ -40,7 +37,7 @@ export default function DemoBankAccounts({ holderName }: Props) {
   return (
     <section ref={sectionRef} className="kawvo-demo-bank" aria-label="Ejemplo de cuentas bancarias">
       <button type="button" className="kawvo-demo-bank-toggle" onClick={() => setExpanded((current) => !current)} aria-expanded={expanded} aria-controls="kawvo-demo-bank-content">
-        <span className="kawvo-demo-bank-title"><span aria-hidden="true">🏦</span><h2>Cuentas</h2></span>
+        <span className="kawvo-demo-bank-title"><span aria-hidden="true" className="kawvo-demo-bank-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3 3 7v2h18V7l-9-4Zm-7 8v6H3v2h18v-2h-2v-6h-2v6h-3v-6h-2v6H9v-6H7v6H5v-6Z"/></svg></span><h2>Cuentas</h2></span>
         <span aria-hidden="true" className={expanded ? 'is-open' : ''}>⌄</span>
       </button>
 
