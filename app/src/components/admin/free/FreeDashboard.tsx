@@ -267,7 +267,7 @@ export default function FreeDashboard() {
         {hasSuperAdminAccess && <button type="button" onClick={() => navigate('/superadmin')} className="flex w-full items-center justify-between rounded-[22px] border border-slate-800 bg-slate-950 p-4 text-left text-white"><span><span className="block text-[11px] font-black uppercase text-emerald-300">Acceso interno</span><span className="block text-sm font-black">Abrir Super Admin</span></span><span>›</span></button>}
         {!isTeamMember && <FreeUpgradeCard />}
       </section>
-      <FreeGuidedTour storageId={String(me?.profile_id || me?.email || 'free')} />
+      <FreeGuidedTour storageId={me ? String(me.email || me.profile_id || '') : ''} />
     </main>
   </>
 }
