@@ -91,8 +91,10 @@ export default function PublicBankAccounts() {
       const target = event.target as Node | null
       if (target && !sectionRef.current?.contains(target)) setExpanded(false)
     }
+    const closeOnScroll = () => setExpanded(false)
     document.addEventListener('pointerdown', closeOutside, true)
     document.addEventListener('focusin', closeOnFocusAway, true)
+    window.addEventListener('scroll', closeOnScroll, { passive: true })
     const observer = sectionRef.current
       ? new IntersectionObserver(([entry]) => { if (entry && entry.intersectionRatio < 0.2) setExpanded(false) }, { threshold: [0, 0.2, 0.5] })
       : null
@@ -107,6 +109,7 @@ export default function PublicBankAccounts() {
     return () => {
       document.removeEventListener('pointerdown', closeOutside, true)
       document.removeEventListener('focusin', closeOnFocusAway, true)
+      window.removeEventListener('scroll', closeOnScroll)
       section?.removeEventListener('pointerdown', resetIdle)
       section?.removeEventListener('keydown', resetIdle)
       window.clearTimeout(idleTimer)
@@ -120,13 +123,8 @@ export default function PublicBankAccounts() {
     }
   }
 
-  function collapseAfterSensitiveAction() {
-    window.setTimeout(() => setExpanded(false), 720)
-  }
-
   async function copySensitive(value: string) {
     await writeClipboard(value)
-    collapseAfterSensitiveAction()
   }
 
   async function copyHolderId(account: PublicBankAccount) {
@@ -170,7 +168,10 @@ export default function PublicBankAccounts() {
         aria-expanded={expanded}
         aria-controls="ilx-bank-content"
       >
-        <h2 id="ilx-bank-title" className="text-xl font-black tracking-[-0.03em]" style={{ color: 'var(--ilx-text)' }}>Cuentas</h2>
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-[18px] leading-none">🏦</span>
+          <h2 id="ilx-bank-title" className="text-xl font-black tracking-[-0.03em]" style={{ color: 'var(--ilx-text)' }}>Cuentas</h2>
+        </span>
         <span aria-hidden="true" className="text-xl font-black transition-transform duration-200" style={{ color: 'var(--ilx-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>⌄</span>
       </button>
 
