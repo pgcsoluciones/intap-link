@@ -30,8 +30,10 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
     if(!expanded)return
     const closeOutside=(event:PointerEvent)=>{const target=event.target as Node|null;if(target&&!sectionRef.current?.contains(target))setExpanded(false)}
     const closeOnFocusAway=(event:FocusEvent)=>{const target=event.target as Node|null;if(target&&!sectionRef.current?.contains(target))setExpanded(false)}
+    const closeOnScroll=()=>setExpanded(false)
     document.addEventListener('pointerdown',closeOutside,true)
     document.addEventListener('focusin',closeOnFocusAway,true)
+    window.addEventListener('scroll',closeOnScroll,{passive:true})
     const observer=sectionRef.current?new IntersectionObserver(([entry])=>{if(entry&&entry.intersectionRatio<.2)setExpanded(false)},{threshold:[0,.2,.5]}):null
     if(observer&&sectionRef.current)observer.observe(sectionRef.current)
     let idleTimer=window.setTimeout(()=>setExpanded(false),8000)
@@ -39,12 +41,11 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
     const section=sectionRef.current
     section?.addEventListener('pointerdown',resetIdle)
     section?.addEventListener('keydown',resetIdle)
-    return()=>{document.removeEventListener('pointerdown',closeOutside,true);document.removeEventListener('focusin',closeOnFocusAway,true);section?.removeEventListener('pointerdown',resetIdle);section?.removeEventListener('keydown',resetIdle);window.clearTimeout(idleTimer);observer?.disconnect()}
+    return()=>{document.removeEventListener('pointerdown',closeOutside,true);document.removeEventListener('focusin',closeOnFocusAway,true);window.removeEventListener('scroll',closeOnScroll);section?.removeEventListener('pointerdown',resetIdle);section?.removeEventListener('keydown',resetIdle);window.clearTimeout(idleTimer);observer?.disconnect()}
   },[expanded])
 
   async function writeClipboard(value:string){try{await navigator.clipboard.writeText(value)}catch{const t=document.createElement('textarea');t.value=value;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}}
-  function collapseAfterSensitiveAction(){window.setTimeout(()=>setExpanded(false),720)}
-  async function copySensitive(value:string){await writeClipboard(value);collapseAfterSensitiveAction()}
+  async function copySensitive(value:string){await writeClipboard(value)}
   async function copyHolderId(item:Bank){try{const r=await fetch(`/api/v1/public/sponsored/${encodeURIComponent(username)}/bank-accounts/${encodeURIComponent(item.id)}/holder-id`);const j:any=await r.json();if(!j?.ok||!j.data?.copy_value)return;await copySensitive(String(j.data.copy_value))}catch{/* dato protegido */}}
   function bankSectionUrl(){return `${window.location.origin}/p/${encodeURIComponent(username)}?share=bancos&card=3#bancos`}
   function shareBankSectionWhatsApp(){window.open(`https://wa.me/?text=${encodeURIComponent(`Te comparto mis datos bancarios para transferencias: ${bankSectionUrl()}`)}`,'_blank','noopener,noreferrer')}
@@ -64,7 +65,10 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
       aria-controls="sponsored-bank-content"
       style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,border:0,background:'transparent',padding:'2px 0',textAlign:'left',cursor:'pointer'}}
     >
-      <h2 id="sponsored-bank-title" style={{margin:0,fontSize:21,lineHeight:1.2,fontWeight:900,color:palette.text}}>Cuentas</h2>
+      <span style={{display:'flex',alignItems:'center',gap:8}}>
+        <span aria-hidden="true" style={{fontSize:18,lineHeight:1}}>🏦</span>
+        <h2 id="sponsored-bank-title" style={{margin:0,fontSize:21,lineHeight:1.2,fontWeight:900,color:palette.text}}>Cuentas</h2>
+      </span>
       <span aria-hidden="true" style={{fontSize:21,fontWeight:900,color:secondaryText,transition:'transform .2s ease',transform:expanded?'rotate(180deg)':'rotate(0deg)'}}>⌄</span>
     </button>
 
