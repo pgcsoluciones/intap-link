@@ -19,6 +19,8 @@ for (const path of paths) {
   assert.doesNotMatch(source, /Cuenta copiada/i, `${path}: no debe mostrar feedback de cuenta copiada`)
   assert.doesNotMatch(source, /Copiar cédula|Copiar RNC/i, `${path}: no debe anunciar copia de identidad`)
   assert.doesNotMatch(source, /se copia sin mostrarse/i, `${path}: no debe explicar el mecanismo sensible`)
+  assert.match(source, /Enviar cuentas por WhatsApp/, `${path}: compartir bancos debe verse como enlace de texto`)
+  assert.match(source, /Copiar enlace/, `${path}: copiar enlace debe verse como texto`)
 }
 
 const publicBank = await readFile(paths[0], 'utf8')
