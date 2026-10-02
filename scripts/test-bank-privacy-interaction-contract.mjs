@@ -13,7 +13,7 @@ for (const path of paths) {
   assert.match(source, /RNC \/ CÉD\./, `${path}: etiqueta discreta RNC / CÉD.`)
   assert.match(source, /setExpanded\(false\)/, `${path}: cierre automático`)
   assert.match(source, /8000/, `${path}: cierre por inactividad`)
-  assert.match(source, /🏦/, `${path}: icono bancario junto al título`)
+  assert.match(source, /<svg/, `${path}: icono bancario monocromático junto al título`)
   assert.doesNotMatch(source, /720/, `${path}: no debe cerrarse inmediatamente tras copiar`)
   assert.doesNotMatch(source, /Copiar cuenta/i, `${path}: no debe anunciar copia de cuenta`)
   assert.doesNotMatch(source, /Cuenta copiada/i, `${path}: no debe mostrar feedback de cuenta copiada`)
@@ -23,9 +23,9 @@ for (const path of paths) {
 
 const publicBank = await readFile(paths[0], 'utf8')
 const sponsoredBank = await readFile(paths[1], 'utf8')
-assert.match(publicBank, /IntersectionObserver/, 'Free/Team/Trial: cierre al abandonar visualmente la sección')
-assert.match(sponsoredBank, /IntersectionObserver/, 'Sponsored: cierre al abandonar visualmente la sección')
-assert.match(publicBank, /window\.addEventListener\('scroll'/, 'Free/Team/Trial: colapsa al hacer scroll')
-assert.match(sponsoredBank, /window\.addEventListener\('scroll'/, 'Sponsored: colapsa al hacer scroll')
+assert.doesNotMatch(publicBank, /IntersectionObserver|addEventListener\('scroll'/, 'Free/Team/Trial: scroll no debe cerrar la sección')
+assert.doesNotMatch(sponsoredBank, /IntersectionObserver|addEventListener\('scroll'/, 'Sponsored: scroll no debe cerrar la sección')
+assert.match(publicBank, /document\.addEventListener\('pointerdown'/, 'Free/Team/Trial: clic fuera sí cierra')
+assert.match(sponsoredBank, /document\.addEventListener\('pointerdown'/, 'Sponsored: clic fuera sí cierra')
 
 console.log('Bank privacy interaction contract: OK')
