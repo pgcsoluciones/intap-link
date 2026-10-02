@@ -19,8 +19,6 @@ for (const path of paths) {
   assert.doesNotMatch(source, /Cuenta copiada/i, `${path}: no debe mostrar feedback de cuenta copiada`)
   assert.doesNotMatch(source, /Copiar cédula|Copiar RNC/i, `${path}: no debe anunciar copia de identidad`)
   assert.doesNotMatch(source, /se copia sin mostrarse/i, `${path}: no debe explicar el mecanismo sensible`)
-  assert.match(source, /Enviar cuentas por WhatsApp/, `${path}: compartir bancos debe verse como enlace de texto`)
-  assert.match(source, /Copiar enlace/, `${path}: copiar enlace debe verse como texto`)
 }
 
 const publicBank = await readFile(paths[0], 'utf8')
@@ -29,5 +27,9 @@ assert.doesNotMatch(publicBank, /IntersectionObserver|addEventListener\('scroll'
 assert.doesNotMatch(sponsoredBank, /IntersectionObserver|addEventListener\('scroll'/, 'Sponsored: scroll no debe cerrar la sección')
 assert.match(publicBank, /document\.addEventListener\('pointerdown'/, 'Free/Team/Trial: clic fuera sí cierra')
 assert.match(sponsoredBank, /document\.addEventListener\('pointerdown'/, 'Sponsored: clic fuera sí cierra')
+assert.match(publicBank, /Enviar cuentas por WhatsApp/, 'Free/Team/Trial: compartir bancos se muestra como enlace de texto')
+assert.match(publicBank, /Copiar enlace/, 'Free/Team/Trial: copiar enlace se muestra como texto')
+assert.match(sponsoredBank, /Enviar cuentas por WhatsApp/, 'Sponsored: compartir bancos se muestra como enlace de texto')
+assert.match(sponsoredBank, /Copiar enlace/, 'Sponsored: copiar enlace se muestra como texto')
 
 console.log('Bank privacy interaction contract: OK')
