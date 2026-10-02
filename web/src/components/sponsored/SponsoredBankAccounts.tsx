@@ -34,7 +34,12 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
     document.addEventListener('focusin',closeOnFocusAway,true)
     const observer=sectionRef.current?new IntersectionObserver(([entry])=>{if(entry&&entry.intersectionRatio<.2)setExpanded(false)},{threshold:[0,.2,.5]}):null
     if(observer&&sectionRef.current)observer.observe(sectionRef.current)
-    return()=>{document.removeEventListener('pointerdown',closeOutside,true);document.removeEventListener('focusin',closeOnFocusAway,true);observer?.disconnect()}
+    let idleTimer=window.setTimeout(()=>setExpanded(false),8000)
+    const resetIdle=()=>{window.clearTimeout(idleTimer);idleTimer=window.setTimeout(()=>setExpanded(false),8000)}
+    const section=sectionRef.current
+    section?.addEventListener('pointerdown',resetIdle)
+    section?.addEventListener('keydown',resetIdle)
+    return()=>{document.removeEventListener('pointerdown',closeOutside,true);document.removeEventListener('focusin',closeOnFocusAway,true);section?.removeEventListener('pointerdown',resetIdle);section?.removeEventListener('keydown',resetIdle);window.clearTimeout(idleTimer);observer?.disconnect()}
   },[expanded])
 
   async function writeClipboard(value:string){try{await navigator.clipboard.writeText(value)}catch{const t=document.createElement('textarea');t.value=value;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}}
