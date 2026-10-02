@@ -97,9 +97,19 @@ export default function PublicBankAccounts() {
       ? new IntersectionObserver(([entry]) => { if (entry && entry.intersectionRatio < 0.2) setExpanded(false) }, { threshold: [0, 0.2, 0.5] })
       : null
     if (observer && sectionRef.current) observer.observe(sectionRef.current)
+
+    let idleTimer = window.setTimeout(() => setExpanded(false), 8000)
+    const resetIdle = () => { window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => setExpanded(false), 8000) }
+    const section = sectionRef.current
+    section?.addEventListener('pointerdown', resetIdle)
+    section?.addEventListener('keydown', resetIdle)
+
     return () => {
       document.removeEventListener('pointerdown', closeOutside, true)
       document.removeEventListener('focusin', closeOnFocusAway, true)
+      section?.removeEventListener('pointerdown', resetIdle)
+      section?.removeEventListener('keydown', resetIdle)
+      window.clearTimeout(idleTimer)
       observer?.disconnect()
     }
   }, [expanded])
