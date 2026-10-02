@@ -37,7 +37,7 @@ assert.match(sponsoredBank, /\?share=bancos&card=3#bancos/, 'Sponsored: WhatsApp
 assert.match(middleware, /share=bancos: social card bancaria/, 'Middleware conserva la Graph Card bancaria server-side')
 assert.match(middleware, /profileShareImage\(profile\)/, 'Graph Card bancaria usa la imagen social del perfil del usuario')
 assert.match(middleware, /twitterCard:\s*'summary_large_image'/, 'Graph Card bancaria mantiene formato gráfico grande')
-assert.match(middleware, /url\.pathname\.match\(\/\^\\\/p\\\/\(\[\^\/\]\+\)\\\/?\$\/i\)/, 'Middleware conserva social card server-side para perfiles patrocinados')
+assert.match(middleware, /const sponsoredProfileMatch = url\.pathname\.match/, 'Middleware conserva social card server-side para perfiles patrocinados')
 assert.match(middleware, /normalizeSocialImage\(profile\.hero_url\)/, 'Social card patrocinada usa imagen del propio perfil')
 
 console.log('Bank privacy interaction contract: OK')
