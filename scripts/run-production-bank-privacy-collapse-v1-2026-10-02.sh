@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 REMOTE="github"
 FEATURE_BRANCH="feature/bank-privacy-collapse-v1"
-EXPECTED_MAIN_SHA="d278cc045ad2e0f1ea73681316f8187869a16212"
+EXPECTED_MAIN_SHA="29946fda4d9b06d2b10dbd6b3ba711043f5391a9"
 APPROVED_PREVIEW_SHA="a89ca27d2bba6711d73f3afe24e004cae8c7a084"
 RUNNER_PATH="scripts/run-production-bank-privacy-collapse-v1-2026-10-02.sh"
 WEB_PROJECT="intap-link"
@@ -58,13 +58,7 @@ git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergi
 [ "$(git rev-list --count HEAD.."$REMOTE/main")" = "0" ] || fail "La feature está detrás de main"
 
 cat > "$LOG_DIR/expected-files.txt" <<'EOF_FILES'
-scripts/run-preview-bank-privacy-collapse-v1-2026-10-02.sh
 scripts/run-production-bank-privacy-collapse-v1-2026-10-02.sh
-scripts/test-bank-privacy-interaction-contract.mjs
-web/src/components/demo/DemoBankAccounts.css
-web/src/components/demo/DemoBankAccounts.tsx
-web/src/components/free-profile/PublicBankAccounts.tsx
-web/src/components/sponsored/SponsoredBankAccounts.tsx
 EOF_FILES
 
 git diff --name-only "$REMOTE/main"...HEAD | sort > "$LOG_DIR/actual-files.txt"
@@ -89,12 +83,9 @@ run npm ci
 run npm run build -w web
 run bash -lc 'cd api && npx tsc --noEmit'
 
-echo; echo "▶ Deploy Web Producción"
-(npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch main) 2>&1 | tee "$WEB_LOG"
-[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Web Producción"
-WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$WEB_LOG" | tail -1 || true)"
-
-sleep 5
+echo; echo "▶ Producción ya fue desplegada en la corrida anterior"
+echo "✓ Se omite redeploy redundante; se valida directamente el estado vivo."
+WEB_ORIGIN="ya desplegado"
 
 echo; echo "▶ Smoke Producción base"
 for url in "https://intaprd.com/" "https://intaprd.com/demo"; do
@@ -120,28 +111,24 @@ print('')
 PY
 }
 
-echo; echo "▶ Smoke Graph Card bancaria Free/Team"
-# Smoke real con perfil publicado + al menos una cuenta activa.
-# profile_bank_settings puede no tener fila; la API pública interpreta ausencia como habilitado.
-# Por eso el runner usa LEFT JOIN + COALESCE, igualando el comportamiento real del endpoint.
-FREE_BANK_SLUG="$(
-  cd api
-  npx wrangler d1 execute "$PROD_DB" --remote --config wrangler.toml --json --command "
-    SELECT p.slug
-      FROM profiles p
-      LEFT JOIN profile_bank_settings s ON s.profile_id=p.id
-      JOIN profile_bank_accounts b ON b.profile_id=p.id AND b.is_active=1
-     WHERE COALESCE(p.is_published,0)=1
-       AND COALESCE(p.is_active,0)=1
-       AND COALESCE(s.is_enabled,1)=1
-       AND NULLIF(TRIM(p.slug),'') IS NOT NULL
-     GROUP BY p.id,p.slug,p.updated_at
-     ORDER BY CASE WHEN lower(p.slug)='jlprince' THEN 0 ELSE 1 END, p.updated_at DESC
-     LIMIT 1;
-  " 2>/dev/null |
-  python3 -c "import json,sys;d=json.load(sys.stdin);r=((d[0].get('results') if isinstance(d,list) and d else []) or []);print((r[0].get('slug') if r else '') or '')"
-)"
-[ -n "$FREE_BANK_SLUG" ] || fail "No existe perfil publicado con cuentas bancarias activas para smoke social"
+echo; echo "▶ Smoke Graph Card bancaria Free/Team · jlprince"
+FREE_BANK_SLUG="jlprince"
+
+BANK_API_JSON="$LOG_DIR/jlprince-bank-api.json"
+curl -sS "https://api.intaprd.com/api/v1/public/profiles/$FREE_BANK_SLUG/bank-accounts" -o "$BANK_API_JSON"
+python3 - "$BANK_API_JSON" <<'PY'
+import json,sys
+data=json.load(open(sys.argv[1],encoding='utf-8'))
+if data.get('ok') is not True:
+    raise SystemExit('API bancaria jlprince no respondió ok=true')
+payload=data.get('data') or {}
+if payload.get('enabled') is not True:
+    raise SystemExit('API bancaria jlprince no está habilitada')
+items=payload.get('items') or []
+if not items:
+    raise SystemExit('API bancaria jlprince no devolvió cuentas activas')
+print(f"✓ jlprince expone {len(items)} cuenta(s) bancaria(s) activas")
+PY
 
 PROFILE_HTML="$LOG_DIR/free-profile.html"
 BANK_HTML="$LOG_DIR/free-bank-share.html"
@@ -152,15 +139,15 @@ PROFILE_IMAGE="$(extract_meta "$PROFILE_HTML" "og:image")"
 BANK_IMAGE="$(extract_meta "$BANK_HTML" "og:image")"
 BANK_TITLE="$(extract_meta "$BANK_HTML" "og:title")"
 
-[ -n "$PROFILE_IMAGE" ] || fail "Perfil Free/Team no expone og:image"
-[ -n "$BANK_IMAGE" ] || fail "Compartir bancos Free/Team no expone og:image"
+[ -n "$PROFILE_IMAGE" ] || fail "Perfil jlprince no expone og:image"
+[ -n "$BANK_IMAGE" ] || fail "Compartir bancos jlprince no expone og:image"
 [ "$PROFILE_IMAGE" = "$BANK_IMAGE" ] || {
   echo "Perfil image: $PROFILE_IMAGE"
   echo "Banco image:  $BANK_IMAGE"
-  fail "La Graph Card bancaria no usa la misma imagen social del usuario"
+  fail "La Graph Card bancaria de jlprince no usa la misma imagen social del usuario"
 }
-printf '%s' "$BANK_TITLE" | grep -qi 'bancari' || fail "La Graph Card bancaria no identifica el contenido bancario"
-echo "✓ Free/Team bank share usa social card del usuario: $FREE_BANK_SLUG"
+printf '%s' "$BANK_TITLE" | grep -qi 'bancari' || fail "La Graph Card bancaria de jlprince no identifica el contenido bancario"
+echo "✓ jlprince: bank share usa la social card del usuario"
 
 echo; echo "▶ Smoke social card bancaria Patrocinado"
 SPONSORED_BANK_USER="$(
@@ -214,12 +201,12 @@ rm -rf "$LOG_DIR"
 
 cat <<EOF
 ================================================================
-✓ PRIVACIDAD DE CUENTAS · PRODUCCIÓN DESPLEGADA
+✓ PRIVACIDAD DE CUENTAS · PRODUCCIÓN VALIDADA Y CERRADA
 ================================================================
 Production SHA: $PROD_SHA
 Release tag:    $TAG
 Previous main:  $PREVIOUS_MAIN
-Web Pages:      ${WEB_ORIGIN:-ver salida Pages}
+Web Pages:      ${WEB_ORIGIN:-ya desplegado}
 
 Incluye:
 ✓ Cuentas contraído por defecto
