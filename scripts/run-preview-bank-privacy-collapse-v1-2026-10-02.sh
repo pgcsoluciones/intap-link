@@ -25,7 +25,7 @@ KAWVO LINK · PRIVACIDAD DE CUENTAS · PREVIEW
 - Sección bancaria contraída bajo “Cuentas”
 - Botones sensibles: Cuenta / RNC / CÉD.
 - Sin mensajes ni colores de “copiado”
-- Colapso tras copiar, tocar fuera, salir de sección o inactividad
+- Colapso al tocar fuera, hacer scroll, salir de sección o tras 8 s de inactividad
 - Aplica a Free/Team/Trial + Patrocinado + Demo
 - Solo Web + Worker Preview como front door
 - NO toca D1, R2, App ni Producción
@@ -121,8 +121,8 @@ QA móvil:
 3. Botones muestran solo “Cuenta” y “RNC / CÉD.”.
 4. Al pulsar no aparece check, verde ni mensaje de copiado.
 5. Solo se percibe el hundimiento del botón.
-6. Tras copiar, se contrae aproximadamente a los 720 ms.
-7. Tocar fuera o pasar a otra sección lo contrae.
+6. Tras copiar, permanece abierto; se contrae a los 8 s si no hay nueva interacción.
+7. Tocar fuera, hacer scroll o pasar a otra sección lo contrae.
 8. Sin interacción, se contrae a los 8 s.
 9. Enlace directo #bancos abre la sección automáticamente.
 10. Revisar Free/Team/Trial, Patrocinado y Demo.
