@@ -16,7 +16,9 @@ export default function DemoBankAccounts({ holderName }: Props) {
       const target = event.target as Node | null
       if (target && !sectionRef.current?.contains(target)) setExpanded(false)
     }
+    const closeOnScroll = () => setExpanded(false)
     document.addEventListener('pointerdown', closeOutside, true)
+    window.addEventListener('scroll', closeOnScroll, { passive: true })
     let idleTimer = window.setTimeout(() => setExpanded(false), 8000)
     const resetIdle = () => { window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => setExpanded(false), 8000) }
     const section = sectionRef.current
@@ -24,6 +26,7 @@ export default function DemoBankAccounts({ holderName }: Props) {
     section?.addEventListener('keydown', resetIdle)
     return () => {
       document.removeEventListener('pointerdown', closeOutside, true)
+      window.removeEventListener('scroll', closeOnScroll)
       section?.removeEventListener('pointerdown', resetIdle)
       section?.removeEventListener('keydown', resetIdle)
       window.clearTimeout(idleTimer)
@@ -32,13 +35,12 @@ export default function DemoBankAccounts({ holderName }: Props) {
 
   async function copy(value: string) {
     try { await navigator.clipboard.writeText(value) } catch { /* demo only */ }
-    window.setTimeout(() => setExpanded(false), 720)
   }
 
   return (
     <section ref={sectionRef} className="kawvo-demo-bank" aria-label="Ejemplo de cuentas bancarias">
       <button type="button" className="kawvo-demo-bank-toggle" onClick={() => setExpanded((current) => !current)} aria-expanded={expanded} aria-controls="kawvo-demo-bank-content">
-        <h2>Cuentas</h2>
+        <span className="kawvo-demo-bank-title"><span aria-hidden="true">🏦</span><h2>Cuentas</h2></span>
         <span aria-hidden="true" className={expanded ? 'is-open' : ''}>⌄</span>
       </button>
 
