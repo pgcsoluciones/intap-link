@@ -165,9 +165,9 @@ export default function PublicBankAccounts() {
 
       {expanded && (
         <div id="ilx-bank-content">
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" onClick={shareBankSectionWhatsApp} className="rounded-xl border px-3 py-2.5 text-xs font-black transition active:scale-[0.98]" style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-soft-primary)', color: 'var(--ilx-primary)' }} aria-label="Enviar esta sección por WhatsApp">WhatsApp</button>
-            <button type="button" onClick={() => void copyBankSectionLink()} className="rounded-xl border px-3 py-2.5 text-xs font-black transition active:scale-[0.98]" style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-surface)', color: 'var(--ilx-text)' }} aria-live="polite">{copiedLink ? '✓ Enlace copiado' : 'Enlace'}</button>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold">
+            <button type="button" onClick={shareBankSectionWhatsApp} className="p-0 underline underline-offset-4 transition active:opacity-60" style={{ color: 'var(--ilx-primary)', background: 'transparent', border: 0 }}>Enviar cuentas por WhatsApp</button>
+            <button type="button" onClick={() => void copyBankSectionLink()} className="p-0 underline underline-offset-4 transition active:opacity-60" style={{ color: 'var(--ilx-text)', background: 'transparent', border: 0 }} aria-live="polite">{copiedLink ? 'Enlace copiado' : 'Copiar enlace'}</button>
           </div>
 
           <div className="mt-4 space-y-3">
