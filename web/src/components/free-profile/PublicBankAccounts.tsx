@@ -87,18 +87,7 @@ export default function PublicBankAccounts() {
       const target = event.target as Node | null
       if (target && !sectionRef.current?.contains(target)) setExpanded(false)
     }
-    const closeOnFocusAway = (event: FocusEvent) => {
-      const target = event.target as Node | null
-      if (target && !sectionRef.current?.contains(target)) setExpanded(false)
-    }
-    const closeOnScroll = () => setExpanded(false)
     document.addEventListener('pointerdown', closeOutside, true)
-    document.addEventListener('focusin', closeOnFocusAway, true)
-    window.addEventListener('scroll', closeOnScroll, { passive: true })
-    const observer = sectionRef.current
-      ? new IntersectionObserver(([entry]) => { if (entry && entry.intersectionRatio < 0.2) setExpanded(false) }, { threshold: [0, 0.2, 0.5] })
-      : null
-    if (observer && sectionRef.current) observer.observe(sectionRef.current)
 
     let idleTimer = window.setTimeout(() => setExpanded(false), 8000)
     const resetIdle = () => { window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => setExpanded(false), 8000) }
@@ -108,12 +97,9 @@ export default function PublicBankAccounts() {
 
     return () => {
       document.removeEventListener('pointerdown', closeOutside, true)
-      document.removeEventListener('focusin', closeOnFocusAway, true)
-      window.removeEventListener('scroll', closeOnScroll)
       section?.removeEventListener('pointerdown', resetIdle)
       section?.removeEventListener('keydown', resetIdle)
       window.clearTimeout(idleTimer)
-      observer?.disconnect()
     }
   }, [expanded])
 
@@ -169,7 +155,9 @@ export default function PublicBankAccounts() {
         aria-controls="ilx-bank-content"
       >
         <span className="flex items-center gap-2">
-          <span aria-hidden="true" className="text-[18px] leading-none">🏦</span>
+<span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: 'var(--ilx-soft-primary)', color: 'var(--ilx-text)' }}>
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M12 3 3 7v2h18V7l-9-4Zm-7 8v6H3v2h18v-2h-2v-6h-2v6h-3v-6h-2v6H9v-6H7v6H5v-6Z"/></svg>
+          </span>
           <h2 id="ilx-bank-title" className="text-xl font-black tracking-[-0.03em]" style={{ color: 'var(--ilx-text)' }}>Cuentas</h2>
         </span>
         <span aria-hidden="true" className="text-xl font-black transition-transform duration-200" style={{ color: 'var(--ilx-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>⌄</span>
