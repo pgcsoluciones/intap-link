@@ -69,9 +69,9 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
     </button>
 
     {expanded&&<div id="sponsored-bank-content">
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:13}}>
-        <button type="button" onClick={shareBankSectionWhatsApp} style={{border:`1px solid ${border}`,borderRadius:12,background:palette.accentSoft,padding:'10px 8px',fontSize:11,fontWeight:850,color:palette.accent,cursor:'pointer'}}>WhatsApp</button>
-        <button type="button" onClick={()=>void copyBankSectionLink()} style={{border:`1px solid ${border}`,borderRadius:12,background:'#fff',padding:'10px 8px',fontSize:11,fontWeight:850,color:palette.text,cursor:'pointer'}}>{copiedLink?'✓ Enlace copiado':'Enlace'}</button>
+      <div style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:'8px 16px',marginTop:13,fontSize:11,fontWeight:800}}>
+        <button type="button" onClick={shareBankSectionWhatsApp} style={{border:0,background:'transparent',padding:0,fontSize:11,fontWeight:800,color:palette.accent,cursor:'pointer',textDecoration:'underline',textUnderlineOffset:3}}>Enviar cuentas por WhatsApp</button>
+        <button type="button" onClick={()=>void copyBankSectionLink()} style={{border:0,background:'transparent',padding:0,fontSize:11,fontWeight:800,color:palette.text,cursor:'pointer',textDecoration:'underline',textUnderlineOffset:3}}>{copiedLink?'Enlace copiado':'Copiar enlace'}</button>
       </div>
 
       <div style={{display:'grid',gap:12,marginTop:16}}>{items.map(item=>{const logo=bankLogoUrl(item.bank_code);return <article key={item.id} style={{border:`1px solid ${border}`,borderRadius:20,padding:'15px 16px',background:palette.accentSoft}}>
