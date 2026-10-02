@@ -29,19 +29,13 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
   useEffect(()=>{
     if(!expanded)return
     const closeOutside=(event:PointerEvent)=>{const target=event.target as Node|null;if(target&&!sectionRef.current?.contains(target))setExpanded(false)}
-    const closeOnFocusAway=(event:FocusEvent)=>{const target=event.target as Node|null;if(target&&!sectionRef.current?.contains(target))setExpanded(false)}
-    const closeOnScroll=()=>setExpanded(false)
     document.addEventListener('pointerdown',closeOutside,true)
-    document.addEventListener('focusin',closeOnFocusAway,true)
-    window.addEventListener('scroll',closeOnScroll,{passive:true})
-    const observer=sectionRef.current?new IntersectionObserver(([entry])=>{if(entry&&entry.intersectionRatio<.2)setExpanded(false)},{threshold:[0,.2,.5]}):null
-    if(observer&&sectionRef.current)observer.observe(sectionRef.current)
     let idleTimer=window.setTimeout(()=>setExpanded(false),8000)
     const resetIdle=()=>{window.clearTimeout(idleTimer);idleTimer=window.setTimeout(()=>setExpanded(false),8000)}
     const section=sectionRef.current
     section?.addEventListener('pointerdown',resetIdle)
     section?.addEventListener('keydown',resetIdle)
-    return()=>{document.removeEventListener('pointerdown',closeOutside,true);document.removeEventListener('focusin',closeOnFocusAway,true);window.removeEventListener('scroll',closeOnScroll);section?.removeEventListener('pointerdown',resetIdle);section?.removeEventListener('keydown',resetIdle);window.clearTimeout(idleTimer);observer?.disconnect()}
+    return()=>{document.removeEventListener('pointerdown',closeOutside,true);section?.removeEventListener('pointerdown',resetIdle);section?.removeEventListener('keydown',resetIdle);window.clearTimeout(idleTimer)}
   },[expanded])
 
   async function writeClipboard(value:string){try{await navigator.clipboard.writeText(value)}catch{const t=document.createElement('textarea');t.value=value;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove()}}
@@ -66,7 +60,9 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
       style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,border:0,background:'transparent',padding:'2px 0',textAlign:'left',cursor:'pointer'}}
     >
       <span style={{display:'flex',alignItems:'center',gap:8}}>
-        <span aria-hidden="true" style={{fontSize:18,lineHeight:1}}>🏦</span>
+<span aria-hidden="true" style={{width:32,height:32,flex:'0 0 32px',display:'grid',placeItems:'center',borderRadius:'999px',background:palette.accentSoft,color:palette.text}}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3 3 7v2h18V7l-9-4Zm-7 8v6H3v2h18v-2h-2v-6h-2v6h-3v-6h-2v6H9v-6H7v6H5v-6Z"/></svg>
+        </span>
         <h2 id="sponsored-bank-title" style={{margin:0,fontSize:21,lineHeight:1.2,fontWeight:900,color:palette.text}}>Cuentas</h2>
       </span>
       <span aria-hidden="true" style={{fontSize:21,fontWeight:900,color:secondaryText,transition:'transform .2s ease',transform:expanded?'rotate(180deg)':'rotate(0deg)'}}>⌄</span>
