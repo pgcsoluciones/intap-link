@@ -11,6 +11,10 @@ for (const path of [
   assert.match(source, /inputMode="numeric"/, `${path}: RNC usa teclado numérico`)
   assert.match(source, /slice\(0,11\)/, `${path}: RNC limita longitud`)
   assert.match(source, /Mi RNC es/, `${path}: RNC se incluye en el mensaje enviado`)
+  const nombreIndex=source.indexOf('>Nombre *')
+  const rncIndex=source.indexOf('>RNC <span')
+  const phoneIndex=source.indexOf('>Teléfono *')
+  assert.ok(nombreIndex>=0&&rncIndex>nombreIndex&&phoneIndex>rncIndex, `${path}: RNC queda inmediatamente después de Nombre y antes de Teléfono`)
 }
 
 console.log('Quote optional RNC contract: OK')
