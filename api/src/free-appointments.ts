@@ -172,6 +172,7 @@ app.get('/api/v1/me/free/experience',requireUser,async(c:any)=>{
     portfolio_title:portfolioTitle(template),
     schedule_visible:scheduleVisible(template),
     schedule:freeSchedule(template),
+    tour_auto_disabled:template.free_tour_auto_disabled===true,
   }})
 })
 app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
@@ -187,12 +188,13 @@ app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
   if(body.quote_button_visible!==undefined)template.free_quote_button_visible=nextQuote
   if(body.schedule_visible!==undefined)template.free_schedule_visible=body.schedule_visible===true
   if(body.schedule!==undefined){template.free_schedule=cleanSchedule(body.schedule);template.free_schedule_configured=true}
+  if(body.tour_auto_disabled!==undefined)template.free_tour_auto_disabled=body.tour_auto_disabled===true
   const statements:any[]=[
     c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),resolved.subject.id),
   ]
   if(body.appointment_enabled!==undefined)statements.push(c.env.DB.prepare("UPDATE appointment_settings SET enabled=?,updated_at=datetime('now') WHERE subject_type='free' AND subject_id=?").bind(nextAgenda?1:0,resolved.subject.id))
   await c.env.DB.batch(statements)
-  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template),schedule_visible:scheduleVisible(template),schedule:freeSchedule(template)}})
+  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template),schedule_visible:scheduleVisible(template),schedule:freeSchedule(template),tour_auto_disabled:template.free_tour_auto_disabled===true}})
 })
 
 app.get('/api/v1/me/free/appointments',requireUser,async(c:any)=>{
