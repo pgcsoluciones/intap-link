@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { disableFreeTourAuto, isFreeTourAutoDisabled } from './freeTourPersistence'
 
 type Step={id:string;target:string;title:string;text:string}
 type Props={storageId:string}
@@ -37,12 +38,12 @@ export default function FreeAccountGuidedTour({storageId}:Props){
   const find=useCallback((start:number,dir:1|-1=1)=>{let i=start;while(i>=0&&i<STEPS.length){if(document.querySelector(STEPS[i].target))return i;i+=dir}return -1},[])
   const position=useCallback((i=index)=>{const step=STEPS[i];const el=step?document.querySelector(step.target) as HTMLElement|null:null;if(!el)return;el.scrollIntoView({block:'center',inline:'nearest',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});window.setTimeout(()=>setRect(el.getBoundingClientRect()),220)},[index])
   const start=useCallback((force=false)=>{if(!force){const s=read(key);if(localStorage.getItem(autoKey)==='1'||s.completed||Number(s.snoozeUntil||0)>Date.now())return}const first=find(0);if(first<0)return;setIndex(first);setOpen(true);window.setTimeout(()=>position(first),40)},[autoKey,find,key,position])
-  useEffect(()=>{if(started.current||!storageId)return;started.current=true;const t=window.setTimeout(()=>start(false),900);return()=>window.clearTimeout(t)},[start,storageId])
+  useEffect(()=>{if(started.current||!storageId)return;started.current=true;const t=window.setTimeout(()=>{void isFreeTourAutoDisabled().then(disabled=>{if(!disabled)start(false)})},900);return()=>window.clearTimeout(t)},[start,storageId])
   useEffect(()=>{const fn=()=>start(true);window.addEventListener('kawvo:account-tour:start',fn);return()=>window.removeEventListener('kawvo:account-tour:start',fn)},[start])
   useEffect(()=>{if(!open)return;const update=()=>{const el=document.querySelector(STEPS[index]?.target) as HTMLElement|null;if(el)setRect(el.getBoundingClientRect())};window.addEventListener('resize',update);window.addEventListener('scroll',update,true);update();return()=>{window.removeEventListener('resize',update);window.removeEventListener('scroll',update,true)}},[open,index])
   const later=()=>{write(key,{snoozeUntil:Date.now()+SNOOZE_MS});setOpen(false)}
-  const disableAuto=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});setOpen(false)}
-  const complete=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});setOpen(false)}
+  const disableAuto=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});void disableFreeTourAuto();setOpen(false)}
+  const complete=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});void disableFreeTourAuto();setOpen(false)}
   const go=(dir:1|-1)=>{const next=find(index+dir,dir);if(next<0){if(dir===1)complete();return}setIndex(next);setRect(null);window.setTimeout(()=>position(next),30)}
   if(!open)return null
   const step=STEPS[index];if(!step)return null
