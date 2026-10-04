@@ -1,4 +1,4 @@
-import app from './preview-entry'
+import app from './index'
 import { requireSuperAdmin } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { FREE_DEMO_MANAGER_EMAIL, createManagedFreeDemo, freeDemoPreset, cleanDemoSlug, validDemoSlug, randomCode, randomToken, sha256Hex } from './free-demo-core'
