@@ -85,6 +85,7 @@ assert.match(editor,/if\(!saved\)return/,'fallo de guardado bloquea publicación
 assert.match(claimCore,/FREE_DEMO_V2_CLAIM_EMAIL='intapcard@gmail\.com'/,'correo especial exacto')
 assert.match(api,/special_email:FREE_DEMO_V2_CLAIM_EMAIL,slug:String\(\(row as any\)\.slug\),claim_code:raw/,'respuesta del reclamo contiene correo+slug+código')
 assert.match(migration,/code_hash TEXT NOT NULL UNIQUE/,'solo hash del código queda persistido')
+assert.match(migration,/claimed_owner_email TEXT/,'histórico conserva snapshot del correo reclamante')
 assert.match(login,/free-demo-v2-claim\/login/,'login normal reconoce código de reclamo')
 assert.match(login,/auth\/password\/login/,'contraseña real de intapcard conserva fallback')
 assert.match(app,/path="\/claim\/free-demo"/,'App expone selección de credencial definitiva')
@@ -104,6 +105,9 @@ assert.match(authCallback,/next_url/,'callback usa la ruta final entregada por b
 assert.match(claimCore,/UPDATE profiles[\s\S]*SET user_id=\?,template_data=\?/,'claim transfiere ownership del Free real')
 assert.match(claimCore,/UPDATE free_demo_v2_claims[\s\S]*SET status='used'/,'claim queda consumido')
 assert.match(claimCore,/verified_user_already_has_free_profile/,'se protege el contrato un usuario = un Free')
+assert.match(claimCore,/claimed_owner_email=\?/,'claim conserva correo verificado en histórico')
+assert.match(claimCore,/cl\.status='active'/,'código permanece activo hasta verificar identidad definitiva')
+assert.doesNotMatch(api,/SET status='in_progress' WHERE id=\? AND status='active'/,'login con código no bloquea el reclamo antes de verificar credenciales')
 assert.match(superAdmin,/claimed_owner_email/,'histórico SuperAdmin conserva correo del dueño reclamante')
 
 // No reutilizar el mecanismo roto v1.
