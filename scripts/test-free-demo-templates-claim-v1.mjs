@@ -67,7 +67,7 @@ assert.doesNotMatch(routes,/app\.post\('\/api\/v1\/me\/free-demos',requireDemoMa
 assert.match(manager,/Usar código Demo/,'cuenta especial crea borrador solo por código')
 assert.match(manager,/Finalizar y publicar/,'borrador se finaliza después de editar')
 assert.match(manager,/nombre y el slug definitivos se fijan al publicar por primera vez/,'publicación replica lifecycle Trial')
-assert.match(routes,/published_at&&requestedSlug!==currentSlug/,'slug queda bloqueado tras primera publicación')
+assert.match(routes,/publishedAt&&requestedSlug!==currentSlug/,'slug queda bloqueado tras primera publicación')
 assert.match(superAdmin,/Generar código de reclamo/,'SuperAdmin conserva reclamo final separado')
 assert.match(layout,/freeDemos/,'navegación SuperAdmin conserva módulo Demos Free')
 
