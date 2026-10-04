@@ -117,12 +117,65 @@ export async function createManagedFreeDemoFromArtifact(db:D1Database,input:{
 }){
   const user=await db.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(input.userId).first()
   if(String((user as any)?.email||'').trim().toLowerCase()!==FREE_DEMO_MANAGER_EMAIL)return null
+
   const created=await createManagedFreeDemo(db,{slug:`demo-${String(input.publicCode||'').toLowerCase()}`,artifactId:input.artifactId,createdFrom:'free_activation'})
-  await db.batch([
-    db.prepare(`UPDATE intap_artifacts SET owner_user_id=?,profile_id=?,status='activated',activated_at=?,updated_at=? WHERE id=? AND owner_user_id IS NULL AND status IN('available','unassigned')`).bind(created.syntheticUserId,created.profileId,input.claimAt,input.claimAt,input.artifactId),
-    db.prepare(`UPDATE artifact_activation_codes SET status='used',used_at=? WHERE id=? AND artifact_id=? AND status='active'`).bind(input.claimAt,input.activationCodeId,input.artifactId),
-    db.prepare(`UPDATE artifact_activation_intents SET status='consumed',consumed_at=? WHERE intent_hash=? AND artifact_id=? AND activation_code_id=? AND status='active'`).bind(input.claimAt,input.intentHash,input.artifactId,input.activationCodeId),
-    db.prepare(`INSERT INTO artifact_activation_claims(intent_hash,artifact_id,activation_code_id,user_id,profile_id,claim_at,ok) VALUES(?,?,?,?,?,?,1)`).bind(input.intentHash,input.artifactId,input.activationCodeId,input.userId,created.profileId,input.claimAt),
-  ])
+  try{
+    await db.batch([
+      db.prepare(`UPDATE intap_artifacts
+        SET owner_user_id=?,profile_id=?,status='activated',activated_at=?,updated_at=?
+        WHERE id=? AND owner_user_id IS NULL AND status IN('available','unassigned')
+          AND EXISTS (
+            SELECT 1 FROM artifact_activation_intents i
+            JOIN artifact_activation_codes ac ON ac.id=i.activation_code_id
+            WHERE i.intent_hash=? AND i.artifact_id=? AND i.activation_code_id=?
+              AND i.status='active' AND i.revoked_at IS NULL AND i.expires_at>?
+              AND ac.artifact_id=? AND ac.status='active'
+              AND (ac.expires_at IS NULL OR ac.expires_at>?)
+          )`).bind(created.syntheticUserId,created.profileId,input.claimAt,input.claimAt,input.artifactId,input.intentHash,input.artifactId,input.activationCodeId,input.claimAt,input.artifactId,input.claimAt),
+      db.prepare(`UPDATE artifact_activation_codes SET status='used',used_at=?
+        WHERE id=? AND artifact_id=? AND status='active'
+          AND (expires_at IS NULL OR expires_at>?)
+          AND EXISTS (
+            SELECT 1 FROM intap_artifacts a
+            WHERE a.id=? AND a.owner_user_id=? AND a.profile_id=? AND a.status='activated' AND a.activated_at=?
+          )`).bind(input.claimAt,input.activationCodeId,input.artifactId,input.claimAt,input.artifactId,created.syntheticUserId,created.profileId,input.claimAt),
+      db.prepare(`UPDATE artifact_activation_intents SET status='consumed',consumed_at=?
+        WHERE intent_hash=? AND artifact_id=? AND activation_code_id=?
+          AND status='active' AND revoked_at IS NULL AND expires_at>?
+          AND EXISTS (
+            SELECT 1 FROM artifact_activation_codes ac
+            WHERE ac.id=? AND ac.status='used' AND ac.used_at=?
+          )`).bind(input.claimAt,input.intentHash,input.artifactId,input.activationCodeId,input.claimAt,input.activationCodeId,input.claimAt),
+      db.prepare(`INSERT INTO artifact_activation_claims
+        (intent_hash,artifact_id,activation_code_id,user_id,profile_id,claim_at,ok)
+        VALUES(?,?,?,?,?,?,CASE WHEN EXISTS(
+          SELECT 1
+          FROM intap_artifacts a
+          JOIN artifact_activation_codes ac ON ac.id=?
+          JOIN artifact_activation_intents i ON i.intent_hash=?
+          WHERE a.id=? AND a.owner_user_id=? AND a.profile_id=? AND a.status='activated' AND a.activated_at=?
+            AND ac.artifact_id=a.id AND ac.status='used' AND ac.used_at=?
+            AND i.artifact_id=a.id AND i.activation_code_id=ac.id AND i.status='consumed' AND i.consumed_at=?
+        ) THEN 1 ELSE 0 END)`).bind(
+          input.intentHash,input.artifactId,input.activationCodeId,input.userId,created.profileId,input.claimAt,
+          input.activationCodeId,input.intentHash,input.artifactId,created.syntheticUserId,created.profileId,input.claimAt,input.claimAt,input.claimAt
+        ),
+    ])
+  }catch(error){
+    // createManagedFreeDemo committed its canonical Free shell first. If the
+    // activation receipt fails, remove that shell so a failed/raced device
+    // activation never leaves a ghost Demo behind.
+    await db.batch([
+      db.prepare("DELETE FROM appointment_availability WHERE subject_type='free' AND subject_id=?").bind(created.profileId),
+      db.prepare("DELETE FROM appointment_reasons WHERE subject_type='free' AND subject_id=?").bind(created.profileId),
+      db.prepare("DELETE FROM appointment_blocks WHERE subject_type='free' AND subject_id=?").bind(created.profileId),
+      db.prepare("DELETE FROM appointment_settings WHERE subject_type='free' AND subject_id=?").bind(created.profileId),
+      db.prepare('DELETE FROM free_demo_profiles WHERE id=?').bind(created.demoId),
+      db.prepare('DELETE FROM profiles WHERE id=? AND user_id=?').bind(created.profileId,created.syntheticUserId),
+      db.prepare('DELETE FROM users WHERE id=?').bind(created.syntheticUserId),
+    ]).catch(()=>undefined)
+    throw error
+  }
+
   return {...created,publicCode:input.publicCode,productType:input.productType}
 }
