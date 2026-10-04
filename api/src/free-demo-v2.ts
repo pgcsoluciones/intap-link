@@ -1,7 +1,7 @@
 import app from './index'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
-import { ensureAppointmentSubject, getAppointmentSettings, getAppointmentAvailabilityRows, saveAppointmentConfiguration } from './appointments-core'
+import { getAppointmentSettings, getAppointmentAvailabilityRows, saveAppointmentConfiguration } from './appointments-core'
 import { resolveFreeStarterContent, FREE_PROFILE_CATEGORIES } from '../../shared/free-profile-starter-content'
 import { FREE_PROFILE_STARTER_ASSETS } from '../../shared/free-profile-starter-assets'
 
@@ -112,11 +112,16 @@ app.post('/api/v1/superadmin/free-demo-v2',requireSuperAdmin('super_admin'),asyn
     c.env.DB.prepare("INSERT INTO profile_social_links(id,profile_id,type,url,sort_order,enabled) VALUES(?,?,'call','tel:+18090000000',0,1)").bind('demo-v2:'+demoId+':quick:call',profileId),
     c.env.DB.prepare("INSERT INTO profile_social_links(id,profile_id,type,url,sort_order,enabled) VALUES(?,?,'instagram','https://www.instagram.com/kawvolink',1,1)").bind('demo-v2:'+demoId+':quick:instagram',profileId),
     c.env.DB.prepare("INSERT INTO profile_social_links(id,profile_id,type,url,sort_order,enabled) VALUES(?,?,'location',?,2,1)").bind('demo-v2:'+demoId+':quick:location',profileId,map),
+    c.env.DB.prepare("INSERT INTO appointment_settings(subject_type,subject_id,enabled,slot_minutes,min_notice_minutes,horizon_days,timezone,reason_mode,created_at,updated_at) VALUES('free',?,1,30,120,30,'America/Santo_Domingo','default',datetime('now'),datetime('now'))").bind(profileId),
+    c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,1,'08:00','18:00',1,1)").bind('demo-v2:'+demoId+':av:1',profileId),
+    c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,2,'08:00','18:00',1,2)").bind('demo-v2:'+demoId+':av:2',profileId),
+    c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,3,'08:00','18:00',1,3)").bind('demo-v2:'+demoId+':av:3',profileId),
+    c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,4,'08:00','18:00',1,4)").bind('demo-v2:'+demoId+':av:4',profileId),
+    c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,5,'08:00','18:00',1,5)").bind('demo-v2:'+demoId+':av:5',profileId),
+    c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,6,'09:00','13:00',1,6)").bind('demo-v2:'+demoId+':av:6',profileId),
   ]
   portfolio.forEach((path,index)=>statements.push(c.env.DB.prepare('INSERT INTO profile_gallery(id,profile_id,image_key,alt_text,title,description,sort_order) VALUES(?,?,?,?,?,?,?)').bind('demo-v2:'+demoId+':portfolio:'+(index+1),profileId,absoluteAsset(c,path),def.label+' · ejemplo '+(index+1),'Trabajo '+(index+1),'Imagen de ejemplo del rubro. Sustitúyela por una foto real antes de publicar.',index)))
   await c.env.DB.batch(statements)
-  await ensureAppointmentSubject(c.env.DB,'free',profileId)
-  await c.env.DB.prepare("UPDATE appointment_settings SET enabled=1,updated_at=datetime('now') WHERE subject_type='free' AND subject_id=?").bind(profileId).run()
   await logAdminAction({db:c.env.DB,adminUserId,action:'free_demo_v2.create',targetType:'profile',targetId:profileId,after:{demo_id:demoId,template_key:def.key,status:'draft'}}).catch(()=>undefined)
   return c.json({ok:true,data:{id:demoId,status:'draft',edit_url:webOrigin(c)+'/free-demo/edit/'+demoId}},201)
 })
