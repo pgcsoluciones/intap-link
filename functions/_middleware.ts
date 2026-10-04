@@ -724,12 +724,12 @@ ${seoHeadHtml}
         const whatWeDo = compact(profile.what_we_do, 220);
         const isQuoteLink = url.searchParams.get('cotizar') === '1';
         const description = isQuoteLink
-          ? `Puedes solicitar una cotización o pedir más información a ${businessName}. Completa el formulario y envía tu solicitud por WhatsApp o correo.`
+          ? `Te comparto el formulario de cotización / información de ${businessName}. Completa tu solicitud y envíala directamente por WhatsApp o correo.`
           : (whatWeDo || (specialization ? `${specialization} · Presentación digital de ${businessName}` : `Presentación digital de ${businessName}`));
         const hero = normalizeSocialImage(profile.hero_url);
         const image = hero || `${url.origin}/assets/og/kawvo-link-og.png`;
         return injectSimpleSocialCard({
-          title: isQuoteLink ? `Cotización / información | ${businessName}` : `${businessName} | Kawvo Link`,
+          title: isQuoteLink ? `Solicita una cotización con ${businessName} | Kawvo Link` : `${businessName} | Kawvo Link`,
           description,
           image,
           canonicalUrl: isQuoteLink
@@ -873,6 +873,45 @@ ${seoHeadHtml}
           image,
           imageType: imageTypeFor(image),
           siteName: bankMeta.siteName || 'Kawvo Link',
+          ogType: 'website',
+          twitterCard: 'summary_large_image',
+          language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
+        });
+        const headers = new Headers(response.headers);
+        headers.set('content-type', 'text/html; charset=UTF-8');
+        headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
+        return withSecurityHeaders(new Response(updatedHtml, { status: response.status, statusText: response.statusText, headers }));
+      }
+      return withSecurityHeaders(response);
+    }
+  }
+
+  // cotizar=1: social card contextual para perfiles Free/Team.
+  // Mantiene la imagen social propia del perfil, pero el título explica el propósito
+  // para que Instagram/WhatsApp no muestren solo el nombre del negocio.
+  if (url.searchParams.get('cotizar') === '1' && /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) {
+    const [quoteMeta, profile] = await Promise.all([
+      getDynamicProfileSeoBundle(slug, discoveryRuntime),
+      fetchPublicProfileForShare(slug),
+    ]);
+    if (quoteMeta) {
+      const response = await fetchSpaShell();
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        const html = await response.text();
+        const businessName = quoteMeta.title.split('|')[0].trim() || slug;
+        const pageUrl =
+          customProfileSlug === slug
+            ? `${ARGENIS_CANONICAL_ORIGIN}?cotizar=1`
+            : `${url.origin}/${encodeURIComponent(slug)}?cotizar=1`;
+        const image = profile ? profileShareImage(profile) : quoteMeta.image;
+        const updatedHtml = injectHeadMetadata(html, {
+          title: `Solicita una cotización con ${businessName} | Kawvo Link`,
+          description: `Te comparto el formulario de cotización / información de ${businessName}. Completa tu solicitud y envíala directamente por WhatsApp o correo.`,
+          url: pageUrl,
+          image,
+          imageType: imageTypeFor(image),
+          siteName: quoteMeta.siteName || 'Kawvo Link',
           ogType: 'website',
           twitterCard: 'summary_large_image',
           language: discoveryRuntime.language === 'en' ? 'en-US' : 'es-DO',
