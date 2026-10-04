@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { disableFreeTourAuto, isFreeTourAutoDisabled } from './freeTourPersistence'
 
 type Step={id:string;target:string;title:string;text:string}
 type Props={storageId:string;firstTeam?:boolean}
@@ -41,12 +42,12 @@ export default function FreeTeamGuidedTour({storageId,firstTeam=false}:Props){
   const TOP_CARD_STEPS=new Set(['team-name','company','banking','variable-data'])
   const position=useCallback((i=index)=>{const step=steps[i];const el=document.querySelector(step?.target) as HTMLElement|null;if(!el)return;const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;const behavior:ScrollBehavior=reduced?'auto':'smooth';if(TOP_CARD_STEPS.has(step.id)){el.scrollIntoView({block:'start',inline:'nearest',behavior});window.setTimeout(()=>{const r=el.getBoundingClientRect();const desiredTop=Math.min(330,Math.max(300,window.innerHeight*0.36));window.scrollBy({top:r.top-desiredTop,left:0,behavior});window.setTimeout(()=>setRect(el.getBoundingClientRect()),reduced?20:220)},reduced?20:180);return}el.scrollIntoView({block:'center',inline:'nearest',behavior});window.setTimeout(()=>setRect(el.getBoundingClientRect()),reduced?20:220)},[index,steps])
   const start=useCallback((force=false)=>{if(!force){const s=read(key);if(localStorage.getItem(autoKey)==='1'||s.completed||Number(s.snoozeUntil||0)>Date.now())return}const first=find(0);if(first<0)return;setIndex(first);setOpen(true);window.setTimeout(()=>position(first),40)},[autoKey,find,key,position])
-  useEffect(()=>{if(started.current||!storageId)return;started.current=true;if(firstTeam){const t=window.setTimeout(()=>start(false),900);return()=>window.clearTimeout(t)}},[firstTeam,start,storageId])
+  useEffect(()=>{if(started.current||!storageId)return;started.current=true;if(firstTeam){const t=window.setTimeout(()=>{void isFreeTourAutoDisabled().then(disabled=>{if(!disabled)start(false)})},900);return()=>window.clearTimeout(t)}},[firstTeam,start,storageId])
   useEffect(()=>{const fn=()=>start(true);window.addEventListener('kawvo:team-tour:start',fn);return()=>window.removeEventListener('kawvo:team-tour:start',fn)},[start])
   useEffect(()=>{if(!open)return;const update=()=>{const el=document.querySelector(steps[index]?.target) as HTMLElement|null;if(el)setRect(el.getBoundingClientRect())};window.addEventListener('resize',update);window.addEventListener('scroll',update,true);update();return()=>{window.removeEventListener('resize',update);window.removeEventListener('scroll',update,true)}},[index,open,steps])
   const later=()=>{write(key,{snoozeUntil:Date.now()+SNOOZE_MS});setOpen(false)}
-  const disableAuto=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});setOpen(false)}
-  const complete=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});setOpen(false)}
+  const disableAuto=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});void disableFreeTourAuto();setOpen(false)}
+  const complete=()=>{try{localStorage.setItem(autoKey,'1')}catch{};write(key,{completed:true});void disableFreeTourAuto();setOpen(false)}
   const go=(dir:1|-1)=>{const next=find(index+dir,dir);if(next<0){if(dir===1)complete();return}setIndex(next);setRect(null);window.setTimeout(()=>position(next),30)}
   if(!open)return null
   const step=steps[index];if(!step)return null
