@@ -27,6 +27,11 @@ async function requireUser(c:any,next:any){
 app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
 
+  const account=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  if(String((account as any)?.email||'').trim().toLowerCase()==='intapcard@gmail.com'){
+    return c.json({ok:true,data:{kind:'free_demo_manager',route:'/admin/free/demos',multiple_profiles:true}})
+  }
+
   const sponsorMembership=await c.env.DB.prepare(
     `SELECT sm.sponsor_id,sm.role,st.is_active
        FROM sponsor_members sm
