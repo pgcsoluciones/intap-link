@@ -21,7 +21,7 @@ const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'sponsors', label: 'Perfil patrocinado' },
   { key: 'sponsorBrand', label: 'Marca patrocinador' },
   { key: 'demo', label: 'Resultados Demo' },
-  { key: 'freeDemos', label: 'Plantillas Demo Free' },
+  { key: 'freeDemos', label: 'Demos Free' },
   { key: 'trials', label: 'Trials' },
   { key: 'support', label: 'Soporte / tickets' },
   { key: 'resources', label: 'Recursos de usuarios' },
