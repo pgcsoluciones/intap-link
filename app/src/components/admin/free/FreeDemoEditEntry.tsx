@@ -2,20 +2,28 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { apiPost } from '../../../lib/api'
 
+const openingDemoIds=new Set<string>()
+
 export default function FreeDemoEditEntry(){
   const { id='' }=useParams()
   const navigate=useNavigate()
   const[error,setError]=useState('')
 
   useEffect(()=>{
-    let alive=true
+    if(!id||openingDemoIds.has(id))return
+    openingDemoIds.add(id)
     ;(async()=>{
       const j:any=await apiPost('/me/free-demos/'+encodeURIComponent(id)+'/open',{})
-      if(!alive)return
-      if(j?.ok)window.location.replace(j.data?.next_url||'/admin/free')
-      else setError(j?.error||'No se pudo abrir el borrador Demo.')
-    })().catch(()=>{if(alive)setError('No se pudo abrir el borrador Demo.')})
-    return()=>{alive=false}
+      if(j?.ok){
+        window.location.replace(j.data?.next_url||'/admin/free')
+        return
+      }
+      openingDemoIds.delete(id)
+      setError(j?.error||'No se pudo abrir el borrador Demo.')
+    })().catch(()=>{
+      openingDemoIds.delete(id)
+      setError('No se pudo abrir el borrador Demo.')
+    })
   },[id])
 
   return <main className="min-h-screen bg-[#f7f9fc] p-5 text-slate-950">
