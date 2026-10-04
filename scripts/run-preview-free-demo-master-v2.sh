@@ -51,10 +51,13 @@ git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "La rama no desciende d
 cat > "$LOG/allowed.txt" <<'EOF_ALLOWED'
 api/migrations-preview/0088_free_demo_master_v2.sql
 api/migrations/0088_free_demo_master_v2.sql
+api/src/free-demo-claim-core.ts
 api/src/free-demo-v2.ts
+api/src/index.ts
 api/src/preview-free-entry.ts
 app/src/App.tsx
 app/src/components/admin/AdminLogin.tsx
+app/src/components/admin/AuthCallback.tsx
 app/src/components/admin/FreeDemoV2Claim.tsx
 app/src/components/admin/SuperAdminFreeDemoV2.tsx
 app/src/components/admin/SuperAdminLayout.tsx
@@ -76,6 +79,7 @@ run node scripts/test-free-demo-master-v2-contract.mjs
 run node scripts/test-trial-contract.mjs
 run node scripts/test-sponsored-profile-contract.mjs
 run node scripts/test-free-contact-agenda-contract.mjs
+run node scripts/test-ai-profile-canonical-limits.mjs
 
 echo; echo "▶ Builds y TypeScript"
 run npm run build:preview -w web
@@ -166,7 +170,8 @@ cleanup_e2e(){
   if [ -n "$QA_PROFILE_ID" ]; then
     d1 "DELETE FROM appointment_requests WHERE subject_type='free' AND subject_id='$QA_PROFILE_ID'; DELETE FROM appointment_blocks WHERE subject_type='free' AND subject_id='$QA_PROFILE_ID'; DELETE FROM appointment_reasons WHERE subject_type='free' AND subject_id='$QA_PROFILE_ID'; DELETE FROM appointment_availability WHERE subject_type='free' AND subject_id='$QA_PROFILE_ID'; DELETE FROM appointment_settings WHERE subject_type='free' AND subject_id='$QA_PROFILE_ID'; DELETE FROM admin_audit_log WHERE target_id='$QA_PROFILE_ID'; DELETE FROM free_demo_v2_claims WHERE demo_id='$QA_DEMO_ID'; DELETE FROM free_demo_v2_profiles WHERE id='$QA_DEMO_ID'; DELETE FROM profiles WHERE id='$QA_PROFILE_ID';" >/dev/null 2>&1 || true
   fi
-  [ -n "$QA_OWNER_ID" ] && d1 "DELETE FROM auth_sessions WHERE user_id='$QA_OWNER_ID'; DELETE FROM user_password_credentials WHERE user_id='$QA_OWNER_ID'; DELETE FROM users WHERE id='$QA_OWNER_ID';" >/dev/null 2>&1 || true
+  [ -n "$QA_OWNER_ID" ] && d1 "DELETE FROM auth_sessions WHERE user_id='$QA_OWNER_ID'; DELETE FROM user_auth_identities WHERE user_id='$QA_OWNER_ID'; DELETE FROM auth_identities WHERE user_id='$QA_OWNER_ID'; DELETE FROM user_password_credentials WHERE user_id='$QA_OWNER_ID'; DELETE FROM users WHERE id='$QA_OWNER_ID';" >/dev/null 2>&1 || true
+  d1 "DELETE FROM auth_magic_links WHERE email='$QA_OWNER_EMAIL';" >/dev/null 2>&1 || true
   [ -n "$QA_SYNTH_ID" ] && d1 "DELETE FROM auth_sessions WHERE user_id='$QA_SYNTH_ID'; DELETE FROM users WHERE id='$QA_SYNTH_ID';" >/dev/null 2>&1 || true
   d1 "DELETE FROM admin_audit_log WHERE admin_user_id='$QA_ADMIN_ID'; DELETE FROM auth_sessions WHERE user_id='$QA_ADMIN_ID'; DELETE FROM admin_users WHERE user_id='$QA_ADMIN_ID'; DELETE FROM users WHERE id='$QA_ADMIN_ID';" >/dev/null 2>&1 || true
 }
@@ -266,11 +271,20 @@ python3 - "$LOG/claim-context.json" "$QA_SLUG" <<'PY'
 import json,sys; j=json.load(open(sys.argv[1])); assert j["ok"] and j["data"]["slug"]==sys.argv[2]; print("✓ Contexto de reclamo identifica el slug exacto")
 PY
 
-curl -fsS -b "$CLAIM_JAR" -c "$CLAIM_JAR" -H 'Content-Type: application/json' \
-  -d "{\"new_email\":\"$QA_OWNER_EMAIL\",\"password\":\"QaDemoV2-Password-2026!\"}" \
-  https://app.preview.intaprd.com/api/v1/auth/free-demo-v2-claim/complete > "$LOG/claim-complete.json"
-python3 - "$LOG/claim-complete.json" <<'PY'
-import json,sys; j=json.load(open(sys.argv[1])); assert j["ok"] and j["data"]["next_url"].startswith("/admin/free/credentials"); print("✓ Ownership transferido a credenciales definitivas")
+# Simula el enlace seguro ya verificado por Resend usando el endpoint NORMAL
+# magic-link/verify. El token crudo solo existe en esta prueba; D1 recibe su hash,
+# igual que el flujo real enviado por correo.
+QA_MAGIC_RAW="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+QA_MAGIC_HASH="$(printf '%s' "$QA_MAGIC_RAW" | shasum -a 256 | awk '{print $1}')"
+d1 "INSERT INTO auth_magic_links(id,email,token_hash,expires_at,requested_ip,user_agent,created_at) VALUES('qa-magic-v2-$STAMP','$QA_OWNER_EMAIL','$QA_MAGIC_HASH',datetime('now','+10 minutes'),'127.0.0.1','free-demo-v2-e2e',datetime('now'));" >/dev/null
+
+curl -fsS -b "$CLAIM_JAR" -c "$CLAIM_JAR" \
+  "https://app.preview.intaprd.com/api/v1/auth/magic-link/verify?token=$QA_MAGIC_RAW&flow=free_demo_claim" > "$LOG/claim-complete.json"
+python3 - "$LOG/claim-complete.json" "$QA_SLUG" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1]))
+assert j["ok"] and j["data"]["next_url"].startswith("/admin/free/credentials") and j["data"]["slug"]==sys.argv[2]
+print("✓ Correo seguro normal verificó identidad y transfirió ownership")
 PY
 
 VERIFY="$(d1 "SELECT d.status,p.slug,p.plan_id,p.is_published,u.email,(SELECT COUNT(*) FROM profile_products pp WHERE pp.profile_id=p.id) services_count,(SELECT COUNT(*) FROM profile_gallery g WHERE g.profile_id=p.id) portfolio_count FROM free_demo_v2_profiles d JOIN profiles p ON p.id=d.profile_id JOIN users u ON u.id=p.user_id WHERE d.id='$QA_DEMO_ID'; SELECT status claim_status FROM free_demo_v2_claims WHERE demo_id='$QA_DEMO_ID' ORDER BY created_at DESC LIMIT 1;")"
@@ -280,6 +294,15 @@ echo "$VERIFY" | grep -Fq "$QA_OWNER_EMAIL" || fail "Owner definitivo no coincid
 echo "$VERIFY" | grep -Eq '"services_count"[[:space:]]*:[[:space:]]*0' || fail "Aparecieron Servicios"
 echo "$VERIFY" | grep -Fq '"claim_status": "used"' || echo "$VERIFY" | grep -Fq '"claim_status":"used"' || fail "Claim no quedó used"
 echo "✓ E2E DB: Free independiente, sin Servicios, claim usado"
+
+# Trazabilidad histórica en Demos Free + aparición automática en tenant/usuarios Free.
+curl -fsS -H "Cookie: $QA_COOKIE" "https://app.preview.intaprd.com/api/v1/superadmin/free-demo-v2" > "$LOG/demo-history.json"
+grep -Fq "$QA_OWNER_EMAIL" "$LOG/demo-history.json" || fail "Histórico Demo no muestra correo del dueño reclamante"
+grep -Fq '"status":"claimed"' "$LOG/demo-history.json" || grep -Fq '"status": "claimed"' "$LOG/demo-history.json" || fail "Histórico Demo no quedó reclamado"
+curl -fsS -H "Cookie: $QA_COOKIE" "https://app.preview.intaprd.com/api/v1/superadmin/subscribers?q=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$QA_OWNER_EMAIL'))")&limit=10" > "$LOG/subscribers.json"
+grep -Fq "$QA_OWNER_EMAIL" "$LOG/subscribers.json" || fail "Dueño reclamante no aparece en listado normal de suscriptores/tenants"
+grep -Fq "$QA_SLUG" "$LOG/subscribers.json" || fail "Slug reclamado no aparece asociado al usuario normal Free"
+echo "✓ Trazabilidad Demo + tenant Free normal verificados"
 
 # El mismo código no puede iniciar otro claim.
 REUSE="$(curl -sS -o "$LOG/reuse.json" -w '%{http_code}' -H 'Content-Type: application/json' -d "{\"email\":\"intapcard@gmail.com\",\"password\":\"$QA_CLAIM\"}" https://app.preview.intaprd.com/api/v1/auth/free-demo-v2-claim/login)"
@@ -311,9 +334,12 @@ Probado de punta a punta en Preview:
 ✓ slug permanente
 ✓ perfil público HTTP 200 + API pública
 ✓ código de reclamo = intapcard@gmail.com + slug + código
-✓ credenciales definitivas
+✓ correo seguro normal (magic-link/Resend) como identidad definitiva
+✓ Google OAuth preservado por contrato
 ✓ transferencia de ownership
 ✓ claim usado una sola vez
+✓ histórico Demo conserva dueño reclamante
+✓ dueño aparece en listado normal de tenants/usuarios Free
 ✓ datos QA limpiados
 ✓ contratos Trial/Sponsored/Free Agenda intactos
 ✓ Producción NO tocada
