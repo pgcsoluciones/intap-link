@@ -41,6 +41,13 @@ async function requireUser(c:any,next:any){
 }
 function cleanUsername(value:unknown){return String(value??'').trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'')}
 function cleanPhone(value:unknown){let digits=String(value??'').replace(/\D/g,'').slice(0,15);if(digits.startsWith('00'))digits=digits.slice(2);if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits;return digits}
+function formatPhoneForMessage(value:unknown){
+  const digits=cleanPhone(value)
+  const local=digits.length===11&&digits.startsWith('1')?digits.slice(1):digits
+  if(local.length===10&&/^(809|829|849)/.test(local))return `${local.slice(0,3)}-${local.slice(3,6)}-${local.slice(6)}`
+  if(digits.length>=7&&digits.length<=15)return `+${digits}`
+  return String(value??'').trim()
+}
 function humanDate(value:string,_timeZone:string){
   const parts=value.split('-').map(Number),y=parts[0],m=parts[1],d=parts[2]
   try{return new Intl.DateTimeFormat('es-DO',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(Date.UTC(y,m-1,d,12)))}
@@ -54,7 +61,7 @@ function humanTime(value:string){
 function appointmentMessage(row:any){
   const contact=[
     'Hola, mi nombre es '+String(row.customer_name||'').trim()+'.',
-    'Mi teléfono es '+String(row.customer_phone||'').trim()+'.',
+    'Mi teléfono es '+formatPhoneForMessage(row.customer_phone)+'.',
     ...(String(row.customer_email||'').trim()?['Mi correo es '+String(row.customer_email||'').trim()+'.']:[]),
   ].join('\n')
   const intent=['Estoy interesado/a en agendar:',String(row.reason_label||'Cita')].join('\n')
