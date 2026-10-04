@@ -185,42 +185,6 @@ app.post('/api/v1/me/free-demos/redeem-code',requireDemoManager,async(c:any)=>{
   }
 })
 
-app.post('/api/v1/me/free-demos',requireDemoManager,async(c:any)=>{
-  const body=await c.req.json().catch(()=>({}))
-  const presetKey=cleanText(body.preset_key,40),slug=cleanDemoSlug(body.slug),displayName=cleanText(body.name,100)
-  if(!presetExists(presetKey))return c.json({ok:false,error:'Selecciona una plantilla precargada válida.'},400)
-  try{
-    const created=await createManagedFreeDemo(c.env.DB,{slug,displayName:displayName||undefined,presetKey,webOrigin:webOrigin(c),createdFrom:'superadmin'})
-    return c.json({ok:true,data:{...created,next_url:'/admin/free/demos',status:'draft'}},201)
-  }catch(e:any){
-    const code=String(e?.message||'')
-    return c.json({ok:false,error:code==='slug_taken'?'Ese slug ya está en uso.':code==='slug_invalid'?'Slug no válido.':'No pudimos crear la Demo.'},code==='slug_taken'?409:400)
-  }
-})
-
-app.post('/api/v1/me/free-demos/:id/apply-preset',requireDemoManager,async(c:any)=>{
-  const uid=String(c.get('freeDemoManagerUserId')),id=c.req.param('id'),body=await c.req.json().catch(()=>({}))
-  const presetKey=cleanText(body.preset_key,40)
-  if(!presetExists(presetKey))return c.json({ok:false,error:'Plantilla precargada no válida.'},400)
-  const row=await c.env.DB.prepare("SELECT d.profile_id,d.synthetic_owner_user_id,d.status,p.slug,p.name FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? AND d.manager_user_id=? AND d.status<>'claimed' LIMIT 1").bind(id,uid).first()
-  if(!row)return c.json({ok:false,error:'Demo no encontrada.'},404)
-  try{
-    const result=await applyFreeDemoPreset(c.env.DB,{
-      profileId:String((row as any).profile_id),
-      syntheticUserId:String((row as any).synthetic_owner_user_id),
-      presetKey,
-      webOrigin:webOrigin(c),
-      displayName:cleanText(body.name,100)||String((row as any).name||''),
-      slug:body.slug!==undefined?cleanDemoSlug(body.slug):String((row as any).slug||''),
-    })
-    await c.env.DB.prepare("UPDATE free_demo_profiles SET rubric=?,status='draft',updated_at=datetime('now') WHERE id=?").bind(FREE_DEMO_CATALOG.find(x=>x.key===presetKey)?.label||presetKey,id).run()
-    return c.json({ok:true,data:{...result,status:'draft'}})
-  }catch(e:any){
-    const code=String(e?.message||'')
-    return c.json({ok:false,error:code==='slug_taken'?'Ese slug ya está en uso.':code==='slug_invalid'?'Slug no válido.':'No pudimos aplicar la plantilla.'},code==='slug_taken'?409:400)
-  }
-})
-
 app.post('/api/v1/me/free-demos/:id/publish',requireDemoManager,async(c:any)=>{
   const uid=String(c.get('freeDemoManagerUserId')),id=c.req.param('id'),body=await c.req.json().catch(()=>({}))
   const row=await c.env.DB.prepare(`SELECT d.profile_id,d.status,d.published_at,p.slug,p.name,p.is_published
