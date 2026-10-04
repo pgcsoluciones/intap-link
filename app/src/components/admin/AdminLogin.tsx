@@ -85,6 +85,13 @@ export default function AdminLogin() {
     setLoading(true)
     try {
       if (mode === 'login' && loginMethod === 'password' && !hasProductContext) {
+        if (email.trim().toLowerCase() === 'intapcard@gmail.com') {
+          const claim:any = await apiPost('/auth/free-demo-v2-claim/login', { email, password }).catch(() => ({ ok:false, code:'not_claim' }))
+          if (claim?.ok) {
+            window.location.assign(String(claim.data?.next_url || '/claim/free-demo'))
+            return
+          }
+        }
         const json: any = await apiPost('/auth/password/login', { email, password })
         if (json.ok) {
           persistAuthMode(mode)
