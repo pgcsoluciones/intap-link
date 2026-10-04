@@ -2,9 +2,11 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read=(p)=>readFile(p,'utf8')
-const [migration,api,entry,webApp,editor,superAdmin,layout,app,login,claim,types]=await Promise.all([
+const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types]=await Promise.all([
   read('api/migrations-preview/0088_free_demo_master_v2.sql'),
   read('api/src/free-demo-v2.ts'),
+  read('api/src/free-demo-claim-core.ts'),
+  read('api/src/index.ts'),
   read('api/src/preview-free-entry.ts'),
   read('web/src/App.tsx'),
   read('web/src/components/free-demo/FreeDemoEditor.tsx'),
@@ -13,6 +15,8 @@ const [migration,api,entry,webApp,editor,superAdmin,layout,app,login,claim,types
   read('app/src/App.tsx'),
   read('app/src/components/admin/AdminLogin.tsx'),
   read('app/src/components/admin/FreeDemoV2Claim.tsx'),
+  read('app/src/components/admin/AuthCallback.tsx'),
+  read('app/src/components/admin/free/FreeCredentials.tsx'),
   read('web/src/components/free-profile/IntapLinkGratis.types.ts'),
 ])
 
@@ -77,18 +81,30 @@ assert.match(editor,/Finalizar y publicar/,'editor finaliza desde el borrador')
 assert.match(editor,/const saved=await save\(\)/,'publicación exige guardar correctamente el borrador')
 assert.match(editor,/if\(!saved\)return/,'fallo de guardado bloquea publicación')
 
-// Reclamo final: correo especial + slug + código, hash, ownership definitivo.
-assert.match(api,/const CLAIM_EMAIL='intapcard@gmail\.com'/,'correo especial exacto')
-assert.match(api,/special_email:CLAIM_EMAIL,slug:String\(\(row as any\)\.slug\),claim_code:raw/,'respuesta del reclamo contiene correo+slug+código')
+// Reclamo final: autorización temporal + credenciales normales verificadas.
+assert.match(claimCore,/FREE_DEMO_V2_CLAIM_EMAIL='intapcard@gmail\.com'/,'correo especial exacto')
+assert.match(api,/special_email:FREE_DEMO_V2_CLAIM_EMAIL,slug:String\(\(row as any\)\.slug\),claim_code:raw/,'respuesta del reclamo contiene correo+slug+código')
 assert.match(migration,/code_hash TEXT NOT NULL UNIQUE/,'solo hash del código queda persistido')
-assert.match(api,/UPDATE profiles SET user_id=\?,template_data=\?/,'claim transfiere ownership del Free real')
-assert.match(api,/UPDATE free_demo_v2_claims SET status='used'/,'claim queda consumido')
-assert.match(api,/CASE WHEN EXISTS\(SELECT 1 FROM profiles p JOIN free_demo_v2_profiles d/,'transferencia final fuerza rollback transaccional si falla una precondición')
 assert.match(login,/free-demo-v2-claim\/login/,'login normal reconoce código de reclamo')
 assert.match(login,/auth\/password\/login/,'contraseña real de intapcard conserva fallback')
-assert.match(app,/path="\/claim\/free-demo"/,'App expone pantalla de credenciales definitivas')
-assert.match(claim,/Tu correo definitivo/,'claim solicita correo definitivo')
-assert.match(claim,/Nueva contraseña Kawvo/,'claim solicita contraseña definitiva')
+assert.match(app,/path="\/claim\/free-demo"/,'App expone selección de credencial definitiva')
+assert.match(claim,/Continuar con Google/,'claim reutiliza Google existente')
+assert.match(claim,/Continuar con correo seguro/,'claim reutiliza correo seguro existente')
+assert.match(claim,/magic-link\/start/,'claim inicia el flujo Resend existente')
+assert.match(claim,/flow:'free_demo_claim'/,'correo seguro conserva contexto de reclamo')
+assert.match(claim,/auth\/google\/start\?flow=free_demo_claim/,'Google conserva contexto de reclamo')
+assert.doesNotMatch(claim,/Nueva contraseña Kawvo.*input|type="password"/s,'claim no inventa contraseña paralela')
+assert.match(credentials,/Contraseña Kawvo|contraseña/i,'contraseña Kawvo continúa en panel normal de Credenciales')
+assert.match(index,/body\?\.flow === 'free_demo_claim'/,'magic-link/start reconoce el flujo de reclamo')
+assert.match(index,/c\.req\.query\('flow'\) === 'free_demo_claim'/,'magic-link/verify reconoce el flujo de reclamo')
+assert.match(index,/kawvo_free_demo_claim_oauth_flow/,'Google OAuth preserva el flujo de reclamo')
+assert.match(index,/finalizeFreeDemoClaimToVerifiedUser/,'Google y correo verifican identidad antes de transferir')
+assert.match(authCallback,/authFlow === 'free_demo_claim'/,'callback de correo retoma el reclamo')
+assert.match(authCallback,/next_url/,'callback usa la ruta final entregada por backend')
+assert.match(claimCore,/UPDATE profiles[\s\S]*SET user_id=\?,template_data=\?/,'claim transfiere ownership del Free real')
+assert.match(claimCore,/UPDATE free_demo_v2_claims[\s\S]*SET status='used'/,'claim queda consumido')
+assert.match(claimCore,/verified_user_already_has_free_profile/,'se protege el contrato un usuario = un Free')
+assert.match(superAdmin,/claimed_owner_email/,'histórico SuperAdmin conserva correo del dueño reclamante')
 
 // No reutilizar el mecanismo roto v1.
 assert.doesNotMatch(api,/management_sessions|manager_bridge|\/me\/free-demos\/:id\/open/,'v2 no usa bridge ni cambio de sesión')
