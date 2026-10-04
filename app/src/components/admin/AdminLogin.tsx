@@ -85,6 +85,15 @@ export default function AdminLogin() {
     setLoading(true)
     try {
       if (mode === 'login' && loginMethod === 'password' && !hasProductContext) {
+        // El correo especial puede usar un código de reclamo como credencial temporal.
+        // Si no coincide con un claim activo, el login normal continúa sin cambios.
+        if (email.trim().toLowerCase() === 'intapcard@gmail.com') {
+          const claim:any = await apiPost('/auth/free-demo-claim/login', { email, code: password }).catch(() => ({ok:false}))
+          if (claim?.ok) {
+            window.location.assign(claim.data?.next_url || '/claim/free-demo')
+            return
+          }
+        }
         const json: any = await apiPost('/auth/password/login', { email, password })
         if (json.ok) {
           persistAuthMode(mode)
