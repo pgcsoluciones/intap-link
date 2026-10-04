@@ -15,7 +15,7 @@ async function passwordHash(password:string,saltHex:string){const salt=new Uint8
 async function newPasswordRecord(password:string){const salt=crypto.getRandomValues(new Uint8Array(16)),saltHex=hex(salt);return{salt:saltHex,hash:await passwordHash(password,saltHex)}}
 async function sessionUser(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return null;return c.env.DB.prepare("SELECT s.user_id,u.email FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.session_hash=? AND s.expires_at>datetime('now') AND s.revoked_at IS NULL LIMIT 1").bind(await sha256Hex(raw)).first()}
 async function requireDemoManager(c:any,next:any){const row=await sessionUser(c);if(!row||String((row as any).email||'').trim().toLowerCase()!==FREE_DEMO_MANAGER_EMAIL)return c.json({ok:false,error:'Forbidden'},403);c.set('freeDemoManagerUserId',String((row as any).user_id));await next()}
-async function activeClaimSession(c:any){const raw=parseCookie(c.req.header('Cookie')||'',claimCookieName(c));if(!raw)return null;return c.env.DB.prepare("SELECT s.id session_id,c.id claim_id,c.demo_id,c.special_email,d.profile_id,d.synthetic_owner_user_id,d.artifact_id,p.slug,p.name FROM free_demo_claim_sessions s JOIN free_demo_claims c ON c.id=s.claim_id JOIN free_demo_profiles d ON d.id=c.demo_id JOIN profiles p ON p.id=d.profile_id WHERE s.token_hash=? AND s.consumed_at IS NULL AND s.expires_at>datetime('now') AND c.status='active' AND d.status='claim_ready' LIMIT 1").bind(await sha256Hex(raw)).first()}
+async function activeClaimSession(c:any){const raw=parseCookie(c.req.header('Cookie')||'',claimCookieName(c));if(!raw)return null;return c.env.DB.prepare("SELECT s.id session_id,c.id claim_id,c.demo_id,c.special_email,d.profile_id,d.synthetic_owner_user_id,d.artifact_id,p.slug,p.name FROM free_demo_claim_sessions s JOIN free_demo_claims c ON c.id=s.claim_id JOIN free_demo_profiles d ON d.id=c.demo_id JOIN profiles p ON p.id=d.profile_id WHERE s.token_hash=? AND s.consumed_at IS NULL AND s.expires_at>datetime('now') AND c.status='in_progress' AND d.status='claim_ready' LIMIT 1").bind(await sha256Hex(raw)).first()}
 
 app.get('/api/v1/superadmin/free-demo/templates',requireSuperAdmin('super_admin'),async(c:any)=>{
   const rows=await c.env.DB.prepare("SELECT t.*,COUNT(d.id) demo_count FROM free_demo_templates t LEFT JOIN free_demo_profiles d ON d.template_id=t.id GROUP BY t.id ORDER BY t.is_default DESC,t.created_at DESC").all()
@@ -57,7 +57,7 @@ app.post('/api/v1/superadmin/free-demo/profiles/:id/claim-code',requireSuperAdmi
   if(!row)return c.json({ok:false,error:'Demo no encontrada.'},404);if(String((row as any).status)==='claimed')return c.json({ok:false,error:'Este perfil ya fue reclamado.'},409)
   const raw=randomCode(),hash=await sha256Hex(raw),claimId=crypto.randomUUID()
   await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE free_demo_claims SET status='revoked' WHERE demo_id=? AND status='active'").bind(id),
+    c.env.DB.prepare("UPDATE free_demo_claims SET status='revoked' WHERE demo_id=? AND status IN ('active','in_progress')").bind(id),
     c.env.DB.prepare("INSERT INTO free_demo_claims(id,demo_id,special_email,code_hash,status,expires_at,created_by_admin_user_id) VALUES(?,?,?,?,'active',datetime('now','+30 days'),?)").bind(claimId,id,FREE_DEMO_MANAGER_EMAIL,hash,String(c.get('adminUserId')||'')||null),
     c.env.DB.prepare("UPDATE free_demo_profiles SET status='claim_ready',updated_at=datetime('now') WHERE id=?").bind(id),
   ])
@@ -92,7 +92,11 @@ app.post('/api/v1/auth/free-demo-claim/login',async(c:any)=>{
   if(email!==FREE_DEMO_MANAGER_EMAIL||!code)return c.json({ok:false,error:'Código de reclamo no válido.',code:'not_claim'},404)
   const row=await c.env.DB.prepare("SELECT c.id claim_id,c.demo_id,p.slug,p.name FROM free_demo_claims c JOIN free_demo_profiles d ON d.id=c.demo_id JOIN profiles p ON p.id=d.profile_id WHERE c.special_email=? AND c.code_hash=? AND c.status='active' AND (c.expires_at IS NULL OR c.expires_at>datetime('now')) AND d.status='claim_ready' LIMIT 1").bind(FREE_DEMO_MANAGER_EMAIL,await sha256Hex(code)).first()
   if(!row)return c.json({ok:false,error:'Código de reclamo no válido o ya utilizado.',code:'not_claim'},404)
-  const raw=randomToken(),sid=crypto.randomUUID();await c.env.DB.prepare("INSERT INTO free_demo_claim_sessions(id,claim_id,token_hash,expires_at) VALUES(?,?,?,datetime('now','+15 minutes'))").bind(sid,String((row as any).claim_id),await sha256Hex(raw)).run()
+  const claimId=String((row as any).claim_id)
+  const lock=await c.env.DB.prepare("UPDATE free_demo_claims SET status='in_progress' WHERE id=? AND status='active'").bind(claimId).run()
+  if(Number((lock as any)?.meta?.changes||0)!==1)return c.json({ok:false,error:'Código de reclamo no válido o ya utilizado.',code:'not_claim'},404)
+  const raw=randomToken(),sid=crypto.randomUUID()
+  await c.env.DB.prepare("INSERT INTO free_demo_claim_sessions(id,claim_id,token_hash,expires_at) VALUES(?,?,?,datetime('now','+15 minutes'))").bind(sid,claimId,await sha256Hex(raw)).run()
   return c.json({ok:true,data:{next_url:'/claim/free-demo',slug:(row as any).slug,name:(row as any).name}},200,{'Set-Cookie':claimCookie(c,raw)})
 })
 
@@ -111,7 +115,7 @@ app.post('/api/v1/auth/free-demo-claim/complete',async(c:any)=>{
     c.env.DB.prepare("UPDATE profiles SET user_id=?,updated_at=datetime('now') WHERE id=? AND user_id=?").bind(userId,profileId,oldOwner),
     c.env.DB.prepare("UPDATE intap_artifacts SET owner_user_id=?,updated_at=datetime('now') WHERE profile_id=? AND owner_user_id=?").bind(userId,profileId,oldOwner),
     c.env.DB.prepare("UPDATE free_demo_profiles SET status='claimed',claimed_by_user_id=?,claimed_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND status='claim_ready'").bind(userId,demoId),
-    c.env.DB.prepare("UPDATE free_demo_claims SET status='used',used_at=datetime('now') WHERE id=? AND status='active'").bind(claimId),
+    c.env.DB.prepare("UPDATE free_demo_claims SET status='used',used_at=datetime('now') WHERE id=? AND status='in_progress'").bind(claimId),
     c.env.DB.prepare("UPDATE free_demo_claim_sessions SET consumed_at=datetime('now') WHERE id=? AND consumed_at IS NULL").bind(String((claim as any).session_id)),
     c.env.DB.prepare("INSERT INTO auth_sessions(id,user_id,session_hash,expires_at,ip,user_agent,created_at) VALUES(?,?,?,datetime('now','+30 days'),?,?,datetime('now'))").bind(crypto.randomUUID(),userId,sessionHash,ip,ua),
   ])
