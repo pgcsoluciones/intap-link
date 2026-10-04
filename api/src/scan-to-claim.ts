@@ -1,6 +1,7 @@
 import app from './index'
 import { cookieNames, buildScopedCookie, isPreviewEnvironment } from './lib/cookies'
 import { isPublicCodeShape } from './artifacts'
+import { createManagedFreeDemoFromArtifact } from './free-demo-core'
 
 const INTENT_TTL_SECONDS = 15 * 60
 
