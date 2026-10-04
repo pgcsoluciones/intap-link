@@ -28,7 +28,7 @@ export async function getActiveFreeDemoClaim(c:any){
     FROM free_demo_v2_claims cl
     JOIN free_demo_v2_profiles d ON d.id=cl.demo_id
     JOIN profiles p ON p.id=d.profile_id
-    WHERE cl.code_hash=? AND cl.status='in_progress' AND cl.expires_at>datetime('now') AND d.status='claim_ready'
+    WHERE cl.code_hash=? AND cl.status='active' AND cl.expires_at>datetime('now') AND d.status='claim_ready'
     LIMIT 1`).bind(await sha256Hex(raw)).first()
 }
 
@@ -56,7 +56,7 @@ export async function finalizeFreeDemoClaimToVerifiedUser(c:any,userId:string,ve
       SET user_id=?,template_data=?,updated_at=datetime('now')
       WHERE id=? AND user_id=? AND EXISTS(
         SELECT 1 FROM free_demo_v2_profiles d JOIN free_demo_v2_claims cl ON cl.demo_id=d.id
-        WHERE d.id=? AND d.status='claim_ready' AND cl.id=? AND cl.status='in_progress'
+        WHERE d.id=? AND d.status='claim_ready' AND cl.id=? AND cl.status='active'
       )`).bind(userId,JSON.stringify(template),profileId,oldOwner,demoId,claimId),
     c.env.DB.prepare(`UPDATE free_demo_v2_profiles
       SET status='claimed',claimed_by_user_id=?,claimed_at=datetime('now'),updated_at=datetime('now')
@@ -64,7 +64,7 @@ export async function finalizeFreeDemoClaimToVerifiedUser(c:any,userId:string,ve
       .bind(userId,demoId,profileId,userId),
     c.env.DB.prepare(`UPDATE free_demo_v2_claims
       SET status='used',used_at=datetime('now')
-      WHERE id=? AND status='in_progress' AND EXISTS(
+      WHERE id=? AND status='active' AND EXISTS(
         SELECT 1 FROM free_demo_v2_profiles d WHERE d.id=? AND d.status='claimed' AND d.claimed_by_user_id=?
       )`).bind(claimId,demoId,userId),
   ])
