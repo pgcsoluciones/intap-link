@@ -41,6 +41,13 @@ async function requireUser(c:any,next:any){
 }
 function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/^\/+|\/+$/g,'')}
 function cleanPhone(value:unknown){let digits=String(value??'').replace(/\D/g,'').slice(0,15);if(digits.startsWith('00'))digits=digits.slice(2);if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits;return digits}
+function formatPhoneForMessage(value:unknown){
+  const digits=cleanPhone(value)
+  const local=digits.length===11&&digits.startsWith('1')?digits.slice(1):digits
+  if(local.length===10&&/^(809|829|849)/.test(local))return `${local.slice(0,3)}-${local.slice(3,6)}-${local.slice(6)}`
+  if(digits.length>=7&&digits.length<=15)return `+${digits}`
+  return String(value??'').trim()
+}
 function parseTemplateData(value:any){
   if(value&&typeof value==='object'&&!Array.isArray(value))return {...value}
   try{const parsed=JSON.parse(String(value||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}
@@ -59,7 +66,7 @@ function humanTime(value:string){
 }
 function appointmentMessage(row:any){
   return [
-    ['Hola, mi nombre es '+String(row.customer_name||'').trim()+'.','Mi teléfono es '+String(row.customer_phone||'').trim()+'.',...(String(row.customer_email||'').trim()?['Mi correo es '+String(row.customer_email||'').trim()+'.']:[])].join('\n'),
+    ['Hola, mi nombre es '+String(row.customer_name||'').trim()+'.','Mi teléfono es '+formatPhoneForMessage(row.customer_phone)+'.',...(String(row.customer_email||'').trim()?['Mi correo es '+String(row.customer_email||'').trim()+'.']:[])].join('\n'),
     ['Estoy interesado/a en agendar:',String(row.reason_label||'Cita')].join('\n'),
     ['Fecha solicitada:',humanDate(String(row.appointment_date||'')),'','Hora solicitada:',humanTime(String(row.start_time||''))].join('\n'),
     String(row.details||'').trim()?['Detalles:',String(row.details||'').trim()].join('\n'):'',
@@ -172,6 +179,7 @@ app.get('/api/v1/me/free/experience',requireUser,async(c:any)=>{
     portfolio_title:portfolioTitle(template),
     schedule_visible:scheduleVisible(template),
     schedule:freeSchedule(template),
+    tour_auto_disabled:template.free_tour_auto_disabled===true,
   }})
 })
 app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
@@ -187,12 +195,13 @@ app.patch('/api/v1/me/free/experience',requireUser,async(c:any)=>{
   if(body.quote_button_visible!==undefined)template.free_quote_button_visible=nextQuote
   if(body.schedule_visible!==undefined)template.free_schedule_visible=body.schedule_visible===true
   if(body.schedule!==undefined){template.free_schedule=cleanSchedule(body.schedule);template.free_schedule_configured=true}
+  if(body.tour_auto_disabled!==undefined)template.free_tour_auto_disabled=body.tour_auto_disabled===true
   const statements:any[]=[
     c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),resolved.subject.id),
   ]
   if(body.appointment_enabled!==undefined)statements.push(c.env.DB.prepare("UPDATE appointment_settings SET enabled=?,updated_at=datetime('now') WHERE subject_type='free' AND subject_id=?").bind(nextAgenda?1:0,resolved.subject.id))
   await c.env.DB.batch(statements)
-  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template),schedule_visible:scheduleVisible(template),schedule:freeSchedule(template)}})
+  return c.json({ok:true,data:{quote_button_visible:nextQuote,appointment_enabled:nextAgenda,portfolio_title:portfolioTitle(template),schedule_visible:scheduleVisible(template),schedule:freeSchedule(template),tour_auto_disabled:template.free_tour_auto_disabled===true}})
 })
 
 app.get('/api/v1/me/free/appointments',requireUser,async(c:any)=>{
