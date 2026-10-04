@@ -56,7 +56,10 @@ useEffect(()=>{if(!toast)return;const id=window.setTimeout(()=>setToast(''),1800
   function shareActionByWhatsapp(kind:'quote'|'agenda'){
     if(!data)return
     const target=publicBaseUrl+(kind==='quote'?'?cotizar=1':'?agendar=1')
-    const message=kind==='quote'?`Te comparto mi formulario de cotización / información: ${target}`:`Te comparto el enlace para agendar: ${target}`
+    const businessName=String(data.business_name||'este negocio').trim()||'este negocio'
+    const message=kind==='quote'
+      ? `Te comparto el formulario de cotización / información de ${businessName}. Completa tu solicitud aquí: ${target}`
+      : `Te comparto el enlace para agendar: ${target}`
     window.open('https://wa.me/?text='+encodeURIComponent(message),'_blank','noopener,noreferrer')
   }
   function sponsorCta(){const s=data?.sponsor;if(!s)return;let href='';if(s.banner_cta_type==='beneficiary_whatsapp'){const number=cleanPhone(data?.whatsapp||data?.phone);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más sobre estos productos.')}`}if(s.banner_cta_type==='sponsor_whatsapp'){const number=cleanPhone(s.contact_whatsapp);if(number)href=`https://wa.me/${number.replace(/^\+/,'')}?text=${encodeURIComponent(s.whatsapp_message_template||'Hola, me interesa saber más.')}`}if(s.banner_cta_type==='sponsor_url')href=String(s.banner_cta_value||s.website_url||'');if(href)window.open(href,'_blank','noopener,noreferrer')}
