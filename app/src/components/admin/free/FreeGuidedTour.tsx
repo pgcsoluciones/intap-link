@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { disableFreeTourAuto, isFreeTourAutoDisabled } from './freeTourPersistence'
 
 type TourStep = {
   id: string
@@ -153,7 +154,9 @@ export default function FreeGuidedTour({ storageId }: Props) {
   useEffect(() => {
     if (autoStartedRef.current || !storageId) return
     autoStartedRef.current = true
-    const timer = window.setTimeout(() => start(false), 850)
+    const timer = window.setTimeout(() => {
+      void isFreeTourAutoDisabled().then((disabled) => { if (!disabled) start(false) })
+    }, 850)
     return () => window.clearTimeout(timer)
   }, [start, storageId])
 
@@ -199,12 +202,14 @@ export default function FreeGuidedTour({ storageId }: Props) {
   const disableAuto = () => {
     try { localStorage.setItem(autoKey, '1') } catch {}
     writeState(key, { completed: true })
+    void disableFreeTourAuto()
     setOpen(false)
   }
 
   const complete = () => {
     try { localStorage.setItem(autoKey, '1') } catch {}
     writeState(key, { completed: true })
+    void disableFreeTourAuto()
     setOpen(false)
   }
 
