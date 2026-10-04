@@ -51,8 +51,8 @@ assert.match(types,/maxCustomLinks: 3/,'límite canónico Free de enlaces sigue 
 assert.match(editor,/services:\[\]/,'vista previa v2 no muestra Servicios')
 
 // Horario, Cotizar y Agenda son funciones Free reales.
-assert.match(api,/ensureAppointmentSubject\(c\.env\.DB,'free',profileId\)/,'creación inicializa agenda Free real')
-assert.match(api,/UPDATE appointment_settings SET enabled=1/,'agenda nace activa en base Demo')
+assert.match(api,/INSERT INTO appointment_settings\(subject_type,subject_id,enabled/,'creación inicializa agenda Free real dentro del mismo batch')
+assert.match(api,/VALUES\('free',\?,1,30,120,30/,'agenda nace activa en base Demo')
 assert.match(api,/saveAppointmentConfiguration\(c\.env\.DB,'free',profileId/,'editor guarda agenda mediante core Free')
 assert.match(api,/free_quote_button_visible:true/,'base trae Cotizar activo')
 assert.match(api,/free_schedule_visible:true/,'base trae Horario visible')
@@ -74,6 +74,8 @@ assert.match(api,/publishedAt&&requested!==current/,'slug queda bloqueado tras p
 assert.match(api,/UPDATE profiles SET name=\?,slug=\?,is_published=1/,'publicación usa Free canónico')
 assert.match(superAdmin,/Editar borrador/,'SuperAdmin conserva URL de edición')
 assert.match(editor,/Finalizar y publicar/,'editor finaliza desde el borrador')
+assert.match(editor,/const saved=await save\(\)/,'publicación exige guardar correctamente el borrador')
+assert.match(editor,/if\(!saved\)return/,'fallo de guardado bloquea publicación')
 
 // Reclamo final: correo especial + slug + código, hash, ownership definitivo.
 assert.match(api,/const CLAIM_EMAIL='intapcard@gmail\.com'/,'correo especial exacto')
@@ -81,6 +83,7 @@ assert.match(api,/special_email:CLAIM_EMAIL,slug:String\(\(row as any\)\.slug\),
 assert.match(migration,/code_hash TEXT NOT NULL UNIQUE/,'solo hash del código queda persistido')
 assert.match(api,/UPDATE profiles SET user_id=\?,template_data=\?/,'claim transfiere ownership del Free real')
 assert.match(api,/UPDATE free_demo_v2_claims SET status='used'/,'claim queda consumido')
+assert.match(api,/CASE WHEN EXISTS\(SELECT 1 FROM profiles p JOIN free_demo_v2_profiles d/,'transferencia final fuerza rollback transaccional si falla una precondición')
 assert.match(login,/free-demo-v2-claim\/login/,'login normal reconoce código de reclamo')
 assert.match(login,/auth\/password\/login/,'contraseña real de intapcard conserva fallback')
 assert.match(app,/path="\/claim\/free-demo"/,'App expone pantalla de credenciales definitivas')
