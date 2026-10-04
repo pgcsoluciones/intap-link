@@ -133,9 +133,14 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         const path = location.pathname
         const insideSponsor = path === '/admin/sponsor' || path.startsWith('/admin/sponsor/')
         const insideSponsored = path === '/admin/sponsored' || path.startsWith('/admin/sponsored/')
+        const insideFreeDemoManager = path === '/admin/free/demos'
+        const isFreeDemoManager = String(json.data?.email || '').trim().toLowerCase() === 'intapcard@gmail.com'
         const genericEntry = path === '/admin' || path === '/' || path === '/admin/free/onboarding/welcome'
 
-        if (kind === 'sponsor' && !insideSponsor) {
+        if (isFreeDemoManager && insideFreeDemoManager) {
+          // Excepción explícita: el gestor Demo puede permanecer en su selector Free
+          // aunque la misma cuenta tenga otros roles (p. ej. patrocinados).
+        } else if (kind === 'sponsor' && !insideSponsor) {
           navigate(route, { replace:true })
           return
         }
