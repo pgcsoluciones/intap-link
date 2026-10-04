@@ -1,11 +1,11 @@
 import app from './index'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
-import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
+import { isPreviewEnvironment } from './lib/cookies'
+import { FREE_DEMO_V2_FREE_DEMO_V2_CLAIM_EMAIL, freeDemoClaimCookie, getActiveFreeDemoClaim } from './free-demo-claim-core'
 import { getAppointmentSettings, getAppointmentAvailabilityRows, saveAppointmentConfiguration } from './appointments-core'
 import { resolveFreeStarterContent, FREE_PROFILE_CATEGORIES } from '../../shared/free-profile-starter-content'
 import { FREE_PROFILE_STARTER_ASSETS } from '../../shared/free-profile-starter-assets'
 
-const CLAIM_EMAIL='intapcard@gmail.com'
 const MAX_PORTFOLIO=10
 const MAX_QUICK_ACTIONS=3
 const MAX_LINKS=3
@@ -13,7 +13,6 @@ const PALETTES=new Set(['intap','oceano','esmeralda','violeta','coral','grafito'
 const LAYOUTS=new Set(['impacto','personal','esencial'])
 const QUICK_TYPES=new Set(['call','instagram','location','email','tiktok'])
 const RESERVED=new Set(['admin','api','app','www','superadmin','support','demo','trial','p','l','free-demo'])
-const KDF_ITERATIONS=100000
 
 type TemplateDef={key:string;label:string;hint:string;category:string;subcategory:string}
 
@@ -44,16 +43,8 @@ function parseJson(value:unknown){try{const v=JSON.parse(String(value||'{}'));re
 function webOrigin(c:any){return String(c.env.WEB_URL||(isPreviewEnvironment(c.env)?'https://preview.intaprd.com':'https://intaprd.com')).replace(/\/$/,'')}
 function appOrigin(c:any){return String(c.env.APP_URL||(isPreviewEnvironment(c.env)?'https://app.preview.intaprd.com':'https://app.intaprd.com')).replace(/\/$/,'')}
 function absoluteAsset(c:any,path:string){return /^https?:\/\//i.test(path)?path:webOrigin(c)+path}
-function randomToken(bytes=32){const a=crypto.getRandomValues(new Uint8Array(bytes));return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function randomClaimCode(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=crypto.getRandomValues(new Uint8Array(12));const raw=Array.from(bytes).map(x=>alphabet[x%alphabet.length]).join('');return 'CLM-'+raw.slice(0,4)+'-'+raw.slice(4,8)+'-'+raw.slice(8,12)}
 async function sha256Hex(input:string){const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-function bytesHex(bytes:Uint8Array){return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('')}
-async function passwordHash(password:string,saltHex:string){const salt=new Uint8Array((saltHex.match(/.{1,2}/g)||[]).map(x=>parseInt(x,16)));const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveBits']);const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt,iterations:KDF_ITERATIONS,hash:'SHA-256'},key,256);return bytesHex(new Uint8Array(bits))}
-async function passwordRecord(password:string){const salt=crypto.getRandomValues(new Uint8Array(16)),saltHex=bytesHex(salt);return{salt:saltHex,hash:await passwordHash(password,saltHex)}}
-function parseCookie(header:string,name:string){for(const part of header.split(';')){const index=part.indexOf('=');if(index<0)continue;if(part.slice(0,index).trim()===name)return decodeURIComponent(part.slice(index+1).trim())}return null}
-function claimCookieName(c:any){return isPreviewEnvironment(c.env)?'kawvo_free_demo_v2_claim_preview':'kawvo_free_demo_v2_claim'}
-function claimCookie(c:any,value:string,maxAge=900){return buildScopedCookie(c.env,appOrigin(c),claimCookieName(c),value,maxAge)}
-function sessionCookie(c:any,value:string){return buildScopedCookie(c.env,appOrigin(c),cookieNames(c.env).session,value,30*24*60*60)}
 function templateByKey(key:string){return FREE_DEMO_V2_TEMPLATES.find(item=>item.key===key)}
 function templatePreview(c:any,item:TemplateDef){
   const starter=resolveFreeStarterContent(item.category)
@@ -62,11 +53,6 @@ function templatePreview(c:any,item:TemplateDef){
 }
 async function demoRow(c:any,id:string){
   return c.env.DB.prepare("SELECT d.*,p.slug,p.name,p.bio,p.category,p.subcategory,p.layout_id,p.free_palette_id,p.free_brand_color,p.avatar_url,p.hero_url,p.hero_position_x,p.hero_position_y,p.hero_zoom,p.template_data,p.is_published FROM free_demo_v2_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? LIMIT 1").bind(id).first()
-}
-async function activeClaim(c:any){
-  const raw=parseCookie(c.req.header('Cookie')||'',claimCookieName(c))
-  if(!raw)return null
-  return c.env.DB.prepare("SELECT cl.id claim_id,cl.demo_id,cl.slug_snapshot,d.profile_id,d.synthetic_owner_user_id,p.name,p.slug,p.template_data FROM free_demo_v2_claims cl JOIN free_demo_v2_profiles d ON d.id=cl.demo_id JOIN profiles p ON p.id=d.profile_id WHERE cl.code_hash=? AND cl.status='in_progress' AND cl.expires_at>datetime('now') AND d.status='claim_ready' LIMIT 1").bind(await sha256Hex(raw)).first()
 }
 
 app.get('/api/v1/superadmin/free-demo-v2/templates',requireSuperAdmin('viewer'),async(c:any)=>{
@@ -284,56 +270,28 @@ app.post('/api/v1/superadmin/free-demo-v2/:id/claim-code',requireSuperAdmin('sup
   const raw=randomClaimCode(),hash=await sha256Hex(raw),claimId=crypto.randomUUID(),adminUserId=String(c.get('adminUserId')||'')
   await c.env.DB.batch([
     c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='revoked' WHERE demo_id=? AND status IN('active','in_progress')").bind(c.req.param('id')),
-    c.env.DB.prepare("INSERT INTO free_demo_v2_claims(id,demo_id,special_email,slug_snapshot,code_hash,status,expires_at,created_by_admin_user_id) VALUES(?,?,?,?,?,'active',datetime('now','+30 days'),?)").bind(claimId,c.req.param('id'),CLAIM_EMAIL,String((row as any).slug),hash,adminUserId||null),
+    c.env.DB.prepare("INSERT INTO free_demo_v2_claims(id,demo_id,special_email,slug_snapshot,code_hash,status,expires_at,created_by_admin_user_id) VALUES(?,?,?,?,?,'active',datetime('now','+30 days'),?)").bind(claimId,c.req.param('id'),FREE_DEMO_V2_CLAIM_EMAIL,String((row as any).slug),hash,adminUserId||null),
     c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='claim_ready',updated_at=datetime('now') WHERE id=?").bind(c.req.param('id')),
   ])
-  return c.json({ok:true,data:{special_email:CLAIM_EMAIL,slug:String((row as any).slug),claim_code:raw,expires_in_days:30}})
+  return c.json({ok:true,data:{special_email:FREE_DEMO_V2_CLAIM_EMAIL,slug:String((row as any).slug),claim_code:raw,expires_in_days:30}})
 })
 
 app.post('/api/v1/auth/free-demo-v2-claim/login',async(c:any)=>{
   let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
   const email=cleanText(body.email,180).toLowerCase(),code=cleanText(body.code||body.password,40).toUpperCase()
-  if(email!==CLAIM_EMAIL||!code)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
-  const row=await c.env.DB.prepare("SELECT cl.id,cl.demo_id,d.profile_id,p.slug,p.name FROM free_demo_v2_claims cl JOIN free_demo_v2_profiles d ON d.id=cl.demo_id JOIN profiles p ON p.id=d.profile_id WHERE cl.special_email=? AND cl.code_hash=? AND cl.status='active' AND cl.expires_at>datetime('now') AND d.status='claim_ready' LIMIT 1").bind(CLAIM_EMAIL,await sha256Hex(code)).first()
+  if(email!==FREE_DEMO_V2_CLAIM_EMAIL||!code)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
+  const row=await c.env.DB.prepare("SELECT cl.id,cl.demo_id,d.profile_id,p.slug,p.name FROM free_demo_v2_claims cl JOIN free_demo_v2_profiles d ON d.id=cl.demo_id JOIN profiles p ON p.id=d.profile_id WHERE cl.special_email=? AND cl.code_hash=? AND cl.status='active' AND cl.expires_at>datetime('now') AND d.status='claim_ready' LIMIT 1").bind(FREE_DEMO_V2_CLAIM_EMAIL,await sha256Hex(code)).first()
   if(!row)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
   const lock=await c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='in_progress' WHERE id=? AND status='active'").bind(String((row as any).id)).run()
   if(Number((lock as any)?.meta?.changes||0)!==1)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
-  return c.json({ok:true,data:{next_url:'/claim/free-demo',slug:String((row as any).slug),name:String((row as any).name)}},200,{'Set-Cookie':claimCookie(c,code)})
+  return c.json({ok:true,data:{next_url:'/claim/free-demo',slug:String((row as any).slug),name:String((row as any).name)}},200,{'Set-Cookie':freeDemoClaimCookie(c.env,appOrigin(c),code)})
 })
 
 app.get('/api/v1/auth/free-demo-v2-claim/context',async(c:any)=>{
-  const row=await activeClaim(c)
+  const row=await getActiveFreeDemoClaim(c)
   if(!row)return c.json({ok:false,error:'El acceso de reclamo expiró.'},401)
-  return c.json({ok:true,data:{slug:String((row as any).slug),name:String((row as any).name),special_email:CLAIM_EMAIL}})
+  return c.json({ok:true,data:{slug:String((row as any).slug),name:String((row as any).name),special_email:FREE_DEMO_V2_CLAIM_EMAIL}})
 })
 
-app.post('/api/v1/auth/free-demo-v2-claim/complete',async(c:any)=>{
-  const claim=await activeClaim(c)
-  if(!claim)return c.json({ok:false,error:'El acceso de reclamo expiró.'},401)
-  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
-  const email=cleanText(body.new_email,180).toLowerCase(),password=String(body.password||'')
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email===CLAIM_EMAIL)return c.json({ok:false,error:'Usa un correo definitivo válido y diferente al correo Demo.'},400)
-  if(password.length<8||password.length>128)return c.json({ok:false,error:'La contraseña debe tener entre 8 y 128 caracteres.'},400)
-  if(await c.env.DB.prepare('SELECT id FROM users WHERE lower(email)=? LIMIT 1').bind(email).first())return c.json({ok:false,error:'Ese correo ya está vinculado a otra cuenta.'},409)
-
-  const userId=crypto.randomUUID(),credential=await passwordRecord(password),sessionRaw=randomToken(),sessionHash=await sha256Hex(sessionRaw)
-  const profileId=String((claim as any).profile_id),oldOwner=String((claim as any).synthetic_owner_user_id),demoId=String((claim as any).demo_id),claimId=String((claim as any).claim_id)
-  const template=parseJson((claim as any).template_data)
-  delete template.free_demo_v2
-  delete template.free_demo_v2_template_key
-  delete template.free_demo_v2_template_label
-  const ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Forwarded-For')||'',ua=c.req.header('User-Agent')||''
-  await c.env.DB.batch([
-    c.env.DB.prepare('INSERT INTO users(id,email) VALUES(?,?)').bind(userId,email),
-    c.env.DB.prepare("INSERT INTO user_password_credentials(user_id,password_salt,password_hash,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,0,NULL,datetime('now'),datetime('now'))").bind(userId,credential.salt,credential.hash),
-    c.env.DB.prepare("UPDATE profiles SET user_id=?,template_data=?,updated_at=datetime('now') WHERE id=? AND user_id=? AND EXISTS(SELECT 1 FROM free_demo_v2_profiles d JOIN free_demo_v2_claims cl ON cl.demo_id=d.id WHERE d.id=? AND d.status='claim_ready' AND cl.id=? AND cl.status='in_progress')").bind(userId,JSON.stringify(template),profileId,oldOwner,demoId,claimId),
-    c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='claimed',claimed_by_user_id=?,claimed_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND status='claim_ready' AND EXISTS(SELECT 1 FROM profiles p WHERE p.id=? AND p.user_id=?)").bind(userId,demoId,profileId,userId),
-    c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='used',used_at=datetime('now') WHERE id=? AND status='in_progress' AND EXISTS(SELECT 1 FROM free_demo_v2_profiles d WHERE d.id=? AND d.status='claimed' AND d.claimed_by_user_id=?)").bind(claimId,demoId,userId),
-    c.env.DB.prepare("INSERT INTO auth_sessions(id,user_id,session_hash,expires_at,ip,user_agent,created_at) VALUES(?,CASE WHEN EXISTS(SELECT 1 FROM profiles p JOIN free_demo_v2_profiles d ON d.profile_id=p.id JOIN free_demo_v2_claims cl ON cl.demo_id=d.id WHERE p.id=? AND p.user_id=? AND d.id=? AND d.status='claimed' AND d.claimed_by_user_id=? AND cl.id=? AND cl.status='used') THEN ? ELSE NULL END,?,datetime('now','+30 days'),?,?,datetime('now'))").bind(crypto.randomUUID(),profileId,userId,demoId,userId,claimId,userId,sessionHash,ip,ua),
-  ])
-  const verify=await c.env.DB.prepare("SELECT p.user_id,d.status,cl.status claim_status FROM profiles p JOIN free_demo_v2_profiles d ON d.profile_id=p.id JOIN free_demo_v2_claims cl ON cl.demo_id=d.id WHERE p.id=? AND d.id=? AND cl.id=? LIMIT 1").bind(profileId,demoId,claimId).first()
-  if(String((verify as any)?.user_id||'')!==userId||String((verify as any)?.status||'')!=='claimed'||String((verify as any)?.claim_status||'')!=='used')return c.json({ok:false,error:'No se pudo verificar la transferencia final.'},500)
-  return c.json({ok:true,data:{slug:String((claim as any).slug),next_url:'/admin/free/credentials?claimed=1'}},200,{'Set-Cookie':sessionCookie(c,sessionRaw)})
-})
 
 export default app
