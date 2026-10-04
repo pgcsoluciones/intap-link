@@ -7,7 +7,7 @@ import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
-import { finalizeFreeDemoClaimToVerifiedUser, freeDemoClaimCookie } from './free-demo-claim-core'
+import { finalizeFreeDemoClaimToVerifiedUser, freeDemoClaimCookie, getActiveFreeDemoClaim } from './free-demo-claim-core'
 import { registerDemoViralRoutes } from './routes/demo-viral'
 import { registerDemoAiRoutes } from './routes/demo-ai'
 import {
@@ -254,6 +254,9 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
 
+  if (authFlow === 'free_demo_claim' && !(await getActiveFreeDemoClaim(c)))
+    return c.json({ok:false,error:'El acceso de reclamo expiró.',code:'claim_expired'},401)
+
   if (leadToken) {
     const lead = await c.env.DB.prepare(
       `SELECT email FROM trial_leads WHERE token_hash=? AND status IN ('received','linked') AND expires_at>datetime('now') LIMIT 1`
@@ -359,6 +362,8 @@ app.get('/api/v1/auth/google/start', async (c) => {
   const state = generateToken(16)
   const authFlow = c.req.query('flow') === 'trial' ? 'trial' : c.req.query('flow') === 'free_demo_claim' ? 'free_demo_claim' : ''
   const leadToken = authFlow === 'trial' && /^[a-f0-9]{64}$/i.test(String(c.req.query('lead_token')||'')) ? String(c.req.query('lead_token')) : ''
+  if (authFlow === 'free_demo_claim' && !(await getActiveFreeDemoClaim(c)))
+    return c.redirect(`${configuredAppUrl(c)}/claim/free-demo?error=claim_expired`)
   const apiUrl = new URL(c.req.url).origin
   const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
