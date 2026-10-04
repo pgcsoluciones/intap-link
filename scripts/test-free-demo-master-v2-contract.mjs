@@ -25,6 +25,11 @@ assert.doesNotMatch(migration,/ALTER TABLE profiles|DROP TABLE profiles|trial_pr
 assert.doesNotMatch(api,/trial_profiles|sponsored_profiles|sponsored_/i,'API v2 no depende de Trial ni Sponsored')
 assert.match(entry,/import '.\/free-demo-v2'/,'Worker registra v2 por composición sin tocar Trial')
 assert.doesNotMatch(editor,/\/trial\/|sponsored/i,'editor v2 no navega a Trial/Sponsored')
+for(const route of ['/trial','/trial/edit/:id','/trial/:slug']) assert.ok(webApp.includes(route),'rutas Trial protegidas permanecen registradas')
+assert.match(entry,/registerTrialRoutes\(app\)/,'registro Trial permanece en Preview')
+assert.ok(entry.indexOf('registerTrialRoutes(app)') < entry.indexOf('registerPreviewAppFallback(app)'),'Trial permanece antes del catch-all Preview')
+assert.match(layout,/\{ key: 'trials', label: 'Trials' \}/,'menú Trial permanece en SuperAdmin')
+assert.match(app,/path="\/superadmin\/trials"/,'ruta SuperAdmin Trials permanece registrada')
 
 // Perfil Free canónico + ownership normal intacto.
 assert.match(api,/INSERT INTO profiles\(id,user_id,slug,plan_id/,'borrador usa tabla canónica profiles')
