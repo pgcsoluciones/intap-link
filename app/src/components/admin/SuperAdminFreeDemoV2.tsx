@@ -3,7 +3,7 @@ import { apiGet, apiPost } from '../../lib/api'
 import SuperAdminLayout from './SuperAdminLayout'
 
 type Template={key:string;label:string;hint:string;category:string;role:string;bio:string;palette:string;hero_url:string;avatar_url:string;portfolio:string[]}
-type Demo={id:string;template_key:string;template_label:string;status:string;published_at?:string|null;claimed_at?:string|null;name?:string;slug?:string;is_published?:number;hero_url?:string}
+type Demo={id:string;template_key:string;template_label:string;status:string;published_at?:string|null;claimed_at?:string|null;claimed_by_user_id?:string|null;claimed_owner_email?:string|null;name?:string;slug?:string;is_published?:number;hero_url?:string}
 
 export default function SuperAdminFreeDemoV2(){
   const[templates,setTemplates]=useState<Template[]>([])
@@ -80,7 +80,7 @@ export default function SuperAdminFreeDemoV2(){
           {demos.map(demo=><article key={demo.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,padding:16,border:'1px solid #dbe4ef',borderRadius:18,background:'#fff'}}>
             <div style={{display:'flex',gap:13,alignItems:'center',minWidth:0}}>
               {demo.hero_url&&<img src={demo.hero_url} alt="" style={{width:74,height:56,objectFit:'cover',borderRadius:12}}/>}
-              <div style={{minWidth:0}}><strong style={{display:'block'}}>{demo.name||demo.template_label}</strong><span style={{fontSize:12,color:'#64748b'}}>{demo.template_label} · {demo.status}{demo.published_at?' · /'+demo.slug:''}</span></div>
+              <div style={{minWidth:0}}><strong style={{display:'block'}}>{demo.name||demo.template_label}</strong><span style={{fontSize:12,color:'#64748b'}}>{demo.template_label} · {demo.status}{demo.published_at?' · /'+demo.slug:''}</span>{demo.status==='claimed'&&<span style={{display:'block',marginTop:4,fontSize:12,color:'#047857',fontWeight:800}}>Reclamada por {demo.claimed_owner_email||'usuario verificado'}{demo.claimed_at?' · '+new Date(demo.claimed_at).toLocaleDateString():''}</span>}</div>
             </div>
             <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
               {demo.status!=='claimed'&&<a href={web+'/free-demo/edit/'+demo.id} target="_blank" rel="noreferrer" style={{padding:'9px 12px',border:'1px solid #cbd5e1',borderRadius:11,textDecoration:'none',color:'#0f172a',fontWeight:800,fontSize:13}}>Editar borrador</a>}
