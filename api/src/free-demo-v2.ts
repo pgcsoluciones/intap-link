@@ -243,3 +243,92 @@ app.put('/api/v1/superadmin/free-demo-v2/:id/experience',requireSuperAdmin('supe
   await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(next),profileId).run()
   return c.json({ok:true})
 })
+
+
+app.post('/api/v1/superadmin/free-demo-v2/:id/publish',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  if(String((row as any).status)==='claimed')return c.json({ok:false,error:'Este perfil ya fue reclamado.'},409)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const name=cleanText(body.name,100),requested=slugify(body.slug||name),current=String((row as any).slug||''),publishedAt=String((row as any).published_at||'')
+  if(!name)return c.json({ok:false,error:'Escribe el nombre final.'},400)
+  if(!validSlug(requested))return c.json({ok:false,error:'Slug no válido o reservado.'},400)
+  if(publishedAt&&requested!==current)return c.json({ok:false,error:'El slug publicado es permanente.',code:'slug_locked'},409)
+  const slug=publishedAt?current:requested
+  const duplicate=await c.env.DB.prepare('SELECT id FROM profiles WHERE slug=? AND id<>? LIMIT 1').bind(slug,String((row as any).profile_id)).first()
+  if(duplicate)return c.json({ok:false,error:'Ese slug ya está en uso.',code:'slug_taken'},409)
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE profiles SET name=?,slug=?,is_published=1,updated_at=datetime('now') WHERE id=?").bind(name,slug,String((row as any).profile_id)),
+    c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=?").bind(c.req.param('id')),
+  ])
+  return c.json({ok:true,data:{id:c.req.param('id'),name,slug,status:'published',public_url:webOrigin(c)+'/'+slug}})
+})
+
+app.post('/api/v1/superadmin/free-demo-v2/:id/unpublish',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  if(!String((row as any).published_at||''))return c.json({ok:false,error:'La Demo todavía no ha sido publicada.'},409)
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE profiles SET is_published=0,updated_at=datetime('now') WHERE id=?").bind(String((row as any).profile_id)),
+    c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='draft',updated_at=datetime('now') WHERE id=?").bind(c.req.param('id')),
+  ])
+  return c.json({ok:true})
+})
+
+app.post('/api/v1/superadmin/free-demo-v2/:id/claim-code',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  if(!Number((row as any).is_published||0)||!String((row as any).published_at||''))return c.json({ok:false,error:'Publica la presentación antes de generar el reclamo.'},409)
+  const raw=randomClaimCode(),hash=await sha256Hex(raw),claimId=crypto.randomUUID(),adminUserId=String(c.get('adminUserId')||'')
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='revoked' WHERE demo_id=? AND status IN('active','in_progress')").bind(c.req.param('id')),
+    c.env.DB.prepare("INSERT INTO free_demo_v2_claims(id,demo_id,special_email,slug_snapshot,code_hash,status,expires_at,created_by_admin_user_id) VALUES(?,?,?,?,?,'active',datetime('now','+30 days'),?)").bind(claimId,c.req.param('id'),CLAIM_EMAIL,String((row as any).slug),hash,adminUserId||null),
+    c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='claim_ready',updated_at=datetime('now') WHERE id=?").bind(c.req.param('id')),
+  ])
+  return c.json({ok:true,data:{special_email:CLAIM_EMAIL,slug:String((row as any).slug),claim_code:raw,expires_in_days:30}})
+})
+
+app.post('/api/v1/auth/free-demo-v2-claim/login',async(c:any)=>{
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
+  const email=cleanText(body.email,180).toLowerCase(),code=cleanText(body.code||body.password,40).toUpperCase()
+  if(email!==CLAIM_EMAIL||!code)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
+  const row=await c.env.DB.prepare("SELECT cl.id,cl.demo_id,d.profile_id,p.slug,p.name FROM free_demo_v2_claims cl JOIN free_demo_v2_profiles d ON d.id=cl.demo_id JOIN profiles p ON p.id=d.profile_id WHERE cl.special_email=? AND cl.code_hash=? AND cl.status='active' AND cl.expires_at>datetime('now') AND d.status='claim_ready' LIMIT 1").bind(CLAIM_EMAIL,await sha256Hex(code)).first()
+  if(!row)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
+  const lock=await c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='in_progress' WHERE id=? AND status='active'").bind(String((row as any).id)).run()
+  if(Number((lock as any)?.meta?.changes||0)!==1)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
+  return c.json({ok:true,data:{next_url:'/claim/free-demo',slug:String((row as any).slug),name:String((row as any).name)}},200,{'Set-Cookie':claimCookie(c,code)})
+})
+
+app.get('/api/v1/auth/free-demo-v2-claim/context',async(c:any)=>{
+  const row=await activeClaim(c)
+  if(!row)return c.json({ok:false,error:'El acceso de reclamo expiró.'},401)
+  return c.json({ok:true,data:{slug:String((row as any).slug),name:String((row as any).name),special_email:CLAIM_EMAIL}})
+})
+
+app.post('/api/v1/auth/free-demo-v2-claim/complete',async(c:any)=>{
+  const claim=await activeClaim(c)
+  if(!claim)return c.json({ok:false,error:'El acceso de reclamo expiró.'},401)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
+  const email=cleanText(body.new_email,180).toLowerCase(),password=String(body.password||'')
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email===CLAIM_EMAIL)return c.json({ok:false,error:'Usa un correo definitivo válido y diferente al correo Demo.'},400)
+  if(password.length<8||password.length>128)return c.json({ok:false,error:'La contraseña debe tener entre 8 y 128 caracteres.'},400)
+  if(await c.env.DB.prepare('SELECT id FROM users WHERE lower(email)=? LIMIT 1').bind(email).first())return c.json({ok:false,error:'Ese correo ya está vinculado a otra cuenta.'},409)
+
+  const userId=crypto.randomUUID(),credential=await passwordRecord(password),sessionRaw=randomToken(),sessionHash=await sha256Hex(sessionRaw)
+  const profileId=String((claim as any).profile_id),oldOwner=String((claim as any).synthetic_owner_user_id),demoId=String((claim as any).demo_id),claimId=String((claim as any).claim_id)
+  const template=parseJson((claim as any).template_data)
+  delete template.free_demo_v2
+  delete template.free_demo_v2_template_key
+  delete template.free_demo_v2_template_label
+  const ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Forwarded-For')||'',ua=c.req.header('User-Agent')||''
+  await c.env.DB.batch([
+    c.env.DB.prepare('INSERT INTO users(id,email) VALUES(?,?)').bind(userId,email),
+    c.env.DB.prepare("INSERT INTO user_password_credentials(user_id,password_salt,password_hash,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,0,NULL,datetime('now'),datetime('now'))").bind(userId,credential.salt,credential.hash),
+    c.env.DB.prepare("UPDATE profiles SET user_id=?,template_data=?,updated_at=datetime('now') WHERE id=? AND user_id=?").bind(userId,JSON.stringify(template),profileId,oldOwner),
+    c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='claimed',claimed_by_user_id=?,claimed_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND status='claim_ready'").bind(userId,demoId),
+    c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='used',used_at=datetime('now') WHERE id=? AND status='in_progress'").bind(claimId),
+    c.env.DB.prepare("INSERT INTO auth_sessions(id,user_id,session_hash,expires_at,ip,user_agent,created_at) VALUES(?,?,?,datetime('now','+30 days'),?,?,datetime('now'))").bind(crypto.randomUUID(),userId,sessionHash,ip,ua),
+  ])
+  const verify=await c.env.DB.prepare("SELECT p.user_id,d.status,cl.status claim_status FROM profiles p JOIN free_demo_v2_profiles d ON d.profile_id=p.id JOIN free_demo_v2_claims cl ON cl.demo_id=d.id WHERE p.id=? AND d.id=? AND cl.id=? LIMIT 1").bind(profileId,demoId,claimId).first()
+  if(String((verify as any)?.user_id||'')!==userId||String((verify as any)?.status||'')!=='claimed'||String((verify as any)?.claim_status||'')!=='used')return c.json({ok:false,error:'No se pudo verificar la transferencia final.'},500)
+  return c.json({ok:true,data:{slug:String((claim as any).slug),next_url:'/admin/free/credentials?claimed=1'}},200,{'Set-Cookie':sessionCookie(c,sessionRaw)})
+})
+
+export default app
