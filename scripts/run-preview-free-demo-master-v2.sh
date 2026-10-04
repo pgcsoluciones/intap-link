@@ -76,7 +76,27 @@ run npm ci
 
 echo; echo "▶ Contratos nuevos y protegidos"
 run node scripts/test-free-demo-master-v2-contract.mjs
-run node scripts/test-trial-contract.mjs
+
+# El contrato histórico Trial de main contiene una aserción textual obsoleta:
+# espera "Esta demostración ha finalizado.", mientras el baseline aprobado muestra
+# "Tu prueba gratuita ha finalizado." / "Esta presentación no está disponible temporalmente.".
+# No parcheamos Trial para satisfacer un test viejo. Verificamos que sus archivos
+# propios sean byte-a-byte iguales a main y el contrato v2 comprueba sus registros
+# compartidos (rutas, menú y orden antes del catch-all).
+for protected in \
+  api/src/trial-profiles.ts \
+  api/migrations/0071_trial_profiles_72h.sql \
+  api/migrations/0072_trial_crm_traceability.sql \
+  api/migrations/0073_trial_lifecycle_analytics.sql \
+  web/src/components/trial/KawvoTrial.tsx \
+  web/src/components/trial/TrialPanels.tsx \
+  web/src/components/trial/TrialImageCrop.tsx \
+  app/src/components/admin/SuperAdminTrials.tsx
+do
+  git diff --quiet "$REMOTE/main"...HEAD -- "$protected" || fail "Free Demo v2 modificó contrato protegido Trial: $protected"
+done
+echo "✓ Trial: fuentes funcionales intactas contra main; registros compartidos verificados por contrato v2"
+
 run node scripts/test-sponsored-profile-contract.mjs
 run node scripts/test-free-contact-agenda-contract.mjs
 run node scripts/test-ai-profile-canonical-limits.mjs
