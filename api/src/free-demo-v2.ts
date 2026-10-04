@@ -282,9 +282,7 @@ app.post('/api/v1/auth/free-demo-v2-claim/login',async(c:any)=>{
   if(email!==FREE_DEMO_V2_CLAIM_EMAIL||!code)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
   const row=await c.env.DB.prepare("SELECT cl.id,cl.demo_id,d.profile_id,p.slug,p.name FROM free_demo_v2_claims cl JOIN free_demo_v2_profiles d ON d.id=cl.demo_id JOIN profiles p ON p.id=d.profile_id WHERE cl.special_email=? AND cl.code_hash=? AND cl.status='active' AND cl.expires_at>datetime('now') AND d.status='claim_ready' LIMIT 1").bind(FREE_DEMO_V2_CLAIM_EMAIL,await sha256Hex(code)).first()
   if(!row)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
-  const lock=await c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='in_progress' WHERE id=? AND status='active'").bind(String((row as any).id)).run()
-  if(Number((lock as any)?.meta?.changes||0)!==1)return c.json({ok:false,error:'not_claim',code:'not_claim'},404)
-  return c.json({ok:true,data:{next_url:'/claim/free-demo',slug:String((row as any).slug),name:String((row as any).name)}},200,{'Set-Cookie':freeDemoClaimCookie(c.env,appOrigin(c),code)})
+  return c.json({ok:true,data:{next_url:'/claim/free-demo',slug:String((row as any).slug),name:String((row as any).name)}},200,{'Set-Cookie':freeDemoClaimCookie(c.env,appOrigin(c),code,30*60)})
 })
 
 app.get('/api/v1/auth/free-demo-v2-claim/context',async(c:any)=>{
