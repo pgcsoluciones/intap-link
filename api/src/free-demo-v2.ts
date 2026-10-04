@@ -60,7 +60,7 @@ app.get('/api/v1/superadmin/free-demo-v2/templates',requireSuperAdmin('viewer'),
 })
 
 app.get('/api/v1/superadmin/free-demo-v2',requireSuperAdmin('viewer'),async(c:any)=>{
-  const rows=await c.env.DB.prepare("SELECT d.id,d.profile_id,d.template_key,d.template_label,d.status,d.published_at,d.claimed_at,d.created_at,p.name,p.slug,p.is_published,p.hero_url FROM free_demo_v2_profiles d JOIN profiles p ON p.id=d.profile_id ORDER BY d.created_at DESC").all()
+  const rows=await c.env.DB.prepare("SELECT d.id,d.profile_id,d.template_key,d.template_label,d.status,d.published_at,d.claimed_at,d.created_at,d.claimed_by_user_id,p.name,p.slug,p.is_published,p.hero_url,owner.email claimed_owner_email FROM free_demo_v2_profiles d JOIN profiles p ON p.id=d.profile_id LEFT JOIN users owner ON owner.id=d.claimed_by_user_id ORDER BY d.created_at DESC").all()
   return c.json({ok:true,data:rows.results||[]})
 })
 
