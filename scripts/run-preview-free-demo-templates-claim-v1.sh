@@ -29,7 +29,8 @@ Alcance:
 - excepción exacta: intapcard@gmail.com
 - cada Demo Free usa un owner interno independiente
 - catálogo precargado de los principales rubros
-- intapcard crea Demos con nombre + slug y entra al panel Free real
+- SuperAdmin genera un código Demo desde una plantilla MASTER
+- intapcard consume ese código y recién entonces nace el borrador independiente
 - Demos usan textos/imágenes del Free Starter aprobado
 - incluye Horario + Cotizar + Agenda
 - flujo Borrador → Publicado → Reclamo
@@ -53,8 +54,10 @@ git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergi
 cat > "$LOG_DIR/allowed.txt" <<'EOF_ALLOWED'
 api/migrations-preview/0085_free_demo_templates_claim.sql
 api/migrations-preview/0086_free_demo_management_sessions.sql
+api/migrations-preview/0087_free_demo_template_codes.sql
 api/migrations/0085_free_demo_templates_claim.sql
 api/migrations/0086_free_demo_management_sessions.sql
+api/migrations/0087_free_demo_template_codes.sql
 api/src/free-demo-core.ts
 api/src/free-demo-routes.ts
 api/src/account-home-route.ts
@@ -67,6 +70,7 @@ app/src/components/admin/FreeDemoClaim.tsx
 app/src/components/admin/SuperAdminFreeDemos.tsx
 app/src/components/admin/SuperAdminLayout.tsx
 app/src/components/admin/free/FreeDemoManager.tsx
+app/src/components/admin/free/FreeDemoEditEntry.tsx
 app/src/components/admin/free/FreeDemoManagementBridge.tsx
 app/src/components/admin/free/onboarding/FreeArtifactActivation.tsx
 scripts/run-preview-free-demo-templates-claim-v1.sh
@@ -88,8 +92,8 @@ echo; echo "▶ Aplicar migraciones pendientes SOLO en D1 Preview"
 (cd api && npx wrangler d1 migrations apply "$PREVIEW_DB" --remote --config wrangler.preview.toml) 2>&1 | tee "$LOG_DIR/d1-migrations.log"
 
 echo; echo "▶ Verificar tablas nuevas en Preview"
-TABLES="$(cd api && npx wrangler d1 execute "$PREVIEW_DB" --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('free_demo_templates','free_demo_profiles','free_demo_claims','free_demo_claim_sessions','free_demo_management_sessions') ORDER BY name;" 2>/dev/null || true)"
-for table in free_demo_templates free_demo_profiles free_demo_claims free_demo_claim_sessions free_demo_management_sessions; do
+TABLES="$(cd api && npx wrangler d1 execute "$PREVIEW_DB" --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('free_demo_templates','free_demo_profiles','free_demo_claims','free_demo_claim_sessions','free_demo_management_sessions','free_demo_template_codes') ORDER BY name;" 2>/dev/null || true)"
+for table in free_demo_templates free_demo_profiles free_demo_claims free_demo_claim_sessions free_demo_management_sessions free_demo_template_codes; do
   echo "$TABLES" | grep -Fq "$table" || fail "Falta tabla Preview $table"
 done
 echo "✓ D1 Preview listo"
@@ -166,28 +170,29 @@ Feature SHA: $(git rev-parse HEAD)
 App origin:  $APP_ORIGIN
 
 QA MANUAL:
-1. Iniciar sesión con intapcard@gmail.com.
-2. Debe abrir “Mis perfiles Demo Free”.
-3. Crear una Demo desde una plantilla precargada:
-   - Rubro: Ferretería o Diseño / Serigrafía / Impresión
-   - Nombre real de prueba
-   - slug propio.
-4. Confirmar que nace en Borrador con imágenes y textos del rubro.
-5. Pulsar “Entrar al panel Free”.
-6. Debe abrir el panel Free REAL de esa Demo.
-7. Editar portada/avatar, nombre, servicios y portafolio desde el panel aprobado.
-8. Confirmar Horario, Cotizar / información y Agenda.
-9. Pulsar “Volver a Mis Demos” y confirmar retorno a intapcard.
-10. Publicar y revisar el perfil público en Preview; imágenes deben cargar.
-11. Desde SuperAdmin → Demos Free, generar código de reclamo.
-12. En login usar intapcard@gmail.com + código de reclamo.
-13. Debe abrir SOLO credenciales del slug reclamado.
-14. Colocar correo definitivo nuevo + contraseña nueva.
-15. Debe quedar como dueño de un Free independiente.
-16. El código ya NO debe funcionar otra vez.
-17. El perfil reclamado desaparece de Mis perfiles Demo Free.
-18. Una cuenta normal sigue limitada a su único perfil.
-19. Trial no cambió.
-20. Producción NO fue tocada.
+1. SuperAdmin → Demos Free.
+2. Elegir una plantilla base, por ejemplo Diseño / Serigrafía / Impresión.
+3. Pulsar “Generar código Demo”.
+4. Confirmar que se muestra un código DMO-XXXX-XXXX-XXXX.
+5. Iniciar sesión con intapcard@gmail.com.
+6. Debe abrir “Mis Demos Free”.
+7. Pegar el código Demo y pulsar “Crear borrador y editar”.
+8. Debe abrir /admin/free/demos/edit/:id y luego el panel Free REAL de esa copia.
+9. Confirmar que el borrador heredó imágenes/textos del rubro, sin Servicios, y con los mismos módulos/límites del Free actual.
+10. Editar portada/avatar, nombre, portafolio, ubicación, botones y demás módulos Free disponibles.
+11. Confirmar Horario, Cotizar / información y Agenda.
+12. Volver a Mis Demos.
+13. Pulsar “Finalizar y publicar”.
+14. Definir nombre final + slug final.
+15. Confirmar que el perfil público abre en /slug.
+16. Volver a borrador y republicar: el slug final debe permanecer bloqueado.
+17. Desde SuperAdmin generar el código de reclamo FINAL (distinto al código Demo de creación).
+18. En login usar intapcard@gmail.com + código de reclamo.
+19. Colocar correo definitivo nuevo + contraseña nueva.
+20. El perfil reclamado debe salir de Mis Demos y quedar como Free independiente.
+21. Código Demo y código de reclamo son de un solo uso.
+22. Cuenta Free normal conserva sus límites y ownership.
+23. Trial no cambió.
+24. Producción NO fue tocada.
 ================================================================
 EOF
