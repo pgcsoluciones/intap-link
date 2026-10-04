@@ -15,7 +15,7 @@ async function passwordHash(password:string,saltHex:string){const salt=new Uint8
 async function newPasswordRecord(password:string){const salt=crypto.getRandomValues(new Uint8Array(16)),saltHex=hex(salt);return{salt:saltHex,hash:await passwordHash(password,saltHex)}}
 async function sessionUser(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return null;return c.env.DB.prepare("SELECT s.user_id,u.email FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.session_hash=? AND s.expires_at>datetime('now') AND s.revoked_at IS NULL LIMIT 1").bind(await sha256Hex(raw)).first()}
 async function requireDemoManager(c:any,next:any){const row=await sessionUser(c);if(!row||String((row as any).email||'').trim().toLowerCase()!==FREE_DEMO_MANAGER_EMAIL)return c.json({ok:false,error:'Forbidden'},403);c.set('freeDemoManagerUserId',String((row as any).user_id));await next()}
-async function activeClaimSession(c:any){const raw=parseCookie(c.req.header('Cookie')||'',claimCookieName(c));if(!raw)return null;return c.env.DB.prepare("SELECT s.id session_id,c.id claim_id,c.demo_id,c.special_email,d.profile_id,d.synthetic_owner_user_id,d.artifact_id,p.slug,p.name FROM free_demo_claim_sessions s JOIN free_demo_claims c ON c.id=s.claim_id JOIN free_demo_profiles d ON d.id=c.demo_id JOIN profiles p ON p.id=d.profile_id WHERE s.token_hash=? AND s.consumed_at IS NULL AND s.expires_at>datetime('now') AND c.status='in_progress' AND d.status='claim_ready' LIMIT 1").bind(await sha256Hex(raw)).first()}
+async function activeClaimSession(c:any){const raw=parseCookie(c.req.header('Cookie')||'',claimCookieName(c));if(!raw)return null;return c.env.DB.prepare("SELECT s.id session_id,c.id claim_id,c.demo_id,c.special_email,d.profile_id,d.synthetic_owner_user_id,d.artifact_id,p.slug,p.name,p.template_data FROM free_demo_claim_sessions s JOIN free_demo_claims c ON c.id=s.claim_id JOIN free_demo_profiles d ON d.id=c.demo_id JOIN profiles p ON p.id=d.profile_id WHERE s.token_hash=? AND s.consumed_at IS NULL AND s.expires_at>datetime('now') AND c.status='in_progress' AND d.status='claim_ready' LIMIT 1").bind(await sha256Hex(raw)).first()}
 
 app.get('/api/v1/superadmin/free-demo/templates',requireSuperAdmin('super_admin'),async(c:any)=>{
   const rows=await c.env.DB.prepare("SELECT t.*,COUNT(d.id) demo_count FROM free_demo_templates t LEFT JOIN free_demo_profiles d ON d.template_id=t.id GROUP BY t.id ORDER BY t.is_default DESC,t.created_at DESC").all()
@@ -53,8 +53,8 @@ app.get('/api/v1/superadmin/free-demo/profiles',requireSuperAdmin('super_admin')
 })
 
 app.post('/api/v1/superadmin/free-demo/profiles/:id/claim-code',requireSuperAdmin('super_admin'),async(c:any)=>{
-  const id=c.req.param('id'),row=await c.env.DB.prepare("SELECT d.id,d.status,p.slug FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? LIMIT 1").bind(id).first()
-  if(!row)return c.json({ok:false,error:'Demo no encontrada.'},404);if(String((row as any).status)==='claimed')return c.json({ok:false,error:'Este perfil ya fue reclamado.'},409)
+  const id=c.req.param('id'),row=await c.env.DB.prepare("SELECT d.id,d.status,p.slug,p.is_published FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? LIMIT 1").bind(id).first()
+  if(!row)return c.json({ok:false,error:'Demo no encontrada.'},404);if(String((row as any).status)==='claimed')return c.json({ok:false,error:'Este perfil ya fue reclamado.'},409);if(Number((row as any).is_published||0)!==1)return c.json({ok:false,error:'Publica la Demo antes de generar el código de reclamo.'},409)
   const raw=randomCode(),hash=await sha256Hex(raw),claimId=crypto.randomUUID()
   await c.env.DB.batch([
     c.env.DB.prepare("UPDATE free_demo_claims SET status='revoked' WHERE demo_id=? AND status IN ('active','in_progress')").bind(id),
@@ -109,10 +109,15 @@ app.post('/api/v1/auth/free-demo-claim/complete',async(c:any)=>{
   if(password.length<8||password.length>128)return c.json({ok:false,error:'La contraseña debe tener entre 8 y 128 caracteres.'},400)
   if(await c.env.DB.prepare('SELECT id FROM users WHERE lower(email)=? LIMIT 1').bind(email).first())return c.json({ok:false,error:'Ese correo ya está vinculado a otra cuenta. Usa un correo disponible.'},409)
   const profileId=String((claim as any).profile_id),oldOwner=String((claim as any).synthetic_owner_user_id),demoId=String((claim as any).demo_id),claimId=String((claim as any).claim_id),userId=crypto.randomUUID(),cred=await newPasswordRecord(password),rawSession=randomToken(),sessionHash=await sha256Hex(rawSession),ip=c.req.header('CF-Connecting-IP')||c.req.header('X-Forwarded-For')||'',ua=c.req.header('User-Agent')||''
+  let cleanTemplate:any={}
+  try{cleanTemplate=JSON.parse(String((claim as any).template_data||'{}'))||{}}catch{cleanTemplate={}}
+  delete cleanTemplate.free_demo_profile
+  delete cleanTemplate.free_demo_manager_email
+  delete cleanTemplate.free_demo_seed
   await c.env.DB.batch([
     c.env.DB.prepare('INSERT INTO users(id,email) VALUES(?,?)').bind(userId,email),
     c.env.DB.prepare("INSERT INTO user_password_credentials(user_id,password_salt,password_hash,failed_attempts,locked_until,created_at,updated_at) VALUES(?,?,?,0,NULL,datetime('now'),datetime('now'))").bind(userId,cred.salt,cred.hash),
-    c.env.DB.prepare("UPDATE profiles SET user_id=?,updated_at=datetime('now') WHERE id=? AND user_id=?").bind(userId,profileId,oldOwner),
+    c.env.DB.prepare("UPDATE profiles SET user_id=?,template_data=?,updated_at=datetime('now') WHERE id=? AND user_id=?").bind(userId,JSON.stringify(cleanTemplate),profileId,oldOwner),
     c.env.DB.prepare("UPDATE intap_artifacts SET owner_user_id=?,updated_at=datetime('now') WHERE profile_id=? AND owner_user_id=?").bind(userId,profileId,oldOwner),
     c.env.DB.prepare("UPDATE free_demo_profiles SET status='claimed',claimed_by_user_id=?,claimed_at=datetime('now'),updated_at=datetime('now') WHERE id=? AND status='claim_ready'").bind(userId,demoId),
     c.env.DB.prepare("UPDATE free_demo_claims SET status='used',used_at=datetime('now') WHERE id=? AND status='in_progress'").bind(claimId),
