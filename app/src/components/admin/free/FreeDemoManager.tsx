@@ -69,7 +69,7 @@ export default function FreeDemoManager(){
         <p className="text-xs font-black uppercase tracking-[.2em] text-cyan-700">KAWVO LINK</p>
         <h1 className="mt-2 text-3xl font-black">Mis perfiles Demo Free</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Crea una presentación desde una plantilla precargada del rubro y luego entra al panel Free real para cambiar nombre, slug, imágenes, servicios, portafolio, horario, cotización y agenda.
+          Crea una presentación desde una plantilla precargada del rubro y luego entra al panel Free real para cambiar nombre, slug, imágenes, portafolio, horario, cotización, agenda y los demás módulos Free realmente disponibles.
         </p>
       </header>
 
@@ -80,7 +80,7 @@ export default function FreeDemoManager(){
           <div>
             <p className="text-xs font-black uppercase tracking-[.15em] text-cyan-700">Nueva Demo</p>
             <h2 className="mt-1 text-xl font-black">Crear desde plantilla precargada</h2>
-            <p className="mt-1 text-sm text-slate-500">Las imágenes y textos iniciales vienen del banco Free aprobado para ese rubro.</p>
+            <p className="mt-1 text-sm text-slate-500">Las imágenes y textos iniciales vienen del banco Free aprobado para ese rubro y respetan exactamente los mismos módulos y límites del perfil Free.</p>
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
