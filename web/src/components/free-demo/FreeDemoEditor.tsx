@@ -73,7 +73,7 @@ export default function FreeDemoEditor(){
   },[data])
 
   const save=async()=>{
-    if(!data)return
+    if(!data)return false
     setSaving(true);setNotice('')
     try{
       const p=data.profile,td=p.template_data||{}
@@ -91,7 +91,11 @@ export default function FreeDemoEditor(){
       })})
       setNotice('Borrador guardado.')
       await load()
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar.')}finally{setSaving(false)}
+      return true
+    }catch(e){
+      setError(e instanceof Error?e.message:'No pudimos guardar.')
+      return false
+    }finally{setSaving(false)}
   }
 
   const upload=async(kind:'avatar'|'hero'|'portfolio',file?:File,index?:number)=>{
@@ -111,7 +115,9 @@ export default function FreeDemoEditor(){
     if(!data)return
     setSaving(true)
     try{
-      await save()
+      const saved=await save()
+      if(!saved)return
+      setSaving(true)
       const j=await api('/superadmin/free-demo-v2/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify({name:finalName,slug:finalSlug})})
       setPublishOpen(false);setNotice('Presentación publicada: '+j.data.public_url);await load()
     }catch(e){setError(e instanceof Error?e.message:'No pudimos publicar.')}finally{setSaving(false)}
