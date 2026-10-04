@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS free_demo_v2_profiles (
     CHECK (status IN ('draft','published','claim_ready','claimed','disabled')),
   published_at TEXT,
   claimed_by_user_id TEXT,
+  claimed_owner_email TEXT,
   claimed_at TEXT,
   created_by_admin_user_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
