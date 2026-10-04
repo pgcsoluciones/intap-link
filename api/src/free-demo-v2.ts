@@ -120,3 +120,126 @@ app.post('/api/v1/superadmin/free-demo-v2',requireSuperAdmin('super_admin'),asyn
   await logAdminAction({db:c.env.DB,adminUserId,action:'free_demo_v2.create',targetType:'profile',targetId:profileId,after:{demo_id:demoId,template_key:def.key,status:'draft'}}).catch(()=>undefined)
   return c.json({ok:true,data:{id:demoId,status:'draft',edit_url:webOrigin(c)+'/free-demo/edit/'+demoId}},201)
 })
+
+
+app.get('/api/v1/superadmin/free-demo-v2/:id/editor',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'))
+  if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  const profileId=String((row as any).profile_id)
+  const [contact,social,gallery,links,settings,availability,products]=await Promise.all([
+    c.env.DB.prepare('SELECT whatsapp,email,phone,address,map_url FROM profile_contact WHERE profile_id=? LIMIT 1').bind(profileId).first(),
+    c.env.DB.prepare('SELECT id,type,url,sort_order,enabled FROM profile_social_links WHERE profile_id=? AND enabled=1 ORDER BY sort_order ASC LIMIT 3').bind(profileId).all(),
+    c.env.DB.prepare('SELECT id,image_key,alt_text,title,description,sort_order FROM profile_gallery WHERE profile_id=? ORDER BY sort_order ASC LIMIT 10').bind(profileId).all(),
+    c.env.DB.prepare('SELECT id,label,url,sort_order,is_active FROM profile_links WHERE profile_id=? AND is_active=1 ORDER BY sort_order ASC LIMIT 3').bind(profileId).all(),
+    getAppointmentSettings(c.env.DB,'free',profileId),
+    getAppointmentAvailabilityRows(c.env.DB,'free',profileId),
+    c.env.DB.prepare('SELECT COUNT(*) AS n FROM profile_products WHERE profile_id=?').bind(profileId).first(),
+  ])
+  if(Number((products as any)?.n||0)!==0)return c.json({ok:false,error:'Contrato Demo Free inválido: Servicios debe permanecer vacío.'},409)
+  return c.json({ok:true,data:{
+    id:String((row as any).id),
+    status:String((row as any).status),
+    template_key:String((row as any).template_key),
+    template_label:String((row as any).template_label),
+    published_at:(row as any).published_at||null,
+    profile:{
+      id:profileId,slug:String((row as any).slug||''),name:String((row as any).name||''),bio:String((row as any).bio||''),
+      category:String((row as any).category||''),subcategory:String((row as any).subcategory||''),
+      layout_id:String((row as any).layout_id||'impacto'),free_palette_id:String((row as any).free_palette_id||'intap'),
+      free_brand_color:String((row as any).free_brand_color||''),avatar_url:String((row as any).avatar_url||''),hero_url:String((row as any).hero_url||''),
+      hero_position_x:Number((row as any).hero_position_x||50),hero_position_y:Number((row as any).hero_position_y||50),hero_zoom:Number((row as any).hero_zoom||1),
+      template_data:parseJson((row as any).template_data),is_published:Boolean(Number((row as any).is_published||0)),
+    },
+    contact:contact||{},quick_actions:social.results||[],portfolio:gallery.results||[],links:links.results||[],
+    experience:{appointment_enabled:settings.enabled,slot_minutes:settings.slot_minutes,min_notice_minutes:settings.min_notice_minutes,horizon_days:settings.horizon_days,timezone:settings.timezone,reason_mode:settings.reason_mode,availability},
+    limits:{portfolio:MAX_PORTFOLIO,quick_actions:MAX_QUICK_ACTIONS,links:MAX_LINKS,services:0},
+  }})
+})
+
+app.patch('/api/v1/superadmin/free-demo-v2/:id/profile',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'))
+  if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  if(String((row as any).status)==='claimed')return c.json({ok:false,error:'Este perfil ya fue reclamado.'},409)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const profileId=String((row as any).profile_id),currentTemplate=parseJson((row as any).template_data)
+  const role=body.role!==undefined?cleanText(body.role,100):cleanText(currentTemplate.role,100)
+  const portfolioTitle=body.portfolio_title!==undefined?cleanText(body.portfolio_title,80):cleanText(currentTemplate.portfolio_title||'Mis trabajos',80)
+  const scheduleVisible=body.schedule_visible===undefined?currentTemplate.free_schedule_visible!==false:Boolean(body.schedule_visible)
+  const quoteVisible=body.quote_button_visible===undefined?currentTemplate.free_quote_button_visible!==false:Boolean(body.quote_button_visible)
+  const nextTemplate={...currentTemplate,role,portfolio_title:portfolioTitle,free_schedule_visible:scheduleVisible,free_quote_button_visible:quoteVisible,free_demo_v2:true}
+  const layout=body.layout_id!==undefined?cleanText(body.layout_id,20):String((row as any).layout_id||'impacto')
+  const palette=body.free_palette_id!==undefined?cleanText(body.free_palette_id,20):String((row as any).free_palette_id||'intap')
+  if(!LAYOUTS.has(layout)||!PALETTES.has(palette))return c.json({ok:false,error:'Diseño o paleta no válidos.'},400)
+  const brand=body.free_brand_color===undefined?String((row as any).free_brand_color||''):cleanText(body.free_brand_color,7).toUpperCase()
+  if(brand&&!/^#[0-9A-F]{6}$/.test(brand))return c.json({ok:false,error:'Color de marca no válido.'},400)
+  const name=body.name!==undefined?cleanText(body.name,100):String((row as any).name||'')
+  const bio=body.bio!==undefined?cleanText(body.bio,1200):String((row as any).bio||'')
+  const contact=body.contact&&typeof body.contact==='object'?body.contact:{}
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE profiles SET name=?,bio=?,layout_id=?,free_palette_id=?,free_brand_color=?,template_data=?,updated_at=datetime('now') WHERE id=?").bind(name,bio,layout,palette,brand||null,JSON.stringify(nextTemplate),profileId),
+    c.env.DB.prepare("INSERT INTO profile_contact(profile_id,whatsapp,email,phone,hours,address,map_url) VALUES(?,?,?,?,?,?,?) ON CONFLICT(profile_id) DO UPDATE SET whatsapp=excluded.whatsapp,email=excluded.email,phone=excluded.phone,address=excluded.address,map_url=excluded.map_url,updated_at=datetime('now')").bind(profileId,cleanText(contact.whatsapp,40)||null,cleanText(contact.email,180)||null,cleanText(contact.phone,40)||null,null,cleanText(contact.address,240)||null,cleanText(contact.map_url,600)||null),
+    c.env.DB.prepare("UPDATE free_demo_v2_profiles SET updated_at=datetime('now') WHERE id=?").bind(c.req.param('id')),
+  ])
+  return c.json({ok:true})
+})
+
+app.put('/api/v1/superadmin/free-demo-v2/:id/quick-actions',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const items=(Array.isArray(body.items)?body.items:[]).slice(0,MAX_QUICK_ACTIONS).map((item:any)=>({type:cleanText(item.type,20),url:cleanText(item.url,800)})).filter((item:any)=>QUICK_TYPES.has(item.type)&&item.url)
+  const profileId=String((row as any).profile_id),statements:any[]=[c.env.DB.prepare('DELETE FROM profile_social_links WHERE profile_id=?').bind(profileId)]
+  items.forEach((item:any,index:number)=>statements.push(c.env.DB.prepare('INSERT INTO profile_social_links(id,profile_id,type,url,sort_order,enabled) VALUES(?,?,?,?,?,1)').bind('demo-v2:'+c.req.param('id')+':quick:'+(index+1),profileId,item.type,item.url,index)))
+  await c.env.DB.batch(statements)
+  return c.json({ok:true,data:{items}})
+})
+
+app.put('/api/v1/superadmin/free-demo-v2/:id/links',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const items=(Array.isArray(body.items)?body.items:[]).slice(0,MAX_LINKS).map((item:any)=>({label:cleanText(item.label,80),url:cleanText(item.url,800)})).filter((item:any)=>item.label&&item.url)
+  const profileId=String((row as any).profile_id),statements:any[]=[c.env.DB.prepare('DELETE FROM profile_links WHERE profile_id=?').bind(profileId)]
+  items.forEach((item:any,index:number)=>statements.push(c.env.DB.prepare("INSERT INTO profile_links(id,profile_id,label,url,sort_order,is_active,updated_at,created_at) VALUES(?,?,?,?,?,1,datetime('now'),datetime('now'))").bind('demo-v2:'+c.req.param('id')+':link:'+(index+1),profileId,item.label,item.url,index)))
+  await c.env.DB.batch(statements)
+  return c.json({ok:true,data:{items}})
+})
+
+app.put('/api/v1/superadmin/free-demo-v2/:id/portfolio',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const items=(Array.isArray(body.items)?body.items:[]).slice(0,MAX_PORTFOLIO).map((item:any)=>({image_key:cleanText(item.image_key,1200),title:cleanText(item.title,80),description:cleanText(item.description,240)})).filter((item:any)=>item.image_key)
+  const profileId=String((row as any).profile_id),statements:any[]=[c.env.DB.prepare('DELETE FROM profile_gallery WHERE profile_id=?').bind(profileId)]
+  items.forEach((item:any,index:number)=>statements.push(c.env.DB.prepare('INSERT INTO profile_gallery(id,profile_id,image_key,alt_text,title,description,sort_order) VALUES(?,?,?,?,?,?,?)').bind('demo-v2:'+c.req.param('id')+':portfolio:'+(index+1),profileId,item.image_key,item.title||'Trabajo '+(index+1),item.title||'Trabajo '+(index+1),item.description,index)))
+  await c.env.DB.batch(statements)
+  return c.json({ok:true,data:{items}})
+})
+
+app.post('/api/v1/superadmin/free-demo-v2/:id/media',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  const kind=cleanText(c.req.query('kind')||'portfolio',20)
+  if(!['avatar','hero','portfolio'].includes(kind))return c.json({ok:false,error:'Tipo de imagen no válido.'},400)
+  const form=await c.req.formData(),raw=form.get('file')
+  if(!(raw&&typeof raw==='object'&&'stream' in (raw as any)))return c.json({ok:false,error:'Archivo requerido.'},400)
+  const file=raw as File,types:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'},ext=types[file.type]
+  if(!ext)return c.json({ok:false,error:'Usa JPG, PNG o WEBP.'},400)
+  if(Number(file.size||0)>8*1024*1024)return c.json({ok:false,error:'La imagen supera 8 MB.'},413)
+  const key='free-demo-v2/'+c.req.param('id')+'/'+kind+'/'+crypto.randomUUID()+'.'+ext
+  await c.env.BUCKET.put(key,file.stream(),{httpMetadata:{contentType:file.type}})
+  const url=webOrigin(c)+'/api/v1/public/assets/'+key.split('/').map(encodeURIComponent).join('/')
+  if(kind==='avatar'||kind==='hero')await c.env.DB.prepare('UPDATE profiles SET '+(kind==='avatar'?'avatar_url':'hero_url')+"=?,updated_at=datetime('now') WHERE id=?").bind(url,String((row as any).profile_id)).run()
+  return c.json({ok:true,data:{url,key}})
+})
+
+app.put('/api/v1/superadmin/free-demo-v2/:id/experience',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'));if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const profileId=String((row as any).profile_id),template=parseJson((row as any).template_data)
+  const scheduleVisible=body.schedule_visible!==false,quoteVisible=body.quote_button_visible!==false,appointmentEnabled=body.appointment_enabled===true
+  if(!quoteVisible&&!appointmentEnabled)return c.json({ok:false,error:'Mantén visible Cotizar o Agenda.'},400)
+  const availability=(Array.isArray(body.availability)?body.availability:[]).slice(0,28)
+  await saveAppointmentConfiguration(c.env.DB,'free',profileId,{enabled:appointmentEnabled,slot_minutes:body.slot_minutes,min_notice_minutes:body.min_notice_minutes,horizon_days:body.horizon_days,timezone:body.timezone,reason_mode:'default',availability})
+  const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
+  const schedule=availability.filter((item:any)=>item.enabled!==false).map((item:any)=>({day:days[Number(item.weekday)]||'',hours:cleanText(item.start_time,5)+' - '+cleanText(item.end_time,5)}))
+  const next={...template,free_schedule_visible:scheduleVisible,free_quote_button_visible:quoteVisible,free_schedule_configured:true,free_schedule:schedule}
+  await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(next),profileId).run()
+  return c.json({ok:true})
+})
