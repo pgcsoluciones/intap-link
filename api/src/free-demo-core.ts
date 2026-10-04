@@ -11,26 +11,17 @@ export type FreeDemoPresetDefinition={
   category:string
   role?:string
   bio?:string
-  services?:Array<{title:string;description:string}>
 }
 
 export const FREE_DEMO_CATALOG:FreeDemoPresetDefinition[]=[
-  {key:'hardware',label:'Ferretería',hint:'Herramientas, materiales, plomería y hogar',category:'Construcción e ingeniería',role:'Ferretería y soluciones para tu proyecto',bio:'Herramientas, materiales y soluciones para construcción, reparación, mantenimiento y mejoras del hogar.',services:[
-    {title:'Herramientas y equipos',description:'Opciones para construcción, reparación, instalación y mantenimiento.'},
-    {title:'Plomería, hogar y acabados',description:'Productos para instalaciones, reparaciones y mejoras de tus espacios.'},
-    {title:'Cotiza tu proyecto',description:'Consulta disponibilidad, precios y materiales para tu próxima compra.'},
-  ]},
+  {key:'hardware',label:'Ferretería',hint:'Herramientas, materiales, plomería y hogar',category:'Construcción e ingeniería',role:'Ferretería y soluciones para tu proyecto',bio:'Herramientas, materiales y soluciones para construcción, reparación, mantenimiento y mejoras del hogar.'},
   {key:'auto',label:'Taller automotriz / Mecánica',hint:'Mecánica, diagnóstico, pintura y detailing',category:'Automotriz y mecánica'},
   {key:'beauty',label:'Belleza / Salón',hint:'Peluquería, uñas, estética y cuidado personal',category:'Belleza y estética'},
   {key:'health',label:'Salud / Bienestar',hint:'Médicos, terapeutas, fisioterapia y bienestar',category:'Salud y bienestar'},
   {key:'food',label:'Restaurante / Repostería',hint:'Comida, cafetería, catering y repostería',category:'Gastronomía y alimentos'},
   {key:'professional',label:'Servicios profesionales',hint:'Abogados, contables, consultores y asesores',category:'Servicios profesionales'},
   {key:'technical',label:'Técnicos / Instalaciones',hint:'Electricidad, plomería, A/C y mantenimiento',category:'Mantenimiento e instalaciones técnicas'},
-  {key:'printing',label:'Diseño / Serigrafía / Impresión',hint:'Diseño gráfico, impresión, branding y producción',category:'Arte, diseño y creatividad',role:'Diseño, serigrafía e impresión',bio:'Diseño, impresión y producción visual para marcas, negocios, eventos y proyectos personalizados.',services:[
-    {title:'Diseño y artes gráficas',description:'Diseño de piezas visuales, identidad y preparación de artes para impresión.'},
-    {title:'Serigrafía e impresión',description:'Producción de piezas impresas y personalizadas para marcas, negocios y eventos.'},
-    {title:'Pedidos personalizados',description:'Cotiza cantidades, acabados, medidas y opciones según tu proyecto.'},
-  ]},
+  {key:'printing',label:'Diseño / Serigrafía / Impresión',hint:'Diseño gráfico, impresión, branding y producción',category:'Arte, diseño y creatividad',role:'Diseño, serigrafía e impresión',bio:'Diseño, impresión y producción visual para marcas, negocios, eventos y proyectos personalizados.'},
   {key:'retail',label:'Tienda / Comercio',hint:'Productos, ventas, retail y tiendas virtuales',category:'Comercio, retail y tiendas virtuales'},
   {key:'realestate',label:'Inmobiliaria',hint:'Venta, alquiler y gestión de propiedades',category:'Inmobiliaria y propiedades'},
   {key:'construction',label:'Construcción / Ingeniería',hint:'Obras, remodelación, arquitectura e ingeniería',category:'Construcción e ingeniería'},
@@ -74,11 +65,6 @@ export function freeDemoPreset(key:string,webOrigin=''):DemoSnapshot{
   const starter=resolveFreeStarterContent(definition.category)
   const assets=[...((FREE_PROFILE_STARTER_ASSETS as Record<string,readonly string[]>)[starter.category]||[])]
   const urls=assets.map(x=>absoluteAsset(webOrigin,x))
-  const services=(definition.services?.length?definition.services:starter.services).slice(0,3).map((x:any,i:number)=>({
-    title:String(x.title||'Servicio'),
-    description:String(x.description||''),
-    image_url:urls[i+3]||urls[i+2]||urls[0]||'',
-  }))
   const gallery=[2,3,4,5,6].map((n,i)=>({
     title:`Trabajo ${i+1}`,
     description:'Imagen de ejemplo del rubro. Sustitúyela por una foto real antes de entregar el perfil.',
@@ -104,12 +90,9 @@ export function freeDemoPreset(key:string,webOrigin=''):DemoSnapshot{
       {type:'instagram',url:'https://www.instagram.com/kawvolink'},
       {type:'location',url:locationUrl},
     ],
-    services,
     gallery,
     template_data:{
       role,
-      services_section_title:starter.servicesTitle,
-      services_section_description:starter.servicesDescription,
       free_identity_confirmed:true,
       free_quote_button_visible:true,
       free_schedule_visible:true,
@@ -191,14 +174,12 @@ export async function applyFreeDemoPreset(db:D1Database,input:{
       .bind(input.profileId,snap.contact.whatsapp,snap.contact.email,snap.contact.phone,null,snap.contact.address,snap.contact.map_url),
     db.prepare("DELETE FROM profile_social_links WHERE profile_id=? AND id LIKE 'demo:%'").bind(input.profileId),
     db.prepare("DELETE FROM profile_gallery WHERE profile_id=?").bind(input.profileId),
-    db.prepare("DELETE FROM profile_products WHERE profile_id=?").bind(input.profileId),
   ]
   snap.quick_actions.slice(0,3).forEach((x,i)=>{
     const id=x.type==='call'?quickIds.call:x.type==='instagram'?quickIds.instagram:quickIds.location
     statements.push(db.prepare('INSERT INTO profile_social_links(id,profile_id,type,url,sort_order,enabled) VALUES(?,?,?,?,?,1)').bind(id,input.profileId,x.type,x.url,i))
   })
   snap.gallery.slice(0,10).forEach((x,i)=>statements.push(db.prepare('INSERT INTO profile_gallery(id,profile_id,image_key,alt_text,title,description,sort_order) VALUES(?,?,?,?,?,?,?)').bind(`demo:${input.profileId}:gallery:${i+1}`,input.profileId,x.image_key,x.alt_text||x.title,x.title,x.description||'',i)))
-  snap.services.slice(0,3).forEach((x,i)=>statements.push(db.prepare('INSERT INTO profile_products(id,profile_id,title,description,price,image_url,whatsapp_text,is_featured,sort_order) VALUES(?,?,?,?,NULL,?,NULL,0,?)').bind(`demo:${input.profileId}:service:${i+1}`,input.profileId,x.title,x.description,x.image_url||null,i)))
   await db.batch(statements)
   await ensureAppointmentSubject(db,'free',input.profileId)
   await db.prepare("UPDATE appointment_settings SET enabled=1,updated_at=datetime('now') WHERE subject_type='free' AND subject_id=?").bind(input.profileId).run()
