@@ -44,7 +44,6 @@ type DemoSnapshot={
   hero_url:string
   contact:{whatsapp:string;phone:string;email:string;address:string;map_url:string}
   quick_actions:Array<{type:string;url:string}>
-  services:Array<{title:string;description:string;image_url:string}>
   gallery:Array<{title:string;description:string;image_key:string;alt_text:string}>
   template_data:Record<string,any>
 }
