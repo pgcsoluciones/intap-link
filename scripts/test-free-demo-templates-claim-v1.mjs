@@ -2,9 +2,10 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read=(p)=>readFile(p,'utf8')
-const [migration,managementMigration,core,routes,scan,entry,home,app,guard,login,activation,superAdmin,layout,manager,bridge,claim]=await Promise.all([
+const [migration,managementMigration,templateCodeMigration,core,routes,scan,entry,home,app,guard,login,activation,superAdmin,layout,manager,editEntry,bridge,claim]=await Promise.all([
   read('api/migrations-preview/0085_free_demo_templates_claim.sql'),
   read('api/migrations-preview/0086_free_demo_management_sessions.sql'),
+  read('api/migrations-preview/0087_free_demo_template_codes.sql'),
   read('api/src/free-demo-core.ts'),
   read('api/src/free-demo-routes.ts'),
   read('api/src/scan-to-claim.ts'),
@@ -17,6 +18,7 @@ const [migration,managementMigration,core,routes,scan,entry,home,app,guard,login
   read('app/src/components/admin/SuperAdminFreeDemos.tsx'),
   read('app/src/components/admin/SuperAdminLayout.tsx'),
   read('app/src/components/admin/free/FreeDemoManager.tsx'),
+  read('app/src/components/admin/free/FreeDemoEditEntry.tsx'),
   read('app/src/components/admin/free/FreeDemoManagementBridge.tsx'),
   read('app/src/components/admin/FreeDemoClaim.tsx'),
 ])
@@ -37,6 +39,9 @@ assert.match(migration,/free_demo_claims/,'claims aislados')
 assert.doesNotMatch(migration,/ALTER TABLE profiles|DROP TABLE profiles/,'la migración no altera profiles')
 assert.match(managementMigration,/free_demo_management_sessions/,'bridge de edición tiene tabla aislada')
 assert.doesNotMatch(managementMigration,/ALTER TABLE profiles|DROP TABLE profiles/,'bridge tampoco altera profiles')
+assert.match(templateCodeMigration,/free_demo_template_codes/,'códigos Demo de plantilla tienen almacenamiento aislado')
+assert.match(templateCodeMigration,/published_at/,'primera publicación fija el slug definitivo')
+assert.doesNotMatch(templateCodeMigration,/ALTER TABLE profiles|DROP TABLE profiles/,'códigos Demo no alteran schema Free')
 
 // Plantillas precargadas reutilizan el starter Free aprobado y no assets inventados.
 assert.match(core,/resolveFreeStarterContent/,'reutiliza textos canónicos Free Starter')
@@ -51,12 +56,19 @@ assert.match(core,/free_schedule_visible:true/,'Horario visible')
 assert.match(core,/free_schedule_configured:true/,'Horario configurado')
 assert.match(core,/ensureAppointmentSubject\(db,'free',input\.profileId\)/,'Agenda usa núcleo canónico Free')
 assert.match(core,/UPDATE appointment_settings SET enabled=1/,'Agenda activa')
-assert.match(manager,/Crear desde plantilla precargada/,'cuenta especial crea desde catálogo')
-assert.match(manager,/Entrar al panel Free/,'cuenta especial puede entrar al panel Free real')
-assert.match(manager,/mismos módulos y límites del perfil Free/,'Demo declara paridad exacta con Free')
-assert.match(manager,/Cambiar plantilla del rubro/,'puede reaplicar rubro antes de entregar')
-assert.match(superAdmin,/Plantillas precargadas/,'SuperAdmin muestra catálogo aprobado')
-assert.match(superAdmin,/Generar código de reclamo/,'SuperAdmin conserva entrega por claim')
+assert.match(superAdmin,/Plantillas base/,'SuperAdmin muestra catálogo MASTER')
+assert.match(superAdmin,/Generar código Demo/,'cada MASTER genera código Demo')
+assert.match(routes,/\/superadmin\/free-demo\/catalog\/:presetKey\/code/,'backend genera código ligado al preset')
+assert.match(routes,/free_demo_template_codes/,'backend persiste códigos Demo')
+assert.match(routes,/status='redeeming'/,'código Demo se bloquea al consumirlo')
+assert.match(routes,/\/me\/free-demos\/redeem-code/,'intapcard canjea código Demo')
+assert.match(routes,/demo-draft-/,'canje crea slug interno no público')
+assert.doesNotMatch(routes,/app\.post\('\/api\/v1\/me\/free-demos',requireDemoManager/,'no existe creación directa saltándose el código')
+assert.match(manager,/Usar código Demo/,'cuenta especial crea borrador solo por código')
+assert.match(manager,/Finalizar y publicar/,'borrador se finaliza después de editar')
+assert.match(manager,/nombre y el slug definitivos se fijan al publicar por primera vez/,'publicación replica lifecycle Trial')
+assert.match(routes,/published_at&&requestedSlug!==currentSlug/,'slug queda bloqueado tras primera publicación')
+assert.match(superAdmin,/Generar código de reclamo/,'SuperAdmin conserva reclamo final separado')
 assert.match(layout,/freeDemos/,'navegación SuperAdmin conserva módulo Demos Free')
 
 // Edición segura del Demo: sesión sintética, puente restringido y retorno al manager.
@@ -88,9 +100,11 @@ assert.match(activation,/result\.data\?\.free_demo/,'activación especial vuelve
 assert.match(entry,/import '.\/free-demo-routes'/,'rutas registradas')
 assert.match(app,/\/superadmin\/free-demos/,'ruta SuperAdmin')
 assert.match(app,/\/admin\/free\/demos/,'ruta gestor')
+assert.match(app,/\/admin\/free\/demos\/edit\/:id/,'ruta explícita de edición tipo Trial')
+assert.match(editEntry,/\/me\/free-demos\/.*\/open/,'ruta edit abre el borrador específico')
 assert.match(app,/\/claim\/free-demo/,'ruta reclamo')
 assert.match(core,/artifact_activation_claims/,'activación especial conserva receipt')
 assert.match(core,/CASE WHEN EXISTS/,'receipt valida estado final')
 assert.match(core,/DELETE FROM free_demo_profiles/,'race/fallo limpia shell Demo')
 
-console.log('Free Demo preloaded catalog + real Free editor + claim contract: OK')
+console.log('Free Demo MASTER -> code -> draft -> edit -> publish -> claim contract: OK')
