@@ -44,5 +44,7 @@ for(const [name,source] of [['Free cotización',freeQuote],['Patrocinado cotizac
 assert.match(middleware,/Solicita una cotización con \$\{businessName\} \| Kawvo Link/,'Patrocinado: título social contextual')
 assert.match(middleware,/cotizar=1: social card contextual para perfiles Free\/Team/,'Free/Team: falta card social contextual')
 assert.match(middleware,/Te comparto el formulario de cotización \/ información de \$\{businessName\}/,'Card social: falta contexto del formulario')
+assert.match(freeQuote,/Completa tu solicitud aquí:/,'Free: mensaje compartido debe explicar el enlace aunque Instagram no genere card')
+assert.match(sponsoredQuote,/Completa tu solicitud aquí:/,'Patrocinado: mensaje compartido debe explicar el enlace aunque Instagram no genere card')
 
 console.log('Consolidated fixes contract: OK')
