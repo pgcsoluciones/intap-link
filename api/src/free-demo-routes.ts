@@ -239,7 +239,7 @@ app.post('/api/v1/me/free-demos/:id/open',requireDemoManager,async(c:any)=>{
 
 app.get('/api/v1/me/free-demo-management/context',async(c:any)=>{
   const row=await activeManagementContext(c)
-  if(!row)return c.json({ok:false,active:false},404)
+  if(!row)return c.json({ok:true,active:false})
   return c.json({ok:true,active:true,data:{demo_id:(row as any).demo_id,profile_id:(row as any).profile_id,slug:(row as any).slug,name:(row as any).name,status:(row as any).status}})
 })
 
