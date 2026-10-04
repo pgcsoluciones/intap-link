@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS free_demo_claims (
   demo_id TEXT NOT NULL,
   special_email TEXT NOT NULL,
   code_hash TEXT NOT NULL UNIQUE,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','used','revoked','expired')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','in_progress','used','revoked','expired')),
   expires_at TEXT,
   used_at TEXT,
   created_by_admin_user_id TEXT,
