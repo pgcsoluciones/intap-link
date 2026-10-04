@@ -67,7 +67,10 @@ export default function FreeContactActions({profile,colors}:Props){
 
   function share(kind:'quote'|'agenda'){
     const target=publicBase+(kind==='quote'?'?cotizar=1':'?agendar=1')
-    const message=kind==='quote'?'Te comparto mi formulario de cotización / información: '+target:'Te comparto el enlace para agendar: '+target
+    const businessName=String(profile.name||'este negocio').trim()||'este negocio'
+    const message=kind==='quote'
+      ? 'Te comparto el formulario de cotización / información de '+businessName+'. Completa tu solicitud aquí: '+target
+      : 'Te comparto el enlace para agendar: '+target
     window.open('https://wa.me/?text='+encodeURIComponent(message),'_blank','noopener,noreferrer')
   }
   function quoteMessageLines(media:Array<{url:string;kind:string}>){
