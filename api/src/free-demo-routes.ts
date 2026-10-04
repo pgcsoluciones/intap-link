@@ -88,6 +88,31 @@ app.get('/api/v1/superadmin/free-demo/catalog',requireSuperAdmin('viewer'),async
   return c.json({ok:true,data:FREE_DEMO_CATALOG})
 })
 
+app.get('/api/v1/superadmin/free-demo/template-codes',requireSuperAdmin('viewer'),async(c:any)=>{
+  const rows=await c.env.DB.prepare(`SELECT tc.id,tc.preset_key,tc.status,tc.expires_at,tc.used_at,tc.created_at,tc.demo_id,
+      p.slug,p.name
+    FROM free_demo_template_codes tc
+    LEFT JOIN free_demo_profiles d ON d.id=tc.demo_id
+    LEFT JOIN profiles p ON p.id=d.profile_id
+    ORDER BY tc.created_at DESC
+    LIMIT 100`).all()
+  return c.json({ok:true,data:rows.results||[]})
+})
+
+app.post('/api/v1/superadmin/free-demo/catalog/:presetKey/code',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const presetKey=cleanText(c.req.param('presetKey'),40)
+  if(!presetExists(presetKey))return c.json({ok:false,error:'Plantilla precargada no válida.'},404)
+  const compact=randomCode()
+  const raw=`DMO-${compact.slice(0,4)}-${compact.slice(4,8)}-${compact.slice(8,12)}`
+  const id=crypto.randomUUID()
+  await c.env.DB.prepare(`INSERT INTO free_demo_template_codes
+    (id,preset_key,code_hash,status,expires_at,created_by_admin_user_id)
+    VALUES(?,?,?,'active',datetime('now','+30 days'),?)`)
+    .bind(id,presetKey,await sha256Hex(raw),String(c.get('adminUserId')||'')||null).run()
+  const preset=FREE_DEMO_CATALOG.find(x=>x.key===presetKey)
+  return c.json({ok:true,data:{id,preset_key:presetKey,preset_label:preset?.label||presetKey,demo_code:raw,status:'active',expires_in_days:30}},201)
+})
+
 // ── SuperAdmin: supervisa, publica y entrega códigos de reclamo.
 app.get('/api/v1/superadmin/free-demo/profiles',requireSuperAdmin('viewer'),async(c:any)=>{
   const rows=await c.env.DB.prepare("SELECT d.id,d.status,d.rubric,d.created_from,d.created_at,d.claimed_at,p.id profile_id,p.slug,p.name,p.is_published,u.email manager_email,a.public_code FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id JOIN users u ON u.id=d.manager_user_id LEFT JOIN intap_artifacts a ON a.id=d.artifact_id ORDER BY d.created_at DESC").all()
@@ -128,8 +153,36 @@ app.post('/api/v1/superadmin/free-demo/profiles/:id/claim-code',requireSuperAdmi
 // ── intapcard@gmail.com: crea y administra múltiples Free Demo.
 app.get('/api/v1/me/free-demos',requireDemoManager,async(c:any)=>{
   const uid=String(c.get('freeDemoManagerUserId'))
-  const rows=await c.env.DB.prepare("SELECT d.id,d.status,d.rubric,d.created_from,d.created_at,p.id profile_id,p.slug,p.name,p.bio,p.category,p.subcategory,p.is_published,p.avatar_url,p.hero_url,pc.whatsapp,pc.phone,pc.email,pc.address,a.public_code FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id LEFT JOIN profile_contact pc ON pc.profile_id=p.id LEFT JOIN intap_artifacts a ON a.id=d.artifact_id WHERE d.manager_user_id=? AND d.status<>'claimed' ORDER BY d.created_at DESC").bind(uid).all()
+  const rows=await c.env.DB.prepare("SELECT d.id,d.status,d.rubric,d.created_from,d.created_at,d.published_at,p.id profile_id,p.slug,p.name,p.bio,p.category,p.subcategory,p.is_published,p.avatar_url,p.hero_url,pc.whatsapp,pc.phone,pc.email,pc.address,a.public_code FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id LEFT JOIN profile_contact pc ON pc.profile_id=p.id LEFT JOIN intap_artifacts a ON a.id=d.artifact_id WHERE d.manager_user_id=? AND d.status<>'claimed' ORDER BY d.created_at DESC").bind(uid).all()
   return c.json({ok:true,data:rows.results||[]})
+})
+
+app.post('/api/v1/me/free-demos/redeem-code',requireDemoManager,async(c:any)=>{
+  const managerId=String(c.get('freeDemoManagerUserId'))
+  const body=await c.req.json().catch(()=>({}))
+  const code=cleanText(body.code,40).toUpperCase()
+  if(!code)return c.json({ok:false,error:'Escribe el código Demo.'},400)
+  const row=await c.env.DB.prepare(`SELECT id,preset_key
+    FROM free_demo_template_codes
+    WHERE code_hash=? AND status='active'
+      AND (expires_at IS NULL OR expires_at>datetime('now'))
+    LIMIT 1`).bind(await sha256Hex(code)).first()
+  if(!row)return c.json({ok:false,error:'Código Demo inválido, vencido o ya utilizado.'},404)
+  const codeId=String((row as any).id),presetKey=String((row as any).preset_key||'')
+  if(!presetExists(presetKey))return c.json({ok:false,error:'La plantilla asociada a este código ya no está disponible.'},409)
+  const lock=await c.env.DB.prepare("UPDATE free_demo_template_codes SET status='redeeming' WHERE id=? AND status='active'").bind(codeId).run()
+  if(Number((lock as any)?.meta?.changes||0)!==1)return c.json({ok:false,error:'Ese código Demo ya fue utilizado.'},409)
+  try{
+    const draftSlug=`demo-draft-${randomToken(6)}`
+    const created=await createManagedFreeDemo(c.env.DB,{slug:draftSlug,presetKey,webOrigin:webOrigin(c),createdFrom:'superadmin'})
+    await c.env.DB.prepare(`UPDATE free_demo_template_codes
+      SET status='used',redeemed_by_manager_user_id=?,demo_id=?,used_at=datetime('now')
+      WHERE id=? AND status='redeeming'`).bind(managerId,created.demoId,codeId).run()
+    return c.json({ok:true,data:{demo_id:created.demoId,preset_key:presetKey,status:'draft'}},201)
+  }catch(error){
+    await c.env.DB.prepare("UPDATE free_demo_template_codes SET status='active' WHERE id=? AND status='redeeming'").bind(codeId).run().catch(()=>undefined)
+    throw error
+  }
 })
 
 app.post('/api/v1/me/free-demos',requireDemoManager,async(c:any)=>{
@@ -168,19 +221,42 @@ app.post('/api/v1/me/free-demos/:id/apply-preset',requireDemoManager,async(c:any
   }
 })
 
+app.post('/api/v1/me/free-demos/:id/publish',requireDemoManager,async(c:any)=>{
+  const uid=String(c.get('freeDemoManagerUserId')),id=c.req.param('id'),body=await c.req.json().catch(()=>({}))
+  const row=await c.env.DB.prepare(`SELECT d.profile_id,d.status,d.published_at,p.slug,p.name,p.is_published
+    FROM free_demo_profiles d
+    JOIN profiles p ON p.id=d.profile_id
+    WHERE d.id=? AND d.manager_user_id=? AND d.status<>'claimed'
+    LIMIT 1`).bind(id,uid).first()
+  if(!row)return c.json({ok:false,error:'Demo no encontrada.'},404)
+  const name=cleanText(body.name,100)
+  if(!name)return c.json({ok:false,error:'Escribe el nombre final de la presentación.'},400)
+  const requestedSlug=cleanDemoSlug(body.slug||name)
+  if(!validDemoSlug(requestedSlug))return c.json({ok:false,error:'Slug no válido.'},400)
+  const currentSlug=String((row as any).slug||'')
+  const publishedAt=String((row as any).published_at||'')
+  if(publishedAt&&requestedSlug!==currentSlug)return c.json({ok:false,error:'El slug publicado es permanente.',code:'slug_locked'},409)
+  const duplicate=await c.env.DB.prepare('SELECT id FROM profiles WHERE slug=? AND id<>? LIMIT 1').bind(requestedSlug,String((row as any).profile_id)).first()
+  if(duplicate)return c.json({ok:false,error:'Ese slug ya está en uso.',code:'slug_taken'},409)
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE profiles SET name=?,slug=?,is_published=1,updated_at=datetime('now') WHERE id=?").bind(name,requestedSlug,String((row as any).profile_id)),
+    c.env.DB.prepare("UPDATE free_demo_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=?").bind(id),
+  ])
+  return c.json({ok:true,data:{name,slug:requestedSlug,status:'published',is_published:true}})
+})
+
 app.patch('/api/v1/me/free-demos/:id',requireDemoManager,async(c:any)=>{
   const uid=String(c.get('freeDemoManagerUserId')),id=c.req.param('id'),body=await c.req.json().catch(()=>({}))
-  const row=await c.env.DB.prepare("SELECT d.profile_id,d.status,p.slug,p.name,p.bio,p.is_published FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? AND d.manager_user_id=? AND d.status<>'claimed' LIMIT 1").bind(id,uid).first()
+  const row=await c.env.DB.prepare("SELECT d.profile_id,d.status,d.published_at,p.slug,p.name,p.is_published FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? AND d.manager_user_id=? AND d.status<>'claimed' LIMIT 1").bind(id,uid).first()
   if(!row)return c.json({ok:false,error:'Demo no encontrada.'},404)
-  const profileId=String((row as any).profile_id),slug=body.slug!==undefined?cleanDemoSlug(body.slug):String((row as any).slug)
-  if(!validDemoSlug(slug))return c.json({ok:false,error:'Slug no válido.'},400)
-  if(await c.env.DB.prepare('SELECT id FROM profiles WHERE slug=? AND id<>? LIMIT 1').bind(slug,profileId).first())return c.json({ok:false,error:'Ese slug ya está en uso.'},409)
-  const name=body.name!==undefined?cleanText(body.name,100):String((row as any).name||''),published=body.is_published===undefined?Number((row as any).is_published):body.is_published?1:0
+  if(body.is_published===undefined)return c.json({ok:false,error:'No hay cambios para guardar.'},400)
+  const published=body.is_published?1:0
+  if(published===1 && !String((row as any).published_at||''))return c.json({ok:false,error:'Finaliza la Demo definiendo nombre y slug antes de publicarla.',code:'finalize_required'},409)
   await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE profiles SET slug=?,name=?,is_published=?,updated_at=datetime('now') WHERE id=?").bind(slug,name,published,profileId),
+    c.env.DB.prepare("UPDATE profiles SET is_published=?,updated_at=datetime('now') WHERE id=?").bind(published,String((row as any).profile_id)),
     c.env.DB.prepare("UPDATE free_demo_profiles SET status=?,updated_at=datetime('now') WHERE id=?").bind(published?'published':'draft',id),
   ])
-  return c.json({ok:true,data:{slug,name,is_published:Boolean(published)}})
+  return c.json({ok:true,data:{slug:String((row as any).slug),name:String((row as any).name||''),is_published:Boolean(published)}})
 })
 
 // Entra al editor Free REAL del perfil Demo sin ampliar ownership normal.
