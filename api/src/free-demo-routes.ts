@@ -121,18 +121,16 @@ app.get('/api/v1/superadmin/free-demo/profiles',requireSuperAdmin('viewer'),asyn
 
 app.patch('/api/v1/superadmin/free-demo/profiles/:id',requireSuperAdmin('super_admin'),async(c:any)=>{
   const id=c.req.param('id'),body=await c.req.json().catch(()=>({}))
-  const row=await c.env.DB.prepare("SELECT d.profile_id,d.status,p.slug,p.name,p.is_published FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? LIMIT 1").bind(id).first()
+  const row=await c.env.DB.prepare("SELECT d.profile_id,d.status,d.published_at,p.slug,p.name,p.is_published FROM free_demo_profiles d JOIN profiles p ON p.id=d.profile_id WHERE d.id=? LIMIT 1").bind(id).first()
   if(!row)return c.json({ok:false,error:'Demo no encontrada.'},404)
   if(String((row as any).status)==='claimed')return c.json({ok:false,error:'Ese perfil ya fue reclamado y no puede administrarse como Demo.'},409)
-  const profileId=String((row as any).profile_id),slug=body.slug!==undefined?cleanDemoSlug(body.slug):String((row as any).slug)
-  if(!validDemoSlug(slug))return c.json({ok:false,error:'Slug no válido.'},400)
-  if(await c.env.DB.prepare('SELECT id FROM profiles WHERE slug=? AND id<>? LIMIT 1').bind(slug,profileId).first())return c.json({ok:false,error:'Ese slug ya está en uso.'},409)
-  const name=body.name!==undefined?cleanText(body.name,100):String((row as any).name||''),published=body.is_published===undefined?Number((row as any).is_published):body.is_published?1:0
+  const profileId=String((row as any).profile_id),published=body.is_published===undefined?Number((row as any).is_published):body.is_published?1:0
+  if(published===1&&!String((row as any).published_at||''))return c.json({ok:false,error:'La primera publicación se finaliza desde la cuenta Demo definiendo nombre y slug.',code:'finalize_required'},409)
   await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE profiles SET slug=?,name=?,is_published=?,updated_at=datetime('now') WHERE id=?").bind(slug,name,published,profileId),
+    c.env.DB.prepare("UPDATE profiles SET is_published=?,updated_at=datetime('now') WHERE id=?").bind(published,profileId),
     c.env.DB.prepare("UPDATE free_demo_profiles SET status=?,updated_at=datetime('now') WHERE id=?").bind(published?'published':'draft',id),
   ])
-  return c.json({ok:true,data:{slug,name,is_published:Boolean(published),status:published?'published':'draft'}})
+  return c.json({ok:true,data:{slug:String((row as any).slug),name:String((row as any).name||''),is_published:Boolean(published),status:published?'published':'draft'}})
 })
 
 app.post('/api/v1/superadmin/free-demo/profiles/:id/claim-code',requireSuperAdmin('super_admin'),async(c:any)=>{
