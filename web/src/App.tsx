@@ -55,6 +55,10 @@ const KawvoTrial = lazy(
   () => import('./components/trial/KawvoTrial'),
 )
 
+const FreeDemoEditor = lazy(
+  () => import('./components/free-demo/FreeDemoEditor'),
+)
+
 const IntapProfileBioPestsManager = lazy(
   () =>
     import(
@@ -179,6 +183,11 @@ function App() {
           <Route
             path="/demo/s/:token"
             element={<KawvoLinkDemoShared />}
+          />
+
+          <Route
+            path="/free-demo/edit/:id"
+            element={<FreeDemoEditor />}
           />
 
           <Route
