@@ -275,6 +275,37 @@ app.post('/api/v1/me/artifacts/scan/confirm', requireScanAuth, async (c: any) =>
   const activationCodeId = String((candidate as any).activation_code_id)
   const claimAt = new Date().toISOString().replace('T', ' ').replace('Z', '')
 
+  // Excepción explícita y aislada: intapcard@gmail.com no reutiliza su perfil Free.
+  // Crea un perfil Free Demo canónico con owner sintético y lo agrega a su grupo de demostración.
+  // Usuarios normales conservan exactamente el flujo histórico de un perfil por cuenta.
+  try {
+    const managedDemo = await createManagedFreeDemoFromArtifact(c.env.DB, {
+      userId,
+      artifactId,
+      activationCodeId,
+      intentHash,
+      publicCode: String((candidate as any).public_code),
+      productType: String((candidate as any).product_type || 'other'),
+      claimAt,
+    })
+    if (managedDemo) {
+      return c.json({
+        ok: true,
+        data: {
+          public_code: managedDemo.publicCode,
+          product_type: managedDemo.productType,
+          profile_id: managedDemo.profileId,
+          profile_slug: managedDemo.slug,
+          free_demo: true,
+          next_url: configuredAppUrl(c) + '/admin/free/demos',
+        },
+      }, 201, { 'Set-Cookie': activationIntentCookie(c, '', 0) })
+    }
+  } catch (error) {
+    console.error('[scan/confirm] managed Free Demo activation rejected', error)
+    return c.json({ ok: false, error: 'No se pudo crear la presentación Demo. El producto no fue consumido; vuelve a intentarlo.' }, 409)
+  }
+
   const statements: any[] = []
   if (needsProfile) {
     statements.push(
