@@ -288,6 +288,7 @@ app.post('/api/v1/me/artifacts/scan/confirm', requireScanAuth, async (c: any) =>
       publicCode: String((candidate as any).public_code),
       productType: String((candidate as any).product_type || 'other'),
       claimAt,
+      webOrigin: String(c.env.WEB_PAGES_ORIGIN || c.env.WEB_URL || ''),
     })
     if (managedDemo) {
       return c.json({
