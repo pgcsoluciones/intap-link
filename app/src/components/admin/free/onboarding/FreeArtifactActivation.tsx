@@ -101,6 +101,10 @@ export default function FreeArtifactActivation() {
     localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
     sessionStorage.setItem('kawvo_free_artifact_activated', activatedCode)
     setSaving(false)
+    if (result.data?.free_demo && result.data?.next_url) {
+      navigate(String(result.data.next_url), { replace: true })
+      return
+    }
     await routeAfterActivation()
   }
 
