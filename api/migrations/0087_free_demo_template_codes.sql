@@ -23,3 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_free_demo_template_codes_status
 
 CREATE INDEX IF NOT EXISTS idx_free_demo_template_codes_preset
   ON free_demo_template_codes(preset_key, status);
+
+-- First-publication marker keeps the final slug immutable even if a Demo is
+-- temporarily returned to draft/unpublished state.
+ALTER TABLE free_demo_profiles ADD COLUMN published_at TEXT;
