@@ -59,9 +59,9 @@ export async function finalizeFreeDemoClaimToVerifiedUser(c:any,userId:string,ve
         WHERE d.id=? AND d.status='claim_ready' AND cl.id=? AND cl.status='active'
       )`).bind(userId,JSON.stringify(template),profileId,oldOwner,demoId,claimId),
     c.env.DB.prepare(`UPDATE free_demo_v2_profiles
-      SET status='claimed',claimed_by_user_id=?,claimed_at=datetime('now'),updated_at=datetime('now')
+      SET status='claimed',claimed_by_user_id=?,claimed_owner_email=?,claimed_at=datetime('now'),updated_at=datetime('now')
       WHERE id=? AND status='claim_ready' AND EXISTS(SELECT 1 FROM profiles p WHERE p.id=? AND p.user_id=?)`)
-      .bind(userId,demoId,profileId,userId),
+      .bind(userId,email,demoId,profileId,userId),
     c.env.DB.prepare(`UPDATE free_demo_v2_claims
       SET status='used',used_at=datetime('now')
       WHERE id=? AND status='active' AND EXISTS(
