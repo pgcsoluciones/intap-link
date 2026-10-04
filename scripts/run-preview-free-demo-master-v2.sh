@@ -271,6 +271,14 @@ python3 - "$LOG/claim-context.json" "$QA_SLUG" <<'PY'
 import json,sys; j=json.load(open(sys.argv[1])); assert j["ok"] and j["data"]["slug"]==sys.argv[2]; print("✓ Contexto de reclamo identifica el slug exacto")
 PY
 
+# Google usa el OAuth normal y solo añade el contexto temporal de reclamo.
+curl -sS -b "$CLAIM_JAR" -c "$CLAIM_JAR" -D "$LOG/google-start.headers" -o /dev/null \
+  "https://app.preview.intaprd.com/api/v1/auth/google/start?flow=free_demo_claim"
+grep -Eq '^HTTP/.* 302' "$LOG/google-start.headers" || fail "Google claim no inicia OAuth con 302"
+grep -qi '^location: https://accounts.google.com/' "$LOG/google-start.headers" || fail "Google claim no reutiliza OAuth oficial"
+grep -qi 'kawvo_free_demo_claim_oauth_flow=' "$LOG/google-start.headers" || fail "Google claim no conserva contexto temporal"
+echo "✓ Google OAuth normal recibe contexto de reclamo sin cambiar su contrato"
+
 # Simula el enlace seguro ya verificado por Resend usando el endpoint NORMAL
 # magic-link/verify. El token crudo solo existe en esta prueba; D1 recibe su hash,
 # igual que el flujo real enviado por correo.
@@ -286,6 +294,12 @@ j=json.load(open(sys.argv[1]))
 assert j["ok"] and j["data"]["next_url"].startswith("/admin/free/credentials") and j["data"]["slug"]==sys.argv[2]
 print("✓ Correo seguro normal verificó identidad y transfirió ownership")
 PY
+
+# La sesión resultante ya es la del propietario Free normal.
+curl -fsS -b "$CLAIM_JAR" https://app.preview.intaprd.com/api/v1/me > "$LOG/owner-me.json"
+grep -Fq "$QA_OWNER_EMAIL" "$LOG/owner-me.json" || fail "La sesión final no pertenece al dueño verificado"
+grep -Fq "$QA_SLUG" "$LOG/owner-me.json" || fail "La cuenta final no resuelve el slug reclamado"
+echo "✓ Propietario entra por el contrato normal Free"
 
 VERIFY="$(d1 "SELECT d.status,p.slug,p.plan_id,p.is_published,u.email,(SELECT COUNT(*) FROM profile_products pp WHERE pp.profile_id=p.id) services_count,(SELECT COUNT(*) FROM profile_gallery g WHERE g.profile_id=p.id) portfolio_count FROM free_demo_v2_profiles d JOIN profiles p ON p.id=d.profile_id JOIN users u ON u.id=p.user_id WHERE d.id='$QA_DEMO_ID'; SELECT status claim_status FROM free_demo_v2_claims WHERE demo_id='$QA_DEMO_ID' ORDER BY created_at DESC LIMIT 1;")"
 printf '%s\n' "$VERIFY" | tee "$LOG/e2e-db.log"
