@@ -5,6 +5,7 @@ ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 REMOTE="github"
 BRANCH="feature/free-demo-templates-claim-v1"
 EXPECTED_MAIN_SHA="3bfb091146d7f8018ccf214afec4adb9245d8597"
+WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
 PREVIEW_DB="intap_db_preview"
 PREVIEW_CFG="$ROOT/api/wrangler.preview.toml"
@@ -27,8 +28,9 @@ Alcance:
 - NO cambia límites de perfiles/correos normales.
 - excepción exacta: intapcard@gmail.com
 - cada Demo Free usa un owner interno independiente
-- SuperAdmin crea plantillas por rubro y genera Demos
-- Demos usan interfaz Free actual
+- catálogo precargado de los principales rubros
+- intapcard crea Demos con nombre + slug y entra al panel Free real
+- Demos usan textos/imágenes del Free Starter aprobado
 - incluye Horario + Cotizar + Agenda
 - flujo Borrador → Publicado → Reclamo
 - claim = correo especial + slug + código de un solo uso
@@ -50,9 +52,12 @@ git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergi
 
 cat > "$LOG_DIR/allowed.txt" <<'EOF_ALLOWED'
 api/migrations-preview/0085_free_demo_templates_claim.sql
+api/migrations-preview/0086_free_demo_management_sessions.sql
 api/migrations/0085_free_demo_templates_claim.sql
+api/migrations/0086_free_demo_management_sessions.sql
 api/src/free-demo-core.ts
 api/src/free-demo-routes.ts
+api/src/account-home-route.ts
 api/src/preview-free-entry.ts
 api/src/scan-to-claim.ts
 app/src/App.tsx
@@ -62,6 +67,7 @@ app/src/components/admin/FreeDemoClaim.tsx
 app/src/components/admin/SuperAdminFreeDemos.tsx
 app/src/components/admin/SuperAdminLayout.tsx
 app/src/components/admin/free/FreeDemoManager.tsx
+app/src/components/admin/free/FreeDemoManagementBridge.tsx
 app/src/components/admin/free/onboarding/FreeArtifactActivation.tsx
 scripts/run-preview-free-demo-templates-claim-v1.sh
 scripts/test-free-demo-templates-claim-v1.mjs
@@ -74,22 +80,16 @@ diff -u "$LOG_DIR/allowed.sorted.txt" "$LOG_DIR/actual.txt" || fail "Hay archivo
 run git diff --check "$REMOTE/main"...HEAD
 run npm ci
 run node scripts/test-free-demo-templates-claim-v1.mjs
+run npm run build:preview -w web
 run npm run build:preview -w app
 run bash -lc 'cd api && npx tsc --noEmit'
 
-echo; echo "▶ Confirmar D1 Preview antes de migrar"
-TABLE_CHECK="$(cd api && npx wrangler d1 execute "$PREVIEW_DB" --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('free_demo_templates','free_demo_profiles','free_demo_claims','free_demo_claim_sessions') ORDER BY name;" 2>/dev/null || true)"
-printf '%s
-' "$TABLE_CHECK"
-
-if ! echo "$TABLE_CHECK" | grep -Fq "free_demo_templates"; then
-  echo; echo "▶ Aplicar migraciones pendientes SOLO en D1 Preview"
-  (cd api && npx wrangler d1 migrations apply "$PREVIEW_DB" --remote --config wrangler.preview.toml) 2>&1 | tee "$LOG_DIR/d1-migrations.log"
-fi
+echo; echo "▶ Aplicar migraciones pendientes SOLO en D1 Preview"
+(cd api && npx wrangler d1 migrations apply "$PREVIEW_DB" --remote --config wrangler.preview.toml) 2>&1 | tee "$LOG_DIR/d1-migrations.log"
 
 echo; echo "▶ Verificar tablas nuevas en Preview"
-TABLES="$(cd api && npx wrangler d1 execute "$PREVIEW_DB" --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('free_demo_templates','free_demo_profiles','free_demo_claims','free_demo_claim_sessions') ORDER BY name;" 2>/dev/null || true)"
-for table in free_demo_templates free_demo_profiles free_demo_claims free_demo_claim_sessions; do
+TABLES="$(cd api && npx wrangler d1 execute "$PREVIEW_DB" --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('free_demo_templates','free_demo_profiles','free_demo_claims','free_demo_claim_sessions','free_demo_management_sessions') ORDER BY name;" 2>/dev/null || true)"
+for table in free_demo_templates free_demo_profiles free_demo_claims free_demo_claim_sessions free_demo_management_sessions; do
   echo "$TABLES" | grep -Fq "$table" || fail "Falta tabla Preview $table"
 done
 echo "✓ D1 Preview listo"
@@ -99,6 +99,11 @@ TRIAL_TABLES="$(cd api && npx wrangler d1 execute "$PREVIEW_DB" --remote --confi
 echo "$TRIAL_TABLES" | grep -Fq "trial_profiles" || fail "La tabla Trial histórica no está disponible para comprobar aislamiento"
 grep -Eq "trial_profiles|trial_leads|/trial/" api/src/free-demo-core.ts api/src/free-demo-routes.ts && fail "Free Demo contiene dependencia Trial"
 echo "✓ Free Demo no depende de Trial"
+
+echo; echo "▶ Deploy Web Preview"
+(npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH") 2>&1 | tee "$LOG_DIR/web.log"
+WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$LOG_DIR/web.log" | tail -1 || true)"
+[ -n "$WEB_ORIGIN" ] || fail "No pude detectar Web Preview origin"
 
 echo; echo "▶ Deploy App Preview"
 (npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch "$BRANCH") 2>&1 | tee "$LOG_DIR/app.log"
@@ -114,13 +119,15 @@ restore_cfg(){
 }
 trap restore_cfg EXIT
 
-python3 - "$PREVIEW_CFG" "$APP_ORIGIN" <<'PY'
+python3 - "$PREVIEW_CFG" "$APP_ORIGIN" "$WEB_ORIGIN" <<'PY'
 from pathlib import Path
 import re,sys
-p=Path(sys.argv[1]); app=sys.argv[2]
+p=Path(sys.argv[1]); app=sys.argv[2]; web=sys.argv[3]
 s=p.read_text()
-s,n=re.subn(r'APP_PAGES_ORIGIN\s*=\s*"[^"]+"',f'APP_PAGES_ORIGIN = "{app}"',s,count=1)
-if n != 1: raise SystemExit("No pude fijar APP_PAGES_ORIGIN Preview")
+s,n_app=re.subn(r'APP_PAGES_ORIGIN\s*=\s*"[^"]+"',f'APP_PAGES_ORIGIN = "{app}"',s,count=1)
+s,n_web=re.subn(r'WEB_PAGES_ORIGIN\s*=\s*"[^"]+"',f'WEB_PAGES_ORIGIN = "{web}"',s,count=1)
+if n_app != 1: raise SystemExit("No pude fijar APP_PAGES_ORIGIN Preview")
+if n_web != 1: raise SystemExit("No pude fijar WEB_PAGES_ORIGIN Preview")
 p.write_text(s)
 PY
 
@@ -136,7 +143,7 @@ trap - EXIT
 sleep 5
 
 echo; echo "▶ Smoke HTTP Preview"
-for url in   "https://app.preview.intaprd.com/admin/login"   "https://app.preview.intaprd.com/superadmin/free-demos"   "https://app.preview.intaprd.com/admin/free/demos"   "https://app.preview.intaprd.com/claim/free-demo"
+for url in   "https://preview.intaprd.com/"   "https://app.preview.intaprd.com/admin/login"   "https://app.preview.intaprd.com/superadmin/free-demos"   "https://app.preview.intaprd.com/admin/free/demos"   "https://app.preview.intaprd.com/claim/free-demo"
 do
   code="$(curl -sS -L -o /dev/null -w '%{http_code}' "$url")"
   echo "✓ $url -> HTTP $code"
@@ -159,29 +166,28 @@ Feature SHA: $(git rev-parse HEAD)
 App origin:  $APP_ORIGIN
 
 QA MANUAL:
-1. SuperAdmin → Plantillas Demo Free.
-2. Crear plantilla, por ejemplo:
-   - Nombre: Demo Ferretería
-   - Rubro: Ferretería
-   - Correo plantilla: ferreteria-demo@kawvo.local
-   - Preset: Ferretería
-   - marcar como predeterminada.
-3. Generar Demo con slug propio.
-4. Confirmar que nace en Borrador.
-5. Abrir perfil: debe usar interfaz Free actual.
-6. Confirmar Horario, Cotizar / información y Agendar.
-7. Publicar desde SuperAdmin.
-8. Generar código de reclamo.
-9. En login usar:
-   Correo: intapcard@gmail.com
-   Contraseña: código de reclamo.
-10. Debe abrir SOLO la pantalla de credenciales del slug reclamado.
-11. Colocar correo definitivo nuevo + contraseña nueva.
-12. Debe entrar como dueño del perfil Free independiente.
-13. El código anterior ya NO debe volver a funcionar.
-14. El perfil reclamado debe desaparecer de Mis perfiles Demo Free.
-15. Probar una cuenta normal: debe seguir limitada a su único perfil normal.
-16. Confirmar que Trial no cambió.
-17. Producción NO fue tocada.
+1. Iniciar sesión con intapcard@gmail.com.
+2. Debe abrir “Mis perfiles Demo Free”.
+3. Crear una Demo desde una plantilla precargada:
+   - Rubro: Ferretería o Diseño / Serigrafía / Impresión
+   - Nombre real de prueba
+   - slug propio.
+4. Confirmar que nace en Borrador con imágenes y textos del rubro.
+5. Pulsar “Entrar al panel Free”.
+6. Debe abrir el panel Free REAL de esa Demo.
+7. Editar portada/avatar, nombre, servicios y portafolio desde el panel aprobado.
+8. Confirmar Horario, Cotizar / información y Agenda.
+9. Pulsar “Volver a Mis Demos” y confirmar retorno a intapcard.
+10. Publicar y revisar el perfil público en Preview; imágenes deben cargar.
+11. Desde SuperAdmin → Demos Free, generar código de reclamo.
+12. En login usar intapcard@gmail.com + código de reclamo.
+13. Debe abrir SOLO credenciales del slug reclamado.
+14. Colocar correo definitivo nuevo + contraseña nueva.
+15. Debe quedar como dueño de un Free independiente.
+16. El código ya NO debe funcionar otra vez.
+17. El perfil reclamado desaparece de Mis perfiles Demo Free.
+18. Una cuenta normal sigue limitada a su único perfil.
+19. Trial no cambió.
+20. Producción NO fue tocada.
 ================================================================
 EOF
