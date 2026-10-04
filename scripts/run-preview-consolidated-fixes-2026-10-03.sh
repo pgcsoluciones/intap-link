@@ -111,13 +111,15 @@ restore_cfg(){
 }
 trap restore_cfg EXIT
 
-python3 - "$PREVIEW_CFG" "$WEB_ORIGIN" <<'PY'
+python3 - "$PREVIEW_CFG" "$WEB_ORIGIN" "$APP_ORIGIN" <<'PY'
 from pathlib import Path
 import re,sys
-p=Path(sys.argv[1]); web=sys.argv[2]
+p=Path(sys.argv[1]); web=sys.argv[2]; app=sys.argv[3]
 s=p.read_text()
-s,n=re.subn(r'WEB_PAGES_ORIGIN\s*=\s*"[^"]+"',f'WEB_PAGES_ORIGIN = "{web}"',s,count=1)
-if n != 1: raise SystemExit("No pude fijar WEB_PAGES_ORIGIN Preview")
+s,n_web=re.subn(r'WEB_PAGES_ORIGIN\s*=\s*"[^"]+"',f'WEB_PAGES_ORIGIN = "{web}"',s,count=1)
+s,n_app=re.subn(r'APP_PAGES_ORIGIN\s*=\s*"[^"]+"',f'APP_PAGES_ORIGIN = "{app}"',s,count=1)
+if n_web != 1: raise SystemExit("No pude fijar WEB_PAGES_ORIGIN Preview")
+if n_app != 1: raise SystemExit("No pude fijar APP_PAGES_ORIGIN Preview")
 p.write_text(s)
 PY
 
@@ -158,7 +160,8 @@ QA prioritario:
 6. Compartir formulario en Instagram/WhatsApp muestra:
    “Solicita una cotización con [Negocio]”
    y conserva la imagen social del perfil.
-7. Revisar Free y Patrocinado.
-8. Producción NO fue tocada.
+7. Mi cuenta debe mostrar PRESENTACIÓN Y CONTACTO con Horario, Cotizar y Agenda.
+8. Revisar Free y Patrocinado.
+9. Producción NO fue tocada.
 ================================================================
 EOF
