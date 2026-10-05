@@ -30,9 +30,32 @@ app.patch('/api/v1/superadmin/sponsors/:id',requireSuperAdmin('super_admin'),asy
   if(nextProfileSlug&&(!USERNAME_RE.test(nextProfileSlug)||RESERVED.has(nextProfileSlug)))return c.json({ok:false,error:'El slug público no es válido.'},422)
   if(nextProfileSlug){const used=await c.env.DB.prepare(`SELECT id FROM sponsored_profiles WHERE username=? AND sponsor_id<>? LIMIT 1`).bind(nextProfileSlug,id).first();if(used)return c.json({ok:false,error:'Ese slug público ya está ocupado.'},409)}
   const active=(body.is_active===false||Number(body.is_active)===0)?0:1
-  await c.env.DB.prepare(`UPDATE sponsor_tenants SET name=?,sponsor_type=?,profile_slug=?,logo_url=?,contact_email=?,contact_whatsapp=?,website_url=?,is_active=?,updated_at=datetime('now') WHERE id=?`).bind(clean(body.name,120)||String((current as any).name),body.sponsor_type==='brand'?'brand':'merchant',nextProfileSlug||null,clean(body.logo_url,800),clean(body.contact_email,160).toLowerCase(),clean(body.contact_whatsapp,40),clean(body.website_url,800),active,id).run()
-  if(nextProfileSlug){await c.env.DB.prepare(`UPDATE sponsored_profiles SET username=COALESCE(username,?),updated_at=datetime('now') WHERE sponsor_id=? AND profile_role='sponsor_owner'`).bind(nextProfileSlug,id).run()}
-  return c.json({ok:true})
+  const currentEmail=clean((current as any).contact_email,160).toLowerCase()
+  const nextEmail=clean(body.contact_email,160).toLowerCase()
+  const ownerChanged=Boolean(nextEmail&&nextEmail!==currentEmail)
+  let nextOwnerUserId=''
+
+  if(ownerChanged){
+    const target=await c.env.DB.prepare(`SELECT id,email FROM users WHERE lower(email)=? LIMIT 1`).bind(nextEmail).first()
+    if(!target)return c.json({ok:false,error:'El nuevo correo propietario todavía no tiene una cuenta Kawvo. Inicia sesión o registra esa cuenta antes de transferir el patrocinador.',code:'sponsor_owner_account_required'},409)
+    nextOwnerUserId=String((target as any).id||'')
+    const otherSponsor=await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_members WHERE user_id=? AND status='active' AND role='owner' AND sponsor_id<>? LIMIT 1`).bind(nextOwnerUserId,id).first()
+    if(otherSponsor)return c.json({ok:false,error:'Ese correo ya es propietario activo de otro patrocinador. Usa otra cuenta o libera primero ese patrocinio.',code:'sponsor_owner_already_assigned'},409)
+  }
+
+  const statements:any[]=[
+    c.env.DB.prepare(`UPDATE sponsor_tenants SET name=?,sponsor_type=?,profile_slug=?,logo_url=?,contact_email=?,contact_whatsapp=?,website_url=?,is_active=?,updated_at=datetime('now') WHERE id=?`).bind(clean(body.name,120)||String((current as any).name),body.sponsor_type==='brand'?'brand':'merchant',nextProfileSlug||null,clean(body.logo_url,800),nextEmail,clean(body.contact_whatsapp,40),clean(body.website_url,800),active,id),
+  ]
+  if(nextProfileSlug)statements.push(c.env.DB.prepare(`UPDATE sponsored_profiles SET username=COALESCE(username,?),updated_at=datetime('now') WHERE sponsor_id=? AND profile_role='sponsor_owner'`).bind(nextProfileSlug,id))
+  if(ownerChanged&&nextOwnerUserId){
+    statements.push(
+      c.env.DB.prepare(`INSERT INTO sponsor_members(sponsor_id,user_id,role,status,created_at) VALUES(?,?,'owner','active',datetime('now')) ON CONFLICT(sponsor_id,user_id) DO UPDATE SET role='owner',status='active'`).bind(id,nextOwnerUserId),
+      c.env.DB.prepare(`UPDATE sponsor_members SET status='inactive' WHERE sponsor_id=? AND role='owner' AND user_id<>?`).bind(id,nextOwnerUserId),
+      c.env.DB.prepare(`UPDATE sponsored_profiles SET user_id=?,updated_at=datetime('now') WHERE sponsor_id=? AND profile_role='sponsor_owner'`).bind(nextOwnerUserId,id),
+    )
+  }
+  await c.env.DB.batch(statements)
+  return c.json({ok:true,data:{owner_transferred:ownerChanged,owner_email:nextEmail}})
 })
 
 app.post('/api/v1/me/sponsored-profile/publish',requireUser,async(c:any)=>{
