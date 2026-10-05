@@ -1,7 +1,7 @@
 import app from './index'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import { isPreviewEnvironment } from './lib/cookies'
-import { FREE_DEMO_V2_FREE_DEMO_V2_CLAIM_EMAIL, freeDemoClaimCookie, getActiveFreeDemoClaim } from './free-demo-claim-core'
+import { FREE_DEMO_V2_CLAIM_EMAIL, freeDemoClaimCookie, getActiveFreeDemoClaim } from './free-demo-claim-core'
 import { getAppointmentSettings, getAppointmentAvailabilityRows, saveAppointmentConfiguration } from './appointments-core'
 import { resolveFreeStarterContent, FREE_PROFILE_CATEGORIES } from '../../shared/free-profile-starter-content'
 import { FREE_PROFILE_STARTER_ASSETS } from '../../shared/free-profile-starter-assets'
