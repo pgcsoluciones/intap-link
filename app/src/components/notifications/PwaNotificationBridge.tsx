@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { apiGet, apiPost } from '../../lib/api'
+import { isFreeDemoDelegationActive } from '../../lib/freeDemoDelegation'
 
 type NotificationItem={
   id:string
@@ -136,6 +137,7 @@ export default function PwaNotificationBridge(){
   const pushReady=useRef(false)
 
   useEffect(()=>{
+    if(isFreeDemoDelegationActive())return
     let active=true
     const unlock=()=>void unlockAgendaNotificationAudio()
     window.addEventListener('pointerdown',unlock,{passive:true})
