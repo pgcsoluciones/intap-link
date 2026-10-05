@@ -160,7 +160,8 @@ export default function FreeDemoEditor(){
       const publishSlug=normalizeSlug(finalSlug||draftSlug)
       if(!publishSlug){setError('Define el usuario / slug antes de publicar.');return}
       const j=await api('/superadmin/free-demo-v2/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify({name:finalName,slug:publishSlug})})
-      setPublishOpen(false);setNotice('Presentación publicada: '+j.data.public_url);await load()
+      setPublishOpen(false);setNotice('Presentación publicada: '+j.data.public_url)
+      window.location.assign(appOrigin()+'/admin/free?demo_admin='+encodeURIComponent(id))
     }catch(e){setError(e instanceof Error?e.message:'No pudimos publicar.')}finally{setSaving(false)}
   }
 
