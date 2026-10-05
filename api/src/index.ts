@@ -1739,7 +1739,10 @@ me.put('/profile', async (c) => {
     if(is_published===1){
       await c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status!='claimed'").bind(demoId).run()
     }else{
-      await c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='draft',updated_at=datetime('now') WHERE id=? AND status!='claimed'").bind(demoId).run()
+      await c.env.DB.batch([
+        c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='draft',updated_at=datetime('now') WHERE id=? AND status!='claimed'").bind(demoId),
+        c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='revoked',revoked_at=datetime('now') WHERE demo_id=? AND status='active'").bind(demoId),
+      ])
     }
   }
   return c.json({ ok: true })
