@@ -85,7 +85,7 @@ export default function FreeDashboard() {
       apiGet('/me/contact').catch(() => ({ ok: false })),
       apiGet('/me/free/quick-actions').catch(() => ({ ok: false })),
       apiGet('/me/gallery').catch(() => ({ ok: false })),
-      apiGet('/me/team/context').catch(() => ({ ok: false })),
+      delegatedDemo ? Promise.resolve({ ok:true, data:{ role:'none' } }) : apiGet('/me/team/context').catch(() => ({ ok: false })),
 ]).then(([meJson, superAdminJson, bankJson, contactJson, quickJson, galleryJson, teamJson]: any[]) => {
       if (meJson?.ok) setMe(meJson.data)
       setHasSuperAdminAccess(Boolean(superAdminJson?.ok))
@@ -141,7 +141,7 @@ export default function FreeDashboard() {
   const heroReady = Boolean(me?.hero_url && !isStarterAsset(me.hero_url))
   const isTeamMember = teamContext.role === 'member'
   const teamPermissions = new Set<string>(teamContext.member?.permissions || [])
-  const baseReady = isTeamMember ? nameReady && roleReady : nameReady && roleReady && usernameReady && photoReady && heroReady
+  const baseReady = delegatedDemo ? true : isTeamMember ? nameReady && roleReady : nameReady && roleReady && usernameReady && photoReady && heroReady
   const effectivePublishReady = baseReady
   const publishMissing = isTeamMember
     ? [!nameReady ? 'nombre' : '', !roleReady ? 'cargo' : ''].filter(Boolean)
@@ -217,7 +217,7 @@ export default function FreeDashboard() {
   const renderEditItem = (item: FreeItem) => {
     const completed = completedForItem(item)
     const permissionLocked = !memberCanEdit(item)
-    const prerequisiteLocked = !isTeamMember && !baseReady && !item.baseRequired
+    const prerequisiteLocked = !delegatedDemo && !isTeamMember && !baseReady && !item.baseRequired
     const locked = permissionLocked || prerequisiteLocked
     const neutral = Boolean(item.optional || item.available)
     const statusLabel = permissionLocked ? 'Administrado por Team' : prerequisiteLocked ? 'Bloqueado' : item.optional ? 'Opcional' : item.available ? 'Disponible' : completed ? 'Completado' : 'Por revisar'
@@ -229,8 +229,8 @@ export default function FreeDashboard() {
     return <div key={item.title} className={`relative flex w-full items-center gap-3 rounded-[22px] border p-4 transition ${!locked ? 'hover:-translate-y-0.5 hover:shadow-md' : ''} ${cardClass}`}><button type="button" disabled={locked} onClick={open} className="flex min-w-0 flex-1 items-center gap-4 text-left disabled:cursor-not-allowed"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg font-black ${iconClass}`}>{locked ? '🔒' : completed && !neutral ? '✓' : item.icon}</span><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="block text-sm font-black text-slate-900">{item.title}</span><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wide ${badgeClass}`}>{statusLabel}</span></span><span className="mt-0.5 block text-xs leading-5 text-slate-500">{helper}</span></span></button><FreeHelpTip title={item.title} text={item.help} /><button type="button" disabled={locked} onClick={open} aria-label={`Abrir ${item.title}`} className="text-lg text-slate-300 disabled:cursor-not-allowed">›</button></div>
   }
 
-  const avatarEditable = !isTeamMember || teamPermissions.has('photo')
-  const designEditable = !isTeamMember ? baseReady : teamPermissions.has('design')
+  const avatarEditable = delegatedDemo || !isTeamMember || teamPermissions.has('photo')
+  const designEditable = delegatedDemo || (!isTeamMember ? baseReady : teamPermissions.has('design'))
 
   return <>
     {avatarFile && <ImageCropModal file={avatarFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setAvatarFile(null)} />}
@@ -260,7 +260,7 @@ export default function FreeDashboard() {
 
         {publishError && <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs font-semibold text-amber-800">{publishError}</p>}
 
-        <article data-tour="bank-accounts" className={`rounded-[24px] border p-5 ${bankSummary.allowed ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Cuentas bancarias</p><h2 className="mt-1 text-lg font-black">Facilita las transferencias bancarias</h2><p className="mt-1 text-xs text-slate-500">{bankSummary.allowed ? `${bankSummary.count}/3 cuentas configuradas${bankSummary.source === 'promotion' ? ' · Beneficio promocional' : ''}.` : 'Disponible en Plan Plus y promociones Free.'}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${bankSummary.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{bankSummary.allowed ? 'Disponible' : 'Bloqueado'}</span></div><button type="button" disabled={!baseReady || isTeamMember} onClick={() => navigate('/admin/free/bank-accounts')} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:bg-slate-100 disabled:text-slate-400">{bankSummary.allowed ? 'Administrar cuentas bancarias' : 'Ver disponibilidad'}</button></article>
+        <article data-tour="bank-accounts" className={`rounded-[24px] border p-5 ${bankSummary.allowed ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200 bg-white'}`}><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Cuentas bancarias</p><h2 className="mt-1 text-lg font-black">Facilita las transferencias bancarias</h2><p className="mt-1 text-xs text-slate-500">{bankSummary.allowed ? `${bankSummary.count}/3 cuentas configuradas${bankSummary.source === 'promotion' ? ' · Beneficio promocional' : ''}.` : 'Disponible en Plan Plus y promociones Free.'}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${bankSummary.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{bankSummary.allowed ? 'Disponible' : 'Bloqueado'}</span></div><button type="button" disabled={(!delegatedDemo && !baseReady) || isTeamMember} onClick={() => navigate('/admin/free/bank-accounts')} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:bg-slate-100 disabled:text-slate-400">{bankSummary.allowed ? 'Administrar cuentas bancarias' : 'Ver disponibilidad'}</button></article>
 
         {!isTeamMember&&!delegatedDemo && <button data-tour="ai-helper" type="button" disabled={!baseReady} onClick={() => navigate('/admin/free/ai-profile')} className="flex w-full items-center gap-3 rounded-[22px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 text-left shadow-sm disabled:opacity-50"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-600 text-xl text-white">✦</span><span className="min-w-0 flex-1"><span className="block text-[10px] font-black uppercase text-cyan-700">IA de Kawvo</span><span className="block text-base font-black">Optimiza tu perfil</span><span className="text-xs text-slate-600">Úsala después de completar tus datos esenciales.</span></span><span>›</span></button>}
 
