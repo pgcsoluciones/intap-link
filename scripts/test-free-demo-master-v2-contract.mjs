@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read=(p)=>readFile(p,'utf8')
-const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge]=await Promise.all([
+const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge,identity]=await Promise.all([
   read('api/migrations-preview/0088_free_demo_master_v2.sql'),
   read('api/src/free-demo-v2.ts'),
   read('api/src/free-demo-claim-core.ts'),
@@ -28,6 +28,7 @@ const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,l
   read('app/src/components/admin/free/FreeStyle.tsx'),
   read('app/src/components/admin/free/TeamPermissionGuard.tsx'),
   read('app/src/components/notifications/PwaNotificationBridge.tsx'),
+  read('app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'),
 ])
 
 // Aislamiento estructural.
@@ -117,6 +118,8 @@ assert.match(guard,/delegatedDemoId && location\.pathname\.startsWith\('\/admin\
 assert.match(dashboard,/isFreeDemoDelegationActive/,'dashboard Free detecta administración delegada')
 assert.match(dashboard,/!delegatedDemo&&<FreeNotificationBell/,'herramientas personales de cuenta quedan fuera del modo delegado')
 assert.match(identifier,/Usuario bloqueado después de publicar/,'pantalla de identificador conserva slug bloqueado')
+assert.match(identity,/Usuario bloqueado después de la primera publicación/,'pantalla principal de identidad Free bloquea el slug ya publicado')
+assert.match(identity,/!delegatedDemo && normalizedSlug/,'identidad no intenta mutar slug durante delegación')
 assert.match(visualEditor,/delegatedDemo/,'editor visual Free adapta preview y oculta herramientas no aplicables')
 assert.match(style,/delegatedDemo/,'estilo Free conserva edición visual bajo delegación')
 assert.match(teamGuard,/isFreeDemoDelegationActive/,'TeamPermissionGuard no consulta ownership Team durante delegación')
