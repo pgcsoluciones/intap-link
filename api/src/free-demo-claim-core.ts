@@ -52,6 +52,7 @@ export async function finalizeFreeDemoClaimToVerifiedUser(c:any,userId:string,ve
   if(existingProfile)return {ok:false,error:'verified_user_already_has_free_profile',status:409}
 
   await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM profile_bank_accounts WHERE profile_id=? AND id=? AND bank_name='Banco de demostración' AND account_number='0000000000'").bind(profileId,'demo-v2:'+demoId+':bank:sample'),
     c.env.DB.prepare(`UPDATE profiles
       SET user_id=?,template_data=?,updated_at=datetime('now')
       WHERE id=? AND user_id=? AND EXISTS(
