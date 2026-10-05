@@ -210,6 +210,9 @@ export default function FreeDemoEditor(){
             {id:'esencial',name:'Esencial',text:'Limpio, directo y sin portada'},
           ].map(item=><button type="button" key={item.id} className={p.layout_id===item.id?'active':''} onClick={()=>updateProfile('layout_id',item.id)}><strong>{item.name}</strong><span>{item.text}</span></button>)}</div>
           <div className="fd2-palette-cards">{FREE_PALETTES.filter(x=>x.id!=='personalizada').map(item=><button type="button" key={item.id} className={p.free_palette_id===item.id?'active':''} onClick={()=>updateProfile('free_palette_id',item.id)}><span className="fd2-swatches"><i style={{background:item.colors.primary}}/><i style={{background:item.colors.secondary}}/><i style={{background:item.colors.accent}}/><i style={{background:item.colors.background}}/></span><strong>{item.name}</strong></button>)}</div>
+          <div style={{marginTop:10,padding:10,border:'1px solid #dbe4ef',borderRadius:14,background:'#fff'}}>
+            <label style={{margin:0}}>Color personalizado<div style={{display:'flex',gap:8,alignItems:'center',marginTop:6}}><input type="color" value={p.free_brand_color||'#071F5F'} onChange={e=>{updateProfile('free_brand_color',e.target.value.toUpperCase());updateProfile('free_palette_id','personalizada')}}/><input value={p.free_brand_color||'#071F5F'} maxLength={7} onChange={e=>{updateProfile('free_brand_color',e.target.value.toUpperCase());updateProfile('free_palette_id','personalizada')}}/></div></label>
+          </div>
         </fieldset>
 
         <fieldset><legend>Botones rápidos · {data.quick_actions.length}/3</legend>
