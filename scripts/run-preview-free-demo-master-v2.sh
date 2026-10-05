@@ -303,6 +303,10 @@ j=json.load(open(sys.argv[1])); assert j["ok"] and j["data"]["slug"]==sys.argv[2
 print("✓ Primera publicación fijó slug")
 PY
 
+# Simula una Demo creada antes de incorporar la cuenta ficticia por defecto:
+# elimina la semilla y su marca para exigir que la delegación haga backfill una sola vez.
+d1 "DELETE FROM profile_bank_accounts WHERE profile_id='$QA_PROFILE_ID'; UPDATE profiles SET template_data=json_remove(COALESCE(template_data,'{}'),'$.free_demo_v2_bank_seeded') WHERE id='$QA_PROFILE_ID';" >/dev/null
+
 echo; echo "▶ E2E real: panel Free normal después de publicar, sin impersonación"
 curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
   https://app.preview.intaprd.com/api/v1/me > "$LOG/delegated-me.json"
@@ -311,6 +315,29 @@ import json,sys
 j=json.load(open(sys.argv[1])); d=j["data"]
 assert j["ok"] and d["slug"]==sys.argv[2] and d["plan_id"]=="free"
 print("✓ /me canónico resuelve exactamente el Free Demo publicado")
+PY
+
+python3 - "$LOG/tiny-demo.png" <<'PY'
+import base64,sys
+open(sys.argv[1],"wb").write(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z5xQAAAAASUVORK5CYII="))
+PY
+curl -fsS -X POST -H "Cookie: $QA_COOKIE" -F "file=@$LOG/tiny-demo.png;type=image/png" \
+  "https://app.preview.intaprd.com/api/v1/superadmin/free-demo-v2/$QA_DEMO_ID/media?kind=avatar" > "$LOG/demo-avatar-upload.json"
+curl -fsS -X POST -H "Cookie: $QA_COOKIE" -F "file=@$LOG/tiny-demo.png;type=image/png" \
+  "https://app.preview.intaprd.com/api/v1/superadmin/free-demo-v2/$QA_DEMO_ID/media?kind=hero" > "$LOG/demo-hero-upload.json"
+python3 - "$LOG/demo-avatar-upload.json" "$LOG/demo-hero-upload.json" <<'PY'
+import json,sys
+a=json.load(open(sys.argv[1])); h=json.load(open(sys.argv[2]))
+assert a["ok"] and a["data"]["url"] and h["ok"] and h["data"]["url"]
+print("✓ Avatar y portada Demo suben por la ruta media SuperAdmin")
+PY
+curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  https://app.preview.intaprd.com/api/v1/me > "$LOG/delegated-me-after-media.json"
+python3 - "$LOG/delegated-me-after-media.json" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); d=j["data"]
+assert j["ok"] and "/free-demo-v2/" in str(d.get("avatar_url","")) and "/free-demo-v2/" in str(d.get("hero_url",""))
+print("✓ Avatar y portada quedaron persistidos en el Free Demo canónico")
 PY
 
 curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
@@ -328,7 +355,15 @@ import json,sys
 j=json.load(open(sys.argv[1])); d=j["data"]
 assert j["ok"] and d["access"]["allowed"] is True and len(d["items"])>=1
 assert d["items"][0]["bank_name"]=="Banco de demostración"
-print("✓ Demo publicada trae al menos una cuenta bancaria de ejemplo interactiva")
+print("✓ Demo antigua recibe backfill de cuenta bancaria ficticia al administrarse")
+PY
+curl -fsS "https://app.preview.intaprd.com/api/v1/public/profiles/$QA_SLUG/bank-accounts" > "$LOG/public-bank.json"
+python3 - "$LOG/public-bank.json" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); d=j["data"]
+assert j["ok"] and d["enabled"] is True and len(d["items"])>=1
+assert d["items"][0]["bank_name"]=="Banco de demostración"
+print("✓ Cuenta bancaria ficticia también aparece en la API pública del perfil")
 PY
 
 curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
@@ -501,7 +536,9 @@ Probado de punta a punta en Preview:
 ✓ edición canónica /me apunta al Demo seleccionado
 ✓ slug permanente y bloqueado desde SuperAdmin y desde panel Free
 ✓ Mi cuenta conserva Horario, Cotizar / información y Agenda
-✓ Demo incluye una cuenta bancaria de ejemplo interactiva
+✓ avatar y portada Demo se suben y persisten desde el panel real
+✓ Demos antiguas reciben una cuenta bancaria ficticia por backfill si están vacías
+✓ cuenta bancaria ficticia visible también en el perfil público
 ✓ horario público Demo usa AM/PM sin tocar el renderer Free compartido
 ✓ campana y centro de notificaciones funcionan sobre la Demo seleccionada
 ✓ funciones privadas del propietario quedan protegidas hasta el reclamo
