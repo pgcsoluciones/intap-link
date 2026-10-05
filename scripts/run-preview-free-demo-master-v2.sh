@@ -61,6 +61,7 @@ api/src/preview-entry.ts
 api/src/preview-free-actions.ts
 api/src/preview-free-entry.ts
 api/src/bank-accounts.ts
+app/public/sw.js
 app/src/App.tsx
 app/src/lib/api.ts
 app/src/lib/freeDemoDelegation.ts
@@ -184,6 +185,14 @@ done
 PROTECTED="$(curl -sS -o "$LOG/protected.json" -w '%{http_code}' https://app.preview.intaprd.com/api/v1/superadmin/free-demo-v2/templates)"
 [ "$PROTECTED" = "401" ] || fail "La API v2 no está protegida correctamente: HTTP $PROTECTED"
 echo "✓ API SuperAdmin v2 responde 401 sin sesión"
+
+APP_HTML="$(curl -fsS https://app.preview.intaprd.com/)"
+APP_JS="$(printf '%s' "$APP_HTML" | grep -Eo '/assets/index-[^"]+\.js' | head -1)"
+[ -n "$APP_JS" ] || fail "No pude detectar bundle App Preview actual"
+curl -fsS "https://app.preview.intaprd.com$APP_JS" > "$LOG/live-app.js"
+grep -Fq 'Mi cuenta' "$LOG/live-app.js" || fail "Bundle App Preview no contiene el panel Free actual con Mi cuenta"
+grep -Fq 'Solicitudes y actividad de esta presentación' "$LOG/live-app.js" || fail "Bundle App Preview no contiene Mi cuenta delegado actualizado"
+echo "✓ Bundle servido por app.preview contiene el panel Free actual"
 
 # ── E2E real sobre Preview ───────────────────────────────────────────────────
 echo; echo "▶ E2E real: base → borrador → editor → publicación → claim → ownership"
