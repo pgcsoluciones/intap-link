@@ -4,7 +4,7 @@ import { apiGet, apiPut, apiUpload } from '../../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../../lib/imageUploadOptimization'
 import ImageCropModal from '../../ImageCropModal'
 import { FreeBackButton } from '../FreePanelUi'
-import { isFreeDemoDelegationActive } from '../../../../lib/freeDemoDelegation'
+import { activeFreeDemoDelegationId, isFreeDemoDelegationActive } from '../../../../lib/freeDemoDelegation'
 
 function normalizeSlug(value: string) {
   return value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '').slice(0, 32)
@@ -80,9 +80,11 @@ export default function FreeOnboardingIdentity() {
       const optimized = await optimizeImageBlobForUpload(blob, { maxDimension: 400, quality: 0.82, baseName: 'avatar' })
       const form = new FormData()
       form.append('file', optimized, optimized.name)
-      const result: any = await apiUpload('/me/profile/avatar', form)
-      if (result.ok && result.avatar_url) setAvatarUrl(result.avatar_url)
-      else setError(result.error || 'No pudimos subir la foto.')
+      const demoId = delegatedDemo ? activeFreeDemoDelegationId() : ''
+      const result: any = await apiUpload(demoId ? `/superadmin/free-demo-v2/${demoId}/media?kind=avatar` : '/me/profile/avatar', form)
+      const nextAvatar = demoId ? result?.data?.url : result?.avatar_url
+      if (result?.ok && nextAvatar) setAvatarUrl(nextAvatar)
+      else setError(result?.error || 'No pudimos subir la foto.')
     } catch {
       setError('No pudimos subir la foto.')
     } finally {
@@ -98,7 +100,7 @@ export default function FreeOnboardingIdentity() {
   }
   const uploadHero = async (blob:Blob) => {
     setHeroCropFile(null); setUploading(true); setError('')
-    try { const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:1200,quality:0.82,baseName:'hero'}); const form=new FormData(); form.append('file',optimized,optimized.name); const result:any=await apiUpload('/me/profile/hero',form); if(result?.ok&&result.hero_url)setHeroUrl(result.hero_url); else setError(result?.error||'No pudimos subir la portada.') }
+    try { const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:1200,quality:0.82,baseName:'hero'}); const form=new FormData(); form.append('file',optimized,optimized.name); const demoId=delegatedDemo?activeFreeDemoDelegationId():''; const result:any=await apiUpload(demoId?`/superadmin/free-demo-v2/${demoId}/media?kind=hero`:'/me/profile/hero',form); const nextHero=demoId?result?.data?.url:result?.hero_url; if(result?.ok&&nextHero)setHeroUrl(nextHero); else setError(result?.error||'No pudimos subir la portada.') }
     catch { setError('No pudimos subir la portada.') } finally { setUploading(false) }
   }
 
