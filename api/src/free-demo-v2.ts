@@ -147,6 +147,22 @@ app.get('/api/v1/superadmin/free-demo-v2/:id/editor',requireSuperAdmin('super_ad
   }})
 })
 
+app.put('/api/v1/superadmin/free-demo-v2/:id/identifier',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const row=await demoRow(c,c.req.param('id'))
+  if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
+  if(String((row as any).status)==='claimed')return c.json({ok:false,error:'Este perfil ya fue reclamado.'},409)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  const requested=slugify(body.slug)
+  if(!validSlug(requested))return c.json({ok:false,error:'Usuario / slug no válido o reservado.'},400)
+  const publishedAt=String((row as any).published_at||'')
+  const current=String((row as any).slug||'')
+  if(publishedAt&&requested!==current)return c.json({ok:false,error:'El usuario / slug publicado es permanente.',code:'slug_locked'},409)
+  const duplicate=await c.env.DB.prepare('SELECT id FROM profiles WHERE slug=? AND id<>? LIMIT 1').bind(requested,String((row as any).profile_id)).first()
+  if(duplicate)return c.json({ok:false,error:'Ese usuario ya está siendo usado por otro perfil.',code:'slug_taken'},409)
+  await c.env.DB.prepare("UPDATE profiles SET slug=?,updated_at=datetime('now') WHERE id=?").bind(requested,String((row as any).profile_id)).run()
+  return c.json({ok:true,data:{slug:requested,public_url:webOrigin(c)+'/'+requested,published:Boolean(publishedAt)}})
+})
+
 app.patch('/api/v1/superadmin/free-demo-v2/:id/profile',requireSuperAdmin('super_admin'),async(c:any)=>{
   const row=await demoRow(c,c.req.param('id'))
   if(!row)return c.json({ok:false,error:'Demo Free no encontrada.'},404)
