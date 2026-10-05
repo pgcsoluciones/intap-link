@@ -103,6 +103,7 @@ assert.match(superAdmin,/Editar borrador/,'SuperAdmin conserva URL de edición')
 assert.match(editor,/Finalizar y publicar/,'editor finaliza desde el borrador')
 assert.match(editor,/const saved=await save\(\)/,'publicación exige guardar correctamente el borrador')
 assert.match(editor,/if\(!saved\)return/,'fallo de guardado bloquea publicación')
+assert.match(editor,/\/admin\/free\?demo_admin=/,'primera publicación entrega inmediatamente el perfil al panel Free normal')
 
 assert.match(superAdmin,/Administrar panel Free/,'después de publicar SuperAdmin ofrece el panel Free normal')
 assert.match(superAdmin,/demo_admin=/,'acceso delegado lleva el id de Demo sin crear una sesión del owner interno')
