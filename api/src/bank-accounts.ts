@@ -1,6 +1,7 @@
 import app from './preview-entry'
 import { cookieNames } from './lib/cookies'
 import { resolveFeaturePromotionAccess } from './lib/feature-promotion-access'
+import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
 
 type AccountType = 'savings' | 'checking'
 type Currency = 'DOP' | 'USD'
@@ -33,7 +34,10 @@ async function requireBankAuth(c: any, next: any) {
   ).bind(sessionHash).first()
 
   if (!session) return c.json({ ok: false, error: 'Unauthorized' }, 401)
-  c.set('userId', String((session as any).user_id || ''))
+  const actorUserId=String((session as any).user_id||'')
+  let effectiveUserId=actorUserId
+  try{effectiveUserId=await applyFreeDemoDelegation(c,actorUserId)}catch(error){return freeDemoDelegationError(c,error)}
+  c.set('userId',effectiveUserId)
   await next()
 }
 
