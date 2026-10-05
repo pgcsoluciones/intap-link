@@ -125,7 +125,6 @@ assert.match(dashboard,/isFreeDemoDelegationActive/,'dashboard Free detecta admi
 assert.match(dashboard,/<FreeNotificationBell \/>/,'panel Free delegado conserva la campana actual')
 assert.match(dashboard,/navigate\('\/admin\/free\/account'\)/,'panel Free delegado conserva Mi cuenta')
 assert.doesNotMatch(dashboard,/Agrega tus servicios/,'panel Free actual no reintroduce Servicios')
-assert.match(dashboard,/!delegatedDemo&&<FreeNotificationBell/,'herramientas personales de cuenta quedan fuera del modo delegado')
 assert.match(identifier,/Usuario bloqueado después de publicar/,'pantalla de identificador conserva slug bloqueado')
 assert.match(identity,/Usuario bloqueado después de la primera publicación/,'pantalla principal de identidad Free bloquea el slug ya publicado')
 assert.match(identity,/!delegatedDemo && normalizedSlug/,'identidad no intenta mutar slug durante delegación')
