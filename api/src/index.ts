@@ -42,6 +42,10 @@ type Variables = {
   userId: string
   adminUserId: string
   adminRole: AdminRole
+  freeDemoId: string
+  freeDemoProfileId: string
+  freeDemoActorUserId: string
+  freeDemoDelegated: boolean
 }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
