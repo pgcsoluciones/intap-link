@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read=(p)=>readFile(p,'utf8')
-const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types]=await Promise.all([
+const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge]=await Promise.all([
   read('api/migrations-preview/0088_free_demo_master_v2.sql'),
   read('api/src/free-demo-v2.ts'),
   read('api/src/free-demo-claim-core.ts'),
@@ -18,6 +18,16 @@ const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,l
   read('app/src/components/admin/AuthCallback.tsx'),
   read('app/src/components/admin/free/FreeCredentials.tsx'),
   read('web/src/components/free-profile/IntapLinkGratis.types.ts'),
+  read('api/src/lib/free-demo-delegation.ts'),
+  read('app/src/lib/freeDemoDelegation.ts'),
+  read('app/src/components/admin/FreeDemoDelegationBanner.tsx'),
+  read('app/src/components/admin/AdminGuard.tsx'),
+  read('app/src/components/admin/free/FreeDashboard.tsx'),
+  read('app/src/components/admin/free/FreeIdentifier.tsx'),
+  read('app/src/components/admin/free/FreeVisualEditor.tsx'),
+  read('app/src/components/admin/free/FreeStyle.tsx'),
+  read('app/src/components/admin/free/TeamPermissionGuard.tsx'),
+  read('app/src/components/notifications/PwaNotificationBridge.tsx'),
 ])
 
 // Aislamiento estructural.
@@ -92,6 +102,26 @@ assert.match(superAdmin,/Editar borrador/,'SuperAdmin conserva URL de edición')
 assert.match(editor,/Finalizar y publicar/,'editor finaliza desde el borrador')
 assert.match(editor,/const saved=await save\(\)/,'publicación exige guardar correctamente el borrador')
 assert.match(editor,/if\(!saved\)return/,'fallo de guardado bloquea publicación')
+
+assert.match(superAdmin,/Administrar panel Free/,'después de publicar SuperAdmin ofrece el panel Free normal')
+assert.match(superAdmin,/demo_admin=/,'acceso delegado lleva el id de Demo sin crear una sesión del owner interno')
+assert.match(delegationClient,/X-Kawvo-Free-Demo-Id/,'cliente adjunta contexto Demo solo a APIs /me')
+assert.match(delegationApi,/admin_users WHERE user_id=\?/,'backend exige rol SuperAdmin para delegación')
+assert.match(delegationApi,/d\.published_at IS NOT NULL/,'delegación solo existe después de la primera publicación')
+assert.match(delegationApi,/p\.user_id=d\.synthetic_owner_user_id/,'delegación exige ownership interno canónico aún intacto')
+assert.match(index,/applyFreeDemoDelegation\(c,actorUserId\)/,'API Free canónica resuelve el owner efectivo desde la sesión SuperAdmin')
+assert.match(index,/free_demo_owner_only/,'operaciones exclusivas del propietario quedan bloqueadas durante delegación')
+assert.match(index,/slug_locked/,'slug publicado permanece bloqueado también desde el panel Free normal')
+assert.match(banner,/panel Free real/,'panel muestra claramente que SuperAdmin administra la Demo sobre el Free real')
+assert.match(guard,/delegatedDemoId && location\.pathname\.startsWith\('\/admin\/free'\)/,'AdminGuard mantiene la navegación dentro del árbol Free sin redirigir al home de SuperAdmin')
+assert.match(dashboard,/isFreeDemoDelegationActive/,'dashboard Free detecta administración delegada')
+assert.match(dashboard,/!delegatedDemo&&<FreeNotificationBell/,'herramientas personales de cuenta quedan fuera del modo delegado')
+assert.match(identifier,/Usuario bloqueado después de publicar/,'pantalla de identificador conserva slug bloqueado')
+assert.match(visualEditor,/delegatedDemo/,'editor visual Free adapta preview y oculta herramientas no aplicables')
+assert.match(style,/delegatedDemo/,'estilo Free conserva edición visual bajo delegación')
+assert.match(teamGuard,/isFreeDemoDelegationActive/,'TeamPermissionGuard no consulta ownership Team durante delegación')
+assert.match(pwaBridge,/isFreeDemoDelegationActive\(\)\)return/,'PWA personal no hace polling durante delegación')
+assert.doesNotMatch(delegationApi,/auth_sessions|Set-Cookie|session_hash/,'delegación no crea ni sustituye sesiones')
 
 // Reclamo final: autorización temporal + credenciales normales verificadas.
 assert.match(claimCore,/FREE_DEMO_V2_CLAIM_EMAIL='intapcard@gmail\.com'/,'correo especial exacto')
