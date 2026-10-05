@@ -8,6 +8,7 @@ import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { finalizeFreeDemoClaimToVerifiedUser, freeDemoClaimCookie, getActiveFreeDemoClaim } from './free-demo-claim-core'
+import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
 import { registerDemoViralRoutes } from './routes/demo-viral'
 import { registerDemoAiRoutes } from './routes/demo-ai'
 import {
@@ -82,7 +83,7 @@ function isAllowedOrigin(origin: string): boolean {
 app.use('*', cors({
   origin: (origin) => isAllowedOrigin(origin) ? origin : '',
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id'],
   credentials: true,
   maxAge: 86400,
 }))
@@ -190,7 +191,14 @@ const requireAuth = async (c: any, next: any) => {
 
   if (!session) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
-  c.set('userId', (session as any).user_id)
+  const actorUserId=String((session as any).user_id||'')
+  let effectiveUserId=actorUserId
+  try{
+    effectiveUserId=await applyFreeDemoDelegation(c,actorUserId)
+  }catch(error){
+    return freeDemoDelegationError(c,error)
+  }
+  c.set('userId', effectiveUserId)
   await next()
 
   // Update last_seen_at non-blocking after response
@@ -1703,6 +1711,14 @@ me.put('/profile', async (c) => {
     console.error('[PUT /me/profile] D1 error:', e)
     return c.json({ ok: false, error: e?.message || 'Error al guardar perfil' }, 500)
   }
+  if(c.get('freeDemoDelegated')&&is_published!==undefined){
+    const demoId=String(c.get('freeDemoId')||'')
+    if(is_published===1){
+      await c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status!='claimed'").bind(demoId).run()
+    }else{
+      await c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='draft',updated_at=datetime('now') WHERE id=? AND status!='claimed'").bind(demoId).run()
+    }
+  }
   return c.json({ ok: true })
 })
 
@@ -1765,6 +1781,7 @@ me.post('/profile/hero', async (c) => {
 
 me.put('/profile/slug', async (c) => {
   const userId = c.get('userId') as string
+  if(c.get('freeDemoDelegated'))return c.json({ok:false,error:'El usuario / slug de una Demo publicada se administra desde SuperAdmin y permanece bloqueado.',code:'slug_locked'},409)
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
