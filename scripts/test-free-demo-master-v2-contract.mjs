@@ -113,6 +113,7 @@ assert.match(delegationApi,/p\.user_id=d\.synthetic_owner_user_id/,'delegación 
 assert.match(index,/applyFreeDemoDelegation\(c,actorUserId\)/,'API Free canónica resuelve el owner efectivo desde la sesión SuperAdmin')
 assert.match(index,/free_demo_owner_only/,'operaciones exclusivas del propietario quedan bloqueadas durante delegación')
 assert.match(index,/slug_locked/,'slug publicado permanece bloqueado también desde el panel Free normal')
+assert.match(index,/UPDATE free_demo_v2_claims SET status='revoked'/,'ocultar una Demo desde el panel Free revoca cualquier código de reclamo activo')
 assert.match(banner,/panel Free real/,'panel muestra claramente que SuperAdmin administra la Demo sobre el Free real')
 assert.match(guard,/delegatedDemoId && location\.pathname\.startsWith\('\/admin\/free'\)/,'AdminGuard mantiene la navegación dentro del árbol Free sin redirigir al home de SuperAdmin')
 assert.match(dashboard,/isFreeDemoDelegationActive/,'dashboard Free detecta administración delegada')
