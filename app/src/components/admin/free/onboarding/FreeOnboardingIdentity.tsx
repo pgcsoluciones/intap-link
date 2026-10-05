@@ -4,6 +4,7 @@ import { apiGet, apiPut, apiUpload } from '../../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../../lib/imageUploadOptimization'
 import ImageCropModal from '../../ImageCropModal'
 import { FreeBackButton } from '../FreePanelUi'
+import { isFreeDemoDelegationActive } from '../../../../lib/freeDemoDelegation'
 
 function normalizeSlug(value: string) {
   return value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '').slice(0, 32)
@@ -11,6 +12,7 @@ function normalizeSlug(value: string) {
 
 export default function FreeOnboardingIdentity() {
   const navigate = useNavigate()
+  const delegatedDemo = isFreeDemoDelegationActive()
   const editingFromPanel = new URLSearchParams(window.location.search).get('from') === 'panel'
   const fileRef = useRef<HTMLInputElement>(null)
   const heroFileRef = useRef<HTMLInputElement>(null)
@@ -107,7 +109,7 @@ export default function FreeOnboardingIdentity() {
       return
     }
     const normalizedSlug = normalizeSlug(slug)
-    if (!teamMember && normalizedSlug.length < 2) {
+    if (!teamMember && !delegatedDemo && normalizedSlug.length < 2) {
       setError('Elige un usuario de al menos 2 caracteres.')
       return
     }
@@ -115,7 +117,7 @@ export default function FreeOnboardingIdentity() {
     setSaving(true)
     setError('')
     try {
-      if (!teamMember && normalizedSlug && normalizedSlug !== originalSlug) {
+      if (!teamMember && !delegatedDemo && normalizedSlug && normalizedSlug !== originalSlug) {
         const slugResult: any = await apiPut('/me/profile/slug', { slug: normalizedSlug })
         if (!slugResult?.ok) {
           setError(slugResult?.error === 'Slug no disponible' ? 'Ese usuario ya está siendo usado por otro perfil. Prueba con otro.' : slugResult?.error || 'No pudimos guardar tu usuario.')
@@ -166,7 +168,7 @@ export default function FreeOnboardingIdentity() {
           {!teamMember && <div className="mt-4 rounded-2xl bg-amber-50/50 p-3"><div className="flex items-center justify-between"><div><p className="text-sm font-bold">Portada</p><p className="mt-1 text-xs text-slate-500">Imagen principal de la plantilla Impacto.</p></div><button type="button" onClick={()=>heroFileRef.current?.click()} disabled={uploading||!profileId} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold">{heroUrl?'Cambiar portada':'Subir portada'}</button></div><button type="button" onClick={()=>heroFileRef.current?.click()} className="mt-3 block aspect-video w-full overflow-hidden rounded-2xl border border-amber-200 bg-slate-100">{heroUrl?<img src={heroUrl} alt="Portada" className="h-full w-full object-cover"/>:<span className="grid h-full place-items-center text-sm font-bold text-slate-400">Agrega tu portada</span>}</button><input ref={heroFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={chooseHero}/></div>}
 
           <div className="mt-5 space-y-4">
-            {!teamMember && <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Usuario</span><div className="mt-2 flex items-center rounded-2xl border border-amber-200 bg-white px-4 focus-within:border-cyan-400"><span className="text-sm font-bold text-slate-400">/</span><input value={slug} onChange={(e) => setSlug(normalizeSlug(e.target.value))} maxLength={32} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="tuusuario" className="min-w-0 flex-1 bg-transparent px-1 py-3.5 text-base font-semibold outline-none" /></div>{slug && <span className="mt-2 block break-all text-xs font-semibold text-cyan-700">{webUrl}/{normalizeSlug(slug)}</span>}</label>}
+            {!teamMember && <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Usuario</span><div className="mt-2 flex items-center rounded-2xl border border-amber-200 bg-white px-4 focus-within:border-cyan-400"><span className="text-sm font-bold text-slate-400">/</span><input value={slug} disabled={delegatedDemo} onChange={(e) => setSlug(normalizeSlug(e.target.value))} maxLength={32} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="tuusuario" className="min-w-0 flex-1 bg-transparent px-1 py-3.5 text-base font-semibold outline-none disabled:text-slate-500" /></div>{slug && <span className="mt-2 block break-all text-xs font-semibold text-cyan-700">{webUrl}/{normalizeSlug(slug)}</span>}{delegatedDemo&&<span className="mt-2 block text-xs font-semibold text-slate-500">Usuario bloqueado después de la primera publicación.</span>}</label>}
             <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Nombre</span><input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Tu nombre" className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400" /></label>
             <label className="block rounded-2xl bg-amber-50/60 p-3"><span className="text-sm font-bold">Cargo</span><input value={role} onChange={(e) => setRole(e.target.value)} maxLength={80} placeholder="Ej. Asesor de ventas" className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3.5 text-base font-semibold outline-none focus:border-cyan-400" /></label>
             <label className={`block rounded-2xl p-3 ${teamMember ? 'bg-slate-100' : 'bg-white'}`}><span className="text-sm font-bold">Sobre mí</span><textarea value={bio} onChange={(e) => setBio(e.target.value)} disabled={teamMember} maxLength={300} rows={4} className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-base outline-none disabled:text-slate-400" />{teamMember && <span className="mt-1 block text-xs font-semibold text-slate-400">Información heredada del perfil master</span>}</label>
