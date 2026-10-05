@@ -432,7 +432,7 @@ Probado de punta a punta en Preview:
 ✓ Agenda real activa
 ✓ edición de datos
 ✓ publicación en /slug
-✓ después de publicar, botón "Administrar panel Free" usa el panel Free real
+✓ después de publicar, el editor entrega inmediatamente el perfil al panel Free real
 ✓ SuperAdmin conserva su propia sesión; no hay impersonación
 ✓ edición canónica /me apunta al Demo seleccionado
 ✓ slug permanente y bloqueado desde SuperAdmin y desde panel Free
@@ -455,8 +455,9 @@ QA VISUAL:
 3. Se abrirá /free-demo/edit/:id.
 4. Revisa imágenes/textos, edita y guarda.
 5. Finaliza con nombre + slug.
-6. Ya publicado, vuelve a SuperAdmin → Demos Free → "Administrar panel Free".
-7. Confirma que ves el mismo panel Free normal y que el slug está bloqueado.
-8. Genera código de reclamo desde SuperAdmin.
+6. Al publicar, debe abrirse automáticamente /admin/free con el panel Free normal del Demo.
+7. Confirma que puedes editar identidad, contacto, botones, ubicación, enlaces, portafolio, diseño, agenda y bancos si están habilitados; el slug debe quedar bloqueado.
+8. Desde SuperAdmin → Demos Free también debe aparecer "Administrar panel Free" para volver a ese mismo panel.
+9. Genera código de reclamo desde SuperAdmin.
 ================================================================
 EOF
