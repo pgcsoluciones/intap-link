@@ -24,6 +24,9 @@ async function api(path:string,init?:RequestInit){
 }
 function quickLabel(type:string){return type==='call'?'Llamar':type==='instagram'?'Instagram':type==='location'?'Ubicación':type==='email'?'Email':'TikTok'}
 function normalizePhone(value:string){let digits=String(value||'').replace(/\D/g,'');if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits;return digits}
+function normalizeSlug(value:string){return String(value||'').toLowerCase().trim().replace(/\s+/g,'-').replace(/[^a-z0-9_-]/g,'').slice(0,32)}
+function mapsSearchUrl(query:string){return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`}
+function mapsEmbedUrl(query:string){return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`}
 function scheduleFrom(data:ApiState){
   const raw=Array.isArray(data.profile?.template_data?.free_schedule)?data.profile.template_data.free_schedule:[]
   return raw.map((x:any)=>({day:String(x.day||''),hours:String(x.hours||'')}))
@@ -38,8 +41,11 @@ export default function FreeDemoEditor(){
   const[publishOpen,setPublishOpen]=useState(false)
   const[finalName,setFinalName]=useState('')
   const[finalSlug,setFinalSlug]=useState('')
+  const[draftSlug,setDraftSlug]=useState('')
+  const[mapPreviewQuery,setMapPreviewQuery]=useState('')
+  const[mapSelected,setMapSelected]=useState(false)
 
-  const load=async()=>{try{const j=await api('/superadmin/free-demo-v2/'+encodeURIComponent(id)+'/editor');setData(j.data);setError('')}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar la Demo.')}}
+  const load=async()=>{try{const j=await api('/superadmin/free-demo-v2/'+encodeURIComponent(id)+'/editor');setData(j.data);const currentSlug=String(j.data?.profile?.slug||'');setDraftSlug(currentSlug.startsWith('demo-draft-')?'':currentSlug);const address=String(j.data?.contact?.address||'');setMapPreviewQuery(address);setMapSelected(Boolean(j.data?.contact?.map_url));setError('')}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar la Demo.')}}
   useEffect(()=>{void load()},[id])
 
   const updateProfile=(key:string,value:any)=>setData(current=>current?{...current,profile:{...current.profile,[key]:value}}:current)
@@ -98,6 +104,39 @@ export default function FreeDemoEditor(){
     }finally{setSaving(false)}
   }
 
+  const saveIdentifier=async()=>{
+    if(!data)return false
+    const slug=normalizeSlug(draftSlug)
+    if(slug.length<2){setError('Escribe un usuario / slug válido.');return false}
+    setSaving(true);setError('')
+    try{
+      const j=await api('/superadmin/free-demo-v2/'+encodeURIComponent(id)+'/identifier',{method:'PUT',body:JSON.stringify({slug})})
+      setDraftSlug(j.data.slug);updateProfile('slug',j.data.slug);setNotice('Usuario / slug reservado: /'+j.data.slug)
+      return true
+    }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar el usuario / slug.');return false}finally{setSaving(false)}
+  }
+
+  const searchLocation=()=>{
+    const query=String(data?.contact?.address||'').trim()
+    if(!query){setError('Escribe el nombre del negocio o una dirección.');return}
+    setMapPreviewQuery(query);setMapSelected(false);updateContact('map_url','');setError('')
+  }
+  const confirmLocation=()=>{
+    if(!mapPreviewQuery)return
+    const url=mapsSearchUrl(mapPreviewQuery)
+    updateContact('map_url',url);setMapSelected(true)
+    setData(current=>current?{...current,quick_actions:current.quick_actions.map((item:any)=>item.type==='location'?{...item,url}:item)}:current)
+  }
+  const useCurrentLocation=()=>{
+    if(!navigator.geolocation){setError('Este dispositivo no permite obtener tu ubicación actual.');return}
+    navigator.geolocation.getCurrentPosition((position)=>{
+      const coordinates=`${position.coords.latitude.toFixed(6)},${position.coords.longitude.toFixed(6)}`
+      if(!String(data?.contact?.address||'').trim())updateContact('address','Ubicación actual')
+      setMapPreviewQuery(coordinates);const url=mapsSearchUrl(coordinates);updateContact('map_url',url);setMapSelected(true)
+      setData(current=>current?{...current,quick_actions:current.quick_actions.map((item:any)=>item.type==='location'?{...item,url}:item)}:current)
+    },()=>setError('No pudimos obtener tu ubicación. Búscala por nombre o dirección.'),{enableHighAccuracy:true,timeout:10000,maximumAge:30000})
+  }
+
   const upload=async(kind:'avatar'|'hero'|'portfolio',file?:File,index?:number)=>{
     if(!file||!data)return
     const fd=new FormData();fd.append('file',file,file.name)
@@ -118,7 +157,9 @@ export default function FreeDemoEditor(){
       const saved=await save()
       if(!saved)return
       setSaving(true)
-      const j=await api('/superadmin/free-demo-v2/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify({name:finalName,slug:finalSlug})})
+      const publishSlug=normalizeSlug(finalSlug||draftSlug)
+      if(!publishSlug){setError('Define el usuario / slug antes de publicar.');return}
+      const j=await api('/superadmin/free-demo-v2/'+encodeURIComponent(id)+'/publish',{method:'POST',body:JSON.stringify({name:finalName,slug:publishSlug})})
       setPublishOpen(false);setNotice('Presentación publicada: '+j.data.public_url);await load()
     }catch(e){setError(e instanceof Error?e.message:'No pudimos publicar.')}finally{setSaving(false)}
   }
@@ -130,7 +171,7 @@ export default function FreeDemoEditor(){
   return <main className="fd2-page">
     <header className="fd2-top">
       <div><strong>KAWVO LINK · DEMO FREE</strong><span>{data.template_label} · {data.status}</span></div>
-      <div className="fd2-top-actions"><a href={appOrigin()+'/superadmin/free-demos'}>Volver a SuperAdmin</a><button onClick={()=>void save()} disabled={saving}>Guardar borrador</button><button className="primary" onClick={()=>{setFinalName(p.name==='Tu nombre o negocio'?'':p.name);setFinalSlug(data.published_at?p.slug:''),setPublishOpen(true)}} disabled={saving}>Finalizar y publicar</button></div>
+      <div className="fd2-top-actions"><a href={appOrigin()+'/superadmin/free-demos'}>Volver a SuperAdmin</a><button onClick={()=>void save()} disabled={saving}>Guardar borrador</button><button className="primary" onClick={()=>{setFinalName(p.name==='Tu nombre o negocio'?'':p.name);setFinalSlug(data.published_at?p.slug:draftSlug),setPublishOpen(true)}} disabled={saving}>Finalizar y publicar</button></div>
     </header>
 
     {notice&&<div className="fd2-notice">{notice}</div>}
@@ -139,6 +180,12 @@ export default function FreeDemoEditor(){
     <div className="fd2-grid">
       <section className="fd2-editor">
         <h1>Editar borrador</h1><p>Esta copia es un perfil Free real en borrador. No modifica la plantilla base.</p>
+        <fieldset><legend>Usuario / URL pública</legend>
+          <p style={{margin:'0 0 10px',fontSize:12,color:'#64748b'}}>Es el mismo identificador que usa un Free normal. Puedes reservarlo mientras trabajas; no será público hasta publicar.</p>
+          <label>Tu usuario<div className="fd2-slug"><span>intaprd.com/</span><input value={draftSlug} disabled={Boolean(data.published_at)} onChange={e=>setDraftSlug(normalizeSlug(e.target.value))} placeholder="tu-negocio"/></div></label>
+          <button type="button" onClick={()=>void saveIdentifier()} disabled={saving||Boolean(data.published_at)||normalizeSlug(draftSlug).length<2}>{data.published_at?'Slug publicado y bloqueado':'Guardar usuario / slug'}</button>
+          <p style={{margin:'10px 0 0',fontSize:12,color:'#64748b'}}>Propietario final: <strong>{data.status==='claimed'?'reclamado':'pendiente de reclamo'}</strong>. No se asigna un correo dueño mientras la Demo sigue bajo SuperAdmin.</p>
+        </fieldset>
         <fieldset><legend>Identidad</legend>
           <label>Nombre<input value={p.name||''} onChange={e=>updateProfile('name',e.target.value)}/></label>
           <label>Especialidad / qué hago<input value={td.role||''} onChange={e=>updateTemplate('role',e.target.value)}/></label>
@@ -149,13 +196,20 @@ export default function FreeDemoEditor(){
         <fieldset><legend>Contacto</legend>
           <div className="fd2-row"><label>WhatsApp<input value={data.contact.whatsapp||''} onChange={e=>updateContact('whatsapp',e.target.value)}/></label><label>Teléfono<input value={data.contact.phone||''} onChange={e=>updateContact('phone',e.target.value)}/></label></div>
           <label>Correo<input value={data.contact.email||''} onChange={e=>updateContact('email',e.target.value)}/></label>
-          <label>Dirección<input value={data.contact.address||''} onChange={e=>updateContact('address',e.target.value)}/></label>
-          <label>Enlace de mapa<input value={data.contact.map_url||''} onChange={e=>updateContact('map_url',e.target.value)}/></label>
+          <label>Dirección o nombre del negocio<input value={data.contact.address||''} onChange={e=>{updateContact('address',e.target.value);setMapSelected(false);updateContact('map_url','')}}/></label>
+          <div className="fd2-map-actions"><button type="button" onClick={searchLocation}>Buscar ubicación</button><button type="button" onClick={useCurrentLocation}>Usar mi ubicación actual</button></div>
+          {mapPreviewQuery&&<div className="fd2-map-preview"><iframe title="Vista previa de ubicación" src={mapsEmbedUrl(mapPreviewQuery)} loading="lazy" referrerPolicy="no-referrer-when-downgrade"/>{!mapSelected?<button type="button" onClick={confirmLocation}>Usar esta ubicación</button>:<div className="fd2-map-ok">✓ Ubicación seleccionada</div>}</div>}
+          {data.contact.map_url&&<p style={{fontSize:11,color:'#64748b',wordBreak:'break-all'}}>Mapa guardado: {data.contact.map_url}</p>}
         </fieldset>
 
-        <fieldset><legend>Diseño</legend>
-          <div className="fd2-row"><label>Plantilla<select value={p.layout_id||'impacto'} onChange={e=>updateProfile('layout_id',e.target.value)}><option value="impacto">Impacto</option><option value="personal">Personal</option><option value="esencial">Esencial</option></select></label>
-          <label>Paleta<select value={p.free_palette_id||'intap'} onChange={e=>updateProfile('free_palette_id',e.target.value)}>{FREE_PALETTES.filter(x=>x.id!=='personalizada').map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label></div>
+        <fieldset><legend>Diseño y apariencia</legend>
+          <p style={{margin:'0 0 10px',fontSize:12,color:'#64748b'}}>Mismas plantillas y paletas disponibles en el panel Free normal.</p>
+          <div className="fd2-layout-cards">{[
+            {id:'impacto',name:'Impacto',text:'Portada protagonista + foto de perfil'},
+            {id:'personal',name:'Personal',text:'Mayor protagonismo de tu identidad'},
+            {id:'esencial',name:'Esencial',text:'Limpio, directo y sin portada'},
+          ].map(item=><button type="button" key={item.id} className={p.layout_id===item.id?'active':''} onClick={()=>updateProfile('layout_id',item.id)}><strong>{item.name}</strong><span>{item.text}</span></button>)}</div>
+          <div className="fd2-palette-cards">{FREE_PALETTES.filter(x=>x.id!=='personalizada').map(item=><button type="button" key={item.id} className={p.free_palette_id===item.id?'active':''} onClick={()=>updateProfile('free_palette_id',item.id)}><span className="fd2-swatches"><i style={{background:item.colors.primary}}/><i style={{background:item.colors.secondary}}/><i style={{background:item.colors.accent}}/><i style={{background:item.colors.background}}/></span><strong>{item.name}</strong></button>)}</div>
         </fieldset>
 
         <fieldset><legend>Botones rápidos · {data.quick_actions.length}/3</legend>
@@ -184,7 +238,7 @@ export default function FreeDemoEditor(){
         <div className="fd2-save"><button onClick={()=>void save()} disabled={saving}>{saving?'Guardando…':'Guardar borrador'}</button></div>
       </section>
 
-      <aside className="fd2-preview"><div className="fd2-preview-label">Vista previa Free real</div><IntapLinkGratisProfile profile={live.profile} layout={live.layout} colors={live.colors}/></aside>
+      <aside className="fd2-preview"><div className="fd2-preview-label">Vista previa Free real</div><IntapLinkGratisProfile profile={live.profile} layout={live.layout} colors={live.colors} showOwnerBar={false}/></aside>
     </div>
 
     {publishOpen&&<div className="fd2-modal" onMouseDown={e=>{if(e.target===e.currentTarget)setPublishOpen(false)}}><section><h2>Finalizar y publicar</h2><p>El borrador conservará todos sus datos. El slug queda fijo después de la primera publicación.</p><label>Nombre final<input value={finalName} onChange={e=>setFinalName(e.target.value)}/></label><label>Slug final<div className="fd2-slug"><span>intaprd.com/</span><input value={finalSlug} disabled={Boolean(data.published_at)} onChange={e=>setFinalSlug(e.target.value)}/></div></label><div><button onClick={()=>setPublishOpen(false)}>Cancelar</button><button className="primary" disabled={saving||!finalName.trim()||!finalSlug.trim()} onClick={()=>void publish()}>Publicar presentación</button></div></section></div>}
