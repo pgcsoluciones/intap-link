@@ -9,6 +9,7 @@ import FreeProfileDangerZone from './FreeProfileDangerZone'
 import FreeSupportPanel from './FreeSupportPanel'
 import FreeAccountGuidedTour from './FreeAccountGuidedTour'
 import FreeExperienceSettings from './FreeExperienceSettings'
+import { isFreeDemoDelegationActive, clearFreeDemoDelegation } from '../../../lib/freeDemoDelegation'
 
 type MeData = {
   email?: string | null
@@ -49,6 +50,7 @@ type RowProps = {
   href?: string
   danger?: boolean
   tour?: string
+  disabled?: boolean
 }
 
 function planLabel(me: MeData | null) {
@@ -62,7 +64,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <p className="mb-3 px-1 text-[13px] font-semibold uppercase tracking-[0.08em] text-slate-400">{children}</p>
 }
 
-function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false, tour }: RowProps) {
+function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false, tour, disabled = false }: RowProps) {
   const content = (
     <>
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center text-[24px] ${danger ? 'text-rose-500' : 'text-slate-500'}`}>{icon}</span>
@@ -75,13 +77,14 @@ function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false
     </>
   )
 
-  const className = 'flex min-h-[70px] w-full items-center gap-3 border-b border-slate-200 px-4 py-3 text-left last:border-b-0'
-  if (href) return <a href={href} target="_blank" rel="noreferrer" className={className} data-account-tour={tour}>{content}</a>
-  return <button type="button" onClick={onClick} className={className} data-account-tour={tour}>{content}</button>
+  const className = 'flex min-h-[70px] w-full items-center gap-3 border-b border-slate-200 px-4 py-3 text-left last:border-b-0 '+(disabled?'cursor-not-allowed opacity-55':'')
+  if (href && !disabled) return <a href={href} target="_blank" rel="noreferrer" className={className} data-account-tour={tour}>{content}</a>
+  return <button type="button" disabled={disabled} onClick={disabled?undefined:onClick} className={className} data-account-tour={tour}>{content}</button>
 }
 
 export default function FreeAccount() {
   const navigate = useNavigate()
+  const delegatedDemo = isFreeDemoDelegationActive()
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const [me, setMe] = useState<MeData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -111,10 +114,10 @@ export default function FreeAccount() {
     Promise.all([
       apiGet('/me').catch(() => ({ ok: false })),
       apiGet('/me/bank-accounts').catch(() => ({ ok: false })),
-      apiGet('/me/ai-profile-assistant/context').catch(() => ({ ok: false })),
-      apiGet('/me/account/resources').catch(() => ({ ok: false })),
+      delegatedDemo ? Promise.resolve({ ok:false }) : apiGet('/me/ai-profile-assistant/context').catch(() => ({ ok: false })),
+      delegatedDemo ? Promise.resolve({ ok:false }) : apiGet('/me/account/resources').catch(() => ({ ok: false })),
       apiGet('/me/notifications?limit=1').catch(() => ({ ok: false })),
-      apiGet('/me/team/admin-context').catch(() => ({ ok: false })),
+      delegatedDemo ? Promise.resolve({ ok:false }) : apiGet('/me/team/admin-context').catch(() => ({ ok: false })),
     ]).then(([meJson, bankJson, aiJson, resourcesJson, notificationsJson, teamJson]: any[]) => {
       if (meJson?.ok) setMe(meJson.data || null)
       if (bankJson?.ok) setBankActive(Boolean(bankJson.data?.access?.allowed && bankJson.data?.enabled !== false))
@@ -123,7 +126,7 @@ export default function FreeAccount() {
       if (notificationsJson?.ok) setUnreadCount(Number(notificationsJson.data?.unread_count || 0))
       if (teamJson?.ok) setTeamContext(teamJson.data || { role: 'none' })
     }).finally(() => setLoading(false))
-  }, [])
+  }, [delegatedDemo])
 
   useEffect(() => {
     const onReady = () => setPwaInstallReady(Boolean((window as any).__kawvoInstallPrompt))
@@ -269,6 +272,7 @@ export default function FreeAccount() {
   }
 
   const handleLogout = async () => {
+    if(delegatedDemo){clearFreeDemoDelegation();window.location.assign('/superadmin/free-demos');return}
     try { await apiPost('/auth/logout', {}) } catch { /* ignore */ }
     window.location.replace('/admin/login')
   }
@@ -351,11 +355,11 @@ export default function FreeAccount() {
               <span className="text-[28px] font-light text-slate-400">›</span>
             </div>
 
-            <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>} label="Credenciales" detail="Google, correo y contraseña Kawvo" onClick={() => navigate('/admin/free/credentials')} />
-            <SettingsRow tour="plan" icon={<span className="text-amber-500"><UpgradeCrownIcon className="h-6 w-6" /></span>} label="Mejora tu plan" detail="Conoce el Plan Plus" href={basicPlanWhatsAppUrl()} />
-            <SettingsRow tour="notifications" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>} label="Notificaciones" detail={unreadCount > 0 ? `${unreadCount} sin leer` : undefined} onClick={openNotifications} />
-            <SettingsRow tour="ai" icon="✧" label="Cuotas de IA" detail={aiUsage ? `${aiUsage.remaining_today ?? '—'} hoy · ${aiUsage.remaining_month ?? '—'} este mes` : undefined} onClick={() => setShowAi((value) => !value)} />
-            {showAi && (
+            <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>} label="Credenciales" detail={delegatedDemo?'Se asignan al propietario cuando reclame esta presentación.':'Google, correo y contraseña Kawvo'} disabled={delegatedDemo} onClick={() => navigate('/admin/free/credentials')} />
+            <SettingsRow tour="plan" icon={<span className="text-amber-500"><UpgradeCrownIcon className="h-6 w-6" /></span>} label="Mejora tu plan" detail={delegatedDemo?'Disponible después del reclamo.':'Conoce el Plan Plus'} disabled={delegatedDemo} href={basicPlanWhatsAppUrl()} />
+            <SettingsRow tour="notifications" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>} label="Notificaciones" detail={unreadCount > 0 ? `${unreadCount} sin leer` : 'Solicitudes y actividad de esta presentación'} onClick={openNotifications} />
+            <SettingsRow tour="ai" icon="✧" label="Cuotas de IA" detail={delegatedDemo?'Disponible al propietario después del reclamo.':aiUsage ? `${aiUsage.remaining_today ?? '—'} hoy · ${aiUsage.remaining_month ?? '—'} este mes` : undefined} disabled={delegatedDemo} onClick={() => setShowAi((value) => !value)} />
+            {showAi && !delegatedDemo && (
               <div className="border-b border-slate-200 bg-white/70 px-5 py-4 text-sm text-slate-600">
                 <div className="flex justify-between"><span>Disponibles hoy</span><strong>{aiUsage?.remaining_today ?? '—'}</strong></div>
                 <div className="mt-2 flex justify-between"><span>Disponibles este mes</span><strong>{aiUsage?.remaining_month ?? '—'}</strong></div>
@@ -370,36 +374,36 @@ export default function FreeAccount() {
 
           <SectionTitle>MI KAWVO</SectionTitle>
             <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-              <SettingsRow tour="install-app" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label={pwaInstalled ? "Kawvo está instalada" : "Instalar app Kawvo"} detail={pwaInstalled ? "La estás usando como app en este dispositivo" : (pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app")} onClick={() => pwaInstalled ? undefined : void installPwa()} />
-              <SettingsRow tour="products" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail="NFC y QR vinculados" onClick={() => navigate('/admin/artifacts?from=account')} />
-              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5M10.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5"/></svg>} tour="team" label={teamContext.role === 'none' ? 'Crear mi primer Team' : 'Team'} detail={teamDetail} badge={teamContext.role === 'master' ? 'MASTER' : teamContext.role === 'editor' ? 'EDITOR' : teamContext.role === 'subadmin' ? 'SUBADMIN' : undefined} onClick={() => navigate('/admin/free/team')} />
+              <SettingsRow tour="install-app" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M9 15l3 3 3-3M12 8v10"/></svg>} label={pwaInstalled ? "Kawvo está instalada" : "Instalar app Kawvo"} detail={delegatedDemo?'Disponible al propietario después del reclamo.':pwaInstalled ? "La estás usando como app en este dispositivo" : (pwaInstallReady ? "Instálala en este dispositivo" : "Accede a Kawvo como una app")} disabled={delegatedDemo} onClick={() => pwaInstalled ? undefined : void installPwa()} />
+              <SettingsRow tour="products" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg>} label="Mis productos" detail={delegatedDemo?'Se vinculan desde la cuenta del propietario.':'NFC y QR vinculados'} disabled={delegatedDemo} onClick={() => navigate('/admin/artifacts?from=account')} />
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5M10.5 19c.5-3.5 2.5-5.5 5.5-5.5s5 2 5.5 5.5"/></svg>} tour="team" label={teamContext.role === 'none' ? 'Crear mi primer Team' : 'Team'} detail={delegatedDemo?'Disponible después del reclamo.':teamDetail} disabled={delegatedDemo} badge={!delegatedDemo?(teamContext.role === 'master' ? 'MASTER' : teamContext.role === 'editor' ? 'EDITOR' : teamContext.role === 'subadmin' ? 'SUBADMIN' : undefined):undefined} onClick={() => navigate('/admin/free/team')} />
               <SettingsRow tour="qr" icon="▦" label={qrBusy ? 'Generando QR…' : 'Descargar QR de mi perfil'} onClick={() => void previewQr()} />
               {bankActive && <SettingsRow tour="bank-transfer" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 10h18M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18M12 3 3 8h18L12 3Z"/></svg>} label="Enviar enlace de cuentas" detail="Comparte con tus clientes el enlace directo a tus cuentas bancarias" onClick={() => void shareBankAccounts()} />}
-              <SettingsRow tour="invite" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3.5 19c.5-3.5 2.6-5.5 5.5-5.5s5 2 5.5 5.5M14 14c2.8-.3 5 1.4 5.5 4.5"/></svg>} label="Invitar a un amigo" onClick={() => setShowInvitePreview(true)} />
+              <SettingsRow tour="invite" icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3.5 19c.5-3.5 2.6-5.5 5.5-5.5s5 2 5.5 5.5M14 14c2.8-.3 5 1.4 5.5 4.5"/></svg>} label="Invitar a un amigo" detail={delegatedDemo?'Disponible al propietario después del reclamo.':undefined} disabled={delegatedDemo} onClick={() => setShowInvitePreview(true)} />
             </div>
           </div>
           {shareFeedback && <p className="mt-3 text-center text-xs font-semibold text-slate-500">{shareFeedback}</p>}
 
-          <div className="mt-8">
+          {!delegatedDemo&&<div className="mt-8">
             <SectionTitle>AYUDA Y RECURSOS</SectionTitle>
             <div data-account-tour={resources.length > 0 ? "resources" : undefined} className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
               {resources.map((resource) => <SettingsRow key={resource.id} icon="□" label={resource.title} detail={resource.description || undefined} href={resource.url} />)}
             </div>
-          </div>
+          </div>}
 
           <div className="mt-8">
-            <SectionTitle>CUENTA Y SEGURIDAD</SectionTitle>
+            <SectionTitle>{delegatedDemo?'ADMINISTRACIÓN DEMO':'CUENTA Y SEGURIDAD'}</SectionTitle>
             <div data-account-tour="security" className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
-              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 4H5v16h5"/><path d="M13 8l4 4-4 4M8 12h9"/></svg>} label="Cerrar sesión" onClick={() => void handleLogout()} />
+              <SettingsRow icon={<svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10 4H5v16h5"/><path d="M13 8l4 4-4 4M8 12h9"/></svg>} label={delegatedDemo?'Volver a Demos Free':'Cerrar sesión'} detail={delegatedDemo?'Tu sesión continúa siendo SuperAdmin.':undefined} onClick={() => void handleLogout()} />
             </div>
           </div>
 
-          <div className="mt-8" id="account-support" data-account-tour="support">
+          {!delegatedDemo&&<div className="mt-8" id="account-support" data-account-tour="support">
             <FreeAccountGuidedTour storageId={me ? String(me.email || me.slug || '') : ''} />
-      <FreeSupportPanel />
-          </div>
+            <FreeSupportPanel />
+          </div>}
 
-          {me?.slug && (
+          {!delegatedDemo&&me?.slug && (
             <div className="mt-8">
               <FreeProfileDangerZone slug={me.slug} email={me.email || ''} />
             </div>
