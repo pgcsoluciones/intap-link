@@ -106,7 +106,8 @@ assert.match(editor,/if\(!saved\)return/,'fallo de guardado bloquea publicación
 
 assert.match(superAdmin,/Administrar panel Free/,'después de publicar SuperAdmin ofrece el panel Free normal')
 assert.match(superAdmin,/demo_admin=/,'acceso delegado lleva el id de Demo sin crear una sesión del owner interno')
-assert.match(delegationClient,/X-Kawvo-Free-Demo-Id/,'cliente adjunta contexto Demo solo a APIs /me')
+assert.match(delegationClient,/X-Kawvo-Free-Demo-Id/,'cliente adjunta contexto Demo a las APIs Free autorizadas')
+assert.match(delegationClient,/normalized==='\/profile\/gallery\/upload'/,'subida canónica de portafolio también conserva la delegación')
 assert.match(delegationApi,/admin_users WHERE user_id=\?/,'backend exige rol SuperAdmin para delegación')
 assert.match(delegationApi,/d\.published_at IS NOT NULL/,'delegación solo existe después de la primera publicación')
 assert.match(delegationApi,/p\.user_id=d\.synthetic_owner_user_id/,'delegación exige ownership interno canónico aún intacto')
