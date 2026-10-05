@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read=(p)=>readFile(p,'utf8')
-const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge,identity,account,experience,serviceWorker]=await Promise.all([
+const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge,identity,contactOnboarding,account,experience,serviceWorker,contactActions]=await Promise.all([
   read('api/migrations-preview/0088_free_demo_master_v2.sql'),
   read('api/src/free-demo-v2.ts'),
   read('api/src/free-demo-claim-core.ts'),
@@ -29,9 +29,11 @@ const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,l
   read('app/src/components/admin/free/TeamPermissionGuard.tsx'),
   read('app/src/components/notifications/PwaNotificationBridge.tsx'),
   read('app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'),
+  read('app/src/components/admin/free/onboarding/FreeOnboardingContact.tsx'),
   read('app/src/components/admin/free/FreeAccount.tsx'),
   read('app/src/components/admin/free/FreeExperienceSettings.tsx'),
   read('app/public/sw.js'),
+  read('web/src/components/free-profile/FreeContactActions.tsx'),
 ])
 
 // Aislamiento estructural.
@@ -77,6 +79,11 @@ assert.match(editor,/services:\[\]/,'vista previa v2 no muestra Servicios')
 assert.match(api,/INSERT INTO appointment_settings\(subject_type,subject_id,enabled/,'creación inicializa agenda Free real dentro del mismo batch')
 assert.match(api,/VALUES\('free',\?,1,30,120,30/,'agenda nace activa en base Demo')
 assert.match(api,/saveAppointmentConfiguration\(c\.env\.DB,'free',profileId/,'editor guarda agenda mediante core Free')
+assert.match(api,/Banco de demostración/,'cada Demo recibe una cuenta bancaria de ejemplo')
+assert.match(api,/promotion:free-demo-v2/,'cuenta bancaria Demo recibe entitlement aislado')
+assert.match(claimCore,/Banco de demostración/,'claim elimina la cuenta de ejemplo si nunca fue sustituida')
+assert.match(api,/time12\(item\.start_time\).*time12\(item\.end_time\)/,'horario Demo se guarda con AM PM')
+assert.match(contactActions,/formatScheduleHours/,'perfil público normaliza horarios 24h a AM PM')
 assert.match(api,/free_quote_button_visible:true/,'base trae Cotizar activo')
 assert.match(api,/free_schedule_visible:true/,'base trae Horario visible')
 
@@ -122,6 +129,12 @@ assert.match(index,/UPDATE free_demo_v2_claims SET status='revoked'/,'ocultar un
 assert.match(banner,/panel Free real/,'panel muestra claramente que SuperAdmin administra la Demo sobre el Free real')
 assert.match(guard,/delegatedDemoId && location\.pathname\.startsWith\('\/admin\/free'\)/,'AdminGuard mantiene la navegación dentro del árbol Free sin redirigir al home de SuperAdmin')
 assert.match(dashboard,/isFreeDemoDelegationActive/,'dashboard Free detecta administración delegada')
+assert.match(dashboard,/const baseReady = delegatedDemo \? true/,'Demo publicada no bloquea módulos por contenido starter')
+assert.match(dashboard,/const designEditable = delegatedDemo \|\|/,'diseño, plantilla y colores permanecen editables en Demo')
+assert.match(dashboard,/const avatarEditable = delegatedDemo \|\|/,'avatar permanece editable en Demo')
+assert.match(dashboard,/delegatedDemo \? Promise\.resolve\(\{ ok:true, data:\{ role:'none' \} \}\)/,'dashboard no consulta Team durante Demo')
+assert.match(identity,/delegatedDemo \? Promise\.resolve/,'identidad no consulta Team durante Demo')
+assert.match(contactOnboarding,/delegatedDemo \? Promise\.resolve/,'contacto no consulta Team durante Demo')
 assert.match(dashboard,/<FreeNotificationBell \/>/,'panel Free delegado conserva la campana actual')
 assert.match(dashboard,/navigate\('\/admin\/free\/account'\)/,'panel Free delegado conserva Mi cuenta')
 assert.doesNotMatch(dashboard,/Agrega tus servicios/,'panel Free actual no reintroduce Servicios')
