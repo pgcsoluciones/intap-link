@@ -89,6 +89,29 @@ app.use('*', cors({
 }))
 app.options('*', (c) => c.body(null, 204))
 
+app.use('/api/v1/me/*', async (c:any,next:any) => {
+  const delegated=String(c.req.header('X-Kawvo-Free-Demo-Id')||'').trim()
+  if(!delegated)return next()
+  const path=String(c.req.path||'')
+  const blocked=[
+    '/api/v1/me/account',
+    '/api/v1/me/artifacts',
+    '/api/v1/me/team',
+    '/api/v1/me/sponsored',
+    '/api/v1/me/support',
+    '/api/v1/me/ai-profile-assistant',
+    '/api/v1/me/products',
+    '/api/v1/me/notifications',
+    '/api/v1/me/push',
+    '/api/v1/me/profile/exit',
+    '/api/v1/me/profile/claim',
+  ]
+  if(blocked.some(prefix=>path===prefix||path.startsWith(prefix+'/'))){
+    return c.json({ok:false,error:'Esta función pertenece a la cuenta del propietario y no está disponible durante la administración Demo.',code:'free_demo_owner_only'},403)
+  }
+  await next()
+})
+
 registerDemoViralRoutes(app)
 registerDemoAiRoutes(app)
 
