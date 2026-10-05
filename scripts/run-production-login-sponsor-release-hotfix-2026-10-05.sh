@@ -45,10 +45,18 @@ echo "▶ Preflight D1 Producción"
 CHECK="$(cd api && npx wrangler d1 execute intap_db --remote --config wrangler.toml --json --command "
 SELECT id,email FROM users WHERE lower(email) IN ('intapcard@gmail.com','beatocotizaciones@gmail.com') ORDER BY email;
 SELECT id,name,contact_email FROM sponsor_tenants WHERE id='b5aac44a-3e97-48a9-9917-11980996b283';
+SELECT 'CONFLICT:'||sm.sponsor_id AS conflict
+FROM sponsor_members sm
+JOIN users u ON u.id=sm.user_id
+WHERE lower(u.email)='intapcard@gmail.com'
+  AND sm.status='active'
+  AND sm.role='owner'
+  AND sm.sponsor_id<>'b5aac44a-3e97-48a9-9917-11980996b283';
 ")"
 echo "$CHECK" | grep -qi 'intapcard@gmail.com' || fail "No existe la cuenta intapcard@gmail.com en Producción"
 echo "$CHECK" | grep -qi 'beatocotizaciones@gmail.com' || fail "No existe la cuenta beatocotizaciones@gmail.com en Producción"
 echo "$CHECK" | grep -q 'b5aac44a-3e97-48a9-9917-11980996b283' || fail "No existe sponsor DAPSA esperado"
+if echo "$CHECK" | grep -q 'CONFLICT:'; then echo "$CHECK"; fail "intapcard@gmail.com ya es owner activo de otro sponsor"; fi
 echo "✓ Preflight D1 OK"
 
 echo
@@ -83,15 +91,28 @@ WHERE id='b5aac44a-3e97-48a9-9917-11980996b283';
 echo
 echo "▶ Verificación D1 post-repair"
 VERIFY="$(cd api && npx wrangler d1 execute intap_db --remote --config wrangler.toml --json --command "
-SELECT u.email,sm.role,sm.status FROM sponsor_members sm JOIN users u ON u.id=sm.user_id WHERE sm.sponsor_id='b5aac44a-3e97-48a9-9917-11980996b283' ORDER BY u.email;
-SELECT sp.username,sp.profile_role,u.email FROM sponsored_profiles sp LEFT JOIN users u ON u.id=sp.user_id WHERE sp.sponsor_id='b5aac44a-3e97-48a9-9917-11980996b283' AND sp.profile_role='sponsor_owner';
-SELECT u.email,p.id,p.slug,p.plan_id FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE lower(u.email)='beatocotizaciones@gmail.com';
+SELECT 'NEW_OWNER_OK' AS check_name,u.email,sm.role,sm.status
+FROM sponsor_members sm JOIN users u ON u.id=sm.user_id
+WHERE sm.sponsor_id='b5aac44a-3e97-48a9-9917-11980996b283'
+  AND lower(u.email)='intapcard@gmail.com' AND sm.role='owner' AND sm.status='active';
+SELECT 'OLD_OWNER_INACTIVE' AS check_name,u.email,sm.role,sm.status
+FROM sponsor_members sm JOIN users u ON u.id=sm.user_id
+WHERE sm.sponsor_id='b5aac44a-3e97-48a9-9917-11980996b283'
+  AND lower(u.email)='beatocotizaciones@gmail.com' AND sm.status='inactive';
+SELECT 'MASTER_OK' AS check_name,sp.username,sp.profile_role,u.email
+FROM sponsored_profiles sp LEFT JOIN users u ON u.id=sp.user_id
+WHERE sp.sponsor_id='b5aac44a-3e97-48a9-9917-11980996b283'
+  AND sp.profile_role='sponsor_owner' AND lower(u.email)='intapcard@gmail.com';
+SELECT 'OLD_ACCOUNT_RELEASED' AS check_name,u.email,p.id,p.slug,p.plan_id
+FROM users u LEFT JOIN profiles p ON p.user_id=u.id
+WHERE lower(u.email)='beatocotizaciones@gmail.com';
 ")"
 echo "$VERIFY"
-echo "$VERIFY" | grep -qi 'intapcard@gmail.com' || fail "DAPSA no quedó en intapcard"
-echo "$VERIFY" | grep -qi 'beatocotizaciones@gmail.com' || fail "No pude verificar cuenta liberada"
-echo "$VERIFY" | grep -qi '"status": "inactive"' || echo "ℹ️ Revisa visualmente el estado inactive del dueño anterior"
-echo "✓ D1 reparado"
+echo "$VERIFY" | grep -q 'NEW_OWNER_OK' || fail "DAPSA no quedó con intapcard como owner activo"
+echo "$VERIFY" | grep -q 'OLD_OWNER_INACTIVE' || fail "beatocotizaciones sigue activo en DAPSA"
+echo "$VERIFY" | grep -q 'MASTER_OK' || fail "Perfil Master DAPSA no quedó en intapcard"
+echo "$VERIFY" | grep -q 'OLD_ACCOUNT_RELEASED' || fail "No pude verificar cuenta liberada"
+echo "✓ D1 reparado y ownership validado"
 
 echo
 echo "▶ Deploy Admin App Producción"
