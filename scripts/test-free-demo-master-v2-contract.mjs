@@ -81,6 +81,7 @@ assert.match(api,/\/superadmin\/free-demo-v2\/:id\/identifier/,'backend reserva 
 assert.match(editor,/Buscar ubicación/,'editor replica búsqueda de ubicación Free')
 assert.match(editor,/Usar mi ubicación actual/,'editor replica geolocalización Free')
 assert.match(editor,/fd2-palette-cards/,'editor muestra paletas visuales, no solo un select')
+assert.match(editor,/Color personalizado/,'editor conserva color de marca personalizado del Free normal')
 assert.match(editor,/credentials:'include'/,'editor reusa sesión SuperAdmin sin sustituirla')
 
 // Lifecycle borrador -> slug final -> publicación.
