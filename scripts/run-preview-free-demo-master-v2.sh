@@ -190,9 +190,17 @@ APP_HTML="$(curl -fsS https://app.preview.intaprd.com/)"
 APP_JS="$(printf '%s' "$APP_HTML" | grep -Eo '/assets/index-[^"]+\.js' | head -1)"
 [ -n "$APP_JS" ] || fail "No pude detectar bundle App Preview actual"
 curl -fsS "https://app.preview.intaprd.com$APP_JS" > "$LOG/live-app.js"
-grep -Fq 'Mi cuenta' "$LOG/live-app.js" || fail "Bundle App Preview no contiene el panel Free actual con Mi cuenta"
-grep -Fq 'Solicitudes y actividad de esta presentación' "$LOG/live-app.js" || fail "Bundle App Preview no contiene Mi cuenta delegado actualizado"
-echo "✓ Bundle servido por app.preview contiene el panel Free actual"
+
+LOCAL_APP_JS="$(find app/dist/assets -maxdepth 1 -type f -name 'index-*.js' | sort | tail -1)"
+[ -n "$LOCAL_APP_JS" ] || fail "No pude detectar bundle App local recién compilado"
+LIVE_SHA="$(shasum -a 256 "$LOG/live-app.js" | awk '{print $1}')"
+LOCAL_SHA="$(shasum -a 256 "$LOCAL_APP_JS" | awk '{print $1}')"
+[ "$LIVE_SHA" = "$LOCAL_SHA" ] || {
+  echo "Bundle live:  $LIVE_SHA"
+  echo "Bundle local: $LOCAL_SHA"
+  fail "app.preview no está sirviendo exactamente el bundle recién compilado"
+}
+echo "✓ app.preview sirve byte-a-byte el bundle App recién compilado"
 
 # ── E2E real sobre Preview ───────────────────────────────────────────────────
 echo; echo "▶ E2E real: base → borrador → editor → publicación → claim → ownership"
