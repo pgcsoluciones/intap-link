@@ -13,6 +13,31 @@ function requestedDemoId(c:any){
   return String(c.req.header(FREE_DEMO_DELEGATION_HEADER)||'').trim()
 }
 
+function to12Hour(value:unknown){
+  const raw=String(value||'').trim()
+  if(/\b(?:AM|PM)\b/i.test(raw))return raw.replace(/\bam\b/gi,'AM').replace(/\bpm\b/gi,'PM')
+  const m=raw.match(/^(\d{1,2}):(\d{2})$/)
+  if(!m)return raw
+  const hour=Number(m[1]),minute=m[2],period=hour>=12?'PM':'AM',display=hour%12||12
+  return `${display}:${minute} ${period}`
+}
+function normalizeDemoScheduleTemplate(value:unknown){
+  let data:any={}
+  try{const parsed=JSON.parse(String(value||'{}'));data=parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return null}
+  const schedule=Array.isArray(data.free_schedule)?data.free_schedule:null
+  if(!schedule)return null
+  let changed=false
+  const normalized=schedule.map((item:any)=>{
+    const hours=String(item?.hours||'').trim()
+    const parts=hours.split(/\s*-\s*/)
+    if(parts.length!==2)return item
+    const next=`${to12Hour(parts[0])} - ${to12Hour(parts[1])}`
+    if(next!==hours)changed=true
+    return {...item,hours:next}
+  })
+  return changed?JSON.stringify({...data,free_schedule:normalized}):null
+}
+
 export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promise<FreeDemoDelegation|null>{
   const demoId=requestedDemoId(c)
   if(!demoId)return null
@@ -23,7 +48,7 @@ export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promis
 
   const row=await c.env.DB.prepare(`
     SELECT d.id demo_id,d.profile_id,d.synthetic_owner_user_id,d.status,d.published_at,
-           p.slug,p.plan_id,p.is_active,p.user_id
+           p.slug,p.plan_id,p.is_active,p.user_id,p.template_data
       FROM free_demo_v2_profiles d
       JOIN profiles p ON p.id=d.profile_id
      WHERE d.id=?
@@ -36,6 +61,11 @@ export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promis
   `).bind(demoId).first()
 
   if(!row)throw Object.assign(new Error('Esta Demo no está disponible para administración delegada.'),{status:409,code:'free_demo_delegation_unavailable'})
+
+  const normalizedTemplate=normalizeDemoScheduleTemplate((row as any).template_data)
+  if(normalizedTemplate){
+    await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(normalizedTemplate,String((row as any).profile_id)).run()
+  }
 
   return{
     demoId:String((row as any).demo_id),
