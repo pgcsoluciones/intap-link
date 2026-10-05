@@ -62,6 +62,7 @@ api/src/preview-free-actions.ts
 api/src/preview-free-entry.ts
 api/src/bank-accounts.ts
 app/src/App.tsx
+app/src/lib/api.ts
 app/src/lib/freeDemoDelegation.ts
 app/src/components/admin/FreeDemoDelegationBanner.tsx
 app/src/components/admin/AdminGuard.tsx
