@@ -66,6 +66,7 @@ scripts/test-free-demo-master-v2-contract.mjs
 web/src/App.tsx
 web/src/components/free-demo/FreeDemoEditor.css
 web/src/components/free-demo/FreeDemoEditor.tsx
+web/src/components/free-profile/IntapLinkGratisProfile.tsx
 EOF_ALLOWED
 git diff --name-only "$REMOTE/main"...HEAD | sort > "$LOG/actual.txt"
 sort "$LOG/allowed.txt" > "$LOG/allowed.sorted.txt"
@@ -232,6 +233,15 @@ assert d["limits"]=={"portfolio":10,"quick_actions":3,"links":3,"services":0}
 assert len(d["quick_actions"])<=3 and len(d["portfolio"])<=10 and d["experience"]["appointment_enabled"] is True
 assert d["profile"]["is_published"] is False
 print("✓ Editor: límites Free + Agenda + borrador no publicado")
+PY
+
+curl -fsS -H "Cookie: $QA_COOKIE" -H 'Content-Type: application/json' -X PUT \
+  -d "{\"slug\":\"$QA_SLUG\"}" \
+  "https://app.preview.intaprd.com/api/v1/superadmin/free-demo-v2/$QA_DEMO_ID/identifier" > "$LOG/identifier.json"
+python3 - "$LOG/identifier.json" "$QA_SLUG" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); assert j["ok"] and j["data"]["slug"]==sys.argv[2]
+print("✓ Usuario / slug reservado antes de publicar")
 PY
 
 curl -fsS -H "Cookie: $QA_COOKIE" -H 'Content-Type: application/json' -X PATCH \
