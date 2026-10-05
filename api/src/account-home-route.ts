@@ -38,8 +38,8 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
 
   if(sponsorMembership){
     const masterProfile=await c.env.DB.prepare(
-      `SELECT id,username,status FROM sponsored_profiles WHERE user_id=? AND profile_role='sponsor_owner' ORDER BY created_at ASC LIMIT 1`
-    ).bind(userId).first()
+      `SELECT id,username,status FROM sponsored_profiles WHERE sponsor_id=? AND user_id=? AND profile_role='sponsor_owner' ORDER BY created_at ASC LIMIT 1`
+    ).bind(String((sponsorMembership as any).sponsor_id||''),userId).first()
     return c.json({ok:true,data:{
       kind:'sponsor',
       route:'/admin/sponsor',
@@ -62,7 +62,8 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
     `SELECT id,profile_role,status,username
        FROM sponsored_profiles
       WHERE user_id=?
-      ORDER BY CASE WHEN profile_role='beneficiary' THEN 0 ELSE 1 END,created_at DESC
+        AND COALESCE(profile_role,'beneficiary')='beneficiary'
+      ORDER BY created_at DESC
       LIMIT 1`
   ).bind(userId).first()
 
