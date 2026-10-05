@@ -87,7 +87,6 @@ scripts/test-free-demo-master-v2-contract.mjs
 web/src/App.tsx
 web/src/components/free-demo/FreeDemoEditor.css
 web/src/components/free-demo/FreeDemoEditor.tsx
-web/src/components/free-profile/FreeContactActions.tsx
 web/src/components/free-profile/IntapLinkGratisProfile.tsx
 EOF_ALLOWED
 git diff --name-only "$REMOTE/main"...HEAD | sort > "$LOG/actual.txt"
@@ -378,6 +377,14 @@ import json,sys; assert json.load(open(sys.argv[1]))["ok"]; print("✓ La sesió
 PY
 
 PUBLIC_CODE="$(curl -sS -L -o "$LOG/public.html" -w '%{http_code}' "https://preview.intaprd.com/$QA_SLUG")"
+curl -fsS "https://app.preview.intaprd.com/api/v1/public/profiles/$QA_SLUG" > "$LOG/public-profile.json"
+python3 - "$LOG/public-profile.json" <<'PY'
+import json,re,sys
+j=json.load(open(sys.argv[1])); assert j["ok"]
+schedule=((j.get("data") or {}).get("freeExperience") or {}).get("schedule") or []
+assert schedule and all(re.search(r'\b(?:AM|PM)\b',str(item.get("hours","")),re.I) for item in schedule)
+print("✓ Horario público Demo usa AM/PM en todas las franjas")
+PY
 [ "$PUBLIC_CODE" = "200" ] || fail "Perfil público QA respondió $PUBLIC_CODE"
 curl -fsS "https://preview.intaprd.com/api/v1/public/profiles/$QA_SLUG" > "$LOG/public-api.json"
 python3 - "$LOG/public-api.json" <<'PY'
@@ -495,6 +502,7 @@ Probado de punta a punta en Preview:
 ✓ slug permanente y bloqueado desde SuperAdmin y desde panel Free
 ✓ Mi cuenta conserva Horario, Cotizar / información y Agenda
 ✓ Demo incluye una cuenta bancaria de ejemplo interactiva
+✓ horario público Demo usa AM/PM sin tocar el renderer Free compartido
 ✓ campana y centro de notificaciones funcionan sobre la Demo seleccionada
 ✓ funciones privadas del propietario quedan protegidas hasta el reclamo
 ✓ perfil público HTTP 200 + API pública
