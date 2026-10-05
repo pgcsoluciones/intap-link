@@ -39,6 +39,13 @@ function slugify(value:unknown){
 }
 function validSlug(slug:string){return slug.length>=2&&slug.length<=60&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)&&!RESERVED.has(slug)}
 function cleanText(value:unknown,max=500){return String(value??'').trim().slice(0,max)}
+function time12(value:unknown){
+  const raw=String(value||'').trim()
+  const match=raw.match(/^(\d{1,2}):(\d{2})$/)
+  if(!match)return raw
+  const hour=Number(match[1]),minute=match[2],period=hour>=12?'PM':'AM',display=hour%12||12
+  return `${display}:${minute} ${period}`
+}
 function parseJson(value:unknown){try{const v=JSON.parse(String(value||'{}'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch{return {}}}
 function webOrigin(c:any){return String(c.env.WEB_URL||(isPreviewEnvironment(c.env)?'https://preview.intaprd.com':'https://intaprd.com')).replace(/\/$/,'')}
 function appOrigin(c:any){return String(c.env.APP_URL||(isPreviewEnvironment(c.env)?'https://app.preview.intaprd.com':'https://app.intaprd.com')).replace(/\/$/,'')}
@@ -105,6 +112,9 @@ app.post('/api/v1/superadmin/free-demo-v2',requireSuperAdmin('super_admin'),asyn
     c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,4,'08:00','18:00',1,4)").bind('demo-v2:'+demoId+':av:4',profileId),
     c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,5,'08:00','18:00',1,5)").bind('demo-v2:'+demoId+':av:5',profileId),
     c.env.DB.prepare("INSERT INTO appointment_availability(id,subject_type,subject_id,weekday,start_time,end_time,enabled,sort_order) VALUES(?, 'free', ?,6,'09:00','13:00',1,6)").bind('demo-v2:'+demoId+':av:6',profileId),
+    c.env.DB.prepare("INSERT OR IGNORE INTO profile_modules(profile_id,module_code,expires_at,activated_at,assignment_reason) VALUES(?,'bank_accounts',NULL,datetime('now'),'promotion:free-demo-v2')").bind(profileId),
+    c.env.DB.prepare("INSERT OR REPLACE INTO profile_bank_settings(profile_id,is_enabled,updated_at) VALUES(?,1,datetime('now'))").bind(profileId),
+    c.env.DB.prepare("INSERT INTO profile_bank_accounts(id,profile_id,bank_code,bank_name,account_number,account_type,currency,holder_name,holder_id_type,holder_id_number,display_mode,sort_order,is_active,created_at,updated_at) VALUES(?,?,NULL,'Banco de demostración','0000000000','savings','DOP','Cuenta de demostración','rnc','000000001','masked',0,1,datetime('now'),datetime('now'))").bind('demo-v2:'+demoId+':bank:sample',profileId),
   ]
   portfolio.forEach((path,index)=>statements.push(c.env.DB.prepare('INSERT INTO profile_gallery(id,profile_id,image_key,alt_text,title,description,sort_order) VALUES(?,?,?,?,?,?,?)').bind('demo-v2:'+demoId+':portfolio:'+(index+1),profileId,absoluteAsset(c,path),def.label+' · ejemplo '+(index+1),'Trabajo '+(index+1),'Imagen de ejemplo del rubro. Sustitúyela por una foto real antes de publicar.',index)))
   await c.env.DB.batch(statements)
@@ -245,7 +255,7 @@ app.put('/api/v1/superadmin/free-demo-v2/:id/experience',requireSuperAdmin('supe
   const availability=(Array.isArray(body.availability)?body.availability:[]).slice(0,28)
   await saveAppointmentConfiguration(c.env.DB,'free',profileId,{enabled:appointmentEnabled,slot_minutes:body.slot_minutes,min_notice_minutes:body.min_notice_minutes,horizon_days:body.horizon_days,timezone:body.timezone,reason_mode:'default',availability})
   const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
-  const schedule=availability.filter((item:any)=>item.enabled!==false).map((item:any)=>({day:days[Number(item.weekday)]||'',hours:cleanText(item.start_time,5)+' - '+cleanText(item.end_time,5)}))
+  const schedule=availability.filter((item:any)=>item.enabled!==false).map((item:any)=>({day:days[Number(item.weekday)]||'',hours:time12(item.start_time)+' - '+time12(item.end_time)}))
   const next={...template,free_schedule_visible:scheduleVisible,free_quote_button_visible:quoteVisible,free_schedule_configured:true,free_schedule:schedule}
   await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(next),profileId).run()
   return c.json({ok:true})
