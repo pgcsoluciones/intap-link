@@ -38,6 +38,10 @@ function normalizeDemoScheduleTemplate(value:unknown){
   return changed?JSON.stringify({...data,free_schedule:normalized}):null
 }
 
+function parseTemplate(value:unknown){
+  try{const parsed=JSON.parse(String(value||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}
+}
+
 export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promise<FreeDemoDelegation|null>{
   const demoId=requestedDemoId(c)
   if(!demoId)return null
@@ -63,8 +67,25 @@ export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promis
   if(!row)throw Object.assign(new Error('Esta Demo no está disponible para administración delegada.'),{status:409,code:'free_demo_delegation_unavailable'})
 
   const normalizedTemplate=normalizeDemoScheduleTemplate((row as any).template_data)
+  const profileId=String((row as any).profile_id)
+  let template=parseTemplate(normalizedTemplate||((row as any).template_data))
   if(normalizedTemplate){
-    await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(normalizedTemplate,String((row as any).profile_id)).run()
+    await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(normalizedTemplate,profileId).run()
+  }
+
+  if(template.free_demo_v2_bank_seeded!==true){
+    const countRow=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM profile_bank_accounts WHERE profile_id=?").bind(profileId).first()
+    const count=Number((countRow as any)?.n||0)
+    const statements:any[]=[
+      c.env.DB.prepare("INSERT OR IGNORE INTO profile_modules(profile_id,module_code,expires_at,activated_at,assignment_reason) VALUES(?,'bank_accounts',NULL,datetime('now'),'promotion:free-demo-v2')").bind(profileId),
+      c.env.DB.prepare("INSERT INTO profile_bank_settings(profile_id,is_enabled,updated_at) VALUES(?,1,datetime('now')) ON CONFLICT(profile_id) DO UPDATE SET is_enabled=1,updated_at=datetime('now')").bind(profileId),
+    ]
+    if(count===0){
+      statements.push(c.env.DB.prepare("INSERT OR IGNORE INTO profile_bank_accounts(id,profile_id,bank_code,bank_name,account_number,account_type,currency,holder_name,holder_id_type,holder_id_number,display_mode,sort_order,is_active,created_at,updated_at) VALUES(?,?,NULL,'Banco de demostración','0000000000','savings','DOP','Cuenta de demostración','rnc','000000001','masked',0,1,datetime('now'),datetime('now'))").bind('demo-v2:'+String((row as any).demo_id)+':bank:sample',profileId))
+    }
+    template={...template,free_demo_v2_bank_seeded:true}
+    statements.push(c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),profileId))
+    await c.env.DB.batch(statements)
   }
 
   return{
