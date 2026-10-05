@@ -95,6 +95,7 @@ app.post('/api/v1/superadmin/free-demo-v2',requireSuperAdmin('super_admin'),asyn
     free_demo_v2:true,
     free_demo_v2_template_key:def.key,
     free_demo_v2_template_label:def.label,
+    free_demo_v2_bank_seeded:true,
   }
   const adminUserId=String(c.get('adminUserId')||'')
   const statements:any[]=[
