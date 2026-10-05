@@ -79,6 +79,7 @@ app/src/components/admin/free/FreeIdentifier.tsx
 app/src/components/admin/free/FreeStyle.tsx
 app/src/components/admin/free/FreeVisualEditor.tsx
 app/src/components/admin/free/TeamPermissionGuard.tsx
+app/src/components/admin/free/onboarding/FreeOnboardingContact.tsx
 app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx
 app/src/components/notifications/PwaNotificationBridge.tsx
 scripts/run-preview-free-demo-master-v2.sh
@@ -86,6 +87,7 @@ scripts/test-free-demo-master-v2-contract.mjs
 web/src/App.tsx
 web/src/components/free-demo/FreeDemoEditor.css
 web/src/components/free-demo/FreeDemoEditor.tsx
+web/src/components/free-profile/FreeContactActions.tsx
 web/src/components/free-profile/IntapLinkGratisProfile.tsx
 EOF_ALLOWED
 git diff --name-only "$REMOTE/main"...HEAD | sort > "$LOG/actual.txt"
@@ -321,6 +323,16 @@ print("✓ Contacto del panel Free real responde bajo delegación")
 PY
 
 curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  https://app.preview.intaprd.com/api/v1/me/bank-accounts > "$LOG/delegated-bank.json"
+python3 - "$LOG/delegated-bank.json" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); d=j["data"]
+assert j["ok"] and d["access"]["allowed"] is True and len(d["items"])>=1
+assert d["items"][0]["bank_name"]=="Banco de demostración"
+print("✓ Demo publicada trae al menos una cuenta bancaria de ejemplo interactiva")
+PY
+
+curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
   "https://app.preview.intaprd.com/api/v1/me/notifications?limit=1" > "$LOG/delegated-notifications.json"
 python3 - "$LOG/delegated-notifications.json" <<'PY'
 import json,sys
@@ -482,6 +494,7 @@ Probado de punta a punta en Preview:
 ✓ edición canónica /me apunta al Demo seleccionado
 ✓ slug permanente y bloqueado desde SuperAdmin y desde panel Free
 ✓ Mi cuenta conserva Horario, Cotizar / información y Agenda
+✓ Demo incluye una cuenta bancaria de ejemplo interactiva
 ✓ campana y centro de notificaciones funcionan sobre la Demo seleccionada
 ✓ funciones privadas del propietario quedan protegidas hasta el reclamo
 ✓ perfil público HTTP 200 + API pública
