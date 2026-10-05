@@ -303,6 +303,32 @@ j=json.load(open(sys.argv[1])); assert j["ok"]
 print("✓ Contacto del panel Free real responde bajo delegación")
 PY
 
+curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  "https://app.preview.intaprd.com/api/v1/me/notifications?limit=1" > "$LOG/delegated-notifications.json"
+python3 - "$LOG/delegated-notifications.json" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); assert j["ok"] and "unread_count" in j.get("data",{})
+print("✓ Campana y centro de notificaciones responden para la Demo administrada")
+PY
+
+curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  https://app.preview.intaprd.com/api/v1/me/free/experience > "$LOG/delegated-experience.json"
+python3 - "$LOG/delegated-experience.json" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); d=j["data"]
+assert j["ok"] and isinstance(d.get("schedule"),list) and "quote_button_visible" in d and "appointment_enabled" in d
+print("✓ Mi cuenta carga Horario + Cotizar / información + Agenda del Demo")
+PY
+
+curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  https://app.preview.intaprd.com/api/v1/me/free/appointments > "$LOG/delegated-agenda.json"
+python3 - "$LOG/delegated-agenda.json" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); d=j["data"]
+assert j["ok"] and "settings" in d and "availability" in d and "requests" in d
+print("✓ Gestor real de Agenda Free responde bajo delegación")
+PY
+
 DELEGATED_SLUG_CODE="$(curl -sS -o "$LOG/delegated-slug-lock.json" -w '%{http_code}' -X PUT \
   -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" -H 'Content-Type: application/json' \
   -d '{"slug":"otro-slug-panel-free"}' https://app.preview.intaprd.com/api/v1/me/profile/slug)"
@@ -438,7 +464,9 @@ Probado de punta a punta en Preview:
 ✓ SuperAdmin conserva su propia sesión; no hay impersonación
 ✓ edición canónica /me apunta al Demo seleccionado
 ✓ slug permanente y bloqueado desde SuperAdmin y desde panel Free
-✓ funciones privadas del propietario quedan fuera de la delegación
+✓ Mi cuenta conserva Horario, Cotizar / información y Agenda
+✓ campana y centro de notificaciones funcionan sobre la Demo seleccionada
+✓ funciones privadas del propietario quedan protegidas hasta el reclamo
 ✓ perfil público HTTP 200 + API pública
 ✓ código de reclamo = intapcard@gmail.com + slug + código
 ✓ correo seguro normal (magic-link/Resend) como identidad definitiva
