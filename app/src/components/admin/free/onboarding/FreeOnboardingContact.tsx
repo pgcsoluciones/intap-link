@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../../../lib/api'
 import { FreeBackButton, FreeUpgradeCard } from '../FreePanelUi'
+import { isFreeDemoDelegationActive } from '../../../../lib/freeDemoDelegation'
 
 const RD_AREA_CODES = /^(809|829|849)/
 
