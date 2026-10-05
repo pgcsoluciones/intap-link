@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPatch, apiPut } from '../../../lib/api'
 import { FreeBackButton, FreeUpgradeCard } from './FreePanelUi'
+import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
 
 type LayoutId = 'impacto' | 'personal' | 'esencial'
 type PaletteId = 'intap' | 'oceano' | 'esmeralda' | 'violeta' | 'coral' | 'grafito' | 'arena' | 'personalizada'
@@ -42,6 +43,7 @@ function normalizeHex(value: string) {
 
 export default function FreeStyle() {
   const navigate = useNavigate()
+  const delegatedDemo = isFreeDemoDelegationActive()
   const [selected, setSelected] = useState<LayoutId>('esencial')
   const [palette, setPalette] = useState<PaletteId>('intap')
   const [brandColor, setBrandColor] = useState('#071F5F')
@@ -54,8 +56,8 @@ export default function FreeStyle() {
 
   const webUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   const previewUrl = useMemo(
-    () => slug ? `${webUrl}/${encodeURIComponent(slug)}?preview=1&embed=1&v=${previewVersion}` : '',
-    [slug, previewVersion, webUrl],
+    () => slug ? `${webUrl}/${encodeURIComponent(slug)}?${delegatedDemo?'':'preview=1&'}embed=1&v=${previewVersion}` : '',
+    [slug, previewVersion, webUrl, delegatedDemo],
   )
   const refreshPreview = () => setPreviewVersion((current) => current + 1)
 
@@ -163,7 +165,7 @@ export default function FreeStyle() {
                 <div className="mt-3 flex gap-2"><input value={brandColor} onChange={(event) => setBrandColor(event.target.value.toUpperCase())} maxLength={7} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-base font-bold uppercase outline-none focus:border-cyan-400" /><button type="button" disabled={saving} onClick={() => void choosePalette('personalizada', brandColor)} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">Aplicar</button></div>
               </div>
               {message && <p className="order-4 mt-5 text-center text-sm font-bold text-slate-700 lg:order-none">{message}</p>}
-              <div className="mt-5"><FreeUpgradeCard compact /></div>
+              {!delegatedDemo&&<div className="mt-5"><FreeUpgradeCard compact /></div>}
             </section>
           </div>
 
