@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet, apiPost } from '../../lib/api'
+import { activeFreeDemoDelegationId, clearFreeDemoDelegation } from '../../lib/freeDemoDelegation'
 
 interface Props {
   children: React.ReactNode
@@ -86,9 +87,15 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
     let teamCode = readTeamCode()
     let hasTeamActivationContext = Boolean(scanCode && teamCode)
     const insideTeamFlow = location.pathname === '/admin/free/team' || location.pathname.startsWith('/admin/free/team/')
+    const delegatedDemoId = activeFreeDemoDelegationId()
 
     apiGet('/me').then(async (json: any) => {
       if (!json.ok) {
+        if (delegatedDemoId) {
+          clearFreeDemoDelegation()
+          window.location.replace('/superadmin/free-demos')
+          return
+        }
         // Never drop a validated Team activation into a generic login. The two
         // identifiers are the source of truth needed to resume Master preparation.
         if (hasTeamActivationContext) {
@@ -96,6 +103,17 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         } else {
           navigate('/admin/login', { replace: true })
         }
+        return
+      }
+
+      if (delegatedDemoId && location.pathname.startsWith('/admin/free')) {
+        const planId = json.data?.plan_id || json.data?.plan_code || 'free'
+        if (!json.data?.profile_id || planId !== 'free') {
+          clearFreeDemoDelegation()
+          window.location.replace('/superadmin/free-demos')
+          return
+        }
+        setReady(true)
         return
       }
 
