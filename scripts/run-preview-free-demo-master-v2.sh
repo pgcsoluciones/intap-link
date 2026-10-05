@@ -53,14 +53,29 @@ api/migrations-preview/0088_free_demo_master_v2.sql
 api/migrations/0088_free_demo_master_v2.sql
 api/src/free-demo-claim-core.ts
 api/src/free-demo-v2.ts
+api/src/free-appointments.ts
+api/src/free-profile-preview.ts
 api/src/index.ts
+api/src/lib/free-demo-delegation.ts
+api/src/preview-entry.ts
+api/src/preview-free-actions.ts
 api/src/preview-free-entry.ts
+api/src/bank-accounts.ts
 app/src/App.tsx
+app/src/lib/freeDemoDelegation.ts
+app/src/components/admin/FreeDemoDelegationBanner.tsx
+app/src/components/admin/AdminGuard.tsx
 app/src/components/admin/AdminLogin.tsx
 app/src/components/admin/AuthCallback.tsx
 app/src/components/admin/FreeDemoV2Claim.tsx
 app/src/components/admin/SuperAdminFreeDemoV2.tsx
 app/src/components/admin/SuperAdminLayout.tsx
+app/src/components/admin/free/FreeDashboard.tsx
+app/src/components/admin/free/FreeIdentifier.tsx
+app/src/components/admin/free/FreeStyle.tsx
+app/src/components/admin/free/FreeVisualEditor.tsx
+app/src/components/admin/free/TeamPermissionGuard.tsx
+app/src/components/notifications/PwaNotificationBridge.tsx
 scripts/run-preview-free-demo-master-v2.sh
 scripts/test-free-demo-master-v2-contract.mjs
 web/src/App.tsx
@@ -266,6 +281,43 @@ j=json.load(open(sys.argv[1])); assert j["ok"] and j["data"]["slug"]==sys.argv[2
 print("✓ Primera publicación fijó slug")
 PY
 
+echo; echo "▶ E2E real: panel Free normal después de publicar, sin impersonación"
+curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  https://app.preview.intaprd.com/api/v1/me > "$LOG/delegated-me.json"
+python3 - "$LOG/delegated-me.json" "$QA_SLUG" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); d=j["data"]
+assert j["ok"] and d["slug"]==sys.argv[2] and d["plan_id"]=="free"
+print("✓ /me canónico resuelve exactamente el Free Demo publicado")
+PY
+
+curl -fsS -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  https://app.preview.intaprd.com/api/v1/me/contact > "$LOG/delegated-contact.json"
+python3 - "$LOG/delegated-contact.json" <<'PY'
+import json,sys
+j=json.load(open(sys.argv[1])); assert j["ok"]
+print("✓ Contacto del panel Free real responde bajo delegación")
+PY
+
+DELEGATED_SLUG_CODE="$(curl -sS -o "$LOG/delegated-slug-lock.json" -w '%{http_code}' -X PUT \
+  -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" -H 'Content-Type: application/json' \
+  -d '{"slug":"otro-slug-panel-free"}' https://app.preview.intaprd.com/api/v1/me/profile/slug)"
+[ "$DELEGATED_SLUG_CODE" = "409" ] || fail "Panel Free delegado permitió cambiar el slug publicado"
+grep -Fq 'slug_locked' "$LOG/delegated-slug-lock.json" || fail "Falta slug_locked en panel Free delegado"
+echo "✓ Slug permanece bloqueado también desde panel Free normal"
+
+OWNER_ONLY_CODE="$(curl -sS -o "$LOG/delegated-owner-only.json" -w '%{http_code}' \
+  -H "Cookie: $QA_COOKIE" -H "X-Kawvo-Free-Demo-Id: $QA_DEMO_ID" \
+  https://app.preview.intaprd.com/api/v1/me/account/resources)"
+[ "$OWNER_ONLY_CODE" = "403" ] || fail "Panel Demo delegado expuso recursos privados de la cuenta"
+grep -Fq 'free_demo_owner_only' "$LOG/delegated-owner-only.json" || fail "Falta bloqueo owner-only"
+echo "✓ Funciones privadas del propietario permanecen fuera de la delegación"
+
+curl -fsS -H "Cookie: $QA_COOKIE" https://app.preview.intaprd.com/api/v1/superadmin/free-demo-v2/templates > "$LOG/admin-after-delegation.json"
+python3 - "$LOG/admin-after-delegation.json" <<'PY'
+import json,sys; assert json.load(open(sys.argv[1]))["ok"]; print("✓ La sesión sigue siendo SuperAdmin después de usar el panel Free")
+PY
+
 PUBLIC_CODE="$(curl -sS -L -o "$LOG/public.html" -w '%{http_code}' "https://preview.intaprd.com/$QA_SLUG")"
 [ "$PUBLIC_CODE" = "200" ] || fail "Perfil público QA respondió $PUBLIC_CODE"
 curl -fsS "https://preview.intaprd.com/api/v1/public/profiles/$QA_SLUG" > "$LOG/public-api.json"
@@ -378,7 +430,11 @@ Probado de punta a punta en Preview:
 ✓ Agenda real activa
 ✓ edición de datos
 ✓ publicación en /slug
-✓ slug permanente
+✓ después de publicar, botón "Administrar panel Free" usa el panel Free real
+✓ SuperAdmin conserva su propia sesión; no hay impersonación
+✓ edición canónica /me apunta al Demo seleccionado
+✓ slug permanente y bloqueado desde SuperAdmin y desde panel Free
+✓ funciones privadas del propietario quedan fuera de la delegación
 ✓ perfil público HTTP 200 + API pública
 ✓ código de reclamo = intapcard@gmail.com + slug + código
 ✓ correo seguro normal (magic-link/Resend) como identidad definitiva
@@ -397,6 +453,8 @@ QA VISUAL:
 3. Se abrirá /free-demo/edit/:id.
 4. Revisa imágenes/textos, edita y guarda.
 5. Finaliza con nombre + slug.
-6. Genera código de reclamo desde SuperAdmin.
+6. Ya publicado, vuelve a SuperAdmin → Demos Free → "Administrar panel Free".
+7. Confirma que ves el mismo panel Free normal y que el slug está bloqueado.
+8. Genera código de reclamo desde SuperAdmin.
 ================================================================
 EOF
