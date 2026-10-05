@@ -105,7 +105,6 @@ app.use('/api/v1/me/*', async (c:any,next:any) => {
     '/api/v1/me/support',
     '/api/v1/me/ai-profile-assistant',
     '/api/v1/me/products',
-    '/api/v1/me/notifications',
     '/api/v1/me/push',
     '/api/v1/me/profile/exit',
     '/api/v1/me/profile/claim',
