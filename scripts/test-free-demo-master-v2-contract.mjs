@@ -75,6 +75,12 @@ for(const route of [
 ])assert.match(api,route,'mutación Demo v2 requiere SuperAdmin')
 assert.match(webApp,/path="\/free-demo\/edit\/:id"/,'Web expone URL de edición dedicada')
 assert.match(editor,/app\.preview\.intaprd\.com/,'editor Preview consulta API autenticada del App')
+assert.match(editor,/showOwnerBar=\{false\}/,'vista previa Demo no ejecuta herramientas privadas del dueño Free')
+assert.match(editor,/Guardar usuario \/ slug/,'editor permite reservar usuario\/slug antes de publicar')
+assert.match(api,/\/superadmin\/free-demo-v2\/:id\/identifier/,'backend reserva slug Demo con control SuperAdmin')
+assert.match(editor,/Buscar ubicación/,'editor replica búsqueda de ubicación Free')
+assert.match(editor,/Usar mi ubicación actual/,'editor replica geolocalización Free')
+assert.match(editor,/fd2-palette-cards/,'editor muestra paletas visuales, no solo un select')
 assert.match(editor,/credentials:'include'/,'editor reusa sesión SuperAdmin sin sustituirla')
 
 // Lifecycle borrador -> slug final -> publicación.
