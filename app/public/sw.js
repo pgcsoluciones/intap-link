@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kawvo-shell-v2'
+const CACHE_NAME = 'kawvo-shell-v3'
 const SHELL = ['/admin/free/home?source=pwa', '/manifest.webmanifest', '/kawvo-icon.svg']
 const AGENDA_PREF_CACHE = 'kawvo-agenda-preferences-v1'
 
