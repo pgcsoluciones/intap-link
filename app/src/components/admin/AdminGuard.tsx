@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { apiGet, apiPost } from '../../lib/api'
+import { apiGet } from '../../lib/api'
 
 interface Props {
   children: React.ReactNode
@@ -151,27 +151,18 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
 
       if (location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         if (scanCode) {
-          let scanPending: any = await apiGet('/me/artifacts/scan/pending')
+          const scanPending: any = await apiGet('/me/artifacts/scan/pending')
             .catch(() => ({ ok: false }))
-
-          if (!scanPending.ok) {
-            const start: any = await apiPost('/public/artifacts/scan/start', { public_code: scanCode })
-              .catch(() => ({ ok: false }))
-
-            if (start.ok && start.state === 'ready') {
-              scanPending = await apiGet('/me/artifacts/scan/pending')
-                .catch(() => ({ ok: false }))
-            } else if (start.ok && start.state === 'activated') {
-              clearScanCode()
-            } else if (!start.ok) {
-              clearScanCode()
-            }
-          }
 
           if (scanPending.ok && scanPending.data?.public_code) {
             navigate('/admin/artifacts/activate?scan=1', { replace: true })
             return
           }
+
+          // A stored scan code without a live server-side intent is stale.
+          // Do not recreate activation from localStorage on every admin visit:
+          // that can trap every login route in /admin/artifacts/activate.
+          clearScanCode()
         }
       }
 
