@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read=(p)=>readFile(p,'utf8')
-const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge,identity,account,experience]=await Promise.all([
+const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge,identity,account,experience,serviceWorker]=await Promise.all([
   read('api/migrations-preview/0088_free_demo_master_v2.sql'),
   read('api/src/free-demo-v2.ts'),
   read('api/src/free-demo-claim-core.ts'),
@@ -31,6 +31,7 @@ const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,l
   read('app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'),
   read('app/src/components/admin/free/FreeAccount.tsx'),
   read('app/src/components/admin/free/FreeExperienceSettings.tsx'),
+  read('app/public/sw.js'),
 ])
 
 // Aislamiento estructural.
@@ -138,6 +139,7 @@ assert.match(account,/Se asignan al propietario cuando reclame esta presentació
 assert.match(experience,/type="time"/,'horario Free usa selectores de hora estructurados')
 assert.match(experience,/Configurar disponibilidad de Agenda/,'Mi cuenta conserva acceso a Agenda')
 assert.match(experience,/Cotizar \/ información/,'Mi cuenta conserva Cotizar / información')
+assert.match(serviceWorker,/kawvo-shell-v3/,'Service Worker invalida shell antiguo del panel Free')
 assert.doesNotMatch(delegationApi,/auth_sessions|Set-Cookie|session_hash/,'delegación no crea ni sustituye sesiones')
 
 // Reclamo final: autorización temporal + credenciales normales verificadas.
