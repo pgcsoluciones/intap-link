@@ -17,6 +17,7 @@ function normalizePhone(input: string): string | null {
 }
 
 export default function FreeOnboardingContact() {
+  const delegatedDemo = isFreeDemoDelegationActive()
   const navigate = useNavigate()
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
@@ -31,7 +32,7 @@ export default function FreeOnboardingContact() {
   useEffect(() => {
     Promise.all([
       apiGet('/me/contact'),
-      apiGet('/me/team/context').catch(() => ({ ok: false })),
+      delegatedDemo ? Promise.resolve({ ok:true, data:{ role:'none' } }) : apiGet('/me/team/context').catch(() => ({ ok: false })),
     ]).then(([json, teamJson]: any[]) => {
       if (json?.ok && json.data) {
         setWhatsapp(json.data.whatsapp || '')
