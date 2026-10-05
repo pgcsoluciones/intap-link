@@ -1,3 +1,4 @@
+import { delegatedFreeDemoHeaders } from './freeDemoDelegation'
 const envOrigin = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL ?? ''
 const API_ORIGIN = (envOrigin || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '')
 const API_BASE = `${API_ORIGIN}/api/v1`
@@ -12,7 +13,7 @@ function buildApiUrl(path: string): string {
 
 export async function apiGet<T = any>(path: string): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path) },
     credentials: 'include',
   })
   return res.json()
@@ -21,7 +22,7 @@ export async function apiGet<T = any>(path: string): Promise<T> {
 export async function apiPost<T = any>(path: string, body: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path) },
     credentials: 'include',
     body: JSON.stringify(body),
   })
@@ -31,7 +32,7 @@ export async function apiPost<T = any>(path: string, body: unknown): Promise<T> 
 export async function apiPut<T = any>(path: string, body: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path) },
     credentials: 'include',
     body: JSON.stringify(body),
   })
@@ -41,7 +42,7 @@ export async function apiPut<T = any>(path: string, body: unknown): Promise<T> {
 export async function apiPatch<T = any>(path: string, body: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path) },
     credentials: 'include',
     body: JSON.stringify(body),
   })
@@ -51,7 +52,7 @@ export async function apiPatch<T = any>(path: string, body: unknown): Promise<T>
 export async function apiDelete<T = any>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path) },
     credentials: 'include',
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
@@ -62,6 +63,7 @@ export async function apiDelete<T = any>(path: string, body?: unknown): Promise<
 export async function apiUpload<T = any>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'POST',
+    headers: { ...delegatedFreeDemoHeaders(path) },
     credentials: 'include',
     body: formData,
   })
