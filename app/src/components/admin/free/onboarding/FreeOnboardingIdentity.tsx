@@ -38,7 +38,7 @@ export default function FreeOnboardingIdentity() {
   useEffect(() => {
     Promise.all([
       apiGet('/me'),
-      apiGet('/me/team/context').catch(() => ({ ok: false })),
+      delegatedDemo ? Promise.resolve({ ok:true, data:{ role:'none' } }) : apiGet('/me/team/context').catch(() => ({ ok: false })),
     ]).then(([json, teamJson]: any[]) => {
       if (json?.ok && json.data) {
         const d = json.data
