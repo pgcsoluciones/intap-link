@@ -36,7 +36,8 @@ export function clearFreeDemoDelegation(){
 
 export function delegatedFreeDemoHeaders(path:string):Record<string,string>{
   const normalized=path.startsWith('/')?path:'/'+path
-  if(!normalized.startsWith('/me'))return{}
+  const delegatedProfileRoute=normalized==='/profile/gallery/upload'
+  if(!normalized.startsWith('/me')&&!delegatedProfileRoute)return{}
   const id=activeFreeDemoDelegationId()
   return id?{'X-Kawvo-Free-Demo-Id':id}:{}
 }
