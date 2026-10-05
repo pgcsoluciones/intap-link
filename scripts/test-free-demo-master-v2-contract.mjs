@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read=(p)=>readFile(p,'utf8')
-const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge,identity]=await Promise.all([
+const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,login,claim,authCallback,credentials,types,delegationApi,delegationClient,banner,guard,dashboard,identifier,visualEditor,style,teamGuard,pwaBridge,identity,account,experience]=await Promise.all([
   read('api/migrations-preview/0088_free_demo_master_v2.sql'),
   read('api/src/free-demo-v2.ts'),
   read('api/src/free-demo-claim-core.ts'),
@@ -29,6 +29,8 @@ const [migration,api,claimCore,index,entry,webApp,editor,superAdmin,layout,app,l
   read('app/src/components/admin/free/TeamPermissionGuard.tsx'),
   read('app/src/components/notifications/PwaNotificationBridge.tsx'),
   read('app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx'),
+  read('app/src/components/admin/free/FreeAccount.tsx'),
+  read('app/src/components/admin/free/FreeExperienceSettings.tsx'),
 ])
 
 // Aislamiento estructural.
@@ -119,6 +121,9 @@ assert.match(index,/UPDATE free_demo_v2_claims SET status='revoked'/,'ocultar un
 assert.match(banner,/panel Free real/,'panel muestra claramente que SuperAdmin administra la Demo sobre el Free real')
 assert.match(guard,/delegatedDemoId && location\.pathname\.startsWith\('\/admin\/free'\)/,'AdminGuard mantiene la navegación dentro del árbol Free sin redirigir al home de SuperAdmin')
 assert.match(dashboard,/isFreeDemoDelegationActive/,'dashboard Free detecta administración delegada')
+assert.match(dashboard,/<FreeNotificationBell \/>/,'panel Free delegado conserva la campana actual')
+assert.match(dashboard,/navigate\('\/admin\/free\/account'\)/,'panel Free delegado conserva Mi cuenta')
+assert.doesNotMatch(dashboard,/Agrega tus servicios/,'panel Free actual no reintroduce Servicios')
 assert.match(dashboard,/!delegatedDemo&&<FreeNotificationBell/,'herramientas personales de cuenta quedan fuera del modo delegado')
 assert.match(identifier,/Usuario bloqueado después de publicar/,'pantalla de identificador conserva slug bloqueado')
 assert.match(identity,/Usuario bloqueado después de la primera publicación/,'pantalla principal de identidad Free bloquea el slug ya publicado')
@@ -126,7 +131,13 @@ assert.match(identity,/!delegatedDemo && normalizedSlug/,'identidad no intenta m
 assert.match(visualEditor,/delegatedDemo/,'editor visual Free adapta preview y oculta herramientas no aplicables')
 assert.match(style,/delegatedDemo/,'estilo Free conserva edición visual bajo delegación')
 assert.match(teamGuard,/isFreeDemoDelegationActive/,'TeamPermissionGuard no consulta ownership Team durante delegación')
-assert.match(pwaBridge,/isFreeDemoDelegationActive\(\)\)return/,'PWA personal no hace polling durante delegación')
+assert.match(pwaBridge,/isFreeDemoDelegationActive\(\)\)return/,'PWA push personal no se suscribe durante delegación')
+assert.match(account,/Solicitudes y actividad de esta presentación/,'Mi cuenta delegado conserva notificaciones del perfil')
+assert.match(account,/<FreeExperienceSettings \/>/,'Mi cuenta conserva Presentación y contacto')
+assert.match(account,/Se asignan al propietario cuando reclame esta presentación/,'credenciales continúan protegidas hasta reclamo')
+assert.match(experience,/type="time"/,'horario Free usa selectores de hora estructurados')
+assert.match(experience,/Configurar disponibilidad de Agenda/,'Mi cuenta conserva acceso a Agenda')
+assert.match(experience,/Cotizar \/ información/,'Mi cuenta conserva Cotizar / información')
 assert.doesNotMatch(delegationApi,/auth_sessions|Set-Cookie|session_hash/,'delegación no crea ni sustituye sesiones')
 
 // Reclamo final: autorización temporal + credenciales normales verificadas.
