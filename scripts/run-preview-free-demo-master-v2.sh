@@ -71,7 +71,9 @@ app/src/components/admin/AuthCallback.tsx
 app/src/components/admin/FreeDemoV2Claim.tsx
 app/src/components/admin/SuperAdminFreeDemoV2.tsx
 app/src/components/admin/SuperAdminLayout.tsx
+app/src/components/admin/free/FreeAccount.tsx
 app/src/components/admin/free/FreeDashboard.tsx
+app/src/components/admin/free/FreeExperienceSettings.tsx
 app/src/components/admin/free/FreeIdentifier.tsx
 app/src/components/admin/free/FreeStyle.tsx
 app/src/components/admin/free/FreeVisualEditor.tsx
