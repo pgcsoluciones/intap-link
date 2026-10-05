@@ -75,6 +75,7 @@ app/src/components/admin/free/FreeIdentifier.tsx
 app/src/components/admin/free/FreeStyle.tsx
 app/src/components/admin/free/FreeVisualEditor.tsx
 app/src/components/admin/free/TeamPermissionGuard.tsx
+app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx
 app/src/components/notifications/PwaNotificationBridge.tsx
 scripts/run-preview-free-demo-master-v2.sh
 scripts/test-free-demo-master-v2-contract.mjs
