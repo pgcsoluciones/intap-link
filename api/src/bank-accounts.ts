@@ -48,10 +48,13 @@ function cleanHolderId(value: unknown): string {
 function maskAccountNumber(value: string): string {
   const clean = cleanAccountNumber(value)
   if (!clean) return ''
-  const last4 = clean.slice(-4)
-  const hiddenLength = Math.max(4, clean.length - last4.length)
-  const hidden = 'X'.repeat(hiddenLength)
-  return `${hidden}${last4}`.replace(/(.{4})/g, '$1 ').trim()
+  return `•••• ${clean.slice(-4)}`
+}
+
+function publicHolderId(type: HolderIdType | null, value: unknown): string {
+  const clean = cleanHolderId(value)
+  if (!type || !clean) return ''
+  return type === 'rnc' ? clean : `•••• ${clean.slice(-4)}`
 }
 
 function normalizeAccountType(value: unknown): AccountType | null {
@@ -331,7 +334,7 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
 
   const rows = await c.env.DB.prepare(
     `SELECT id, bank_code, bank_name, account_number, account_type, currency,
-            holder_name, holder_id_type, display_mode, sort_order
+            holder_name, holder_id_type, holder_id_number, display_mode, sort_order
        FROM profile_bank_accounts
       WHERE profile_id = ? AND is_active = 1
       ORDER BY sort_order ASC, created_at ASC
@@ -352,8 +355,9 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
           currency: row.currency,
           holder_name: row.holder_name,
           holder_id_type: row.holder_id_type || null,
+          holder_id_display: publicHolderId(normalizeHolderIdType(row.holder_id_type), row.holder_id_number),
           display_mode: row.display_mode,
-          display_number: row.display_mode === 'visible' ? accountNumber : maskAccountNumber(accountNumber),
+          display_number: maskAccountNumber(accountNumber),
           copy_value: accountNumber,
         }
       }),
