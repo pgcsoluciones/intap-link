@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 
@@ -12,6 +12,7 @@ type PublicBankAccount = {
   currency: 'DOP' | 'USD'
   holder_name: string
   holder_id_type: HolderIdType | null
+  holder_id_display: string
   display_mode: 'masked' | 'visible'
   display_number: string
   copy_value: string
@@ -38,10 +39,9 @@ export default function PublicBankAccounts() {
     ((host === 'argenisgrullon.com' || host === 'www.argenisgrullon.com') ? 'argenisg' : '')
   const [items, setItems] = useState<PublicBankAccount[]>([])
   const [enabled, setEnabled] = useState(false)
-  const [expanded, setExpanded] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [copiedAction, setCopiedAction] = useState('')
   const [portalHost, setPortalHost] = useState<HTMLElement | null>(null)
-  const sectionRef = useRef<HTMLElement | null>(null)
   const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
 
   useEffect(() => {
@@ -77,31 +77,8 @@ export default function PublicBankAccounts() {
 
   useEffect(() => {
     if (!enabled || items.length === 0 || window.location.hash !== '#bancos') return
-    setExpanded(true)
     window.setTimeout(() => { document.getElementById('bancos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 160)
   }, [enabled, items.length])
-
-  useEffect(() => {
-    if (!expanded) return
-    const closeOutside = (event: PointerEvent) => {
-      const target = event.target as Node | null
-      if (target && !sectionRef.current?.contains(target)) setExpanded(false)
-    }
-    document.addEventListener('pointerdown', closeOutside, true)
-
-    let idleTimer = window.setTimeout(() => setExpanded(false), 8000)
-    const resetIdle = () => { window.clearTimeout(idleTimer); idleTimer = window.setTimeout(() => setExpanded(false), 8000) }
-    const section = sectionRef.current
-    section?.addEventListener('pointerdown', resetIdle)
-    section?.addEventListener('keydown', resetIdle)
-
-    return () => {
-      document.removeEventListener('pointerdown', closeOutside, true)
-      section?.removeEventListener('pointerdown', resetIdle)
-      section?.removeEventListener('keydown', resetIdle)
-      window.clearTimeout(idleTimer)
-    }
-  }, [expanded])
 
   async function writeClipboard(value: string) {
     try { await navigator.clipboard.writeText(value) } catch {
@@ -109,8 +86,14 @@ export default function PublicBankAccounts() {
     }
   }
 
-  async function copySensitive(value: string) {
-    await writeClipboard(value)
+  function markCopied(key: string) {
+    setCopiedAction(key)
+    window.setTimeout(() => setCopiedAction((current) => current === key ? '' : current), 1500)
+  }
+
+  async function copyAccount(account: PublicBankAccount) {
+    await writeClipboard(account.copy_value)
+    markCopied(`account:${account.id}`)
   }
 
   function holderIdValue(account: PublicBankAccount) {
@@ -135,11 +118,13 @@ export default function PublicBankAccounts() {
           'text/plain': valuePromise.then((value) => new Blob([value], { type: 'text/plain' })),
         })
         await navigator.clipboard.write([item])
+        markCopied(`id:${account.id}`)
         return
       }
     } catch { /* fallback compatible */ }
     try {
       await writeClipboard(await valuePromise)
+      markCopied(`id:${account.id}`)
     } catch { /* identificación protegida */ }
   }
 
@@ -165,56 +150,47 @@ export default function PublicBankAccounts() {
   if (!enabled || items.length === 0 || !portalHost) return null
 
   const content = (
-    <section ref={sectionRef} id="bancos" className="ilx-section scroll-mt-5" aria-labelledby="ilx-bank-title" style={{ borderTop: '1px solid var(--ilx-border)', paddingTop: 18, marginTop: 22 }}>
-      <button
-        type="button"
-        onClick={() => setExpanded((current) => !current)}
-        className="flex w-full items-center justify-between gap-3 rounded-xl py-1 text-left transition active:scale-[0.995]"
-        aria-expanded={expanded}
-        aria-controls="ilx-bank-content"
-      >
-        <span className="flex items-center gap-2">
-<span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: 'var(--ilx-soft-primary)', color: 'var(--ilx-text)' }}>
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M12 3 3 7v2h18V7l-9-4Zm-7 8v6H3v2h18v-2h-2v-6h-2v6h-3v-6h-2v6H9v-6H7v6H5v-6Z"/></svg>
-          </span>
-          <h2 id="ilx-bank-title" className="text-xl font-black tracking-[-0.03em]" style={{ color: 'var(--ilx-text)' }}>Cuentas</h2>
+    <section id="bancos" className="ilx-section scroll-mt-5" aria-labelledby="ilx-bank-title" style={{ borderTop: '1px solid var(--ilx-border)', paddingTop: 18, marginTop: 22 }}>
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: 'var(--ilx-soft-primary)', color: 'var(--ilx-text)' }}>
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M12 3 3 7v2h18V7l-9-4Zm-7 8v6H3v2h18v-2h-2v-6h-2v6h-3v-6h-2v6H9v-6H7v6H5v-6Z"/></svg>
         </span>
-        <span aria-hidden="true" className="text-xl font-black transition-transform duration-200" style={{ color: 'var(--ilx-muted)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>⌄</span>
-      </button>
+        <h2 id="ilx-bank-title" className="text-xl font-black tracking-[-0.03em]" style={{ color: 'var(--ilx-text)' }}>Datos para Transferencias</h2>
+      </div>
 
-      {expanded && (
-        <div id="ilx-bank-content">
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold">
-            <button type="button" onClick={shareBankSectionWhatsApp} className="p-0 underline underline-offset-4 transition active:opacity-60" style={{ color: 'var(--ilx-primary)', background: 'transparent', border: 0 }}>Enviar cuentas por WhatsApp</button>
-            <button type="button" onClick={() => void copyBankSectionLink()} className="p-0 underline underline-offset-4 transition active:opacity-60" style={{ color: 'var(--ilx-text)', background: 'transparent', border: 0 }} aria-live="polite">{copiedLink ? 'Enlace copiado' : 'Copiar enlace'}</button>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {items.map((account) => {
-              const logo = bankLogoUrl(account.bank_code)
-              return (
-                <article key={account.id} className="rounded-[20px] border p-4" style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-soft-primary)' }}>
-                  <div className="flex items-start gap-4">
-                    <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border bg-white p-1 shadow-sm" style={{ borderColor: 'var(--ilx-border)' }}>
-                      {logo ? <img src={logo} alt={`Logo de ${account.bank_name}`} className="h-full w-full object-contain" loading="lazy" decoding="async" /> : <span className="text-sm font-black text-slate-600">{bankInitials(account.bank_name)}</span>}
-                    </div>
-                    <div className="min-w-0 flex-1 pt-1">
-                      <h3 className="text-sm font-black leading-5" style={{ color: 'var(--ilx-text)' }}>{account.bank_name}</h3>
-                      <p className="mt-0.5 text-xs font-bold" style={{ color: 'var(--ilx-primary)' }}>{accountTypeLabel(account.account_type)} · {account.currency}</p>
-                      <p className="mt-3 text-sm font-bold" style={{ color: 'var(--ilx-text)' }}>{account.holder_name}</p>
-                      <p className="mt-1 break-all font-mono text-sm font-bold tracking-wide" style={{ color: 'var(--ilx-muted)' }}>{account.display_number}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => void copySensitive(account.copy_value)} className="rounded-xl px-3 py-3 text-sm font-black transition active:scale-[0.96]" style={{ background: 'var(--ilx-action)', color: 'var(--ilx-on-action)' }} aria-label="Cuenta">Cuenta</button>
-                    <button type="button" disabled={!account.holder_id_type} onClick={() => void copyHolderId(account)} className="rounded-xl border px-3 py-3 text-sm font-black transition active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45" style={{ background: 'var(--ilx-surface)', color: 'var(--ilx-text)', borderColor: 'var(--ilx-border)' }} aria-label="RNC o cédula">RNC / CÉD.</button>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
+      <div id="ilx-bank-content">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold">
+          <button type="button" onClick={shareBankSectionWhatsApp} className="p-0 underline underline-offset-4 transition active:opacity-60" style={{ color: 'var(--ilx-primary)', background: 'transparent', border: 0 }}>Enviar cuentas por WhatsApp</button>
+          <button type="button" onClick={() => void copyBankSectionLink()} className="p-0 underline underline-offset-4 transition active:opacity-60" style={{ color: 'var(--ilx-text)', background: 'transparent', border: 0 }} aria-live="polite">{copiedLink ? 'Enlace copiado' : 'Copiar enlace'}</button>
         </div>
-      )}
+
+        <div className="mt-4 space-y-3">
+          {items.map((account) => {
+            const logo = bankLogoUrl(account.bank_code)
+            const idLabel = account.holder_id_type === 'rnc' ? 'RNC' : 'Cédula'
+            return (
+              <article key={account.id} className="rounded-[20px] border p-4" style={{ borderColor: 'var(--ilx-border)', background: 'var(--ilx-soft-primary)' }}>
+                <div className="flex items-start gap-4">
+                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border bg-white p-1 shadow-sm" style={{ borderColor: 'var(--ilx-border)' }}>
+                    {logo ? <img src={logo} alt={`Logo de ${account.bank_name}`} className="h-full w-full object-contain" loading="lazy" decoding="async" /> : <span className="text-sm font-black text-slate-600">{bankInitials(account.bank_name)}</span>}
+                  </div>
+                  <div className="min-w-0 flex-1 pt-1">
+                    <h3 className="text-sm font-black leading-5" style={{ color: 'var(--ilx-text)' }}>{account.bank_name}</h3>
+                    <p className="mt-0.5 text-xs font-bold" style={{ color: 'var(--ilx-primary)' }}>{accountTypeLabel(account.account_type)} · {account.currency}</p>
+                    <p className="mt-3 text-sm font-bold" style={{ color: 'var(--ilx-text)' }}>{account.holder_name}</p>
+                    <p className="mt-1 break-all font-mono text-sm font-bold tracking-wide" style={{ color: 'var(--ilx-muted)' }}>{account.display_number}</p>
+                    {account.holder_id_type && account.holder_id_display && <p className="mt-2 text-xs font-bold" style={{ color: 'var(--ilx-muted)' }}>{idLabel}: <span className="font-mono">{account.holder_id_display}</span></p>}
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => void copyAccount(account)} className="rounded-xl px-3 py-3 text-sm font-black transition active:scale-[0.96]" style={{ background: 'var(--ilx-action)', color: 'var(--ilx-on-action)' }} aria-live="polite">{copiedAction === `account:${account.id}` ? 'Cuenta copiada' : 'Copiar cuenta'}</button>
+                  <button type="button" disabled={!account.holder_id_type} onClick={() => void copyHolderId(account)} className="rounded-xl border px-3 py-3 text-sm font-black transition active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-45" style={{ background: 'var(--ilx-surface)', color: 'var(--ilx-text)', borderColor: 'var(--ilx-border)' }} aria-live="polite">{copiedAction === `id:${account.id}` ? 'RNC/CÉD. copiada' : 'Copiar RNC/CÉD.'}</button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      </div>
     </section>
   )
 
