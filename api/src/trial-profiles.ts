@@ -44,6 +44,12 @@ function normalizeSlug(input: unknown) {
 function validSlug(slug:string){return slug.length>=2 && slug.length<=60 && SLUG_RE.test(slug) && !RESERVED.has(slug)}
 function parseJson(value:any){try{return JSON.parse(String(value||'{}'))}catch{return {}}}
 function str(value:any,max=180){return String(value||'').trim().slice(0,max)}
+function publicTrialHolderId(item:any){
+  const type=String(item?.holder_id_type||'').toLowerCase()
+  const value=String(item?.holder_id_number||'').replace(/\D/g,'')
+  if(!value)return''
+  return type==='rnc'?value:`•••• ${value.slice(-4)}`
+}
 function durationHours(value:any,fallback=72){const n=Math.round(Number(value));return Number.isFinite(n)?Math.min(720,Math.max(1,n)):fallback}
 function sqlDate(d:Date){return d.toISOString().replace('T',' ').replace('Z','')}
 function prospectFromRow(row:any){
@@ -433,7 +439,10 @@ export function registerTrialRoutes(app:any){
     const data=rowOut(row)
     const publicProfile=JSON.parse(JSON.stringify(data.profile||{}))
     const bankItems=publicProfile?.modules?.banks?.items
-    if(Array.isArray(bankItems))for(const item of bankItems)delete item.holder_id_number
+    if(Array.isArray(bankItems))for(const item of bankItems){
+      item.holder_id_display=publicTrialHolderId(item)
+      delete item.holder_id_number
+    }
     data.profile=publicProfile
     delete (data as any).prospect
     if(data.status==='expired' && (row as any).status!=='expired')c.executionCtx.waitUntil(c.env.DB.prepare(`UPDATE trial_profiles SET status='expired',updated_at=datetime('now') WHERE id=? AND status='active'`).bind((row as any).id).run())
