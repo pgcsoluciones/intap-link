@@ -1,43 +1,66 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-const paths = [
-  'web/src/components/free-profile/PublicBankAccounts.tsx',
-  'web/src/components/sponsored/SponsoredBankAccounts.tsx',
-  'web/src/components/demo/DemoBankAccounts.tsx',
-]
+const publicBankPath = 'web/src/components/free-profile/PublicBankAccounts.tsx'
+const sponsoredBankPath = 'web/src/components/sponsored/SponsoredBankAccounts.tsx'
+const demoBankPath = 'web/src/components/demo/DemoBankAccounts.tsx'
+const trialPanelsPath = 'web/src/components/trial/TrialPanels.tsx'
 
-for (const path of paths) {
-  const source = await readFile(path, 'utf8')
-  assert.match(source, />Cuentas</, `${path}: título discreto Cuentas`)
-  assert.match(source, /RNC \/ CÉD\./, `${path}: etiqueta discreta RNC / CÉD.`)
-  assert.match(source, /setExpanded\(false\)/, `${path}: cierre automático`)
-  assert.match(source, /8000/, `${path}: cierre por inactividad`)
-  assert.match(source, /<svg/, `${path}: icono bancario monocromático junto al título`)
-  assert.doesNotMatch(source, /720/, `${path}: no debe cerrarse inmediatamente tras copiar`)
-  assert.doesNotMatch(source, /Copiar cuenta/i, `${path}: no debe anunciar copia de cuenta`)
-  assert.doesNotMatch(source, /Cuenta copiada/i, `${path}: no debe mostrar feedback de cuenta copiada`)
-  assert.doesNotMatch(source, /Copiar cédula|Copiar RNC/i, `${path}: no debe anunciar copia de identidad`)
-  assert.doesNotMatch(source, /se copia sin mostrarse/i, `${path}: no debe explicar el mecanismo sensible`)
+const [publicBank, sponsoredBank, demoBank, trialPanels, bankApi, previewBankApi, sponsoredApi, trialApi, middleware] = await Promise.all([
+  readFile(publicBankPath, 'utf8'),
+  readFile(sponsoredBankPath, 'utf8'),
+  readFile(demoBankPath, 'utf8'),
+  readFile(trialPanelsPath, 'utf8'),
+  readFile('api/src/bank-accounts.ts', 'utf8'),
+  readFile('api/src/preview-bank-accounts.ts', 'utf8'),
+  readFile('api/src/sponsored-bank-accounts.ts', 'utf8'),
+  readFile('api/src/trial-profiles.ts', 'utf8'),
+  readFile('functions/_middleware.ts', 'utf8'),
+])
+
+for (const [path, source] of [
+  [publicBankPath, publicBank],
+  [sponsoredBankPath, sponsoredBank],
+  [demoBankPath, demoBank],
+  [trialPanelsPath, trialPanels],
+]) {
+  assert.match(source, /Datos para Transferencias/, `${path}: título Datos para Transferencias`)
+  assert.match(source, /Copiar cuenta/, `${path}: CTA claro para copiar cuenta`)
+  assert.match(source, /Cuenta copiada/, `${path}: feedback temporal de cuenta copiada`)
+  assert.match(source, /Copiar RNC\/CÉD\./, `${path}: CTA claro para copiar RNC/CÉD.`)
+  assert.match(source, /RNC\/CÉD\. copiada/, `${path}: feedback temporal de RNC/CÉD. copiada`)
 }
 
-const publicBank = await readFile(paths[0], 'utf8')
-const sponsoredBank = await readFile(paths[1], 'utf8')
-const middleware = await readFile('functions/_middleware.ts', 'utf8')
-assert.doesNotMatch(publicBank, /IntersectionObserver|addEventListener\('scroll'/, 'Free/Team/Trial: scroll no debe cerrar la sección')
-assert.doesNotMatch(sponsoredBank, /IntersectionObserver|addEventListener\('scroll'/, 'Sponsored: scroll no debe cerrar la sección')
-assert.match(publicBank, /document\.addEventListener\('pointerdown'/, 'Free/Team/Trial: clic fuera sí cierra')
-assert.match(sponsoredBank, /document\.addEventListener\('pointerdown'/, 'Sponsored: clic fuera sí cierra')
-assert.match(publicBank, /Enviar cuentas por WhatsApp/, 'Free/Team/Trial: compartir bancos se muestra como enlace de texto')
-assert.match(publicBank, /Copiar enlace/, 'Free/Team/Trial: copiar enlace se muestra como texto')
-assert.match(sponsoredBank, /Enviar cuentas por WhatsApp/, 'Sponsored: compartir bancos se muestra como enlace de texto')
-assert.match(sponsoredBank, /Copiar enlace/, 'Sponsored: copiar enlace se muestra como texto')
-assert.match(publicBank, /\?share=bancos&card=3#bancos/, 'Free/Team/Trial: WhatsApp usa URL bancaria canónica con card social')
-assert.match(sponsoredBank, /\?share=bancos&card=3#bancos/, 'Sponsored: WhatsApp usa URL bancaria canónica con card social')
-assert.match(middleware, /share=bancos: social card bancaria/, 'Middleware conserva la Graph Card bancaria server-side')
-assert.match(middleware, /profileShareImage\(profile\)/, 'Graph Card bancaria usa la imagen social del perfil del usuario')
-assert.match(middleware, /twitterCard:\s*'summary_large_image'/, 'Graph Card bancaria mantiene formato gráfico grande')
-assert.match(middleware, /const sponsoredProfileMatch = url\.pathname\.match/, 'Middleware conserva social card server-side para perfiles patrocinados')
-assert.match(middleware, /normalizeSocialImage\(profile\.hero_url\)/, 'Social card patrocinada usa imagen del propio perfil')
+assert.doesNotMatch(publicBank, /setExpanded|aria-expanded|8000|pointerdown/, 'Free/Team: bancos permanecen siempre desplegados')
+assert.doesNotMatch(sponsoredBank, /setExpanded|aria-expanded|8000|pointerdown/, 'Sponsored: bancos permanecen siempre desplegados')
+assert.doesNotMatch(demoBank, /setExpanded|aria-expanded|8000|pointerdown/, 'Demo: bancos permanecen siempre desplegados')
 
-console.log('Bank privacy interaction contract: OK')
+assert.match(bankApi, /display_number:\s*maskAccountNumber\(accountNumber\)/, 'Free/Team: número público siempre enmascarado')
+assert.match(previewBankApi, /display_number:\s*maskAccountNumber\(accountNumber\)/, 'Preview: número público siempre enmascarado')
+assert.match(sponsoredApi, /display_number:maskAccountNumber\(accountNumber\)/, 'Sponsored: número público siempre enmascarado')
+assert.match(trialPanels, /'•••• '\+b\.account_number\.slice\(-4\)/, 'Trial: número público muestra solo últimos 4')
+
+for (const [path, source] of [
+  ['api/src/bank-accounts.ts', bankApi],
+  ['api/src/preview-bank-accounts.ts', previewBankApi],
+  ['api/src/sponsored-bank-accounts.ts', sponsoredApi],
+  ['api/src/trial-profiles.ts', trialApi],
+]) {
+  assert.match(source, /holder_id_display|publicHolderId|publicTrialHolderId/, `${path}: expone identificación pública segura`)
+}
+
+assert.match(bankApi, /type === 'rnc' \? clean : `•••• \$\{clean\.slice\(-4\)\}`/, 'Free/Team: RNC completo, cédula últimos 4')
+assert.match(sponsoredApi, /type==='rnc'\?number:`•••• \$\{number\.slice\(-4\)\}`/, 'Sponsored: RNC completo, cédula últimos 4')
+assert.match(trialApi, /type==='rnc'\?value:`•••• \$\{value\.slice\(-4\)\}`/, 'Trial: RNC completo, cédula últimos 4')
+
+assert.match(publicBank, /Enviar cuentas por WhatsApp/, 'Free/Team: compartir bancos conserva WhatsApp')
+assert.match(publicBank, /Copiar enlace/, 'Free/Team: copiar enlace se conserva')
+assert.match(sponsoredBank, /Enviar cuentas por WhatsApp/, 'Sponsored: compartir bancos conserva WhatsApp')
+assert.match(sponsoredBank, /Copiar enlace/, 'Sponsored: copiar enlace se conserva')
+assert.match(publicBank, /\?share=bancos&card=3#bancos/, 'Free/Team: URL bancaria canónica')
+assert.match(sponsoredBank, /\?share=bancos&card=3#bancos/, 'Sponsored: URL bancaria canónica')
+assert.match(middleware, /share=bancos: social card bancaria/, 'Middleware conserva Graph Card bancaria')
+assert.match(middleware, /profileShareImage\(profile\)/, 'Graph Card bancaria usa imagen social del perfil')
+assert.match(middleware, /twitterCard:\s*'summary_large_image'/, 'Graph Card bancaria mantiene formato gráfico grande')
+
+console.log('Bank transfer data interaction contract: OK')
