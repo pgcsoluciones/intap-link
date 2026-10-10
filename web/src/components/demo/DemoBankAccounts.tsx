@@ -30,8 +30,8 @@ export default function DemoBankAccounts({ holderName }: Props) {
             <div className="kawvo-demo-bank-data">
               <h3>Banco de ejemplo</h3>
               <b>Cuenta de ahorros · DOP</b>
-              <strong>{holderName}</strong>
               <code>{DEMO_MASKED}</code>
+              <strong>{holderName}</strong>
               <em>Cédula: {DEMO_ID_MASKED}</em>
             </div>
           </div>
