@@ -7,7 +7,10 @@ type Currency='DOP'|'USD'
 type DisplayMode='masked'|'visible'
 type HolderIdType='cedula'|'rnc'
 
-const MAX_ACTIVE_BANK_ACCOUNTS=3
+const DEFAULT_BANK_ACCOUNT_LIMIT=3
+
+function normalizeBankAccountLimit(value:unknown){const n=Math.floor(Number(value));return Number.isFinite(n)?Math.min(5,Math.max(2,n)):DEFAULT_BANK_ACCOUNT_LIMIT}
+async function sponsorBankAccountLimit(c:any,sponsorId:string){const row=await c.env.DB.prepare('SELECT bank_account_limit FROM sponsor_tenants WHERE id=? LIMIT 1').bind(sponsorId).first();return normalizeBankAccountLimit((row as any)?.bank_account_limit)}
 
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){for(const part of header.split(';')){const [key,...rest]=part.trim().split('=');if(key===name)return decodeURIComponent(rest.join('='))}return null}
@@ -29,14 +32,15 @@ function serializeOwner(row:any){const accountNumber=String(row.account_number||
 
 app.get('/api/v1/me/sponsored-profile/bank-accounts',requireUser,async(c:any)=>{
   const profile=await resolveOwnedSponsoredProfile(c,String(c.get('userId')||''),sponsoredProfileScope(c))
-  if(!profile)return c.json({ok:true,data:{access:{allowed:false},enabled:false,items:[],max_accounts:MAX_ACTIVE_BANK_ACCOUNTS}})
+  if(!profile)return c.json({ok:true,data:{access:{allowed:false},enabled:false,items:[],max_accounts:DEFAULT_BANK_ACCOUNT_LIMIT}})
   const sponsorId=String((profile as any).sponsor_id)
+  const maxAccounts=await sponsorBankAccountLimit(c,sponsorId)
   const allowed=await bankModuleEnabled(c,sponsorId)
-  if(!allowed)return c.json({ok:true,data:{access:{allowed:false},enabled:false,items:[],max_accounts:MAX_ACTIVE_BANK_ACCOUNTS}})
+  if(!allowed)return c.json({ok:true,data:{access:{allowed:false},enabled:false,items:[],max_accounts:maxAccounts}})
   const profileId=String((profile as any).id)
   const enabled=await sectionEnabled(c,profileId)
   const rows=await c.env.DB.prepare('SELECT id,bank_code,bank_name,account_number,account_type,currency,holder_name,holder_id_type,holder_id_number,display_mode,sort_order,is_active FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1 ORDER BY sort_order ASC,created_at ASC').bind(profileId).all()
-  return c.json({ok:true,data:{access:{allowed:true},enabled,max_accounts:MAX_ACTIVE_BANK_ACCOUNTS,items:(rows.results as any[]).map(serializeOwner)}})
+  return c.json({ok:true,data:{access:{allowed:true},enabled,max_accounts:maxAccounts,items:(rows.results as any[]).map(serializeOwner)}})
 })
 
 app.put('/api/v1/me/sponsored-profile/bank-accounts/settings',requireUser,async(c:any)=>{
@@ -54,8 +58,9 @@ app.post('/api/v1/me/sponsored-profile/bank-accounts',requireUser,async(c:any)=>
   const profile=await resolveOwnedSponsoredProfile(c,String(c.get('userId')||''),sponsoredProfileScope(c));if(!profile)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
   if(!(await bankModuleEnabled(c,String((profile as any).sponsor_id))))return c.json({ok:false,error:'Este módulo no está habilitado para tu patrocinio.'},403)
   const profileId=String((profile as any).id)
+  const maxAccounts=await sponsorBankAccountLimit(c,String((profile as any).sponsor_id))
   const count=await c.env.DB.prepare('SELECT COUNT(*) AS n FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1').bind(profileId).first()
-  if(Number((count as any)?.n||0)>=MAX_ACTIVE_BANK_ACCOUNTS)return c.json({ok:false,error:'Puedes agregar un máximo de 3 cuentas.'},409)
+  if(Number((count as any)?.n||0)>=maxAccounts)return c.json({ok:false,error:`Puedes agregar un máximo de ${maxAccounts} cuentas.`},409)
   const body=await c.req.json().catch(()=>({}))
   const bankName=clean(body.bank_name,80),bankCode=clean(body.bank_code,40)||null,accountNumber=cleanAccountNumber(body.account_number),accountType=normalizeAccountType(body.account_type),currency=normalizeCurrency(body.currency),holderName=clean(body.holder_name,120),holderIdType=normalizeHolderIdType(body.holder_id_type),holderIdNumber=cleanHolderId(body.holder_id_number),displayMode=normalizeDisplayMode(body.display_mode||'masked')
   if(!bankName)return c.json({ok:false,error:'Selecciona el banco.'},400)
@@ -95,9 +100,11 @@ app.get('/api/v1/public/sponsored/:username/bank-accounts',async(c:any)=>{
   const username=clean(c.req.param('username'),40).toLowerCase()
   const profile=await c.env.DB.prepare("SELECT sp.id,sp.sponsor_id FROM sponsored_profiles sp WHERE sp.username=? AND sp.status='published' LIMIT 1").bind(username).first();if(!profile)return c.json({ok:false,error:'Perfil no encontrado.'},404)
   const profileId=String((profile as any).id)
-  if(!(await bankModuleEnabled(c,String((profile as any).sponsor_id))))return c.json({ok:true,data:{enabled:false,items:[]}})
+  const sponsorId=String((profile as any).sponsor_id)
+  if(!(await bankModuleEnabled(c,sponsorId)))return c.json({ok:true,data:{enabled:false,items:[]}})
   if(!(await sectionEnabled(c,profileId)))return c.json({ok:true,data:{enabled:false,items:[]}})
-  const rows=await c.env.DB.prepare('SELECT id,bank_code,bank_name,account_number,account_type,currency,holder_name,holder_id_type,holder_id_number,display_mode,sort_order FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1 ORDER BY sort_order ASC,created_at ASC LIMIT 3').bind(profileId).all()
+  const maxAccounts=await sponsorBankAccountLimit(c,sponsorId)
+  const rows=await c.env.DB.prepare('SELECT id,bank_code,bank_name,account_number,account_type,currency,holder_name,holder_id_type,holder_id_number,display_mode,sort_order FROM sponsored_bank_accounts WHERE sponsored_profile_id=? AND is_active=1 ORDER BY sort_order ASC,created_at ASC LIMIT ?').bind(profileId,maxAccounts).all()
   return c.json({ok:true,data:{enabled:true,items:(rows.results as any[]).map((row:any)=>{const accountNumber=String(row.account_number||'');return{id:row.id,bank_code:row.bank_code||null,bank_name:row.bank_name,account_type:row.account_type,currency:row.currency,holder_name:row.holder_name,holder_id_type:row.holder_id_type||null,holder_id_display:publicHolderId(normalizeHolderIdType(row.holder_id_type),row.holder_id_number),display_mode:row.display_mode||'masked',display_number:maskAccountNumber(accountNumber),copy_value:accountNumber}})}})
 })
 
