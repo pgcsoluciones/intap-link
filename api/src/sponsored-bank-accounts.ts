@@ -10,7 +10,7 @@ type HolderIdType='cedula'|'rnc'
 const DEFAULT_BANK_ACCOUNT_LIMIT=3
 
 function normalizeBankAccountLimit(value:unknown){const n=Math.floor(Number(value));return Number.isFinite(n)?Math.min(5,Math.max(2,n)):DEFAULT_BANK_ACCOUNT_LIMIT}
-async function sponsorBankAccountLimit(c:any,sponsorId:string){const row=await c.env.DB.prepare('SELECT bank_account_limit FROM sponsor_tenants WHERE id=? LIMIT 1').bind(sponsorId).first();return normalizeBankAccountLimit((row as any)?.bank_account_limit)}
+async function sponsorBankAccountLimit(c:any,sponsorId:string){const row=await c.env.DB.prepare('SELECT max_accounts FROM sponsor_bank_limits WHERE sponsor_id=? LIMIT 1').bind(sponsorId).first();return normalizeBankAccountLimit((row as any)?.max_accounts)}
 
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){for(const part of header.split(';')){const [key,...rest]=part.trim().split('=');if(key===name)return decodeURIComponent(rest.join('='))}return null}
