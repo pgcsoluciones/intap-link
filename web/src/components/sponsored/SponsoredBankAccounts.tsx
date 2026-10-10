@@ -59,9 +59,9 @@ export default function SponsoredBankAccounts({palette=DEFAULT_PALETTE}:{palette
           <div style={{minWidth:0,flex:1}}>
             <strong style={{display:'block',fontSize:15,color:palette.text}}>{item.bank_name}</strong>
             <span style={{display:'block',marginTop:4,fontSize:12,fontWeight:700,color:palette.accent}}>{item.account_type==='checking'?'Cuenta corriente':'Cuenta de ahorros'} · {item.currency}</span>
-            <div style={{marginTop:10,fontSize:13,fontWeight:800,color:palette.text}}>{item.holder_name}</div>
             <div style={{marginTop:5,fontFamily:'monospace',fontSize:15,fontWeight:850,letterSpacing:.5,color:secondaryText}}>{item.display_number}</div>
-            {item.holder_id_type&&item.holder_id_display&&<div style={{marginTop:7,fontSize:12,fontWeight:800,color:secondaryText}}>{idLabel}: <span style={{fontFamily:'monospace'}}>{item.holder_id_display}</span></div>}
+            <div style={{marginTop:10,fontSize:13,fontWeight:800,color:palette.text}}>{item.holder_name}</div>
+            {item.holder_id_type&&item.holder_id_display&&<div style={{marginTop:5,fontSize:12,fontWeight:800,color:secondaryText}}>{idLabel}: <span style={{fontFamily:'monospace'}}>{item.holder_id_display}</span></div>}
           </div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:14}}>
