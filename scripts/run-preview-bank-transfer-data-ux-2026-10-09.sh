@@ -31,7 +31,7 @@ KAWVO LINK · DATOS PARA TRANSFERENCIAS · PREVIEW
 - CTA: Copiar cuenta / Copiar RNC/CÉD.
 - Feedback: Cuenta copiada / RNC/CÉD. copiada
 - Aplica a Free/Team, Patrocinado, Trial y Demo
-- Sin migraciones D1
+- Migración Preview 0089: límite de cuentas bancarias por tenant (2 a 5)
 - Producción NO se toca
 
 Main esperado: $EXPECTED_MAIN_SHA
@@ -53,6 +53,10 @@ api/src/bank-accounts.ts
 api/src/preview-bank-accounts.ts
 api/src/sponsored-bank-accounts.ts
 api/src/trial-profiles.ts
+api/src/sponsored-profiles.ts
+api/migrations/0089_sponsor_bank_account_limit.sql
+api/migrations-preview/0089_sponsor_bank_account_limit.sql
+app/src/components/admin/SuperAdminSponsors.tsx
 app/src/components/admin/free/FreeBankAccounts.tsx
 app/src/components/admin/sponsored/SponsoredBankAccounts.tsx
 scripts/run-preview-bank-transfer-data-ux-2026-10-09.sh
@@ -73,6 +77,18 @@ run node scripts/test-bank-privacy-interaction-contract.mjs
 run npm run build:preview -w app
 run npm run build -w web
 run bash -lc 'cd api && npx tsc --noEmit'
+
+echo; echo "▶ Verificar/aplicar migración 0089 en D1 Preview"
+HAS_LIMIT="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsor_tenants') WHERE name='bank_account_limit';" 2>/dev/null || true)"
+if ! echo "$HAS_LIMIT" | grep -Fq "bank_account_limit"; then
+  (
+    cd api
+    npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --file=migrations-preview/0089_sponsor_bank_account_limit.sql
+  ) || fail "No se pudo aplicar migración 0089 en Preview"
+fi
+SCHEMA_CHECK="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT bank_account_limit FROM sponsor_tenants LIMIT 1;" 2>/dev/null || true)"
+echo "$SCHEMA_CHECK" >/dev/null
+echo "✓ sponsor_tenants.bank_account_limit disponible en Preview"
 
 echo; echo "▶ Deploy Web Preview"
 (npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH") 2>&1 | tee "$LOG_DIR/web.log"
@@ -136,13 +152,15 @@ App origin:  $APP_ORIGIN
 QA móvil:
 1. El título dice “Datos para Transferencias”.
 2. La sección aparece siempre desplegada; no hay flecha ni acordeón.
-3. Cada cuenta muestra solo sus últimos 4 dígitos.
-4. Si es RNC, el número se ve completo.
-5. Si es cédula, solo se ven sus últimos 4 dígitos.
-6. “Copiar cuenta” copia el número completo y cambia temporalmente a “Cuenta copiada”.
-7. “Copiar RNC/CÉD.” copia la identificación completa y cambia temporalmente a “RNC/CÉD. copiada”.
-8. Revisar Free/Team, Patrocinado, Trial y Demo.
-9. En paneles de configuración ya no se ofrece mostrar públicamente el número completo de cuenta.
-10. Producción NO fue tocada.
+3. Debajo del tipo de cuenta aparece el número de cuenta con solo sus últimos 4 dígitos.
+4. Debajo del nombre del titular aparece RNC o Cédula.
+5. Si es RNC, el número se ve completo.
+6. Si es cédula, solo se ven sus últimos 4 dígitos.
+7. “Copiar cuenta” copia el número completo y cambia temporalmente a “Cuenta copiada”.
+8. “Copiar RNC/CÉD.” copia la identificación completa y cambia temporalmente a “RNC/CÉD. copiada”.
+9. En SuperAdmin > Patrocinadores, cada tenant permite seleccionar 2, 3, 4 o 5 cuentas.
+10. El panel patrocinado respeta el límite asignado al tenant.
+11. Revisar Free/Team, Patrocinado, Trial y Demo.
+12. Producción NO fue tocada.
 ================================================================
 EOF
