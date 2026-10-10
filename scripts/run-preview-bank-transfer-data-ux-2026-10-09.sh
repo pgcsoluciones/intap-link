@@ -50,12 +50,14 @@ git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergi
 
 cat > "$LOG_DIR/allowed.txt" <<'EOF_ALLOWED'
 api/src/bank-accounts.ts
+api/src/index.ts
 api/src/preview-bank-accounts.ts
 api/src/sponsored-bank-accounts.ts
 api/src/trial-profiles.ts
 api/src/sponsored-profiles.ts
 api/migrations/0089_sponsor_bank_account_limit.sql
 api/migrations-preview/0089_sponsor_bank_account_limit.sql
+app/src/components/admin/SuperAdminDashboard.tsx
 app/src/components/admin/SuperAdminSponsors.tsx
 app/src/components/admin/free/FreeBankAccounts.tsx
 app/src/components/admin/sponsored/SponsoredBankAccounts.tsx
@@ -79,16 +81,18 @@ run npm run build -w web
 run bash -lc 'cd api && npx tsc --noEmit'
 
 echo; echo "▶ Verificar/aplicar migración 0089 en D1 Preview"
-HAS_LIMIT_TABLE="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='sponsor_bank_limits';" 2>/dev/null || true)"
-if ! echo "$HAS_LIMIT_TABLE" | grep -Fq "sponsor_bank_limits"; then
+LIMIT_TABLES="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('profile_bank_limits','sponsor_bank_limits') ORDER BY name;" 2>/dev/null || true)"
+if ! echo "$LIMIT_TABLES" | grep -Fq "profile_bank_limits" || ! echo "$LIMIT_TABLES" | grep -Fq "sponsor_bank_limits"; then
   (
     cd api
     npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --file=migrations-preview/0089_sponsor_bank_account_limit.sql
   ) || fail "No se pudo aplicar migración 0089 en Preview"
 fi
-SCHEMA_CHECK="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsor_bank_limits') WHERE name='max_accounts';" 2>/dev/null || true)"
-echo "$SCHEMA_CHECK" | grep -Fq "max_accounts" || fail "Falta sponsor_bank_limits.max_accounts en Preview"
-echo "✓ sponsor_bank_limits.max_accounts disponible en Preview"
+PROFILE_SCHEMA="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('profile_bank_limits') WHERE name='max_accounts';" 2>/dev/null || true)"
+SPONSOR_SCHEMA="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsor_bank_limits') WHERE name='max_accounts';" 2>/dev/null || true)"
+echo "$PROFILE_SCHEMA" | grep -Fq "max_accounts" || fail "Falta profile_bank_limits.max_accounts en Preview"
+echo "$SPONSOR_SCHEMA" | grep -Fq "max_accounts" || fail "Falta sponsor_bank_limits.max_accounts en Preview"
+echo "✓ límites bancarios Free y Patrocinado disponibles en Preview"
 
 echo; echo "▶ Deploy Web Preview"
 (npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH") 2>&1 | tee "$LOG_DIR/web.log"
@@ -158,9 +162,11 @@ QA móvil:
 6. Si es cédula, solo se ven sus últimos 4 dígitos.
 7. “Copiar cuenta” copia el número completo y cambia temporalmente a “Cuenta copiada”.
 8. “Copiar RNC/CÉD.” copia la identificación completa y cambia temporalmente a “RNC/CÉD. copiada”.
-9. En SuperAdmin > Patrocinadores, cada tenant permite seleccionar 2, 3, 4 o 5 cuentas.
-10. El panel patrocinado respeta el límite asignado al tenant.
-11. Revisar Free/Team, Patrocinado, Trial y Demo.
-12. Producción NO fue tocada.
+9. En SuperAdmin > Suscriptores, cada usuario Free permite seleccionar 2, 3, 4 o 5 cuentas.
+10. El panel Free respeta el límite individual asignado al usuario/perfil.
+11. En SuperAdmin > Patrocinadores también se conserva el selector 2, 3, 4 o 5.
+12. El panel patrocinado respeta el límite asignado al tenant patrocinador.
+13. Revisar Free/Team, Patrocinado, Trial y Demo.
+14. Producción NO fue tocada.
 ================================================================
 EOF
