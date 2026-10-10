@@ -6,7 +6,7 @@ const sponsoredBankPath = 'web/src/components/sponsored/SponsoredBankAccounts.ts
 const demoBankPath = 'web/src/components/demo/DemoBankAccounts.tsx'
 const trialPanelsPath = 'web/src/components/trial/TrialPanels.tsx'
 
-const [publicBank, sponsoredBank, demoBank, trialPanels, bankApi, previewBankApi, sponsoredApi, trialApi, superAdminSponsors, sponsoredAdminBanks, sponsorApi, migration, middleware] = await Promise.all([
+const [publicBank, sponsoredBank, demoBank, trialPanels, bankApi, previewBankApi, sponsoredApi, trialApi, superAdminDashboard, superAdminSponsors, freeAdminBanks, sponsoredAdminBanks, coreApi, sponsorApi, migration, middleware] = await Promise.all([
   readFile(publicBankPath, 'utf8'),
   readFile(sponsoredBankPath, 'utf8'),
   readFile(demoBankPath, 'utf8'),
@@ -15,8 +15,11 @@ const [publicBank, sponsoredBank, demoBank, trialPanels, bankApi, previewBankApi
   readFile('api/src/preview-bank-accounts.ts', 'utf8'),
   readFile('api/src/sponsored-bank-accounts.ts', 'utf8'),
   readFile('api/src/trial-profiles.ts', 'utf8'),
+  readFile('app/src/components/admin/SuperAdminDashboard.tsx', 'utf8'),
   readFile('app/src/components/admin/SuperAdminSponsors.tsx', 'utf8'),
+  readFile('app/src/components/admin/free/FreeBankAccounts.tsx', 'utf8'),
   readFile('app/src/components/admin/sponsored/SponsoredBankAccounts.tsx', 'utf8'),
+  readFile('api/src/index.ts', 'utf8'),
   readFile('api/src/sponsored-profiles.ts', 'utf8'),
   readFile('api/migrations-preview/0089_sponsor_bank_account_limit.sql', 'utf8'),
   readFile('functions/_middleware.ts', 'utf8'),
@@ -68,6 +71,15 @@ assertHierarchy(sponsoredBank, 'item.display_number', 'item.holder_name', 'item.
 assertHierarchy(demoBank, '<code>{DEMO_MASKED}</code>', '<strong>{holderName}</strong>', 'Cédula: {DEMO_ID_MASKED}', 'Demo')
 assertHierarchy(trialPanels, "b.account_number?'•••• '", '<b>{b.holder_name}</b>', 'idDisplay', 'Trial')
 
+assert.match(migration, /CREATE TABLE IF NOT EXISTS profile_bank_limits/, 'Migración crea límite bancario individual para perfil Free')
+assert.match(bankApi, /profileBankAccountLimit/, 'API Free resuelve límite bancario por perfil')
+assert.match(bankApi, /LIMIT \?/, 'API pública Free limita cuentas dinámicamente')
+assert.match(freeAdminBanks, /maxAccounts/, 'Panel Free usa el límite bancario configurado')
+assert.match(coreApi, /\/superadmin\/subscribers\/:userId\/bank-limit/, 'SuperAdmin expone control de límite bancario para usuario Free')
+assert.match(coreApi, /free_bank_limit_changed/, 'Cambio del límite Free queda auditado')
+assert.match(superAdminDashboard, /Cuentas bancarias permitidas/, 'SuperAdmin permite seleccionar límite bancario del usuario Free')
+assert.match(superAdminDashboard, /2 cuentas/, 'SuperAdmin ofrece 2 cuentas para Free')
+assert.match(superAdminDashboard, /5 cuentas/, 'SuperAdmin ofrece 5 cuentas para Free')
 assert.match(migration, /CREATE TABLE IF NOT EXISTS sponsor_bank_limits/, 'Migración crea configuración bancaria aislada por tenant')
 assert.match(migration, /max_accounts INTEGER NOT NULL DEFAULT 3/, 'Migración define límite bancario predeterminado')
 assert.match(migration, /BETWEEN 2 AND 5/, 'Migración restringe límite de 2 a 5')
