@@ -20,6 +20,7 @@ interface Subscriber {
   is_published?: number | boolean
   created_at?: string | null
   profile_id?: string
+  bank_account_limit?: number
 }
 
 interface BillingOverview {
@@ -171,6 +172,8 @@ export default function SuperAdminDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [bankLimitSavingUser, setBankLimitSavingUser] = useState('')
+  const [bankLimitMessage, setBankLimitMessage] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -216,6 +219,27 @@ export default function SuperAdminDashboard() {
     load()
     return () => { cancelled = true }
   }, [])
+
+  async function updateFreeBankLimit(subscriber: Subscriber, maxAccounts: number) {
+    const userId = String(subscriber.user_id || subscriber.id || '')
+    if (!userId || subscriber.plan_id !== 'free' || bankLimitSavingUser) return
+    setBankLimitSavingUser(userId)
+    setBankLimitMessage('')
+    try {
+      const json: any = await apiPatch(`/superadmin/subscribers/${encodeURIComponent(userId)}/bank-limit`, { max_accounts: maxAccounts })
+      if (!json?.ok) throw new Error(json?.error || 'No se pudo actualizar el límite de cuentas.')
+      setSubscribers((current) => current.map((item) =>
+        String(item.user_id || item.id || '') === userId
+          ? { ...item, bank_account_limit: maxAccounts }
+          : item
+      ))
+      setBankLimitMessage(`Límite bancario actualizado a ${maxAccounts} cuentas para ${subscriber.email || subscriber.slug || 'el usuario'}.`)
+    } catch (err) {
+      setBankLimitMessage(err instanceof Error ? err.message : 'No se pudo actualizar el límite de cuentas.')
+    } finally {
+      setBankLimitSavingUser('')
+    }
+  }
 
   async function loadPaymentLinks() {
     setPaymentLinksLoading(true)
@@ -1691,6 +1715,58 @@ export default function SuperAdminDashboard() {
     )
   }
 
+  function renderSubscribersSection() {
+    return (
+      <div className="rounded-3xl bg-white px-4 py-8 text-slate-900 shadow-sm">
+        <div className="mx-auto max-w-6xl">
+          <header className="mb-6">
+            <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">KAWVO LINK</p>
+            <h1 className="mt-2 text-3xl font-black">Usuarios / perfiles Free</h1>
+            <p className="mt-2 text-sm text-slate-600">Administra parámetros individuales de cada usuario Free. El límite de cuentas bancarias puede ser 2, 3, 4 o 5.</p>
+          </header>
+          <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="w-full min-w-[820px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-3 py-3">Email</th>
+                  <th className="px-3 py-3">Slug</th>
+                  <th className="px-3 py-3">Plan</th>
+                  <th className="px-3 py-3">Estado</th>
+                  <th className="px-3 py-3">Cuentas bancarias permitidas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscribers.map((subscriber, index) => {
+                  const userId = String(subscriber.user_id || subscriber.id || '')
+                  return <tr key={userId || subscriber.profile_id || index} className="border-t border-slate-100">
+                    <td className="px-3 py-3 font-semibold">{subscriber.email || '—'}</td>
+                    <td className="px-3 py-3">{subscriber.slug || '—'}</td>
+                    <td className="px-3 py-3">{subscriber.plan_id || '—'}</td>
+                    <td className="px-3 py-3">{subscriber.is_active ? 'Activo' : 'Inactivo'}</td>
+                    <td className="px-3 py-3">
+                      {subscriber.plan_id === 'free' ? <select
+                        value={subscriber.bank_account_limit || 3}
+                        disabled={bankLimitSavingUser === userId}
+                        onChange={(event) => void updateFreeBankLimit(subscriber, Number(event.target.value))}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 disabled:opacity-40"
+                      >
+                        <option value={2}>2 cuentas</option>
+                        <option value={3}>3 cuentas</option>
+                        <option value={4}>4 cuentas</option>
+                        <option value={5}>5 cuentas</option>
+                      </select> : <span className="text-slate-400">No aplica</span>}
+                    </td>
+                  </tr>
+                })}
+              </tbody>
+            </table>
+          </div>
+          {bankLimitMessage && <p className="mt-4 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-600">{bankLimitMessage}</p>}
+        </div>
+      </div>
+    )
+  }
+
   function renderSectionPlaceholder() {
     const titles: Record<SuperAdminSection, { title: string; description: string }> = {
       dashboard: {
@@ -1834,6 +1910,7 @@ export default function SuperAdminDashboard() {
                       <th className="border-b border-slate-200 px-3 py-3">Plan</th>
                       <th className="border-b border-slate-200 px-3 py-3">Activo</th>
                       <th className="border-b border-slate-200 px-3 py-3">Publicado</th>
+                      <th className="border-b border-slate-200 px-3 py-3">Cuentas permitidas</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1844,12 +1921,27 @@ export default function SuperAdminDashboard() {
                         <td className="border-b border-slate-100 px-3 py-3">{s.plan_id || '—'}</td>
                         <td className="border-b border-slate-100 px-3 py-3">{s.is_active ? 'Sí' : 'No'}</td>
                         <td className="border-b border-slate-100 px-3 py-3">{s.is_published ? 'Sí' : 'No'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3">
+                          {s.plan_id === 'free' ? (
+                            <select
+                              value={s.bank_account_limit || 3}
+                              disabled={bankLimitSavingUser === String(s.user_id || s.id || '')}
+                              onChange={(event) => void updateFreeBankLimit(s, Number(event.target.value))}
+                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40"
+                            >
+                              <option value={2}>2</option>
+                              <option value={3}>3</option>
+                              <option value={4}>4</option>
+                              <option value={5}>5</option>
+                            </select>
+                          ) : <span className="text-slate-400">—</span>}
+                        </td>
                       </tr>
                     ))}
 
                     {subscribers.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
+                        <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
                           No hay suscriptores para mostrar o tu usuario no tiene permiso Super Admin.
                         </td>
                       </tr>
@@ -1857,11 +1949,14 @@ export default function SuperAdminDashboard() {
                   </tbody>
                 </table>
               </div>
+              {bankLimitMessage && <p className="mt-4 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">{bankLimitMessage}</p>}
             </section>
           </>
         )}
           </div>
         </div>
+      ) : currentSection === 'subscribers' ? (
+        renderSubscribersSection()
       ) : currentSection === 'billing' ? (
         renderBillingSection()
       ) : currentSection === 'paymentLinks' ? (
