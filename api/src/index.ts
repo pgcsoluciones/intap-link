@@ -3959,7 +3959,35 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
                 p.id AS profile_id, p.slug, p.name AS profile_name,
                 p.plan_id, p.is_active, p.is_published,
                 p.trial_ends_at, p.admin_notes,
-                COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3) AS bank_account_limit,
+                CASE
+                  WHEN EXISTS (
+                    SELECT 1 FROM team_members tm
+                    JOIN team_workspaces tw ON tw.id=tm.team_id
+                    WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                  )
+                  THEN COALESCE((
+                    SELECT pbl.max_accounts
+                    FROM team_members tm
+                    JOIN team_workspaces tw ON tw.id=tm.team_id
+                    LEFT JOIN profile_bank_limits pbl ON pbl.profile_id=tw.master_profile_id
+                    WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                    LIMIT 1
+                  ), 3)
+                  ELSE COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3)
+                END AS bank_account_limit,
+                CASE WHEN EXISTS (
+                  SELECT 1 FROM team_members tm
+                  JOIN team_workspaces tw ON tw.id=tm.team_id
+                  WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                ) THEN 1 ELSE 0 END AS bank_account_limit_inherited,
+                (
+                  SELECT mp.slug
+                  FROM team_members tm
+                  JOIN team_workspaces tw ON tw.id=tm.team_id
+                  JOIN profiles mp ON mp.id=tw.master_profile_id
+                  WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                  LIMIT 1
+                ) AS bank_account_limit_master_slug,
                 (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id) AS links_count,
                 (SELECT COUNT(*) FROM profile_modules pm
                  WHERE pm.profile_id = p.id
@@ -3978,7 +4006,35 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
                 p.id AS profile_id, p.slug, p.name AS profile_name,
                 p.plan_id, p.is_active, p.is_published,
                 NULL AS trial_ends_at, NULL AS admin_notes,
-                COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3) AS bank_account_limit,
+                CASE
+                  WHEN EXISTS (
+                    SELECT 1 FROM team_members tm
+                    JOIN team_workspaces tw ON tw.id=tm.team_id
+                    WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                  )
+                  THEN COALESCE((
+                    SELECT pbl.max_accounts
+                    FROM team_members tm
+                    JOIN team_workspaces tw ON tw.id=tm.team_id
+                    LEFT JOIN profile_bank_limits pbl ON pbl.profile_id=tw.master_profile_id
+                    WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                    LIMIT 1
+                  ), 3)
+                  ELSE COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3)
+                END AS bank_account_limit,
+                CASE WHEN EXISTS (
+                  SELECT 1 FROM team_members tm
+                  JOIN team_workspaces tw ON tw.id=tm.team_id
+                  WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                ) THEN 1 ELSE 0 END AS bank_account_limit_inherited,
+                (
+                  SELECT mp.slug
+                  FROM team_members tm
+                  JOIN team_workspaces tw ON tw.id=tm.team_id
+                  JOIN profiles mp ON mp.id=tw.master_profile_id
+                  WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                  LIMIT 1
+                ) AS bank_account_limit_master_slug,
                 (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id) AS links_count,
                 (SELECT COUNT(*) FROM profile_modules pm
                  WHERE pm.profile_id = p.id
@@ -4006,7 +4062,35 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
       .bind(targetUserId).first(),
     c.env.DB.prepare(
       `SELECT p.*, pl.max_links, pl.max_photos, pl.max_faqs, pl.max_products, pl.max_videos, pl.can_use_vcard,
-              COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3) AS bank_account_limit
+              CASE
+                  WHEN EXISTS (
+                    SELECT 1 FROM team_members tm
+                    JOIN team_workspaces tw ON tw.id=tm.team_id
+                    WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                  )
+                  THEN COALESCE((
+                    SELECT pbl.max_accounts
+                    FROM team_members tm
+                    JOIN team_workspaces tw ON tw.id=tm.team_id
+                    LEFT JOIN profile_bank_limits pbl ON pbl.profile_id=tw.master_profile_id
+                    WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                    LIMIT 1
+                  ), 3)
+                  ELSE COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3)
+                END AS bank_account_limit,
+                CASE WHEN EXISTS (
+                  SELECT 1 FROM team_members tm
+                  JOIN team_workspaces tw ON tw.id=tm.team_id
+                  WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                ) THEN 1 ELSE 0 END AS bank_account_limit_inherited,
+                (
+                  SELECT mp.slug
+                  FROM team_members tm
+                  JOIN team_workspaces tw ON tw.id=tm.team_id
+                  JOIN profiles mp ON mp.id=tw.master_profile_id
+                  WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active'
+                  LIMIT 1
+                ) AS bank_account_limit_master_slug
        FROM profiles p
        LEFT JOIN plan_limits pl ON p.plan_id = pl.plan_id
        WHERE p.user_id = ? LIMIT 1`
@@ -4103,6 +4187,22 @@ app.patch('/api/v1/superadmin/subscribers/:userId/bank-limit', requireSuperAdmin
   }
 
   const profileId = String((profile as any).id)
+  const teamMember = await c.env.DB.prepare(
+    `SELECT tw.master_profile_id,mp.slug master_slug
+       FROM team_members tm
+       JOIN team_workspaces tw ON tw.id=tm.team_id
+       JOIN profiles mp ON mp.id=tw.master_profile_id
+      WHERE tm.profile_id=? AND tm.status='active' AND tw.status='active'
+      LIMIT 1`
+  ).bind(profileId).first().catch(() => null)
+  if (teamMember) {
+    return c.json({
+      ok: false,
+      error: `Este perfil Team hereda el límite de cuentas del Master${(teamMember as any).master_slug ? ` /${String((teamMember as any).master_slug)}` : ''}. Modifica el límite del Master Team.`,
+      data: { inherited: true, master_profile_id: String((teamMember as any).master_profile_id || ''), master_slug: String((teamMember as any).master_slug || '') },
+    }, 409)
+  }
+
   const previous = await c.env.DB.prepare(
     `SELECT max_accounts FROM profile_bank_limits WHERE profile_id = ? LIMIT 1`
   ).bind(profileId).first().catch(() => null)
