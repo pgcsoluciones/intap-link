@@ -5,6 +5,19 @@ type Currency = 'DOP' | 'USD'
 type HolderIdType = 'cedula' | 'rnc'
 
 const FAIR_CUTOFF_UTC = '2026-09-06 04:00:00'
+const DEFAULT_MAX_BANK_ACCOUNTS = 3
+
+function normalizeBankAccountLimit(value: unknown): number {
+  const n = Math.floor(Number(value))
+  return Number.isFinite(n) ? Math.min(5, Math.max(2, n)) : DEFAULT_MAX_BANK_ACCOUNTS
+}
+
+async function profileBankAccountLimit(c: any, profileId: string): Promise<number> {
+  const row = await c.env.DB.prepare(
+    `SELECT max_accounts FROM profile_bank_limits WHERE profile_id = ? LIMIT 1`,
+  ).bind(profileId).first().catch(() => null)
+  return normalizeBankAccountLimit((row as any)?.max_accounts)
+}
 
 function cleanAccountNumber(value: unknown): string {
   return String(value || '').replace(/[^0-9A-Za-z]/g, '').slice(0, 40)
@@ -78,14 +91,15 @@ app.get('/api/v1/public/profiles/:slug/preview-bank-accounts', async (c: any) =>
   const enabled = settings ? Boolean((settings as any).is_enabled) : true
   if (!enabled) return c.json({ ok: true, data: { enabled: false, items: [] } })
 
+  const maxAccounts = await profileBankAccountLimit(c, profileId)
   const rows = await c.env.DB.prepare(
     `SELECT id, bank_code, bank_name, account_number, account_type, currency,
             holder_name, holder_id_type, holder_id_number, display_mode, sort_order
        FROM profile_bank_accounts
       WHERE profile_id = ? AND is_active = 1
       ORDER BY sort_order ASC, created_at ASC
-      LIMIT 3`,
-  ).bind(profileId).all()
+      LIMIT ?`,
+  ).bind(profileId, maxAccounts).all()
 
   return c.json({
     ok: true,
