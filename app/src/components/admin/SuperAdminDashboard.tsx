@@ -21,6 +21,8 @@ interface Subscriber {
   created_at?: string | null
   profile_id?: string
   bank_account_limit?: number
+  bank_account_limit_inherited?: number | boolean
+  bank_account_limit_master_slug?: string | null
 }
 
 interface BillingOverview {
@@ -222,7 +224,7 @@ export default function SuperAdminDashboard() {
 
   async function updateFreeBankLimit(subscriber: Subscriber, maxAccounts: number) {
     const userId = String(subscriber.user_id || subscriber.id || '')
-    if (!userId || subscriber.plan_id !== 'free' || bankLimitSavingUser) return
+    if (!userId || subscriber.plan_id !== 'free' || subscriber.bank_account_limit_inherited || bankLimitSavingUser) return
     setBankLimitSavingUser(userId)
     setBankLimitMessage('')
     try {
@@ -1722,7 +1724,7 @@ export default function SuperAdminDashboard() {
           <header className="mb-6">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-600">KAWVO LINK</p>
             <h1 className="mt-2 text-3xl font-black">Usuarios / perfiles Free</h1>
-            <p className="mt-2 text-sm text-slate-600">Administra parámetros individuales de cada usuario Free. El límite de cuentas bancarias puede ser 2, 3, 4 o 5.</p>
+            <p className="mt-2 text-sm text-slate-600">Administra parámetros individuales de cada usuario Free. En Team, cada miembro hereda automáticamente el límite de cuentas asignado al Master.</p>
           </header>
           <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="w-full min-w-[820px] text-left text-sm">
@@ -1744,17 +1746,20 @@ export default function SuperAdminDashboard() {
                     <td className="px-3 py-3">{subscriber.plan_id || '—'}</td>
                     <td className="px-3 py-3">{subscriber.is_active ? 'Activo' : 'Inactivo'}</td>
                     <td className="px-3 py-3">
-                      {subscriber.plan_id === 'free' ? <select
-                        value={subscriber.bank_account_limit || 3}
-                        disabled={bankLimitSavingUser === userId}
-                        onChange={(event) => void updateFreeBankLimit(subscriber, Number(event.target.value))}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 disabled:opacity-40"
-                      >
-                        <option value={2}>2 cuentas</option>
-                        <option value={3}>3 cuentas</option>
-                        <option value={4}>4 cuentas</option>
-                        <option value={5}>5 cuentas</option>
-                      </select> : <span className="text-slate-400">No aplica</span>}
+                      {subscriber.plan_id === 'free' ? <div>
+                        <select
+                          value={subscriber.bank_account_limit || 3}
+                          disabled={Boolean(subscriber.bank_account_limit_inherited) || bankLimitSavingUser === userId}
+                          onChange={(event) => void updateFreeBankLimit(subscriber, Number(event.target.value))}
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-700 disabled:opacity-55"
+                        >
+                          <option value={2}>2 cuentas</option>
+                          <option value={3}>3 cuentas</option>
+                          <option value={4}>4 cuentas</option>
+                          <option value={5}>5 cuentas</option>
+                        </select>
+                        {Boolean(subscriber.bank_account_limit_inherited) && <span className="mt-1 block text-xs font-bold text-cyan-700">Heredado del Master Team{subscriber.bank_account_limit_master_slug ? ` /${subscriber.bank_account_limit_master_slug}` : ''}</span>}
+                      </div> : <span className="text-slate-400">No aplica</span>}
                     </td>
                   </tr>
                 })}
@@ -1923,17 +1928,20 @@ export default function SuperAdminDashboard() {
                         <td className="border-b border-slate-100 px-3 py-3">{s.is_published ? 'Sí' : 'No'}</td>
                         <td className="border-b border-slate-100 px-3 py-3">
                           {s.plan_id === 'free' ? (
-                            <select
-                              value={s.bank_account_limit || 3}
-                              disabled={bankLimitSavingUser === String(s.user_id || s.id || '')}
-                              onChange={(event) => void updateFreeBankLimit(s, Number(event.target.value))}
-                              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40"
-                            >
-                              <option value={2}>2</option>
-                              <option value={3}>3</option>
-                              <option value={4}>4</option>
-                              <option value={5}>5</option>
-                            </select>
+                            <div>
+                              <select
+                                value={s.bank_account_limit || 3}
+                                disabled={Boolean(s.bank_account_limit_inherited) || bankLimitSavingUser === String(s.user_id || s.id || '')}
+                                onChange={(event) => void updateFreeBankLimit(s, Number(event.target.value))}
+                                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-55"
+                              >
+                                <option value={2}>2</option>
+                                <option value={3}>3</option>
+                                <option value={4}>4</option>
+                                <option value={5}>5</option>
+                              </select>
+                              {Boolean(s.bank_account_limit_inherited) && <span className="mt-1 block text-[10px] font-bold text-cyan-700">Heredado del Master Team{s.bank_account_limit_master_slug ? ` /${s.bank_account_limit_master_slug}` : ''}</span>}
+                            </div>
                           ) : <span className="text-slate-400">—</span>}
                         </td>
                       </tr>
