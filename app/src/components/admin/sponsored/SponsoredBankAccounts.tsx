@@ -3,7 +3,7 @@ import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../../lib/api'
 
 type HolderIdType='cedula'|'rnc'
 type Bank={id:string;bank_code:string|null;bank_name:string;account_number:string;display_number:string;account_type:'savings'|'checking';currency:'DOP'|'USD';holder_name:string;holder_id_type:HolderIdType|null;holder_id_number:string;display_mode:'masked'|'visible';sort_order:number}
-const MAX_ACTIVE=3
+const DEFAULT_MAX_ACTIVE=3
 const BANKS=[
   {code:'vimenca',name:'Banco Vimenca'},{code:'promerica',name:'Banco Promerica'},{code:'popular',name:'Banco Popular Dominicano'},{code:'bdi',name:'Banco BDI'},{code:'santa-cruz',name:'Banco Santa Cruz'},{code:'bhd-leon',name:'Banco BHD León'},{code:'ademi',name:'Banco Ademi'},{code:'banesco',name:'Banesco'},{code:'scotiabank',name:'Scotiabank República Dominicana'},{code:'la-nacional',name:'La Nacional Ahorros y Préstamos'},{code:'banreservas',name:'Banco de Reservas'},{code:'citi',name:'Citi'},{code:'caribe',name:'Banco Caribe'},{code:'lopez-de-haro',name:'Banco López de Haro'},{code:'bellbank',name:'Bellbank'},{code:'activo-dominicana',name:'Banco Múltiple Activo Dominicana'},{code:'lafise',name:'Banco LAFISE'},{code:'asociacion-cibao',name:'Asociación Cibao de Ahorros y Préstamos'},{code:'otro',name:'Otro banco'},
 ]
@@ -15,6 +15,7 @@ export function SponsoredBankAccountsSection({mode='beneficiary',profileId}:{mod
   const params=new URLSearchParams();if(mode==='master')params.set('scope','master');else if(profileId)params.set('profile_id',profileId);const scopeQuery=params.toString()?`?${params.toString()}`:''
   const[allowed,setAllowed]=useState(false)
   const[enabled,setEnabled]=useState(true)
+  const[maxActive,setMaxActive]=useState(DEFAULT_MAX_ACTIVE)
   const[items,setItems]=useState<Bank[]>([])
   const[form,setForm]=useState<any>(blank)
   const[editingId,setEditingId]=useState<string|null>(null)
@@ -22,8 +23,8 @@ export function SponsoredBankAccountsSection({mode='beneficiary',profileId}:{mod
   const[loading,setLoading]=useState(true)
   const[error,setError]=useState('')
   const[message,setMessage]=useState('')
-  const remaining=useMemo(()=>Math.max(0,MAX_ACTIVE-items.length),[items.length])
-  async function load(){setLoading(true);setError('');try{const j:any=await apiGet(`/me/sponsored-profile/bank-accounts${scopeQuery}`);if(!j?.ok)throw new Error(j?.error||'No pudimos cargar las cuentas.');setAllowed(Boolean(j.data?.access?.allowed));setEnabled(j.data?.enabled!==false);setItems(Array.isArray(j.data?.items)?j.data.items:[])}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar las cuentas.')}finally{setLoading(false)}}
+  const remaining=useMemo(()=>Math.max(0,maxActive-items.length),[maxActive,items.length])
+  async function load(){setLoading(true);setError('');try{const j:any=await apiGet(`/me/sponsored-profile/bank-accounts${scopeQuery}`);if(!j?.ok)throw new Error(j?.error||'No pudimos cargar las cuentas.');setAllowed(Boolean(j.data?.access?.allowed));setEnabled(j.data?.enabled!==false);setMaxActive(Math.min(5,Math.max(2,Number(j.data?.max_accounts||DEFAULT_MAX_ACTIVE))));setItems(Array.isArray(j.data?.items)?j.data.items:[])}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar las cuentas.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[scopeQuery])
   function selectBank(code:string){const bank=BANKS.find(item=>item.code===code)||BANKS[0];setForm((current:any)=>({...current,bank_code:bank.code,bank_name:bank.name}))}
   function reset(){setEditingId(null);setForm(blank)}
@@ -34,10 +35,10 @@ export function SponsoredBankAccountsSection({mode='beneficiary',profileId}:{mod
   if(loading)return <section id="sponsored-bank-accounts" data-sponsored-tour="bank-accounts" className="rounded-[26px] border border-slate-200 bg-white p-5"><p className="text-sm font-semibold text-slate-400">Cargando cuentas bancarias…</p></section>
   if(!allowed)return null
   return <section id="sponsored-bank-accounts" data-sponsored-tour="bank-accounts" className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(15,23,42,.04)]">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.12em] text-cyan-700">Cuentas bancarias</p><h2 className="mt-1 text-xl font-black">Facilita las transferencias bancarias</h2><p className="mt-1 text-sm leading-6 text-slate-500">Agrega hasta 3 cuentas para que tus clientes copien los datos necesarios desde tu perfil.</p></div><span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">{items.length}/{MAX_ACTIVE}</span></div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.12em] text-cyan-700">Cuentas bancarias</p><h2 className="mt-1 text-xl font-black">Facilita las transferencias bancarias</h2><p className="mt-1 text-sm leading-6 text-slate-500">Agrega hasta {maxActive} cuentas para que tus clientes copien los datos necesarios desde tu perfil.</p></div><span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700">{items.length}/{maxActive}</span></div>
     <div className="mt-5 flex items-center justify-between gap-4 rounded-[22px] border border-slate-200 bg-slate-50 p-4"><div><p className="text-sm font-black">Mostrar en mi perfil</p><p className="mt-1 text-xs font-medium text-slate-500">Puedes ocultar toda la sección sin borrar tus cuentas.</p></div><button type="button" onClick={()=>void toggleSection()} disabled={saving} aria-pressed={enabled} className={`relative h-8 w-14 shrink-0 rounded-full transition ${enabled?'bg-cyan-600':'bg-slate-200'}`}><span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition ${enabled?'left-7':'left-1'}`}/></button></div>
     {(error||message)&&<p className={`mt-4 rounded-2xl px-4 py-3 text-sm font-black ${error?'bg-rose-50 text-rose-700':'bg-emerald-50 text-emerald-700'}`}>{error||message}</p>}
-    {(items.length<MAX_ACTIVE||editingId)&&<div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+    {(items.length<maxActive||editingId)&&<div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
       <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[.1em] text-slate-400">{editingId?'Editar cuenta':'Agregar cuenta'}</p><p className="mt-1 text-lg font-black">{editingId?'Actualiza los datos':`${remaining} ${remaining===1?'espacio disponible':'espacios disponibles'}`}</p></div>{editingId&&<button type="button" onClick={reset} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-600">Cancelar</button>}</div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="block sm:col-span-2"><span className="text-sm font-black text-slate-700">Banco</span><select value={form.bank_code} onChange={e=>selectBank(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 font-semibold">{BANKS.map(bank=><option key={bank.code} value={bank.code}>{bank.name}</option>)}</select></label>
