@@ -15,9 +15,23 @@ function normalizeBankAccountLimit(value: unknown): number {
 }
 
 async function profileBankAccountLimit(c: any, profileId: string): Promise<number> {
+  const team = await c.env.DB.prepare(
+    `SELECT tw.master_profile_id
+       FROM team_members tm
+       JOIN team_workspaces tw ON tw.id = tm.team_id
+      WHERE tm.profile_id = ?
+        AND tm.status = 'active'
+        AND tw.status = 'active'
+      LIMIT 1`,
+  ).bind(profileId).first().catch(() => null)
+
+  const effectiveProfileId = team
+    ? String((team as any).master_profile_id || profileId)
+    : profileId
+
   const row = await c.env.DB.prepare(
     `SELECT max_accounts FROM profile_bank_limits WHERE profile_id = ? LIMIT 1`,
-  ).bind(profileId).first().catch(() => null)
+  ).bind(effectiveProfileId).first().catch(() => null)
   return normalizeBankAccountLimit((row as any)?.max_accounts)
 }
 
