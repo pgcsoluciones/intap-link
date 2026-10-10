@@ -82,12 +82,13 @@ export default function FreeBankAccounts() {
   const [saving, setSaving] = useState(false)
   const [access, setAccess] = useState<Access>({ allowed: false, source: null })
   const [enabled, setEnabled] = useState(true)
+  const [maxAccounts, setMaxAccounts] = useState(3)
   const [accounts, setAccounts] = useState<BankAccount[]>([])
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [message, setMessage] = useState('')
 
-  const remaining = useMemo(() => Math.max(0, 3 - accounts.length), [accounts.length])
+  const remaining = useMemo(() => Math.max(0, maxAccounts - accounts.length), [maxAccounts, accounts.length])
   const missingFields = useMemo(() => {
     const missing: string[] = []
     if (!form.bank_name.trim()) missing.push('banco')
@@ -105,6 +106,7 @@ export default function FreeBankAccounts() {
       if (json?.ok) {
         setAccess(json.data?.access || { allowed: false, source: null })
         setEnabled(json.data?.enabled !== false)
+        setMaxAccounts(Math.min(5, Math.max(2, Number(json.data?.max_accounts || 3))))
         setAccounts(Array.isArray(json.data?.items) ? json.data.items : [])
       } else {
         setMessage(json?.error || 'No se pudo cargar esta sección.')
@@ -229,7 +231,7 @@ export default function FreeBankAccounts() {
             <div className="grid h-14 w-14 place-items-center rounded-2xl bg-slate-950 text-2xl text-white">$</div>
             <p className="mt-5 text-xs font-black uppercase tracking-[0.14em] text-violet-700">Función premium</p>
             <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Cuentas bancarias</h1>
-            <p className="mt-3 text-base font-medium leading-7 text-slate-600">Agrega hasta 3 cuentas a tu perfil y permite que tus clientes copien los datos necesarios para hacer una transferencia.</p>
+            <p className="mt-3 text-base font-medium leading-7 text-slate-600">Agrega hasta {maxAccounts} cuentas a tu perfil y permite que tus clientes copien los datos necesarios para hacer una transferencia.</p>
             <div className="mt-5 rounded-2xl bg-violet-50 p-4 text-sm font-semibold leading-6 text-violet-900">Disponible en Plan Plus. Los perfiles Free activados durante la promoción de feria conservan esta función permanentemente.</div>
             <a href={basicPlanWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-4 text-base font-black text-white">Conocer Plan Plus</a>
             <button type="button" disabled className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-400">Tengo un código promocional · Próximamente</button>
@@ -262,7 +264,7 @@ export default function FreeBankAccounts() {
 
         {message && <p className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-black shadow-sm ${message.startsWith('✓') ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-300 bg-amber-50 text-amber-900'}`}>{message}</p>}
 
-        {(accounts.length < 3 || editingId) && (
+        {(accounts.length < maxAccounts || editingId) && (
           <section className="mt-5 rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.12em] text-cyan-700">{editingId ? 'Editar cuenta' : 'Agregar cuenta'}</p><h2 className="mt-1 text-xl font-black">{editingId ? 'Actualiza los datos' : `${remaining} ${remaining === 1 ? 'espacio disponible' : 'espacios disponibles'}`}</h2></div>{editingId && <button type="button" onClick={resetForm} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">Cancelar</button>}</div>
 
