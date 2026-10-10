@@ -77,7 +77,9 @@ run git diff --check "$REMOTE/main"...HEAD
 run npm ci
 run node scripts/test-bank-privacy-interaction-contract.mjs
 run npm run build:preview -w app
-run npm run build -w web
+run bash -lc 'cd web && npm run build:preview'
+if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then fail "Bundle Web Preview contiene API productiva"; fi
+grep -R -Fq 'https://preview.intaprd.com' web/dist/assets || fail "Bundle Web Preview no apunta al API Preview"
 run bash -lc 'cd api && npx tsc --noEmit'
 
 echo; echo "▶ Verificar/aplicar migración 0089 en D1 Preview"
