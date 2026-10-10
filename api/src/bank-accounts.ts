@@ -7,7 +7,19 @@ type Currency = 'DOP' | 'USD'
 type DisplayMode = 'masked' | 'visible'
 type HolderIdType = 'cedula' | 'rnc'
 
-const MAX_BANK_ACCOUNTS = 3
+const DEFAULT_MAX_BANK_ACCOUNTS = 3
+
+function normalizeBankAccountLimit(value: unknown): number {
+  const n = Math.floor(Number(value))
+  return Number.isFinite(n) ? Math.min(5, Math.max(2, n)) : DEFAULT_MAX_BANK_ACCOUNTS
+}
+
+async function profileBankAccountLimit(c: any, profileId: string): Promise<number> {
+  const row = await c.env.DB.prepare(
+    `SELECT max_accounts FROM profile_bank_limits WHERE profile_id = ? LIMIT 1`,
+  ).bind(profileId).first().catch(() => null)
+  return normalizeBankAccountLimit((row as any)?.max_accounts)
+}
 
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
@@ -142,6 +154,7 @@ app.get('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
   const settings = await c.env.DB.prepare(
     `SELECT is_enabled FROM profile_bank_settings WHERE profile_id = ? LIMIT 1`,
   ).bind(profileId).first()
+  const maxAccounts = await profileBankAccountLimit(c, profileId)
 
   const rows = access.allowed
     ? await c.env.DB.prepare(
@@ -158,7 +171,7 @@ app.get('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
     data: {
       access,
       enabled: settings ? Boolean((settings as any).is_enabled) : true,
-      max_accounts: MAX_BANK_ACCOUNTS,
+      max_accounts: maxAccounts,
       items: (rows.results as any[]).map(serializeOwnerAccount),
     },
   })
@@ -195,11 +208,12 @@ app.post('/api/v1/me/bank-accounts', requireBankAuth, async (c: any) => {
   const access = await bankAccess(c, profileId, String((profile as any).plan_id || 'free'))
   if (!access.allowed) return c.json({ ok: false, error: 'Cuentas bancarias no disponibles para tu plan actual.' }, 403)
 
+  const maxAccounts = await profileBankAccountLimit(c, profileId)
   const countRow = await c.env.DB.prepare(
     `SELECT COUNT(*) AS n FROM profile_bank_accounts WHERE profile_id = ?`,
   ).bind(profileId).first()
-  if (Number((countRow as any)?.n || 0) >= MAX_BANK_ACCOUNTS) {
-    return c.json({ ok: false, error: 'Puedes agregar un máximo de 3 cuentas.' }, 409)
+  if (Number((countRow as any)?.n || 0) >= maxAccounts) {
+    return c.json({ ok: false, error: `Puedes agregar un máximo de ${maxAccounts} cuentas.` }, 409)
   }
 
   let body: any = {}
@@ -332,14 +346,15 @@ app.get('/api/v1/public/profiles/:slug/bank-accounts', async (c: any) => {
   const enabled = settings ? Boolean((settings as any).is_enabled) : true
   if (!enabled) return c.json({ ok: true, data: { enabled: false, items: [] } })
 
+  const maxAccounts = await profileBankAccountLimit(c, profileId)
   const rows = await c.env.DB.prepare(
     `SELECT id, bank_code, bank_name, account_number, account_type, currency,
             holder_name, holder_id_type, holder_id_number, display_mode, sort_order
        FROM profile_bank_accounts
       WHERE profile_id = ? AND is_active = 1
       ORDER BY sort_order ASC, created_at ASC
-      LIMIT 3`,
-  ).bind(profileId).all()
+      LIMIT ?`,
+  ).bind(profileId, maxAccounts).all()
 
   return c.json({
     ok: true,
