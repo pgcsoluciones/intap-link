@@ -3959,6 +3959,7 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
                 p.id AS profile_id, p.slug, p.name AS profile_name,
                 p.plan_id, p.is_active, p.is_published,
                 p.trial_ends_at, p.admin_notes,
+                COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3) AS bank_account_limit,
                 (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id) AS links_count,
                 (SELECT COUNT(*) FROM profile_modules pm
                  WHERE pm.profile_id = p.id
@@ -3977,6 +3978,7 @@ app.get('/api/v1/superadmin/subscribers', requireSuperAdmin('viewer'), async (c)
                 p.id AS profile_id, p.slug, p.name AS profile_name,
                 p.plan_id, p.is_active, p.is_published,
                 NULL AS trial_ends_at, NULL AS admin_notes,
+                COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3) AS bank_account_limit,
                 (SELECT COUNT(*) FROM profile_links WHERE profile_id = p.id) AS links_count,
                 (SELECT COUNT(*) FROM profile_modules pm
                  WHERE pm.profile_id = p.id
@@ -4003,7 +4005,8 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
     c.env.DB.prepare(`SELECT id, email, NULL AS created_at FROM users WHERE id = ? LIMIT 1`)
       .bind(targetUserId).first(),
     c.env.DB.prepare(
-      `SELECT p.*, pl.max_links, pl.max_photos, pl.max_faqs, pl.max_products, pl.max_videos, pl.can_use_vcard
+      `SELECT p.*, pl.max_links, pl.max_photos, pl.max_faqs, pl.max_products, pl.max_videos, pl.can_use_vcard,
+              COALESCE((SELECT pbl.max_accounts FROM profile_bank_limits pbl WHERE pbl.profile_id=p.id LIMIT 1), 3) AS bank_account_limit
        FROM profiles p
        LEFT JOIN plan_limits pl ON p.plan_id = pl.plan_id
        WHERE p.user_id = ? LIMIT 1`
@@ -4075,6 +4078,59 @@ app.get('/api/v1/superadmin/subscribers/:userId', requireSuperAdmin('viewer'), a
       recent_audit: (recentAudit as any).results,
     },
   })
+})
+
+// ── PATCH /api/v1/superadmin/subscribers/:userId/bank-limit ────────────────
+// Configura el máximo de cuentas bancarias del perfil Free entre 2 y 5.
+app.patch('/api/v1/superadmin/subscribers/:userId/bank-limit', requireSuperAdmin('support'), async (c) => {
+  const adminUserId = c.get('adminUserId') as string
+  const targetUserId = c.req.param('userId')
+  let body: any = {}
+  try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON body' }, 400) }
+
+  const maxAccounts = Math.floor(Number(body.max_accounts))
+  if (![2, 3, 4, 5].includes(maxAccounts)) {
+    return c.json({ ok: false, error: 'El límite debe ser 2, 3, 4 o 5.' }, 400)
+  }
+
+  const profile = await c.env.DB.prepare(
+    `SELECT id, plan_id FROM profiles WHERE user_id = ? LIMIT 1`
+  ).bind(targetUserId).first()
+
+  if (!profile) return c.json({ ok: false, error: 'Profile not found' }, 404)
+  if (String((profile as any).plan_id || 'free') !== 'free') {
+    return c.json({ ok: false, error: 'Este control corresponde a perfiles Free.' }, 409)
+  }
+
+  const profileId = String((profile as any).id)
+  const previous = await c.env.DB.prepare(
+    `SELECT max_accounts FROM profile_bank_limits WHERE profile_id = ? LIMIT 1`
+  ).bind(profileId).first().catch(() => null)
+  const previousLimit = Number((previous as any)?.max_accounts || 3)
+  const auditId = crypto.randomUUID()
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? null
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO profile_bank_limits(profile_id,max_accounts,updated_at)
+       VALUES(?,?,datetime('now'))
+       ON CONFLICT(profile_id) DO UPDATE SET max_accounts=excluded.max_accounts,updated_at=datetime('now')`
+    ).bind(profileId, maxAccounts),
+    c.env.DB.prepare(
+      `INSERT INTO admin_audit_log
+         (id, admin_user_id, action, target_type, target_id, before_json, after_json, ip, created_at)
+       VALUES (?, ?, 'free_bank_limit_changed', 'profile', ?, ?, ?, ?, datetime('now'))`
+    ).bind(
+      auditId,
+      adminUserId,
+      profileId,
+      JSON.stringify({ max_accounts: previousLimit }),
+      JSON.stringify({ max_accounts: maxAccounts }),
+      ip,
+    ),
+  ])
+
+  return c.json({ ok: true, data: { user_id: targetUserId, profile_id: profileId, max_accounts: maxAccounts } })
 })
 
 // ── PATCH /api/v1/superadmin/subscribers/:userId/plan ────────────────────────
