@@ -177,9 +177,9 @@ export default function PublicBankAccounts() {
                   <div className="min-w-0 flex-1 pt-1">
                     <h3 className="text-sm font-black leading-5" style={{ color: 'var(--ilx-text)' }}>{account.bank_name}</h3>
                     <p className="mt-0.5 text-xs font-bold" style={{ color: 'var(--ilx-primary)' }}>{accountTypeLabel(account.account_type)} · {account.currency}</p>
-                    <p className="mt-3 text-sm font-bold" style={{ color: 'var(--ilx-text)' }}>{account.holder_name}</p>
                     <p className="mt-1 break-all font-mono text-sm font-bold tracking-wide" style={{ color: 'var(--ilx-muted)' }}>{account.display_number}</p>
-                    {account.holder_id_type && account.holder_id_display && <p className="mt-2 text-xs font-bold" style={{ color: 'var(--ilx-muted)' }}>{idLabel}: <span className="font-mono">{account.holder_id_display}</span></p>}
+                    <p className="mt-3 text-sm font-bold" style={{ color: 'var(--ilx-text)' }}>{account.holder_name}</p>
+                    {account.holder_id_type && account.holder_id_display && <p className="mt-1 text-xs font-bold" style={{ color: 'var(--ilx-muted)' }}>{idLabel}: <span className="font-mono">{account.holder_id_display}</span></p>}
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2">
