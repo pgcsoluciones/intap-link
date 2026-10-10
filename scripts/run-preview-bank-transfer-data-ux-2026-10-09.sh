@@ -79,16 +79,16 @@ run npm run build -w web
 run bash -lc 'cd api && npx tsc --noEmit'
 
 echo; echo "▶ Verificar/aplicar migración 0089 en D1 Preview"
-HAS_LIMIT="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsor_tenants') WHERE name='bank_account_limit';" 2>/dev/null || true)"
-if ! echo "$HAS_LIMIT" | grep -Fq "bank_account_limit"; then
+HAS_LIMIT_TABLE="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM sqlite_master WHERE type='table' AND name='sponsor_bank_limits';" 2>/dev/null || true)"
+if ! echo "$HAS_LIMIT_TABLE" | grep -Fq "sponsor_bank_limits"; then
   (
     cd api
     npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --file=migrations-preview/0089_sponsor_bank_account_limit.sql
   ) || fail "No se pudo aplicar migración 0089 en Preview"
 fi
-SCHEMA_CHECK="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT bank_account_limit FROM sponsor_tenants LIMIT 1;" 2>/dev/null || true)"
-echo "$SCHEMA_CHECK" >/dev/null
-echo "✓ sponsor_tenants.bank_account_limit disponible en Preview"
+SCHEMA_CHECK="$(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command "SELECT name FROM pragma_table_info('sponsor_bank_limits') WHERE name='max_accounts';" 2>/dev/null || true)"
+echo "$SCHEMA_CHECK" | grep -Fq "max_accounts" || fail "Falta sponsor_bank_limits.max_accounts en Preview"
+echo "✓ sponsor_bank_limits.max_accounts disponible en Preview"
 
 echo; echo "▶ Deploy Web Preview"
 (npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH") 2>&1 | tee "$LOG_DIR/web.log"
