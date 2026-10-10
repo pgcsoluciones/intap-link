@@ -68,7 +68,8 @@ assertHierarchy(sponsoredBank, 'item.display_number', 'item.holder_name', 'item.
 assertHierarchy(demoBank, '<code>{DEMO_MASKED}</code>', '<strong>{holderName}</strong>', 'Cédula: {DEMO_ID_MASKED}', 'Demo')
 assertHierarchy(trialPanels, "b.account_number?'•••• '", '<b>{b.holder_name}</b>', 'idDisplay', 'Trial')
 
-assert.match(migration, /bank_account_limit INTEGER NOT NULL DEFAULT 3/, 'Migración agrega límite bancario al tenant')
+assert.match(migration, /CREATE TABLE IF NOT EXISTS sponsor_bank_limits/, 'Migración crea configuración bancaria aislada por tenant')
+assert.match(migration, /max_accounts INTEGER NOT NULL DEFAULT 3/, 'Migración define límite bancario predeterminado')
 assert.match(migration, /BETWEEN 2 AND 5/, 'Migración restringe límite de 2 a 5')
 assert.match(superAdminSponsors, /Cuentas bancarias permitidas/, 'SuperAdmin permite configurar límite bancario del tenant')
 assert.match(superAdminSponsors, /<option value=\{2\}>2 cuentas<\/option>/, 'SuperAdmin ofrece mínimo 2')
