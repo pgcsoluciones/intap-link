@@ -52,7 +52,9 @@ run git pull --ff-only "$REMOTE" "$FEATURE_BRANCH"
 
 HEAD_SHA="$(git rev-parse HEAD)"
 echo "Feature HEAD: $HEAD_SHA"
-[ "$HEAD_SHA" = "$APPROVED_PREVIEW_SHA" ] || fail "HEAD no coincide con el Preview aprobado"
+git merge-base --is-ancestor "$APPROVED_PREVIEW_SHA" HEAD || fail "El Preview aprobado ya no es ancestro"
+POST_APPROVAL="$(git diff --name-only "$APPROVED_PREVIEW_SHA"..HEAD | grep -v "^${RUNNER_PATH}$" || true)"
+[ -z "$POST_APPROVAL" ] || { echo "$POST_APPROVAL"; fail "Hay cambios de producto posteriores al Preview aprobado"; }
 
 git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergieron"
 [ "$(git rev-list --count HEAD.."$REMOTE/main")" = "0" ] || fail "La feature está detrás de main"
