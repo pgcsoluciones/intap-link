@@ -29,6 +29,9 @@ Regla:
 - Si el Master cambia de 3 a 5, los miembros pasan a 5 sin sincronización manual.
 - Nuevos miembros también heredan el límite vigente.
 - Fuera de Team, el perfil Free conserva su límite individual.
+- Patrocinado conserva su límite 2 a 5 por tenant.
+- Trial permite 2, 3, 4 o 5 cuentas controladas por SuperAdmin.
+- El owner del Trial no puede alterar el límite asignado.
 - Sin migraciones D1.
 - Producción NO se toca.
 
@@ -49,7 +52,11 @@ cat > "$LOG_DIR/allowed.txt" <<'EOF_ALLOWED'
 api/src/bank-accounts.ts
 api/src/index.ts
 api/src/preview-bank-accounts.ts
+api/src/trial-online.ts
+api/src/trial-profiles.ts
 app/src/components/admin/SuperAdminDashboard.tsx
+web/src/components/trial/KawvoTrial.tsx
+web/src/components/trial/TrialPanels.tsx
 scripts/run-preview-team-bank-limit-inheritance-2026-10-10.sh
 scripts/test-bank-privacy-interaction-contract.mjs
 EOF_ALLOWED
@@ -131,6 +138,9 @@ QA:
 4. En el panel bancario de cada miembro deben aparecer 5 espacios máximos.
 5. Cambia el Master a 2 y verifica que los miembros cambien a 2 automáticamente.
 6. Un Free que NO pertenece a Team mantiene su selector individual.
-7. Producción NO fue tocada.
+7. Patrocinado mantiene su control independiente 2..5 por tenant.
+8. En Trial, SuperAdmin puede asignar 2, 3, 4 o 5 cuentas.
+9. El owner del Trial ve el límite asignado, pero no puede modificarlo.
+10. Producción NO fue tocada.
 ================================================================
 EOF
