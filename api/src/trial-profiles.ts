@@ -50,6 +50,19 @@ function publicTrialHolderId(item:any){
   if(!value)return''
   return type==='rnc'?value:`•••• ${value.slice(-4)}`
 }
+function normalizeTrialBankLimit(value:any){
+  const n=Math.floor(Number(value))
+  return Number.isFinite(n)?Math.min(5,Math.max(2,n)):3
+}
+function normalizeTrialBankModule(snapshot:any){
+  if(!snapshot || typeof snapshot!=='object' || Array.isArray(snapshot))return snapshot
+  const modules=snapshot.modules&&typeof snapshot.modules==='object'&&!Array.isArray(snapshot.modules)?snapshot.modules:{}
+  const raw=modules.banks&&typeof modules.banks==='object'&&!Array.isArray(modules.banks)?modules.banks:{enabled:false,items:[]}
+  const max=normalizeTrialBankLimit(raw.max_accounts)
+  const items=Array.isArray(raw.items)?raw.items.slice(0,max):[]
+  snapshot.modules={...modules,banks:{...raw,enabled:Boolean(raw.enabled),max_accounts:max,items}}
+  return snapshot
+}
 function durationHours(value:any,fallback=72){const n=Math.round(Number(value));return Number.isFinite(n)?Math.min(720,Math.max(1,n)):fallback}
 function sqlDate(d:Date){return d.toISOString().replace('T',' ').replace('Z','')}
 function prospectFromRow(row:any){
@@ -140,7 +153,10 @@ export function registerTrialRoutes(app:any){
     const id=crypto.randomUUID(); const adminUserId=String(c.get('adminUserId')||'')
     let body:any={}; try{body=await c.req.json()}catch{body={}}
     const snapshot=JSON.parse(JSON.stringify(MASTER)); snapshot.profile.id=id; snapshot.profile.slug=''
-    snapshot.modules={banks:{enabled:Boolean(body?.modules?.banks),items:[]}}
+    const bankInput=body?.modules?.banks
+    const bankEnabled=bankInput&&typeof bankInput==='object'?Boolean(bankInput.enabled):Boolean(bankInput)
+    const bankMax=normalizeTrialBankLimit(bankInput&&typeof bankInput==='object'?bankInput.max_accounts:3)
+    snapshot.modules={banks:{enabled:bankEnabled,max_accounts:bankMax,items:[]}}
     const prospect=normalizeProspect(body?.prospect||{})
     const duration=durationHours(body?.duration_hours,72)
     await c.env.DB.prepare(`INSERT INTO trial_profiles(
@@ -250,7 +266,8 @@ export function registerTrialRoutes(app:any){
     const sets:string[]=[]; const values:any[]=[]
     if(body?.profile!==undefined){
       if(!body.profile || typeof body.profile!=='object' || Array.isArray(body.profile))return c.json({ok:false,error:'Perfil inválido.'},400)
-      const encoded=JSON.stringify(body.profile)
+      const normalizedProfile=normalizeTrialBankModule(JSON.parse(JSON.stringify(body.profile)))
+      const encoded=JSON.stringify(normalizedProfile)
       if(encoded.length>180000)return c.json({ok:false,error:'El perfil supera el tamaño permitido.'},413)
       sets.push('profile_json=?');values.push(encoded)
     }
@@ -303,7 +320,7 @@ export function registerTrialRoutes(app:any){
         expiresAt=sqlDate(new Date(now.getTime()+durationHours((existing as any).duration_hours,72)*60*60*1000))
       }
     }
-    const snapshot=parseJson((existing as any).profile_json)
+    const snapshot=normalizeTrialBankModule(parseJson((existing as any).profile_json))
     if(snapshot.profile){snapshot.profile.slug=slug;snapshot.profile.vcardFileName=`${slug}.vcf`}
     await c.env.DB.prepare(`UPDATE trial_profiles SET slug=?,name=?,status=CASE WHEN expires_at IS NOT NULL AND expires_at<=datetime('now') THEN 'expired' ELSE 'active' END,profile_json=?,activated_at=?,expires_at=?,updated_at=datetime('now') WHERE id=?`)
       .bind(slug,name,JSON.stringify(snapshot),activatedAt,expiresAt,id).run()
@@ -424,7 +441,7 @@ export function registerTrialRoutes(app:any){
     const data=rowOut(row)
     if(data.status==='expired')return c.json({ok:false,error:'Trial finalizado.'},410)
     if(data.status==='inactive')return c.json({ok:false,error:'Trial desactivado.'},410)
-    const snapshot=parseJson((row as any).profile_json)
+    const snapshot=normalizeTrialBankModule(parseJson((row as any).profile_json))
     const banks=Array.isArray(snapshot?.modules?.banks?.items)?snapshot.modules.banks.items:[]
     const account=banks.find((item:any)=>String(item?.id||'')===c.req.param('bankId'))
     const value=String(account?.holder_id_number||'').replace(/\D/g,'')
@@ -437,7 +454,7 @@ export function registerTrialRoutes(app:any){
     const row=await c.env.DB.prepare('SELECT * FROM trial_profiles WHERE slug=? LIMIT 1').bind(slug).first()
     if(!row || (row as any).status==='draft')return c.json({ok:false,error:'Trial no encontrado.'},404)
     const data=rowOut(row)
-    const publicProfile=JSON.parse(JSON.stringify(data.profile||{}))
+    const publicProfile=normalizeTrialBankModule(JSON.parse(JSON.stringify(data.profile||{})))
     const bankItems=publicProfile?.modules?.banks?.items
     if(Array.isArray(bankItems))for(const item of bankItems){
       item.holder_id_display=publicTrialHolderId(item)
