@@ -6,15 +6,17 @@ const sponsoredBankPath = 'web/src/components/sponsored/SponsoredBankAccounts.ts
 const demoBankPath = 'web/src/components/demo/DemoBankAccounts.tsx'
 const trialPanelsPath = 'web/src/components/trial/TrialPanels.tsx'
 
-const [publicBank, sponsoredBank, demoBank, trialPanels, bankApi, previewBankApi, sponsoredApi, trialApi, superAdminDashboard, superAdminSponsors, freeAdminBanks, sponsoredAdminBanks, coreApi, sponsorApi, migration, middleware] = await Promise.all([
+const [publicBank, sponsoredBank, demoBank, trialPanels, trialUi, bankApi, previewBankApi, sponsoredApi, trialApi, trialOnlineApi, superAdminDashboard, superAdminSponsors, freeAdminBanks, sponsoredAdminBanks, coreApi, sponsorApi, migration, middleware] = await Promise.all([
   readFile(publicBankPath, 'utf8'),
   readFile(sponsoredBankPath, 'utf8'),
   readFile(demoBankPath, 'utf8'),
   readFile(trialPanelsPath, 'utf8'),
+  readFile('web/src/components/trial/KawvoTrial.tsx', 'utf8'),
   readFile('api/src/bank-accounts.ts', 'utf8'),
   readFile('api/src/preview-bank-accounts.ts', 'utf8'),
   readFile('api/src/sponsored-bank-accounts.ts', 'utf8'),
   readFile('api/src/trial-profiles.ts', 'utf8'),
+  readFile('api/src/trial-online.ts', 'utf8'),
   readFile('app/src/components/admin/SuperAdminDashboard.tsx', 'utf8'),
   readFile('app/src/components/admin/SuperAdminSponsors.tsx', 'utf8'),
   readFile('app/src/components/admin/free/FreeBankAccounts.tsx', 'utf8'),
@@ -87,6 +89,14 @@ assert.match(coreApi, /bank_account_limit_inherited/, 'SuperAdmin identifica lí
 assert.match(coreApi, /Modifica el límite del Master Team/, 'SuperAdmin bloquea override directo en miembro Team')
 assert.match(superAdminDashboard, /Heredado del Master Team/, 'SuperAdmin muestra herencia de límite Team')
 assert.match(superAdminDashboard, /bank_account_limit_inherited/, 'Selector de miembro Team queda bloqueado')
+assert.match(trialPanels, /Cuentas bancarias permitidas/, 'Trial expone control de cantidad de cuentas')
+assert.match(trialPanels, /data\.items\.length<max/, 'Trial editor respeta límite dinámico')
+assert.match(trialUi, /createBankLimit/, 'Creación de Trial permite configurar 2..5 cuentas')
+assert.match(trialUi, /mode==='editor'\?setTrialBankLimit:undefined/, 'Solo SuperAdmin puede cambiar el límite del Trial')
+assert.match(trialApi, /normalizeTrialBankLimit/, 'API Trial normaliza límite 2..5')
+assert.match(trialApi, /max_accounts:bankMax/, 'Trial nuevo persiste límite bancario')
+assert.match(trialOnlineApi, /normalizeOwnerTrialBankModule/, 'Owner Trial conserva límite definido por SuperAdmin')
+assert.match(trialOnlineApi, /max_accounts:3/, 'Trial online inicia con límite seguro predeterminado')
 assert.match(migration, /CREATE TABLE IF NOT EXISTS sponsor_bank_limits/, 'Migración crea configuración bancaria aislada por tenant')
 assert.match(migration, /max_accounts INTEGER NOT NULL DEFAULT 3/, 'Migración define límite bancario predeterminado')
 assert.match(migration, /BETWEEN 2 AND 5/, 'Migración restringe límite de 2 a 5')
