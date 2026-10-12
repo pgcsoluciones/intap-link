@@ -15,6 +15,18 @@ function normalizeInstagram(value:any){return String(value||'').trim().toLowerCa
 function sqlDate(d:Date){return d.toISOString().replace('T',' ').replace('Z','')}
 function parseJson(value:any){try{return JSON.parse(String(value||'{}'))}catch{return {}}}
 function str(value:any,max=180){return String(value||'').trim().slice(0,max)}
+function normalizeTrialBankLimit(value:any){const n=Math.floor(Number(value));return Number.isFinite(n)?Math.min(5,Math.max(2,n)):3}
+function normalizeOwnerTrialBankModule(next:any,current:any){
+  if(!next || typeof next!=='object' || Array.isArray(next))return next
+  const currentModules=current?.modules&&typeof current.modules==='object'&&!Array.isArray(current.modules)?current.modules:{}
+  const currentBanks=currentModules.banks&&typeof currentModules.banks==='object'&&!Array.isArray(currentModules.banks)?currentModules.banks:{}
+  const max=normalizeTrialBankLimit(currentBanks.max_accounts)
+  const nextModules=next.modules&&typeof next.modules==='object'&&!Array.isArray(next.modules)?next.modules:{}
+  const nextBanks=nextModules.banks&&typeof nextModules.banks==='object'&&!Array.isArray(nextModules.banks)?nextModules.banks:{enabled:false,items:[]}
+  const items=Array.isArray(nextBanks.items)?nextBanks.items.slice(0,max):[]
+  next.modules={...nextModules,banks:{...nextBanks,max_accounts:max,items}}
+  return next
+}
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function generateOpaqueToken(bytes=32){const a=new Uint8Array(bytes);crypto.getRandomValues(a);return Array.from(a).map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function leadFromToken(env:any,rawToken:string){
@@ -200,7 +212,7 @@ export function registerTrialOnlineRoutes(app:any){
       snapshot.profile.quickActions=(snapshot.profile.quickActions||[]).map((item:any)=>item?.type==='call'?{...item,url:`tel:+${prospectPhone}`}:item)
     }
     if(prospectEmail)snapshot.profile.email=prospectEmail
-    snapshot.modules={banks:{enabled:false,items:[]}}
+    snapshot.modules={banks:{enabled:false,max_accounts:3,items:[]}}
     const now=new Date()
     const startedAt=sqlDate(now)
     const expiresAt=sqlDate(new Date(now.getTime()+96*60*60*1000))
@@ -245,11 +257,13 @@ export function registerTrialOnlineRoutes(app:any){
     if(state(row)==='expired')return c.json({ok:false,error:'Tu prueba ya finalizó.',code:'trial_expired'},410)
     let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
     if(!body?.profile||typeof body.profile!=='object'||Array.isArray(body.profile))return c.json({ok:false,error:'Perfil inválido.'},400)
-    const encoded=JSON.stringify(body.profile)
+    const currentSnapshot=parseJson((row as any).profile_json)
+    const normalizedProfile=normalizeOwnerTrialBankModule(JSON.parse(JSON.stringify(body.profile)),currentSnapshot)
+    const encoded=JSON.stringify(normalizedProfile)
     if(encoded.length>180000)return c.json({ok:false,error:'El perfil supera el tamaño permitido.'},413)
     const userId=String(c.get('userId')||'')
     await c.env.DB.prepare("UPDATE trial_profiles SET profile_json=?,updated_at=datetime('now') WHERE id=? AND owner_user_id=?").bind(encoded,id,userId).run()
-    await claimProfileIdentities(c.env,id,userId,body.profile)
+    await claimProfileIdentities(c.env,id,userId,normalizedProfile)
     return c.json({ok:true,data:{id,updated_at:new Date().toISOString()}})
   })
 
