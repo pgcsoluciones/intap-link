@@ -28,6 +28,12 @@ const DEFAULT_AVAILABILITY=[
 ]
 
 export function cleanAppointmentText(value:unknown,max=500){return String(value??'').trim().slice(0,max)}
+export function normalizeAppointmentPhone(value:unknown){
+  let digits=String(value??'').replace(/\D/g,'').slice(0,15)
+  if(digits.startsWith('00'))digits=digits.slice(2)
+  if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits
+  return digits
+}
 export function validAppointmentDate(value:unknown){
   const text=String(value??'')
   if(!/^\d{4}-\d{2}-\d{2}$/.test(text))return false
@@ -105,7 +111,7 @@ export async function getAppointmentCustomReasons(db:D1Database,subjectType:stri
 export async function getAppointmentAvailabilityRows(db:D1Database,subjectType:string,subjectId:string){
   await ensureAppointmentSubject(db,subjectType,subjectId)
   const rows=await db.prepare(`SELECT id,weekday,start_time,end_time,enabled,sort_order FROM appointment_availability WHERE subject_type=? AND subject_id=? ORDER BY weekday ASC,sort_order ASC,start_time ASC`).bind(subjectType,subjectId).all()
-  return rows.results||[]
+  return (rows.results||[]).map((row:any)=>({...row,customer_phone:normalizeAppointmentPhone(row.customer_phone)}))
 }
 
 export async function getAppointmentBlocks(db:D1Database,subjectType:string,subjectId:string,fromDate?:string){
@@ -199,9 +205,9 @@ export async function createAppointmentBlock(db:D1Database,subjectType:string,su
 export async function createAppointmentRequest(db:D1Database,subject:AppointmentSubject,body:any){
   const settings=await getAppointmentSettings(db,subject.type,subject.id)
   if(!settings.enabled)throw new Error('La agenda no está disponible.')
-  const name=cleanAppointmentText(body?.name,120),phone=cleanAppointmentText(body?.phone,40),email=cleanAppointmentText(body?.email,180)
+  const name=cleanAppointmentText(body?.name,120),phone=normalizeAppointmentPhone(body?.phone),email=cleanAppointmentText(body?.email,180)
   const date=String(body?.date||''),start=String(body?.time||''),reasonId=cleanAppointmentText(body?.reason_id,120),details=cleanAppointmentText(body?.details,900)
-  if(!name||!phone||!validAppointmentDate(date)||!validAppointmentTime(start)||!reasonId)throw new Error('Completa nombre, teléfono, fecha, hora y motivo.')
+  if(!name||phone.length<7||!validAppointmentDate(date)||!validAppointmentTime(start)||!reasonId)throw new Error('Completa nombre, teléfono válido, fecha, hora y motivo.')
   if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Correo inválido.')
   const slots=await availableAppointmentSlots(db,subject.type,subject.id,date)
   const slot=slots.find(item=>item.time===start)
