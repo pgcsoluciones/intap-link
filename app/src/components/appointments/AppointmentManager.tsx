@@ -17,7 +17,18 @@ function path(base:string,suffix:string,query:string){
   const q=query?query.replace(/^\?/,''):''
   return base+suffix+(q?'?'+q:'')
 }
-function waPhone(value:string){return String(value||'').replace(/\D/g,'')}
+function waPhone(value:string){
+  let digits=String(value||'').replace(/\D/g,'').slice(0,15)
+  if(digits.startsWith('00'))digits=digits.slice(2)
+  if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits
+  return digits
+}
+function displayPhone(value:string){
+  const digits=waPhone(value)
+  const local=digits.length===11&&digits.startsWith('1')?digits.slice(1):digits
+  if(local.length===10&&/^(809|829|849)/.test(local))return `${local.slice(0,3)}-${local.slice(3,6)}-${local.slice(6)}`
+  return digits?('+'+digits):''
+}
 function humanDate(value:string){
   const parts=value.split('-').map(Number),y=parts[0],m=parts[1],d=parts[2]
   if(!y||!m||!d)return value
@@ -342,7 +353,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
 
 function RequestCard({item,children,targeted=false}:{item:RequestItem;children?:ReactNode;targeted?:boolean}){
   const statusLabel:Record<string,string>={pending:'Pendiente',confirmed:'Confirmada',rejected:'Rechazada',cancelled:'Cancelada',released:'Liberada'}
-  return <article id={'appointment-request-'+item.id} className={'rounded-2xl border bg-slate-50 p-4 transition-all duration-300 '+(targeted?'border-cyan-400 ring-4 ring-cyan-100 shadow-lg':'border-slate-200')}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-lg font-black leading-tight">{item.customer_name}</strong><p className="mt-2 text-[15px] font-bold leading-6 text-slate-600">{humanDate(item.appointment_date)} · {humanTime(item.start_time)} · {item.reason_label}</p><p className="mt-1 text-[15px] leading-6 text-slate-600">{item.customer_phone}{item.customer_email?' · '+item.customer_email:''}</p>{item.details&&<p className="mt-2 text-base leading-6 text-slate-700">{item.details}</p>}</div><span className="shrink-0 rounded-full bg-white px-2.5 py-1.5 text-xs font-black uppercase text-slate-500">{statusLabel[item.status]||item.status}</span></div>{children&&<div className="mt-4 flex flex-wrap gap-2">{children}</div>}</article>
+  return <article id={'appointment-request-'+item.id} className={'rounded-2xl border bg-slate-50 p-4 transition-all duration-300 '+(targeted?'border-cyan-400 ring-4 ring-cyan-100 shadow-lg':'border-slate-200')}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-lg font-black leading-tight">{item.customer_name}</strong><p className="mt-2 text-[15px] font-bold leading-6 text-slate-600">{humanDate(item.appointment_date)} · {humanTime(item.start_time)} · {item.reason_label}</p><p className="mt-1 text-[15px] leading-6 text-slate-600">{displayPhone(item.customer_phone)}{item.customer_email?' · '+item.customer_email:''}</p>{item.details&&<p className="mt-2 text-base leading-6 text-slate-700">{item.details}</p>}</div><span className="shrink-0 rounded-full bg-white px-2.5 py-1.5 text-xs font-black uppercase text-slate-500">{statusLabel[item.status]||item.status}</span></div>{children&&<div className="mt-4 flex flex-wrap gap-2">{children}</div>}</article>
 }
 
 function PaginationControls({page,total,pageSize,onPage}:{page:number;total:number;pageSize:number;onPage:(page:number)=>void}){
