@@ -19,6 +19,10 @@ type Props={
   onToast:(message:string)=>void
 }
 
+function normalizePhoneInput(value:string){
+  return value.replace(/[^0-9+()\-\s]/g,'').slice(0,24)
+}
+
 function humanSlot(value:string){
   const parts=value.split(':').map(Number),h=parts[0],m=parts[1]
   if(!Number.isFinite(h)||!Number.isFinite(m))return value
@@ -108,7 +112,7 @@ export default function AppointmentRequestModal({apiBase,palette,onClose,onToast
       {configLoading?<div style={loadingBox}>Cargando disponibilidad…</div>:!config?.enabled?<div style={warningBox}>La agenda de este perfil no está disponible en este momento.</div>:<>
         <div style={{display:'grid',gap:14,marginTop:18}}>
           <label style={label}>Nombre *<input style={field} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} autoComplete="name" placeholder="Tu nombre"/></label>
-          <label style={label}>Teléfono *<input style={field} value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} inputMode="tel" autoComplete="tel" placeholder="809-000-0000"/></label>
+          <label style={label}>Teléfono / WhatsApp *<input style={field} value={form.phone} onChange={e=>setForm({...form,phone:normalizePhoneInput(e.target.value)})} inputMode="tel" autoComplete="tel" placeholder="809-000-0000"/></label>
           <label style={label}>Correo <span style={optional}>(opcional)</span><input style={field} type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} autoComplete="email" placeholder="correo@ejemplo.com"/></label>
 
           <label style={label}><span style={fieldTitle}><FaCalendarAlt/>Fecha *</span><input style={field} type="date" min={config.min_date} max={config.max_date} value={form.date} onChange={e=>setForm({...form,date:e.target.value,time:''})}/></label>
