@@ -9,6 +9,30 @@ type Experience={
   schedule:Array<{day:string;hours:string}>
 }
 
+const DAY_OPTIONS=['Lunes a Viernes','Lunes','Martes','Miércoles','Jueves','Viernes','Sábados','Domingos','Todos los días']
+
+function to24(value:string){
+  const raw=String(value||'').trim()
+  const direct=raw.match(/^(\d{1,2}):(\d{2})$/)
+  if(direct)return `${String(Math.min(23,Number(direct[1]))).padStart(2,'0')}:${direct[2]}`
+  const match=raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i)
+  if(!match)return''
+  let hour=Number(match[1])%12
+  if(match[3].toUpperCase()==='PM')hour+=12
+  return `${String(hour).padStart(2,'0')}:${match[2]||'00'}`
+}
+function to12(value:string){
+  const match=String(value||'').match(/^(\d{1,2}):(\d{2})$/)
+  if(!match)return value
+  const hour=Number(match[1]),minute=match[2],period=hour>=12?'PM':'AM',display=hour%12||12
+  return `${display}:${minute} ${period}`
+}
+function splitHours(value:string){
+  const parts=String(value||'').split(/\s+-\s+/)
+  return{start:to24(parts[0]||'')||'08:00',end:to24(parts[1]||'')||'18:00'}
+}
+function joinHours(start:string,end:string){return `${to12(start)} - ${to12(end)}`}
+
 export default function FreeExperienceSettings(){
   const[data,setData]=useState<Experience|null>(null)
   const[loading,setLoading]=useState(true)
@@ -48,8 +72,18 @@ export default function FreeExperienceSettings(){
     <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
       <div className="border-b border-slate-200 px-4 py-4">
         <div className="flex items-center justify-between gap-4"><div className="min-w-0"><p className="text-[17px] font-medium text-slate-800">Nuestro horario</p><p className="mt-1 text-[13px] leading-5 text-slate-500">{data.schedule_visible?'Visible públicamente en tu presentación.':'Oculto en tu presentación; puedes seguir editándolo aquí.'}</p></div><div className="flex shrink-0 items-center gap-2"><span className={'text-[12px] font-bold '+(data.schedule_visible?'text-cyan-700':'text-slate-400')}>{data.schedule_visible?'Ocultar':'Mostrar'}</span><button type="button" disabled={saving} onClick={()=>void patch({schedule_visible:!data.schedule_visible})} className={'relative h-7 w-12 shrink-0 rounded-full transition '+(data.schedule_visible?'bg-cyan-600':'bg-slate-300')} aria-pressed={data.schedule_visible} aria-label={data.schedule_visible?'Ocultar horario público':'Mostrar horario público'}><span className={'absolute top-1 h-5 w-5 rounded-full bg-white shadow transition '+(data.schedule_visible?'left-6':'left-1')}/></button></div></div>
-        <div className="mt-3 space-y-2">{data.schedule.map((item,index)=><div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2"><input value={item.day} onChange={e=>{const schedule=[...data.schedule];schedule[index]={...schedule[index],day:e.target.value};setData({...data,schedule})}} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-300" placeholder="Días"/><input value={item.hours} onChange={e=>{const schedule=[...data.schedule];schedule[index]={...schedule[index],hours:e.target.value};setData({...data,schedule})}} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-300" placeholder="Horario"/><button type="button" onClick={()=>setData({...data,schedule:data.schedule.filter((_,i)=>i!==index)})} className="rounded-xl border border-slate-200 px-3 text-xs font-black text-slate-500">Quitar</button></div>)}</div>
-        <div className="mt-3 flex gap-2"><button type="button" disabled={data.schedule.length>=7} onClick={()=>setData({...data,schedule:[...data.schedule,{day:'',hours:''}].slice(0,7)})} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40">Agregar horario</button><button type="button" disabled={saving} onClick={()=>void patch({schedule:data.schedule})} className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:opacity-40">Guardar horario</button></div>
+        <div className="mt-4 space-y-3">{data.schedule.map((item,index)=>{const range=splitHours(item.hours);const options=DAY_OPTIONS.includes(item.day)?DAY_OPTIONS:[item.day,...DAY_OPTIONS];return <div key={index} className="rounded-2xl border border-slate-200 bg-white p-3">
+          <div className="flex items-center gap-2">
+            <select value={item.day} onChange={e=>{const schedule=[...data.schedule];schedule[index]={...schedule[index],day:e.target.value};setData({...data,schedule})}} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-cyan-300">{options.filter(Boolean).map(day=><option key={day} value={day}>{day}</option>)}</select>
+            <button type="button" onClick={()=>setData({...data,schedule:data.schedule.filter((_,i)=>i!==index)})} className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-500">Quitar</button>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="text-[11px] font-black uppercase tracking-wide text-slate-400">Desde<input type="time" value={range.start} onChange={e=>{const schedule=[...data.schedule];schedule[index]={...schedule[index],hours:joinHours(e.target.value,range.end)};setData({...data,schedule})}} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-cyan-300"/></label>
+            <label className="text-[11px] font-black uppercase tracking-wide text-slate-400">Hasta<input type="time" value={range.end} onChange={e=>{const schedule=[...data.schedule];schedule[index]={...schedule[index],hours:joinHours(range.start,e.target.value)};setData({...data,schedule})}} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none focus:border-cyan-300"/></label>
+          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-500">{item.day}: {joinHours(range.start,range.end)}</p>
+        </div>})}</div>
+        <div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={data.schedule.length>=7} onClick={()=>setData({...data,schedule:[...data.schedule,{day:'Lunes a Viernes',hours:'8:00 AM - 6:00 PM'}].slice(0,7)})} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40">Agregar horario</button><button type="button" disabled={saving} onClick={()=>void patch({schedule:data.schedule})} className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:opacity-40">Guardar horario</button></div>
       </div>
       <div className="border-b border-slate-200 px-4 py-4">
         <div className="flex items-center justify-between gap-4">
