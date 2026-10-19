@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
+import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
 
 export default function TeamPermissionGuard({ permission, children }: { permission: string | string[]; children: React.ReactNode }) {
   const navigate = useNavigate()
@@ -9,6 +10,7 @@ export default function TeamPermissionGuard({ permission, children }: { permissi
   const [masterName, setMasterName] = useState('')
 
   useEffect(() => {
+    if(isFreeDemoDelegationActive()){setAllowed(true);setLoading(false);return}
     apiGet('/me/team/context').then((json: any) => {
       if (!json?.ok || json.data?.role !== 'member') { setAllowed(true); return }
       const permissions: string[] = json.data?.member?.permissions || []
