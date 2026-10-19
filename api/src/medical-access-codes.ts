@@ -31,10 +31,13 @@ app.post('/api/v1/superadmin/kawmed/programs',requireSuperAdmin('super_admin'),a
   if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
   const id=crypto.randomUUID()
   await c.env.DB.prepare(`INSERT INTO medical_sponsor_programs(
-    id,sponsor_id,name,private_banner_image_url,private_cta_label,private_cta_url,vademecum_url,vademecum_label,notes,enabled
-  ) VALUES(?,?,?,?,?,?,?,?,?,?)`).bind(
+    id,sponsor_id,name,private_banner_image_url,private_cta_label,private_cta_url,vademecum_url,vademecum_label,representative_cta_label,representative_message_template,notes,enabled
+  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).bind(
     id,sponsorId,name,safeUrl(body.private_banner_image_url),clean(body.private_cta_label,80)||'Conocer más',safeUrl(body.private_cta_url),
-    safeUrl(body.vademecum_url),clean(body.vademecum_label,80)||'Ver vademécum',clean(body.notes,500),body.enabled===false?0:1
+    safeUrl(body.vademecum_url),clean(body.vademecum_label,80)||'Ver vademécum',
+    clean(body.representative_cta_label,80)||'Mi visitador',
+    clean(body.representative_message_template,400)||'Hola {visitador}, soy {medico}. Te contacto desde mi panel KawMed y necesito información de {patrocinador}.',
+    clean(body.notes,500),body.enabled===false?0:1
   ).run()
   return c.json({ok:true,data:{id}},201)
 })
@@ -43,12 +46,14 @@ app.patch('/api/v1/superadmin/kawmed/programs/:id',requireSuperAdmin('super_admi
   const id=clean(c.req.param('id'),80),body=await c.req.json().catch(()=>({}))
   const current=await c.env.DB.prepare('SELECT * FROM medical_sponsor_programs WHERE id=? LIMIT 1').bind(id).first()
   if(!current)return c.json({ok:false,error:'Programa KawMed no encontrado.'},404)
-  await c.env.DB.prepare(`UPDATE medical_sponsor_programs SET name=?,private_banner_image_url=?,private_cta_label=?,private_cta_url=?,vademecum_url=?,vademecum_label=?,notes=?,enabled=?,updated_at=datetime('now') WHERE id=?`).bind(
+  await c.env.DB.prepare(`UPDATE medical_sponsor_programs SET name=?,private_banner_image_url=?,private_cta_label=?,private_cta_url=?,vademecum_url=?,vademecum_label=?,representative_cta_label=?,representative_message_template=?,notes=?,enabled=?,updated_at=datetime('now') WHERE id=?`).bind(
     clean(body.name,120)||String((current as any).name||''),body.private_banner_image_url!==undefined?safeUrl(body.private_banner_image_url):String((current as any).private_banner_image_url||''),
     body.private_cta_label!==undefined?(clean(body.private_cta_label,80)||'Conocer más'):String((current as any).private_cta_label||'Conocer más'),
     body.private_cta_url!==undefined?safeUrl(body.private_cta_url):String((current as any).private_cta_url||''),
     body.vademecum_url!==undefined?safeUrl(body.vademecum_url):String((current as any).vademecum_url||''),
     body.vademecum_label!==undefined?(clean(body.vademecum_label,80)||'Ver vademécum'):String((current as any).vademecum_label||'Ver vademécum'),
+    body.representative_cta_label!==undefined?(clean(body.representative_cta_label,80)||'Mi visitador'):String((current as any).representative_cta_label||'Mi visitador'),
+    body.representative_message_template!==undefined?(clean(body.representative_message_template,400)||'Hola {visitador}, soy {medico}. Te contacto desde mi panel KawMed y necesito información de {patrocinador}.'):String((current as any).representative_message_template||'Hola {visitador}, soy {medico}. Te contacto desde mi panel KawMed y necesito información de {patrocinador}.'),
     body.notes!==undefined?clean(body.notes,500):String((current as any).notes||''),
     body.enabled===undefined?Number((current as any).enabled??1):(body.enabled?1:0),id
   ).run()
