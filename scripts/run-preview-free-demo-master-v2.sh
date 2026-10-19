@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 REMOTE="github"
-BRANCH="feature/free-demo-master-v2"
-EXPECTED_MAIN_SHA="3bfb091146d7f8018ccf214afec4adb9245d8597"
+BRANCH="reconcile/free-demo-master-v2-2026-10-19"
+EXPECTED_MAIN_SHA="17726235dd609a3dc0e05b5a69f87776c2a4e861"
 PREVIEW_DB="intap_db_preview"
 WEB_PROJECT="intap-link"
 APP_PROJECT="intap-web2"
@@ -61,7 +61,6 @@ api/src/preview-entry.ts
 api/src/preview-free-actions.ts
 api/src/preview-free-entry.ts
 api/src/bank-accounts.ts
-app/public/sw.js
 app/src/App.tsx
 app/src/lib/api.ts
 app/src/lib/freeDemoDelegation.ts
@@ -98,6 +97,22 @@ run npm ci
 
 echo; echo "▶ Contratos nuevos y protegidos"
 run node scripts/test-free-demo-master-v2-contract.mjs
+run node scripts/test-agenda-phone-normalization-contract.mjs
+run node scripts/test-bank-privacy-interaction-contract.mjs
+run node scripts/test-login-sponsor-release-hotfix-2026-10-05.mjs
+
+echo; echo "▶ Guardas de reconciliación contra regresiones recientes"
+grep -Fq "profileBankAccountLimit" api/src/bank-accounts.ts || fail "Se perdió el límite bancario actual 2..5/Team"
+grep -Fq "team_members" api/src/bank-accounts.ts || fail "Se perdió herencia bancaria Team"
+grep -Fq "applyFreeDemoDelegation" api/src/bank-accounts.ts || fail "Falta delegación Demo en bancos"
+grep -Fq "X-Kawvo-Free-Demo-Id" api/src/index.ts || fail "Falta header de delegación Demo"
+grep -Fq "clearScanCode()" app/src/components/admin/AdminGuard.tsx || fail "Se perdió limpieza de scan stale"
+if grep -Fq "apiPost('/public/artifacts/scan/start'" app/src/components/admin/AdminGuard.tsx; then
+  fail "Regresó la recreación automática del scan stale en AdminGuard"
+fi
+grep -Fq "activeFreeDemoDelegationId" app/src/components/admin/AdminGuard.tsx || fail "Falta navegación de delegación Demo"
+git diff --quiet "$REMOTE/main"...HEAD -- app/public/sw.js || fail "Free Demo no debe alterar el Service Worker actual"
+echo "✓ Login/scan, bancos Team, Agenda WhatsApp y cache actual protegidos"
 
 # El contrato histórico Trial de main contiene una aserción textual obsoleta:
 # espera "Esta demostración ha finalizado.", mientras el baseline aprobado muestra
@@ -114,6 +129,7 @@ for protected in \
   web/src/components/trial/TrialPanels.tsx \
   web/src/components/trial/TrialImageCrop.tsx \
   app/src/components/admin/SuperAdminTrials.tsx \
+  app/public/sw.js \
   api/src/sponsored-profiles.ts \
   api/src/sponsored-public.ts \
   web/src/components/sponsored/SponsoredProfile.tsx \
@@ -259,7 +275,12 @@ j=json.load(open(sys.argv[1])); assert j["ok"] and j["data"]["status"]=="draft";
 PY
 )"
 [ -n "$QA_DEMO_ID" ] || fail "No se creó Demo QA"
-echo "✓ Borrador creado: $QA_DEMO_ID"
+ROW_CREATED="$(d1 "SELECT profile_id,synthetic_owner_user_id FROM free_demo_v2_profiles WHERE id='$QA_DEMO_ID' LIMIT 1;")"
+QA_PROFILE_ID="$(printf '%s' "$ROW_CREATED" | python3 -c "import sys,re; s=sys.stdin.read(); m=re.search(r'\"profile_id\"\\s*:\\s*\"([^\"]+)\"',s); print(m.group(1) if m else '')")"
+QA_SYNTH_ID="$(printf '%s' "$ROW_CREATED" | python3 -c "import sys,re; s=sys.stdin.read(); m=re.search(r'\"synthetic_owner_user_id\"\\s*:\\s*\"([^\"]+)\"',s); print(m.group(1) if m else '')")"
+[ -n "$QA_PROFILE_ID" ] || fail "No pude resolver profile_id del Demo QA"
+[ -n "$QA_SYNTH_ID" ] || fail "No pude resolver synthetic_owner_user_id del Demo QA"
+echo "✓ Borrador creado: $QA_DEMO_ID · profile $QA_PROFILE_ID"
 
 curl -fsS -H "Cookie: $QA_COOKIE" "https://app.preview.intaprd.com/api/v1/superadmin/free-demo-v2/$QA_DEMO_ID/editor" > "$LOG/editor.json"
 python3 - "$LOG/editor.json" <<'PY'
