@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../../../lib/api'
 import { FreeBackButton, FreeUpgradeCard } from '../FreePanelUi'
+import { isFreeDemoDelegationActive } from '../../../../lib/freeDemoDelegation'
 
 const RD_AREA_CODES = /^(809|829|849)/
 
@@ -17,6 +18,7 @@ function normalizePhone(input: string): string | null {
 }
 
 export default function FreeOnboardingContact() {
+  const delegatedDemo = isFreeDemoDelegationActive()
   const navigate = useNavigate()
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
@@ -31,7 +33,7 @@ export default function FreeOnboardingContact() {
   useEffect(() => {
     Promise.all([
       apiGet('/me/contact'),
-      apiGet('/me/team/context').catch(() => ({ ok: false })),
+      delegatedDemo ? Promise.resolve({ ok:true, data:{ role:'none' } }) : apiGet('/me/team/context').catch(() => ({ ok: false })),
     ]).then(([json, teamJson]: any[]) => {
       if (json?.ok && json.data) {
         setWhatsapp(json.data.whatsapp || '')
