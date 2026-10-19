@@ -14,7 +14,7 @@ import {
 } from 'react-icons/fi'
 import { FaHeartbeat, FaStethoscope, FaWhatsapp } from 'react-icons/fa'
 import { apiGet } from '../../lib/api'
-import KawMedAppointmentModal from './KawMedAppointmentModal'
+import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
 import KawMedModal from './KawMedModal'
 import type { KawMedCenter, KawMedProfileData, KawMedSchedule, KawMedService } from './types'
 import './KawMedProfile.css'
@@ -82,6 +82,7 @@ export default function KawMedProfile() {
   const [modal, setModal] = useState<ModalName>(null)
   const [appointmentOpen, setAppointmentOpen] = useState(false)
   const [shareNotice, setShareNotice] = useState('')
+  const [toast, setToast] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -381,7 +382,18 @@ export default function KawMedProfile() {
         </footer>
       </div>
 
-      <KawMedAppointmentModal open={appointmentOpen} profile={profile} onClose={() => setAppointmentOpen(false)} />
+      {appointmentOpen ? (
+        <AppointmentRequestModal
+          apiBase={'/api/v1/public/medical-profiles/'+encodeURIComponent(profile.slug)+'/appointments'}
+          palette={{accent:'#126fe8',accentSoft:'#eaf4ff',text:'#10233f'}}
+          onClose={() => setAppointmentOpen(false)}
+          onToast={(message) => {
+            setToast(message)
+            window.setTimeout(() => setToast(''), 2800)
+          }}
+        />
+      ) : null}
+      {toast ? <div className="kawmed-toast" role="status">{toast}</div> : null}
 
       <KawMedModal open={modal === 'schedule'} title="Horarios y centros de consulta" onClose={() => setModal(null)}>
         <ScheduleList schedules={profile.schedules} />
