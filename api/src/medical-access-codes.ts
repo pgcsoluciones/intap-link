@@ -62,13 +62,17 @@ app.get('/api/v1/superadmin/kawmed/codes',requireSuperAdmin('viewer'),async(c:an
   if(['available','claimed','inactive'].includes(status)){where.push('mac.status=?');binds.push(status)}
   if(program){where.push('mac.program_id=?');binds.push(program)}
   const rows=await c.env.DB.prepare(`SELECT mac.*,b.name AS batch_name,p.name AS program_name,st.name AS sponsor_name,
-    u.email AS claimed_email,mp.name AS medical_name,mp.slug AS medical_slug
+    u.email AS claimed_email,mp.name AS medical_name,mp.slug AS medical_slug,mp.specialty AS medical_specialty,
+    COALESCE(mp.whatsapp,mp.phone) AS medical_phone,mp.email AS medical_email,
+    mr.id AS representative_id,TRIM(COALESCE(mr.first_name,'')||' '||COALESCE(mr.last_name,'')) AS representative_name,
+    mr.whatsapp AS representative_whatsapp,mr.zone AS representative_zone
     FROM medical_access_codes mac
     LEFT JOIN medical_code_batches b ON b.id=mac.batch_id
     LEFT JOIN medical_sponsor_programs p ON p.id=mac.program_id
     LEFT JOIN sponsor_tenants st ON st.id=p.sponsor_id
     LEFT JOIN users u ON u.id=mac.claimed_by_user_id
     LEFT JOIN medical_profiles mp ON mp.id=mac.medical_profile_id
+    LEFT JOIN medical_representatives mr ON mr.id=mac.current_representative_id
     WHERE ${where.join(' AND ')} ORDER BY mac.created_at DESC LIMIT 500`).bind(...binds).all()
   return c.json({ok:true,data:rows.results||[]})
 })
@@ -98,13 +102,13 @@ app.post('/api/v1/superadmin/kawmed/batches',requireSuperAdmin('super_admin'),as
       if(!reserved.has(candidate)){reserved.add(candidate);code=candidate}
     }
     if(!code)throw new Error('No se pudo completar un lote de códigos MED únicos.')
-    codes.push({id:crypto.randomUUID(),code})
+    codes.push({id:crypto.randomUUID(),code,station_number:i+1})
   }
   const statements:any[]=[c.env.DB.prepare('INSERT INTO medical_code_batches(id,program_id,name,quantity,notes,created_by_admin_user_id) VALUES(?,?,?,?,?,?)').bind(id,programId||null,name,quantity,clean(body.notes,500),adminId||null)]
-  for(const item of codes)statements.push(c.env.DB.prepare("INSERT INTO medical_access_codes(id,code,batch_id,program_id,status,created_by_admin_user_id) VALUES(?,?,?,?, 'available',?)").bind(item.id,item.code,id,programId||null,adminId||null))
+  for(const item of codes)statements.push(c.env.DB.prepare("INSERT INTO medical_access_codes(id,code,batch_id,program_id,station_number,status,created_by_admin_user_id) VALUES(?,?,?,?,?,'available',?)").bind(item.id,item.code,id,programId||null,item.station_number,adminId||null))
   await c.env.DB.batch(statements)
   const appUrl=String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')
-  return c.json({ok:true,data:{batch_id:id,name,quantity,sponsored:Boolean(programId),codes:codes.map(x=>({code:x.code,claim_url:appUrl+'/claim/kawmed?code='+encodeURIComponent(x.code)}))}},201)
+  return c.json({ok:true,data:{batch_id:id,name,quantity,sponsored:Boolean(programId),codes:codes.map(x=>({code:x.code,station_number:x.station_number,claim_url:appUrl+'/claim/kawmed?code='+encodeURIComponent(x.code)}))}},201)
 })
 
 app.patch('/api/v1/superadmin/kawmed/codes/:code/status',requireSuperAdmin('super_admin'),async(c:any)=>{
@@ -166,6 +170,162 @@ app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
       ).run()
   }
   return c.json({ok:true,data:{medical_profile_id:profileId,slug:profileSlug,sponsored:Boolean(sponsorId),next_url:'/admin/medical'}},201)
+})
+
+async function sponsorMembership(c:any,write=false){
+  const userId=await sessionUserId(c)
+  if(!userId)return{error:c.json({ok:false,error:'Unauthorized'},401)}
+  const row=await c.env.DB.prepare(`SELECT sm.sponsor_id,sm.role,st.name,st.is_active
+    FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id
+    WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1 LIMIT 1`).bind(userId).first()
+  if(!row)return{error:c.json({ok:false,error:'No tienes acceso a un patrocinador.'},403)}
+  if(write&&!['owner','admin'].includes(String((row as any).role||'')))return{error:c.json({ok:false,error:'No tienes permiso para administrar KawMed.'},403)}
+  return{userId,sponsorId:String((row as any).sponsor_id||''),role:String((row as any).role||''),sponsorName:String((row as any).name||'')}
+}
+function normalizePhone(value:unknown){let d=String(value??'').replace(/\D/g,'');if(d.length===10)d='1'+d;return d.slice(0,15)}
+function representativeName(row:any){return [String(row?.first_name||'').trim(),String(row?.last_name||'').trim()].filter(Boolean).join(' ')}
+function waMessage(template:string,ctx:{visitador:string;medico:string;patrocinador:string}){
+  return template.replace(/\{visitador\}/gi,ctx.visitador).replace(/\{medico\}/gi,ctx.medico).replace(/\{patrocinador\}/gi,ctx.patrocinador)
+}
+
+app.get('/api/v1/sponsor/kawmed/overview',async(c:any)=>{
+  const auth:any=await sponsorMembership(c,false);if(auth.error)return auth.error
+  const sponsorId=auth.sponsorId
+  const [programs,batches,reps,codes]=await Promise.all([
+    c.env.DB.prepare(`SELECT p.*,
+      (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.program_id=p.id) codes_total,
+      (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.program_id=p.id AND mac.status='claimed') codes_claimed
+      FROM medical_sponsor_programs p WHERE p.sponsor_id=? ORDER BY p.created_at DESC`).bind(sponsorId).all(),
+    c.env.DB.prepare(`SELECT b.*,p.name AS program_name,
+      (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.batch_id=b.id) codes_total,
+      (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.batch_id=b.id AND mac.status='claimed') codes_claimed
+      FROM medical_code_batches b JOIN medical_sponsor_programs p ON p.id=b.program_id
+      WHERE p.sponsor_id=? ORDER BY b.created_at DESC`).bind(sponsorId).all(),
+    c.env.DB.prepare(`SELECT mr.*,
+      (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.current_representative_id=mr.id) codes_total,
+      (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.current_representative_id=mr.id AND mac.status='claimed') doctors_active
+      FROM medical_representatives mr WHERE mr.sponsor_id=? ORDER BY mr.active DESC,mr.first_name,mr.last_name`).bind(sponsorId).all(),
+    c.env.DB.prepare(`SELECT mac.id,mac.code,mac.status,mac.station_number,mac.claimed_at,mac.batch_id,
+      b.name AS batch_name,p.id AS program_id,p.name AS program_name,
+      mp.id AS medical_profile_id,mp.name AS medical_name,mp.professional_prefix,mp.specialty AS medical_specialty,
+      COALESCE(NULLIF(mp.whatsapp,''),mp.phone) AS medical_phone,COALESCE(NULLIF(mp.email,''),u.email) AS medical_email,mp.slug AS medical_slug,
+      mr.id AS representative_id,mr.employee_code AS representative_code,mr.first_name AS representative_first_name,mr.last_name AS representative_last_name,
+      mr.whatsapp AS representative_whatsapp,mr.zone AS representative_zone,mr.territory AS representative_territory
+      FROM medical_access_codes mac
+      JOIN medical_sponsor_programs p ON p.id=mac.program_id
+      LEFT JOIN medical_code_batches b ON b.id=mac.batch_id
+      LEFT JOIN medical_profiles mp ON mp.id=mac.medical_profile_id
+      LEFT JOIN users u ON u.id=mac.claimed_by_user_id
+      LEFT JOIN medical_representatives mr ON mr.id=mac.current_representative_id
+      WHERE p.sponsor_id=?
+      ORDER BY b.created_at DESC,COALESCE(mac.station_number,999999),mac.created_at`).bind(sponsorId).all()
+  ])
+  return c.json({ok:true,data:{sponsor:{id:sponsorId,name:auth.sponsorName,role:auth.role},programs:programs.results||[],batches:batches.results||[],representatives:reps.results||[],codes:codes.results||[]}})
+})
+
+app.post('/api/v1/sponsor/kawmed/representatives/import',async(c:any)=>{
+  const auth:any=await sponsorMembership(c,true);if(auth.error)return auth.error
+  const body=await c.req.json().catch(()=>({})),rows=Array.isArray(body.rows)?body.rows.slice(0,1000):[]
+  if(!rows.length)return c.json({ok:false,error:'No hay colaboradores para importar.'},422)
+  const statements:any[]=[];let accepted=0
+  for(const source of rows){
+    const firstName=clean(source.first_name||source.nombre,80),lastName=clean(source.last_name||source.apellido,80)
+    const whatsapp=normalizePhone(source.whatsapp||source.telefono||source.phone),email=clean(source.email||source.correo,160).toLowerCase()
+    const employeeCode=clean(source.employee_code||source.codigo||source.code,60).toUpperCase(),zone=clean(source.zone||source.zona,100),territory=clean(source.territory||source.territorio,120)
+    if(!firstName||whatsapp.length<10)continue
+    const id=crypto.randomUUID()
+    if(employeeCode){
+      statements.push(c.env.DB.prepare(`INSERT INTO medical_representatives(id,sponsor_id,employee_code,first_name,last_name,whatsapp,email,zone,territory,active)
+        VALUES(?,?,?,?,?,?,?,?,?,1)
+        ON CONFLICT(sponsor_id,employee_code) WHERE employee_code IS NOT NULL AND employee_code<>'' DO UPDATE SET
+        first_name=excluded.first_name,last_name=excluded.last_name,whatsapp=excluded.whatsapp,email=excluded.email,zone=excluded.zone,territory=excluded.territory,active=1,updated_at=datetime('now')`)
+        .bind(id,auth.sponsorId,employeeCode,firstName,lastName,whatsapp,email,zone,territory))
+    }else{
+      statements.push(c.env.DB.prepare(`INSERT INTO medical_representatives(id,sponsor_id,first_name,last_name,whatsapp,email,zone,territory,active)
+        VALUES(?,?,?,?,?,?,?,?,1)`).bind(id,auth.sponsorId,firstName,lastName,whatsapp,email,zone,territory))
+    }
+    accepted++
+  }
+  if(!statements.length)return c.json({ok:false,error:'Ninguna fila válida. Nombre y WhatsApp son obligatorios.'},422)
+  await c.env.DB.batch(statements)
+  return c.json({ok:true,data:{received:rows.length,accepted}})
+})
+
+app.post('/api/v1/sponsor/kawmed/representatives',async(c:any)=>{
+  const auth:any=await sponsorMembership(c,true);if(auth.error)return auth.error
+  const body=await c.req.json().catch(()=>({})),firstName=clean(body.first_name,80),whatsapp=normalizePhone(body.whatsapp)
+  if(!firstName||whatsapp.length<10)return c.json({ok:false,error:'Nombre y WhatsApp válido son requeridos.'},422)
+  const id=crypto.randomUUID()
+  await c.env.DB.prepare(`INSERT INTO medical_representatives(id,sponsor_id,employee_code,first_name,last_name,whatsapp,email,zone,territory,active)
+    VALUES(?,?,?,?,?,?,?,?,?,1)`).bind(id,auth.sponsorId,clean(body.employee_code,60).toUpperCase()||null,firstName,clean(body.last_name,80),whatsapp,clean(body.email,160).toLowerCase(),clean(body.zone,100),clean(body.territory,120)).run()
+  return c.json({ok:true,data:{id}},201)
+})
+
+app.patch('/api/v1/sponsor/kawmed/representatives/:id',async(c:any)=>{
+  const auth:any=await sponsorMembership(c,true);if(auth.error)return auth.error
+  const id=clean(c.req.param('id'),80),body=await c.req.json().catch(()=>({}))
+  const current=await c.env.DB.prepare('SELECT * FROM medical_representatives WHERE id=? AND sponsor_id=? LIMIT 1').bind(id,auth.sponsorId).first()
+  if(!current)return c.json({ok:false,error:'Visitador no encontrado.'},404)
+  const whatsapp=body.whatsapp!==undefined?normalizePhone(body.whatsapp):String((current as any).whatsapp||'')
+  if(whatsapp.length<10)return c.json({ok:false,error:'WhatsApp inválido.'},422)
+  await c.env.DB.prepare(`UPDATE medical_representatives SET employee_code=?,first_name=?,last_name=?,whatsapp=?,email=?,zone=?,territory=?,active=?,updated_at=datetime('now') WHERE id=? AND sponsor_id=?`).bind(
+    body.employee_code!==undefined?(clean(body.employee_code,60).toUpperCase()||null):(current as any).employee_code,
+    body.first_name!==undefined?(clean(body.first_name,80)||String((current as any).first_name)):(current as any).first_name,
+    body.last_name!==undefined?clean(body.last_name,80):(current as any).last_name,whatsapp,
+    body.email!==undefined?clean(body.email,160).toLowerCase():(current as any).email,
+    body.zone!==undefined?clean(body.zone,100):(current as any).zone,
+    body.territory!==undefined?clean(body.territory,120):(current as any).territory,
+    body.active===undefined?Number((current as any).active??1):(body.active?1:0),id,auth.sponsorId
+  ).run()
+  return c.json({ok:true})
+})
+
+app.post('/api/v1/sponsor/kawmed/assign',async(c:any)=>{
+  const auth:any=await sponsorMembership(c,true);if(auth.error)return auth.error
+  const body=await c.req.json().catch(()=>({})),representativeId=clean(body.representative_id,80),batchId=clean(body.batch_id,80),groupLabel=clean(body.group_label,120)
+  const rep=await c.env.DB.prepare('SELECT id FROM medical_representatives WHERE id=? AND sponsor_id=? AND active=1 LIMIT 1').bind(representativeId,auth.sponsorId).first()
+  if(!rep)return c.json({ok:false,error:'Visitador inválido o inactivo.'},422)
+  let codeIds=Array.isArray(body.code_ids)?body.code_ids.map((v:any)=>clean(v,80)).filter(Boolean).slice(0,500):[]
+  let source='selection'
+  if(!codeIds.length){
+    const quantity=Math.max(0,Math.min(500,Math.floor(Number(body.quantity||0))))
+    if(!batchId||!quantity)return c.json({ok:false,error:'Selecciona códigos o indica lote y cantidad.'},422)
+    const rows=await c.env.DB.prepare(`SELECT mac.id FROM medical_access_codes mac
+      JOIN medical_sponsor_programs p ON p.id=mac.program_id
+      WHERE mac.batch_id=? AND p.sponsor_id=? AND mac.status<>'inactive'
+      ORDER BY CASE WHEN mac.current_representative_id IS NULL OR mac.current_representative_id='' THEN 0 ELSE 1 END,COALESCE(mac.station_number,999999),mac.created_at
+      LIMIT ?`).bind(batchId,auth.sponsorId,quantity).all()
+    codeIds=(rows.results||[]).map((r:any)=>String(r.id||'')).filter(Boolean);source='quantity'
+  }
+  if(!codeIds.length)return c.json({ok:false,error:'No hay códigos disponibles para asignar.'},409)
+  const marks=codeIds.map(()=>'?').join(',')
+  const owned=await c.env.DB.prepare(`SELECT mac.id FROM medical_access_codes mac JOIN medical_sponsor_programs p ON p.id=mac.program_id WHERE p.sponsor_id=? AND mac.id IN (${marks})`).bind(auth.sponsorId,...codeIds).all()
+  const allowed=(owned.results||[]).map((r:any)=>String(r.id||''))
+  if(!allowed.length)return c.json({ok:false,error:'Los códigos seleccionados no pertenecen a este patrocinador.'},403)
+  const statements:any[]=[]
+  for(const id of allowed){
+    statements.push(
+      c.env.DB.prepare("UPDATE medical_code_representative_assignments SET active=0,ended_at=datetime('now') WHERE medical_access_code_id=? AND active=1").bind(id),
+      c.env.DB.prepare("INSERT INTO medical_code_representative_assignments(id,medical_access_code_id,representative_id,assigned_by_user_id,assignment_source,group_label,active) VALUES(?,?,?,?,?,?,1)").bind(crypto.randomUUID(),id,representativeId,auth.userId,source,groupLabel),
+      c.env.DB.prepare("UPDATE medical_access_codes SET current_representative_id=?,updated_at=datetime('now') WHERE id=?").bind(representativeId,id)
+    )
+  }
+  await c.env.DB.batch(statements)
+  return c.json({ok:true,data:{assigned:allowed.length}})
+})
+
+app.get('/api/v1/sponsor/kawmed/assignments/history',async(c:any)=>{
+  const auth:any=await sponsorMembership(c,false);if(auth.error)return auth.error
+  const codeId=clean(c.req.query('code_id'),80)
+  const rows=await c.env.DB.prepare(`SELECT a.id,a.medical_access_code_id,a.assignment_source,a.group_label,a.assigned_at,a.ended_at,a.active,
+    mr.first_name,mr.last_name,mr.employee_code,mr.zone
+    FROM medical_code_representative_assignments a
+    JOIN medical_representatives mr ON mr.id=a.representative_id
+    JOIN medical_access_codes mac ON mac.id=a.medical_access_code_id
+    JOIN medical_sponsor_programs p ON p.id=mac.program_id
+    WHERE p.sponsor_id=? AND (?='' OR a.medical_access_code_id=?)
+    ORDER BY a.assigned_at DESC LIMIT 500`).bind(auth.sponsorId,codeId,codeId).all()
+  return c.json({ok:true,data:rows.results||[]})
 })
 
 export default app
