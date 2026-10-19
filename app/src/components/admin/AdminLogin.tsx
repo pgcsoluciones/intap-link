@@ -7,6 +7,7 @@ const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 const TEAM_CODE_KEY = 'kawvo_team_join_code'
 const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
 const KAWMED_CLAIM_CODE_KEY = 'kawvo_kawmed_claim_code'
+const KAWMED_CLAIM_RESUME_KEY = 'kawvo_kawmed_claim_resume'
 
 function validProduct(value: string) { return /^[A-Z2-9]{8,24}$/.test(value) }
 function validTeam(value: string) { return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(value) }
@@ -59,6 +60,8 @@ export default function AdminLogin() {
     if (isKawMedResume) {
       sessionStorage.setItem(KAWMED_CLAIM_CODE_KEY, kawMedCode)
       localStorage.setItem(KAWMED_CLAIM_CODE_KEY, kawMedCode)
+      sessionStorage.setItem(KAWMED_CLAIM_RESUME_KEY, '1')
+      localStorage.setItem(KAWMED_CLAIM_RESUME_KEY, '1')
     }
     if (!hasProductContext) {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
