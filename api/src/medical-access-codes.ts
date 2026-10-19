@@ -131,10 +131,17 @@ app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
   if(!validMedCode(code))return c.json({ok:false,error:'Código MED inválido.'},422)
   const prior=await c.env.DB.prepare("SELECT code,medical_profile_id FROM medical_access_codes WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first()
   if(prior)return c.json({ok:false,error:'Esta cuenta ya activó un acceso KawMed.',code:'kawmed_already_claimed',medical_profile_id:String((prior as any).medical_profile_id||'')},409)
-  const access=await c.env.DB.prepare(`SELECT mac.*,p.sponsor_id,p.vademecum_url,p.vademecum_label
-    FROM medical_access_codes mac LEFT JOIN medical_sponsor_programs p ON p.id=mac.program_id WHERE mac.code=? LIMIT 1`).bind(code).first()
+  const access=await c.env.DB.prepare(`SELECT mac.*,p.sponsor_id,p.vademecum_url,p.vademecum_label,p.enabled AS program_enabled,st.is_active AS sponsor_active
+    FROM medical_access_codes mac
+    LEFT JOIN medical_sponsor_programs p ON p.id=mac.program_id
+    LEFT JOIN sponsor_tenants st ON st.id=p.sponsor_id
+    WHERE mac.code=? LIMIT 1`).bind(code).first()
   if(!access)return c.json({ok:false,error:'Código MED no encontrado.'},404)
   if(String((access as any).status)!=='available')return c.json({ok:false,error:'Este código MED ya fue utilizado o está inactivo.'},409)
+  if(String((access as any).program_id||'')){
+    if(Number((access as any).program_enabled)!==1)return c.json({ok:false,error:'El programa patrocinado de este código está pausado.'},409)
+    if(Number((access as any).sponsor_active)!==1)return c.json({ok:false,error:'El patrocinador de este código no está activo.'},409)
+  }
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const email=String((user as any)?.email||'').trim().toLowerCase()
   let profile=await c.env.DB.prepare('SELECT id,slug FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first()
