@@ -56,10 +56,12 @@ api/migrations-preview/0090_kawmed_medical_profiles_v1.sql
 api/migrations-preview/0091_kawmed_insurance_exclusions.sql
 api/migrations-preview/0092_kawmed_shared_appointments.sql
 api/migrations-preview/0093_kawmed_medical_appointment_reasons.sql
+api/migrations-preview/0094_kawmed_private_sponsorship.sql
 api/migrations/0090_kawmed_medical_profiles_v1.sql
 api/migrations/0091_kawmed_insurance_exclusions.sql
 api/migrations/0092_kawmed_shared_appointments.sql
 api/migrations/0093_kawmed_medical_appointment_reasons.sql
+api/migrations/0094_kawmed_private_sponsorship.sql
 api/src/index.ts
 api/src/medical-appointments.ts
 api/src/preview-free-entry.ts
@@ -74,6 +76,8 @@ app/src/components/admin/free/FreeNotifications.tsx
 web/public/assets/kawmed/demo-doctor-reference.jpg
 web/public/assets/kawmed/laura-mendez-hero.jpg
 web/src/App.tsx
+web/src/components/appointments/AppointmentOwnerBar.tsx
+web/src/components/appointments/AppointmentRequestModal.tsx
 web/src/components/medical-profile/KawMedModal.tsx
 web/src/components/medical-profile/KawMedProfile.css
 web/src/components/medical-profile/KawMedProfile.tsx
@@ -97,11 +101,12 @@ run node scripts/test-free-demo-master-v2-contract.mjs
 echo; echo "▶ Proteger módulos comunes aprobados"
 git diff --quiet "$REMOTE/main"...HEAD -- api/src/appointments-core.ts || fail "KawMed no debe modificar appointments-core.ts"
 git diff --quiet "$REMOTE/main"...HEAD -- app/src/components/appointments/AppointmentManager.tsx || fail "KawMed no debe modificar AppointmentManager.tsx"
-git diff --quiet "$REMOTE/main"...HEAD -- web/src/components/appointments/AppointmentRequestModal.tsx || fail "KawMed no debe modificar AppointmentRequestModal.tsx"
 git diff --quiet "$REMOTE/main"...HEAD -- app/public/sw.js || fail "KawMed no debe modificar Service Worker"
 git diff --quiet "$REMOTE/main"...HEAD -- api/src/bank-accounts.ts || fail "KawMed no debe modificar bancos existentes"
 # FreeNotifications se extiende únicamente con props opcionales; su comportamiento Free debe seguir cubierto por contrato.
 run node scripts/test-consolidated-fixes-2026-10-03.mjs
+run node scripts/test-free-contact-agenda-contract.mjs
+run node scripts/test-sponsored-profile-contract.mjs
 
 echo; echo "▶ Build Web + App + API"
 run npm run build:preview -w web
@@ -127,7 +132,7 @@ if [ -n "$PENDING_FILES" ]; then
   while IFS= read -r migration; do
     [ -z "$migration" ] && continue
     case "$migration" in
-      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql|0092_kawmed_shared_appointments.sql|0093_kawmed_medical_appointment_reasons.sql) ;;
+      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql|0092_kawmed_shared_appointments.sql|0093_kawmed_medical_appointment_reasons.sql|0094_kawmed_private_sponsorship.sql) ;;
       *) fail "Migración Preview pendiente fuera de KawMed: $migration" ;;
     esac
   done <<< "$PENDING_FILES"
@@ -156,6 +161,7 @@ SCHEMA_JSON="$(
     SELECT slug,status,user_id FROM medical_profiles WHERE slug='lauramendez' LIMIT 1;
     SELECT subject_type,subject_id,enabled,reason_mode FROM appointment_settings WHERE subject_type='medical' AND subject_id='kawmed_demo_laura_mendez' LIMIT 1;
     SELECT COUNT(*) AS medical_reason_count FROM appointment_reasons WHERE subject_type='medical' AND subject_id='kawmed_demo_laura_mendez' AND enabled=1;
+    SELECT mps.medical_profile_id,mps.sponsor_id,mps.vademecum_url,st.name AS sponsor_name FROM medical_profile_sponsors mps JOIN sponsor_tenants st ON st.id=mps.sponsor_id WHERE mps.medical_profile_id='kawmed_demo_laura_mendez' AND mps.enabled=1 LIMIT 1;
   " 2>/dev/null
 )"
 python3 - "$SCHEMA_JSON" <<'PY'
@@ -174,7 +180,9 @@ if not agenda or int(agenda[0].get('enabled') or 0)!=1: raise SystemExit('Agenda
 if str(agenda[0].get('reason_mode') or '')!='custom': raise SystemExit('Agenda KawMed no usa motivos médicos custom')
 reasons=[r for r in rows if 'medical_reason_count' in r]
 if not reasons or int(reasons[0].get('medical_reason_count') or 0)<6: raise SystemExit('Faltan motivos médicos KawMed')
-print('✓ Schema KawMed + demo + Agenda compartida + motivos médicos disponibles')
+sponsor=[r for r in rows if r.get('medical_profile_id')=='kawmed_demo_laura_mendez']
+if not sponsor or not sponsor[0].get('sponsor_id') or not sponsor[0].get('vademecum_url'): raise SystemExit('Falta patrocinio privado/vademécum del demo KawMed')
+print('✓ Schema KawMed + Agenda + motivos médicos + patrocinio privado disponibles')
 PY
 
 echo; echo "▶ Deploy App Pages Preview"
@@ -234,6 +242,10 @@ assert isinstance((p.get('insurance_policy') or {}).get('excluded'),list)
 print('✓ API KawMed responde perfil, centros, horarios, servicios y seguros')
 PY
 
+
+# El endpoint de patrocinio es PRIVADO: sin sesión debe negar acceso.
+code="$(curl -sS -o /dev/null -w '%{http_code}' https://preview.intaprd.com/api/v1/me/medical-profile/sponsor-context)"
+[ "$code" = "401" ] || fail "Patrocinio médico privado quedó expuesto sin sesión: HTTP $code"
 
 APPT_JSON="$LOG_DIR/kawmed-appointments.json"
 code="$(curl -sS -o "$APPT_JSON" -w '%{http_code}' https://preview.intaprd.com/api/v1/public/medical-profiles/lauramendez/appointments)"
