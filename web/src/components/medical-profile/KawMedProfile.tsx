@@ -12,9 +12,10 @@ import {
   FiShare2,
   FiShield,
 } from 'react-icons/fi'
-import { FaHeartbeat, FaStethoscope, FaWhatsapp } from 'react-icons/fa'
+import { FaHeartbeat, FaQrcode, FaStethoscope, FaTimes, FaWhatsapp } from 'react-icons/fa'
 import { apiGet } from '../../lib/api'
 import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
+import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
 import KawMedModal from './KawMedModal'
 import type { KawMedCenter, KawMedProfileData, KawMedSchedule, KawMedService } from './types'
 import './KawMedProfile.css'
@@ -35,6 +36,17 @@ function formatTime(value: string): string {
 
 function publicOrigin(): string {
   return window.location.origin
+}
+
+function appOrigin(): string {
+  const host = window.location.hostname.toLowerCase()
+  return host === 'preview.intaprd.com' || host.endsWith('.pages.dev')
+    ? 'https://app.preview.intaprd.com'
+    : 'https://app.intaprd.com'
+}
+
+function loginUrl(): string {
+  return appOrigin() + '/admin/login'
 }
 
 function openMap(center: KawMedCenter) {
@@ -83,6 +95,8 @@ export default function KawMedProfile() {
   const [appointmentOpen, setAppointmentOpen] = useState(false)
   const [shareNotice, setShareNotice] = useState('')
   const [toast, setToast] = useState('')
+  const [qrOpen, setQrOpen] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -225,6 +239,33 @@ export default function KawMedProfile() {
     URL.revokeObjectURL(url)
   }, [profile])
 
+  const openQr = useCallback(async () => {
+    if (!profile) return
+    try {
+      const QRCode = await import('qrcode')
+      setQrDataUrl(await QRCode.toDataURL(`${publicOrigin()}/m/${profile.slug}`, {
+        width: 1200,
+        margin: 3,
+        errorCorrectionLevel: 'H',
+        color: { dark: '#10233f', light: '#ffffff' },
+      }))
+      setQrOpen(true)
+    } catch {
+      setToast('No pudimos generar el código QR.')
+      window.setTimeout(() => setToast(''), 2800)
+    }
+  }, [profile])
+
+  const downloadQr = useCallback(() => {
+    if (!profile || !qrDataUrl) return
+    const link = document.createElement('a')
+    link.href = qrDataUrl
+    link.download = `${profile.slug}-qr.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }, [profile, qrDataUrl])
+
   const shareProfile = useCallback(async () => {
     if (!profile) return
     const url = `${publicOrigin()}/m/${profile.slug}`
@@ -266,6 +307,17 @@ export default function KawMedProfile() {
 
   return (
     <main className="kawmed-shell">
+      <AppointmentOwnerBar
+        username={profile.slug}
+        ownerApiBase={appOrigin()+'/api/v1/me/medical-profile/appointments'}
+        manageOrigin={appOrigin()}
+        settingsPath="/admin/medical"
+        palette={{accent:'#126fe8',accentSoft:'#eaf4ff',text:'#10233f'}}
+        onToast={(message) => {
+          setToast(message)
+          window.setTimeout(() => setToast(''), 2800)
+        }}
+      />
       <div className="kawmed-profile">
         <div className="kawmed-brandbar" aria-label="KawMed by KawLink">
           <span className="kawmed-brandbar__mark">KAWLINK</span>
@@ -371,14 +423,17 @@ export default function KawMedProfile() {
           </article>
         </section>
 
-        <button type="button" className="kawmed-share-footer" onClick={shareProfile}>
-          <FiShare2 />
-          {shareNotice || 'Compartir perfil'}
-        </button>
+        <section className="kawmed-public-actions" aria-label="Acciones del perfil">
+          <button type="button" onClick={shareProfile}><FiShare2 />{shareNotice || 'Compartir perfil'}</button>
+          <button type="button" onClick={() => void openQr()}><FaQrcode />Código QR</button>
+          <a href={loginUrl()}>Iniciar sesión</a>
+        </section>
 
         <footer className="kawmed-footer">
-          <span>KawMed</span>
-          <small>by KawLink</small>
+          <a href="https://nfc.kawvoia.com" target="_blank" rel="noopener noreferrer">
+            <span>KawMed</span>
+            <small>by KawLink</small>
+          </a>
         </footer>
       </div>
 
@@ -394,6 +449,22 @@ export default function KawMedProfile() {
         />
       ) : null}
       {toast ? <div className="kawmed-toast" role="status">{toast}</div> : null}
+
+      {qrOpen ? (
+        <div className="kawmed-qr-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setQrOpen(false)
+        }}>
+          <article className="kawmed-qr-modal" role="dialog" aria-modal="true" aria-label="Código QR">
+            <button type="button" className="kawmed-qr-close" onClick={() => setQrOpen(false)} aria-label="Cerrar"><FaTimes /></button>
+            <span className="kawmed-qr-kicker">KAWMED</span>
+            <h2>Código QR</h2>
+            <p>Escanea para abrir este perfil médico.</p>
+            {qrDataUrl ? <img src={qrDataUrl} alt={`Código QR de ${profile.display_name}`} /> : null}
+            <strong>{profile.display_name}</strong>
+            <button type="button" className="kawmed-qr-download" onClick={downloadQr}><FaQrcode />Descargar PNG</button>
+          </article>
+        </div>
+      ) : null}
 
       <KawMedModal open={modal === 'schedule'} title="Horarios y centros de consulta" onClose={() => setModal(null)}>
         <ScheduleList schedules={profile.schedules} />
