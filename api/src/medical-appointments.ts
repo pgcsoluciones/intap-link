@@ -85,26 +85,31 @@ function sponsorCtaUrl(row:any){
 }
 async function medicalSponsorContext(c:any,profileId:string){
   const row=await c.env.DB.prepare(`SELECT
-      mps.vademecum_url,mps.vademecum_label,mps.enabled,
+      mps.vademecum_url,mps.vademecum_label,mps.enabled,mps.program_id,
       st.id AS sponsor_id,st.name,st.logo_url,st.banner_title,st.banner_image_url,
       st.banner_cta_label,st.banner_cta_type,st.banner_cta_value,st.website_url,
-      st.contact_whatsapp,st.is_active
+      st.contact_whatsapp,st.is_active,
+      msp.private_banner_image_url,msp.private_cta_label,msp.private_cta_url,
+      msp.vademecum_url AS program_vademecum_url,msp.vademecum_label AS program_vademecum_label
     FROM medical_profile_sponsors mps
     JOIN sponsor_tenants st ON st.id=mps.sponsor_id
+    LEFT JOIN medical_sponsor_programs msp ON msp.id=mps.program_id AND msp.enabled=1
     WHERE mps.medical_profile_id=? AND mps.enabled=1 AND st.is_active=1
     LIMIT 1`).bind(profileId).first().catch(()=>null)
   if(!row)return null
-  const vademecumUrl=safeExternalUrl((row as any).vademecum_url)
+  const vademecumUrl=safeExternalUrl((row as any).program_vademecum_url||(row as any).vademecum_url)
+  const privateCtaUrl=safeExternalUrl((row as any).private_cta_url)
   return{
     id:String((row as any).sponsor_id||''),
+    program_id:String((row as any).program_id||''),
     name:String((row as any).name||''),
     logo_url:safeExternalUrl((row as any).logo_url),
     banner_title:String((row as any).banner_title||'').trim(),
-    banner_image_url:safeExternalUrl((row as any).banner_image_url),
-    cta_label:String((row as any).banner_cta_label||'Conocer más').trim()||'Conocer más',
-    cta_url:sponsorCtaUrl(row),
+    banner_image_url:safeExternalUrl((row as any).private_banner_image_url||(row as any).banner_image_url),
+    cta_label:String((row as any).private_cta_label||(row as any).banner_cta_label||'Conocer más').trim()||'Conocer más',
+    cta_url:privateCtaUrl||sponsorCtaUrl(row),
     vademecum_url:vademecumUrl,
-    vademecum_label:String((row as any).vademecum_label||'Ver vademécum').trim()||'Ver vademécum',
+    vademecum_label:String((row as any).program_vademecum_label||(row as any).vademecum_label||'Ver vademécum').trim()||'Ver vademécum',
   }
 }
 
