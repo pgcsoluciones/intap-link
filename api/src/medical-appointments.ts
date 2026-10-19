@@ -7,6 +7,7 @@ import {
   confirmAppointmentRequest,
   createAppointmentBlock,
   createAppointmentRequest,
+  ensureAppointmentSubject,
   getAppointmentAvailabilityRows,
   getAppointmentBlocks,
   getAppointmentCustomReasons,
@@ -38,6 +39,32 @@ async function requireUser(c:any,next:any){
   c.set('userId',userId)
   await next()
 }
+const MEDICAL_DEFAULT_REASONS=[
+  'Consulta médica',
+  'Evaluación inicial',
+  'Seguimiento / control',
+  'Revisión de resultados',
+  'Procedimiento / tratamiento',
+  'Chequeo preventivo',
+  'Otro',
+]
+
+async function ensureMedicalAppointmentDefaults(db:D1Database,subjectId:string){
+  await ensureAppointmentSubject(db,'medical',subjectId)
+  const settings=await db.prepare("SELECT reason_mode FROM appointment_settings WHERE subject_type='medical' AND subject_id=? LIMIT 1").bind(subjectId).first()
+  const count=await db.prepare("SELECT COUNT(*) AS n FROM appointment_reasons WHERE subject_type='medical' AND subject_id=?").bind(subjectId).first()
+  if(String((settings as any)?.reason_mode||'default')==='custom'&&Number((count as any)?.n||0)>0)return
+  const statements:any[]=[
+    db.prepare("UPDATE appointment_settings SET reason_mode='custom',updated_at=datetime('now') WHERE subject_type='medical' AND subject_id=?").bind(subjectId),
+    db.prepare("DELETE FROM appointment_reasons WHERE subject_type='medical' AND subject_id=?").bind(subjectId),
+  ]
+  MEDICAL_DEFAULT_REASONS.forEach((label,index)=>statements.push(
+    db.prepare("INSERT INTO appointment_reasons(id,subject_type,subject_id,label,enabled,sort_order) VALUES (?,?,?,?,1,?)")
+      .bind(crypto.randomUUID(),'medical',subjectId,label,index)
+  ))
+  await db.batch(statements)
+}
+
 function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/^\/+|\/+$/g,'').replace(/[^a-z0-9-]/g,'').slice(0,80)}
 function cleanPhone(value:unknown){let digits=String(value??'').replace(/\D/g,'').slice(0,15);if(digits.startsWith('00'))digits=digits.slice(2);if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits;return digits}
 function formatPhoneForMessage(value:unknown){
@@ -71,7 +98,9 @@ async function ownedSubject(c:any){
   const profile=await c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
     FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
   if(!profile)return null
-  return{profile,userId,subject:{type:'medical',id:String((profile as any).id||''),ownerUserId:userId}}
+  const subjectId=String((profile as any).id||'')
+  await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
+  return{profile,userId,subject:{type:'medical',id:subjectId,ownerUserId:userId}}
 }
 async function addNotification(c:any,request:any,profile:any){
   const ownerUserId=String((profile as any).user_id||'')
@@ -167,6 +196,25 @@ app.post('/api/v1/me/medical-profile/appointments/requests/:id/:action',requireU
     const request=await c.env.DB.prepare('SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status FROM appointment_requests WHERE id=? LIMIT 1').bind(requestId).first()
     return c.json({ok:true,data:request})
   }catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos actualizar la solicitud.'},409)}
+})
+
+app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||''),slug=cleanSlug(c.req.query('username'))
+  if(!slug)return c.json({ok:false,error:'Perfil inválido.'},400)
+  const profile=await c.env.DB.prepare("SELECT id,slug,name,professional_prefix,user_id FROM medical_profiles WHERE lower(slug)=? AND user_id=? LIMIT 1").bind(slug,userId).first()
+  if(!profile)return c.json({ok:false,error:'Not owner'},403)
+  const subjectId=String((profile as any).id||'')
+  await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
+  const settings=await getAppointmentSettings(c.env.DB,'medical',subjectId)
+  const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
+  const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending'").bind(subjectId).first()
+  return c.json({ok:true,data:{
+    is_owner:true,
+    enabled:settings.enabled,
+    pending_count:Number((count as any)?.n||0),
+    pending:rows.results||[],
+    manage_url:'/admin/medical/agenda'
+  }})
 })
 
 export default app
