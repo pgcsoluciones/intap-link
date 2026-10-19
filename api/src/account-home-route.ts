@@ -83,6 +83,17 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
     }})
   }
 
+  const profile=await c.env.DB.prepare(
+    `SELECT id,plan_id,slug FROM profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`
+  ).bind(userId).first()
+
+  if(profile){
+    const planId=String((profile as any).plan_id||'free').trim().toLowerCase()
+    const slug=String((profile as any).slug||'')
+    if(planId==='free')return c.json({ok:true,data:{kind:'free',route:'/admin/free',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:'/admin/free/agenda'}})
+    return c.json({ok:true,data:{kind:planId.includes('med')?'med':'paid',route:'/admin',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:null}})
+  }
+
   const medical=await c.env.DB.prepare(
     `SELECT id,slug,status FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`
   ).bind(userId).first()
@@ -97,17 +108,6 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
       public_route:slug?'/m/'+slug:null,
       agenda_route:'/admin/medical/agenda',
     }})
-  }
-
-  const profile=await c.env.DB.prepare(
-    `SELECT id,plan_id,slug FROM profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`
-  ).bind(userId).first()
-
-  if(profile){
-    const planId=String((profile as any).plan_id||'free').trim().toLowerCase()
-    const slug=String((profile as any).slug||'')
-    if(planId==='free')return c.json({ok:true,data:{kind:'free',route:'/admin/free',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:'/admin/free/agenda'}})
-    return c.json({ok:true,data:{kind:planId.includes('med')?'med':'paid',route:'/admin',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:null}})
   }
 
   return c.json({ok:true,data:{kind:'none',route:'/admin/free/onboarding/welcome'}})
