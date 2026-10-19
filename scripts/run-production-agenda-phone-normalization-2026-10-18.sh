@@ -52,7 +52,7 @@ run git pull --ff-only "$REMOTE" "$FEATURE_BRANCH"
 HEAD_SHA="$(git rev-parse HEAD)"
 echo "Feature HEAD: $HEAD_SHA"
 git merge-base --is-ancestor "$APPROVED_PREVIEW_SHA" HEAD || fail "El Preview aprobado ya no es ancestro"
-POST_APPROVAL="$(git diff --name-only "$APPROVED_PREVIEW_SHA"..HEAD | grep -v "^\${RUNNER_PATH}$" || true)"
+POST_APPROVAL="$(git diff --name-only "$APPROVED_PREVIEW_SHA"..HEAD | grep -v "^${RUNNER_PATH}$" || true)"
 [ -z "$POST_APPROVAL" ] || { echo "$POST_APPROVAL"; fail "Hay cambios de producto posteriores al Preview aprobado"; }
 
 git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergieron"
@@ -106,17 +106,17 @@ echo; echo "▶ Deploy Worker Producción"
   cd api
   npm run deploy:production
 ) 2>&1 | tee "$WORKER_LOG"
-[ "\${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Worker Producción"
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Worker Producción"
 WORKER_VERSION="$(grep -E 'Current Version ID:' "$WORKER_LOG" | tail -1 | sed -E 's/.*Current Version ID:[[:space:]]*//' || true)"
 
 echo; echo "▶ Deploy App Producción"
 (npx wrangler pages deploy app/dist --project-name "$APP_PROJECT" --branch main) 2>&1 | tee "$APP_LOG"
-[ "\${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Producción"
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Producción"
 APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$APP_LOG" | tail -1 || true)"
 
 echo; echo "▶ Deploy Web Producción"
 (npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch main) 2>&1 | tee "$WEB_LOG"
-[ "\${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Web Producción"
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy Web Producción"
 WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$WEB_LOG" | tail -1 || true)"
 
 sleep 5
@@ -152,9 +152,9 @@ cat <<EOF
 Production SHA: $PROD_SHA
 Release tag:    $TAG
 Previous main:  $PREVIOUS_MAIN
-Worker Version: \${WORKER_VERSION:-ver salida Wrangler}
-App Pages:      \${APP_ORIGIN:-ver salida Pages}
-Web Pages:      \${WEB_ORIGIN:-ver salida Pages}
+Worker Version: ${WORKER_VERSION:-ver salida Wrangler}
+App Pages:      ${APP_ORIGIN:-ver salida Pages}
+Web Pages:      ${WEB_ORIGIN:-ver salida Pages}
 
 Validar en Producción:
 1. Cliente solicita una cita con número RD.
