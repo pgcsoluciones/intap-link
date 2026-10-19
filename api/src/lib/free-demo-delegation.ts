@@ -73,10 +73,6 @@ export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promis
     await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(normalizedTemplate,profileId).run()
   }
 
-  // Repair Demo sample accounts created before the logo-backed seed existed.
-  await c.env.DB.prepare("UPDATE profile_bank_accounts SET bank_code='banreservas',bank_name='Banreservas',updated_at=datetime('now') WHERE profile_id=? AND id=? AND bank_code IS NULL AND bank_name='Banco de demostración' AND account_number='0000000000' AND holder_name='Cuenta de demostración'")
-    .bind(profileId,'demo-v2:'+String((row as any).demo_id)+':bank:sample').run()
-
   if(template.free_demo_v2_bank_seeded!==true){
     const countRow=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM profile_bank_accounts WHERE profile_id=?").bind(profileId).first()
     const count=Number((countRow as any)?.n||0)
@@ -85,7 +81,7 @@ export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promis
       c.env.DB.prepare("INSERT INTO profile_bank_settings(profile_id,is_enabled,updated_at) VALUES(?,1,datetime('now')) ON CONFLICT(profile_id) DO UPDATE SET is_enabled=1,updated_at=datetime('now')").bind(profileId),
     ]
     if(count===0){
-      statements.push(c.env.DB.prepare("INSERT OR IGNORE INTO profile_bank_accounts(id,profile_id,bank_code,bank_name,account_number,account_type,currency,holder_name,holder_id_type,holder_id_number,display_mode,sort_order,is_active,created_at,updated_at) VALUES(?,?,'banreservas','Banreservas','0000000000','savings','DOP','Cuenta de demostración','rnc','000000001','masked',0,1,datetime('now'),datetime('now'))").bind('demo-v2:'+String((row as any).demo_id)+':bank:sample',profileId))
+      statements.push(c.env.DB.prepare("INSERT OR IGNORE INTO profile_bank_accounts(id,profile_id,bank_code,bank_name,account_number,account_type,currency,holder_name,holder_id_type,holder_id_number,display_mode,sort_order,is_active,created_at,updated_at) VALUES(?,?,NULL,'Banco de demostración','0000000000','savings','DOP','Cuenta de demostración','rnc','000000001','masked',0,1,datetime('now'),datetime('now'))").bind('demo-v2:'+String((row as any).demo_id)+':bank:sample',profileId))
     }
     template={...template,free_demo_v2_bank_seeded:true}
     statements.push(c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(JSON.stringify(template),profileId))
