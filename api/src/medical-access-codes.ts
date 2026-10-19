@@ -298,7 +298,8 @@ app.post('/api/v1/sponsor/kawmed/assign',async(c:any)=>{
     const rows=await c.env.DB.prepare(`SELECT mac.id FROM medical_access_codes mac
       JOIN medical_sponsor_programs p ON p.id=mac.program_id
       WHERE mac.batch_id=? AND p.sponsor_id=? AND mac.status<>'inactive'
-      ORDER BY CASE WHEN mac.current_representative_id IS NULL OR mac.current_representative_id='' THEN 0 ELSE 1 END,COALESCE(mac.station_number,999999),mac.created_at
+        AND (mac.current_representative_id IS NULL OR mac.current_representative_id='')
+      ORDER BY COALESCE(mac.station_number,999999),mac.created_at
       LIMIT ?`).bind(batchId,auth.sponsorId,quantity).all()
     codeIds=(rows.results||[]).map((r:any)=>String(r.id||'')).filter(Boolean);source='quantity'
   }
