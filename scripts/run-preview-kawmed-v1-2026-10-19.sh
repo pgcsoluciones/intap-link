@@ -69,7 +69,6 @@ app/src/components/admin/medical/MedicalAppointments.tsx
 web/public/assets/kawmed/demo-doctor-reference.jpg
 web/public/assets/kawmed/laura-mendez-hero.jpg
 web/src/App.tsx
-web/src/components/medical-profile/KawMedAppointmentModal.tsx
 web/src/components/medical-profile/KawMedModal.tsx
 web/src/components/medical-profile/KawMedProfile.css
 web/src/components/medical-profile/KawMedProfile.tsx
