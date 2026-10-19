@@ -215,13 +215,15 @@ app.get('/api/v1/sponsor/kawmed/overview',async(c:any)=>{
       mp.id AS medical_profile_id,mp.name AS medical_name,mp.professional_prefix,mp.specialty AS medical_specialty,
       COALESCE(NULLIF(mp.whatsapp,''),mp.phone) AS medical_phone,COALESCE(NULLIF(mp.email,''),u.email) AS medical_email,mp.slug AS medical_slug,
       mr.id AS representative_id,mr.employee_code AS representative_code,mr.first_name AS representative_first_name,mr.last_name AS representative_last_name,
-      mr.whatsapp AS representative_whatsapp,mr.zone AS representative_zone,mr.territory AS representative_territory
+      mr.whatsapp AS representative_whatsapp,mr.zone AS representative_zone,mr.territory AS representative_territory,
+      cra.group_label AS assignment_group,cra.assigned_at AS representative_assigned_at
       FROM medical_access_codes mac
       JOIN medical_sponsor_programs p ON p.id=mac.program_id
       LEFT JOIN medical_code_batches b ON b.id=mac.batch_id
       LEFT JOIN medical_profiles mp ON mp.id=mac.medical_profile_id
       LEFT JOIN users u ON u.id=mac.claimed_by_user_id
       LEFT JOIN medical_representatives mr ON mr.id=mac.current_representative_id
+      LEFT JOIN medical_code_representative_assignments cra ON cra.medical_access_code_id=mac.id AND cra.active=1
       WHERE p.sponsor_id=?
       ORDER BY b.created_at DESC,COALESCE(mac.station_number,999999),mac.created_at`).bind(sponsorId).all()
   ])
