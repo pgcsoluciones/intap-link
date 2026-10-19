@@ -132,7 +132,7 @@ export default function AppointmentRequestModal({apiBase,palette,onClose,onToast
           </label>
 
           <label style={label}>Detalles <span style={optional}>(opcional)</span>
-            <textarea style={{...field,minHeight:112,resize:'vertical'}} maxLength={900} value={form.details} onChange={e=>setForm({...form,details:e.target.value})} placeholder="Ej.: Me interesa llevar mi vehículo para una evaluación antes de decidir el servicio."/>
+            <textarea style={{...field,minHeight:112,resize:'vertical'}} maxLength={900} value={form.details} onChange={e=>setForm({...form,details:e.target.value})} placeholder="Ej.: Primera consulta por molestias recientes, seguimiento de tratamiento o revisión de resultados."/>
           </label>
         </div>
 
