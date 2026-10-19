@@ -375,7 +375,7 @@ python3 - "$LOG/delegated-bank.json" <<'PY'
 import json,sys
 j=json.load(open(sys.argv[1])); d=j["data"]
 assert j["ok"] and d["access"]["allowed"] is True and len(d["items"])>=1
-assert d["items"][0]["bank_name"]=="Banco de demostración"
+assert d["items"][0]["bank_code"]=="banreservas" and d["items"][0]["bank_name"]=="Banreservas"
 print("✓ Demo antigua recibe backfill de cuenta bancaria ficticia al administrarse")
 PY
 curl -fsS "https://app.preview.intaprd.com/api/v1/public/profiles/$QA_SLUG/bank-accounts" > "$LOG/public-bank.json"
@@ -383,7 +383,7 @@ python3 - "$LOG/public-bank.json" <<'PY'
 import json,sys
 j=json.load(open(sys.argv[1])); d=j["data"]
 assert j["ok"] and d["enabled"] is True and len(d["items"])>=1
-assert d["items"][0]["bank_name"]=="Banco de demostración"
+assert d["items"][0]["bank_code"]=="banreservas" and d["items"][0]["bank_name"]=="Banreservas"
 print("✓ Cuenta bancaria ficticia también aparece en la API pública del perfil")
 PY
 
