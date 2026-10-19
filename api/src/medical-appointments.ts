@@ -65,6 +65,49 @@ async function ensureMedicalAppointmentDefaults(db:D1Database,subjectId:string){
   await db.batch(statements)
 }
 
+function safeExternalUrl(value:unknown){
+  const raw=String(value??'').trim().slice(0,1200)
+  if(!raw)return''
+  try{
+    const u=new URL(raw)
+    return u.protocol==='https:'||u.protocol==='http:'?u.toString():''
+  }catch{return''}
+}
+function sponsorCtaUrl(row:any){
+  const type=String(row?.banner_cta_type||'none')
+  const value=String(row?.banner_cta_value||'').trim()
+  if(type==='sponsor_url')return safeExternalUrl(value||row?.website_url)
+  if(type==='sponsor_whatsapp'){
+    const digits=cleanPhone(value||row?.contact_whatsapp)
+    return digits?'https://wa.me/'+digits:''
+  }
+  return safeExternalUrl(row?.website_url)
+}
+async function medicalSponsorContext(c:any,profileId:string){
+  const row=await c.env.DB.prepare(`SELECT
+      mps.vademecum_url,mps.vademecum_label,mps.enabled,
+      st.id AS sponsor_id,st.name,st.logo_url,st.banner_title,st.banner_image_url,
+      st.banner_cta_label,st.banner_cta_type,st.banner_cta_value,st.website_url,
+      st.contact_whatsapp,st.is_active
+    FROM medical_profile_sponsors mps
+    JOIN sponsor_tenants st ON st.id=mps.sponsor_id
+    WHERE mps.medical_profile_id=? AND mps.enabled=1 AND st.is_active=1
+    LIMIT 1`).bind(profileId).first().catch(()=>null)
+  if(!row)return null
+  const vademecumUrl=safeExternalUrl((row as any).vademecum_url)
+  return{
+    id:String((row as any).sponsor_id||''),
+    name:String((row as any).name||''),
+    logo_url:safeExternalUrl((row as any).logo_url),
+    banner_title:String((row as any).banner_title||'').trim(),
+    banner_image_url:safeExternalUrl((row as any).banner_image_url),
+    cta_label:String((row as any).banner_cta_label||'Conocer más').trim()||'Conocer más',
+    cta_url:sponsorCtaUrl(row),
+    vademecum_url:vademecumUrl,
+    vademecum_label:String((row as any).vademecum_label||'Ver vademécum').trim()||'Ver vademécum',
+  }
+}
+
 function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/^\/+|\/+$/g,'').replace(/[^a-z0-9-]/g,'').slice(0,80)}
 function cleanPhone(value:unknown){let digits=String(value??'').replace(/\D/g,'').slice(0,15);if(digits.startsWith('00'))digits=digits.slice(2);if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits;return digits}
 function formatPhoneForMessage(value:unknown){
@@ -151,6 +194,13 @@ app.post('/api/v1/public/medical-profiles/:slug/appointments',async(c:any)=>{
   }catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos registrar la solicitud.'},400)}
 })
 
+app.get('/api/v1/me/medical-profile/sponsor-context',requireUser,async(c:any)=>{
+  const resolved=await ownedSubject(c)
+  if(!resolved)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const sponsor=await medicalSponsorContext(c,resolved.subject.id)
+  return c.json({ok:true,data:sponsor})
+})
+
 app.get('/api/v1/me/medical-profile/appointments',requireUser,async(c:any)=>{
   const resolved=await ownedSubject(c)
   if(!resolved)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
@@ -208,12 +258,15 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
   const settings=await getAppointmentSettings(c.env.DB,'medical',subjectId)
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending'").bind(subjectId).first()
+  const sponsor=await medicalSponsorContext(c,subjectId)
   return c.json({ok:true,data:{
     is_owner:true,
     enabled:settings.enabled,
     pending_count:Number((count as any)?.n||0),
     pending:rows.results||[],
-    manage_url:'/admin/medical/agenda'
+    manage_url:'/admin/medical/agenda',
+    resource_url:sponsor?.vademecum_url||'',
+    resource_label:sponsor?.vademecum_label||'Ver vademécum'
   }})
 })
 
