@@ -58,7 +58,9 @@ diff -u "$LOG_DIR/allowed.sorted.txt" "$LOG_DIR/actual.txt" || fail "Hay archivo
 
 run git diff --check "$REMOTE/main"...HEAD
 run npm ci
-run node scripts/test-sponsored-profile-contract.mjs
+grep -Fq 'run node scripts/test-agenda-phone-normalization-contract.mjs' "$0" || fail "Runner no apunta al contrato específico de Agenda"
+if grep -Fq 'run node scripts/test-sponsored-profile-contract.mjs' "$0"; then fail "Runner no debe ejecutar el contrato patrocinado global"; fi
+run node scripts/test-agenda-phone-normalization-contract.mjs
 run npm run build:preview -w app
 run bash -lc 'cd web && npm run build:preview'
 if grep -R -Fq 'https://api.intaprd.com' web/dist/assets; then fail "Bundle Web Preview contiene API productiva"; fi
