@@ -90,7 +90,16 @@ app.post('/api/v1/superadmin/kawmed/batches',requireSuperAdmin('super_admin'),as
   if(!Number.isFinite(quantity)||quantity<1||quantity>500)return c.json({ok:false,error:'La cantidad debe estar entre 1 y 500 códigos por lote.'},422)
   if(programId){const program=await c.env.DB.prepare('SELECT id,enabled FROM medical_sponsor_programs WHERE id=? LIMIT 1').bind(programId).first();if(!program)return c.json({ok:false,error:'Programa patrocinado no encontrado.'},404);if(Number((program as any).enabled)!==1)return c.json({ok:false,error:'El programa patrocinado está inactivo.'},409)}
   const id=crypto.randomUUID(),name=clean(body.name,120)||('Lote MED '+new Date().toISOString().slice(0,10)),adminId=String(c.get('adminUserId')||'')
-  const codes:any[]=[];for(let i=0;i<quantity;i++)codes.push({id:crypto.randomUUID(),code:await uniqueMedCode(c)})
+  const codes:any[]=[],reserved=new Set<string>()
+  for(let i=0;i<quantity;i++){
+    let code=''
+    for(let attempt=0;attempt<30&&!code;attempt++){
+      const candidate=await uniqueMedCode(c)
+      if(!reserved.has(candidate)){reserved.add(candidate);code=candidate}
+    }
+    if(!code)throw new Error('No se pudo completar un lote de códigos MED únicos.')
+    codes.push({id:crypto.randomUUID(),code})
+  }
   const statements:any[]=[c.env.DB.prepare('INSERT INTO medical_code_batches(id,program_id,name,quantity,notes,created_by_admin_user_id) VALUES(?,?,?,?,?,?)').bind(id,programId||null,name,quantity,clean(body.notes,500),adminId||null)]
   for(const item of codes)statements.push(c.env.DB.prepare("INSERT INTO medical_access_codes(id,code,batch_id,program_id,status,created_by_admin_user_id) VALUES(?,?,?,?, 'available',?)").bind(item.id,item.code,id,programId||null,adminId||null))
   await c.env.DB.batch(statements)
