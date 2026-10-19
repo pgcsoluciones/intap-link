@@ -40,7 +40,7 @@ export default function AuthCallback() {
       return
     }
 
-    fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}`, { credentials: 'include' })
+    fetch(`${API_BASE}/auth/magic-link/verify?token=${encodeURIComponent(token)}${authFlow ? `&flow=${encodeURIComponent(authFlow)}` : ''}`, { credentials: 'include' })
       .then((res) => res.json())
       .then(async (json: any) => {
         if (!json.ok) {
@@ -55,6 +55,10 @@ export default function AuthCallback() {
         if (authFlow === 'trial') {
           const storedLead=sessionStorage.getItem(TRIAL_LEAD_TOKEN_KEY)||''
           navigate('/trial/activate'+(/^[a-f0-9]{64}$/i.test(storedLead)?'?lead_token='+encodeURIComponent(storedLead):''), { replace: true })
+          return
+        }
+        if (authFlow === 'free_demo_claim') {
+          navigate(String(json.data?.next_url || '/admin/free/credentials?claimed=1'), { replace: true })
           return
         }
 
