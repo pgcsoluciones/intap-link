@@ -7,6 +7,8 @@ import { sendMagicLinkEmail } from './lib/email'
 import { requireSuperAdmin, logAdminAction } from './lib/admin-auth'
 import type { AdminRole } from './lib/admin-auth'
 import { buildScopedCookie, cookieNames, isPreviewEnvironment } from './lib/cookies'
+import { finalizeFreeDemoClaimToVerifiedUser, freeDemoClaimCookie, getActiveFreeDemoClaim } from './free-demo-claim-core'
+import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
 import { registerDemoViralRoutes } from './routes/demo-viral'
 import { registerDemoAiRoutes } from './routes/demo-ai'
 import {
@@ -40,6 +42,10 @@ type Variables = {
   userId: string
   adminUserId: string
   adminRole: AdminRole
+  freeDemoId: string
+  freeDemoProfileId: string
+  freeDemoActorUserId: string
+  freeDemoDelegated: boolean
 }
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -81,11 +87,33 @@ function isAllowedOrigin(origin: string): boolean {
 app.use('*', cors({
   origin: (origin) => isAllowedOrigin(origin) ? origin : '',
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id'],
   credentials: true,
   maxAge: 86400,
 }))
 app.options('*', (c) => c.body(null, 204))
+
+app.use('/api/v1/me/*', async (c:any,next:any) => {
+  const delegated=String(c.req.header('X-Kawvo-Free-Demo-Id')||'').trim()
+  if(!delegated)return next()
+  const path=String(c.req.path||'')
+  const blocked=[
+    '/api/v1/me/account',
+    '/api/v1/me/artifacts',
+    '/api/v1/me/team',
+    '/api/v1/me/sponsored',
+    '/api/v1/me/support',
+    '/api/v1/me/ai-profile-assistant',
+    '/api/v1/me/products',
+    '/api/v1/me/push',
+    '/api/v1/me/profile/exit',
+    '/api/v1/me/profile/claim',
+  ]
+  if(blocked.some(prefix=>path===prefix||path.startsWith(prefix+'/'))){
+    return c.json({ok:false,error:'Esta función pertenece a la cuenta del propietario y no está disponible durante la administración Demo.',code:'free_demo_owner_only'},403)
+  }
+  await next()
+})
 
 registerDemoViralRoutes(app)
 registerDemoAiRoutes(app)
@@ -189,7 +217,14 @@ const requireAuth = async (c: any, next: any) => {
 
   if (!session) return c.json({ ok: false, error: 'Unauthorized' }, 401)
 
-  c.set('userId', (session as any).user_id)
+  const actorUserId=String((session as any).user_id||'')
+  let effectiveUserId=actorUserId
+  try{
+    effectiveUserId=await applyFreeDemoDelegation(c,actorUserId)
+  }catch(error){
+    return freeDemoDelegationError(c,error)
+  }
+  c.set('userId', effectiveUserId)
   await next()
 
   // Update last_seen_at non-blocking after response
@@ -248,10 +283,13 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
   const email = String(body.email || '').trim().toLowerCase()
-  const authFlow = body?.flow === 'trial' ? 'trial' : ''
+  const authFlow = body?.flow === 'trial' ? 'trial' : body?.flow === 'free_demo_claim' ? 'free_demo_claim' : ''
   const leadToken = authFlow === 'trial' && /^[a-f0-9]{64}$/i.test(String(body?.lead_token||'')) ? String(body.lead_token) : ''
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
+
+  if (authFlow === 'free_demo_claim' && !(await getActiveFreeDemoClaim(c)))
+    return c.json({ok:false,error:'El acceso de reclamo expiró.',code:'claim_expired'},401)
 
   if (leadToken) {
     const lead = await c.env.DB.prepare(
@@ -283,7 +321,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   // El callback se construye desde APP_URL server-side: producción usa
   // app.intaprd.com y Preview usa app.preview.intaprd.com.
   const appUrl = configuredAppUrl(c)
-  const magicLink = `${appUrl}/auth/callback?token=${rawToken}${authFlow === 'trial' ? '&flow=trial' : ''}${leadToken ? `&lead_token=${encodeURIComponent(leadToken)}` : ''}`
+  const magicLink = `${appUrl}/auth/callback?token=${rawToken}${authFlow ? `&flow=${encodeURIComponent(authFlow)}` : ''}${leadToken ? `&lead_token=${encodeURIComponent(leadToken)}` : ''}`
   const resendKey = (c.env as any).RESEND_API_KEY
   const resendFrom = (c.env as any).RESEND_FROM
 
@@ -326,6 +364,13 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
   ).bind(email).first()
   if (!user) return c.json({ ok: false, error: 'Error al crear usuario' }, 500)
 
+  const authFlow = c.req.query('flow') === 'free_demo_claim' ? 'free_demo_claim' : ''
+  let claimTransfer:any = null
+  if (authFlow === 'free_demo_claim') {
+    claimTransfer = await finalizeFreeDemoClaimToVerifiedUser(c,String((user as any).id),String(email))
+    if (!claimTransfer?.ok) return c.json({ok:false,error:claimTransfer?.error||'No pudimos transferir la presentación.',code:claimTransfer?.error||'claim_transfer_failed'},Number(claimTransfer?.status||409) as any)
+  }
+
   // Crear sesión (30 días)
   const sessionRaw = generateToken(32)
   const sessionHash = await sha256Hex(sessionRaw)
@@ -339,7 +384,7 @@ app.get('/api/v1/auth/magic-link/verify', async (c) => {
 
   const cookie = buildSessionCookie(sessionRaw, c, 30 * 24 * 60 * 60)
 
-  return c.json({ ok: true }, 200, { 'Set-Cookie': cookie })
+  return c.json({ ok: true, data: authFlow === 'free_demo_claim' ? { next_url: '/admin/free/credentials?claimed=1', slug: claimTransfer?.slug || '' } : undefined }, 200, { 'Set-Cookie': cookie })
 })
 
 // ─── Google OAuth ─────────────────────────────────────────────────────────
@@ -349,8 +394,10 @@ app.get('/api/v1/auth/google/start', async (c) => {
   if (!clientId) return c.json({ ok: false, error: 'Google OAuth no configurado' }, 503)
 
   const state = generateToken(16)
-  const authFlow = c.req.query('flow') === 'trial' ? 'trial' : ''
+  const authFlow = c.req.query('flow') === 'trial' ? 'trial' : c.req.query('flow') === 'free_demo_claim' ? 'free_demo_claim' : ''
   const leadToken = authFlow === 'trial' && /^[a-f0-9]{64}$/i.test(String(c.req.query('lead_token')||'')) ? String(c.req.query('lead_token')) : ''
+  if (authFlow === 'free_demo_claim' && !(await getActiveFreeDemoClaim(c)))
+    return c.redirect(`${configuredAppUrl(c)}/claim/free-demo?error=claim_expired`)
   const apiUrl = new URL(c.req.url).origin
   const redirectUri = `${apiUrl}/api/v1/auth/google/callback`
 
@@ -373,6 +420,8 @@ app.get('/api/v1/auth/google/start', async (c) => {
   if (authFlow === 'trial') {
     headers.append('Set-Cookie', buildScopedCookie(c.env, configuredAppUrl(c), 'kawvo_trial_oauth_flow', 'trial', 600, '/api/v1/auth/google'))
     if (leadToken) headers.append('Set-Cookie', buildScopedCookie(c.env, configuredAppUrl(c), 'kawvo_trial_lead_token', leadToken, 600, '/api/v1/auth/google'))
+  } else if (authFlow === 'free_demo_claim') {
+    headers.append('Set-Cookie', buildScopedCookie(c.env, configuredAppUrl(c), 'kawvo_free_demo_claim_oauth_flow', 'free_demo_claim', 600, '/api/v1/auth/google'))
   }
   return new Response(null, { status: 302, headers })
 })
@@ -384,9 +433,11 @@ app.get('/api/v1/auth/google/callback', async (c) => {
 
   const appUrl = configuredAppUrl(c)
   const cookieHeader = c.req.header('Cookie') || ''
-  const authFlow = parseCookie(cookieHeader, 'kawvo_trial_oauth_flow') === 'trial' ? 'trial' : ''
+  const trialFlow = parseCookie(cookieHeader, 'kawvo_trial_oauth_flow') === 'trial'
+  const claimFlow = parseCookie(cookieHeader, 'kawvo_free_demo_claim_oauth_flow') === 'free_demo_claim'
+  const authFlow = trialFlow ? 'trial' : claimFlow ? 'free_demo_claim' : ''
   const trialLeadToken = authFlow === 'trial' ? String(parseCookie(cookieHeader, 'kawvo_trial_lead_token')||'') : ''
-  const loginPath = authFlow === 'trial' ? '/trial/login' : '/admin/login'
+  const loginPath = authFlow === 'trial' ? '/trial/login' : authFlow === 'free_demo_claim' ? '/claim/free-demo' : '/admin/login'
 
   if (oauthError || !code)
     return c.redirect(`${appUrl}${loginPath}?error=oauth_denied`)
@@ -470,6 +521,11 @@ app.get('/api/v1/auth/google/callback', async (c) => {
      ON CONFLICT(provider, provider_user_id) DO NOTHING`
   ).bind(generateToken(16), userId, String(googleUser.id || '')).run()
 
+  if (authFlow === 'free_demo_claim') {
+    const claimTransfer:any = await finalizeFreeDemoClaimToVerifiedUser(c,String(userId),email)
+    if (!claimTransfer?.ok) return c.redirect(`${appUrl}/claim/free-demo?error=${encodeURIComponent(String(claimTransfer?.error||'claim_transfer_failed'))}`)
+  }
+
   // Crear sesión (30 días)
   const sessionRaw = generateToken(32)
   const sessionHash = await sha256Hex(sessionRaw)
@@ -485,14 +541,18 @@ app.get('/api/v1/auth/google/callback', async (c) => {
   const clearState = buildScopedCookie(c.env, appUrl, cookieNames(c.env).oauthState, '', 0, '/api/v1/auth/google')
   const clearTrialFlow = buildScopedCookie(c.env, appUrl, 'kawvo_trial_oauth_flow', '', 0, '/api/v1/auth/google')
   const clearTrialLead = buildScopedCookie(c.env, appUrl, 'kawvo_trial_lead_token', '', 0, '/api/v1/auth/google')
+  const clearClaimFlow = buildScopedCookie(c.env, appUrl, 'kawvo_free_demo_claim_oauth_flow', '', 0, '/api/v1/auth/google')
+  const clearClaimCookie = freeDemoClaimCookie(c.env, appUrl, '', 0)
 
   const headers = new Headers()
   const resumeActivation = await hasPendingActivationIntent(c)
-  headers.set('Location', `${appUrl}${authFlow === 'trial' ? `/trial/activate${/^[a-f0-9]{64}$/i.test(trialLeadToken)?`?lead_token=${encodeURIComponent(trialLeadToken)}`:''}` : resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
+  headers.set('Location', `${appUrl}${authFlow === 'trial' ? `/trial/activate${/^[a-f0-9]{64}$/i.test(trialLeadToken)?`?lead_token=${encodeURIComponent(trialLeadToken)}`:''}` : authFlow === 'free_demo_claim' ? '/admin/free/credentials?claimed=1' : resumeActivation ? '/admin/artifacts/activate' : '/admin'}`)
   headers.append('Set-Cookie', sessionCookie)
   headers.append('Set-Cookie', clearState)
   headers.append('Set-Cookie', clearTrialFlow)
   headers.append('Set-Cookie', clearTrialLead)
+  headers.append('Set-Cookie', clearClaimFlow)
+  if (authFlow === 'free_demo_claim') headers.append('Set-Cookie', clearClaimCookie)
   return new Response(null, { status: 302, headers })
 })
 
@@ -1677,6 +1737,17 @@ me.put('/profile', async (c) => {
     console.error('[PUT /me/profile] D1 error:', e)
     return c.json({ ok: false, error: e?.message || 'Error al guardar perfil' }, 500)
   }
+  if(c.get('freeDemoDelegated')&&is_published!==undefined){
+    const demoId=String(c.get('freeDemoId')||'')
+    if(is_published===1){
+      await c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status!='claimed'").bind(demoId).run()
+    }else{
+      await c.env.DB.batch([
+        c.env.DB.prepare("UPDATE free_demo_v2_profiles SET status='draft',updated_at=datetime('now') WHERE id=? AND status!='claimed'").bind(demoId),
+        c.env.DB.prepare("UPDATE free_demo_v2_claims SET status='revoked',revoked_at=datetime('now') WHERE demo_id=? AND status='active'").bind(demoId),
+      ])
+    }
+  }
   return c.json({ ok: true })
 })
 
@@ -1739,6 +1810,7 @@ me.post('/profile/hero', async (c) => {
 
 me.put('/profile/slug', async (c) => {
   const userId = c.get('userId') as string
+  if(c.get('freeDemoDelegated'))return c.json({ok:false,error:'El usuario / slug de una Demo publicada se administra desde SuperAdmin y permanece bloqueado.',code:'slug_locked'},409)
   let body: any = {}
   try { body = await c.req.json() } catch { return c.json({ ok: false, error: 'Invalid JSON' }, 400) }
 
