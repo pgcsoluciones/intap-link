@@ -6,6 +6,7 @@ const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 const TEAM_CODE_KEY = 'kawvo_team_join_code'
 const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
 const TRIAL_LEAD_TOKEN_KEY = 'kawlink_trial_lead_token'
+const KAWMED_CLAIM_CODE_KEY = 'kawvo_kawmed_claim_code'
 
 function readScanCode(): string {
   const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
@@ -17,6 +18,12 @@ function readTeamCode(): string {
   const value = sessionStorage.getItem(TEAM_CODE_KEY) || localStorage.getItem(TEAM_CODE_KEY) || ''
   const code = value.trim().toUpperCase()
   return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code) ? code : ''
+}
+
+function readKawMedCode(): string {
+  const value = sessionStorage.getItem(KAWMED_CLAIM_CODE_KEY) || localStorage.getItem(KAWMED_CLAIM_CODE_KEY) || ''
+  const code = value.trim().toUpperCase()
+  return /^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(code) ? code : ''
 }
 
 function readSponsorMasterCode(): string {
@@ -59,6 +66,12 @@ export default function AuthCallback() {
         }
         if (authFlow === 'free_demo_claim') {
           navigate(String(json.data?.next_url || '/admin/free/credentials?claimed=1'), { replace: true })
+          return
+        }
+
+        const kawMedCode = readKawMedCode()
+        if (kawMedCode) {
+          navigate(`/claim/kawmed?code=${encodeURIComponent(kawMedCode)}`, { replace: true })
           return
         }
 
