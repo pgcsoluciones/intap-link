@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
 
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
@@ -39,7 +40,10 @@ async function requirePreviewAuth(c: any, next: any) {
     return c.json({ ok: false, error: 'Unauthorized' }, 401)
   }
 
-  c.set('userId', (session as any).user_id)
+  const actorUserId=String((session as any).user_id||'')
+  let effectiveUserId=actorUserId
+  try{effectiveUserId=await applyFreeDemoDelegation(c,actorUserId)}catch(error){return freeDemoDelegationError(c,error)}
+  c.set('userId', effectiveUserId)
   await next()
 }
 
