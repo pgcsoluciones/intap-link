@@ -1685,3 +1685,170 @@
   font-weight: 750;
   box-shadow: 0 12px 32px rgba(16, 35, 63, .22);
 }
+
+
+/* KawMed UI/UX 2 — clean hero framing */
+.kawmed-hero,
+.kawmed-hero__image {
+  background: #fff !important;
+}
+
+.kawmed-hero__shade {
+  background:
+    linear-gradient(
+      to top,
+      rgba(255,255,255,1) 0%,
+      rgba(255,255,255,.98) 10%,
+      rgba(255,255,255,.84) 22%,
+      rgba(255,255,255,.42) 38%,
+      rgba(255,255,255,.10) 54%,
+      rgba(255,255,255,0) 68%
+    ) !important;
+}
+
+.kawmed-public-actions {
+  width: calc(100% - 48px);
+  max-width: 540px;
+  margin: 26px auto 0;
+  padding-top: 18px;
+  border-top: 1px solid #e6edf5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px 14px;
+  flex-wrap: wrap;
+}
+
+.kawmed-public-actions button,
+.kawmed-public-actions a {
+  border: 0;
+  background: transparent;
+  color: #526983;
+  padding: 5px 3px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kawmed-public-actions button:hover,
+.kawmed-public-actions a:hover {
+  color: var(--kawmed-blue);
+}
+
+.kawmed-footer {
+  margin: 20px auto 0;
+  padding: 10px 0 2px;
+  text-align: center;
+}
+
+.kawmed-footer a {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-decoration: none;
+}
+
+.kawmed-footer span {
+  color: #526983;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.kawmed-footer small {
+  color: #9aa8b9;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.kawmed-qr-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(15,23,42,.72);
+}
+
+.kawmed-qr-modal {
+  position: relative;
+  width: min(100%, 390px);
+  max-height: calc(100dvh - 28px);
+  overflow-y: auto;
+  border-radius: 24px;
+  background: #fff;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(15,23,42,.26);
+}
+
+.kawmed-qr-modal h2 {
+  margin: 5px 0 4px;
+  color: var(--kawmed-ink);
+  font-size: 24px;
+}
+
+.kawmed-qr-modal p {
+  margin: 0 0 16px;
+  color: var(--kawmed-muted);
+  font-size: 13px;
+}
+
+.kawmed-qr-modal img {
+  display: block;
+  width: min(100%, 270px);
+  margin: 0 auto 12px;
+  border-radius: 18px;
+}
+
+.kawmed-qr-modal strong {
+  display: block;
+  color: var(--kawmed-ink);
+  font-size: 14px;
+}
+
+.kawmed-qr-kicker {
+  color: var(--kawmed-blue);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .18em;
+}
+
+.kawmed-qr-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+}
+
+.kawmed-qr-download {
+  width: 100%;
+  margin-top: 16px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--kawmed-blue);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
