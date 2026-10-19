@@ -92,6 +92,7 @@ diff -u "$LOG_DIR/expected-files.sorted.txt" "$LOG_DIR/actual-files.txt" || fail
 run git diff --check "$REMOTE/main"...HEAD
 
 echo; echo "▶ Contratos KawMed + regresiones aprobadas"
+run node scripts/test-sponsored-profile-contract.mjs
 run npm ci
 run node scripts/test-kawmed-medical-profile-v1-contract.mjs
 run node scripts/test-agenda-phone-normalization-contract.mjs
@@ -112,8 +113,6 @@ run node scripts/test-consolidated-fixes-2026-10-03.mjs
 # La compatibilidad de los componentes compartidos que KawMed extiende
 # queda cubierta por test-kawmed-medical-profile-v1-contract.mjs y
 # por el contrato patrocinado vigente.
-run node scripts/test-sponsored-profile-contract.mjs
-
 echo; echo "▶ Build Web + App + API"
 run npm run build:preview -w web
 run npm run build:preview -w app
