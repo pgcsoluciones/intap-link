@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { apiGet, apiPatch, apiPut } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
 import type { FreePublicationReadiness } from './FreeFirstRunGuide'
+import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
 
 type LayoutId = 'impacto' | 'personal' | 'esencial'
 type PaletteId = 'intap' | 'oceano' | 'esmeralda' | 'violeta' | 'coral' | 'grafito' | 'arena'
@@ -54,6 +55,7 @@ const sectionLinks: SectionLink[] = [
 
 export default function FreeVisualEditor() {
   const navigate = useNavigate()
+  const delegatedDemo = isFreeDemoDelegationActive()
   const editScrollRef = useRef(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -74,8 +76,8 @@ export default function FreeVisualEditor() {
   const configuredWebUrl = (import.meta.env.VITE_WEB_URL ?? 'https://intaprd.com').replace(/\/$/, '')
   const webUrl = isPreviewEnvironment ? 'https://preview.intaprd.com' : configuredWebUrl
   const previewUrl = useMemo(
-    () => slug ? `/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}?v=${previewVersion}` : '',
-    [slug, previewVersion],
+    () => slug ? (delegatedDemo ? `${webUrl}/${encodeURIComponent(slug)}?v=${previewVersion}` : `/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}?v=${previewVersion}`) : '',
+    [slug, previewVersion, delegatedDemo, webUrl],
   )
 
   async function loadMe() {
@@ -218,7 +220,7 @@ export default function FreeVisualEditor() {
               <p className="mt-2 max-w-2xl text-base font-medium leading-7 text-slate-600">Elige tu plantilla, ajusta colores y edita el contenido principal mientras ves el resultado en tiempo real.</p>
             </div>
 
-            <button type="button" onClick={()=>navigate('/admin/free/ai-profile')} className="flex w-full items-center gap-3 rounded-[24px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md">
+            {!delegatedDemo&&<button type="button" onClick={()=>navigate('/admin/free/ai-profile')} className="flex w-full items-center gap-3 rounded-[24px] border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-cyan-600 text-xl text-white">✦</span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[11px] font-black uppercase tracking-[0.12em] text-cyan-700">IA de Kawvo</span>
@@ -226,7 +228,7 @@ export default function FreeVisualEditor() {
                 <span className="mt-1 block text-sm font-medium leading-5 text-slate-600">Completa y mejora tu presentación con ayuda de la IA de Kawvo.</span>
               </span>
               <span className="text-xl font-black text-cyan-700">›</span>
-            </button>
+            </button>}
 
             <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
@@ -267,7 +269,7 @@ export default function FreeVisualEditor() {
               <h2 className="mt-1 text-xl font-black">Edita cada bloque</h2>
               <p className="mt-2 text-sm font-medium leading-6 text-slate-500">Verde significa completado, ámbar indica pendiente y gris identifica una función disponible que no forma parte de los 6 requisitos de publicación.</p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {sectionLinks.map((item) => {
+                {sectionLinks.filter((item)=>!(delegatedDemo&&item.to==='/admin/free/services')).map((item) => {
                   const isBank = item.statusMode === 'bank'
                   const isAvailable = item.statusMode === 'available'
                   const completed = isBank ? bankCount > 0 : item.readinessKey ? Boolean(readiness?.steps?.[item.readinessKey]) : false
@@ -299,7 +301,7 @@ export default function FreeVisualEditor() {
               ) : (
                 <div className="grid h-[520px] place-items-center rounded-[24px] bg-slate-50 p-8 text-center text-sm font-bold text-slate-500">Reserva tu identificador para ver la vista previa.</div>
               )}
-              {slug && <a href={`${webUrl}/${encodeURIComponent(slug)}?preview=1`} target="_blank" rel="noopener noreferrer" className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Abrir perfil completo</a>}
+              {slug && <a href={`${webUrl}/${encodeURIComponent(slug)}${delegatedDemo?'':'?preview=1'}`} target="_blank" rel="noopener noreferrer" className="mt-4 flex w-full justify-center rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Abrir perfil completo</a>}
             </div>
           </aside>
         </div>
