@@ -32,8 +32,8 @@ Rama: $BRANCH
 - NO toca Producción
 - NO hace merge a main
 - migra SOLO intap_db_preview
-- despliega SOLO Web Preview + Worker Preview
-- mantiene App Preview actual
+- despliega Web/App/Worker SOLO en Preview
+- reutiliza Agenda común sin modificar sus módulos base
 - ruta QA: https://preview.intaprd.com/m/lauramendez
 ================================================================
 EOF
@@ -54,12 +54,18 @@ git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "La rama KawMed no desc
 cat > "$LOG_DIR/expected-files.txt" <<'EOF_FILES'
 api/migrations-preview/0090_kawmed_medical_profiles_v1.sql
 api/migrations-preview/0091_kawmed_insurance_exclusions.sql
+api/migrations-preview/0092_kawmed_shared_appointments.sql
 api/migrations/0090_kawmed_medical_profiles_v1.sql
 api/migrations/0091_kawmed_insurance_exclusions.sql
+api/migrations/0092_kawmed_shared_appointments.sql
 api/src/index.ts
+api/src/medical-appointments.ts
+api/src/preview-free-entry.ts
 api/src/routes/medical-profile.ts
 scripts/run-preview-kawmed-v1-2026-10-19.sh
 scripts/test-kawmed-medical-profile-v1-contract.mjs
+app/src/App.tsx
+app/src/components/admin/medical/MedicalAppointments.tsx
 web/public/assets/kawmed/demo-doctor-reference.jpg
 web/public/assets/kawmed/laura-mendez-hero.jpg
 web/src/App.tsx
@@ -76,12 +82,24 @@ diff -u "$LOG_DIR/expected-files.sorted.txt" "$LOG_DIR/actual-files.txt" || fail
 
 run git diff --check "$REMOTE/main"...HEAD
 
-echo; echo "▶ Contrato KawMed"
+echo; echo "▶ Contratos KawMed + regresiones aprobadas"
 run npm ci
 run node scripts/test-kawmed-medical-profile-v1-contract.mjs
+run node scripts/test-agenda-phone-normalization-contract.mjs
+run node scripts/test-bank-privacy-interaction-contract.mjs
+run node scripts/test-login-sponsor-release-hotfix-2026-10-05.mjs
+run node scripts/test-free-demo-master-v2-contract.mjs
 
-echo; echo "▶ Build Web + API"
+echo; echo "▶ Proteger módulos comunes aprobados"
+git diff --quiet "$REMOTE/main"...HEAD -- api/src/appointments-core.ts || fail "KawMed no debe modificar appointments-core.ts"
+git diff --quiet "$REMOTE/main"...HEAD -- app/src/components/appointments/AppointmentManager.tsx || fail "KawMed no debe modificar AppointmentManager.tsx"
+git diff --quiet "$REMOTE/main"...HEAD -- web/src/components/appointments/AppointmentRequestModal.tsx || fail "KawMed no debe modificar AppointmentRequestModal.tsx"
+git diff --quiet "$REMOTE/main"...HEAD -- app/public/sw.js || fail "KawMed no debe modificar Service Worker"
+git diff --quiet "$REMOTE/main"...HEAD -- api/src/bank-accounts.ts || fail "KawMed no debe modificar bancos existentes"
+
+echo; echo "▶ Build Web + App + API"
 run npm run build:preview -w web
+run npm run build:preview -w app
 run bash -lc 'cd api && npx tsc --noEmit'
 run bash -lc 'npx esbuild api/src/preview-frontdoor-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawmed-preview-frontdoor.mjs'
 
@@ -103,7 +121,7 @@ if [ -n "$PENDING_FILES" ]; then
   while IFS= read -r migration; do
     [ -z "$migration" ] && continue
     case "$migration" in
-      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql) ;;
+      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql|0092_kawmed_shared_appointments.sql) ;;
       *) fail "Migración Preview pendiente fuera de KawMed: $migration" ;;
     esac
   done <<< "$PENDING_FILES"
@@ -129,7 +147,8 @@ SCHEMA_JSON="$(
        'medical_profile_insurance_exclusions'
      )
      ORDER BY name;
-    SELECT slug,status FROM medical_profiles WHERE slug='lauramendez' LIMIT 1;
+    SELECT slug,status,user_id FROM medical_profiles WHERE slug='lauramendez' LIMIT 1;
+    SELECT subject_type,subject_id,enabled FROM appointment_settings WHERE subject_type='medical' AND subject_id='kawmed_demo_laura_mendez' LIMIT 1;
   " 2>/dev/null
 )"
 python3 - "$SCHEMA_JSON" <<'PY'
@@ -142,8 +161,18 @@ missing=required-names
 if missing: raise SystemExit('Faltan tablas KawMed: '+', '.join(sorted(missing)))
 demo=[r for r in rows if r.get('slug')=='lauramendez']
 if not demo or str(demo[0].get('status'))!='active': raise SystemExit('Demo lauramendez no está activo')
-print('✓ Schema KawMed + demo Laura Méndez disponibles')
+if str(demo[0].get('user_id') or '')!='kawmed_demo_owner': raise SystemExit('Demo KawMed no tiene owner QA aislado')
+agenda=[r for r in rows if r.get('subject_type')=='medical' and r.get('subject_id')=='kawmed_demo_laura_mendez']
+if not agenda or int(agenda[0].get('enabled') or 0)!=1: raise SystemExit('Agenda compartida KawMed no está activa')
+print('✓ Schema KawMed + demo + Agenda compartida disponibles')
 PY
+
+echo; echo "▶ Deploy App Pages Preview"
+APP_LOG="$LOG_DIR/app-pages.log"
+(npx wrangler pages deploy app/dist --project-name intap-web2 --branch "$BRANCH") 2>&1 | tee "$APP_LOG"
+[ "${PIPESTATUS[0]}" -eq 0 ] || fail "Deploy App Preview"
+APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$APP_LOG" | tail -1 || true)"
+[ -n "$APP_ORIGIN" ] || fail "No pude detectar origin App Preview"
 
 echo; echo "▶ Deploy Web Pages Preview"
 (npx wrangler pages deploy web/dist --project-name "$WEB_PROJECT" --branch "$BRANCH") 2>&1 | tee "$WEB_LOG"
@@ -155,13 +184,14 @@ cp "$PREVIEW_CFG" "$PREVIEW_CFG_BAK"
 restore_cfg(){ cp "$PREVIEW_CFG_BAK" "$PREVIEW_CFG" 2>/dev/null || true; }
 trap restore_cfg EXIT
 
-python3 - "$PREVIEW_CFG" "$WEB_ORIGIN" <<'PY'
+python3 - "$PREVIEW_CFG" "$WEB_ORIGIN" "$APP_ORIGIN" <<'PY'
 from pathlib import Path
 import re,sys
-p=Path(sys.argv[1]); web=sys.argv[2]
+p=Path(sys.argv[1]); web=sys.argv[2]; app=sys.argv[3]
 s=p.read_text()
-s,n=re.subn(r'WEB_PAGES_ORIGIN\s*=\s*"[^"]+"',f'WEB_PAGES_ORIGIN = "{web}"',s,count=1)
-if n != 1: raise SystemExit('No pude actualizar WEB_PAGES_ORIGIN temporal')
+s,n1=re.subn(r'WEB_PAGES_ORIGIN\s*=\s*"[^"]+"',f'WEB_PAGES_ORIGIN = "{web}"',s,count=1)
+s,n2=re.subn(r'APP_PAGES_ORIGIN\s*=\s*"[^"]+"',f'APP_PAGES_ORIGIN = "{app}"',s,count=1)
+if n1 != 1 or n2 != 1: raise SystemExit('No pude actualizar origins Preview temporales')
 p.write_text(s)
 PY
 
@@ -194,11 +224,27 @@ assert isinstance((p.get('insurance_policy') or {}).get('excluded'),list)
 print('✓ API KawMed responde perfil, centros, horarios, servicios y seguros')
 PY
 
+
+APPT_JSON="$LOG_DIR/kawmed-appointments.json"
+code="$(curl -sS -o "$APPT_JSON" -w '%{http_code}' https://preview.intaprd.com/api/v1/public/medical-profiles/lauramendez/appointments)"
+[ "$code" = "200" ] || { cat "$APPT_JSON"; fail "Agenda pública KawMed HTTP $code"; }
+python3 - "$APPT_JSON" <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1],encoding='utf-8'))
+assert d.get('ok') is True
+a=d.get('data') or {}
+assert a.get('enabled') is True
+assert a.get('has_whatsapp') is True
+assert len(a.get('reasons') or []) >= 1
+print('✓ KawMed reutiliza Agenda pública común y está habilitada')
+PY
+
 for url in \
   "https://preview.intaprd.com/m/lauramendez" \
   "https://preview.intaprd.com/demo" \
   "https://preview.intaprd.com/trial" \
-  "https://app.preview.intaprd.com/superadmin"
+  "https://app.preview.intaprd.com/superadmin" \
+  "https://app.preview.intaprd.com/admin/medical/agenda"
 do
   code="$(curl -sS -L -o /dev/null -w '%{http_code}' "$url")"
   echo "✓ $url -> HTTP $code"
@@ -214,6 +260,7 @@ cat <<EOF
 ================================================================
 Feature SHA: $(git rev-parse HEAD)
 Web Pages:   $WEB_ORIGIN
+App Pages:   $APP_ORIGIN
 
 Perfil demo:
 https://preview.intaprd.com/m/lauramendez
