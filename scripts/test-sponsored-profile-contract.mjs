@@ -355,7 +355,7 @@ has(publicActionsProdMigration,'quote_button_visible INTEGER NOT NULL DEFAULT 1'
 has(pushPreviewMigration,'CREATE TABLE IF NOT EXISTS user_push_subscriptions','Preview persiste suscripciones Web Push por usuario')
 has(pushPreviewMigration,'endpoint TEXT NOT NULL UNIQUE','una suscripción push no se duplica por endpoint')
 has(pushProdMigration,'CREATE TABLE IF NOT EXISTS user_push_subscriptions','Producción deja preparado Web Push reutilizable')
-has(publicUi,"setQuote({name:'',phone:'',email:'',request:'',delivery:'',sector:'',payment:''})",'formulario se limpia después de enviar la solicitud')
+has(publicUi,"setQuote({name:'',phone:'',email:'',rnc:'',request:'',delivery:'',sector:'',payment:''})",'formulario se limpia después de enviar la solicitud')
 has(publicUi,"if(request)detailLines.push('')",'mensaje separa visualmente el texto de la solicitud y el media')
 if(publicUi.includes("].filter(Boolean)"))throw new Error('El mensaje no debe eliminar los separadores de línea del cuerpo de la solicitud')
 has(publicUi,"Sería para pasar a retirar.",'mensaje de cotización usa lenguaje conversacional para retiro')
