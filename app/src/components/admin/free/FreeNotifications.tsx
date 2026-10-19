@@ -32,16 +32,27 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString('es-DO')
 }
 
+type NotificationCenterProps = {
+  backPathOverride?: string
+  backLabelOverride?: string
+  contextLabel?: string
+}
+
 function broadcastNotificationChange() {
   window.dispatchEvent(new Event('kawvo:notifications-changed'))
 }
 
-export default function FreeNotifications() {
+export default function FreeNotifications({
+  backPathOverride,
+  backLabelOverride,
+  contextLabel,
+}: NotificationCenterProps = {}) {
   const navigate = useNavigate()
   const location = useLocation()
   const fromAccount = new URLSearchParams(location.search).get('from') === 'account'
-  const backPath = fromAccount ? '/admin/free/account' : '/admin/free'
-  const backLabel = fromAccount ? 'Regresar a Mi cuenta' : 'Regresar al panel principal'
+  const backPath = backPathOverride || (fromAccount ? '/admin/free/account' : '/admin/free')
+  const backLabel = backLabelOverride || (fromAccount ? 'Regresar a Mi cuenta' : 'Regresar al panel principal')
+  const sectionLabel = contextLabel || (fromAccount ? 'Mi cuenta' : 'Panel principal')
   const [items, setItems] = useState<NotificationItem[]>([])
   const [selected, setSelected] = useState<NotificationItem | null>(null)
   const [loading, setLoading] = useState(true)
@@ -132,7 +143,7 @@ export default function FreeNotifications() {
         <div className="flex items-center gap-3 pb-5">
           <button type="button" onClick={() => navigate(backPath)} aria-label={backLabel} className="text-[34px] font-light leading-none text-slate-500">←</button>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{fromAccount ? 'Mi cuenta' : 'Panel principal'}</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{sectionLabel}</p>
             <h1 className="text-[30px] font-black tracking-[-0.04em] text-slate-950">Notificaciones</h1>
           </div>
           {unread > 0 && <span className="rounded-full bg-cyan-600 px-3 py-1.5 text-xs font-black text-white">{unread} nuevas</span>}
