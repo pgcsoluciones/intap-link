@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { apiGet } from '../../../lib/api'
 
+function publicOrigin(){
+  const host=window.location.hostname.toLowerCase()
+  return host==='app.preview.intaprd.com'||host.endsWith('.pages.dev')?'https://preview.intaprd.com':'https://intaprd.com'
+}
+
 export default function MedicalDashboard(){
   const [profile,setProfile]=useState<any>(null)
   const [unread,setUnread]=useState(0)
@@ -37,7 +42,7 @@ export default function MedicalDashboard(){
           <p className="mt-2 text-sm leading-6 text-slate-500">Revisa solicitudes y avisos de tu cuenta KawMed.</p>
         </button>
 
-        {slug&&<button type="button" onClick={()=>window.open('https://preview.intaprd.com/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-[24px] border border-slate-200 bg-white p-5 text-left shadow-sm sm:col-span-2">
+        {slug&&<button type="button" onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-[24px] border border-slate-200 bg-white p-5 text-left shadow-sm sm:col-span-2">
           <p className="text-xs font-black uppercase tracking-[.14em] text-cyan-700">Perfil público</p>
           <h2 className="mt-2 text-xl font-black">Ver mi perfil médico</h2>
           <p className="mt-2 text-sm leading-6 text-slate-500">Abre la presentación pública para revisar cómo la ven tus pacientes.</p>
