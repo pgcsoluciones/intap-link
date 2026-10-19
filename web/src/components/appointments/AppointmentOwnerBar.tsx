@@ -19,6 +19,8 @@ type Context={
   manage_url:string
   resource_url?:string
   resource_label?:string
+  contact_url?:string
+  contact_label?:string
 }
 type Props={
   username:string
@@ -82,10 +84,13 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   const settingsUrl=origin+settingsPath
   const resourceUrl=String(context.resource_url||'').trim()
   const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
+  const contactUrl=String(context.contact_url||'').trim()
+  const contactLabel=String(context.contact_label||'Contacto').trim()||'Contacto'
   return <div style={{position:'sticky',top:0,zIndex:58,background:'rgba(255,255,255,.96)',backdropFilter:'blur(12px)',borderBottom:'1px solid #e2e8f0',fontFamily:'Inter,system-ui,sans-serif'}}>
     <div style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
       <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
         <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>Configuración</button>
+        {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>{contactLabel}</a>}
         {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>{resourceLabel}</a>}
       </div>
       <div style={{display:'flex',alignItems:'center',gap:7}}>
