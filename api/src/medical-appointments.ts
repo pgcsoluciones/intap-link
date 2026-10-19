@@ -1,0 +1,172 @@
+import app from './index'
+import { sendWebPushToUser } from './pwa-push'
+import { cookieNames } from './lib/cookies'
+import {
+  availableAppointmentSlots,
+  changeAppointmentRequestStatus,
+  confirmAppointmentRequest,
+  createAppointmentBlock,
+  createAppointmentRequest,
+  getAppointmentAvailabilityRows,
+  getAppointmentBlocks,
+  getAppointmentCustomReasons,
+  getAppointmentReasons,
+  getAppointmentSettings,
+  listAppointmentRequests,
+  publicAppointmentConfig,
+  saveAppointmentConfiguration,
+} from './appointments-core'
+
+async function sha256Hex(input:string){
+  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')
+}
+function parseCookie(header:string,name:string){
+  const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&')
+  const match=header.match(new RegExp('(?:^|;\\s*)'+escaped+'=([^;]*)'))
+  return match?decodeURIComponent(match[1]):null
+}
+async function sessionUserId(c:any){
+  const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session)
+  if(!raw)return''
+  const row=await c.env.DB.prepare("SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1").bind(await sha256Hex(raw)).first()
+  return row?String((row as any).user_id||''):''
+}
+async function requireUser(c:any,next:any){
+  const userId=await sessionUserId(c)
+  if(!userId)return c.json({ok:false,error:'Unauthorized'},401)
+  c.set('userId',userId)
+  await next()
+}
+function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/^\/+|\/+$/g,'').replace(/[^a-z0-9-]/g,'').slice(0,80)}
+function cleanPhone(value:unknown){let digits=String(value??'').replace(/\D/g,'').slice(0,15);if(digits.startsWith('00'))digits=digits.slice(2);if(digits.length===10&&/^(809|829|849)/.test(digits))digits='1'+digits;return digits}
+function formatPhoneForMessage(value:unknown){
+  const digits=cleanPhone(value),local=digits.length===11&&digits.startsWith('1')?digits.slice(1):digits
+  if(local.length===10&&/^(809|829|849)/.test(local))return local.slice(0,3)+'-'+local.slice(3,6)+'-'+local.slice(6)
+  return digits?('+'+digits):String(value??'').trim()
+}
+function humanDate(value:string){
+  const[y,m,d]=value.split('-').map(Number)
+  try{return new Intl.DateTimeFormat('es-DO',{timeZone:'UTC',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(Date.UTC(y,m-1,d,12)))}catch{return value}
+}
+function humanTime(value:string){
+  const[h,m]=value.split(':').map(Number)
+  try{return new Intl.DateTimeFormat('es-DO',{timeZone:'UTC',hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(Date.UTC(2000,0,1,h,m)))}catch{return value}
+}
+function appointmentMessage(row:any,displayName:string){
+  return [
+    ['Hola '+displayName+', deseo solicitar una cita.','', 'Mi nombre es '+String(row.customer_name||'').trim()+'.','Mi teléfono es '+formatPhoneForMessage(row.customer_phone)+'.',...(String(row.customer_email||'').trim()?['Mi correo es '+String(row.customer_email||'').trim()+'.']:[])].join('\n'),
+    ['Motivo:',String(row.reason_label||'Consulta médica')].join('\n'),
+    ['Fecha solicitada:',humanDate(String(row.appointment_date||'')),'','Hora solicitada:',humanTime(String(row.start_time||''))].join('\n'),
+    String(row.details||'').trim()?['Detalles:',String(row.details||'').trim()].join('\n'):'',
+    'Quedo pendiente de su confirmación. Muchas gracias.',
+  ].filter(Boolean).join('\n\n')
+}
+async function publicSubject(c:any,slug:string){
+  return c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
+    FROM medical_profiles WHERE lower(slug)=? AND status='active' LIMIT 1`).bind(slug).first()
+}
+async function ownedSubject(c:any){
+  const userId=String(c.get('userId')||'')
+  const profile=await c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
+    FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
+  if(!profile)return null
+  return{profile,userId,subject:{type:'medical',id:String((profile as any).id||''),ownerUserId:userId}}
+}
+async function addNotification(c:any,request:any,profile:any){
+  const ownerUserId=String((profile as any).user_id||'')
+  if(!ownerUserId||ownerUserId==='kawmed_demo_owner')return
+  const actionUrl='/admin/medical/agenda?request='+encodeURIComponent(String(request.id||''))
+  const title='Nueva solicitud de cita'
+  const message=String(request.customer_name||'Paciente')+' · '+String(request.reason_label||'Consulta')+' · '+humanDate(String(request.appointment_date||''))+' · '+humanTime(String(request.start_time||''))
+  await c.env.DB.prepare("INSERT INTO user_notifications(id,user_id,profile_id,type,title,message,source_type,source_id,action_label,action_url,created_at) VALUES (?,?,NULL,'medical_appointment_request',?,?,'appointment_request',?,'Revisar solicitud',?,datetime('now'))").bind(crypto.randomUUID(),ownerUserId,title,message,String(request.id||''),actionUrl).run().catch(()=>undefined)
+  const push=sendWebPushToUser(c.env,ownerUserId,{title,body:message,url:actionUrl,tag:'agenda:'+String(request.id||'')}).catch(()=>undefined)
+  try{if(c.executionCtx?.waitUntil)c.executionCtx.waitUntil(push);else await push}catch{await push}
+}
+async function markRead(c:any,userId:string,requestId:string){
+  await c.env.DB.prepare("UPDATE user_notifications SET read_at=COALESCE(read_at,datetime('now')) WHERE user_id=? AND source_type='appointment_request' AND source_id=?").bind(userId,requestId).run().catch(()=>undefined)
+}
+
+app.get('/api/v1/public/medical-profiles/:slug/appointments',async(c:any)=>{
+  c.header('Cache-Control','no-store, max-age=0')
+  const profile=await publicSubject(c,cleanSlug(c.req.param('slug')))
+  if(!profile)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const id=String((profile as any).id||'')
+  const config=await publicAppointmentConfig(c.env.DB,'medical',id)
+  const whatsapp=cleanPhone((profile as any).whatsapp||(profile as any).phone)
+  const name=[(profile as any).professional_prefix,(profile as any).name].filter(Boolean).join(' ')
+  return c.json({ok:true,data:{...config,enabled:config.enabled&&Boolean(whatsapp),business_name:name,has_whatsapp:Boolean(whatsapp)}})
+})
+app.get('/api/v1/public/medical-profiles/:slug/appointments/availability',async(c:any)=>{
+  c.header('Cache-Control','no-store, max-age=0')
+  const profile=await publicSubject(c,cleanSlug(c.req.param('slug')))
+  if(!profile)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const date=String(c.req.query('date')||'')
+  const slots=await availableAppointmentSlots(c.env.DB,'medical',String((profile as any).id||''),date)
+  return c.json({ok:true,data:{date,slots}})
+})
+app.post('/api/v1/public/medical-profiles/:slug/appointments',async(c:any)=>{
+  const profile=await publicSubject(c,cleanSlug(c.req.param('slug')))
+  if(!profile)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const ownerUserId=String((profile as any).user_id||''),whatsapp=cleanPhone((profile as any).whatsapp||(profile as any).phone)
+  if(!ownerUserId||!whatsapp)return c.json({ok:false,error:'Este perfil todavía no puede recibir solicitudes de cita.'},409)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'Solicitud inválida.'},400)}
+  try{
+    const subject={type:'medical',id:String((profile as any).id),ownerUserId}
+    const created=await createAppointmentRequest(c.env.DB,subject,body)
+    const request=await c.env.DB.prepare('SELECT * FROM appointment_requests WHERE id=? LIMIT 1').bind(String((created as any).id)).first()
+    if(!request)return c.json({ok:false,error:'No pudimos registrar la solicitud.'},500)
+    if(!(created as any).duplicate)await addNotification(c,request,profile)
+    const displayName=[(profile as any).professional_prefix,(profile as any).name].filter(Boolean).join(' ')
+    return c.json({ok:true,data:{request_id:String((request as any).id),status:String((request as any).status),whatsapp_url:'https://wa.me/'+whatsapp+'?text='+encodeURIComponent(appointmentMessage(request,displayName))}},201)
+  }catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos registrar la solicitud.'},400)}
+})
+
+app.get('/api/v1/me/medical-profile/appointments',requireUser,async(c:any)=>{
+  const resolved=await ownedSubject(c)
+  if(!resolved)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const s=resolved.subject,settings=await getAppointmentSettings(c.env.DB,s.type,s.id)
+  const results=await Promise.all([
+    getAppointmentAvailabilityRows(c.env.DB,s.type,s.id),
+    getAppointmentReasons(c.env.DB,s.type,s.id,settings.reason_mode),
+    getAppointmentReasons(c.env.DB,s.type,s.id,'default'),
+    getAppointmentCustomReasons(c.env.DB,s.type,s.id),
+    getAppointmentBlocks(c.env.DB,s.type,s.id),
+    listAppointmentRequests(c.env.DB,s.type,s.id,100),
+  ])
+  const p=resolved.profile
+  return c.json({ok:true,data:{settings,availability:results[0],reasons:results[1],default_reasons:results[2],custom_reasons:results[3],blocks:results[4],requests:results[5],profile:{id:s.id,username:String((p as any).slug||''),business_name:[(p as any).professional_prefix,(p as any).name].filter(Boolean).join(' ')}}})
+})
+app.put('/api/v1/me/medical-profile/appointments/settings',requireUser,async(c:any)=>{
+  const resolved=await ownedSubject(c);if(!resolved)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  try{await saveAppointmentConfiguration(c.env.DB,resolved.subject.type,resolved.subject.id,body);return c.json({ok:true})}
+  catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos guardar la agenda.'},400)}
+})
+app.post('/api/v1/me/medical-profile/appointments/blocks',requireUser,async(c:any)=>{
+  const resolved=await ownedSubject(c);if(!resolved)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  let body:any={};try{body=await c.req.json()}catch{return c.json({ok:false,error:'JSON inválido.'},400)}
+  try{return c.json({ok:true,data:{id:await createAppointmentBlock(c.env.DB,resolved.subject.type,resolved.subject.id,body)}},201)}
+  catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos bloquear el horario.'},400)}
+})
+app.delete('/api/v1/me/medical-profile/appointments/blocks/:id',requireUser,async(c:any)=>{
+  const resolved=await ownedSubject(c);if(!resolved)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  await c.env.DB.prepare('DELETE FROM appointment_blocks WHERE id=? AND subject_type=? AND subject_id=?').bind(c.req.param('id'),resolved.subject.type,resolved.subject.id).run()
+  return c.json({ok:true})
+})
+app.post('/api/v1/me/medical-profile/appointments/requests/:id/:action',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||''),requestId=String(c.req.param('id')||''),action=String(c.req.param('action')||'')
+  const row=await c.env.DB.prepare("SELECT ar.subject_id,mp.id FROM appointment_requests ar JOIN medical_profiles mp ON mp.id=ar.subject_id WHERE ar.id=? AND ar.subject_type='medical' AND mp.user_id=? LIMIT 1").bind(requestId,userId).first()
+  if(!row)return c.json({ok:false,error:'Solicitud no encontrada.'},404)
+  const subjectId=String((row as any).subject_id||'')
+  try{
+    if(action==='confirm')await confirmAppointmentRequest(c.env.DB,'medical',subjectId,requestId)
+    else if(action==='reject'||action==='release')await changeAppointmentRequestStatus(c.env.DB,'medical',subjectId,requestId,action as any)
+    else return c.json({ok:false,error:'Acción inválida.'},400)
+    await markRead(c,userId,requestId)
+    const request=await c.env.DB.prepare('SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status FROM appointment_requests WHERE id=? LIMIT 1').bind(requestId).first()
+    return c.json({ok:true,data:request})
+  }catch(error){return c.json({ok:false,error:error instanceof Error?error.message:'No pudimos actualizar la solicitud.'},409)}
+})
+
+export default app
