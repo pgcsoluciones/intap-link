@@ -7,6 +7,7 @@ const TEAM_CODE_KEY = 'kawvo_team_join_code'
 const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
 const TRIAL_LEAD_TOKEN_KEY = 'kawlink_trial_lead_token'
 const KAWMED_CLAIM_CODE_KEY = 'kawvo_kawmed_claim_code'
+const KAWMED_CLAIM_RESUME_KEY = 'kawvo_kawmed_claim_resume'
 
 function readScanCode(): string {
   const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
@@ -21,6 +22,8 @@ function readTeamCode(): string {
 }
 
 function readKawMedCode(): string {
+  const resume = sessionStorage.getItem(KAWMED_CLAIM_RESUME_KEY) || localStorage.getItem(KAWMED_CLAIM_RESUME_KEY) || ''
+  if (resume !== '1') return ''
   const value = sessionStorage.getItem(KAWMED_CLAIM_CODE_KEY) || localStorage.getItem(KAWMED_CLAIM_CODE_KEY) || ''
   const code = value.trim().toUpperCase()
   return /^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(code) ? code : ''
