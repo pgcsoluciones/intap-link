@@ -68,6 +68,7 @@ api/src/preview-free-entry.ts
 api/src/routes/medical-profile.ts
 scripts/run-preview-kawmed-v1-2026-10-19.sh
 scripts/test-kawmed-medical-profile-v1-contract.mjs
+scripts/test-sponsored-profile-contract.mjs
 app/src/App.tsx
 app/src/components/admin/medical/MedicalAppointments.tsx
 app/src/components/admin/medical/MedicalDashboard.tsx
