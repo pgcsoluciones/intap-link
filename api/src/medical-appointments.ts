@@ -90,16 +90,32 @@ async function medicalSponsorContext(c:any,profileId:string){
       st.banner_cta_label,st.banner_cta_type,st.banner_cta_value,st.website_url,
       st.contact_whatsapp,st.is_active,
       msp.private_banner_image_url,msp.private_cta_label,msp.private_cta_url,
-      msp.vademecum_url AS program_vademecum_url,msp.vademecum_label AS program_vademecum_label
+      msp.vademecum_url AS program_vademecum_url,msp.vademecum_label AS program_vademecum_label,
+      msp.representative_cta_label,msp.representative_message_template,
+      mp.name AS medical_name,mp.professional_prefix,
+      mr.id AS representative_id,mr.first_name AS representative_first_name,mr.last_name AS representative_last_name,
+      mr.whatsapp AS representative_whatsapp,mr.email AS representative_email,mr.zone AS representative_zone
     FROM medical_profile_sponsors mps
     JOIN sponsor_tenants st ON st.id=mps.sponsor_id
+    JOIN medical_profiles mp ON mp.id=mps.medical_profile_id
     LEFT JOIN medical_sponsor_programs msp ON msp.id=mps.program_id AND msp.enabled=1
+    LEFT JOIN medical_access_codes mac ON mac.medical_profile_id=mps.medical_profile_id AND mac.status='claimed'
+    LEFT JOIN medical_representatives mr ON mr.id=mac.current_representative_id AND mr.active=1
     WHERE mps.medical_profile_id=? AND mps.enabled=1 AND st.is_active=1
       AND (mps.program_id IS NULL OR msp.id IS NOT NULL)
     LIMIT 1`).bind(profileId).first().catch(()=>null)
   if(!row)return null
   const vademecumUrl=safeExternalUrl((row as any).program_vademecum_url||(row as any).vademecum_url)
   const privateCtaUrl=safeExternalUrl((row as any).private_cta_url)
+  const representativeWhatsapp=cleanPhone((row as any).representative_whatsapp)
+  const representativeName=[(row as any).representative_first_name,(row as any).representative_last_name].map(v=>String(v||'').trim()).filter(Boolean).join(' ')
+  const medicalName=[(row as any).professional_prefix,(row as any).medical_name].map(v=>String(v||'').trim()).filter(Boolean).join(' ')
+  const representativeTemplate=String((row as any).representative_message_template||'Hola {visitador}, soy {medico}. Te contacto desde mi panel KawMed y necesito información de {patrocinador}.')
+  const representativeMessage=representativeTemplate
+    .replace(/\{visitador\}/gi,representativeName||'')
+    .replace(/\{medico\}/gi,medicalName||'')
+    .replace(/\{patrocinador\}/gi,String((row as any).name||''))
+  const representativeUrl=representativeWhatsapp?'https://wa.me/'+representativeWhatsapp+'?text='+encodeURIComponent(representativeMessage):''
   return{
     id:String((row as any).sponsor_id||''),
     program_id:String((row as any).program_id||''),
@@ -107,8 +123,17 @@ async function medicalSponsorContext(c:any,profileId:string){
     logo_url:safeExternalUrl((row as any).logo_url),
     banner_title:String((row as any).banner_title||'').trim(),
     banner_image_url:safeExternalUrl((row as any).private_banner_image_url||(row as any).banner_image_url),
-    cta_label:String((row as any).private_cta_label||(row as any).banner_cta_label||'Conocer más').trim()||'Conocer más',
-    cta_url:privateCtaUrl||sponsorCtaUrl(row),
+    cta_label:representativeUrl?(String((row as any).representative_cta_label||'Contactar visitador').trim()||'Contactar visitador'):(String((row as any).private_cta_label||(row as any).banner_cta_label||'Conocer más').trim()||'Conocer más'),
+    cta_url:representativeUrl||privateCtaUrl||sponsorCtaUrl(row),
+    representative:representativeUrl?{
+      id:String((row as any).representative_id||''),
+      name:representativeName,
+      whatsapp:representativeWhatsapp,
+      email:String((row as any).representative_email||''),
+      zone:String((row as any).representative_zone||''),
+      url:representativeUrl,
+      label:String((row as any).representative_cta_label||'Mi visitador').trim()||'Mi visitador',
+    }:null,
     vademecum_url:vademecumUrl,
     vademecum_label:String((row as any).program_vademecum_label||(row as any).vademecum_label||'Ver vademécum').trim()||'Ver vademécum',
   }
@@ -272,7 +297,9 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
     pending:rows.results||[],
     manage_url:'/admin/medical/agenda',
     resource_url:sponsor?.vademecum_url||'',
-    resource_label:sponsor?.vademecum_label||'Ver vademécum'
+    resource_label:sponsor?.vademecum_label||'Ver vademécum',
+    contact_url:sponsor?.representative?.url||'',
+    contact_label:sponsor?.representative?.label||'Mi visitador'
   }})
 })
 
