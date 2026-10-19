@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { apiGet, apiPatch, apiPost } from '../../lib/api'
+import { apiGet, apiPatch, apiPost, apiUpload } from '../../lib/api'
 import SuperAdminLayout from './SuperAdminLayout'
 
 type Sponsor={id:string;name:string;logo_url?:string}
@@ -26,6 +26,7 @@ export default function SuperAdminKawMed(){
   const[status,setStatus]=useState('all')
   const[create,setCreate]=useState({sponsor_id:'',name:'',private_banner_image_url:'',private_cta_label:'Conocer más',private_cta_url:'',vademecum_url:'',vademecum_label:'Ver vademécum',notes:''})
   const[batch,setBatch]=useState({program_id:'',name:'',quantity:10,notes:''})
+  const[newSponsor,setNewSponsor]=useState({name:'',contact_email:'',website_url:'',logo_url:''})
 
   const load=async()=>{
     const[s,p,c,m]=await Promise.all([
@@ -56,6 +57,31 @@ export default function SuperAdminKawMed(){
   }),[codes,query,status])
 
   const notify=(ok:string,fail='')=>{setMessage(ok);setError(fail)}
+  async function createSponsorBase(){
+    setBusy(true);notify('')
+    try{
+      const j:any=await apiPost('/superadmin/sponsors',{...newSponsor,sponsor_type:'brand'})
+      if(!j?.ok)throw new Error(j?.error||'No se pudo registrar la empresa.')
+      setNewSponsor({name:'',contact_email:'',website_url:'',logo_url:''})
+      notify('Empresa patrocinadora registrada. Ya puedes crear su programa KawMed.')
+      await load()
+      if(j.data?.id)setCreate(current=>({...current,sponsor_id:String(j.data.id)}))
+    }catch(e){notify('',e instanceof Error?e.message:'No se pudo registrar.')}finally{setBusy(false)}
+  }
+  async function uploadProgramBanner(file:File,mode:'create'|'edit'){
+    const sponsorId=mode==='create'?create.sponsor_id:selected?.sponsor_id
+    if(!sponsorId){notify('','Selecciona primero el patrocinador.');return}
+    setBusy(true);notify('')
+    try{
+      const fd=new FormData();fd.append('file',file)
+      const j:any=await apiUpload('/superadmin/sponsors/'+encodeURIComponent(sponsorId)+'/media?kind=banner',fd)
+      if(!j?.ok||!j.url)throw new Error(j?.error||'No se pudo subir el cintillo.')
+      if(mode==='create')setCreate(current=>({...current,private_banner_image_url:String(j.url)}))
+      else if(selected)setSelected({...selected,private_banner_image_url:String(j.url)})
+      notify('Cintillo cargado. Se usará solo dentro del programa KawMed.')
+    }catch(e){notify('',e instanceof Error?e.message:'No se pudo subir el cintillo.')}finally{setBusy(false)}
+  }
+
   async function createProgram(){
     setBusy(true);notify('')
     try{
@@ -113,11 +139,13 @@ export default function SuperAdminKawMed(){
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[['Programas',totals.programs],['Códigos MED',totals.codes],['Disponibles',totals.available],['Activados',totals.claimed]].map(([l,v])=><div key={String(l)} className={card}><p className="text-xs font-black uppercase tracking-[.07em] text-slate-400">{l}</p><p className="mt-2 text-3xl font-black">{v}</p></div>)}</section>
 
+      <section className={card}><h2 className="text-xl font-black">Registrar empresa / laboratorio</h2><p className="mt-1 text-sm leading-6 text-slate-500">Reutiliza la identidad central de patrocinadores de Kawvo, pero no crea un perfil patrocinado público. Después podrás crear uno o varios programas KawMed privados para esta empresa.</p><div className="mt-4 grid gap-3 md:grid-cols-2"><label className={label}>Nombre<input className={input} value={newSponsor.name} onChange={e=>setNewSponsor({...newSponsor,name:e.target.value})}/></label><label className={label}>Correo propietario<input className={input} type="email" value={newSponsor.contact_email} onChange={e=>setNewSponsor({...newSponsor,contact_email:e.target.value})}/></label><label className={label}>Sitio web · opcional<input className={input} value={newSponsor.website_url} onChange={e=>setNewSponsor({...newSponsor,website_url:e.target.value})}/></label><label className={label}>Logo · URL opcional<input className={input} value={newSponsor.logo_url} onChange={e=>setNewSponsor({...newSponsor,logo_url:e.target.value})}/></label></div><button onClick={()=>void createSponsorBase()} disabled={busy||!newSponsor.name||!newSponsor.contact_email} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Registrar patrocinador médico</button></section>
+
       <section className="grid gap-5 xl:grid-cols-2">
         <div className={card}><h2 className="text-xl font-black">Crear programa médico patrocinado</h2><p className="mt-1 text-sm leading-6 text-slate-500">Usa un patrocinador ya registrado, pero define aquí la campaña médica privada. Esta configuración no altera su patrocinio público normal.</p><div className="mt-4 grid gap-3">
           <label className={label}>Patrocinador<select className={input} value={create.sponsor_id} onChange={e=>setCreate({...create,sponsor_id:e.target.value})}><option value="">Seleccionar</option>{sponsors.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
           <label className={label}>Nombre interno del programa<input className={input} value={create.name} onChange={e=>setCreate({...create,name:e.target.value})} placeholder="Ej. Cardiología 2026"/></label>
-          <label className={label}>Cintillo privado · URL de imagen<input className={input} value={create.private_banner_image_url} onChange={e=>setCreate({...create,private_banner_image_url:e.target.value})} placeholder="https://..."/></label>
+          <label className={label}>Cintillo privado · URL de imagen<input className={input} value={create.private_banner_image_url} onChange={e=>setCreate({...create,private_banner_image_url:e.target.value})} placeholder="https://..."/><span className="mt-2 block text-xs normal-case tracking-normal text-slate-500">Puedes pegar una URL o reutilizar el cargador de imágenes del patrocinador.</span><input type="file" accept="image/jpeg,image/png,image/webp" className="mt-2 block w-full text-xs text-slate-500" onChange={e=>{const file=e.target.files?.[0];if(file)void uploadProgramBanner(file,'create');e.currentTarget.value=''}}/></label>
           <div className="grid gap-3 md:grid-cols-2"><label className={label}>CTA privado<input className={input} value={create.private_cta_label} onChange={e=>setCreate({...create,private_cta_label:e.target.value})}/></label><label className={label}>URL del CTA<input className={input} value={create.private_cta_url} onChange={e=>setCreate({...create,private_cta_url:e.target.value})}/></label></div>
           <div className="grid gap-3 md:grid-cols-2"><label className={label}>Vademécum / catálogo<input className={input} value={create.vademecum_url} onChange={e=>setCreate({...create,vademecum_url:e.target.value})} placeholder="https://..."/></label><label className={label}>Texto del enlace<input className={input} value={create.vademecum_label} onChange={e=>setCreate({...create,vademecum_label:e.target.value})}/></label></div>
           <label className={label}>Notas internas<textarea className={input} value={create.notes} onChange={e=>setCreate({...create,notes:e.target.value})}/></label>
@@ -133,7 +161,7 @@ export default function SuperAdminKawMed(){
       </section>
 
       <section className={card}><h2 className="text-xl font-black">Programas patrocinados KawMed</h2><div className="mt-4 grid gap-3 lg:grid-cols-2">{programs.map(p=><button key={p.id} onClick={()=>setSelected({...p})} className={'rounded-2xl border p-4 text-left '+(selected?.id===p.id?'border-cyan-400 bg-cyan-50':'border-slate-200 bg-white')}><div className="flex items-start justify-between gap-3"><div><p className="font-black">{p.name}</p><p className="mt-1 text-xs text-slate-500">{p.sponsor_name}</p></div><span className={'rounded-full px-2 py-1 text-[11px] font-black '+(p.enabled!==0?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500')}>{p.enabled!==0?'Activo':'Inactivo'}</span></div><p className="mt-3 text-xs text-slate-500">{Number(p.codes_claimed||0)} activados de {Number(p.codes_total||0)} códigos</p></button>)}</div>
-      {selected&&<div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-2"><label className={label}>Nombre<input className={input} value={selected.name||''} onChange={e=>setSelected({...selected,name:e.target.value})}/></label><label className={label}>Cintillo privado<input className={input} value={selected.private_banner_image_url||''} onChange={e=>setSelected({...selected,private_banner_image_url:e.target.value})}/></label><label className={label}>CTA<input className={input} value={selected.private_cta_label||''} onChange={e=>setSelected({...selected,private_cta_label:e.target.value})}/></label><label className={label}>URL CTA<input className={input} value={selected.private_cta_url||''} onChange={e=>setSelected({...selected,private_cta_url:e.target.value})}/></label><label className={label}>Vademécum<input className={input} value={selected.vademecum_url||''} onChange={e=>setSelected({...selected,vademecum_url:e.target.value})}/></label><label className={label}>Texto vademécum<input className={input} value={selected.vademecum_label||''} onChange={e=>setSelected({...selected,vademecum_label:e.target.value})}/></label><label className="flex items-center gap-2 text-sm font-bold md:col-span-2"><input type="checkbox" checked={selected.enabled!==0} onChange={e=>setSelected({...selected,enabled:e.target.checked?1:0})}/> Programa activo</label><div className="md:col-span-2"><button onClick={()=>void saveProgram()} disabled={busy} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Guardar programa</button></div></div>}</section>
+      {selected&&<div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-2"><label className={label}>Nombre<input className={input} value={selected.name||''} onChange={e=>setSelected({...selected,name:e.target.value})}/></label><label className={label}>Cintillo privado<input className={input} value={selected.private_banner_image_url||''} onChange={e=>setSelected({...selected,private_banner_image_url:e.target.value})}/><input type="file" accept="image/jpeg,image/png,image/webp" className="mt-2 block w-full text-xs text-slate-500" onChange={e=>{const file=e.target.files?.[0];if(file)void uploadProgramBanner(file,'edit');e.currentTarget.value=''}}/></label><label className={label}>CTA<input className={input} value={selected.private_cta_label||''} onChange={e=>setSelected({...selected,private_cta_label:e.target.value})}/></label><label className={label}>URL CTA<input className={input} value={selected.private_cta_url||''} onChange={e=>setSelected({...selected,private_cta_url:e.target.value})}/></label><label className={label}>Vademécum<input className={input} value={selected.vademecum_url||''} onChange={e=>setSelected({...selected,vademecum_url:e.target.value})}/></label><label className={label}>Texto vademécum<input className={input} value={selected.vademecum_label||''} onChange={e=>setSelected({...selected,vademecum_label:e.target.value})}/></label><label className="flex items-center gap-2 text-sm font-bold md:col-span-2"><input type="checkbox" checked={selected.enabled!==0} onChange={e=>setSelected({...selected,enabled:e.target.checked?1:0})}/> Programa activo</label><div className="md:col-span-2"><button onClick={()=>void saveProgram()} disabled={busy} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Guardar programa</button></div></div>}</section>
 
       <section className={card}><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">Códigos MED</h2><p className="mt-1 text-sm text-slate-500">No comparten namespace ni flujo con productos, Demos Free, Trials o Perfil patrocinado.</p></div><div className="grid grid-cols-[1fr_150px] gap-2"><input className={input} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar código, médico, lote…"/><select className={input} value={status} onChange={e=>setStatus(e.target.value)}><option value="all">Todos</option><option value="available">Disponibles</option><option value="claimed">Activados</option><option value="inactive">Inactivos</option></select></div></div><div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200"><table className="w-full min-w-[980px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr><th className="p-3">Código</th><th className="p-3">Estado</th><th className="p-3">Lote</th><th className="p-3">Programa / patrocinador</th><th className="p-3">Médico</th><th className="p-3">Cuenta</th><th className="p-3">Control</th></tr></thead><tbody>{filtered.map(row=><tr key={row.code} className="border-t border-slate-100"><td className="p-3 font-mono font-black">{row.code}</td><td className="p-3"><span className={'rounded-full px-2 py-1 font-black '+(row.status==='claimed'?'bg-emerald-50 text-emerald-700':row.status==='inactive'?'bg-rose-50 text-rose-700':'bg-amber-50 text-amber-700')}>{row.status==='claimed'?'Activado':row.status==='inactive'?'Inactivo':'Disponible'}</span></td><td className="p-3">{row.batch_name||'—'}</td><td className="p-3"><div className="font-bold">{row.program_name||'Independiente'}</div><div className="mt-1 text-slate-400">{row.sponsor_name||'Sin patrocinador'}</div></td><td className="p-3">{row.medical_name?<><div className="font-bold">{row.medical_name}</div><div className="mt-1 text-slate-400">/m/{row.medical_slug}</div></>:'—'}</td><td className="p-3">{row.claimed_email||'—'}</td><td className="p-3">{row.status!=='claimed'?<button disabled={busy} onClick={()=>void toggleCode(row)} className="rounded-lg border border-slate-200 px-3 py-2 font-black">{row.status==='inactive'?'Reactivar':'Desactivar'}</button>:<span className="text-slate-400">Uso consumido</span>}</td></tr>)}{!filtered.length&&<tr><td colSpan={7} className="p-6 text-center text-slate-400">No hay códigos que coincidan.</td></tr>}</tbody></table></div></section>
 
