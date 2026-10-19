@@ -3,8 +3,8 @@ set -euo pipefail
 
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 REMOTE="github"
-FEATURE_BRANCH="reconcile/free-demo-master-v2-2026-10-19"
-EXPECTED_MAIN_SHA="17726235dd609a3dc0e05b5a69f87776c2a4e861"
+FEATURE_BRANCH="release/free-demo-master-v2-production-2026-10-19"
+EXPECTED_MAIN_SHA="24ae610e929ae58910c05e19ec27ed7be3c8a8f6"
 APPROVED_PREVIEW_SHA="357e97275f376dce769072f0541ec55b98842c37"
 RUNNER_PATH="scripts/run-production-free-demo-master-v2-2026-10-19.sh"
 WEB_PROJECT="intap-link"
@@ -57,63 +57,19 @@ run git pull --ff-only "$REMOTE" "$FEATURE_BRANCH"
 [ -z "$(git status --porcelain)" ] || { git status --short; fail "Árbol local no limpio"; }
 
 HEAD_SHA="$(git rev-parse HEAD)"
-echo "Feature release: $HEAD_SHA"
+echo "Release runner HEAD: $HEAD_SHA"
 
-git merge-base --is-ancestor "$APPROVED_PREVIEW_SHA" HEAD || fail "El Preview aprobado ya no es ancestro"
-POST_APPROVAL="$(git diff --name-only "$APPROVED_PREVIEW_SHA"..HEAD | grep -v "^${RUNNER_PATH}$" || true)"
-[ -z "$POST_APPROVAL" ] || { echo "$POST_APPROVAL"; fail "Hay cambios de producto posteriores al Preview aprobado"; }
+git merge-base --is-ancestor "$APPROVED_PREVIEW_SHA" "$EXPECTED_MAIN_SHA" || fail "El Preview aprobado no es ancestro del main actual"
+MAIN_AFTER_PREVIEW="$(git diff --name-only "$APPROVED_PREVIEW_SHA".."$EXPECTED_MAIN_SHA" || true)"
+MAIN_AFTER_PREVIEW_PRODUCT="$(printf '%s\n' "$MAIN_AFTER_PREVIEW" | grep -v "^${RUNNER_PATH}$" | sed '/^$/d' || true)"
+[ -z "$MAIN_AFTER_PREVIEW_PRODUCT" ] || { echo "$MAIN_AFTER_PREVIEW_PRODUCT"; fail "main contiene cambios de producto posteriores al Preview aprobado"; }
+echo "✓ main actual contiene exactamente el producto aprobado; solo cambió el runner de Producción"
 
-git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "main y feature divergieron"
-[ "$(git rev-list --count HEAD.."$REMOTE/main")" = "0" ] || fail "La feature está detrás de main"
-
-cat > "$LOG_DIR/expected-files.txt" <<'EOF_FILES'
-api/migrations-preview/0088_free_demo_master_v2.sql
-api/migrations/0088_free_demo_master_v2.sql
-api/src/bank-accounts.ts
-api/src/free-appointments.ts
-api/src/free-demo-claim-core.ts
-api/src/free-demo-v2.ts
-api/src/free-profile-preview.ts
-api/src/index.ts
-api/src/lib/free-demo-delegation.ts
-api/src/preview-entry.ts
-api/src/preview-free-actions.ts
-api/src/preview-free-entry.ts
-app/src/App.tsx
-app/src/components/admin/AdminGuard.tsx
-app/src/components/admin/AdminLogin.tsx
-app/src/components/admin/AuthCallback.tsx
-app/src/components/admin/FreeDemoDelegationBanner.tsx
-app/src/components/admin/FreeDemoV2Claim.tsx
-app/src/components/admin/SuperAdminFreeDemoV2.tsx
-app/src/components/admin/SuperAdminLayout.tsx
-app/src/components/admin/free/FreeAccount.tsx
-app/src/components/admin/free/FreeDashboard.tsx
-app/src/components/admin/free/FreeExperienceSettings.tsx
-app/src/components/admin/free/FreeIdentifier.tsx
-app/src/components/admin/free/FreeStyle.tsx
-app/src/components/admin/free/FreeVisualEditor.tsx
-app/src/components/admin/free/TeamPermissionGuard.tsx
-app/src/components/admin/free/onboarding/FreeOnboardingContact.tsx
-app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx
-app/src/components/notifications/PwaNotificationBridge.tsx
-app/src/lib/api.ts
-app/src/lib/freeDemoDelegation.ts
-scripts/run-preview-free-demo-master-v2.sh
-scripts/run-production-free-demo-master-v2-2026-10-19.sh
-scripts/test-free-demo-master-v2-contract.mjs
-web/src/App.tsx
-web/src/components/free-demo/FreeDemoEditor.css
-web/src/components/free-demo/FreeDemoEditor.tsx
-web/src/components/free-profile/IntapLinkGratisProfile.tsx
-EOF_FILES
-
-git diff --name-only "$REMOTE/main"...HEAD | sort > "$LOG_DIR/actual-files.txt"
-sort "$LOG_DIR/expected-files.txt" > "$LOG_DIR/expected-files.sorted.txt"
-diff -u "$LOG_DIR/expected-files.sorted.txt" "$LOG_DIR/actual-files.txt" || fail "El alcance del release no coincide exactamente con lo aprobado"
+git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "La rama de release no desciende del main actual"
+POST_MAIN="$(git diff --name-only "$REMOTE/main"...HEAD | grep -v "^${RUNNER_PATH}$" || true)"
+[ -z "$POST_MAIN" ] || { echo "$POST_MAIN"; fail "La rama de release contiene cambios fuera del runner"; }
 
 run git diff --check "$REMOTE/main"...HEAD
-
 echo; echo "▶ Verificar configuración de Producción"
 grep -Fq 'name = "intap-api"' api/wrangler.toml || fail "Worker incorrecto"
 grep -Fq 'database_name = "intap_db"' api/wrangler.toml || fail "D1 incorrecta"
@@ -240,7 +196,7 @@ PROTECTED_CODE="$(curl -sS -o "$LOG_DIR/protected.json" -w '%{http_code}' https:
 [ "$PROTECTED_CODE" = "401" ] || fail "API SuperAdmin Free Demo no está protegida: HTTP $PROTECTED_CODE"
 echo "✓ API Free Demo v2 protegida sin sesión"
 
-echo; echo "▶ Promover release validado a main"
+echo; echo "▶ Registrar runner corregido en main después del deploy"
 run git switch -C main "$REMOTE/main"
 run git merge --ff-only "$REMOTE/$FEATURE_BRANCH"
 run git push "$REMOTE" main
