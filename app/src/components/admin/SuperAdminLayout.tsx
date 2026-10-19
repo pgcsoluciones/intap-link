@@ -13,7 +13,7 @@ export type SuperAdminSection =
   | 'admins'
   | 'settings'
 
-type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'freeDemos' | 'trials' | 'resources' | 'promotions' | 'sponsors' | 'sponsorBrand'
+type SuperAdminNavSection = SuperAdminSection | 'products' | 'support' | 'feedback' | 'demo' | 'freeDemos' | 'trials' | 'resources' | 'promotions' | 'sponsors' | 'sponsorBrand' | 'kawmed'
 
 const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'dashboard', label: 'Dashboard' },
@@ -22,6 +22,7 @@ const sidebarItems: Array<{ key: SuperAdminNavSection; label: string }> = [
   { key: 'sponsorBrand', label: 'Marca patrocinador' },
   { key: 'demo', label: 'Resultados Demo' },
   { key: 'freeDemos', label: 'Demos Free' },
+  { key: 'kawmed', label: 'KawMed' },
   { key: 'trials', label: 'Trials' },
   { key: 'support', label: 'Soporte / tickets' },
   { key: 'resources', label: 'Recursos de usuarios' },
@@ -73,6 +74,7 @@ export default function SuperAdminLayout({
       feedback: '/superadmin/feedback',
       demo: '/superadmin/demo',
       freeDemos: '/superadmin/free-demos',
+      kawmed: '/superadmin/kawmed',
       trials: '/superadmin/trials',
       promotions: '/superadmin/promotions',
     }
