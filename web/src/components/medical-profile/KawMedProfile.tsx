@@ -446,6 +446,7 @@ export default function KawMedProfile() {
             setToast(message)
             window.setTimeout(() => setToast(''), 2800)
           }}
+          detailsPlaceholder="Ej.: Primera consulta por molestias recientes, seguimiento de tratamiento o revisión de resultados."
         />
       ) : null}
       {toast ? <div className="kawmed-toast" role="status">{toast}</div> : null}
