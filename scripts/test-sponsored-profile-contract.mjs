@@ -327,7 +327,7 @@ has(publicUi,"params.get('agendar')==='1'",'perfil público acepta enlace direct
 has(appointmentModal,'AppointmentRequestModal','adaptador patrocinado reutiliza el modal genérico')
 has(appointmentModal,"/appointments'",'adaptador patrocinado apunta al endpoint de agenda del perfil')
 has(appointmentRequest,'Nombre *','agenda solicita nombre')
-has(appointmentRequest,'Teléfono *','agenda solicita teléfono')
+has(appointmentRequest,'Teléfono / WhatsApp *','agenda solicita teléfono')
 has(appointmentRequest,'Correo','agenda permite correo opcional')
 has(appointmentRequest,'type="date"','agenda usa selector de fecha')
 has(appointmentRequest,'Hora disponible *','agenda solo ofrece horas disponibles')
