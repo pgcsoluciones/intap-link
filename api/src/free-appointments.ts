@@ -1,6 +1,7 @@
 import app from './index'
 import { sendWebPushToUser } from './pwa-push'
 import { cookieNames } from './lib/cookies'
+import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
 import {
   availableAppointmentSlots,
   changeAppointmentRequestStatus,
@@ -34,9 +35,11 @@ async function sessionUserId(c:any){
   return row?String((row as any).user_id||''):''
 }
 async function requireUser(c:any,next:any){
-  const userId=await sessionUserId(c)
-  if(!userId)return c.json({ok:false,error:'Unauthorized'},401)
-  c.set('userId',userId)
+  const actorUserId=await sessionUserId(c)
+  if(!actorUserId)return c.json({ok:false,error:'Unauthorized'},401)
+  let effectiveUserId=actorUserId
+  try{effectiveUserId=await applyFreeDemoDelegation(c,actorUserId)}catch(error){return freeDemoDelegationError(c,error)}
+  c.set('userId',effectiveUserId)
   await next()
 }
 function cleanSlug(value:unknown){return String(value??'').trim().toLowerCase().replace(/^\/+|\/+$/g,'')}
