@@ -1668,3 +1668,20 @@
     padding-right: 14px;
   }
 }
+
+
+.kawmed-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 110;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  border-radius: 999px;
+  background: #10233f;
+  color: #fff;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 750;
+  box-shadow: 0 12px 32px rgba(16, 35, 63, .22);
+}
