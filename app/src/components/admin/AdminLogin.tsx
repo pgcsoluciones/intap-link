@@ -6,9 +6,11 @@ type Mode = 'login' | 'register'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 const TEAM_CODE_KEY = 'kawvo_team_join_code'
 const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
+const KAWMED_CLAIM_CODE_KEY = 'kawvo_kawmed_claim_code'
 
 function validProduct(value: string) { return /^[A-Z2-9]{8,24}$/.test(value) }
 function validTeam(value: string) { return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(value) }
+function validKawMed(value: string) { return /^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(value) }
 
 export default function AdminLogin() {
   const navigate = useNavigate()
@@ -30,6 +32,8 @@ export default function AdminLogin() {
   const storedScanCode = String(sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || '').trim().toUpperCase()
   const storedTeamCode = String(sessionStorage.getItem(TEAM_CODE_KEY) || localStorage.getItem(TEAM_CODE_KEY) || '').trim().toUpperCase()
   const storedSponsorMasterCode = String(sessionStorage.getItem(SPONSOR_MASTER_CODE_KEY) || localStorage.getItem(SPONSOR_MASTER_CODE_KEY) || '').trim().toUpperCase()
+  const queryKawMedCode = String(searchParams.get('med_code') || '').trim().toUpperCase()
+  const storedKawMedCode = String(sessionStorage.getItem(KAWMED_CLAIM_CODE_KEY) || localStorage.getItem(KAWMED_CLAIM_CODE_KEY) || '').trim().toUpperCase()
 
   const explicitTeamFlow = searchParams.get('activation') === 'team' && validProduct(queryScanCode) && validTeam(queryTeamCode)
   const storedTeamFlow = !searchParams.get('activation') && validProduct(storedScanCode) && validTeam(storedTeamCode)
@@ -37,6 +41,8 @@ export default function AdminLogin() {
   const scanCode = explicitTeamFlow ? queryScanCode : isTeamFlow ? storedScanCode : queryScanCode
   const teamCode = explicitTeamFlow ? queryTeamCode : isTeamFlow ? storedTeamCode : queryTeamCode
   const isSponsorMasterResume = searchParams.get('resume') === 'sponsor_master' && validProduct(storedSponsorMasterCode)
+  const kawMedCode = validKawMed(queryKawMedCode) ? queryKawMedCode : storedKawMedCode
+  const isKawMedResume = searchParams.get('resume') === 'kawmed' && validKawMed(kawMedCode)
 
   const validProductCode = validProduct(scanCode)
   const isScanFlow = searchParams.get('activation') === 'scan' && validProductCode
@@ -50,6 +56,10 @@ export default function AdminLogin() {
 
   useEffect(() => {
     if (isSponsorMasterResume) setMode('login')
+    if (isKawMedResume) {
+      sessionStorage.setItem(KAWMED_CLAIM_CODE_KEY, kawMedCode)
+      localStorage.setItem(KAWMED_CLAIM_CODE_KEY, kawMedCode)
+    }
     if (!hasProductContext) {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
@@ -72,7 +82,7 @@ export default function AdminLogin() {
       return
     }
     setMode(isDraftResume || isSwitchUser ? 'login' : 'register')
-  }, [hasProductContext, isDraftResume, isSponsorMasterResume, isSwitchUser, isTeamFlow, scanCode, teamCode, validProductCode])
+  }, [hasProductContext, isDraftResume, isSponsorMasterResume, isKawMedResume, kawMedCode, isSwitchUser, isTeamFlow, scanCode, teamCode, validProductCode])
 
   const persistAuthMode = (nextMode: Mode) => {
     sessionStorage.setItem('kawvo_auth_mode', nextMode)
@@ -97,6 +107,8 @@ export default function AdminLogin() {
           persistAuthMode(mode)
           if (isSponsorMasterResume) {
             window.location.assign(`/admin/sponsor/entry?public_code=${encodeURIComponent(storedSponsorMasterCode)}`)
+          } else if (isKawMedResume) {
+            window.location.assign(`/claim/kawmed?code=${encodeURIComponent(kawMedCode)}`)
           } else {
             const home:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
             window.location.assign(home?.ok && home?.data?.route ? String(home.data.route) : '/admin')
@@ -172,10 +184,12 @@ export default function AdminLogin() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="mb-7 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isSponsorMasterResume ? 'Accede como patrocinador' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isSponsorMasterResume ? 'Accede como patrocinador' : isKawMedResume ? 'Activa tu acceso KawMed' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
             {isSponsorMasterResume
               ? 'Inicia sesión con el correo registrado para este patrocinador. Al validar la cuenta retomaremos automáticamente el Master.'
+              : isKawMedResume
+                ? 'Accede o crea tu cuenta. Después de validar el correo retomaremos automáticamente el código MED y activaremos tu perfil médico.'
               : isTeamFlow
                 ? 'Inicia sesión con la cuenta Administrador Master para continuar preparando este dispositivo.'
                 : isDraftResume
