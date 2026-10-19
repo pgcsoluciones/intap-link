@@ -111,7 +111,7 @@ export async function getAppointmentCustomReasons(db:D1Database,subjectType:stri
 export async function getAppointmentAvailabilityRows(db:D1Database,subjectType:string,subjectId:string){
   await ensureAppointmentSubject(db,subjectType,subjectId)
   const rows=await db.prepare(`SELECT id,weekday,start_time,end_time,enabled,sort_order FROM appointment_availability WHERE subject_type=? AND subject_id=? ORDER BY weekday ASC,sort_order ASC,start_time ASC`).bind(subjectType,subjectId).all()
-  return (rows.results||[]).map((row:any)=>({...row,customer_phone:normalizeAppointmentPhone(row.customer_phone)}))
+  return rows.results||[]
 }
 
 export async function getAppointmentBlocks(db:D1Database,subjectType:string,subjectId:string,fromDate?:string){
@@ -227,7 +227,7 @@ export async function createAppointmentRequest(db:D1Database,subject:Appointment
 export async function listAppointmentRequests(db:D1Database,subjectType:string,subjectId:string,limit=80){
   await db.prepare(`UPDATE appointment_requests SET status='expired',updated_at=datetime('now') WHERE subject_type=? AND subject_id=? AND status='pending' AND appointment_date<date('now','-1 day')`).bind(subjectType,subjectId).run().catch(()=>undefined)
   const rows=await db.prepare(`SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at,confirmed_at,rejected_at,cancelled_at FROM appointment_requests WHERE subject_type=? AND subject_id=? ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'confirmed' THEN 1 ELSE 2 END,appointment_date ASC,start_time ASC,created_at DESC LIMIT ?`).bind(subjectType,subjectId,Math.max(1,Math.min(200,limit))).all()
-  return rows.results||[]
+  return (rows.results||[]).map((row:any)=>({...row,customer_phone:normalizeAppointmentPhone(row.customer_phone)}))
 }
 
 export async function confirmAppointmentRequest(db:D1Database,subjectType:string,subjectId:string,requestId:string){
