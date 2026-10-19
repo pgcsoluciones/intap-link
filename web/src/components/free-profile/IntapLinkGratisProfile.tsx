@@ -45,6 +45,7 @@ export type IntapLinkGratisProfileProps = {
   editMode?: boolean
   onEditSection?: (section: 'hero' | 'avatar' | 'identity' | 'contact' | 'about' | 'portfolio' | 'services' | 'links' | 'appearance') => void
   onTrackEvent?: (eventType: string, eventLabel?: string) => void
+  showOwnerBar?: boolean
 }
 
 type DetailModal = { kind: 'portfolio'; item: FreeProfilePortfolioItem } | null
@@ -194,7 +195,7 @@ function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layou
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent, showOwnerBar=true }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -372,7 +373,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   return (
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
-      {profile.experience && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
+      {showOwnerBar && profile.experience && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
       {topContent}
       <div className="ilx-shell">
         <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
