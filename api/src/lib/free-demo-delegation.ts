@@ -73,6 +73,10 @@ export async function resolveFreeDemoDelegation(c:any,actorUserId:string):Promis
     await c.env.DB.prepare("UPDATE profiles SET template_data=?,updated_at=datetime('now') WHERE id=?").bind(normalizedTemplate,profileId).run()
   }
 
+  // Repair Demo sample accounts created before the logo-backed seed existed.
+  await c.env.DB.prepare("UPDATE profile_bank_accounts SET bank_code='banreservas',bank_name='Banreservas',updated_at=datetime('now') WHERE profile_id=? AND id=? AND bank_code IS NULL AND bank_name='Banco de demostración' AND account_number='0000000000' AND holder_name='Cuenta de demostración'")
+    .bind(profileId,'demo-v2:'+String((row as any).demo_id)+':bank:sample').run()
+
   if(template.free_demo_v2_bank_seeded!==true){
     const countRow=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM profile_bank_accounts WHERE profile_id=?").bind(profileId).first()
     const count=Number((countRow as any)?.n||0)
