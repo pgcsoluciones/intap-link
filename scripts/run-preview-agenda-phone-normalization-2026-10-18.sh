@@ -49,7 +49,7 @@ cat > "$LOG_DIR/allowed.txt" <<'EOF_ALLOWED'
 api/src/appointments-core.ts
 app/src/components/appointments/AppointmentManager.tsx
 scripts/run-preview-agenda-phone-normalization-2026-10-18.sh
-scripts/test-sponsored-profile-contract.mjs
+scripts/test-agenda-phone-normalization-contract.mjs
 web/src/components/appointments/AppointmentRequestModal.tsx
 EOF_ALLOWED
 git diff --name-only "$REMOTE/main"...HEAD | sort > "$LOG_DIR/actual.txt"
