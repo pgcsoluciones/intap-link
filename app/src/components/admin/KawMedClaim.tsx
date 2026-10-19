@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../lib/api'
 
 const STORAGE_KEY='kawvo_kawmed_claim_code'
+const RESUME_KEY='kawvo_kawmed_claim_resume'
 function valid(code:string){return /^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(code)}
 
 export default function KawMedClaim(){
@@ -36,6 +37,7 @@ export default function KawMedClaim(){
       const j:any=await apiPost('/me/kawmed/claim',{code})
       if(j?.ok){
         sessionStorage.removeItem(STORAGE_KEY);localStorage.removeItem(STORAGE_KEY)
+        sessionStorage.removeItem(RESUME_KEY);localStorage.removeItem(RESUME_KEY)
         setMessage('Acceso KawMed activado. Estamos abriendo tu panel médico…')
         window.setTimeout(()=>window.location.assign(String(j.data?.next_url||'/admin/medical')),500)
         return
@@ -45,6 +47,7 @@ export default function KawMedClaim(){
     }catch(e:any){
       if(e?.message==='Unauthorized'||e?.unauthorized){
         sessionStorage.setItem(STORAGE_KEY,code);localStorage.setItem(STORAGE_KEY,code)
+        sessionStorage.setItem(RESUME_KEY,'1');localStorage.setItem(RESUME_KEY,'1')
         window.location.assign('/admin/login?resume=kawmed&med_code='+encodeURIComponent(code))
         return
       }
