@@ -17,6 +17,8 @@ type Context={
   pending_count:number
   pending:Pending[]
   manage_url:string
+  resource_url?:string
+  resource_label?:string
 }
 type Props={
   username:string
@@ -78,9 +80,14 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   const origin=manageOrigin.replace(/\/$/,'')
   const manageUrl=origin+String(context.manage_url||'/admin/sponsored/agenda')
   const settingsUrl=origin+settingsPath
+  const resourceUrl=String(context.resource_url||'').trim()
+  const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
   return <div style={{position:'sticky',top:0,zIndex:58,background:'rgba(255,255,255,.96)',backdropFilter:'blur(12px)',borderBottom:'1px solid #e2e8f0',fontFamily:'Inter,system-ui,sans-serif'}}>
     <div style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
-      <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>Configuración</button>
+      <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
+        <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>Configuración</button>
+        {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>{resourceLabel}</a>}
+      </div>
       <div style={{display:'flex',alignItems:'center',gap:7}}>
         <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}} />
         <button type="button" onClick={()=>window.location.assign(manageUrl)} style={{...pill,borderColor:palette.accent+'44',background:palette.accentSoft,color:palette.text}}><FaCalendarAlt/>Agenda</button>
