@@ -95,6 +95,7 @@ async function medicalSponsorContext(c:any,profileId:string){
     JOIN sponsor_tenants st ON st.id=mps.sponsor_id
     LEFT JOIN medical_sponsor_programs msp ON msp.id=mps.program_id AND msp.enabled=1
     WHERE mps.medical_profile_id=? AND mps.enabled=1 AND st.is_active=1
+      AND (mps.program_id IS NULL OR msp.id IS NOT NULL)
     LIMIT 1`).bind(profileId).first().catch(()=>null)
   if(!row)return null
   const vademecumUrl=safeExternalUrl((row as any).program_vademecum_url||(row as any).vademecum_url)
