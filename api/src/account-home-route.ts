@@ -83,6 +83,22 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
     }})
   }
 
+  const medical=await c.env.DB.prepare(
+    `SELECT id,slug,status FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`
+  ).bind(userId).first()
+
+  if(medical){
+    const slug=String((medical as any).slug||'')
+    return c.json({ok:true,data:{
+      kind:'med',
+      route:'/admin/medical',
+      profile_id:String((medical as any).id||''),
+      status:String((medical as any).status||'draft'),
+      public_route:slug?'/m/'+slug:null,
+      agenda_route:'/admin/medical/agenda',
+    }})
+  }
+
   const profile=await c.env.DB.prepare(
     `SELECT id,plan_id,slug FROM profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`
   ).bind(userId).first()
