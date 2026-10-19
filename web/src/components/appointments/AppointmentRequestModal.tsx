@@ -17,6 +17,7 @@ type Props={
   palette:Palette
   onClose:()=>void
   onToast:(message:string)=>void
+  detailsPlaceholder?:string
 }
 
 function normalizePhoneInput(value:string){
@@ -29,7 +30,7 @@ function humanSlot(value:string){
   return new Intl.DateTimeFormat('es-DO',{hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(2000,0,1,h,m))
 }
 
-export default function AppointmentRequestModal({apiBase,palette,onClose,onToast}:Props){
+export default function AppointmentRequestModal({apiBase,palette,onClose,onToast,detailsPlaceholder}:Props){
   const[config,setConfig]=useState<Config|null>(null)
   const[configLoading,setConfigLoading]=useState(true)
   const[slots,setSlots]=useState<Slot[]>([])
@@ -132,7 +133,7 @@ export default function AppointmentRequestModal({apiBase,palette,onClose,onToast
           </label>
 
           <label style={label}>Detalles <span style={optional}>(opcional)</span>
-            <textarea style={{...field,minHeight:112,resize:'vertical'}} maxLength={900} value={form.details} onChange={e=>setForm({...form,details:e.target.value})} placeholder="Ej.: Primera consulta por molestias recientes, seguimiento de tratamiento o revisión de resultados."/>
+            <textarea style={{...field,minHeight:112,resize:'vertical'}} maxLength={900} value={form.details} onChange={e=>setForm({...form,details:e.target.value})} placeholder={detailsPlaceholder||'Ej.: Me interesa llevar mi vehículo para una evaluación antes de decidir el servicio.'}/>
           </label>
         </div>
 
