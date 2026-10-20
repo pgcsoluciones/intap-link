@@ -31,6 +31,9 @@ const prodPrivateSponsor=read('api/migrations/0094_kawmed_private_sponsorship.sq
 const previewAcceptedInsurance=read('api/migrations-preview/0098_kawmed_accepted_insurances.sql')
 const prodAcceptedInsurance=read('api/migrations/0098_kawmed_accepted_insurances.sql')
 const medicalOwner=read('api/src/medical-profile-owner.ts')
+const previewMasterProfile=read('api/migrations-preview/0099_kawmed_master_public_profile.sql')
+const prodMasterProfile=read('api/migrations/0099_kawmed_master_public_profile.sql')
+const sponsorMaster=read('app/src/components/admin/sponsored/SponsorKawMed.tsx')
 
 assert(apiIndex.includes("registerMedicalProfileRoutes"),'API no registra KawMed')
 assert(route.includes("/api/v1/public/medical-profiles/:slug"),'falta endpoint público KawMed')
@@ -98,6 +101,16 @@ assert(medicalOwner.includes("/api/v1/me/medical-profile/centers"),'configuraci�
 assert(medicalOwner.includes("/api/v1/me/medical-profile/schedules"),'configuración KawMed no administra horarios')
 assert(medicalOwner.includes("/api/v1/me/medical-profile/insurances"),'configuración KawMed no administra seguros')
 assert(medicalOwner.includes("/api/v1/me/medical-profile/media"),'configuración KawMed no reutiliza carga de medios')
+assert(medicalOwner.includes("scope')||'').trim()==='sponsor_master'",'editor médico no admite contexto Master')
+assert(medicalOwner.includes('medical_sponsor_master_profiles'),'editor Master no reutiliza medical_profiles')
+assert(medicalAppointments.includes('medical_sponsor_master_profiles'),'Agenda Master no reutiliza perfil médico')
+assert(medicalManager.includes("scope==='sponsor_master'"),'gestor Agenda no conserva scope Master')
+assert(medicalDashboard.includes("scope='doctor'"),'dashboard médico no es reusable por Master')
+assert(sponsorMaster.includes('<MedicalDashboard scope="sponsor_master" embedded/>'),'Master KawMed no reutiliza editor médico aprobado')
+assert(sponsorMaster.includes('Mi presentación'),'Master KawMed no tiene menú de presentación')
+assert(sponsorMaster.includes('Identidad de patrocinio'),'Master KawMed no tiene menú de identidad')
+assert(sponsorMaster.includes('Códigos y trazabilidad'),'Master KawMed no tiene menú de trazabilidad')
+assert(sponsorMaster.includes('Credenciales'),'Master KawMed no tiene menú de credenciales')
 
 for (const [name,sql] of [
   ['preview 0090',previewMigration],
@@ -119,4 +132,6 @@ for (const [name,sql] of [
 
 assert(previewAcceptedInsurance.includes('medical_profile_insurances'),'Preview no crea seguros aceptados KawMed')
 assert(prodAcceptedInsurance.includes('medical_profile_insurances'),'Producción no conserva seguros aceptados KawMed')
+assert(previewMasterProfile.includes('medical_sponsor_master_profiles'),'Preview no relaciona Master con perfil público KawMed')
+assert(prodMasterProfile.includes('medical_sponsor_master_profiles'),'Producción no conserva relación Master/perfil KawMed')
 console.log('KawMed medical profile v1 contract: OK')
