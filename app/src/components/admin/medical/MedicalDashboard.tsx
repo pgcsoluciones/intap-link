@@ -54,7 +54,7 @@ export default function MedicalDashboard(){
 
   const slug=String(profile?.slug||'')
   const centers=profile?.centers||[],schedules=profile?.schedules||[]
-  const centerById=useMemo(()=>new Map(centers.map((c:any)=>[String(c.id),c])),[centers])
+  const centerById=useMemo(()=>new Map<string,any>(centers.map((c:any)=>[String(c.id),c] as [string,any])),[centers])
   const completeness=useMemo(()=>{
     const checks=[Boolean(profile?.name),Boolean(profile?.specialty),Boolean(profile?.avatar_url),Boolean(profile?.cover_url),centers.length>0,schedules.length>0]
     return{done:checks.filter(Boolean).length,total:checks.length}
