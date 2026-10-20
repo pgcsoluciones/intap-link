@@ -28,7 +28,9 @@ export async function listSponsorAccounts(c:any,userId:string){
   if(!userId)return[]
   const rows=await c.env.DB.prepare(`
     SELECT sm.sponsor_id,sm.role,sm.status,sm.created_at,st.name,st.slug,st.sponsor_type,st.logo_url,st.is_active,
-           EXISTS(SELECT 1 FROM medical_sponsor_programs msp WHERE msp.sponsor_id=st.id AND msp.enabled=1) AS has_kawmed
+           EXISTS(SELECT 1 FROM medical_sponsor_programs msp WHERE msp.sponsor_id=st.id AND msp.enabled=1) AS has_kawmed,
+           EXISTS(SELECT 1 FROM sponsor_artifacts sa WHERE sa.sponsor_id=st.id AND sa.artifact_role='master') AS has_normal_master,
+           EXISTS(SELECT 1 FROM medical_sponsor_masters msm WHERE msm.sponsor_id=st.id AND msm.status<>'inactive') AS has_kawmed_master
       FROM sponsor_members sm
       JOIN sponsor_tenants st ON st.id=sm.sponsor_id
      WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1
