@@ -2,6 +2,7 @@ import app from './index'
 import { cookieNames } from './lib/cookies'
 import { requireSuperAdmin } from './lib/admin-auth'
 import { SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL } from './sponsored-multiprofile-access'
+import { resolveOwnedSponsoredProfile, sponsoredProfileScope } from './sponsored-profile-scope'
 
 const USERNAME_RE=/^[a-z0-9][a-z0-9-]{2,29}$/
 const RESERVED=new Set(['admin','api','app','www','superadmin','support','demo','med','p','l'])
@@ -61,7 +62,7 @@ app.patch('/api/v1/superadmin/sponsors/:id',requireSuperAdmin('super_admin'),asy
 
 app.post('/api/v1/me/sponsored-profile/publish',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
-  const row=await c.env.DB.prepare(`SELECT * FROM sponsored_profiles WHERE user_id=? ORDER BY CASE WHEN profile_role='sponsor_owner' THEN 0 ELSE 1 END,created_at DESC LIMIT 1`).bind(userId).first()
+  const row=await resolveOwnedSponsoredProfile(c,userId,sponsoredProfileScope(c))
   if(!row)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
   const missing:string[]=[];const username=slug((row as any).username);const role=String((row as any).profile_role||'beneficiary')
   if(!username)missing.push('usuario')
