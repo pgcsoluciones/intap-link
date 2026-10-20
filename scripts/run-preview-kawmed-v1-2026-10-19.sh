@@ -275,6 +275,10 @@ PY
 code="$(curl -sS -o /dev/null -w '%{http_code}' https://preview.intaprd.com/api/v1/me/medical-profile/sponsor-context)"
 [ "$code" = "401" ] || fail "Patrocinio médico privado quedó expuesto sin sesión: HTTP $code"
 
+# El panel Master KawMed también es privado: sin sesión patrocinadora debe negar acceso.
+code="$(curl -sS -o /dev/null -w '%{http_code}' https://preview.intaprd.com/api/v1/sponsor/kawmed/overview)"
+[ "$code" = "401" ] || fail "Trazabilidad KawMed del patrocinador quedó expuesta sin sesión: HTTP $code"
+
 APPT_JSON="$LOG_DIR/kawmed-appointments.json"
 code="$(curl -sS -o "$APPT_JSON" -w '%{http_code}' https://preview.intaprd.com/api/v1/public/medical-profiles/lauramendez/appointments)"
 [ "$code" = "200" ] || { cat "$APPT_JSON"; fail "Agenda pública KawMed HTTP $code"; }
