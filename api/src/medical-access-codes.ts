@@ -101,6 +101,33 @@ app.get('/api/v1/public/kawmed-master/:code',async(c:any)=>{
   return c.json({ok:true,data:{master_code:String((row as any).master_code),status:String((row as any).status),sponsor_id:String((row as any).sponsor_id),sponsor_name:String((row as any).sponsor_name||''),logo_url:String((row as any).logo_url||'')}})
 })
 
+
+app.get('/api/v1/me/kawmed-master/access/:code',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||''),code=normalizeCode(c.req.param('code'))
+  if(!validMedMasterCode(code))return c.json({ok:false,error:'Código Master KawMed inválido.'},422)
+  const master=await c.env.DB.prepare(`SELECT msm.sponsor_id,msm.status,msm.claimed_by_user_id,st.contact_email,st.is_active
+    FROM medical_sponsor_masters msm JOIN sponsor_tenants st ON st.id=msm.sponsor_id
+    WHERE msm.master_code=? LIMIT 1`).bind(code).first()
+  if(!master)return c.json({ok:false,error:'Master KawMed no encontrado.'},404)
+  const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
+  const sponsorEmail=String((master as any).contact_email||'').trim().toLowerCase()
+  const sponsorId=String((master as any).sponsor_id||'')
+  const alreadyMember=await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,userId).first()
+  const authorizedSpecial=accountEmail===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL
+  const claimedBy=String((master as any).claimed_by_user_id||'')
+  const claimedByOther=String((master as any).status)==='claimed'&&claimedBy&&claimedBy!==userId
+  const allowed=Number((master as any).is_active)===1&&!claimedByOther&&Boolean(alreadyMember||authorizedSpecial||(sponsorEmail&&accountEmail===sponsorEmail))
+  return c.json({ok:true,data:{
+    authenticated:true,
+    current_email:accountEmail,
+    allowed,
+    sponsor_id:sponsorId,
+    status:String((master as any).status||'available'),
+    reason:claimedByOther?'claimed_by_other':allowed?'allowed':'wrong_account',
+  }})
+})
+
 app.post('/api/v1/me/kawmed-master/claim',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),body=await c.req.json().catch(()=>({})),code=normalizeCode(body.code)
   if(!validMedMasterCode(code))return c.json({ok:false,error:'Código Master KawMed inválido.'},422)
