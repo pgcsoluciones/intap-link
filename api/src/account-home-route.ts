@@ -1,6 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
-import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { listOwnedSponsoredBeneficiaryProfiles, resolveSponsorMembership, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -27,14 +27,7 @@ async function requireUser(c:any,next:any){
 app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
 
-  const sponsorMembership=await c.env.DB.prepare(
-    `SELECT sm.sponsor_id,sm.role,st.is_active
-       FROM sponsor_members sm
-       LEFT JOIN sponsor_tenants st ON st.id=sm.sponsor_id
-      WHERE sm.user_id=? AND sm.status='active'
-      ORDER BY CASE WHEN sm.role='owner' THEN 0 ELSE 1 END
-      LIMIT 1`
-  ).bind(userId).first()
+  const sponsorMembership=await resolveSponsorMembership(c,userId)
 
   if(sponsorMembership){
     const masterProfile=await c.env.DB.prepare(
