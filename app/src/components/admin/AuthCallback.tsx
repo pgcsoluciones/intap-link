@@ -8,6 +8,8 @@ const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
 const TRIAL_LEAD_TOKEN_KEY = 'kawlink_trial_lead_token'
 const KAWMED_CLAIM_CODE_KEY = 'kawvo_kawmed_claim_code'
 const KAWMED_CLAIM_RESUME_KEY = 'kawvo_kawmed_claim_resume'
+const KAWMED_MASTER_CODE_KEY = 'kawvo_kawmed_master_code'
+const KAWMED_MASTER_RESUME_KEY = 'kawvo_kawmed_master_resume'
 
 function readScanCode(): string {
   const value = sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || ''
@@ -27,6 +29,14 @@ function readKawMedCode(): string {
   const value = sessionStorage.getItem(KAWMED_CLAIM_CODE_KEY) || localStorage.getItem(KAWMED_CLAIM_CODE_KEY) || ''
   const code = value.trim().toUpperCase()
   return /^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(code) ? code : ''
+}
+
+function readKawMedMasterCode(): string {
+  const resume = sessionStorage.getItem(KAWMED_MASTER_RESUME_KEY) || localStorage.getItem(KAWMED_MASTER_RESUME_KEY) || ''
+  if (resume !== '1') return ''
+  const value = sessionStorage.getItem(KAWMED_MASTER_CODE_KEY) || localStorage.getItem(KAWMED_MASTER_CODE_KEY) || ''
+  const code = value.trim().toUpperCase()
+  return /^MEDM-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(code) ? code : ''
 }
 
 function readSponsorMasterCode(): string {
@@ -69,6 +79,12 @@ export default function AuthCallback() {
         }
         if (authFlow === 'free_demo_claim') {
           navigate(String(json.data?.next_url || '/admin/free/credentials?claimed=1'), { replace: true })
+          return
+        }
+
+        const kawMedMasterCode = readKawMedMasterCode()
+        if (kawMedMasterCode) {
+          navigate(`/claim/kawmed-master?code=${encodeURIComponent(kawMedMasterCode)}`, { replace: true })
           return
         }
 
