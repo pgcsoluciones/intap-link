@@ -1,6 +1,7 @@
 import app from './index'
 import { sendWebPushToUser } from './pwa-push'
 import { cookieNames } from './lib/cookies'
+import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 import {
   availableAppointmentSlots,
   changeAppointmentRequestStatus,
