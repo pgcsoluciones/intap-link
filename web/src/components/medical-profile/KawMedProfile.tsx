@@ -12,12 +12,12 @@ import {
   FiShare2,
   FiShield,
 } from 'react-icons/fi'
-import { FaHeartbeat, FaQrcode, FaStethoscope, FaTimes, FaWhatsapp } from 'react-icons/fa'
+import { FaQrcode, FaTimes, FaWhatsapp } from 'react-icons/fa'
 import { apiGet } from '../../lib/api'
 import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
 import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
 import KawMedModal from './KawMedModal'
-import type { KawMedCenter, KawMedProfileData, KawMedSchedule, KawMedService } from './types'
+import type { KawMedCenter, KawMedProfileData, KawMedSchedule } from './types'
 import './KawMedProfile.css'
 
 type ApiResponse = {
@@ -26,7 +26,7 @@ type ApiResponse = {
   error?: string
 }
 
-type ModalName = 'schedule' | 'services' | 'centers' | 'location' | 'insurance' | null
+type ModalName = 'schedule' | 'centers' | 'location' | 'insurance' | null
 
 function formatTime(value: string): string {
   const [rawHour = '0', rawMinute = '00'] = value.split(':')
@@ -77,13 +77,6 @@ function ScheduleList({ schedules }: { schedules: KawMedSchedule[] }) {
       ))}
     </div>
   )
-}
-
-function ServiceIcon({ service }: { service: KawMedService }) {
-  const value = `${service.title} ${service.category || ''}`.toLowerCase()
-  if (value.includes('electro') || value.includes('ecg')) return <FiActivity />
-  if (value.includes('prevención') || value.includes('prevencion') || value.includes('riesgo')) return <FaHeartbeat />
-  return <FaStethoscope />
 }
 
 export default function KawMedProfile() {
@@ -400,15 +393,6 @@ export default function KawMedProfile() {
             <FiChevronRight className="kawmed-panel__chevron" />
           </button>
 
-          <button className="kawmed-panel kawmed-panel--direct" type="button" onClick={() => setModal('services')}>
-            <span className="kawmed-panel__icon kawmed-panel__icon--service"><FaStethoscope /></span>
-            <span className="kawmed-panel__title">
-              <strong>Servicios / Especialidades</strong>
-              <small>Áreas de atención profesional</small>
-            </span>
-            <FiChevronRight className="kawmed-panel__chevron" />
-          </button>
-
           <article className="kawmed-panel kawmed-panel--insurance">
             <div className="kawmed-panel__trigger kawmed-panel__trigger--static">
               <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShield /></span>
@@ -469,20 +453,6 @@ export default function KawMedProfile() {
 
       <KawMedModal open={modal === 'schedule'} title="Horarios y centros de consulta" onClose={() => setModal(null)}>
         <ScheduleList schedules={profile.schedules} />
-      </KawMedModal>
-
-      <KawMedModal open={modal === 'services'} title="Servicios y especialidades" onClose={() => setModal(null)}>
-        <div className="kawmed-detail-list">
-          {profile.services.map((service) => (
-            <article key={service.id} className="kawmed-detail-card">
-              <span><ServiceIcon service={service} /></span>
-              <div>
-                <strong>{service.title}</strong>
-                {service.description ? <p>{service.description}</p> : null}
-              </div>
-            </article>
-          ))}
-        </div>
       </KawMedModal>
 
       <KawMedModal open={modal === 'centers'} title="Centros de atención" onClose={() => setModal(null)}>
