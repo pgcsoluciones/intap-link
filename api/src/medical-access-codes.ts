@@ -110,6 +110,8 @@ app.post('/api/v1/me/kawmed-master/claim',requireUser,async(c:any)=>{
   if(!master)return c.json({ok:false,error:'Master KawMed no encontrado.'},404)
   if(Number((master as any).is_active)!==1)return c.json({ok:false,error:'El patrocinador está inactivo.'},409)
   if(String((master as any).status)==='inactive')return c.json({ok:false,error:'Este Master KawMed está inactivo.'},409)
+  const claimedBy=String((master as any).claimed_by_user_id||'')
+  if(String((master as any).status)==='claimed'&&claimedBy&&claimedBy!==userId)return c.json({ok:false,error:'Este Master KawMed ya fue activado por otra cuenta.'},409)
 
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
