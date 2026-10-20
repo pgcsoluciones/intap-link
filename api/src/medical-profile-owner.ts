@@ -86,7 +86,7 @@ app.patch('/api/v1/me/medical-profile/centers/:id',requireUser,async(c:any)=>{
   const current=await c.env.DB.prepare("SELECT * FROM medical_profile_centers WHERE id=? AND medical_profile_id=? LIMIT 1").bind(id,String(r.profile.id)).first()
   if(!current)return c.json({ok:false,error:'Centro no encontrado.'},404)
   await c.env.DB.prepare(`UPDATE medical_profile_centers SET name=?,address=?,city=?,province=?,country=?,phone=?,map_url=?,latitude=?,longitude=?,sort_order=?,active=? WHERE id=?`).bind(
-    b.name!==undefined?clean(b.name,120):current.name,b.address!==undefined?clean(b.address,200):current.address,b.city!==undefined?clean(b.city,100):current.city,b.province!==undefined?clean(b.province,100):current.province,b.country!==undefined?clean(b.country,100):current.country,b.phone!==undefined?clean(b.phone,40):current.phone,b.map_url!==undefined?clean(b.map_url,1000):current.map_url,b.latitude!==undefined?b.latitude:current.latitude,b.longitude!==undefined?b.longitude:current.longitude,b.sort_order!==undefined?Number(b.sort_order):current.sort_order,b.active===undefined?Number(current.active??1):(b.active?1:0),id
+    b.name!==undefined?clean(b.name,120):(current as any).name,b.address!==undefined?clean(b.address,200):(current as any).address,b.city!==undefined?clean(b.city,100):(current as any).city,b.province!==undefined?clean(b.province,100):(current as any).province,b.country!==undefined?clean(b.country,100):(current as any).country,b.phone!==undefined?clean(b.phone,40):(current as any).phone,b.map_url!==undefined?clean(b.map_url,1000):(current as any).map_url,b.latitude!==undefined?b.latitude:(current as any).latitude,b.longitude!==undefined?b.longitude:(current as any).longitude,b.sort_order!==undefined?Number(b.sort_order):(current as any).sort_order,b.active===undefined?Number((current as any).active??1):(b.active?1:0),id
   ).run()
   return c.json({ok:true})
 })
@@ -113,11 +113,11 @@ app.patch('/api/v1/me/medical-profile/schedules/:id',requireUser,async(c:any)=>{
   const id=clean(c.req.param('id'),80),b=await c.req.json().catch(()=>({}))
   const current=await c.env.DB.prepare("SELECT * FROM medical_profile_schedules WHERE id=? AND medical_profile_id=? LIMIT 1").bind(id,String(r.profile.id)).first()
   if(!current)return c.json({ok:false,error:'Horario no encontrado.'},404)
-  const centerId=b.center_id!==undefined?clean(b.center_id,80):String(current.center_id)
+  const centerId=b.center_id!==undefined?clean(b.center_id,80):String((current as any).center_id)
   const center=await c.env.DB.prepare("SELECT id FROM medical_profile_centers WHERE id=? AND medical_profile_id=? LIMIT 1").bind(centerId,String(r.profile.id)).first()
   if(!center)return c.json({ok:false,error:'Centro inválido.'},422)
   await c.env.DB.prepare(`UPDATE medical_profile_schedules SET center_id=?,day_of_week=?,shift=?,start_time=?,end_time=?,notes=?,sort_order=?,active=? WHERE id=?`).bind(
-    centerId,b.day_of_week!==undefined?Math.max(1,Math.min(7,Number(b.day_of_week))):current.day_of_week,b.shift!==undefined?clean(b.shift,60):current.shift,b.start_time!==undefined?clean(b.start_time,5):current.start_time,b.end_time!==undefined?clean(b.end_time,5):current.end_time,b.notes!==undefined?clean(b.notes,180):current.notes,b.sort_order!==undefined?Number(b.sort_order):current.sort_order,b.active===undefined?Number(current.active??1):(b.active?1:0),id
+    centerId,b.day_of_week!==undefined?Math.max(1,Math.min(7,Number(b.day_of_week))):(current as any).day_of_week,b.shift!==undefined?clean(b.shift,60):(current as any).shift,b.start_time!==undefined?clean(b.start_time,5):(current as any).start_time,b.end_time!==undefined?clean(b.end_time,5):(current as any).end_time,b.notes!==undefined?clean(b.notes,180):(current as any).notes,b.sort_order!==undefined?Number(b.sort_order):(current as any).sort_order,b.active===undefined?Number((current as any).active??1):(b.active?1:0),id
   ).run()
   return c.json({ok:true})
 })
