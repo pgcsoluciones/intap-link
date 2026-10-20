@@ -178,10 +178,11 @@ async function sponsorMasterMedicalProfile(c:any,userId:string){
 }
 async function ownedSubject(c:any){
   const userId=String(c.get('userId')||'')
-  const profile=medicalOwnerScope(c)==='sponsor_master'
+  let profile=medicalOwnerScope(c)==='sponsor_master'
     ?await sponsorMasterMedicalProfile(c,userId)
     :await c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
       FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
+  if(!profile&&medicalOwnerScope(c)!=='sponsor_master')profile=await sponsorMasterMedicalProfile(c,userId)
   if(!profile)return null
   const subjectId=String((profile as any).id||'')
   await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
@@ -302,8 +303,12 @@ app.post('/api/v1/me/medical-profile/appointments/requests/:id/:action',requireU
 app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),slug=cleanSlug(c.req.query('username'))
   if(!slug)return c.json({ok:false,error:'Perfil inválido.'},400)
-  const resolved=await ownedSubject(c)
-  const profile=resolved&&String((resolved.profile as any).slug||'').toLowerCase()===slug?resolved.profile:null
+  let resolved=await ownedSubject(c)
+  let profile=resolved&&String((resolved.profile as any).slug||'').toLowerCase()===slug?resolved.profile:null
+  if(!profile){
+    const sponsorProfile=await sponsorMasterMedicalProfile(c,userId)
+    if(sponsorProfile&&String((sponsorProfile as any).slug||'').toLowerCase()===slug)profile=sponsorProfile
+  }
   if(!profile)return c.json({ok:false,error:'Not owner'},403)
   const subjectId=String((profile as any).id||'')
   await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
