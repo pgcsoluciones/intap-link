@@ -101,6 +101,7 @@ app/src/components/admin/SuperAdminLayout.tsx
 app/src/components/notifications/PwaNotificationBridge.tsx
 app/src/components/admin/medical/MedicalAppointments.tsx
 app/src/components/admin/medical/MedicalDashboard.tsx
+app/src/components/admin/medical/MedicalCenterLocationPicker.tsx
 app/src/components/admin/medical/MedicalNotifications.tsx
 app/src/components/admin/sponsored/SponsorDashboard.tsx
 app/src/components/admin/sponsored/SponsorKawMed.tsx
