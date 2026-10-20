@@ -59,6 +59,7 @@ api/migrations-preview/0093_kawmed_medical_appointment_reasons.sql
 api/migrations-preview/0094_kawmed_private_sponsorship.sql
 api/migrations-preview/0095_kawmed_access_codes_programs.sql
 api/migrations-preview/0096_kawmed_representatives_traceability.sql
+api/migrations-preview/0097_kawmed_master_multiaccount.sql
 api/migrations/0090_kawmed_medical_profiles_v1.sql
 api/migrations/0091_kawmed_insurance_exclusions.sql
 api/migrations/0092_kawmed_shared_appointments.sql
@@ -66,11 +67,20 @@ api/migrations/0093_kawmed_medical_appointment_reasons.sql
 api/migrations/0094_kawmed_private_sponsorship.sql
 api/migrations/0095_kawmed_access_codes_programs.sql
 api/migrations/0096_kawmed_representatives_traceability.sql
+api/migrations/0097_kawmed_master_multiaccount.sql
 api/src/index.ts
 api/src/account-home-route.ts
 api/src/medical-appointments.ts
 api/src/medical-access-codes.ts
 api/src/preview-free-entry.ts
+api/src/sponsor-multiaccount.ts
+api/src/sponsored-brand-controls.ts
+api/src/sponsored-media.ts
+api/src/sponsored-multiprofile-access.ts
+api/src/sponsored-owner-flow.ts
+api/src/sponsored-profile-scope.ts
+api/src/sponsored-profiles.ts
+api/src/sponsored-scan.ts
 api/src/routes/medical-profile.ts
 scripts/run-preview-kawmed-v1-2026-10-19.sh
 scripts/test-kawmed-medical-profile-v1-contract.mjs
@@ -80,6 +90,7 @@ app/src/App.tsx
 app/src/components/admin/AdminLogin.tsx
 app/src/components/admin/AuthCallback.tsx
 app/src/components/admin/KawMedClaim.tsx
+app/src/components/admin/KawMedMasterClaim.tsx
 app/src/components/admin/SuperAdminKawMed.tsx
 app/src/components/admin/SuperAdminLayout.tsx
 app/src/components/notifications/PwaNotificationBridge.tsx
@@ -155,7 +166,7 @@ if [ -n "$PENDING_FILES" ]; then
   while IFS= read -r migration; do
     [ -z "$migration" ] && continue
     case "$migration" in
-      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql|0092_kawmed_shared_appointments.sql|0093_kawmed_medical_appointment_reasons.sql|0094_kawmed_private_sponsorship.sql|0095_kawmed_access_codes_programs.sql|0096_kawmed_representatives_traceability.sql) ;;
+      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql|0092_kawmed_shared_appointments.sql|0093_kawmed_medical_appointment_reasons.sql|0094_kawmed_private_sponsorship.sql|0095_kawmed_access_codes_programs.sql|0096_kawmed_representatives_traceability.sql|0097_kawmed_master_multiaccount.sql) ;;
       *) fail "Migración Preview pendiente fuera de KawMed: $migration" ;;
     esac
   done <<< "$PENDING_FILES"
@@ -183,7 +194,9 @@ SCHEMA_JSON="$(
        'medical_code_batches',
        'medical_access_codes',
        'medical_representatives',
-       'medical_code_representative_assignments'
+       'medical_code_representative_assignments',
+       'medical_sponsor_masters',
+       'sponsor_user_context'
      )
      ORDER BY name;
     SELECT slug,status,user_id FROM medical_profiles WHERE slug='lauramendez' LIMIT 1;
@@ -197,7 +210,7 @@ import json,sys
 data=json.loads(sys.argv[1]); rows=[]
 for block in data if isinstance(data,list) else []: rows.extend(block.get('results') or [])
 names={str(r.get('name') or '') for r in rows if r.get('name')}
-required={'medical_profiles','medical_profile_centers','medical_profile_schedules','medical_profile_services','medical_profile_insurance_exclusions','medical_sponsor_programs','medical_code_batches','medical_access_codes','medical_representatives','medical_code_representative_assignments'}
+required={'medical_profiles','medical_profile_centers','medical_profile_schedules','medical_profile_services','medical_profile_insurance_exclusions','medical_sponsor_programs','medical_code_batches','medical_access_codes','medical_representatives','medical_code_representative_assignments','medical_sponsor_masters','sponsor_user_context'}
 missing=required-names
 if missing: raise SystemExit('Faltan tablas KawMed: '+', '.join(sorted(missing)))
 demo=[r for r in rows if r.get('slug')=='lauramendez']
@@ -210,7 +223,7 @@ reasons=[r for r in rows if 'medical_reason_count' in r]
 if not reasons or int(reasons[0].get('medical_reason_count') or 0)<6: raise SystemExit('Faltan motivos médicos KawMed')
 sponsor=[r for r in rows if r.get('medical_profile_id')=='kawmed_demo_laura_mendez']
 if not sponsor or not sponsor[0].get('sponsor_id') or not sponsor[0].get('vademecum_url'): raise SystemExit('Falta patrocinio privado/vademécum del demo KawMed')
-print('✓ Schema KawMed + Agenda + patrocinio privado + códigos MED + visitadores disponibles')
+print('✓ Schema KawMed + Agenda + patrocinio privado + códigos MED + visitadores + Master médico + multicuenta disponibles')
 PY
 
 echo; echo "▶ Deploy App Pages Preview"
@@ -279,6 +292,10 @@ code="$(curl -sS -o /dev/null -w '%{http_code}' https://preview.intaprd.com/api/
 code="$(curl -sS -o /dev/null -w '%{http_code}' https://preview.intaprd.com/api/v1/sponsor/kawmed/overview)"
 [ "$code" = "401" ] || fail "Trazabilidad KawMed del patrocinador quedó expuesta sin sesión: HTTP $code"
 
+# El selector multicuenta también es privado.
+code="$(curl -sS -o /dev/null -w '%{http_code}' https://preview.intaprd.com/api/v1/sponsor/accounts)"
+[ "$code" = "401" ] || fail "Selector multicuenta quedó expuesto sin sesión: HTTP $code"
+
 APPT_JSON="$LOG_DIR/kawmed-appointments.json"
 code="$(curl -sS -o "$APPT_JSON" -w '%{http_code}' https://preview.intaprd.com/api/v1/public/medical-profiles/lauramendez/appointments)"
 [ "$code" = "200" ] || { cat "$APPT_JSON"; fail "Agenda pública KawMed HTTP $code"; }
@@ -300,6 +317,7 @@ for url in \
   "https://app.preview.intaprd.com/superadmin" \
   "https://app.preview.intaprd.com/superadmin/kawmed" \
   "https://app.preview.intaprd.com/claim/kawmed" \
+  "https://app.preview.intaprd.com/claim/kawmed-master" \
   "https://app.preview.intaprd.com/admin/sponsor/kawmed" \
   "https://app.preview.intaprd.com/admin/medical" \
   "https://app.preview.intaprd.com/admin/medical/agenda" \
