@@ -292,7 +292,9 @@ function waMessage(template:string,ctx:{visitador:string;medico:string;patrocina
 app.get('/api/v1/sponsor/kawmed/overview',async(c:any)=>{
   const auth:any=await sponsorMembership(c,false);if(auth.error)return auth.error
   const sponsorId=auth.sponsorId
-  const [programs,batches,reps,codes]=await Promise.all([
+  const [tenant,master,programs,batches,reps,codes]=await Promise.all([
+    c.env.DB.prepare("SELECT id,name,slug,logo_url,banner_image_url,contact_email,contact_whatsapp,website_url FROM sponsor_tenants WHERE id=? LIMIT 1").bind(sponsorId).first(),
+    c.env.DB.prepare("SELECT master_code,status,claimed_at FROM medical_sponsor_masters WHERE sponsor_id=? LIMIT 1").bind(sponsorId).first(),
     c.env.DB.prepare(`SELECT p.*,
       (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.program_id=p.id) codes_total,
       (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.program_id=p.id AND mac.status='claimed') codes_claimed
@@ -323,7 +325,35 @@ app.get('/api/v1/sponsor/kawmed/overview',async(c:any)=>{
       WHERE p.sponsor_id=?
       ORDER BY b.created_at DESC,COALESCE(mac.station_number,999999),mac.created_at`).bind(sponsorId).all()
   ])
-  return c.json({ok:true,data:{sponsor:{id:sponsorId,name:auth.sponsorName,role:auth.role},programs:programs.results||[],batches:batches.results||[],representatives:reps.results||[],codes:codes.results||[]}})
+  return c.json({ok:true,data:{
+    sponsor:{id:sponsorId,name:auth.sponsorName,role:auth.role,...(tenant||{})},
+    master:master||null,
+    programs:programs.results||[],
+    batches:batches.results||[],
+    representatives:reps.results||[],
+    codes:codes.results||[]
+  }})
+})
+
+app.patch('/api/v1/sponsor/kawmed/programs/:id',async(c:any)=>{
+  const auth:any=await sponsorMembership(c,true);if(auth.error)return auth.error
+  const id=clean(c.req.param('id'),80),body=await c.req.json().catch(()=>({}))
+  const current=await c.env.DB.prepare("SELECT * FROM medical_sponsor_programs WHERE id=? AND sponsor_id=? LIMIT 1").bind(id,auth.sponsorId).first()
+  if(!current)return c.json({ok:false,error:'Programa KawMed no encontrado.'},404)
+  await c.env.DB.prepare(`UPDATE medical_sponsor_programs SET
+    private_banner_image_url=?,private_cta_label=?,private_cta_url=?,
+    vademecum_url=?,vademecum_label=?,representative_cta_label=?,representative_message_template=?,
+    updated_at=datetime('now') WHERE id=? AND sponsor_id=?`).bind(
+      body.private_banner_image_url!==undefined?safeUrl(body.private_banner_image_url):String((current as any).private_banner_image_url||''),
+      body.private_cta_label!==undefined?(clean(body.private_cta_label,80)||'Conocer más'):String((current as any).private_cta_label||'Conocer más'),
+      body.private_cta_url!==undefined?safeUrl(body.private_cta_url):String((current as any).private_cta_url||''),
+      body.vademecum_url!==undefined?safeUrl(body.vademecum_url):String((current as any).vademecum_url||''),
+      body.vademecum_label!==undefined?(clean(body.vademecum_label,80)||'Ver vademécum'):String((current as any).vademecum_label||'Ver vademécum'),
+      body.representative_cta_label!==undefined?(clean(body.representative_cta_label,80)||'Mi visitador'):String((current as any).representative_cta_label||'Mi visitador'),
+      body.representative_message_template!==undefined?(clean(body.representative_message_template,400)||String((current as any).representative_message_template||'')):String((current as any).representative_message_template||''),
+      id,auth.sponsorId
+    ).run()
+  return c.json({ok:true})
 })
 
 app.post('/api/v1/sponsor/kawmed/representatives/import',async(c:any)=>{
