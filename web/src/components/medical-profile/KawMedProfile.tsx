@@ -312,11 +312,6 @@ export default function KawMedProfile() {
         }}
       />
       <div className="kawmed-profile">
-        <div className="kawmed-brandbar" aria-label="KawMed by KawLink">
-          <span className="kawmed-brandbar__mark">KAWLINK</span>
-          <span className="kawmed-brandbar__product">KawMed</span>
-        </div>
-
         <section className="kawmed-hero">
           <img className="kawmed-hero__image" src={heroImage} alt={profile.display_name} />
           <div className="kawmed-hero__shade" />
