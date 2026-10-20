@@ -9,6 +9,7 @@ type Program={id:string;sponsor_id:string;sponsor_name:string;name:string;privat
 type Code={id:string;code:string;status:string;station_number?:number;batch_name?:string;program_name?:string;sponsor_name?:string;claimed_email?:string;medical_name?:string;medical_slug?:string;medical_specialty?:string;medical_phone?:string;medical_email?:string;representative_name?:string;representative_zone?:string;created_at?:string;claimed_at?:string}
 type Profile={id:string;slug:string;name:string;professional_prefix?:string;specialty?:string;status:string;email?:string;code?:string;program_name?:string;sponsor_name?:string;claimed_at?:string}
 type Generated={code:string;claim_url:string}
+type MedicalMaster={master_code:string;status:string;claim_url:string;claimed_email?:string;claimed_at?:string;already_exists?:boolean}
 type PendingImageKind='sponsor-logo'|'program-banner-create'|'program-banner-edit'
 type PendingImage={file:File;kind:PendingImageKind}|null
 
@@ -33,6 +34,8 @@ export default function SuperAdminKawMed(){
   const[status,setStatus]=useState('all')
   const[create,setCreate]=useState({sponsor_id:'',name:'',private_banner_image_url:'',private_cta_label:'Conocer más',private_cta_url:'',vademecum_url:'',vademecum_label:'Ver vademécum',representative_cta_label:'Mi visitador',representative_message_template:'Hola {visitador}, soy {medico}. Te contacto desde mi panel KawMed y necesito información de {patrocinador}.',notes:''})
   const[batch,setBatch]=useState({program_id:'',name:'',quantity:10,notes:''})
+  const[masterSponsorId,setMasterSponsorId]=useState('')
+  const[medicalMaster,setMedicalMaster]=useState<MedicalMaster|null>(null)
   const[newSponsor,setNewSponsor]=useState({name:'',contact_email:'',website_url:'',logo_url:''})
   const[pending,setPending]=useState<PendingImage>(null)
   const[sponsorLogoFile,setSponsorLogoFile]=useState<File|null>(null)
@@ -52,6 +55,7 @@ export default function SuperAdminKawMed(){
   }
   useEffect(()=>{void load()},[])
   useEffect(()=>()=>{if(sponsorLogoPreview.startsWith('blob:'))URL.revokeObjectURL(sponsorLogoPreview)},[sponsorLogoPreview])
+  useEffect(()=>{if(!masterSponsorId){setMedicalMaster(null);return}apiGet('/superadmin/kawmed/masters/'+encodeURIComponent(masterSponsorId)).then((j:any)=>{if(j?.ok)setMedicalMaster(j.data||null)}).catch(()=>setMedicalMaster(null))},[masterSponsorId])
 
   const totals=useMemo(()=>({
     programs:programs.length,
@@ -97,7 +101,7 @@ export default function SuperAdminKawMed(){
       setNewSponsor({name:'',contact_email:'',website_url:'',logo_url:''})
       notify('Empresa patrocinadora registrada. Ya puedes crear su programa KawMed.')
       await load()
-      if(sponsorId)setCreate(current=>({...current,sponsor_id:sponsorId}))
+      if(sponsorId){setCreate(current=>({...current,sponsor_id:sponsorId}));setMasterSponsorId(sponsorId)}
     }catch(e){notify('',e instanceof Error?e.message:'No se pudo registrar.')}finally{setBusy(false)}
   }
   async function saveCroppedImage(blob:Blob,kind:'sponsor-logo'|'program-banner-create'|'program-banner-edit'){
@@ -117,6 +121,22 @@ export default function SuperAdminKawMed(){
       else setSelected(current=>current?({...current,private_banner_image_url:url}):current)
       notify('Cintillo ajustado y cargado con el gestor de imagen de KawLink.')
     }catch(e){notify('',e instanceof Error?e.message:'No se pudo subir el cintillo.')}finally{setBusy(false)}
+  }
+
+  async function generateMedicalMaster(){
+    if(!masterSponsorId)return
+    setBusy(true);notify('')
+    try{
+      const j:any=await apiPost('/superadmin/kawmed/masters/'+encodeURIComponent(masterSponsorId),{})
+      if(!j?.ok)throw new Error(j?.error||'No se pudo generar el Master KawMed.')
+      setMedicalMaster(j.data||null)
+      notify(j.data?.already_exists?'Este patrocinador ya tenía un Master KawMed; mostramos el acceso existente.':'Master KawMed generado y vinculado al patrocinador.')
+    }catch(e){notify('',e instanceof Error?e.message:'No se pudo generar el Master KawMed.')}finally{setBusy(false)}
+  }
+  async function copyMedicalMaster(){
+    if(!medicalMaster?.claim_url)return
+    await navigator.clipboard.writeText(medicalMaster.claim_url)
+    notify('URL del Master KawMed copiada.')
   }
 
   async function createProgram(){
@@ -177,6 +197,8 @@ export default function SuperAdminKawMed(){
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[['Programas',totals.programs],['Códigos MED',totals.codes],['Disponibles',totals.available],['Activados',totals.claimed]].map(([l,v])=><div key={String(l)} className={card}><p className="text-xs font-black uppercase tracking-[.07em] text-slate-400">{l}</p><p className="mt-2 text-3xl font-black">{v}</p></div>)}</section>
 
       <section className={card}><h2 className="text-xl font-black">Registrar empresa / laboratorio</h2><p className="mt-1 text-sm leading-6 text-slate-500">Reutiliza la identidad central de patrocinadores de Kawvo, pero no crea un perfil patrocinado público. Después podrás crear uno o varios programas KawMed privados para esta empresa.</p><div className="mt-4 grid gap-3 md:grid-cols-2"><label className={label}>Nombre<input className={input} value={newSponsor.name} onChange={e=>setNewSponsor({...newSponsor,name:e.target.value})}/></label><label className={label}>Correo propietario<input className={input} type="email" value={newSponsor.contact_email} onChange={e=>setNewSponsor({...newSponsor,contact_email:e.target.value})}/></label><label className={label}>Sitio web · opcional<input className={input} value={newSponsor.website_url} onChange={e=>setNewSponsor({...newSponsor,website_url:e.target.value})}/></label><div><p className={label}>Logo</p><button type="button" onClick={()=>sponsorLogoRef.current?.click()} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold">{sponsorLogoFile?'Cambiar logo':'Subir logo'}</button><input ref={sponsorLogoRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const file=e.target.files?.[0];e.target.value='';chooseImage(file,'sponsor-logo')}}/>{sponsorLogoPreview&&<div className="mt-3 flex h-28 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-3"><img src={sponsorLogoPreview} alt="Vista previa del logo" className="max-h-full max-w-full object-contain"/></div>}</div></div><button onClick={()=>void createSponsorBase()} disabled={busy||!newSponsor.name||!newSponsor.contact_email} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Registrar patrocinador médico</button></section>
+
+      <section className={card}><div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between"><div><h2 className="text-xl font-black">Acceso Master KawMed</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Genera un Master exclusivo para que el propietario del patrocinador active y acceda a su Panel Master KawMed. No utiliza el Master del patrocinio público ni sus productos.</p></div><span className="w-fit rounded-full bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-800">MEDM-XXX-XXX</span></div><div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end"><label className={label}>Patrocinador<select className={input} value={masterSponsorId} onChange={e=>setMasterSponsorId(e.target.value)}><option value="">Seleccionar</option>{sponsors.map(sp=><option key={sp.id} value={sp.id}>{sp.name}</option>)}</select></label><button type="button" onClick={()=>void generateMedicalMaster()} disabled={busy||!masterSponsorId} className="rounded-xl bg-cyan-700 px-5 py-3 text-sm font-black text-white disabled:opacity-40">{medicalMaster?'Ver / recuperar Master':'Generar Master KawMed'}</button></div>{medicalMaster&&<div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/60 p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[.08em] text-cyan-700">Master KawMed</p><p className="mt-1 font-mono text-xl font-black">{medicalMaster.master_code}</p><p className="mt-2 break-all text-xs font-semibold text-slate-600">{medicalMaster.claim_url}</p><p className="mt-2 text-xs text-slate-500">Estado: {medicalMaster.status==='claimed'?'Activado':medicalMaster.status==='inactive'?'Inactivo':'Disponible'}{medicalMaster.claimed_email?' · '+medicalMaster.claimed_email:''}</p></div><button type="button" onClick={()=>void copyMedicalMaster()} className="rounded-xl border border-cyan-200 bg-white px-4 py-3 text-xs font-black text-cyan-800">Copiar URL Master</button></div></div>}</section>
 
       <section className="grid gap-5 xl:grid-cols-2">
         <div className={card}><h2 className="text-xl font-black">Crear programa médico patrocinado</h2><p className="mt-1 text-sm leading-6 text-slate-500">Usa un patrocinador ya registrado, pero define aquí la campaña médica privada. Esta configuración no altera su patrocinio público normal.</p><div className="mt-4 grid gap-3">
