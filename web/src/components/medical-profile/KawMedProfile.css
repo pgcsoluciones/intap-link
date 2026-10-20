@@ -1852,3 +1852,38 @@
   font-weight: 900;
   cursor: pointer;
 }
+
+/* KawMed QA 2026-10-20: shared medical image with fade ending before contacts. */
+.kawmed-hero__shade {
+  pointer-events: none;
+  background: linear-gradient(to top,
+    #fff 0%,
+    rgba(255,255,255,.97) 10%,
+    rgba(255,255,255,.78) 24%,
+    rgba(255,255,255,.33) 42%,
+    rgba(255,255,255,0) 67%) !important;
+}
+.kawmed-identity, .kawmed-intro, .kawmed-contact-pills {
+  position: relative;
+  z-index: 1;
+  background-color: #fff;
+}
+.kawmed-contact-pill:not(:disabled):hover,
+.kawmed-contact-pill:not(:disabled):focus-visible {
+  border-color: #126fe8;
+  background: #eaf4ff;
+  color: #10233f;
+  box-shadow: 0 10px 22px rgba(18,111,232,.16);
+}
+.kawmed-contact-pill--primary:not(:disabled):hover,
+.kawmed-contact-pill--primary:not(:disabled):focus-visible {
+  background: linear-gradient(135deg,#0f51b6,#176bdd);
+  color: #fff;
+}
+.kawmed-contact-pill:focus-visible {
+  outline: 2px solid #126fe8;
+  outline-offset: 3px;
+}
+@media (hover:none) {
+  .kawmed-contact-pill:not(:disabled):hover { transform: none; box-shadow: none; }
+}
