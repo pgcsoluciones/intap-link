@@ -413,11 +413,11 @@ export default function KawMedProfile() {
             <div className="kawmed-panel__trigger kawmed-panel__trigger--static">
               <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShield /></span>
               <span className="kawmed-panel__title">
-                <strong>Aceptamos todos los seguros</strong>
-                <small>Sujeto a cobertura y condiciones de cada plan</small>
+                <strong>Seguros médicos</strong>
+                <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : 'Consulta cobertura y excepciones'}</small>
               </span>
               <button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
-                Excepto
+                Ver seguros
               </button>
             </div>
           </article>
@@ -523,15 +523,17 @@ export default function KawMedProfile() {
           ))}
         </div>
       </KawMedModal>
-      <KawMedModal open={modal === 'insurance'} title="Seguros no aceptados" onClose={() => setModal(null)}>
+      <KawMedModal open={modal === 'insurance'} title="Seguros médicos" onClose={() => setModal(null)}>
         <div className="kawmed-insurance-modal">
+          <h3>Seguros aceptados</h3>
+          {profile.insurance_policy.accepted.length ? (
+            <ul>{profile.insurance_policy.accepted.map((name) => <li key={'accepted-'+name}>{name}</li>)}</ul>
+          ) : (
+            <p>Este perfil no ha publicado una lista específica de seguros aceptados.</p>
+          )}
+          <h3>Excepciones</h3>
           {profile.insurance_policy.excluded.length ? (
-            <>
-              <p>Este perfil indica cobertura general, excepto los siguientes seguros o planes:</p>
-              <ul>
-                {profile.insurance_policy.excluded.map((name) => <li key={name}>{name}</li>)}
-              </ul>
-            </>
+            <ul>{profile.insurance_policy.excluded.map((name) => <li key={'excluded-'+name}>{name}</li>)}</ul>
           ) : (
             <p>No hay excepciones registradas para este perfil.</p>
           )}
