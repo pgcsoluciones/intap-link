@@ -16,7 +16,7 @@ function cleanSlug(value: unknown): string {
     .slice(0, 80)
 }
 
-function profileResponse(profile: any, centers: any[], schedules: any[], services: any[], insuranceExclusions: any[]) {
+function profileResponse(profile: any, centers: any[], schedules: any[], services: any[], acceptedInsurances: any[], insuranceExclusions: any[]) {
   const centerById = new Map(centers.map((center) => [String(center.id), center]))
 
   return {
@@ -71,7 +71,8 @@ function profileResponse(profile: any, centers: any[], schedules: any[], service
       sort_order: Number(service.sort_order || 0),
     })),
     insurance_policy: {
-      accepts_all: true,
+      accepts_all: acceptedInsurances.length === 0,
+      accepted: acceptedInsurances.map((row) => String(row.insurance_name)),
       excluded: insuranceExclusions.map((row) => String(row.insurance_name)),
     },
   }
@@ -98,7 +99,7 @@ export function registerMedicalProfileRoutes(app: any) {
         })
       }
 
-      const [centersResult, schedulesResult, servicesResult, insuranceExclusionsResult] = await Promise.all([
+      const [centersResult, schedulesResult, servicesResult, acceptedInsurancesResult, insuranceExclusionsResult] = await Promise.all([
         c.env.DB.prepare(
           `SELECT id, name, address, city, province, country, phone, map_url,
                   latitude, longitude, sort_order
@@ -120,6 +121,12 @@ export function registerMedicalProfileRoutes(app: any) {
         ).bind((profile as any).id).all(),
         c.env.DB.prepare(
           `SELECT insurance_name
+             FROM medical_profile_insurances
+            WHERE medical_profile_id = ? AND active = 1
+            ORDER BY sort_order ASC, insurance_name ASC`
+        ).bind((profile as any).id).all(),
+        c.env.DB.prepare(
+          `SELECT insurance_name
              FROM medical_profile_insurance_exclusions
             WHERE medical_profile_id = ? AND active = 1
             ORDER BY sort_order ASC, insurance_name ASC`
@@ -133,6 +140,7 @@ export function registerMedicalProfileRoutes(app: any) {
           centersResult.results || [],
           schedulesResult.results || [],
           servicesResult.results || [],
+          acceptedInsurancesResult.results || [],
           insuranceExclusionsResult.results || [],
         ),
       }, 200, {
