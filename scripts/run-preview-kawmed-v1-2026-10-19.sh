@@ -86,6 +86,8 @@ app/src/components/notifications/PwaNotificationBridge.tsx
 app/src/components/admin/medical/MedicalAppointments.tsx
 app/src/components/admin/medical/MedicalDashboard.tsx
 app/src/components/admin/medical/MedicalNotifications.tsx
+app/src/components/admin/sponsored/SponsorDashboard.tsx
+app/src/components/admin/sponsored/SponsorKawMed.tsx
 app/src/components/admin/free/FreeNotifications.tsx
 web/public/assets/kawmed/demo-doctor-reference.jpg
 web/public/assets/kawmed/laura-mendez-hero.jpg
