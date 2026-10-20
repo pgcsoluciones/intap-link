@@ -69,7 +69,7 @@ app.patch('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const next={
     name:b.name!==undefined?clean(b.name,100):String(p.name||''),
     professional_prefix:b.professional_prefix!==undefined?clean(b.professional_prefix,20):String(p.professional_prefix||''),
-    specialty:b.specialty!==undefined?clean(b.specialty,100):String(p.specialty||''),
+    specialty:b.specialty!==undefined?clean(b.specialty,400):String(p.specialty||''),
     subspecialty:b.subspecialty!==undefined?clean(b.subspecialty,140):String(p.subspecialty||''),
     bio:b.bio!==undefined?clean(b.bio,700):String(p.bio||''),
     phone:b.phone!==undefined?clean(b.phone,40):String(p.phone||''),
