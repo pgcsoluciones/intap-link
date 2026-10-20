@@ -139,6 +139,7 @@ has(sponsorOwner,'nextEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL','intapcar
 has(sponsorScan,'authorizedMultiAccount','Master normal acepta cuenta especial durante demos')
 has(sponsorScan,'setSponsorContext(c,currentUserId,sponsorId)','Master normal fija el patrocinador escaneado')
 has(sponsorProfiles,'resolveSponsorMembership(c,userId)','panel patrocinado normal resuelve tenant seleccionado')
+has(sponsorProfiles,"artifact_role='master'",'medical-only Master does not auto-create a normal sponsored profile')
 has(sponsorScope,'resolveSponsorMembership(c,userId)','perfil Master normal queda limitado al tenant seleccionado')
 has(sponsorMedia,'resolveSponsorMembership(c,requester)','media normal se carga al tenant seleccionado')
 has(sponsorBrand,'resolveSponsorMembership(c,userId)','marca normal se guarda en el tenant seleccionado')
