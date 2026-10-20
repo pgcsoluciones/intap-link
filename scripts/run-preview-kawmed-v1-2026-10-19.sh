@@ -112,7 +112,6 @@ web/src/App.tsx
 web/src/components/appointments/AppointmentOwnerBar.tsx
 web/src/components/appointments/AppointmentRequestModal.tsx
 web/src/components/medical-profile/KawMedModal.tsx
-web/src/components/appointments/AppointmentOwnerBar.tsx
 web/src/components/medical-profile/KawMedProfile.css
 web/src/components/medical-profile/KawMedProfile.tsx
 web/src/components/medical-profile/types.ts
