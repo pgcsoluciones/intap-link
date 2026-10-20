@@ -8,8 +8,8 @@ type MedicalDashboardProps={scope?:'doctor'|'sponsor_master';embedded?:boolean;o
 type PendingImage={file:File;kind:'avatar'|'cover'}|null
 const MEDICAL_SPECIALTIES=['Anestesiología','Cardiología','Cirugía cardiovascular','Cirugía general','Cirugía plástica','Dermatología','Endocrinología','Gastroenterología','Geriatría','Ginecología y obstetricia','Hematología','Infectología','Medicina familiar','Medicina física y rehabilitación','Medicina general','Medicina interna','Nefrología','Neumología','Neurología','Nutriología clínica','Odontología','Oftalmología','Oncología','Ortopedia y traumatología','Otorrinolaringología','Pediatría','Psiquiatría','Radiología','Reumatología','Urología']
 const MEDICAL_INSURERS=['ARS Humano','ARS Universal','MAPFRE Salud','ARS Primera','ARS Palic','ARS Monumental','ARS Futuro','ARS CMD','ARS SEMMA','SENASA','ARS Reservas','ARS Yunen']
-function selectedInsurer(text:string,name:string){return text.split('\\n').some(v=>v.trim().toLocaleLowerCase('es')===name.toLocaleLowerCase('es'))}
-function toggleInsurer(text:string,name:string,checked:boolean){const rows=text.split('\\n').map(x=>x.trim()).filter(Boolean).filter(x=>x.toLocaleLowerCase('es')!==name.toLocaleLowerCase('es'));return [...rows,...(checked?[name]:[])].join('\\n')}
+function selectedInsurer(text:string,name:string){return text.split('\n').some(v=>v.trim().toLocaleLowerCase('es')===name.toLocaleLowerCase('es'))}
+function toggleInsurer(text:string,name:string,checked:boolean){const rows=text.split('\n').map(x=>x.trim()).filter(Boolean).filter(x=>x.toLocaleLowerCase('es')!==name.toLocaleLowerCase('es'));return [...rows,...(checked?[name]:[])].join('\n')}
 const DAYS=[['1','Lunes'],['2','Martes'],['3','Miércoles'],['4','Jueves'],['5','Viernes'],['6','Sábado'],['7','Domingo']]
 const input='mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'
 const label='block text-[11px] font-black uppercase tracking-[.08em] text-slate-500'
