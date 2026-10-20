@@ -1,6 +1,7 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { requireSuperAdmin } from './lib/admin-auth'
+import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 
 function clean(value:unknown,max=800){return String(value??'').trim().slice(0,max)}
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
@@ -24,7 +25,7 @@ async function uploadFile(c:any,sponsorId:string,kind:'logo'|'banner'){
 // CTA, destination, title and commercial message remain centrally controlled by Super Admin.
 app.patch('/api/v1/sponsor/settings',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
-  const membership=await c.env.DB.prepare(`SELECT sponsor_id,role FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(userId).first()
+  const membership=await resolveSponsorMembership(c,userId)
   if(!membership||!['owner','admin'].includes(String((membership as any).role)))return c.json({ok:false,error:'No tienes permiso para editar la imagen del patrocinio.'},403)
   const body=await c.req.json().catch(()=>({}))
   await c.env.DB.prepare(`UPDATE sponsor_tenants SET logo_url=?,banner_image_url=?,updated_at=datetime('now') WHERE id=?`).bind(clean(body.logo_url),clean(body.banner_image_url),String((membership as any).sponsor_id)).run()
