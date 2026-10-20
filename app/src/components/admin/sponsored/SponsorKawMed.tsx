@@ -16,6 +16,8 @@ function station(code:Code){return code.station_number?String(code.station_numbe
 
 export default function SponsorKawMed(){
   const[data,setData]=useState<Overview|null>(null)
+  const[sponsorAccounts,setSponsorAccounts]=useState<any[]>([])
+  const[currentSponsorId,setCurrentSponsorId]=useState('')
   const[loading,setLoading]=useState(true)
   const[busy,setBusy]=useState(false)
   const[message,setMessage]=useState('')
@@ -34,12 +36,22 @@ export default function SponsorKawMed(){
   async function load(){
     setLoading(true);setError('')
     try{
-      const j:any=await apiGet('/sponsor/kawmed/overview')
+      const[j,accounts]:any[]=await Promise.all([apiGet('/sponsor/kawmed/overview'),apiGet('/sponsor/accounts')])
       if(!j?.ok)throw new Error(j?.error||'No pudimos abrir KawMed.')
       setData(j.data)
+      if(accounts?.ok){setSponsorAccounts(Array.isArray(accounts.data?.accounts)?accounts.data.accounts:[]);setCurrentSponsorId(String(accounts.data?.current_sponsor_id||j.data?.sponsor?.id||''))}
     }catch(e){setError(e instanceof Error?e.message:'No pudimos abrir KawMed.')}finally{setLoading(false)}
   }
   useEffect(()=>{void load()},[])
+  async function changeSponsorAccount(sponsorId:string){
+    if(!sponsorId||sponsorId===currentSponsorId)return
+    setBusy(true);setError('');setMessage('')
+    try{
+      const j:any=await apiPost('/sponsor/context',{sponsor_id:sponsorId})
+      if(!j?.ok)throw new Error(j?.error||'No pudimos cambiar de patrocinador.')
+      window.location.assign('/admin/sponsor/kawmed')
+    }catch(e){setError(e instanceof Error?e.message:'No pudimos cambiar de patrocinador.');setBusy(false)}
+  }
 
   const codes=data?.codes||[],reps=data?.representatives||[],batches=data?.batches||[]
   const stats=useMemo(()=>({
@@ -140,7 +152,7 @@ export default function SponsorKawMed(){
   if(!data)return <main className="min-h-screen bg-slate-50 p-6 font-['Inter']"><div className="mx-auto max-w-xl rounded-3xl bg-white p-6"><h1 className="text-2xl font-black">KawMed no disponible</h1><p className="mt-2 text-sm text-slate-500">{error||'Esta cuenta no tiene un programa KawMed patrocinado.'}</p></div></main>
 
   return <main className="min-h-screen bg-slate-50 px-4 py-6 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[1280px] space-y-5">
-    <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">KAWMED · PANEL MASTER</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{data.sponsor.name}</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Distribuye estaciones por visitador y da seguimiento a activaciones y datos profesionales de los médicos vinculados a tu programa.</p></div><button onClick={()=>window.location.assign('/admin/sponsor')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black">Volver al patrocinador</button></div></header>
+    <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">KAWMED · PANEL MASTER</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{data.sponsor.name}</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Distribuye estaciones por visitador y da seguimiento a activaciones y datos profesionales de los médicos vinculados a tu programa.</p>{sponsorAccounts.length>1&&<label className="mt-3 block max-w-sm text-[11px] font-black uppercase tracking-[.08em] text-slate-500">Cuenta patrocinada<select value={currentSponsorId} onChange={e=>void changeSponsorAccount(e.target.value)} disabled={busy} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-900">{sponsorAccounts.map(account=><option key={account.sponsor_id} value={account.sponsor_id}>{account.name}{Number(account.has_kawmed)===1?' · KawMed':''}</option>)}</select></label>}</div><button onClick={()=>window.location.assign('/admin/sponsor')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black">Volver al patrocinador</button></div></header>
 
     {message&&<div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</div>}
     {error&&<div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</div>}
