@@ -54,14 +54,14 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     try{
       const[p,notifications,sponsorJson]:any[]=await Promise.all([
         apiGet(scoped('/me/medical-profile')),
-        scope==='doctor'?apiGet('/me/notifications?limit=1').catch(()=>({ok:false})):Promise.resolve({ok:false}),
+        scope==='doctor'?apiGet('/me/medical-profile/appointments').catch(()=>({ok:false})):Promise.resolve({ok:false}),
         scope==='doctor'?apiGet('/me/medical-profile/sponsor-context').catch(()=>({ok:false})):Promise.resolve({ok:false}),
       ])
       if(!p?.ok)throw new Error(p?.error||'No pudimos abrir tu perfil médico.')
       setProfile(p.data);setForm(p.data)
       setAcceptedText((p.data?.insurance_policy?.accepted||[]).map((x:any)=>x.insurance_name||x).join('\n'))
       setExcludedText((p.data?.insurance_policy?.excluded||[]).map((x:any)=>x.insurance_name||x).join('\n'))
-      if(notifications?.ok)setUnread(Number(notifications.data?.unread_count||0))
+      if(notifications?.ok)setUnread(Array.isArray(notifications.data?.requests)?notifications.data.requests.filter((r:any)=>r.status==='pending').length:0)
       if(sponsorJson?.ok)setSponsor(sponsorJson.data||null)
     }catch(e){setError(e instanceof Error?e.message:'No pudimos abrir KawMed.')}finally{if(!silent)setLoading(false)}
   }
