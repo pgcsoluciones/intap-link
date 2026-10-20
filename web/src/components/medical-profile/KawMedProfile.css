@@ -1887,3 +1887,24 @@
 @media (hover:none) {
   .kawmed-contact-pill:not(:disabled):hover { transform: none; box-shadow: none; }
 }
+
+/* KawMed QA: softer portrait transition, stronger specialty contrast and accessible text. */
+.kawmed-hero__shade {
+  background: linear-gradient(to top,
+    #fff 0%, rgba(255,255,255,.995) 15%,
+    rgba(255,255,255,.93) 31%, rgba(255,255,255,.68) 48%,
+    rgba(255,255,255,.27) 66%, transparent 86%) !important;
+}
+.kawmed-identity .kawmed-specialty {
+  font-size: clamp(20px, 4.8vw, 25px);
+  font-weight: 850;
+  line-height: 1.3;
+  color: #0b315e;
+}
+.kawmed-identity .kawmed-subtitle,
+.kawmed-intro > p,
+.kawmed-meta {
+  color: #324a66;
+  font-size: 14px;
+  line-height: 1.6;
+}
