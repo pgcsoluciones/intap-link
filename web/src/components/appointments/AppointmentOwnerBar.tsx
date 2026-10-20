@@ -27,11 +27,12 @@ type Props={
   ownerApiBase:string
   manageOrigin:string
   settingsPath:string
+  settingsLabel?:string
   palette:Palette
   onToast:(message:string)=>void
 }
 
-export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,palette,onToast}:Props){
+export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Configuración',palette,onToast}:Props){
   const[context,setContext]=useState<Context|null>(null)
   const[open,setOpen]=useState(false)
   const[actionId,setActionId]=useState('')
@@ -89,7 +90,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   return <div style={{position:'sticky',top:0,zIndex:58,background:'rgba(255,255,255,.96)',backdropFilter:'blur(12px)',borderBottom:'1px solid #e2e8f0',fontFamily:'Inter,system-ui,sans-serif'}}>
     <div style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
       <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
-        <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>Configuración</button>
+        <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>{settingsLabel}</button>
         {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>{contactLabel}</a>}
         {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>{resourceLabel}</a>}
       </div>
