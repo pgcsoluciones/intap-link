@@ -101,7 +101,7 @@ assert(medicalOwner.includes("/api/v1/me/medical-profile/centers"),'configuraci�
 assert(medicalOwner.includes("/api/v1/me/medical-profile/schedules"),'configuración KawMed no administra horarios')
 assert(medicalOwner.includes("/api/v1/me/medical-profile/insurances"),'configuración KawMed no administra seguros')
 assert(medicalOwner.includes("/api/v1/me/medical-profile/media"),'configuración KawMed no reutiliza carga de medios')
-assert(medicalOwner.includes("scope')||'').trim()==='sponsor_master'",'editor médico no admite contexto Master')
+assert(medicalOwner.includes("scope')||'').trim()==='sponsor_master'"),'editor médico no admite contexto Master')
 assert(medicalOwner.includes('medical_sponsor_master_profiles'),'editor Master no reutiliza medical_profiles')
 assert(medicalAppointments.includes('medical_sponsor_master_profiles'),'Agenda Master no reutiliza perfil médico')
 assert(medicalManager.includes("scope==='sponsor_master'"),'gestor Agenda no conserva scope Master')
