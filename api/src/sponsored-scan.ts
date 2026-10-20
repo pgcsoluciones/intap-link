@@ -43,7 +43,8 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
       const user=await c.env.DB.prepare(`SELECT email FROM users WHERE id=? LIMIT 1`).bind(currentUserId).first()
       const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
       const registeredEmail=String((row as any).sponsor_contact_email||'').trim().toLowerCase()
-      if(!registeredEmail||!accountEmail||registeredEmail!==accountEmail){
+      const authorizedMultiAccount=await sponsoredMultiProfileAccess(c,currentUserId)
+      if(!authorizedMultiAccount&&(!registeredEmail||!accountEmail||registeredEmail!==accountEmail)){
         return c.json({ok:true,state:'sponsored_master_login',artifact,sponsor,message:'Este Master debe activarse con el mismo correo registrado por Super Admin para el patrocinador.',manage_url:null,login_url:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
       }
       await c.env.DB.prepare(`INSERT INTO sponsor_members (sponsor_id,user_id,role,status) VALUES (?,?,'owner','active') ON CONFLICT(sponsor_id,user_id) DO UPDATE SET role='owner',status='active'`).bind(sponsorId,currentUserId).run()
