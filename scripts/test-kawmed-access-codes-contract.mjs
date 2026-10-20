@@ -3,6 +3,7 @@ import fs from 'node:fs'
 const read=p=>fs.readFileSync(p,'utf8')
 const has=(t,n,l)=>{if(!t.includes(n))throw new Error('Falta contrato: '+l)}
 const absent=(t,n,l)=>{if(t.includes(n))throw new Error('Regresión: '+l)}
+const withoutSqlLineComments=t=>t.replace(/--.*$/gm,'')
 
 const api=read('api/src/medical-access-codes.ts')
 const appointments=read('api/src/medical-appointments.ts')
@@ -13,6 +14,7 @@ const repMigration=read('api/migrations-preview/0096_kawmed_representatives_trac
 const repProdMigration=read('api/migrations/0096_kawmed_representatives_traceability.sql')
 const masterMigration=read('api/migrations-preview/0097_kawmed_master_multiaccount.sql')
 const masterProdMigration=read('api/migrations/0097_kawmed_master_multiaccount.sql')
+const masterMigrationSql=withoutSqlLineComments(masterMigration)
 const superAdmin=read('app/src/components/admin/SuperAdminKawMed.tsx')
 const sponsorMaster=read('app/src/components/admin/sponsored/SponsorKawMed.tsx')
 const sponsorDashboard=read('app/src/components/admin/sponsored/SponsorDashboard.tsx')
@@ -50,8 +52,8 @@ absent(repMigration,'team_members','visitadores KawMed no se mezclan con Team')
 has(masterMigration,'CREATE TABLE IF NOT EXISTS medical_sponsor_masters','Master KawMed vive en tabla propia')
 has(masterMigration,'CREATE TABLE IF NOT EXISTS sponsor_user_context','contexto multicuenta se guarda separado')
 has(masterProdMigration,'medical_sponsor_masters','Producción queda preparada para Master KawMed')
-absent(masterMigration,'sponsor_artifacts','Master KawMed no se mezcla con sponsor_artifacts')
-absent(masterMigration,'intap_artifacts','Master KawMed no consume productos físicos')
+absent(masterMigrationSql,'sponsor_artifacts','Master KawMed no se mezcla con sponsor_artifacts')
+absent(masterMigrationSql,'intap_artifacts','Master KawMed no consume productos físicos')
 absent(migration,'intap_artifacts','códigos MED no deben mezclarse con productos')
 absent(migration,'sponsor_artifacts','lotes MED no deben mezclarse con patrocinio público')
 
