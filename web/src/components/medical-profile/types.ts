@@ -37,6 +37,7 @@ export interface KawMedService {
 
 export interface KawMedInsurancePolicy {
   accepts_all: boolean
+  accepted: string[]
   excluded: string[]
 }
 
