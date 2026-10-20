@@ -9,7 +9,8 @@ type Program={id:string;sponsor_id:string;sponsor_name:string;name:string;privat
 type Code={id:string;code:string;status:string;station_number?:number;batch_name?:string;program_name?:string;sponsor_name?:string;claimed_email?:string;medical_name?:string;medical_slug?:string;medical_specialty?:string;medical_phone?:string;medical_email?:string;representative_name?:string;representative_zone?:string;created_at?:string;claimed_at?:string}
 type Profile={id:string;slug:string;name:string;professional_prefix?:string;specialty?:string;status:string;email?:string;code?:string;program_name?:string;sponsor_name?:string;claimed_at?:string}
 type Generated={code:string;claim_url:string}
-type PendingImage={file:File;kind:'sponsor-logo'|'program-banner-create'|'program-banner-edit'}|null
+type PendingImageKind='sponsor-logo'|'program-banner-create'|'program-banner-edit'
+type PendingImage={file:File;kind:PendingImageKind}|null
 
 const card='rounded-[24px] border border-slate-200 bg-white p-5'
 const label='block text-[11px] font-black uppercase tracking-[.08em] text-slate-500'
@@ -67,7 +68,7 @@ export default function SuperAdminKawMed(){
   }),[codes,query,status])
 
   const notify=(ok:string,fail='')=>{setMessage(ok);setError(fail)}
-  function chooseImage(file:File|undefined,kind:PendingImage extends {kind:infer K}?K:never){
+  function chooseImage(file:File|undefined,kind:PendingImageKind){
     if(!file)return
     if(file.size>12*1024*1024){notify('','La imagen original supera 12 MB. Elige una más liviana.');return}
     notify('')
