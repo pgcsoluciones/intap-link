@@ -1,5 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+escaped+'=([^;]*)'));return match?decodeURIComponent(match[1]):null}
@@ -8,10 +9,40 @@ async function requireUser(c:any,next:any){const id=await sessionUserId(c);if(!i
 const clean=(v:unknown,max=500)=>String(v??'').trim().slice(0,max)
 const cleanSlug=(v:unknown)=>clean(v,80).toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'')
 function ext(file:File){const byType:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};return byType[file.type]||''}
+function ownerScope(c:any){return String(c.req.query('scope')||'').trim()==='sponsor_master'?'sponsor_master':'doctor'}
+async function uniqueMedicalSlug(c:any,base:string){
+  let root=cleanSlug(base)||('kawmed-'+crypto.randomUUID().slice(0,8)),candidate=root,n=2
+  while(await c.env.DB.prepare("SELECT id FROM medical_profiles WHERE slug=? LIMIT 1").bind(candidate).first())candidate=(root+'-'+n++).slice(0,80)
+  return candidate
+}
+async function ensureSponsorMasterProfile(c:any,userId:string){
+  const membership=await resolveSponsorMembership(c,userId)
+  if(!membership||!['owner','admin'].includes(String((membership as any).role||'')))return null
+  const sponsorId=String((membership as any).sponsor_id||'')
+  const current=await c.env.DB.prepare(`SELECT mp.*
+    FROM medical_sponsor_master_profiles msmp
+    JOIN medical_profiles mp ON mp.id=msmp.medical_profile_id
+    WHERE msmp.sponsor_id=? LIMIT 1`).bind(sponsorId).first()
+  if(current)return{userId,profile:current,sponsorId,scope:'sponsor_master'}
+  const sponsor=await c.env.DB.prepare("SELECT id,name,slug,contact_email,contact_whatsapp,logo_url,banner_image_url FROM sponsor_tenants WHERE id=? AND is_active=1 LIMIT 1").bind(sponsorId).first()
+  if(!sponsor)return null
+  const profileId=crypto.randomUUID(),slug=await uniqueMedicalSlug(c,(String((sponsor as any).slug||'kawmed')+'-med'))
+  await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT INTO medical_profiles(id,user_id,slug,name,professional_prefix,specialty,subspecialty,bio,avatar_url,cover_url,phone,whatsapp,email,city,province,country,organization,status)
+      VALUES(?,NULL,?,?,NULL,'Laboratorio médico',NULL,'Perfil médico de ejemplo del programa KawMed.',?,?,?, ?,?,NULL,NULL,'República Dominicana',?,'draft')`).bind(
+        profileId,slug,String((sponsor as any).name||'Patrocinador KawMed'),String((sponsor as any).logo_url||''),String((sponsor as any).banner_image_url||''),
+        String((sponsor as any).contact_whatsapp||''),String((sponsor as any).contact_whatsapp||''),String((sponsor as any).contact_email||''),String((sponsor as any).name||'')
+      ),
+    c.env.DB.prepare("INSERT INTO medical_sponsor_master_profiles(sponsor_id,medical_profile_id,created_by_user_id) VALUES(?,?,?)").bind(sponsorId,profileId,userId),
+  ])
+  const created=await c.env.DB.prepare("SELECT * FROM medical_profiles WHERE id=? LIMIT 1").bind(profileId).first()
+  return created?{userId,profile:created,sponsorId,scope:'sponsor_master'}:null
+}
 async function owned(c:any){
   const userId=String(c.get('userId')||'')
+  if(ownerScope(c)==='sponsor_master')return ensureSponsorMasterProfile(c,userId)
   const profile=await c.env.DB.prepare("SELECT * FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1").bind(userId).first()
-  return profile?{userId,profile}:null
+  return profile?{userId,profile,scope:'doctor'}:null
 }
 async function full(c:any,profile:any){
   const id=String(profile.id)
