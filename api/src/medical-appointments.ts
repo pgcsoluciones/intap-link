@@ -167,17 +167,36 @@ async function publicSubject(c:any,slug:string){
   return c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
     FROM medical_profiles WHERE lower(slug)=? AND status='active' LIMIT 1`).bind(slug).first()
 }
+function medicalOwnerScope(c:any){return String(c.req.query('scope')||'').trim()==='sponsor_master'?'sponsor_master':'doctor'}
+async function sponsorMasterMedicalProfile(c:any,userId:string){
+  const membership=await resolveSponsorMembership(c,userId)
+  if(!membership||!['owner','admin'].includes(String((membership as any).role||'')))return null
+  return c.env.DB.prepare(`SELECT mp.id,mp.user_id,mp.slug,mp.name,mp.professional_prefix,mp.specialty,mp.whatsapp,mp.phone,mp.status
+    FROM medical_sponsor_master_profiles msmp
+    JOIN medical_profiles mp ON mp.id=msmp.medical_profile_id
+    WHERE msmp.sponsor_id=? LIMIT 1`).bind(String((membership as any).sponsor_id||'')).first()
+}
 async function ownedSubject(c:any){
   const userId=String(c.get('userId')||'')
-  const profile=await c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
-    FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
+  const profile=medicalOwnerScope(c)==='sponsor_master'
+    ?await sponsorMasterMedicalProfile(c,userId)
+    :await c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
+      FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
   if(!profile)return null
   const subjectId=String((profile as any).id||'')
   await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
   return{profile,userId,subject:{type:'medical',id:subjectId,ownerUserId:userId}}
 }
 async function addNotification(c:any,request:any,profile:any){
-  const ownerUserId=String((profile as any).user_id||'')
+  let ownerUserId=String((profile as any).user_id||'')
+  if(!ownerUserId){
+    const mapped=await c.env.DB.prepare(`SELECT COALESCE(msm.claimed_by_user_id,sm.user_id) AS owner_user_id
+      FROM medical_sponsor_master_profiles msmp
+      LEFT JOIN medical_sponsor_masters msm ON msm.sponsor_id=msmp.sponsor_id
+      LEFT JOIN sponsor_members sm ON sm.sponsor_id=msmp.sponsor_id AND sm.status='active' AND sm.role='owner'
+      WHERE msmp.medical_profile_id=? ORDER BY sm.created_at ASC LIMIT 1`).bind(String((profile as any).id||'')).first()
+    ownerUserId=String((mapped as any)?.owner_user_id||'')
+  }
   if(!ownerUserId||ownerUserId==='kawmed_demo_owner')return
   const actionUrl='/admin/medical/agenda?request='+encodeURIComponent(String(request.id||''))
   const title='Nueva solicitud de cita'
@@ -266,7 +285,8 @@ app.delete('/api/v1/me/medical-profile/appointments/blocks/:id',requireUser,asyn
 })
 app.post('/api/v1/me/medical-profile/appointments/requests/:id/:action',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),requestId=String(c.req.param('id')||''),action=String(c.req.param('action')||'')
-  const row=await c.env.DB.prepare("SELECT ar.subject_id,mp.id FROM appointment_requests ar JOIN medical_profiles mp ON mp.id=ar.subject_id WHERE ar.id=? AND ar.subject_type='medical' AND mp.user_id=? LIMIT 1").bind(requestId,userId).first()
+  const resolved=await ownedSubject(c);if(!resolved)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const row=await c.env.DB.prepare("SELECT subject_id FROM appointment_requests WHERE id=? AND subject_type='medical' AND subject_id=? LIMIT 1").bind(requestId,resolved.subject.id).first()
   if(!row)return c.json({ok:false,error:'Solicitud no encontrada.'},404)
   const subjectId=String((row as any).subject_id||'')
   try{
@@ -282,7 +302,8 @@ app.post('/api/v1/me/medical-profile/appointments/requests/:id/:action',requireU
 app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),slug=cleanSlug(c.req.query('username'))
   if(!slug)return c.json({ok:false,error:'Perfil inválido.'},400)
-  const profile=await c.env.DB.prepare("SELECT id,slug,name,professional_prefix,user_id FROM medical_profiles WHERE lower(slug)=? AND user_id=? LIMIT 1").bind(slug,userId).first()
+  const resolved=await ownedSubject(c)
+  const profile=resolved&&String((resolved.profile as any).slug||'').toLowerCase()===slug?resolved.profile:null
   if(!profile)return c.json({ok:false,error:'Not owner'},403)
   const subjectId=String((profile as any).id||'')
   await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
@@ -295,7 +316,7 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
     enabled:settings.enabled,
     pending_count:Number((count as any)?.n||0),
     pending:rows.results||[],
-    manage_url:'/admin/medical/agenda',
+    manage_url:medicalOwnerScope(c)==='sponsor_master'?'/admin/sponsor/kawmed?tab=profile&agenda=1':'/admin/medical/agenda',
     resource_url:sponsor?.vademecum_url||'',
     resource_label:sponsor?.vademecum_label||'Ver vademécum',
     contact_url:sponsor?.representative?.url||'',
