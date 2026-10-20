@@ -319,7 +319,7 @@ export default function KawMedProfile() {
 
         <section className="kawmed-identity">
           <h1>{profile.display_name}</h1>
-          <p className="kawmed-specialty">{profile.specialty}</p>
+          <p className="kawmed-specialty">{profile.specialty.split(" | ").join(" · ")}</p>
           {profile.subspecialty ? <p className="kawmed-subtitle">{profile.subspecialty}</p> : null}
         </section>
 
@@ -333,7 +333,7 @@ export default function KawMedProfile() {
 
         <section className="kawmed-contact-pills" aria-label="Contacto y acciones">
           <button
-            className="kawmed-contact-pill kawmed-contact-pill--primary"
+            className="kawmed-contact-pill"
             type="button"
             onClick={contactWhatsApp}
             disabled={!profile.whatsapp}
@@ -343,7 +343,7 @@ export default function KawMedProfile() {
           </button>
 
           <button
-            className="kawmed-contact-pill"
+            className="kawmed-contact-pill kawmed-contact-pill--primary"
             type="button"
             onClick={() => setAppointmentOpen(true)}
           >
