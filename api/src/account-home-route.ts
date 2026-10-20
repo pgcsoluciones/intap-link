@@ -30,9 +30,25 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   const sponsorMembership=await resolveSponsorMembership(c,userId)
 
   if(sponsorMembership){
+    const sponsorId=String((sponsorMembership as any).sponsor_id||'')
+    const [normalMaster,kawMedMaster]=await Promise.all([
+      c.env.DB.prepare("SELECT 1 FROM sponsor_artifacts WHERE sponsor_id=? AND artifact_role='master' LIMIT 1").bind(sponsorId).first(),
+      c.env.DB.prepare("SELECT 1 FROM medical_sponsor_masters WHERE sponsor_id=? AND status<>'inactive' LIMIT 1").bind(sponsorId).first(),
+    ])
+    if(kawMedMaster&&!normalMaster){
+      return c.json({ok:true,data:{
+        kind:'sponsor_med',
+        route:'/admin/sponsor/kawmed',
+        role:String((sponsorMembership as any).role||'member'),
+        profile_id:null,
+        username:null,
+        public_route:null,
+        agenda_route:null,
+      }})
+    }
     const masterProfile=await c.env.DB.prepare(
       `SELECT id,username,status FROM sponsored_profiles WHERE sponsor_id=? AND user_id=? AND profile_role='sponsor_owner' ORDER BY created_at ASC LIMIT 1`
-    ).bind(String((sponsorMembership as any).sponsor_id||''),userId).first()
+    ).bind(sponsorId,userId).first()
     return c.json({ok:true,data:{
       kind:'sponsor',
       route:'/admin/sponsor',
