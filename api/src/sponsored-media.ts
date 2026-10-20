@@ -1,4 +1,5 @@
 import app from './index'
+import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 import { cookieNames } from './lib/cookies'
 import { resolveOwnedSponsoredProfile, sponsoredProfileScope } from './sponsored-profile-scope'
 
@@ -20,7 +21,7 @@ app.post('/api/v1/me/sponsored-profile/media',requireAuth,async(c:any)=>{
 })
 
 app.post('/api/v1/sponsor/media',requireAuth,async(c:any)=>{
-  const requester=String(c.get('userId')||'');const membership=await c.env.DB.prepare(`SELECT sponsor_id,role FROM sponsor_members WHERE user_id=? AND status='active' LIMIT 1`).bind(requester).first();if(!membership||!['owner','admin'].includes(String((membership as any).role)))return c.json({ok:false,error:'No tienes permiso para editar el patrocinio.'},403)
+  const requester=String(c.get('userId')||'');const membership=await resolveSponsorMembership(c,requester);if(!membership||!['owner','admin'].includes(String((membership as any).role)))return c.json({ok:false,error:'No tienes permiso para editar el patrocinio.'},403)
   const kind=String(c.req.query('kind')||'banner');if(!['logo','banner'].includes(kind))return c.json({ok:false,error:'Tipo de imagen no válido.'},400)
   const read=await readImage(c);if('error' in read)return c.json({ok:false,error:read.error},read.status)
   const sponsorId=String((membership as any).sponsor_id);const key=`sponsors/${sponsorId}/${kind}/${crypto.randomUUID()}.${read.ext}`
