@@ -305,6 +305,7 @@ export default function KawMedProfile() {
         ownerApiBase={appOrigin()+'/api/v1/me/medical-profile/appointments'}
         manageOrigin={appOrigin()}
         settingsPath="/admin/medical"
+        settingsLabel="Editar mi perfil"
         palette={{accent:'#126fe8',accentSoft:'#eaf4ff',text:'#10233f'}}
         onToast={(message) => {
           setToast(message)
