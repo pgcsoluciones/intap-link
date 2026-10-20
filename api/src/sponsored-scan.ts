@@ -1,7 +1,7 @@
 import app from './index'
 import { cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { ensureSponsorOwnerProfileBase } from './sponsored-owner-profile-seed'
-import { sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { setSponsorContext, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 function configuredWebUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://preview.intaprd.com':'https://intaprd.com';return String(c.env.WEB_URL||fallback).replace(/\/$/,'')}
 function configuredAppUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://app.preview.intaprd.com':'https://app.intaprd.com';return String(c.env.APP_URL||fallback).replace(/\/$/,'')}
@@ -51,6 +51,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
     }
 
     const role=String((sponsorMembership as any)?.role||'viewer')
+    if(currentUserId&&await sponsoredMultiProfileAccess(c,currentUserId))await setSponsorContext(c,currentUserId,sponsorId)
     if(role==='owner'){
       const profile=await ensureSponsorOwnerProfileBase(c,sponsorId,currentUserId)
       return c.json({ok:true,state:'sponsored_master',artifact,sponsor,message:'Master reconocido. Tu presentación patrocinada está lista en borrador.',profile:{username:(profile as any)?.username||null,status:(profile as any)?.status||'draft'},manage_url:`${configuredAppUrl(c)}/admin/sponsored?sponsor_master=1`,sponsor_panel_url:`${configuredAppUrl(c)}/admin/sponsor`})
