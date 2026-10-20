@@ -15,13 +15,14 @@ async function owned(c:any){
 }
 async function full(c:any,profile:any){
   const id=String(profile.id)
-  const [centers,schedules,services,excluded]=await Promise.all([
+  const [centers,schedules,services,accepted,excluded]=await Promise.all([
     c.env.DB.prepare("SELECT * FROM medical_profile_centers WHERE medical_profile_id=? ORDER BY sort_order,name").bind(id).all(),
     c.env.DB.prepare("SELECT * FROM medical_profile_schedules WHERE medical_profile_id=? ORDER BY day_of_week,sort_order,start_time").bind(id).all(),
     c.env.DB.prepare("SELECT * FROM medical_profile_services WHERE medical_profile_id=? ORDER BY sort_order,title").bind(id).all(),
+    c.env.DB.prepare("SELECT * FROM medical_profile_insurances WHERE medical_profile_id=? ORDER BY sort_order,insurance_name").bind(id).all(),
     c.env.DB.prepare("SELECT * FROM medical_profile_insurance_exclusions WHERE medical_profile_id=? ORDER BY sort_order,insurance_name").bind(id).all(),
   ])
-  return{...profile,centers:centers.results||[],schedules:schedules.results||[],services:services.results||[],insurance_policy:{accepts_all:true,excluded:(excluded.results||[]).map((r:any)=>({id:r.id,insurance_name:r.insurance_name,sort_order:r.sort_order,active:r.active}))}}
+  return{...profile,centers:centers.results||[],schedules:schedules.results||[],services:services.results||[],insurance_policy:{accepts_all:(accepted.results||[]).length===0,accepted:(accepted.results||[]).map((r:any)=>({id:r.id,insurance_name:r.insurance_name,sort_order:r.sort_order,active:r.active})),excluded:(excluded.results||[]).map((r:any)=>({id:r.id,insurance_name:r.insurance_name,sort_order:r.sort_order,active:r.active}))}}
 }
 app.get('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
@@ -125,12 +126,19 @@ app.delete('/api/v1/me/medical-profile/schedules/:id',requireUser,async(c:any)=>
   await c.env.DB.prepare("DELETE FROM medical_profile_schedules WHERE id=? AND medical_profile_id=?").bind(clean(c.req.param('id'),80),String(r.profile.id)).run()
   return c.json({ok:true})
 })
-app.put('/api/v1/me/medical-profile/insurance-exclusions',requireUser,async(c:any)=>{
+app.put('/api/v1/me/medical-profile/insurances',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
-  const b=await c.req.json().catch(()=>({})),items=Array.isArray(b.excluded)?b.excluded.map((x:any)=>clean(x,120)).filter(Boolean).slice(0,50):[]
-  const statements:any[]=[c.env.DB.prepare("DELETE FROM medical_profile_insurance_exclusions WHERE medical_profile_id=?").bind(String(r.profile.id))]
-  items.forEach((name:string,index:number)=>statements.push(c.env.DB.prepare("INSERT INTO medical_profile_insurance_exclusions(id,medical_profile_id,insurance_name,sort_order,active,created_at) VALUES(?,?,?,?,1,datetime('now'))").bind(crypto.randomUUID(),String(r.profile.id),name,index)))
+  const b=await c.req.json().catch(()=>({}))
+  const accepted=Array.isArray(b.accepted)?b.accepted.map((x:any)=>clean(x,120)).filter(Boolean).slice(0,50):[]
+  const excluded=Array.isArray(b.excluded)?b.excluded.map((x:any)=>clean(x,120)).filter(Boolean).slice(0,50):[]
+  const pid=String(r.profile.id)
+  const statements:any[]=[
+    c.env.DB.prepare("DELETE FROM medical_profile_insurances WHERE medical_profile_id=?").bind(pid),
+    c.env.DB.prepare("DELETE FROM medical_profile_insurance_exclusions WHERE medical_profile_id=?").bind(pid),
+  ]
+  accepted.forEach((name:string,index:number)=>statements.push(c.env.DB.prepare("INSERT INTO medical_profile_insurances(id,medical_profile_id,insurance_name,sort_order,active,created_at) VALUES(?,?,?,?,1,datetime('now'))").bind(crypto.randomUUID(),pid,name,index)))
+  excluded.forEach((name:string,index:number)=>statements.push(c.env.DB.prepare("INSERT INTO medical_profile_insurance_exclusions(id,medical_profile_id,insurance_name,sort_order,active,created_at) VALUES(?,?,?,?,1,datetime('now'))").bind(crypto.randomUUID(),pid,name,index)))
   await c.env.DB.batch(statements)
-  return c.json({ok:true,data:{excluded:items}})
+  return c.json({ok:true,data:{accepted,excluded}})
 })
 export default app
