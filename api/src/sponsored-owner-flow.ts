@@ -1,6 +1,7 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { requireSuperAdmin } from './lib/admin-auth'
+import { SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL } from './sponsored-multiprofile-access'
 
 const USERNAME_RE=/^[a-z0-9][a-z0-9-]{2,29}$/
 const RESERVED=new Set(['admin','api','app','www','superadmin','support','demo','med','p','l'])
@@ -40,7 +41,7 @@ app.patch('/api/v1/superadmin/sponsors/:id',requireSuperAdmin('super_admin'),asy
     if(!target)return c.json({ok:false,error:'El nuevo correo propietario todavía no tiene una cuenta Kawvo. Inicia sesión o registra esa cuenta antes de transferir el patrocinador.',code:'sponsor_owner_account_required'},409)
     nextOwnerUserId=String((target as any).id||'')
     const otherSponsor=await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_members WHERE user_id=? AND status='active' AND role='owner' AND sponsor_id<>? LIMIT 1`).bind(nextOwnerUserId,id).first()
-    if(otherSponsor)return c.json({ok:false,error:'Ese correo ya es propietario activo de otro patrocinador. Usa otra cuenta o libera primero ese patrocinio.',code:'sponsor_owner_already_assigned'},409)
+    if(otherSponsor&&nextEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL)return c.json({ok:false,error:'Ese correo ya es propietario activo de otro patrocinador. Usa otra cuenta o libera primero ese patrocinio.',code:'sponsor_owner_already_assigned'},409)
   }
 
   const statements:any[]=[
