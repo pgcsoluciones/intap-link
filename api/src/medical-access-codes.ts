@@ -1,11 +1,15 @@
 import app from './index'
 import { requireSuperAdmin } from './lib/admin-auth'
 import { cookieNames } from './lib/cookies'
+import { SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL, resolveSponsorMembership, setSponsorContext } from './sponsored-multiprofile-access'
 
 function clean(value:unknown,max=500){return String(value??'').trim().slice(0,max)}
 function safeUrl(value:unknown){const raw=clean(value,1200);if(!raw)return'';try{const u=new URL(raw);return u.protocol==='https:'||u.protocol==='http:'?u.toString():''}catch{return''}}
 function normalizeCode(value:unknown){return clean(value,32).toUpperCase()}
 function validMedCode(value:string){return /^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(value)}
+function medMasterCode(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=crypto.getRandomValues(new Uint8Array(6));const raw=Array.from(bytes).map(x=>alphabet[x%alphabet.length]).join('');return 'MEDM-'+raw.slice(0,3)+'-'+raw.slice(3,6)}
+function validMedMasterCode(value:string){return /^MEDM-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(value)}
+async function uniqueMedMasterCode(c:any){for(let i=0;i<30;i++){const code=medMasterCode();const row=await c.env.DB.prepare('SELECT id FROM medical_sponsor_masters WHERE master_code=? LIMIT 1').bind(code).first();if(!row)return code}throw new Error('No se pudo generar un Master KawMed único.')}
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+escaped+'=([^;]*)'));return match?decodeURIComponent(match[1]):null}
 async function sessionUserId(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return'';const row=await c.env.DB.prepare("SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1").bind(await sha256Hex(raw)).first();return row?String((row as any).user_id||''):''}
@@ -58,6 +62,71 @@ app.patch('/api/v1/superadmin/kawmed/programs/:id',requireSuperAdmin('super_admi
     body.enabled===undefined?Number((current as any).enabled??1):(body.enabled?1:0),id
   ).run()
   return c.json({ok:true})
+})
+
+
+app.get('/api/v1/superadmin/kawmed/masters/:sponsorId',requireSuperAdmin('viewer'),async(c:any)=>{
+  const sponsorId=clean(c.req.param('sponsorId'),80)
+  const row=await c.env.DB.prepare(`SELECT msm.*,st.name AS sponsor_name,u.email AS claimed_email
+    FROM medical_sponsor_masters msm
+    JOIN sponsor_tenants st ON st.id=msm.sponsor_id
+    LEFT JOIN users u ON u.id=msm.claimed_by_user_id
+    WHERE msm.sponsor_id=? LIMIT 1`).bind(sponsorId).first()
+  const appUrl=String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')
+  return c.json({ok:true,data:row?{...row,claim_url:appUrl+'/claim/kawmed-master?code='+encodeURIComponent(String((row as any).master_code||''))}:null})
+})
+
+app.post('/api/v1/superadmin/kawmed/masters/:sponsorId',requireSuperAdmin('super_admin'),async(c:any)=>{
+  const sponsorId=clean(c.req.param('sponsorId'),80)
+  const sponsor=await c.env.DB.prepare('SELECT id,name FROM sponsor_tenants WHERE id=? LIMIT 1').bind(sponsorId).first()
+  if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
+  const existing=await c.env.DB.prepare('SELECT * FROM medical_sponsor_masters WHERE sponsor_id=? LIMIT 1').bind(sponsorId).first()
+  const appUrl=String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')
+  if(existing){
+    const code=String((existing as any).master_code||'')
+    return c.json({ok:true,data:{master_code:code,status:String((existing as any).status||'available'),claim_url:appUrl+'/claim/kawmed-master?code='+encodeURIComponent(code),already_exists:true}})
+  }
+  const id=crypto.randomUUID(),code=await uniqueMedMasterCode(c),adminId=String(c.get('adminUserId')||'')
+  await c.env.DB.prepare(`INSERT INTO medical_sponsor_masters(id,sponsor_id,master_code,status,created_by_admin_user_id) VALUES(?,?,?,'available',?)`).bind(id,sponsorId,code,adminId||null).run()
+  return c.json({ok:true,data:{master_code:code,status:'available',claim_url:appUrl+'/claim/kawmed-master?code='+encodeURIComponent(code),already_exists:false}},201)
+})
+
+app.get('/api/v1/public/kawmed-master/:code',async(c:any)=>{
+  const code=normalizeCode(c.req.param('code'))
+  if(!validMedMasterCode(code))return c.json({ok:false,error:'Código Master KawMed inválido.'},400)
+  const row=await c.env.DB.prepare(`SELECT msm.master_code,msm.status,st.id AS sponsor_id,st.name AS sponsor_name,st.logo_url
+    FROM medical_sponsor_masters msm JOIN sponsor_tenants st ON st.id=msm.sponsor_id
+    WHERE msm.master_code=? LIMIT 1`).bind(code).first()
+  if(!row)return c.json({ok:false,error:'Master KawMed no encontrado.'},404)
+  return c.json({ok:true,data:{master_code:String((row as any).master_code),status:String((row as any).status),sponsor_id:String((row as any).sponsor_id),sponsor_name:String((row as any).sponsor_name||''),logo_url:String((row as any).logo_url||'')}})
+})
+
+app.post('/api/v1/me/kawmed-master/claim',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||''),body=await c.req.json().catch(()=>({})),code=normalizeCode(body.code)
+  if(!validMedMasterCode(code))return c.json({ok:false,error:'Código Master KawMed inválido.'},422)
+  const master=await c.env.DB.prepare(`SELECT msm.*,st.name AS sponsor_name,st.contact_email,st.is_active
+    FROM medical_sponsor_masters msm JOIN sponsor_tenants st ON st.id=msm.sponsor_id
+    WHERE msm.master_code=? LIMIT 1`).bind(code).first()
+  if(!master)return c.json({ok:false,error:'Master KawMed no encontrado.'},404)
+  if(Number((master as any).is_active)!==1)return c.json({ok:false,error:'El patrocinador está inactivo.'},409)
+  if(String((master as any).status)==='inactive')return c.json({ok:false,error:'Este Master KawMed está inactivo.'},409)
+
+  const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
+  const sponsorEmail=String((master as any).contact_email||'').trim().toLowerCase()
+  const sponsorId=String((master as any).sponsor_id||'')
+  const alreadyMember=await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,userId).first()
+  const authorizedSpecial=accountEmail===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL
+  if(!alreadyMember&&!authorizedSpecial&&(!sponsorEmail||accountEmail!==sponsorEmail)){
+    return c.json({ok:false,error:'Este Master debe activarse con el correo propietario registrado para el patrocinador.',code:'kawmed_master_wrong_account'},403)
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare(`INSERT INTO sponsor_members(sponsor_id,user_id,role,status,created_at) VALUES(?,?,'owner','active',datetime('now')) ON CONFLICT(sponsor_id,user_id) DO UPDATE SET role='owner',status='active'`).bind(sponsorId,userId),
+    c.env.DB.prepare(`UPDATE medical_sponsor_masters SET status='claimed',claimed_by_user_id=?,claimed_at=COALESCE(claimed_at,datetime('now')),updated_at=datetime('now') WHERE id=?`).bind(userId,String((master as any).id||'')),
+  ])
+  if(authorizedSpecial)await setSponsorContext(c,userId,sponsorId)
+  return c.json({ok:true,data:{sponsor_id:sponsorId,sponsor_name:String((master as any).sponsor_name||''),next_url:'/admin/sponsor/kawmed'}},201)
 })
 
 app.get('/api/v1/superadmin/kawmed/codes',requireSuperAdmin('viewer'),async(c:any)=>{
@@ -180,9 +249,7 @@ app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
 async function sponsorMembership(c:any,write=false){
   const userId=await sessionUserId(c)
   if(!userId)return{error:c.json({ok:false,error:'Unauthorized'},401)}
-  const row=await c.env.DB.prepare(`SELECT sm.sponsor_id,sm.role,st.name,st.is_active
-    FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id
-    WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1 LIMIT 1`).bind(userId).first()
+  const row=await resolveSponsorMembership(c,userId)
   if(!row)return{error:c.json({ok:false,error:'No tienes acceso a un patrocinador.'},403)}
   if(write&&!['owner','admin'].includes(String((row as any).role||'')))return{error:c.json({ok:false,error:'No tienes permiso para administrar KawMed.'},403)}
   return{userId,sponsorId:String((row as any).sponsor_id||''),role:String((row as any).role||''),sponsorName:String((row as any).name||'')}
