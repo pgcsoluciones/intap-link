@@ -496,12 +496,7 @@ export default function KawMedProfile() {
           ) : (
             <p>Este perfil no ha publicado una lista específica de seguros aceptados.</p>
           )}
-          <h3>Excepciones</h3>
-          {profile.insurance_policy.excluded.length ? (
-            <ul>{profile.insurance_policy.excluded.map((name) => <li key={'excluded-'+name}>{name}</li>)}</ul>
-          ) : (
-            <p>No hay excepciones registradas para este perfil.</p>
-          )}
+          {profile.insurance_policy.excluded.length > 0 && <><h3>Excepciones</h3><ul>{profile.insurance_policy.excluded.map((name) => <li key={'excluded-'+name}>{name}</li>)}</ul></>}
         </div>
       </KawMedModal>
 
