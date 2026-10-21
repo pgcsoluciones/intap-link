@@ -1936,3 +1936,118 @@
   .kawmed-identity { padding-inline: 18px; }
   .kawmed-identity h1 { margin-bottom: 15px; }
 }
+
+
+/* KawMed template 2: same public data and actions, alternate pastel presentation. */
+.kawmed-shell--pastel {
+  --kawmed-pastel-accent: #139da7;
+  --kawmed-pastel-soft: #e4f7f8;
+  background: #f0f9fc;
+}
+.kawmed-palette--lavender { --kawmed-pastel-accent: #9686c9; --kawmed-pastel-soft: #f0edff; }
+.kawmed-palette--mint { --kawmed-pastel-accent: #4a9c87; --kawmed-pastel-soft: #e5f7ee; }
+.kawmed-palette--peach { --kawmed-pastel-accent: #cf8c77; --kawmed-pastel-soft: #fff0eb; }
+.kawmed-palette--sky { --kawmed-pastel-accent: #568fbf; --kawmed-pastel-soft: #e9f4ff; }
+.kawmed-shell--pastel .kawmed-profile {
+  max-width: 600px;
+  background: linear-gradient(180deg, #fff 0%, #f7fbff 100%);
+  border-radius: 34px;
+  overflow: hidden;
+  box-shadow: 0 16px 65px rgba(24, 61, 93, .09);
+}
+.kawmed-shell--pastel .kawmed-hero {
+  aspect-ratio: 4 / 4.2;
+  min-height: 420px;
+  background: var(--kawmed-pastel-soft);
+  border-radius: 0 0 30px 30px;
+}
+.kawmed-shell--pastel .kawmed-hero__image { object-position: center 32%; }
+.kawmed-shell--pastel .kawmed-hero__shade {
+  background: linear-gradient(to top, rgba(245,252,255,.98) 0%,rgba(245,252,255,.65) 24%,transparent 57%),
+    linear-gradient(90deg,rgba(244,252,255,.92) 0%,rgba(244,252,255,.52) 53%,transparent 100%) !important;
+}
+.kawmed-pastel-hero-copy {
+  position: absolute;
+  left: clamp(18px,5vw,32px);
+  right: 18px;
+  bottom: 24px;
+  z-index: 2;
+  max-width: min(78%, 405px);
+  color: #12294c;
+  text-shadow: 0 1px 9px rgba(255,255,255,.58);
+}
+.kawmed-pastel-hero-copy h1 {
+  font-family: Georgia, serif;
+  font-size: clamp(28px,6vw,43px);
+  line-height: 1.1;
+  letter-spacing: -.025em;
+  margin: 0 0 14px;
+  font-weight: 750;
+}
+.kawmed-pastel-hero-specialties p { margin: 0 0 5px; line-height: 1.32; }
+.kawmed-pastel-main-specialty {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--kawmed-pastel-soft) 78%, white);
+  color: #0c5865;
+  font-weight: 800;
+  font-size: clamp(14px,3.5vw,18px);
+}
+.kawmed-pastel-extra-specialty { font-size: clamp(14px,3.4vw,18px); font-weight: 650; }
+.kawmed-pastel-subspecialty { margin: 9px 0 0; font-size: clamp(13px,3.1vw,16px); color: #425b79; }
+.kawmed-shell--pastel .kawmed-intro {
+  margin: -2px 20px 4px;
+  padding: 24px 18px 8px;
+  border-radius: 25px;
+  text-align: left;
+  background: #fff;
+}
+.kawmed-shell--pastel .kawmed-meta { justify-content: flex-start; flex-wrap: wrap; }
+.kawmed-shell--pastel .kawmed-contact-pills {
+  margin: 14px 20px 28px;
+  gap: 12px;
+}
+.kawmed-shell--pastel .kawmed-contact-pill {
+  min-height: 82px;
+  padding: 12px;
+  border: 1px solid #d8eaf0;
+  border-radius: 25px;
+  background: #f7fcfd;
+  box-shadow: 0 8px 20px rgba(22,71,100,.05);
+}
+.kawmed-shell--pastel .kawmed-contact-pill__icon {
+  background: var(--kawmed-pastel-soft);
+  color: var(--kawmed-pastel-accent);
+}
+.kawmed-shell--pastel .kawmed-contact-pill--primary {
+  background: var(--kawmed-pastel-accent);
+  border-color: var(--kawmed-pastel-accent);
+  color: #fff;
+}
+.kawmed-shell--pastel .kawmed-contact-pill--primary .kawmed-contact-pill__icon {
+  background: rgba(255,255,255,.18);
+  color: #fff;
+}
+.kawmed-shell--pastel .kawmed-panels { padding: 0 20px; gap: 13px; }
+.kawmed-shell--pastel .kawmed-panel {
+  border-radius: 25px;
+  padding: 7px 9px;
+  min-height: 96px;
+  border-color: #dcecf8;
+  background: #edf6ff;
+  box-shadow: 0 6px 18px rgba(24,72,110,.045);
+}
+.kawmed-shell--pastel .kawmed-panel:nth-child(2) { background: #edfaf8; border-color: #d0efea; }
+.kawmed-shell--pastel .kawmed-panel:nth-child(3) { background: #f0f4ff; border-color: #dde4fc; }
+.kawmed-shell--pastel .kawmed-panel__icon { background: #dcecff; }
+.kawmed-shell--pastel .kawmed-panel__icon--teal { background: #d5f5f1; }
+.kawmed-shell--pastel .kawmed-panel__icon--insurance { background: #dfe8ff; }
+.kawmed-shell--pastel .kawmed-insurance-except { background: #e1ebff; border-radius: 999px; }
+@media(max-width:420px) {
+  .kawmed-shell--pastel .kawmed-hero { min-height: 400px; }
+  .kawmed-pastel-hero-copy { max-width: 84%; bottom: 20px; }
+  .kawmed-shell--pastel .kawmed-contact-pills { margin-left: 12px; margin-right: 12px; gap: 8px; }
+  .kawmed-shell--pastel .kawmed-contact-pill { padding: 9px; min-height: 74px; }
+  .kawmed-shell--pastel .kawmed-panels { padding: 0 12px; }
+}
