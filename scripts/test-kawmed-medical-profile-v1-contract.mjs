@@ -83,7 +83,7 @@ assert(profile.includes('kawmed-pastel-hero-copy') && profile.includes('isPastel
 assert(medicalStyles.includes('.kawmed-shell--pastel .kawmed-profile') && medicalStyles.includes('.kawmed-palette--lavender'),'plantilla pastel y paletas definidas')
 assert(profile.includes("params.get('kawmed_preview')") && profile.includes("params.get('kawmed_palette')"),'vista completa debe permitir probar sin alterar datos guardados')
 assert(medicalDashboard.includes('Vista previa completa del perfil') && medicalDashboard.includes('<iframe') && medicalDashboard.includes('Dr. Nombre Apellido'),'editor debe mostrar miniaturas ilustradas y vista completa activa')
-assert(medicalStyles.includes('.kawmed-shell--pastel .kawmed-hero__shade') && medicalStyles.includes('background: none !important'),'plantilla pastel debe retirar degradado')
+assert(medicalStyles.includes('.kawmed-shell--pastel .kawmed-hero__shade') && medicalStyles.includes('.kawmed-shell--pastel .kawmed-hero__shade {display:none!important}'),'plantilla pastel debe retirar degradado')
 assert(medicalDashboard.includes("['appearance','Apariencia']") && medicalDashboard.includes("apiPut(scoped('/me/medical-profile/appearance')"),'editor permite seleccionar y persistir apariencia')
 assert(medicalOwner.includes("app.post('/api/v1/me/medical-profile/specialties'") && medicalOwner.includes('AND specialty=?') && medicalOwner.includes("SELECT specialty FROM medical_profiles WHERE id=?"),'especialidad adicional requiere escritura atómica y lectura de D1')
 assert(medicalOwner.includes("app.delete('/api/v1/me/medical-profile/specialties'") && medicalDashboard.includes("apiDelete(scoped('/me/medical-profile/specialties')"),'eliminar especialidad requiere ruta independiente')
