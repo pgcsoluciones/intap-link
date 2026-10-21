@@ -88,8 +88,8 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
         organization:form.organization,status:form.status,
       })
       if(!j?.ok)throw new Error(j?.error||'No pudimos guardar el perfil.')
-      setProfile(j.data);setForm(j.data);showSaved('profile','Perfil médico guardado.')
-    }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar.')}finally{setBusy(false)}
+      setProfile(j.data);setForm(j.data);showSaved('profile','Perfil médico guardado.');return true
+    }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar.');return false}finally{setBusy(false)}
   }
 
   async function addSecondarySpecialty(){
@@ -99,8 +99,9 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     if(existing.some(x=>x.toLocaleLowerCase('es')===value.toLocaleLowerCase('es'))){setError('Esta especialidad ya está agregada.');return}
     const next=[...existing,value].join(' | ')
     setForm((previous:any)=>({...previous,specialty:next}))
-    await saveProfile(next)
-    setSecondaryDraft('')
+    const saved=await saveProfile(next)
+    if(saved)setSecondaryDraft('')
+    else setForm((previous:any)=>({...previous,specialty:existing.join(' | ')}))
   }
 
   function chooseImage(file:File|undefined,kind:'avatar'|'cover'){
