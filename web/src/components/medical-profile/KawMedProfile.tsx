@@ -298,7 +298,7 @@ export default function KawMedProfile() {
   const heroImage = profile.cover_url || profile.avatar_url || '/assets/kawmed/laura-mendez-hero.jpg'
   const primaryCenter = profile.centers[0] || null
   const isPastel = profile.template === 'pastel'
-  const palette = ['aqua','lavender','mint','peach','sky'].includes(profile.palette||'') ? profile.palette : 'aqua'
+  const palette: 'aqua' | 'lavender' | 'mint' | 'peach' | 'sky' = profile.palette && ['aqua','lavender','mint','peach','sky'].includes(profile.palette) ? profile.palette : 'aqua'
 
   return (
     <main className={`kawmed-shell${isPastel ? ` kawmed-shell--pastel kawmed-palette--${palette}` : ""}`}>
