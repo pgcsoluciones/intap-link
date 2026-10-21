@@ -1891,9 +1891,9 @@
 /* KawMed QA: softer portrait transition, stronger specialty contrast and accessible text. */
 .kawmed-hero__shade {
   background: linear-gradient(to top,
-    #fff 0%, rgba(255,255,255,.995) 15%,
-    rgba(255,255,255,.93) 31%, rgba(255,255,255,.68) 48%,
-    rgba(255,255,255,.27) 66%, transparent 86%) !important;
+    #fff 0%, rgba(255,255,255,.98) 12%,
+    rgba(255,255,255,.84) 26%, rgba(255,255,255,.42) 43%,
+    rgba(255,255,255,.12) 58%, transparent 74%) !important;
 }
 .kawmed-identity .kawmed-specialty {
   font-size: clamp(20px, 4.8vw, 25px);
