@@ -101,6 +101,9 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     try{
       const result:any=await apiPost(scoped('/me/medical-profile/specialties'),{specialty:value})
       if(!result?.ok)throw new Error(result?.error||'No se pudo guardar la especialidad.')
+      // Confirm the server actually wrote the medical profile currently shown in this editor.
+      if(String(result.data?.profile_id||'')!==String(profile?.id||'')||String(result.data?.slug||'')!==String(profile?.slug||''))
+        throw new Error('La API guardó una especialidad en otro perfil médico. Esperado: '+String(profile?.slug||'')+'; recibido: '+String(result.data?.slug||'')+'. No se confirmó este perfil.')
       // Server has performed a direct D1 readback, not merely echoed local form state.
       const persisted=String(result.data?.specialty||'')
       if(!persisted.split(' | ').some((item:string)=>item.trim().toLocaleLowerCase('es')===value.toLocaleLowerCase('es')))
