@@ -26,6 +26,8 @@ function profileResponse(profile: any, centers: any[], schedules: any[], service
     professional_prefix: profile.professional_prefix || null,
     display_name: [profile.professional_prefix, profile.name].filter(Boolean).join(' '),
     specialty: profile.specialty,
+    template: profile.template || 'classic',
+    palette: profile.palette || 'aqua',
     subspecialty: profile.subspecialty || null,
     bio: profile.bio || null,
     avatar_url: profile.avatar_url || null,
@@ -85,11 +87,11 @@ export function registerMedicalProfileRoutes(app: any) {
 
     try {
       const profile = await c.env.DB.prepare(
-        `SELECT id, slug, name, professional_prefix, specialty, subspecialty, bio,
-                avatar_url, cover_url, phone, whatsapp, email, city, province, country,
-                organization, status
-           FROM medical_profiles
-          WHERE slug = ? AND status = 'active'
+        `SELECT mp.id, mp.slug, mp.name, mp.professional_prefix, mp.specialty, mp.subspecialty, mp.bio,
+                mp.avatar_url, mp.cover_url, mp.phone, mp.whatsapp, mp.email, mp.city, mp.province, mp.country,
+                mp.organization, mp.status, COALESCE(ma.template,'classic') AS template, COALESCE(ma.palette,'aqua') AS palette
+           FROM medical_profiles mp LEFT JOIN medical_profile_appearance ma ON ma.medical_profile_id=mp.id
+          WHERE mp.slug = ? AND mp.status = 'active'
           LIMIT 1`
       ).bind(slug).first()
 
