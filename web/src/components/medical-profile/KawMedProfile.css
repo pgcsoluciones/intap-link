@@ -1908,3 +1908,31 @@
   font-size: 14px;
   line-height: 1.6;
 }
+
+/* KawMed: typography hierarchy for multiple and long medical specialties. */
+.kawmed-identity { margin-top: -22px; padding: 0 24px 20px; }
+.kawmed-identity h1 { margin-bottom: 18px; }
+.kawmed-specialties { max-width: 540px; margin: 0 auto; display: grid; gap: 11px; }
+.kawmed-identity .kawmed-specialty {
+  margin: 0 auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  line-height: 1.35;
+}
+.kawmed-identity .kawmed-specialty--main {
+  font-size: clamp(17px, 3.7vw, 22px);
+  font-weight: 800;
+  color: #0c315b;
+}
+.kawmed-identity .kawmed-specialty--additional {
+  font-size: clamp(15px, 3.2vw, 19px);
+  font-weight: 700;
+  color: #344e6e;
+}
+.kawmed-identity .kawmed-subtitle { margin-top: 15px; font-size: 14px; color: #354d6a; }
+.kawmed-intro { padding-top: 12px; padding-bottom: 22px; }
+@media(max-width:420px){
+  .kawmed-identity { padding-inline: 18px; }
+  .kawmed-identity h1 { margin-bottom: 15px; }
+}
