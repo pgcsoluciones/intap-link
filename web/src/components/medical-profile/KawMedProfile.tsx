@@ -310,6 +310,7 @@ export default function KawMedProfile() {
     <main className={`kawmed-shell${isPastel ? ` kawmed-shell--pastel kawmed-palette--${palette}` : ""}`}>
       <AppointmentOwnerBar
         username={profile.slug}
+        mobileMenu
         ownerApiBase={appOrigin()+'/api/v1/me/medical-profile/appointments'}
         manageOrigin={appOrigin()}
         settingsPath="/admin/medical"
