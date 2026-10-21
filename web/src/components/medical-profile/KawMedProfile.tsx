@@ -388,7 +388,7 @@ export default function KawMedProfile() {
               <strong>Horarios</strong>
               <small>Días y tandas disponibles</small>
             </span>
-            <FiChevronRight className="kawmed-panel__chevron" />
+            <FiCalendar className="kawmed-panel__art" aria-hidden="true" /><FiBriefcase className="kawmed-panel__art" aria-hidden="true" /><FiChevronRight className="kawmed-panel__chevron" />
           </button>
 
           <button className="kawmed-panel kawmed-panel--direct" type="button" onClick={() => setModal('centers')}>
@@ -407,7 +407,7 @@ export default function KawMedProfile() {
                 <strong>Seguros médicos</strong>
                 <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : profile.insurance_policy.accepts_all ? 'Todos los seguros' : 'Consulta cobertura y excepciones'}</small>
               </span>
-              <button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
+              <FiShield className="kawmed-panel__art" aria-hidden="true" /><button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
                 Ver seguros
               </button>
             </div>
