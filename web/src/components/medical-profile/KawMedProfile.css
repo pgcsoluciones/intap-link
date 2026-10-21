@@ -1939,277 +1939,131 @@
 
 
 
-/* KawMed Pastel — composed as a separate visual system, with no photo fade. */
-.kawmed-shell--pastel {
-  --med-accent: #139da7;
-  --med-light: #e4f7f8;
-  background: #eff7fa;
-}
-.kawmed-palette--lavender {--med-accent:#9686c9;--med-light:#f0edff}
-.kawmed-palette--mint {--med-accent:#4a9c87;--med-light:#e5f7ee}
-.kawmed-palette--peach {--med-accent:#cf8c77;--med-light:#fff0eb}
-.kawmed-palette--sky {--med-accent:#568fbf;--med-light:#e9f4ff}
-.kawmed-shell--pastel .kawmed-profile {
-  width:min(100%,600px);
-  background:#fff;
-  border-radius:30px;
-  overflow:hidden;
-  box-shadow:0 18px 56px rgba(25,64,89,.07);
-}
-.kawmed-shell--pastel .kawmed-hero {
-  height:440px;
-  min-height:0;
-  aspect-ratio:auto;
-  background:var(--med-light);
-  border-radius:28px 28px 0 0;
-}
-.kawmed-shell--pastel .kawmed-hero__image {
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  object-position:center 25%;
-}
-.kawmed-shell--pastel .kawmed-hero__shade {display:none!important}
-.kawmed-shell--pastel .kawmed-pastel-hero-copy {
-  position:absolute;
-  z-index:2;
-  left:20px;
-  right:20px;
-  bottom:20px;
-  width:auto;
-  max-width:none;
-  padding:0;
-  background:none;
-  border:0;
-  border-radius:0;
-  backdrop-filter:none;
-  text-shadow:none;
-  color:#102747;
-}
-.kawmed-shell--pastel .kawmed-pastel-hero-copy h1 {
-  display:table;
-  max-width:100%;
-  margin:0 0 10px;
-  padding:3px 0 4px;
-  background:none;
-  border-radius:0;
-  box-decoration-break:clone;
-  font-family:Georgia,serif;
-  font-size:clamp(24px,5vw,36px);
-  letter-spacing:-.035em;
-  line-height:1.16;
-}
-.kawmed-shell--pastel .kawmed-pastel-hero-specialties {
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  gap:5px;
-}
-.kawmed-shell--pastel .kawmed-pastel-hero-specialties p {
-  margin:0;
-  display:table;
-  max-width:100%;
-  padding:3px 0;
-  border-radius:0;
-  background:none;
-  font-size:clamp(12px,2.9vw,15px);
-  line-height:1.35;
-  font-weight:650;
-}
-.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-main-specialty {
-  color:var(--med-accent);
-  font-weight:800;
-  background:none;
-}
-.kawmed-shell--pastel .kawmed-pastel-subspecialty {
-  display:table;
-  padding:3px 0;
-  margin:5px 0 0;
-  border-radius:0;
-  background:none;
-  color:#4a5e77;
-  font-size:clamp(12px,2.8vw,14px);
-}
-.kawmed-shell--pastel .kawmed-intro {
-  margin:0;
-  padding:23px 20px 18px;
-  background:#fff;
-  border-radius:0;
-  text-align:left;
-}
-.kawmed-shell--pastel .kawmed-intro>p {max-width:550px;margin:0 0 14px}
-.kawmed-shell--pastel .kawmed-meta {justify-content:flex-start;flex-wrap:wrap;gap:8px 18px}
-.kawmed-shell--pastel .kawmed-contact-pills {
-  padding:8px 20px 25px;
-  margin:0;
-  gap:11px;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-}
-.kawmed-shell--pastel .kawmed-contact-pill {
-  min-height:75px;
-  width:100%;
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  padding:12px;
-  gap:10px;
-  border-radius:22px;
-  border:1px solid #d5e8ed;
-  background:#f6fbfc;
-  color:#152e50;
-  box-shadow:none;
-  text-align:left;
-}
-.kawmed-shell--pastel .kawmed-contact-pill--primary {
-  background:var(--med-accent);
-  color:#fff;
-  border-color:var(--med-accent);
-}
-.kawmed-shell--pastel .kawmed-contact-pill__icon {
-  width:44px;
-  height:44px;
-  flex:0 0 44px;
-  border-radius:50%;
-  background:var(--med-light);
-  color:var(--med-accent);
-}
-.kawmed-shell--pastel .kawmed-contact-pill--primary .kawmed-contact-pill__icon {
-  background:rgba(255,255,255,.17);
-  color:white;
-}
-.kawmed-shell--pastel .kawmed-contact-pill strong {
-  display:block;
-  white-space:normal;
-  font-size:13px;
-  line-height:1.25;
-  text-align:left;
-}
-.kawmed-shell--pastel .kawmed-contact-pill small {text-align:left;font-size:10px}
-.kawmed-shell--pastel .kawmed-contact-pill--primary small {color:#f1ffff}
-.kawmed-shell--pastel .kawmed-panels {
-  display:grid;
-  gap:13px;
-  padding:4px 20px 18px;
-}
-.kawmed-shell--pastel .kawmed-panel {
-  position:relative;
-  isolation:isolate;
-  min-height:102px;
-  border-radius:22px;
-  padding:8px 12px;
-  margin:0;
-  overflow:hidden;
-  border:1px solid #d9eaf6;
-  background:#edf6ff;
-  box-shadow:none;
-  text-align:left;
-}
-.kawmed-shell--pastel .kawmed-panel:nth-child(2) {background:#eefaF7;border-color:#ccebe7}
-.kawmed-shell--pastel .kawmed-panel:nth-child(3) {background:#eff3ff;border-color:#dfe6ff}
-.kawmed-shell--pastel .kawmed-panel__icon {
-  width:56px;
-  height:56px;
-  border-radius:50%;
-  background:#deedff;
-  color:#2272cd;
-  flex-shrink:0;
-  position:relative;
-  z-index:2;
-}
-.kawmed-shell--pastel .kawmed-panel__icon--teal {background:#d6f3ee;color:#118a87}
-.kawmed-shell--pastel .kawmed-panel__icon--insurance {background:#dfe8ff;color:#426fcc}
-.kawmed-shell--pastel .kawmed-panel__icon svg {width:25px;height:25px}
-.kawmed-shell--pastel .kawmed-panel__title,
-.kawmed-shell--pastel .kawmed-panel__chevron,
-.kawmed-shell--pastel .kawmed-insurance-except {position:relative;z-index:2}
-.kawmed-shell--pastel .kawmed-panel__title strong {font-size:15px}
-.kawmed-shell--pastel .kawmed-panel__title small {font-size:11px}
-.kawmed-shell--pastel .kawmed-panel__art {
-  display:block;
-  position:absolute;
-  width:108px;
-  height:108px;
-  right:45px;
-  bottom:-17px;
-  color:#78adde;
-  opacity:.19;
-  stroke-width:1.3;
-  pointer-events:none;
-  z-index:0;
-}
-.kawmed-shell--pastel .kawmed-panel:nth-child(2) .kawmed-panel__art {color:#61b4ab}
-.kawmed-shell--pastel .kawmed-panel:nth-child(3) .kawmed-panel__art {color:#8399da}
-.kawmed-shell--pastel .kawmed-insurance-except {
-  border-radius:999px;
-  background:#e0eaff;
-}
-@media(max-width:440px) {
-  .kawmed-shell--pastel .kawmed-profile {border-radius:0}
-  .kawmed-shell--pastel .kawmed-hero {height:420px;border-radius:0}
-  .kawmed-shell--pastel .kawmed-pastel-hero-copy {left:20px;right:20px;bottom:20px;width:auto}
-  .kawmed-shell--pastel .kawmed-intro {padding:20px 20px 16px}
-  .kawmed-shell--pastel .kawmed-contact-pills {padding:6px 20px 20px;gap:8px}
-  .kawmed-shell--pastel .kawmed-contact-pill {min-height:71px;padding:8px;gap:7px}
-  .kawmed-shell--pastel .kawmed-contact-pill__icon {height:38px;width:38px;flex-basis:38px}
-  .kawmed-shell--pastel .kawmed-contact-pill strong {font-size:11px}
-  .kawmed-shell--pastel .kawmed-panels {padding:0 20px 16px}
-}
 
-/* One consistent internal grid and clean card surfaces */
-.kawmed-shell--pastel .kawmed-contact-pill__icon svg {width:22px;height:22px;stroke-width:1.8}
-.kawmed-shell--pastel .kawmed-panel__art {display:none}
-.kawmed-shell--pastel .kawmed-panel:nth-child(2) .kawmed-panel__art {
-  display:block;
-  right:46px;
-  width:90px;
-  height:90px;
-  bottom:-4px;
-  opacity:.13;
+/* KawMed Pastel V2 — independently composed design, not an override pile.
+   Every content surface follows one 24px horizontal grid. */
+.kawmed-shell--pastel{--pastel-accent:#139da7;--pastel-tint:#e5f7f8;background:#edf7fb}
+.kawmed-palette--lavender{--pastel-accent:#9686c9;--pastel-tint:#f1edff}
+.kawmed-palette--mint{--pastel-accent:#4a9c87;--pastel-tint:#e5f7ee}
+.kawmed-palette--peach{--pastel-accent:#cf8c77;--pastel-tint:#fff0eb}
+.kawmed-palette--sky{--pastel-accent:#568fbf;--pastel-tint:#e8f3ff}
+.kawmed-shell--pastel .kawmed-profile{width:min(100%,620px);background:#fff;border-radius:32px;overflow:hidden;box-shadow:0 20px 65px rgba(28,70,105,.08)}
+.kawmed-shell--pastel .kawmed-hero{height:490px;min-height:0;aspect-ratio:auto;background:var(--pastel-tint);border-radius:28px 28px 0 0;isolation:isolate}
+.kawmed-shell--pastel .kawmed-hero__image{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center 29%}
+.kawmed-shell--pastel .kawmed-hero__shade{display:none!important}
+.kawmed-shell--pastel .kawmed-pastel-hero-copy{
+ position:absolute;left:24px;right:24px;bottom:24px;z-index:3;
+ box-sizing:border-box;width:auto;max-width:none;margin:0;
+ padding:18px 20px 17px;border-radius:23px;
+ background:rgba(251,254,255,.91);border:1px solid rgba(255,255,255,.85);
+ box-shadow:0 12px 40px rgba(18,52,78,.12);
+ backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ color:#112b4e;text-shadow:none;
 }
-.kawmed-shell--pastel .kawmed-panel--insurance,
-.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
-  background:transparent;
+.kawmed-shell--pastel .kawmed-pastel-hero-copy h1{
+ display:block;max-width:none;margin:0 0 12px;padding:0;
+ background:transparent;font:700 clamp(27px,5.8vw,37px)/1.12 Georgia,serif;
+ letter-spacing:-.036em;color:#11284a
 }
-.kawmed-shell--pastel .kawmed-panel--insurance {
-  background:#eff3ff;
+.kawmed-shell--pastel .kawmed-pastel-hero-specialties{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.kawmed-shell--pastel .kawmed-pastel-hero-specialties p{
+ display:block;width:auto;max-width:100%;margin:0;padding:0;
+ border:0;border-radius:0;background:transparent;
+ color:#193857;font-size:clamp(13px,3.2vw,16px);font-weight:650;line-height:1.36
 }
-.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
-  border:0;
-  box-shadow:none;
+.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-main-specialty{
+ color:var(--pastel-accent);font-weight:800;padding:0 0 3px;border-bottom:1px solid #d5e9ec
 }
-.kawmed-shell--pastel .kawmed-panel__chevron {flex-shrink:0}
+.kawmed-shell--pastel .kawmed-pastel-subspecialty{
+ display:block;margin:7px 0 0;padding:0;background:transparent;border:0;border-radius:0;
+ font-size:clamp(12px,3vw,14px);font-weight:500;color:#63758d;line-height:1.3
+}
+.kawmed-shell--pastel .kawmed-intro{
+ margin:0;padding:25px 24px 17px;background:#fff;border:0;border-radius:0;text-align:left
+}
+.kawmed-shell--pastel .kawmed-intro>p{margin:0 0 17px;max-width:none;line-height:1.65}
+.kawmed-shell--pastel .kawmed-meta{display:flex;justify-content:flex-start;flex-wrap:wrap;gap:8px 20px}
+.kawmed-shell--pastel .kawmed-contact-pills{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+ margin:0;padding:5px 24px 31px
+}
+.kawmed-shell--pastel .kawmed-contact-pill{
+ display:flex;align-items:center;justify-content:flex-start;gap:13px;
+ min-width:0;min-height:84px;padding:13px;
+ border:1px solid #d7e9ed;border-radius:25px;background:#f7fcfd;
+ color:#112b4e;box-shadow:none;text-align:left
+}
+.kawmed-shell--pastel .kawmed-contact-pill--primary{background:var(--pastel-accent);border-color:var(--pastel-accent);color:#fff}
+.kawmed-shell--pastel .kawmed-contact-pill__icon{
+ display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;
+ background:var(--pastel-tint);color:var(--pastel-accent);border-radius:50%
+}
+.kawmed-shell--pastel .kawmed-contact-pill__icon svg{width:22px;height:22px;stroke-width:1.75}
+.kawmed-shell--pastel .kawmed-contact-pill--primary .kawmed-contact-pill__icon{background:rgba(255,255,255,.17);color:#fff}
+.kawmed-shell--pastel .kawmed-contact-pill>span:last-child{min-width:0;display:grid;gap:4px}
+.kawmed-shell--pastel .kawmed-contact-pill strong{
+ display:block;white-space:normal;font-size:clamp(11px,2.7vw,14px);font-weight:800;line-height:1.24;text-align:left
+}
+.kawmed-shell--pastel .kawmed-contact-pill small{display:block;font-size:10px;line-height:1.3;text-align:left}
+.kawmed-shell--pastel .kawmed-contact-pill--primary small{color:rgba(255,255,255,.87)}
+.kawmed-shell--pastel .kawmed-panels{display:grid;gap:14px;margin:0;padding:0 24px 23px}
+.kawmed-shell--pastel .kawmed-panel{
+ display:flex;align-items:center;gap:16px;position:relative;isolation:isolate;
+ min-width:0;min-height:108px;margin:0;padding:19px;
+ overflow:hidden;border:1px solid #d8eaf8;border-radius:25px;background:#edf6ff;
+ box-shadow:none;text-align:left
+}
+.kawmed-shell--pastel .kawmed-panel:nth-child(2){background:#edf9f6;border-color:#ccece7}
+.kawmed-shell--pastel .kawmed-panel:nth-child(3){background:#eff3ff;border-color:#dce5ff}
+.kawmed-shell--pastel .kawmed-panel__icon{
+ display:grid;place-items:center;flex:0 0 55px;width:55px;height:55px;
+ border-radius:50%;background:#daebff;color:#1471d6;position:relative;z-index:2
+}
+.kawmed-shell--pastel .kawmed-panel__icon--teal{background:#d7f4ef;color:#108d8a}
+.kawmed-shell--pastel .kawmed-panel__icon--insurance{background:#dfe9ff;color:#4777d3}
+.kawmed-shell--pastel .kawmed-panel__icon svg{width:25px;height:25px;stroke-width:1.7}
+.kawmed-shell--pastel .kawmed-panel__title{position:relative;z-index:2;flex:1;min-width:0;display:grid;gap:5px}
+.kawmed-shell--pastel .kawmed-panel__title strong{font-size:clamp(12px,3vw,15px);line-height:1.22}
+.kawmed-shell--pastel .kawmed-panel__title small{font-size:clamp(10px,2.4vw,11px);line-height:1.3}
+.kawmed-shell--pastel .kawmed-panel__chevron{position:relative;z-index:3;flex:0 0 16px}
+.kawmed-shell--pastel .kawmed-panel__illustration{
+ display:grid;place-items:center;position:absolute;right:41px;bottom:-15px;
+ width:112px;height:112px;opacity:.18;color:#639ed3;pointer-events:none;z-index:0
+}
+.kawmed-shell--pastel .kawmed-panel__illustration svg{width:110px;height:110px;stroke-width:1.2}
+.kawmed-shell--pastel .kawmed-panel:nth-child(2) .kawmed-panel__illustration{color:#43a89f}
+.kawmed-shell--pastel .kawmed-panel:nth-child(2) .kawmed-panel__illustration svg:last-child{
+ position:absolute;right:18px;top:19px;width:35px;height:35px;stroke-width:1.8
+}
+.kawmed-shell--pastel .kawmed-panel:nth-child(3) .kawmed-panel__illustration{color:#7f93d8;right:30px}
+.kawmed-shell--pastel .kawmed-panel--insurance{
+ display:block;min-height:108px;padding:0;background:#eff3ff
+}
+.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger{
+ display:grid;grid-template-columns:55px minmax(0,1fr) auto;
+ align-items:center;gap:16px;position:relative;width:100%;min-height:106px;
+ margin:0;padding:19px;border:0;border-radius:25px;background:transparent!important;box-shadow:none
+}
+.kawmed-shell--pastel .kawmed-insurance-except{
+ position:relative;z-index:3;min-width:0;padding:9px 13px;margin:0;
+ border:0;border-radius:999px;background:#dfe9ff;color:#285bc2;white-space:nowrap
+}
+.kawmed-shell--pastel .kawmed-public-actions{margin:10px 24px}
 @media(max-width:440px){
-  .kawmed-shell--pastel .kawmed-hero {height:470px}
-  .kawmed-shell--pastel .kawmed-pastel-hero-copy h1 {font-size:clamp(27px,7vw,34px)}
-}
-
-/* Remove the inset white rectangle in insurance and keep its contents on one grid. */
-.kawmed-shell--pastel .kawmed-panel--insurance {padding:0; background:#eff3ff}
-.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
-  display:grid;
-  grid-template-columns:56px minmax(0,1fr) auto;
-  align-items:center;
-  gap:12px;
-  min-height:100px;
-  width:100%;
-  margin:0;
-  padding:14px 16px;
-  background:transparent!important;
-  border:0;
-  border-radius:22px;
-}
-.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-insurance-except {
-  margin:0;
-  min-width:0;
-  white-space:nowrap;
-  background:#e0eaff;
-}
-@media(max-width:420px){
-  .kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
-    grid-template-columns:48px minmax(0,1fr) auto;
-    gap:8px;
-    padding:10px;
-  }
+ .kawmed-shell--pastel .kawmed-profile{border-radius:0}
+ .kawmed-shell--pastel .kawmed-hero{height:460px;border-radius:0}
+ .kawmed-shell--pastel .kawmed-pastel-hero-copy{left:20px;right:20px;bottom:18px;padding:15px 16px}
+ .kawmed-shell--pastel .kawmed-intro{padding:21px 20px 15px}
+ .kawmed-shell--pastel .kawmed-contact-pills{gap:9px;padding:4px 20px 25px}
+ .kawmed-shell--pastel .kawmed-contact-pill{min-height:72px;padding:8px;gap:8px;border-radius:20px}
+ .kawmed-shell--pastel .kawmed-contact-pill__icon{flex-basis:39px;width:39px;height:39px}
+ .kawmed-shell--pastel .kawmed-panels{padding:0 20px 19px;gap:12px}
+ .kawmed-shell--pastel .kawmed-panel{min-height:98px;padding:13px;gap:10px}
+ .kawmed-shell--pastel .kawmed-panel__icon{flex-basis:45px;width:45px;height:45px}
+ .kawmed-shell--pastel .kawmed-panel__illustration{right:25px;width:94px;height:94px}
+ .kawmed-shell--pastel .kawmed-panel__illustration svg{width:94px;height:94px}
+ .kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger{
+  grid-template-columns:45px minmax(0,1fr) auto;gap:9px;padding:13px;min-height:96px
+ }
+ .kawmed-shell--pastel .kawmed-insurance-except{padding:8px;font-size:10px}
 }
