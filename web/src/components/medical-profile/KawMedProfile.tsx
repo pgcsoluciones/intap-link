@@ -6,6 +6,7 @@ import {
   FiPlusSquare,
   FiBriefcase,
   FiHome,
+  FiShieldCheck,
   FiCalendar,
   FiChevronRight,
   FiMapPin,
@@ -390,7 +391,7 @@ export default function KawMedProfile() {
               <strong>Horarios</strong>
               <small>Días y tandas disponibles</small>
             </span>
-            <FiHome className="kawmed-panel__art" aria-hidden="true" /><FiChevronRight className="kawmed-panel__chevron" />
+            <span className="kawmed-panel__illustration" aria-hidden="true"><FiCalendar /></span><FiChevronRight className="kawmed-panel__chevron" />
           </button>
 
           <button className="kawmed-panel kawmed-panel--direct" type="button" onClick={() => setModal('centers')}>
@@ -399,17 +400,17 @@ export default function KawMedProfile() {
               <strong>Centros de atención</strong>
               <small>{profile.centers.length} {profile.centers.length === 1 ? 'centro disponible' : 'centros disponibles'}</small>
             </span>
-            <FiChevronRight className="kawmed-panel__chevron" />
+            <span className="kawmed-panel__illustration" aria-hidden="true"><FiHome /><FiPlusSquare /></span><FiChevronRight className="kawmed-panel__chevron" />
           </button>
 
           <article className="kawmed-panel kawmed-panel--insurance">
             <div className="kawmed-panel__trigger kawmed-panel__trigger--static">
-              <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShield /></span>
+              <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShieldCheck /></span>
               <span className="kawmed-panel__title">
                 <strong>Seguros médicos</strong>
                 <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : profile.insurance_policy.accepts_all ? 'Todos los seguros' : 'Consulta cobertura y excepciones'}</small>
               </span>
-              <button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
+              <span className="kawmed-panel__illustration" aria-hidden="true"><FiShieldCheck /></span><button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
                 Ver seguros
               </button>
             </div>
