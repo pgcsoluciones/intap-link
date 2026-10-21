@@ -297,16 +297,18 @@ export default function KawMedProfile() {
 
   const heroImage = profile.cover_url || profile.avatar_url || '/assets/kawmed/laura-mendez-hero.jpg'
   const primaryCenter = profile.centers[0] || null
+  const isPastel = profile.template === 'pastel'
+  const palette = ['aqua','lavender','mint','peach','sky'].includes(profile.palette||'') ? profile.palette : 'aqua'
 
   return (
-    <main className="kawmed-shell">
+    <main className={`kawmed-shell${isPastel ? ` kawmed-shell--pastel kawmed-palette--${palette}` : ""}`}>
       <AppointmentOwnerBar
         username={profile.slug}
         ownerApiBase={appOrigin()+'/api/v1/me/medical-profile/appointments'}
         manageOrigin={appOrigin()}
         settingsPath="/admin/medical"
         settingsLabel="Editar mi perfil"
-        palette={{accent:'#126fe8',accentSoft:'#eaf4ff',text:'#10233f'}}
+        palette={{accent:isPastel?({aqua:'#139da7',lavender:'#9686c9',mint:'#4a9c87',peach:'#cf8c77',sky:'#568fbf'} as Record<string,string>)[palette]:'#126fe8',accentSoft:'#eaf4ff',text:'#10233f'}}
         onToast={(message) => {
           setToast(message)
           window.setTimeout(() => setToast(''), 2800)
@@ -316,13 +318,18 @@ export default function KawMedProfile() {
         <section className="kawmed-hero">
           <img className="kawmed-hero__image" src={heroImage} alt={profile.display_name} />
           <div className="kawmed-hero__shade" />
+          {isPastel ? <div className="kawmed-pastel-hero-copy">
+            <h1>{profile.display_name}</h1>
+            <div className="kawmed-pastel-hero-specialties">{profile.specialty.split(' | ').filter(Boolean).map((name,index)=><p className={index===0?'kawmed-pastel-main-specialty':'kawmed-pastel-extra-specialty'} key={index}>{name.trim()}</p>)}</div>
+            {profile.subspecialty?<p className="kawmed-pastel-subspecialty">{profile.subspecialty}</p>:null}
+          </div>:null}
         </section>
 
-        <section className="kawmed-identity">
+        {!isPastel?<section className="kawmed-identity">
           <h1>{profile.display_name}</h1>
           <div className="kawmed-specialties">{profile.specialty.split(" | ").map((name,index)=><p className={index===0?"kawmed-specialty kawmed-specialty--main":"kawmed-specialty kawmed-specialty--additional"} key={index}>{name.trim()}</p>)}</div>
           {profile.subspecialty ? <p className="kawmed-subtitle">{profile.subspecialty}</p> : null}
-        </section>
+        </section>:null}
 
         <section className="kawmed-intro">
           <p>{profile.bio || 'Información profesional no disponible.'}</p>
@@ -394,7 +401,7 @@ export default function KawMedProfile() {
               <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShield /></span>
               <span className="kawmed-panel__title">
                 <strong>Seguros médicos</strong>
-                <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : 'Consulta cobertura y excepciones'}</small>
+                <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : profile.insurance_policy.accepts_all ? 'Todos los seguros' : 'Consulta cobertura y excepciones'}</small>
               </span>
               <button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
                 Ver seguros
