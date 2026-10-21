@@ -394,26 +394,22 @@ export default function KawMedProfile() {
           </button>
 
           <button className="kawmed-panel kawmed-panel--direct" type="button" onClick={() => setModal('centers')}>
-            <span className="kawmed-panel__icon kawmed-panel__icon--teal"><FiPlusSquare /></span>
+            <span className="kawmed-panel__icon kawmed-panel__icon--teal"><FiHome /></span>
             <span className="kawmed-panel__title">
               <strong>Centros de atención</strong>
               <small>{profile.centers.length} {profile.centers.length === 1 ? 'centro disponible' : 'centros disponibles'}</small>
             </span>
-            <span className="kawmed-panel__illustration" aria-hidden="true"><FiHome /><FiPlusSquare /></span><FiChevronRight className="kawmed-panel__chevron" />
+            <span className="kawmed-panel__illustration" aria-hidden="true"><FiHome /></span><FiChevronRight className="kawmed-panel__chevron" />
           </button>
 
-          <article className="kawmed-panel kawmed-panel--insurance">
-            <div className="kawmed-panel__trigger kawmed-panel__trigger--static">
+          <button className="kawmed-panel kawmed-panel--direct kawmed-panel--insurance" type="button" onClick={() => setModal('insurance')}>
               <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShield /></span>
               <span className="kawmed-panel__title">
                 <strong>Seguros médicos</strong>
                 <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : profile.insurance_policy.accepts_all ? 'Todos los seguros' : 'Consulta cobertura y excepciones'}</small>
               </span>
-              <span className="kawmed-panel__illustration" aria-hidden="true"><FiShield /></span><button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
-                Ver seguros
-              </button>
-            </div>
-          </article>
+              <span className="kawmed-panel__illustration" aria-hidden="true"><FiShield /></span><FiChevronRight className="kawmed-panel__chevron" />
+          </button>
         </section>
 
         <section className="kawmed-public-actions" aria-label="Acciones del perfil">
