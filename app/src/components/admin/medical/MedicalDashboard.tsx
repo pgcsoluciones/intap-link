@@ -97,15 +97,12 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     if(!value||busy)return
     const existing=String(form.specialty||'').split(' | ').map(x=>x.trim()).filter(Boolean)
     if(existing.some(x=>x.toLocaleLowerCase('es')===value.toLocaleLowerCase('es'))){setError('Esta especialidad ya está agregada.');return}
-    const next=[...existing,value].join(' | ')
     setBusy(true);setError('');setFeedback(null)
     try{
-      // Persist only the specialty: do not accidentally overwrite unrelated form edits.
-      const result:any=await apiPatch(scoped('/me/medical-profile'),{specialty:next})
+      const result:any=await apiPost(scoped('/me/medical-profile/specialties'),{specialty:value})
       if(!result?.ok)throw new Error(result?.error||'No se pudo guardar la especialidad.')
-      const verified:any=await apiGet(scoped('/me/medical-profile'))
-      if(!verified?.ok)throw new Error('No pudimos verificar la especialidad guardada. Recarga el perfil antes de intentarlo nuevamente.')
-      const persisted=String(verified.data?.specialty||'')
+      // Server has performed a direct D1 readback, not merely echoed local form state.
+      const persisted=String(result.data?.specialty||'')
       if(!persisted.split(' | ').some((item:string)=>item.trim().toLocaleLowerCase('es')===value.toLocaleLowerCase('es')))
         throw new Error('La especialidad no quedó registrada. No se ha confirmado el guardado.')
       setProfile((previous:any)=>({...previous,specialty:persisted}))
