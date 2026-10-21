@@ -2093,3 +2093,32 @@
  .kawmed-shell--pastel .kawmed-intro>p{font-size:16px}
  .kawmed-shell--pastel .kawmed-meta{font-size:15px}
 }
+
+/* KawMed modal readability + appointment action (both templates). */
+.kawmed-modal__appointment-cta{
+ width:100%;min-height:54px;display:inline-flex;align-items:center;justify-content:center;
+ gap:11px;padding:13px 18px;border:0;border-radius:16px;
+ background:#159789;color:#fff;font:800 17px/1.35 Inter,system-ui,sans-serif;
+ cursor:pointer;box-shadow:0 5px 16px rgba(20,126,119,.13)
+}
+.kawmed-modal__appointment-cta:focus-visible{outline:3px solid #105d79;outline-offset:3px}
+.kawmed-modal__appointment-cta svg{width:21px;height:21px}
+@media(max-width:700px){
+ .kawmed-modal__header h2{font-size:clamp(24px,6vw,32px);line-height:1.18}
+ .kawmed-modal__content{padding:18px 18px 14px}
+ .kawmed-schedule-row{gap:14px;padding:17px 0}
+ .kawmed-schedule-row>div:first-child span{font-size:17px;line-height:1.4}
+ .kawmed-schedule-row__time strong{font-size:15px;line-height:1.45;white-space:normal}
+ .kawmed-center-card{grid-template-columns:48px minmax(0,1fr);gap:13px;padding:17px}
+ .kawmed-center-card__icon{width:48px;height:48px}
+ .kawmed-center-card__copy strong{font-size:17px;line-height:1.4}
+ .kawmed-center-card p{font-size:15px;line-height:1.55}
+ .kawmed-center-card__copy a{font-size:16px;line-height:1.4}
+ .kawmed-center-card>button{min-height:50px;font-size:16px}
+ .kawmed-modal__footer{padding:13px 18px 20px}
+}
+@media(max-width:420px){
+ .kawmed-schedule-row{grid-template-columns:minmax(0,1fr);gap:7px}
+ .kawmed-schedule-row__time{justify-items:start;text-align:left}
+ .kawmed-schedule-row__time strong{font-size:16px}
+}
