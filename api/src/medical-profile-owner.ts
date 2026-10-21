@@ -53,11 +53,26 @@ async function full(c:any,profile:any){
     c.env.DB.prepare("SELECT * FROM medical_profile_insurances WHERE medical_profile_id=? ORDER BY sort_order,insurance_name").bind(id).all(),
     c.env.DB.prepare("SELECT * FROM medical_profile_insurance_exclusions WHERE medical_profile_id=? ORDER BY sort_order,insurance_name").bind(id).all(),
   ])
-  return{...profile,centers:centers.results||[],schedules:schedules.results||[],services:services.results||[],insurance_policy:{accepts_all:(accepted.results||[]).length===0,accepted:(accepted.results||[]).map((r:any)=>({id:r.id,insurance_name:r.insurance_name,sort_order:r.sort_order,active:r.active})),excluded:(excluded.results||[]).map((r:any)=>({id:r.id,insurance_name:r.insurance_name,sort_order:r.sort_order,active:r.active}))}}
+  const appearance=await c.env.DB.prepare('SELECT template,palette FROM medical_profile_appearance WHERE medical_profile_id=?').bind(id).first()
+  return{...profile,template:String((appearance as any)?.template||'classic'),palette:String((appearance as any)?.palette||'aqua'),centers:centers.results||[],schedules:schedules.results||[],services:services.results||[],insurance_policy:{accepts_all:(accepted.results||[]).length===0,accepted:(accepted.results||[]).map((r:any)=>({id:r.id,insurance_name:r.insurance_name,sort_order:r.sort_order,active:r.active})),excluded:(excluded.results||[]).map((r:any)=>({id:r.id,insurance_name:r.insurance_name,sort_order:r.sort_order,active:r.active}))}}
 }
 app.get('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   return c.json({ok:true,data:await full(c,r.profile)})
+})
+app.put('/api/v1/me/medical-profile/appearance',requireUser,async(c:any)=>{
+  const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const b=await c.req.json().catch(()=>({}))
+  const template=String(b.template||'')
+  const palette=String(b.palette||'')
+  if(!['classic','pastel'].includes(template)||!['aqua','lavender','mint','peach','sky'].includes(palette))
+    return c.json({ok:false,error:'Apariencia no válida.'},422)
+  const id=String(r.profile.id)
+  await c.env.DB.prepare(`INSERT INTO medical_profile_appearance(medical_profile_id,template,palette,updated_at) VALUES(?,?,?,datetime('now')) ON CONFLICT(medical_profile_id) DO UPDATE SET template=excluded.template,palette=excluded.palette,updated_at=datetime('now')`).bind(id,template,palette).run()
+  const saved=await c.env.DB.prepare('SELECT template,palette FROM medical_profile_appearance WHERE medical_profile_id=?').bind(id).first()
+  if(String((saved as any)?.template)!==template||String((saved as any)?.palette)!==palette)return c.json({ok:false,error:'No se pudo verificar apariencia.'},500)
+  c.header('Cache-Control','no-store')
+  return c.json({ok:true,data:{template,palette}})
 })
 app.patch('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
