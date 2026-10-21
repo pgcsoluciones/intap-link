@@ -14,7 +14,7 @@ import {
   FiPhone,
   FiShare2,
 } from 'react-icons/fi'
-import { FaQrcode, FaTimes, FaWhatsapp } from 'react-icons/fa'
+import { FaHospital, FaQrcode, FaTimes, FaWhatsapp } from 'react-icons/fa'
 import { apiGet } from '../../lib/api'
 import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
 import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
@@ -394,12 +394,12 @@ export default function KawMedProfile() {
           </button>
 
           <button className="kawmed-panel kawmed-panel--direct" type="button" onClick={() => setModal('centers')}>
-            <span className="kawmed-panel__icon kawmed-panel__icon--teal"><FiHome /></span>
+            <span className="kawmed-panel__icon kawmed-panel__icon--teal"><FaHospital /></span>
             <span className="kawmed-panel__title">
               <strong>Centros de atención</strong>
               <small>{profile.centers.length} {profile.centers.length === 1 ? 'centro disponible' : 'centros disponibles'}</small>
             </span>
-            <span className="kawmed-panel__illustration" aria-hidden="true"><FiHome /></span><FiChevronRight className="kawmed-panel__chevron" />
+            <span className="kawmed-panel__illustration" aria-hidden="true"><FaHospital /></span><FiChevronRight className="kawmed-panel__chevron" />
           </button>
 
           <button className="kawmed-panel kawmed-panel--direct kawmed-panel--insurance" type="button" onClick={() => setModal('insurance')}>
