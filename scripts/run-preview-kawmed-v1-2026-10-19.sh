@@ -62,6 +62,7 @@ api/migrations-preview/0096_kawmed_representatives_traceability.sql
 api/migrations-preview/0097_kawmed_master_multiaccount.sql
 api/migrations-preview/0098_kawmed_accepted_insurances.sql
 api/migrations-preview/0099_kawmed_master_public_profile.sql
+api/migrations-preview/0150_kawmed_appearance_v2.sql
 api/migrations/0090_kawmed_medical_profiles_v1.sql
 api/migrations/0091_kawmed_insurance_exclusions.sql
 api/migrations/0092_kawmed_shared_appointments.sql
@@ -72,6 +73,7 @@ api/migrations/0096_kawmed_representatives_traceability.sql
 api/migrations/0097_kawmed_master_multiaccount.sql
 api/migrations/0098_kawmed_accepted_insurances.sql
 api/migrations/0099_kawmed_master_public_profile.sql
+api/migrations/0150_kawmed_appearance_v2.sql
 api/src/index.ts
 api/src/account-home-route.ts
 api/src/medical-appointments.ts
@@ -172,7 +174,7 @@ if [ -n "$PENDING_FILES" ]; then
   while IFS= read -r migration; do
     [ -z "$migration" ] && continue
     case "$migration" in
-      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql|0092_kawmed_shared_appointments.sql|0093_kawmed_medical_appointment_reasons.sql|0094_kawmed_private_sponsorship.sql|0095_kawmed_access_codes_programs.sql|0096_kawmed_representatives_traceability.sql|0097_kawmed_master_multiaccount.sql|0098_kawmed_accepted_insurances.sql|0099_kawmed_master_public_profile.sql) ;;
+      0090_kawmed_medical_profiles_v1.sql|0091_kawmed_insurance_exclusions.sql|0092_kawmed_shared_appointments.sql|0093_kawmed_medical_appointment_reasons.sql|0094_kawmed_private_sponsorship.sql|0095_kawmed_access_codes_programs.sql|0096_kawmed_representatives_traceability.sql|0097_kawmed_master_multiaccount.sql|0098_kawmed_accepted_insurances.sql|0099_kawmed_master_public_profile.sql|0150_kawmed_appearance_v2.sql) ;;
       *) fail "Migración Preview pendiente fuera de KawMed: $migration" ;;
     esac
   done <<< "$PENDING_FILES"
