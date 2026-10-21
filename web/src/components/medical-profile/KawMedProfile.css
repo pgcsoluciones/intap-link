@@ -2184,3 +2184,32 @@
   .kawmed-shell--pastel .kawmed-hero {height:470px}
   .kawmed-shell--pastel .kawmed-pastel-hero-copy h1 {font-size:clamp(27px,7vw,34px)}
 }
+
+/* Remove the inset white rectangle in insurance and keep its contents on one grid. */
+.kawmed-shell--pastel .kawmed-panel--insurance {padding:0; background:#eff3ff}
+.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
+  display:grid;
+  grid-template-columns:56px minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  min-height:100px;
+  width:100%;
+  margin:0;
+  padding:14px 16px;
+  background:transparent!important;
+  border:0;
+  border-radius:22px;
+}
+.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-insurance-except {
+  margin:0;
+  min-width:0;
+  white-space:nowrap;
+  background:#e0eaff;
+}
+@media(max-width:420px){
+  .kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
+    grid-template-columns:48px minmax(0,1fr) auto;
+    gap:8px;
+    padding:10px;
+  }
+}
