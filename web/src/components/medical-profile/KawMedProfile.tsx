@@ -81,6 +81,9 @@ function ScheduleList({ schedules }: { schedules: KawMedSchedule[] }) {
 
 export default function KawMedProfile() {
   const { slug = '' } = useParams()
+  const params = new URLSearchParams(window.location.search)
+  const previewTemplate = params.get('kawmed_preview')
+  const previewPalette = params.get('kawmed_palette')
   const [profile, setProfile] = useState<KawMedProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -297,8 +300,9 @@ export default function KawMedProfile() {
 
   const heroImage = profile.cover_url || profile.avatar_url || '/assets/kawmed/laura-mendez-hero.jpg'
   const primaryCenter = profile.centers[0] || null
-  const isPastel = profile.template === 'pastel'
-  const palette: 'aqua' | 'lavender' | 'mint' | 'peach' | 'sky' = profile.palette && ['aqua','lavender','mint','peach','sky'].includes(profile.palette) ? profile.palette : 'aqua'
+  const isPastel = (previewTemplate === 'pastel' || previewTemplate === 'classic' ? previewTemplate : profile.template) === 'pastel'
+  const effectivePalette = previewPalette && ['aqua','lavender','mint','peach','sky'].includes(previewPalette) ? previewPalette : profile.palette
+  const palette: 'aqua' | 'lavender' | 'mint' | 'peach' | 'sky' = effectivePalette && ['aqua','lavender','mint','peach','sky'].includes(effectivePalette) ? effectivePalette as 'aqua' | 'lavender' | 'mint' | 'peach' | 'sky' : 'aqua'
 
   return (
     <main className={`kawmed-shell${isPastel ? ` kawmed-shell--pastel kawmed-palette--${palette}` : ""}`}>
