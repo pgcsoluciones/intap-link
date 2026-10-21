@@ -3,7 +3,10 @@ import { useParams } from 'react-router-dom'
 import {
   FiActivity,
   FiBookmark,
+  FiUserPlus,
+  FiPlusSquare,
   FiBriefcase,
+  FiHome,
   FiCalendar,
   FiChevronRight,
   FiMapPin,
@@ -376,7 +379,7 @@ export default function KawMedProfile() {
           </button>
 
           <button className="kawmed-contact-pill" type="button" onClick={downloadVCard}>
-            <span className="kawmed-contact-pill__icon"><FiBookmark /></span>
+            <span className="kawmed-contact-pill__icon"><FiUserPlus /></span>
             <span><strong>Guardar contacto</strong><small>En tu teléfono</small></span>
           </button>
         </section>
@@ -388,11 +391,11 @@ export default function KawMedProfile() {
               <strong>Horarios</strong>
               <small>Días y tandas disponibles</small>
             </span>
-            <FiCalendar className="kawmed-panel__art" aria-hidden="true" /><FiBriefcase className="kawmed-panel__art" aria-hidden="true" /><FiChevronRight className="kawmed-panel__chevron" />
+            <FiHome className="kawmed-panel__art" aria-hidden="true" /><FiChevronRight className="kawmed-panel__chevron" />
           </button>
 
           <button className="kawmed-panel kawmed-panel--direct" type="button" onClick={() => setModal('centers')}>
-            <span className="kawmed-panel__icon kawmed-panel__icon--teal"><FiBriefcase /></span>
+            <span className="kawmed-panel__icon kawmed-panel__icon--teal"><FiPlusSquare /></span>
             <span className="kawmed-panel__title">
               <strong>Centros de atención</strong>
               <small>{profile.centers.length} {profile.centers.length === 1 ? 'centro disponible' : 'centros disponibles'}</small>
@@ -407,7 +410,7 @@ export default function KawMedProfile() {
                 <strong>Seguros médicos</strong>
                 <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : profile.insurance_policy.accepts_all ? 'Todos los seguros' : 'Consulta cobertura y excepciones'}</small>
               </span>
-              <FiShield className="kawmed-panel__art" aria-hidden="true" /><button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
+              <button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
                 Ver seguros
               </button>
             </div>
