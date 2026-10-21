@@ -1975,10 +1975,10 @@
 .kawmed-shell--pastel .kawmed-pastel-hero-copy {
   position:absolute;
   z-index:2;
-  left:22px;
-  right:auto;
-  bottom:22px;
-  width:min(81%,420px);
+  left:20px;
+  right:20px;
+  bottom:20px;
+  width:auto;
   max-width:none;
   padding:0;
   background:none;
@@ -1992,9 +1992,9 @@
   display:table;
   max-width:100%;
   margin:0 0 10px;
-  padding:3px 9px 4px;
-  background:rgba(248,253,255,.94);
-  border-radius:10px;
+  padding:3px 0 4px;
+  background:none;
+  border-radius:0;
   box-decoration-break:clone;
   font-family:Georgia,serif;
   font-size:clamp(24px,5vw,36px);
@@ -2011,9 +2011,9 @@
   margin:0;
   display:table;
   max-width:100%;
-  padding:3px 8px;
-  border-radius:8px;
-  background:rgba(249,253,255,.94);
+  padding:3px 0;
+  border-radius:0;
+  background:none;
   font-size:clamp(12px,2.9vw,15px);
   line-height:1.35;
   font-weight:650;
@@ -2021,20 +2021,20 @@
 .kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-main-specialty {
   color:var(--med-accent);
   font-weight:800;
-  background:rgba(244,253,252,.95);
+  background:none;
 }
 .kawmed-shell--pastel .kawmed-pastel-subspecialty {
   display:table;
-  padding:3px 8px;
+  padding:3px 0;
   margin:5px 0 0;
-  border-radius:8px;
-  background:rgba(249,253,255,.94);
+  border-radius:0;
+  background:none;
   color:#4a5e77;
   font-size:clamp(12px,2.8vw,14px);
 }
 .kawmed-shell--pastel .kawmed-intro {
   margin:0;
-  padding:23px 25px 18px;
+  padding:23px 20px 18px;
   background:#fff;
   border-radius:0;
   text-align:left;
@@ -2042,7 +2042,7 @@
 .kawmed-shell--pastel .kawmed-intro>p {max-width:550px;margin:0 0 14px}
 .kawmed-shell--pastel .kawmed-meta {justify-content:flex-start;flex-wrap:wrap;gap:8px 18px}
 .kawmed-shell--pastel .kawmed-contact-pills {
-  padding:8px 24px 25px;
+  padding:8px 20px 25px;
   margin:0;
   gap:11px;
   grid-template-columns:repeat(2,minmax(0,1fr));
@@ -2091,13 +2091,13 @@
 .kawmed-shell--pastel .kawmed-panels {
   display:grid;
   gap:13px;
-  padding:4px 24px 18px;
+  padding:4px 20px 18px;
 }
 .kawmed-shell--pastel .kawmed-panel {
   position:relative;
   isolation:isolate;
   min-height:102px;
-  border-radius:23px;
+  border-radius:22px;
   padding:8px 12px;
   margin:0;
   overflow:hidden;
@@ -2148,11 +2148,39 @@
 @media(max-width:440px) {
   .kawmed-shell--pastel .kawmed-profile {border-radius:0}
   .kawmed-shell--pastel .kawmed-hero {height:420px;border-radius:0}
-  .kawmed-shell--pastel .kawmed-pastel-hero-copy {left:14px;bottom:13px;width:calc(100% - 28px)}
-  .kawmed-shell--pastel .kawmed-intro {padding:20px 16px 16px}
-  .kawmed-shell--pastel .kawmed-contact-pills {padding:6px 13px 20px;gap:8px}
+  .kawmed-shell--pastel .kawmed-pastel-hero-copy {left:20px;right:20px;bottom:20px;width:auto}
+  .kawmed-shell--pastel .kawmed-intro {padding:20px 20px 16px}
+  .kawmed-shell--pastel .kawmed-contact-pills {padding:6px 20px 20px;gap:8px}
   .kawmed-shell--pastel .kawmed-contact-pill {min-height:71px;padding:8px;gap:7px}
   .kawmed-shell--pastel .kawmed-contact-pill__icon {height:38px;width:38px;flex-basis:38px}
   .kawmed-shell--pastel .kawmed-contact-pill strong {font-size:11px}
-  .kawmed-shell--pastel .kawmed-panels {padding:0 13px 16px}
+  .kawmed-shell--pastel .kawmed-panels {padding:0 20px 16px}
+}
+
+/* One consistent internal grid and clean card surfaces */
+.kawmed-shell--pastel .kawmed-contact-pill__icon svg {width:22px;height:22px;stroke-width:1.8}
+.kawmed-shell--pastel .kawmed-panel__art {display:none}
+.kawmed-shell--pastel .kawmed-panel:nth-child(2) .kawmed-panel__art {
+  display:block;
+  right:46px;
+  width:90px;
+  height:90px;
+  bottom:-4px;
+  opacity:.13;
+}
+.kawmed-shell--pastel .kawmed-panel--insurance,
+.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
+  background:transparent;
+}
+.kawmed-shell--pastel .kawmed-panel--insurance {
+  background:#eff3ff;
+}
+.kawmed-shell--pastel .kawmed-panel--insurance .kawmed-panel__trigger {
+  border:0;
+  box-shadow:none;
+}
+.kawmed-shell--pastel .kawmed-panel__chevron {flex-shrink:0}
+@media(max-width:440px){
+  .kawmed-shell--pastel .kawmed-hero {height:470px}
+  .kawmed-shell--pastel .kawmed-pastel-hero-copy h1 {font-size:clamp(27px,7vw,34px)}
 }
