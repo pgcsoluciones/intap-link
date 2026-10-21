@@ -120,6 +120,23 @@ app.post('/api/v1/me/medical-profile/specialties',requireUser,async(c:any)=>{
   c.header('Cache-Control','no-store')
   return c.json({ok:true,data:{specialty:persisted,added:name}})
 })
+// Dedicated removal preserves the primary specialty and rejects concurrent edits.
+app.delete('/api/v1/me/medical-profile/specialties',requireUser,async(c:any)=>{
+  const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const body=await c.req.json().catch(()=>({}))
+  const target=clean(body.specialty,140)
+  const before=String(r.profile.specialty||'')
+  const items=before.split(' | ').map(x=>x.trim()).filter(Boolean)
+  const index=items.findIndex((x,i)=>i>0&&x.toLocaleLowerCase('es')===target.toLocaleLowerCase('es'))
+  if(index<0)return c.json({ok:false,error:'Especialidad adicional no encontrada.'},404)
+  const next=items.filter((_,i)=>i!==index).join(' | ')
+  const result:any=await c.env.DB.prepare("UPDATE medical_profiles SET specialty=?,updated_at=datetime('now') WHERE id=? AND specialty=?").bind(next,String(r.profile.id),before).run()
+  if(Number(result?.meta?.changes||0)!==1)return c.json({ok:false,error:'El perfil cambió durante la operación. Actualiza y vuelve a intentarlo.'},409)
+  const saved=await c.env.DB.prepare("SELECT specialty FROM medical_profiles WHERE id=?").bind(String(r.profile.id)).first()
+  if(String((saved as any)?.specialty||'')!==next)return c.json({ok:false,error:'No se pudo verificar la eliminación.'},500)
+  c.header('Cache-Control','no-store')
+  return c.json({ok:true,data:{specialty:next}})
+})
 app.post('/api/v1/me/medical-profile/media',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   const kind=String(c.req.query('kind')||'');if(kind!=='avatar'&&kind!=='cover')return c.json({ok:false,error:'Tipo de imagen inválido.'},400)
