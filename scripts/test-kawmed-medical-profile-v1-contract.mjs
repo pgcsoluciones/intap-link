@@ -31,7 +31,6 @@ const privateSponsor=read('api/migrations-preview/0094_kawmed_private_sponsorshi
 const prodPrivateSponsor=read('api/migrations/0094_kawmed_private_sponsorship.sql')
 const previewAcceptedInsurance=read('api/migrations-preview/0098_kawmed_accepted_insurances.sql')
 const prodAcceptedInsurance=read('api/migrations/0098_kawmed_accepted_insurances.sql')
-const medicalOwner=read('api/src/medical-profile-owner.ts')
 const previewMasterProfile=read('api/migrations-preview/0099_kawmed_master_public_profile.sql')
 const prodMasterProfile=read('api/migrations/0099_kawmed_master_public_profile.sql')
 const sponsorMaster=read('app/src/components/admin/sponsored/SponsorKawMed.tsx')
