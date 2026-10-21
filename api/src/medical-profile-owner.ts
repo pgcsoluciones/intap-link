@@ -69,7 +69,11 @@ app.patch('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const next={
     name:b.name!==undefined?clean(b.name,100):String(p.name||''),
     professional_prefix:b.professional_prefix!==undefined?clean(b.professional_prefix,20):String(p.professional_prefix||''),
-    specialty:b.specialty!==undefined?clean(b.specialty,400):String(p.specialty||''),
+    // A generic profile save may change the primary specialty but must never erase persisted additions.
+    specialty:b.specialty!==undefined?[
+      clean(b.specialty,400).split(' | ')[0].trim(),
+      ...String(p.specialty||'').split(' | ').slice(1).map(x=>x.trim()).filter(Boolean),
+    ].filter(Boolean).join(' | ').slice(0,400):String(p.specialty||''),
     subspecialty:b.subspecialty!==undefined?clean(b.subspecialty,140):String(p.subspecialty||''),
     bio:b.bio!==undefined?clean(b.bio,700):String(p.bio||''),
     phone:b.phone!==undefined?clean(b.phone,40):String(p.phone||''),
@@ -82,9 +86,10 @@ app.patch('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
     status:['draft','active','inactive'].includes(String(b.status))?String(b.status):String(p.status||'draft'),
   }
   if(!next.name||!next.specialty)return c.json({ok:false,error:'Nombre y especialidad son requeridos.'},422)
-  await c.env.DB.prepare(`UPDATE medical_profiles SET slug=?,name=?,professional_prefix=?,specialty=?,subspecialty=?,bio=?,phone=?,whatsapp=?,email=?,city=?,province=?,country=?,organization=?,status=?,updated_at=datetime('now') WHERE id=?`).bind(
-    slug,next.name,next.professional_prefix,next.specialty,next.subspecialty,next.bio,next.phone,next.whatsapp,next.email,next.city,next.province,next.country,next.organization,next.status,String(p.id)
+  const write:any=await c.env.DB.prepare(`UPDATE medical_profiles SET slug=?,name=?,professional_prefix=?,specialty=?,subspecialty=?,bio=?,phone=?,whatsapp=?,email=?,city=?,province=?,country=?,organization=?,status=?,updated_at=datetime('now') WHERE id=? AND specialty=?`).bind(
+    slug,next.name,next.professional_prefix,next.specialty,next.subspecialty,next.bio,next.phone,next.whatsapp,next.email,next.city,next.province,next.country,next.organization,next.status,String(p.id),String(p.specialty||'')
   ).run()
+  if(Number(write?.meta?.changes||0)!==1)return c.json({ok:false,error:'El perfil fue modificado mientras guardabas. Actualiza y vuelve a guardar.'},409)
   const updated=await c.env.DB.prepare("SELECT * FROM medical_profiles WHERE id=?").bind(String(p.id)).first()
   return c.json({ok:true,data:await full(c,updated)})
 })
