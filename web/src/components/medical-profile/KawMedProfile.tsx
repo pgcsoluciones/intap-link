@@ -320,7 +320,7 @@ export default function KawMedProfile() {
 
         <section className="kawmed-identity">
           <h1>{profile.display_name}</h1>
-          <p className="kawmed-specialty">{profile.specialty.split(" | ").join(" · ")}</p>
+          <div className="kawmed-specialties">{profile.specialty.split(" | ").map((name,index)=><p className={index===0?"kawmed-specialty kawmed-specialty--main":"kawmed-specialty kawmed-specialty--additional"} key={index}>{name.trim()}</p>)}</div>
           {profile.subspecialty ? <p className="kawmed-subtitle">{profile.subspecialty}</p> : null}
         </section>
 
