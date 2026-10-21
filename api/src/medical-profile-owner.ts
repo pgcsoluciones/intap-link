@@ -88,6 +88,33 @@ app.patch('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const updated=await c.env.DB.prepare("SELECT * FROM medical_profiles WHERE id=?").bind(String(p.id)).first()
   return c.json({ok:true,data:await full(c,updated)})
 })
+
+// Atomic specialty append: never replace the entire profile or lose existing specialties.
+app.post('/api/v1/me/medical-profile/specialties',requireUser,async(c:any)=>{
+  const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const body=await c.req.json().catch(()=>({}))
+  const name=clean(body.specialty,140)
+  if(!name||name.includes('|'))return c.json({ok:false,error:'Introduce una especialidad válida.'},422)
+  const id=String(r.profile.id)
+  const current=await c.env.DB.prepare('SELECT specialty FROM medical_profiles WHERE id=?').bind(id).first()
+  if(!current)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const names=String((current as any).specialty||'').split(' | ').map(x=>x.trim()).filter(Boolean)
+  if(names.some(x=>x.toLocaleLowerCase('es')===name.toLocaleLowerCase('es')))
+    return c.json({ok:false,error:'Esta especialidad ya está registrada.'},409)
+  // Compare-and-set prevents concurrent clients from silently discarding another update.
+  const before=String((current as any).specialty||'')
+  const combined=[...names,name].join(' | ')
+  if(combined.length>400)return c.json({ok:false,error:'Límite de especialidades alcanzado.'},422)
+  const write:any=await c.env.DB.prepare("UPDATE medical_profiles SET specialty=?,updated_at=datetime('now') WHERE id=? AND specialty=?")
+    .bind(combined,id,before).run()
+  if(Number(write?.meta?.changes||0)!==1)
+    return c.json({ok:false,error:'El perfil cambió mientras guardabas. Actualiza e inténtalo nuevamente.'},409)
+  const saved=await c.env.DB.prepare('SELECT specialty FROM medical_profiles WHERE id=?').bind(id).first()
+  const persisted=String((saved as any)?.specialty||'')
+  if(persisted!==combined)return c.json({ok:false,error:'No se pudo confirmar la escritura en D1.'},500)
+  c.header('Cache-Control','no-store')
+  return c.json({ok:true,data:{specialty:persisted,added:name}})
+})
 app.post('/api/v1/me/medical-profile/media',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   const kind=String(c.req.query('kind')||'');if(kind!=='avatar'&&kind!=='cover')return c.json({ok:false,error:'Tipo de imagen inválido.'},400)
