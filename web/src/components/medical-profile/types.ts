@@ -47,6 +47,8 @@ export interface KawMedProfileData {
   name: string
   professional_prefix: string | null
   display_name: string
+  template?: 'classic' | 'pastel'
+  palette?: 'aqua' | 'lavender' | 'mint' | 'peach' | 'sky'
   specialty: string
   subspecialty: string | null
   bio: string | null
