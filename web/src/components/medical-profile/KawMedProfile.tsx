@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   FiActivity,
-  FiBookmark,
   FiUserPlus,
   FiPlusSquare,
   FiBriefcase,
