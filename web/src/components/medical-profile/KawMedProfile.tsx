@@ -457,11 +457,11 @@ export default function KawMedProfile() {
         </div>
       ) : null}
 
-      <KawMedModal open={modal === 'schedule'} title="Horarios y centros de consulta" onClose={() => setModal(null)}>
+      <KawMedModal open={modal === 'schedule'} title="Horarios y centros de consulta" onClose={() => setModal(null)} footer={<button type="button" className="kawmed-modal__appointment-cta" onClick={() => { setModal(null); setAppointmentOpen(true) }}><FiCalendar /> Agendar cita</button>}>
         <ScheduleList schedules={profile.schedules} />
       </KawMedModal>
 
-      <KawMedModal open={modal === 'centers'} title="Centros de atención" onClose={() => setModal(null)}>
+      <KawMedModal open={modal === 'centers'} title="Centros de atención" onClose={() => setModal(null)} footer={<button type="button" className="kawmed-modal__appointment-cta" onClick={() => { setModal(null); setAppointmentOpen(true) }}><FiCalendar /> Agendar cita</button>}>
         <div className="kawmed-detail-list">
           {profile.centers.map((center) => (
             <article key={center.id} className="kawmed-center-card">
