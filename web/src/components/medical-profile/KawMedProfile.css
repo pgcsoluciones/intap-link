@@ -2135,3 +2135,24 @@
   .kawmed-shell--pastel .kawmed-pastel-hero-copy h1 { font-size: clamp(26px,8vw,36px); }
   .kawmed-shell--pastel .kawmed-contact-pill__icon { width: 39px; height: 39px; }
 }
+
+/* Native SVG illustrations, decorative only: calendar, clinic and shield. */
+.kawmed-shell--pastel .kawmed-panel::before { content: none !important; }
+.kawmed-shell--pastel .kawmed-panel__art {
+  display: block;
+  position: absolute;
+  right: 34px;
+  bottom: -19px;
+  width: 112px;
+  height: 112px;
+  stroke-width: 1.25px;
+  color: #6dabda;
+  opacity: .20;
+  pointer-events: none;
+}
+.kawmed-shell--pastel .kawmed-panel:nth-child(2) .kawmed-panel__art { color: #57b9ae; }
+.kawmed-shell--pastel .kawmed-panel:nth-child(3) .kawmed-panel__art { color: #8295d8; }
+.kawmed-shell--pastel .kawmed-panel__title,
+.kawmed-shell--pastel .kawmed-panel__icon,
+.kawmed-shell--pastel .kawmed-panel__chevron,
+.kawmed-shell--pastel .kawmed-insurance-except { position: relative; z-index: 2; }
