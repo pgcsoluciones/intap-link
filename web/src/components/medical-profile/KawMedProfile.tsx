@@ -6,7 +6,7 @@ import {
   FiPlusSquare,
   FiBriefcase,
   FiHome,
-  FiShieldCheck,
+  FiShield,
   FiCalendar,
   FiChevronRight,
   FiMapPin,
@@ -405,12 +405,12 @@ export default function KawMedProfile() {
 
           <article className="kawmed-panel kawmed-panel--insurance">
             <div className="kawmed-panel__trigger kawmed-panel__trigger--static">
-              <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShieldCheck /></span>
+              <span className="kawmed-panel__icon kawmed-panel__icon--insurance"><FiShield /></span>
               <span className="kawmed-panel__title">
                 <strong>Seguros médicos</strong>
                 <small>{profile.insurance_policy.accepted.length ? profile.insurance_policy.accepted.slice(0,2).join(' · ') : profile.insurance_policy.accepts_all ? 'Todos los seguros' : 'Consulta cobertura y excepciones'}</small>
               </span>
-              <span className="kawmed-panel__illustration" aria-hidden="true"><FiShieldCheck /></span><button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
+              <span className="kawmed-panel__illustration" aria-hidden="true"><FiShield /></span><button type="button" className="kawmed-insurance-except" onClick={() => setModal('insurance')}>
                 Ver seguros
               </button>
             </div>
