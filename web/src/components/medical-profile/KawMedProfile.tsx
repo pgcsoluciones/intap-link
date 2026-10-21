@@ -13,7 +13,6 @@ import {
   FiNavigation,
   FiPhone,
   FiShare2,
-  FiShield,
 } from 'react-icons/fi'
 import { FaQrcode, FaTimes, FaWhatsapp } from 'react-icons/fa'
 import { apiGet } from '../../lib/api'
