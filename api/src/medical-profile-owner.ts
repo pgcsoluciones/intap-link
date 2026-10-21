@@ -118,7 +118,7 @@ app.post('/api/v1/me/medical-profile/specialties',requireUser,async(c:any)=>{
   const persisted=String((saved as any)?.specialty||'')
   if(persisted!==combined)return c.json({ok:false,error:'No se pudo confirmar la escritura en D1.'},500)
   c.header('Cache-Control','no-store')
-  return c.json({ok:true,data:{specialty:persisted,added:name}})
+  return c.json({ok:true,data:{profile_id:id,slug:String(r.profile.slug||''),specialty:persisted,added:name}})
 })
 // Dedicated removal preserves the primary specialty and rejects concurrent edits.
 app.delete('/api/v1/me/medical-profile/specialties',requireUser,async(c:any)=>{
