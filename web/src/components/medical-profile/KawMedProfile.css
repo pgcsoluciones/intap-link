@@ -2277,3 +2277,50 @@
  .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration{right:27px;bottom:-13px;width:104px;height:104px}
  .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration svg{width:104px;height:104px}
 }
+
+/* Classic: preserve Modern's roomy two-column primary action layout. */
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pills{
+ box-sizing:border-box;width:100%;max-width:620px;margin:0 auto;
+ padding:5px 24px 31px;display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill{
+ display:flex;align-items:center;justify-content:flex-start;
+ min-width:0;min-height:94px;padding:12px;gap:12px;
+ border-radius:24px;text-align:left;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill__icon{
+ display:grid;place-items:center;flex:0 0 48px;
+ width:48px;height:48px;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill>span:last-child{
+ display:flex;flex-direction:column;justify-content:center;
+ align-items:flex-start;flex:1;min-width:0;gap:4px;text-align:left;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill strong{
+ display:block;max-width:100%;font-size:16px;line-height:1.28;
+ white-space:normal;overflow:visible;text-overflow:clip;
+ overflow-wrap:break-word;text-align:left;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill small{
+ display:block;max-width:100%;font-size:13px;line-height:1.35;
+ white-space:normal;text-align:left;
+}
+@media(max-width:440px){
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pills{
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;
+  padding:4px 20px 25px;
+ }
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill{
+  min-height:92px;padding:9px;gap:8px;border-radius:21px;
+ }
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill__icon{
+  flex:0 0 40px;width:40px;height:40px;
+ }
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill strong{
+  font-size:14px;line-height:1.25;
+ }
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill small{
+  font-size:12px;line-height:1.35;
+ }
+}
