@@ -68,3 +68,24 @@ Fuentes consultadas de archivos de proyecto (contenido histórico, no evidencia 
 | KawMed | bitácora Oct 20 lo conserva en Preview | 11 migraciones pendientes, no copiar seeds demo |
 
 **Secuencia recomendada:** inventario vivo Cloudflare y D1 → reconciliación contra bitácoras → pruebas end-to-end → migración compatible → publicación escalonada → verificación y actualización de main.
+
+## Evidencia del inventario Cloudflare ejecutado por operador — 2026-10-22 07:39 RD
+
+Fuente: salida de `scripts/inventory-production-platform-2026-10-22.sh`, suministrada por el operador desde Mac (Wrangler 3.114.17; macOS 12.6).
+
+- Refs al momento de la ejecución: HEAD local `a0d56a6f`; `github/main` `2391896286839528557066968ca4b8abe9831fb9`; feature remota `42969b3b47b71fcce0d813273b3ff3a878330c1e`.
+- Los dos proyectos Pages consultados (`intap-link` y `intap-web2`) listaron deployments **Preview** asociados a la rama feature, entre ellos `42969b3`, `dab4afd`, etc. No mostraron entradas `Production` en la salida; esto **no prueba** por sí solo que no exista otra vía de servicio mediante custom domain/Worker/proyecto distinto. Verificar configuraciones Pages, dominios y deployments por entorno.
+- `intap_db` Producción: exactamente 11 migraciones pendientes: 0090–0099 y 0150 KawMed. `intap_db_preview`: "No migrations to apply".
+- HTTP simple: `https://intaprd.com/` 200; `https://app.intaprd.com/` 200; `https://api.intaprd.com/` 503; `https://preview.intaprd.com/` 200; `https://app.preview.intaprd.com/` 200.
+- El HTTP 503 corresponde **solo a la ruta raíz** de API; no se probó `/api/*` ni un endpoint de salud conocido. No diagnosticar caída global de la API sin esa comparación.
+- Advertencias Wrangler: runtime macOS 12.6 no soportado según CLI (recomienda >=13.5), Wrangler 3.114.17 desactualizado. No forzar upgrade major sin pruebas ni descartar advertencia.
+
+### Consecuencias para el corte
+1. **No ejecutar runner KawMed**: su alcance sigue siendo parcial, no cubre promoción integral ni topología/rollback; adicionalmente conserva un bloqueo fail-closed.
+2. Confirmar si `api.intaprd.com` tiene una falla real en la ruta raíz o error de Worker custom domain. Antes de aplicar 11 migraciones verificar rutas API existentes en ambos dominios y, preferiblemente, un health endpoint documentado.
+3. Inventariar deployments `Production` de Pages y bindings/domains utilizando Cloudflare Dashboard o CLI con datos de entorno; las entradas Preview no sirven como evidencia de rollback productivo.
+4. Preparar maniobra de rollback de Web/App/Worker **independiente de datos D1**; migraciones son forward-only salvo plan probado.
+5. Ejecutar ensayo de migraciones sobre respaldo SQLite aislado y comprobar compatibilidad con API activa.
+6. Evitar confundir las advertencias de versiones con errores efectivos: CI aprobada no equivale a paridad operacional real.
+
+**Estado: inventario parcial pero útil, no autorizado para publicación.**
