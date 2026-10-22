@@ -45,18 +45,20 @@ EXPECTED="$(printf '%s\n' 0090_kawmed_medical_profiles_v1.sql 0091_kawmed_insura
 [ "$PENDING" = "$EXPECTED" ] || fail "Migraciones pendientes no coinciden exactamente con las 11 esperadas"
 # No introducir datos de demostración en DB real.
 if grep -qE 'kawmed_demo_laura_mendez|kawmed_ins_ex_1|kawmed_ins_accept_1' api/migrations/009{0,1,2,3,8}_kawmed_*.sql; then fail "Datos de prueba en migraciones"; fi
-echo "✓ Gates aprobados: backup, pruebas, builds, exactamente 11 migraciones. Iniciando promoción autorizada."
+echo "✓ Gates aprobados: backup, pruebas, builds, exactamente 11 migraciones."
+# Bloquear despliegue hasta cierre explícito del triage de seguridad.
+[ -f "$HOME/kawmed-db-production-backups/kawmed-security-review-approved.txt" ] || fail "PENDIENTE: aprobación de revisión de dependencias. No desplegar."
 (cd api && npx wrangler d1 migrations apply intap_db --remote --config wrangler.toml) 2>&1 | tee "$LOG_DIR/migrations.txt"
 # Implementar Web/App, después Worker. Guardar orígenes y reconfigurar el Worker de forma transitoria.
 (npx wrangler pages deploy app/dist --project-name intap-web2 --branch main) 2>&1 | tee "$LOG_DIR/app.txt"
 (npx wrangler pages deploy web/dist --project-name intap-link --branch main) 2>&1 | tee "$LOG_DIR/web.txt"
 (cd api && npx wrangler deploy --config wrangler.toml) 2>&1 | tee "$LOG_DIR/worker.txt"
-for url in https://intaprd.com/ https://app.intaprd.com/admin/medical https://app.intaprd.com/superadmin/kawmed https://intaprd.com/m/lauramendez; do
+for url in https://intaprd.com/ https://app.intaprd.com/admin/medical https://app.intaprd.com/superadmin/kawmed; do
  code="$(curl -sS -L -o /dev/null -w '%{http_code}' "$url")"
  echo "$url => $code" | tee -a "$LOG_DIR/smoke.txt"
  [ "$code" = "200" ] || fail "Smoke HTTP falló: $url"
 done
-# No forzar contenido falso en Producción; perfil demo puede no existir.
+# No usar /m/lauramendez como smoke: el perfil ficticio existe únicamente en Preview.
 git fetch github main
 [ "$(git rev-parse github/main)" = "$EXPECTED_MAIN" ] || fail "main cambió durante el despliegue"
 git switch -C main github/main
