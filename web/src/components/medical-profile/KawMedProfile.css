@@ -2407,3 +2407,24 @@
  padding:0;
  margin:0;
 }
+
+/* Subspecialties carry the same hierarchy and prominence as specialties. */
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-subtitle{
+ font-family:Inter,system-ui,sans-serif;
+ font-size:clamp(17px,3.7vw,22px);
+ line-height:1.38;
+ font-weight:800;
+ color:#173b61;
+ text-align:center;
+ max-width:100%;
+ margin:11px auto 0;
+ text-wrap:balance;
+}
+.kawmed-shell--pastel .kawmed-pastel-subspecialty{
+ font-family:Inter,system-ui,sans-serif;
+ font-size:clamp(14px,3.1vw,17px);
+ line-height:1.42;
+ font-weight:800;
+ color:#173b61;
+ margin:5px 0 0;
+}
