@@ -29,6 +29,7 @@ else fail "Se necesita sqlite3 para verificar restauración"; fi
 mkdir -p "$LOG_DIR"
 git diff --check github/main...HEAD
 node scripts/test-kawmed-medical-profile-v1-contract.mjs
+node scripts/test-kawmed-release-security-scope.mjs
 node scripts/test-kawmed-access-codes-contract.mjs
 node scripts/test-agenda-phone-normalization-contract.mjs
 node scripts/test-bank-privacy-interaction-contract.mjs
