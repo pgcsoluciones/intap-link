@@ -4,11 +4,11 @@ const artifacts=fs.readFileSync('app/src/components/admin/SuperAdminArtifacts.ts
 const packageJson=JSON.parse(fs.readFileSync('app/package.json','utf8'))
 const runner=fs.readFileSync('scripts/run-production-kawmed-v1-2026-10-22.sh','utf8')
 const prodDir='api/migrations'
-const paths=fs.readdirSync(prodDir).filter(name=>/^0(?:09[0-9]|150)_kawmed_/.test(name))
+const paths=fs.readdirSync(prodDir).filter(name=>/^(?:009[0-9]|0150)_kawmed_/.test(name))
 assert(packageJson.dependencies.xlsx,'xlsx dependency unexpectedly absent; review export implementation')
 assert(artifacts.includes("XLSX.utils.json_to_sheet") && artifacts.includes("XLSX.writeFile"),'Excel export flow changed')
 assert(!/XLSX\.(read|readFile)\s*\(/.test(artifacts),'xlsx now parses untrusted files; reassess vulnerability')
-assert(runner.includes('kawmed-security-review-approved.txt'),'production script missing security gate')
+assert(runner.includes('DESPLIEGUE BLOQUEADO:') && runner.includes('fail "DESPLIEGUE BLOQUEADO:'),'production script missing fail-closed security gate')
 assert(runner.includes('shasum -a 256 -c'),'production script missing backup verification')
 assert(runner.includes('migrations list intap_db --remote'),'production script missing pending-migration check')
 assert(runner.includes('migrations apply intap_db --remote'),'production script migration target changed')
