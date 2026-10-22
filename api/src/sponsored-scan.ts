@@ -1,7 +1,7 @@
 import app from './index'
 import { cookieNames, isPreviewEnvironment } from './lib/cookies'
 import { ensureSponsorOwnerProfileBase } from './sponsored-owner-profile-seed'
-import { sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { setSponsorContext, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 function configuredWebUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://preview.intaprd.com':'https://intaprd.com';return String(c.env.WEB_URL||fallback).replace(/\/$/,'')}
 function configuredAppUrl(c:any){const fallback=isPreviewEnvironment(c.env)?'https://app.preview.intaprd.com':'https://app.intaprd.com';return String(c.env.APP_URL||fallback).replace(/\/$/,'')}
@@ -43,7 +43,8 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
       const user=await c.env.DB.prepare(`SELECT email FROM users WHERE id=? LIMIT 1`).bind(currentUserId).first()
       const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
       const registeredEmail=String((row as any).sponsor_contact_email||'').trim().toLowerCase()
-      if(!registeredEmail||!accountEmail||registeredEmail!==accountEmail){
+      const authorizedMultiAccount=await sponsoredMultiProfileAccess(c,currentUserId)
+      if(!authorizedMultiAccount&&(!registeredEmail||!accountEmail||registeredEmail!==accountEmail)){
         return c.json({ok:true,state:'sponsored_master_login',artifact,sponsor,message:'Este Master debe activarse con el mismo correo registrado por Super Admin para el patrocinador.',manage_url:null,login_url:`${configuredAppUrl(c)}/admin/sponsor/entry?public_code=${encodeURIComponent(publicCode)}`})
       }
       await c.env.DB.prepare(`INSERT INTO sponsor_members (sponsor_id,user_id,role,status) VALUES (?,?,'owner','active') ON CONFLICT(sponsor_id,user_id) DO UPDATE SET role='owner',status='active'`).bind(sponsorId,currentUserId).run()
@@ -51,6 +52,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
     }
 
     const role=String((sponsorMembership as any)?.role||'viewer')
+    if(currentUserId&&await sponsoredMultiProfileAccess(c,currentUserId))await setSponsorContext(c,currentUserId,sponsorId)
     if(role==='owner'){
       const profile=await ensureSponsorOwnerProfileBase(c,sponsorId,currentUserId)
       return c.json({ok:true,state:'sponsored_master',artifact,sponsor,message:'Master reconocido. Tu presentación patrocinada está lista en borrador.',profile:{username:(profile as any)?.username||null,status:(profile as any)?.status||'draft'},manage_url:`${configuredAppUrl(c)}/admin/sponsored?sponsor_master=1`,sponsor_panel_url:`${configuredAppUrl(c)}/admin/sponsor`})

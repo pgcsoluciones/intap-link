@@ -6,9 +6,15 @@ type Mode = 'login' | 'register'
 const SCAN_PUBLIC_CODE_KEY = 'kawvo_scan_public_code'
 const TEAM_CODE_KEY = 'kawvo_team_join_code'
 const SPONSOR_MASTER_CODE_KEY = 'kawvo_sponsor_master_code'
+const KAWMED_CLAIM_CODE_KEY = 'kawvo_kawmed_claim_code'
+const KAWMED_CLAIM_RESUME_KEY = 'kawvo_kawmed_claim_resume'
+const KAWMED_MASTER_CODE_KEY = 'kawvo_kawmed_master_code'
+const KAWMED_MASTER_RESUME_KEY = 'kawvo_kawmed_master_resume'
 
 function validProduct(value: string) { return /^[A-Z2-9]{8,24}$/.test(value) }
 function validTeam(value: string) { return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(value) }
+function validKawMed(value: string) { return /^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(value) }
+function validKawMedMaster(value: string) { return /^MEDM-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(value) }
 
 export default function AdminLogin() {
   const navigate = useNavigate()
@@ -30,6 +36,10 @@ export default function AdminLogin() {
   const storedScanCode = String(sessionStorage.getItem(SCAN_PUBLIC_CODE_KEY) || localStorage.getItem(SCAN_PUBLIC_CODE_KEY) || '').trim().toUpperCase()
   const storedTeamCode = String(sessionStorage.getItem(TEAM_CODE_KEY) || localStorage.getItem(TEAM_CODE_KEY) || '').trim().toUpperCase()
   const storedSponsorMasterCode = String(sessionStorage.getItem(SPONSOR_MASTER_CODE_KEY) || localStorage.getItem(SPONSOR_MASTER_CODE_KEY) || '').trim().toUpperCase()
+  const queryKawMedCode = String(searchParams.get('med_code') || '').trim().toUpperCase()
+  const storedKawMedCode = String(sessionStorage.getItem(KAWMED_CLAIM_CODE_KEY) || localStorage.getItem(KAWMED_CLAIM_CODE_KEY) || '').trim().toUpperCase()
+  const queryKawMedMasterCode = String(searchParams.get('med_master_code') || '').trim().toUpperCase()
+  const storedKawMedMasterCode = String(sessionStorage.getItem(KAWMED_MASTER_CODE_KEY) || localStorage.getItem(KAWMED_MASTER_CODE_KEY) || '').trim().toUpperCase()
 
   const explicitTeamFlow = searchParams.get('activation') === 'team' && validProduct(queryScanCode) && validTeam(queryTeamCode)
   const storedTeamFlow = !searchParams.get('activation') && validProduct(storedScanCode) && validTeam(storedTeamCode)
@@ -37,6 +47,10 @@ export default function AdminLogin() {
   const scanCode = explicitTeamFlow ? queryScanCode : isTeamFlow ? storedScanCode : queryScanCode
   const teamCode = explicitTeamFlow ? queryTeamCode : isTeamFlow ? storedTeamCode : queryTeamCode
   const isSponsorMasterResume = searchParams.get('resume') === 'sponsor_master' && validProduct(storedSponsorMasterCode)
+  const kawMedCode = validKawMed(queryKawMedCode) ? queryKawMedCode : storedKawMedCode
+  const isKawMedResume = searchParams.get('resume') === 'kawmed' && validKawMed(kawMedCode)
+  const kawMedMasterCode = validKawMedMaster(queryKawMedMasterCode) ? queryKawMedMasterCode : storedKawMedMasterCode
+  const isKawMedMasterResume = searchParams.get('resume') === 'kawmed_master' && validKawMedMaster(kawMedMasterCode)
 
   const validProductCode = validProduct(scanCode)
   const isScanFlow = searchParams.get('activation') === 'scan' && validProductCode
@@ -49,7 +63,19 @@ export default function AdminLogin() {
     : '', [isTeamFlow, scanCode, teamCode])
 
   useEffect(() => {
-    if (isSponsorMasterResume) setMode('login')
+    if (isSponsorMasterResume || isKawMedMasterResume) setMode('login')
+    if (isKawMedMasterResume) {
+      sessionStorage.setItem(KAWMED_MASTER_CODE_KEY, kawMedMasterCode)
+      localStorage.setItem(KAWMED_MASTER_CODE_KEY, kawMedMasterCode)
+      sessionStorage.setItem(KAWMED_MASTER_RESUME_KEY, '1')
+      localStorage.setItem(KAWMED_MASTER_RESUME_KEY, '1')
+    }
+    if (isKawMedResume) {
+      sessionStorage.setItem(KAWMED_CLAIM_CODE_KEY, kawMedCode)
+      localStorage.setItem(KAWMED_CLAIM_CODE_KEY, kawMedCode)
+      sessionStorage.setItem(KAWMED_CLAIM_RESUME_KEY, '1')
+      localStorage.setItem(KAWMED_CLAIM_RESUME_KEY, '1')
+    }
     if (!hasProductContext) {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
@@ -72,7 +98,7 @@ export default function AdminLogin() {
       return
     }
     setMode(isDraftResume || isSwitchUser ? 'login' : 'register')
-  }, [hasProductContext, isDraftResume, isSponsorMasterResume, isSwitchUser, isTeamFlow, scanCode, teamCode, validProductCode])
+  }, [hasProductContext, isDraftResume, isSponsorMasterResume, isKawMedMasterResume, kawMedMasterCode, isKawMedResume, kawMedCode, isSwitchUser, isTeamFlow, scanCode, teamCode, validProductCode])
 
   const persistAuthMode = (nextMode: Mode) => {
     sessionStorage.setItem('kawvo_auth_mode', nextMode)
@@ -97,6 +123,10 @@ export default function AdminLogin() {
           persistAuthMode(mode)
           if (isSponsorMasterResume) {
             window.location.assign(`/admin/sponsor/entry?public_code=${encodeURIComponent(storedSponsorMasterCode)}`)
+          } else if (isKawMedMasterResume) {
+            window.location.assign(`/claim/kawmed-master?code=${encodeURIComponent(kawMedMasterCode)}`)
+          } else if (isKawMedResume) {
+            window.location.assign(`/claim/kawmed?code=${encodeURIComponent(kawMedCode)}`)
           } else {
             const home:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
             window.location.assign(home?.ok && home?.data?.route ? String(home.data.route) : '/admin')
@@ -172,10 +202,14 @@ export default function AdminLogin() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="mb-7 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isSponsorMasterResume ? 'Accede como patrocinador' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isSponsorMasterResume ? 'Accede como patrocinador' : isKawMedMasterResume ? 'Activa tu Master KawMed' : isKawMedResume ? 'Activa tu acceso KawMed' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
             {isSponsorMasterResume
               ? 'Inicia sesión con el correo registrado para este patrocinador. Al validar la cuenta retomaremos automáticamente el Master.'
+              : isKawMedMasterResume
+                ? 'Inicia sesión con la cuenta autorizada del patrocinador. Al validar el acceso retomaremos automáticamente el Master KawMed.'
+              : isKawMedResume
+                ? 'Accede o crea tu cuenta. Después de validar el correo retomaremos automáticamente el código MED y activaremos tu perfil médico.'
               : isTeamFlow
                 ? 'Inicia sesión con la cuenta Administrador Master para continuar preparando este dispositivo.'
                 : isDraftResume
@@ -197,7 +231,7 @@ export default function AdminLogin() {
         </div>}
 
         <div className="rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          {!isTeamFlow && !isSponsorMasterResume && <div className="grid grid-cols-2 gap-1 rounded-[22px] bg-slate-100 p-1">
+          {!isTeamFlow && !isSponsorMasterResume && !isKawMedMasterResume && <div className="grid grid-cols-2 gap-1 rounded-[22px] bg-slate-100 p-1">
             <button type="button" onClick={() => { setMode('login'); setError('') }} className={`rounded-[18px] px-3 py-3 text-sm font-extrabold transition ${!isRegister ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Acceder</button>
             <button type="button" onClick={() => { setMode('register'); setError('') }} className={`rounded-[18px] px-3 py-3 text-sm font-extrabold transition ${isRegister ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Crear cuenta</button>
           </div>}
@@ -212,7 +246,7 @@ export default function AdminLogin() {
               {!isRegister && loginMethod === 'password' && !hasProductContext && <label className="block text-xs font-extrabold uppercase tracking-[0.1em] text-slate-500">Contraseña Kawvo<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tu contraseña Kawvo" required className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100" /></label>}
               {!isRegister && loginMethod === 'password' && !hasProductContext && <button type="button" onClick={() => { setRecoveryStage('email'); setError('') }} className="-mt-1 block w-full text-right text-xs font-extrabold text-cyan-700 hover:text-cyan-800">Olvidé mi contraseña</button>}
               {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600">{error}</p>}
-              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Procesando…' : isSponsorMasterResume ? 'Continuar con el Master' : isTeamFlow ? 'Continuar como Master' : isRegister ? 'Validar mi correo' : loginMethod === 'password' && !hasProductContext ? 'Entrar con contraseña' : 'Continuar'}</button>
+              <button type="submit" disabled={loading} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-40">{loading ? 'Procesando…' : isSponsorMasterResume ? 'Continuar con el Master' : isKawMedMasterResume ? 'Continuar con Master KawMed' : isTeamFlow ? 'Continuar como Master' : isRegister ? 'Validar mi correo' : loginMethod === 'password' && !hasProductContext ? 'Entrar con contraseña' : 'Continuar'}</button>
             </form>
 
             {recoveryStage !== 'idle' && <div className="space-y-4">

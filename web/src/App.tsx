@@ -55,6 +55,10 @@ const KawvoTrial = lazy(
   () => import('./components/trial/KawvoTrial'),
 )
 
+const KawMedProfile = lazy(
+  () => import('./components/medical-profile/KawMedProfile'),
+)
+
 const FreeDemoEditor = lazy(
   () => import('./components/free-demo/FreeDemoEditor'),
 )
@@ -213,6 +217,11 @@ function App() {
           <Route
             path="/trial/:slug"
             element={<KawvoTrial mode="public" />}
+          />
+
+          <Route
+            path="/m/:slug"
+            element={<KawMedProfile />}
           />
 
           <Route

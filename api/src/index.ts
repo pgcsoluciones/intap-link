@@ -11,6 +11,7 @@ import { finalizeFreeDemoClaimToVerifiedUser, freeDemoClaimCookie, getActiveFree
 import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
 import { registerDemoViralRoutes } from './routes/demo-viral'
 import { registerDemoAiRoutes } from './routes/demo-ai'
+import { registerMedicalProfileRoutes } from './routes/medical-profile'
 import {
   ARTIFACT_PRODUCT_TYPES,
   generateHumanCode,
@@ -117,6 +118,7 @@ app.use('/api/v1/me/*', async (c:any,next:any) => {
 
 registerDemoViralRoutes(app)
 registerDemoAiRoutes(app)
+registerMedicalProfileRoutes(app)
 
 
 app.use('/api/*', async (c, next) => {

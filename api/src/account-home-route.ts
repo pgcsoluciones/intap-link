@@ -1,6 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
-import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { listOwnedSponsoredBeneficiaryProfiles, resolveSponsorMembership, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -27,19 +27,28 @@ async function requireUser(c:any,next:any){
 app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
 
-  const sponsorMembership=await c.env.DB.prepare(
-    `SELECT sm.sponsor_id,sm.role,st.is_active
-       FROM sponsor_members sm
-       LEFT JOIN sponsor_tenants st ON st.id=sm.sponsor_id
-      WHERE sm.user_id=? AND sm.status='active'
-      ORDER BY CASE WHEN sm.role='owner' THEN 0 ELSE 1 END
-      LIMIT 1`
-  ).bind(userId).first()
+  const sponsorMembership=await resolveSponsorMembership(c,userId)
 
   if(sponsorMembership){
+    const sponsorId=String((sponsorMembership as any).sponsor_id||'')
+    const [normalMaster,kawMedMaster]=await Promise.all([
+      c.env.DB.prepare("SELECT 1 FROM sponsor_artifacts WHERE sponsor_id=? AND artifact_role='master' LIMIT 1").bind(sponsorId).first(),
+      c.env.DB.prepare("SELECT 1 FROM medical_sponsor_masters WHERE sponsor_id=? AND status<>'inactive' LIMIT 1").bind(sponsorId).first(),
+    ])
+    if(kawMedMaster&&!normalMaster){
+      return c.json({ok:true,data:{
+        kind:'sponsor_med',
+        route:'/admin/sponsor/kawmed',
+        role:String((sponsorMembership as any).role||'member'),
+        profile_id:null,
+        username:null,
+        public_route:null,
+        agenda_route:null,
+      }})
+    }
     const masterProfile=await c.env.DB.prepare(
       `SELECT id,username,status FROM sponsored_profiles WHERE sponsor_id=? AND user_id=? AND profile_role='sponsor_owner' ORDER BY created_at ASC LIMIT 1`
-    ).bind(String((sponsorMembership as any).sponsor_id||''),userId).first()
+    ).bind(sponsorId,userId).first()
     return c.json({ok:true,data:{
       kind:'sponsor',
       route:'/admin/sponsor',
@@ -92,6 +101,22 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
     const slug=String((profile as any).slug||'')
     if(planId==='free')return c.json({ok:true,data:{kind:'free',route:'/admin/free',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:'/admin/free/agenda'}})
     return c.json({ok:true,data:{kind:planId.includes('med')?'med':'paid',route:'/admin',plan_id:planId,public_route:slug?'/'+slug:null,agenda_route:null}})
+  }
+
+  const medical=await c.env.DB.prepare(
+    `SELECT id,slug,status FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`
+  ).bind(userId).first()
+
+  if(medical){
+    const slug=String((medical as any).slug||'')
+    return c.json({ok:true,data:{
+      kind:'med',
+      route:'/admin/medical',
+      profile_id:String((medical as any).id||''),
+      status:String((medical as any).status||'draft'),
+      public_route:slug?'/m/'+slug:null,
+      agenda_route:'/admin/medical/agenda',
+    }})
   }
 
   return c.json({ok:true,data:{kind:'none',route:'/admin/free/onboarding/welcome'}})
