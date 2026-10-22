@@ -51,6 +51,10 @@ const KawvoLinkDemoShared = lazy(
   () => import('./components/demo/KawvoLinkDemoShared'),
 )
 
+const KawMedProfile = lazy(
+  () => import('./components/medical-profile/KawMedProfile'),
+)
+
 const KawvoTrial = lazy(
   () => import('./components/trial/KawvoTrial'),
 )
@@ -213,6 +217,11 @@ function App() {
           <Route
             path="/trial/:slug"
             element={<KawvoTrial mode="public" />}
+          />
+
+          <Route
+            path="/m/:slug"
+            element={<KawMedProfile />}
           />
 
           <Route
