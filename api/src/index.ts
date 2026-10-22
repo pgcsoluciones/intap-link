@@ -1,3 +1,4 @@
+import { registerMedicalProfileRoutes } from './routes/medical-profile'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { getCookie } from 'hono/cookie'
@@ -6709,5 +6710,7 @@ const agentsDisabledResponse = (c: any) => c.json({
 app.post('/api/v1/agents/workspaces', agentsDisabledResponse)
 app.post('/api/v1/agents/chat/sessions', agentsDisabledResponse)
 app.post('/api/v1/agents/chat/messages', agentsDisabledResponse)
+
+registerMedicalProfileRoutes(app)
 
 export default app
