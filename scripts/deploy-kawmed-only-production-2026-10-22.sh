@@ -19,11 +19,11 @@ run git diff --check "$REMOTE/main...HEAD"
 run npm ci
 run node scripts/test-kawmed-isolation-contract.mjs
 run node scripts/test-ai-profile-assistant-contract.mjs
-run node scripts/test-ai-profile-assistant-integration.mjs
 run npm run build -w web
 run npm run build -w app
 run npx tsc --noEmit -p api/tsconfig.json
-run npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawmed-production-api-check.mjs
+run npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-ai-api.mjs
+run node scripts/test-ai-profile-assistant-integration.mjs
 SCHEMA="$(cd api && npx wrangler d1 execute intap_db --remote --config wrangler.toml --json --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('medical_profiles','medical_access_codes','medical_sponsor_masters');")"
 if echo "$SCHEMA" | grep -Eq '"name"[[:space:]]*:[[:space:]]*"medical_'; then fail "Esquema KawMed parcialmente o totalmente presente. Detener para recuperación segura."; fi
 mkdir -p "$HOME/kawmed-db-production-backups"
