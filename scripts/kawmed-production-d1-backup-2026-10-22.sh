@@ -2,7 +2,8 @@
 set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 cd "$ROOT"
-[ -z "$(git status --porcelain)" ] || { echo "ERROR: cambios locales"; exit 1; }
+git diff --quiet && git diff --cached --quiet || { echo "ERROR: archivos versionados modificados"; exit 1; }
+# Los reportes sin seguimiento generados por preflight no bloquean la exportación.
 grep -Fq 'database_name = "intap_db"' api/wrangler.toml
 grep -Fq 'ENVIRONMENT = "production"' api/wrangler.toml
 umask 077
