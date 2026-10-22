@@ -2201,3 +2201,79 @@
  .kawmed-shell--pastel .kawmed-contact-pill{gap:8px}
  .kawmed-shell--pastel .kawmed-contact-pill strong{font-size:14px;line-height:1.22}
 }
+
+/* KawMed: shared medical information separators. */
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity::after{
+ content:"";display:block;height:1px;background:#d7e7f1;
+ width:min(100%,520px);margin:22px auto 0;
+}
+.kawmed-shell--pastel .kawmed-intro::before{
+ content:"";display:block;height:1px;background:#d7e7f1;
+ width:100%;margin:0 auto 20px;
+}
+.kawmed-shell .kawmed-intro::after{
+ content:"";display:block;height:1px;background:#d7e7f1;
+ width:100%;margin:20px auto 0;
+}
+/* Classic adopts Modern's illustrated three-card language, with classic-blue palette. */
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panels{
+ width:100%;max-width:620px;margin:0 auto;box-sizing:border-box;
+ display:grid;gap:14px;padding:0 24px 23px;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel--direct{
+ position:relative;isolation:isolate;display:grid;
+ grid-template-columns:55px minmax(0,1fr) 20px;
+ align-items:center;column-gap:16px;row-gap:0;
+ width:100%;min-height:116px;padding:18px;
+ overflow:hidden;border:1px solid #d8eaf8;
+ border-radius:25px;background:#edf6ff;
+ box-shadow:0 12px 25px rgba(44,113,176,.13);
+ color:#122744;text-align:left;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel:nth-child(2){
+ background:#edf9f6;border-color:#ccece7;
+ box-shadow:0 12px 25px rgba(41,158,142,.13);
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel:nth-child(3){
+ background:#eff3ff;border-color:#dce5ff;
+ box-shadow:0 12px 25px rgba(103,117,202,.13);
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__icon{
+ grid-column:1;grid-row:1;justify-self:center;z-index:2;
+ display:grid;place-items:center;flex:0 0 55px;
+ width:55px;height:55px;border-radius:50%;
+ background:#daebff;color:#1471d6;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__icon--teal{background:#d7f4ef;color:#108d8a}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__icon--insurance{background:#dfe9ff;color:#4777d3}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__icon svg{width:25px;height:25px}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__title{
+ grid-column:2;grid-row:1;min-width:0;align-self:center;z-index:2;
+ display:flex;flex-direction:column;justify-content:center;gap:5px;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__title strong{
+ font:800 17px/1.3 Inter,system-ui,sans-serif;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__title small{font-size:13px;line-height:1.4}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__chevron{
+ grid-column:3;grid-row:1;align-self:center;justify-self:center;
+ display:block;position:relative;z-index:3;width:20px;height:20px;margin:0;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration{
+ position:absolute;left:auto;right:37px;top:auto;bottom:-16px;z-index:0;
+ display:grid;place-items:center;width:120px;height:120px;
+ opacity:.16;pointer-events:none;color:#639ed3;
+}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration svg{width:120px;height:120px}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel:nth-child(2) .kawmed-panel__illustration{color:#43a89f}
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel:nth-child(3) .kawmed-panel__illustration{color:#7f93d8}
+@media(max-width:440px){
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panels{gap:12px;padding:0 20px 19px}
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel--direct{
+  grid-template-columns:45px minmax(0,1fr) 18px;gap:11px;
+  min-height:108px;padding:13px;
+ }
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__icon{width:45px;height:45px}
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration{right:27px;bottom:-13px;width:104px;height:104px}
+ .kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration svg{width:104px;height:104px}
+}
