@@ -65,10 +65,10 @@ assert(medicalManager.includes("AppointmentManager"),'panel médico no reutiliza
 assert(appRoutes.includes('path="/admin/medical/agenda"'),'falta ruta de gestión médica')
 assert(previewEntry.includes("import './medical-appointments'"),'worker no carga adaptador médico')
 assert(previewAgenda.includes("'medical','kawmed_demo_laura_mendez'"),'Preview no inicializa Agenda KawMed')
-assert(prodAgenda.includes("'medical','kawmed_demo_laura_mendez'"),'falta migración equivalente de Agenda KawMed')
+assert(!prodAgenda.includes('kawmed_demo_laura_mendez'),'Producción no debe inicializar agenda con datos ficticios')
 assert(previewReasons.includes("'Consulta médica'"),'Preview no define motivos médicos')
 assert(previewReasons.includes("'Seguimiento / control'"),'Preview no define seguimiento médico')
-assert(prodReasons.includes("'Revisión de resultados'"),'Producción no conserva motivos médicos equivalentes')
+assert(!prodReasons.includes('kawmed_demo_laura_mendez'),'Producción no debe inicializar motivos médicos ficticios')
 assert(profile.includes("AppointmentOwnerBar"),'KawMed no reutiliza barra de propietario común')
 assert(profile.includes("Código QR"),'KawMed no ofrece QR en el pie público')
 assert(profile.includes("Iniciar sesión"),'KawMed no ofrece inicio de sesión en el pie')
@@ -151,7 +151,8 @@ for (const [name,sql] of [
   assert(sql.includes('CREATE TABLE IF NOT EXISTS medical_profile_centers'),name+': falta medical_profile_centers')
   assert(sql.includes('CREATE TABLE IF NOT EXISTS medical_profile_schedules'),name+': falta medical_profile_schedules')
   assert(sql.includes('CREATE TABLE IF NOT EXISTS medical_profile_services'),name+': falta medical_profile_services')
-  assert(sql.includes("'lauramendez'"),name+': falta demo Laura Méndez')
+  if(name.startsWith('preview')) assert(sql.includes("'lauramendez'"),name+': falta demo Laura Méndez')
+  else assert(!sql.includes("'lauramendez'") && !sql.includes('kawmed_demo_laura_mendez'),name+': Producción no debe sembrar perfiles ficticios')
 }
 
 for (const [name,sql] of [
@@ -161,6 +162,7 @@ for (const [name,sql] of [
   assert(sql.includes('medical_profile_insurance_exclusions'),name+': falta tabla de exclusiones')
 }
 
+assert(!prodInsurance.includes('kawmed_ins_ex_1') && !prodAcceptedInsurance.includes('kawmed_ins_accept_1'),'Producción no debe sembrar seguros ficticios')
 assert(previewAcceptedInsurance.includes('medical_profile_insurances'),'Preview no crea seguros aceptados KawMed')
 assert(prodAcceptedInsurance.includes('medical_profile_insurances'),'Producción no conserva seguros aceptados KawMed')
 assert(previewMasterProfile.includes('medical_sponsor_master_profiles'),'Preview no relaciona Master con perfil público KawMed')
