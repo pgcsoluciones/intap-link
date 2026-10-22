@@ -88,6 +88,7 @@ assert(profile.includes("params.get('kawmed_preview')") && profile.includes("par
 assert(medicalDashboard.includes('Ver vista previa de la plantilla seleccionada') && !medicalDashboard.includes('<iframe') && medicalDashboard.includes('Dr. Nombre Apellido'),'editor debe mostrar miniaturas y botón de vista previa externo')
 assert((profile.match(/className="kawmed-modal__appointment-cta"/g)||[]).length===2 && profile.includes('setModal(null); setAppointmentOpen(true)'),'horarios y centros deben ofrecer acceso directo a la agenda')
 assert(medicalStyles.includes('.kawmed-schedule-row__time strong{font-size:15px') && medicalStyles.includes('.kawmed-center-card__copy strong{font-size:17px'),'los modales deben tener texto móvil legible')
+assert(medicalStyles.includes('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-contact-pill strong') && medicalStyles.includes('overflow-wrap:break-word;text-align:left'),'Clásica debe mostrar completos los títulos de los cuatro botones')
 assert(medicalStyles.includes('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration') && medicalStyles.includes('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity::after'),'plantilla clasica: tarjetas ilustradas y separador de especialidades')
 assert(medicalStyles.includes('.kawmed-shell .kawmed-intro::after') && medicalStyles.includes('.kawmed-shell--pastel .kawmed-intro::before'),'perfil medico: separadores antes y despues de bio/centro')
 assert(profile.includes('mobileMenu'),'KawMed debe activar menú móvil del propietario')
