@@ -2428,3 +2428,18 @@
  color:#173b61;
  margin:5px 0 0;
 }
+
+/* Patient accessibility: larger booking-form copy and input controls on phones. */
+@media(max-width:700px){
+ .kawmed-form{gap:17px}
+ .kawmed-form__intro{font-size:16px;line-height:1.55}
+ .kawmed-form label{font-size:16px;line-height:1.4;gap:9px}
+ .kawmed-form label small{font-size:14px}
+ .kawmed-form input,
+ .kawmed-form select,
+ .kawmed-form textarea{font-size:17px;line-height:1.45;min-height:52px;padding:12px 14px}
+ .kawmed-form input::placeholder,
+ .kawmed-form textarea::placeholder{font-size:16px}
+ .kawmed-form__error,.kawmed-form__privacy{font-size:14px;line-height:1.5}
+ .kawmed-form .kawmed-button--full{font-size:17px;min-height:56px}
+}
