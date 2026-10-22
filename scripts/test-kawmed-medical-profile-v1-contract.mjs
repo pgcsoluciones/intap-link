@@ -88,6 +88,8 @@ assert(profile.includes("params.get('kawmed_preview')") && profile.includes("par
 assert(medicalDashboard.includes('Vista previa completa del perfil') && medicalDashboard.includes('<iframe') && medicalDashboard.includes('Dr. Nombre Apellido'),'editor debe mostrar miniaturas ilustradas y vista completa activa')
 assert((profile.match(/className="kawmed-modal__appointment-cta"/g)||[]).length===2 && profile.includes('setModal(null); setAppointmentOpen(true)'),'horarios y centros deben ofrecer acceso directo a la agenda')
 assert(medicalStyles.includes('.kawmed-schedule-row__time strong{font-size:15px') && medicalStyles.includes('.kawmed-center-card__copy strong{font-size:17px'),'los modales deben tener texto móvil legible')
+assert(medicalStyles.includes('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-panel__illustration') && medicalStyles.includes('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity::after'),'plantilla clasica: tarjetas ilustradas y separador de especialidades')
+assert(medicalStyles.includes('.kawmed-shell .kawmed-intro::after') && medicalStyles.includes('.kawmed-shell--pastel .kawmed-intro::before'),'perfil medico: separadores antes y despues de bio/centro')
 assert(profile.includes('mobileMenu'),'KawMed debe activar menú móvil del propietario')
 assert(medicalStyles.includes('.kawmed-owner-header__desktop-links{display:none!important}') && medicalStyles.includes('.kawmed-owner-header__dropdown'),'el menú móvil debe sustituir enlaces superiores')
 assert(medicalStyles.includes('.kawmed-shell--pastel .kawmed-intro>p{font-size:17px') && medicalStyles.includes('.kawmed-shell--pastel .kawmed-panel__title strong{font-size:17px'),'móvil debe aumentar legibilidad')
