@@ -36,3 +36,22 @@ Fecha: 2026-10-22. **Documento operativo, no autorización de ejecución.**
 
 ## Estado
 Runbook documentado. Aún sin evidencias suficientes para desplegar con garantías de no regresión: faltan versión activa exitosa de App, procedimiento rollback Pages comprobado, auditoría runtime, QA E2E y verificación de compatibilidad Worker/esquema. Esto no impide construir el release integral, pero **no se debe intentar un despliegue ciego**.
+
+## Verificación documental de rollback de Cloudflare (2026-10-22)
+Fuentes oficiales consultadas:
+- https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/
+- https://developers.cloudflare.com/workers/wrangler/commands/workers/
+- https://developers.cloudflare.com/api/resources/pages/subresources/projects/subresources/deployments/
+
+### Worker `intap-api`
+`wrangler rollback <VERSION_ID> --name intap-api --config api/wrangler.toml` publica **inmediatamente** esa versión en el 100% de las rutas. Es una acción mutante y **NO** es paso de preflight. La versión observada anterior al cutover es `ce72ba26-95ec-4243-8e9e-fd2e3efcaf6d`. Guardar confirmación de despliegue activo actual justo antes del corte. **No probar rollback sobre Producción por curiosidad.**
+
+### Pages
+Cloudflare publica API oficial `POST /accounts/{account_id}/pages/projects/{project_name}/deployments/{deployment_id}/rollback`, que promueve una implementación **previa exitosa**. No es equivalente a volver a poner `main` en un SHA anterior: el rollback de artefactos de Pages es independiente de Git y no revierte D1 ni Worker. Se requiere cuenta y credencial con permiso Pages Write, que **no deben guardarse en archivos del repositorio ni copiarse en el chat**. Puede hacerse por el Dashboard seleccionando deployment saludable en Deployments. Verificar primero cuál fue exitoso y está disponible; jamás la entrada App `66e1b98b` con Failure.
+
+### Caveats
+- No hacer rollback si la versión anterior no comprende el nuevo esquema. Primero comprobar compatibilidad backwards con migraciones aditivas.
+- La configuración de cron, bindings y secretos se controla por entorno; no mezclar Preview y Producción.
+- El rollback es plan contingente, no argumento suficiente para afirmar que el lanzamiento carecerá de regresiones.
+
+**Resultado:** mecanismos oficiales identificados y documentados; todavía sin validación efectiva de un rollback ni identificación de un deployment Pages App inequívocamente exitoso.
