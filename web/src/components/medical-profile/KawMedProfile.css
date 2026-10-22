@@ -2348,3 +2348,35 @@
   gap:9px;
  }
 }
+
+/* Shared centered action rhythm: Classic + Modern, with tighter contact pairing. */
+.kawmed-shell--pastel .kawmed-contact-pill{
+ justify-content:center;
+ border-radius:34px;
+ gap:10px;
+}
+.kawmed-shell--pastel .kawmed-contact-pill>span:last-child{
+ flex:0 1 auto;
+ align-items:center;
+ justify-content:center;
+ justify-items:center;
+ text-align:center;
+}
+.kawmed-shell--pastel .kawmed-contact-pill strong,
+.kawmed-shell--pastel .kawmed-contact-pill small{
+ text-align:center;
+ white-space:normal;
+ overflow:visible;
+ text-overflow:clip;
+}
+.kawmed-shell .kawmed-contact-pill:last-child{
+ column-gap:6px;
+ gap:6px;
+}
+.kawmed-shell .kawmed-contact-pill:last-child>span:last-child{
+ flex:0 1 auto;
+}
+@media(max-width:440px){
+ .kawmed-shell--pastel .kawmed-contact-pill{border-radius:29px;gap:8px}
+ .kawmed-shell .kawmed-contact-pill:last-child{gap:5px}
+}
