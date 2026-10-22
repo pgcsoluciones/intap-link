@@ -49,8 +49,15 @@ if grep -qE 'kawmed_demo_laura_mendez|kawmed_ins_ex_1|kawmed_ins_accept_1' api/m
 echo "✓ Gates aprobados: backup, pruebas, builds, exactamente 11 migraciones."
 # Bloquear despliegue hasta cierre explícito del triage de seguridad.
 fail "DESPLIEGUE BLOQUEADO: aún falta cerrar auditoría de dependencias y autorizar un runner de release sin este bloqueo."
+# Ejecutar solo tras resolver la auditoría de seguridad, definir estrategia de rollback
+# y validar de nuevo la consistencia del release y sus migraciones.
+# PRECAUCIÓN: cada paso modifica Producción; debe fallar inmediatamente ante errores.
 (cd api && npx wrangler d1 migrations apply intap_db --remote --config wrangler.toml) 2>&1 | tee "$LOG_DIR/migrations.txt"
-# Implementar Web/App, después Worker. Guardar orígenes y reconfigurar el Worker de forma transitoria.
+echo "▶ Confirmar esquema aplicado antes de actualizar Web/App"
+(cd api && npx wrangler d1 migrations list intap_db --remote --config wrangler.toml) 2>&1 | tee "$LOG_DIR/migrations-after.txt"
+if grep -Eq '[0-9]{4}_[A-Za-z0-9._-]+\\.sql' "$LOG_DIR/migrations-after.txt"; then
+ fail "Quedaron migraciones pendientes; detener publicación"
+fi
 (npx wrangler pages deploy app/dist --project-name intap-web2 --branch main) 2>&1 | tee "$LOG_DIR/app.txt"
 (npx wrangler pages deploy web/dist --project-name intap-link --branch main) 2>&1 | tee "$LOG_DIR/web.txt"
 (cd api && npx wrangler deploy --config wrangler.toml) 2>&1 | tee "$LOG_DIR/worker.txt"
