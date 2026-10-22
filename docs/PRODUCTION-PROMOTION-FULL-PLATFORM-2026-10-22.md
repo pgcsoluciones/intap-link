@@ -101,3 +101,13 @@ El operador ejecutó curl para `https://intaprd.com/api/health`, `https://app.in
 El operador ejecutó `dry-run-kawmed-migrations-on-backup-2026-10-22.sh` sobre el SQL de respaldo local verificado por SHA256. Se aplicaron las **11 migraciones** 0090–0099 y 0150 en SQLite temporal, sin fallas SQL y con `PRAGMA integrity_check=ok`. La prueba antes/después mostró la misma violación de FK heredada: `profile_videos|1|profiles|0`. **Ninguna violación nueva fue introducida**. No borrar el registro de Producción sin identificar su origen; el operador aclara que los perfiles usados en QA eran ficticios, lo cual no demuestra el origen de este registro específico en `intap_db`.
 
 **Gate de integridad de migraciones: PASA con incidencia heredada documentada.** Persisten gates independientes de compatibilidad funcional, seguridad y rollback de infraestructura para el lanzamiento integral. La base productiva sigue intacta.
+
+## Despliegues productivos Pages — inventario ejecutado 2026-10-22
+
+Operador ejecutó `verify-kawvo-production-readonly-2026-10-22.sh` sobre Cloudflare autenticado. `github/main=2391896286839528557066968ca4b8abe9831fb9`; candidato `10e2f12d71eb165e2b79461163ba485f2d3bf160` a ese momento. API health 200 en los tres dominios. `wrangler pages deployment list --environment production` identifica:
+
+- **Web** `intap-link`: deployment de Producción para SHA `2391896` en `https://7588f64f.intap-link.pages.dev` con estado `Idle`; en lista otra ejecución del mismo SHA `https://dabc4a57.intap-link.pages.dev` marcada temporalmente `3 days ago`.
+- **App** `intap-web2`: deployment de Producción SHA `2391896` en `https://66e1b98b.intap-web2.pages.dev` con estado **Failure**; otra ejecución del mismo SHA `https://22418cee.intap-web2.pages.dev` marcada `3 days ago`. Varias entradas anteriores de App `Failure`; identificar con Cloudflare qué deployment está sirviendo el dominio antes de decidir rollback.
+- **D1** continúa con 11 migraciones KawMed pendientes; ninguna aplicada.
+
+**Importante:** no interpretar la lista (orden, columna `Status` y `3 days ago`) como prueba suficiente de deployment **activo** ni considerar `Failure` recuperable. Debe consultarse detalle del deployment efectivo de `app.intaprd.com`, configuración git/build Pages y versión del Worker `intap-api` antes de corte. La comprobación de salud de API no permite inferir su SHA publicado.
