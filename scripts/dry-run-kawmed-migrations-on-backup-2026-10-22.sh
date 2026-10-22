@@ -12,7 +12,12 @@ trap 'rm -rf "$TMP"' EXIT
 DB="$TMP/rehearsal.sqlite"
 sqlite3 "$DB" < "$BACKUP"
 [ "$(sqlite3 "$DB" 'PRAGMA integrity_check;')" = "ok" ] || { echo "ERROR: respaldo invalido"; exit 1; }
+PRE_FK="$(sqlite3 "$DB" 'PRAGMA foreign_key_check;' | sort)"
 echo "Respaldo restaurado; ensayo en archivo temporal."
+if [ -n "$PRE_FK" ]; then
+ echo "AVISO: infracciones de FK presentes ANTES de migrar:"
+ printf '%s\n' "$PRE_FK"
+fi
 MIGRATIONS=(
   0090_kawmed_medical_profiles_v1.sql
   0091_kawmed_insurance_exclusions.sql
@@ -36,8 +41,15 @@ for name in "${MIGRATIONS[@]}"; do
  sqlite3 -bail "$DB" < "$file" || { echo "ERROR aplicando $name"; exit 1; }
 done
 [ "$(sqlite3 "$DB" 'PRAGMA integrity_check;')" = "ok" ] || { echo "ERROR de integridad"; exit 1; }
-echo "PRAGMA foreign_key_check (sin resultados esperado):"
-FK="$(sqlite3 "$DB" 'PRAGMA foreign_key_check;')"
-[ -z "$FK" ] || { printf '%s\n' "$FK"; echo "ERROR FK"; exit 1; }
-echo "OK: 11 migraciones aplicadas localmente, integridad y claves foráneas correctas."
+echo "Comparando infracciones FK antes y después..."
+POST_FK="$(sqlite3 "$DB" 'PRAGMA foreign_key_check;' | sort)"
+NEW_FK="$(comm -13 <(printf '%s\n' "$PRE_FK" | sed '/^$/d') <(printf '%s\n' "$POST_FK" | sed '/^$/d'))"
+if [ -n "$NEW_FK" ]; then
+ echo "ERROR: nuevas infracciones FK introducidas:"; printf '%s\n' "$NEW_FK"; exit 1
+fi
+if [ -n "$POST_FK" ]; then
+ echo "AVISO: hay relaciones inconsistentes heredadas; requieren revisión separada."
+ printf '%s\n' "$POST_FK"
+fi
+echo "OK: 11 migraciones aplicadas localmente sin nuevas infracciones FK."
 echo "La DB de Producción NO ha sido modificada."
