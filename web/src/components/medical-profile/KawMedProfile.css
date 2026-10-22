@@ -2380,3 +2380,30 @@
  .kawmed-shell--pastel .kawmed-contact-pill{border-radius:29px;gap:8px}
  .kawmed-shell .kawmed-contact-pill:last-child{gap:5px}
 }
+
+/* Equal visual importance for all medical specialties in Classic and Modern. */
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-specialties .kawmed-specialty,
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-specialties .kawmed-specialty--main,
+.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-specialties .kawmed-specialty--additional{
+ font-family:Inter,system-ui,sans-serif;
+ font-size:clamp(17px,3.7vw,22px);
+ line-height:1.38;
+ font-weight:800;
+ color:#173b61;
+ margin:0 auto;
+ max-width:100%;
+ text-align:center;
+ text-wrap:balance;
+}
+.kawmed-shell--pastel .kawmed-pastel-hero-specialties p,
+.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-main-specialty,
+.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-extra-specialty{
+ font-family:Inter,system-ui,sans-serif;
+ font-size:clamp(14px,3.1vw,17px);
+ line-height:1.42;
+ font-weight:800;
+ color:#173b61;
+ border:0;
+ padding:0;
+ margin:0;
+}
