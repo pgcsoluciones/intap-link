@@ -12,9 +12,4 @@ CREATE TABLE IF NOT EXISTS medical_profile_insurance_exclusions (
 CREATE INDEX IF NOT EXISTS idx_medical_insurance_exclusions_profile
 ON medical_profile_insurance_exclusions(medical_profile_id, active, sort_order);
 
--- Datos ficticios para QA del perfil demo.
-INSERT OR IGNORE INTO medical_profile_insurance_exclusions
-(id, medical_profile_id, insurance_name, sort_order, active)
-VALUES
-('kawmed_ins_ex_1','kawmed_demo_laura_mendez','Seguro Demo Alfa',1,1),
-('kawmed_ins_ex_2','kawmed_demo_laura_mendez','Plan Médico Demo Beta',2,1);
+-- Producción: sin datos ficticios ni aseguradoras de demostración.
