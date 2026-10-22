@@ -55,7 +55,7 @@ fail "DESPLIEGUE BLOQUEADO: aún falta cerrar auditoría de dependencias y autor
 (cd api && npx wrangler d1 migrations apply intap_db --remote --config wrangler.toml) 2>&1 | tee "$LOG_DIR/migrations.txt"
 echo "▶ Confirmar esquema aplicado antes de actualizar Web/App"
 (cd api && npx wrangler d1 migrations list intap_db --remote --config wrangler.toml) 2>&1 | tee "$LOG_DIR/migrations-after.txt"
-if grep -Eq '[0-9]{4}_[A-Za-z0-9._-]+\\.sql' "$LOG_DIR/migrations-after.txt"; then
+if grep -Eq '[0-9]{4}_[A-Za-z0-9._-]+[.]sql' "$LOG_DIR/migrations-after.txt"; then
  fail "Quedaron migraciones pendientes; detener publicación"
 fi
 (npx wrangler pages deploy app/dist --project-name intap-web2 --branch main) 2>&1 | tee "$LOG_DIR/app.txt"
