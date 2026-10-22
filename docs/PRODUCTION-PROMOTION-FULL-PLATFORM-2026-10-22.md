@@ -37,3 +37,34 @@
 
 ## Estado
 **No autorizada publicación automática desde este documento.** El runner KawMed parcial anterior no cubre el alcance real; el objetivo es crear un nuevo release de plataforma completa después de manifest y pruebas.
+
+## Contraste documental: bitácoras históricas (revisión 2026-10-22)
+
+Fuentes consultadas de archivos de proyecto (contenido histórico, no evidencia del estado vivo de Cloudflare):
+
+- `BITACORA_MAESTRA_KAWVO_LINK_CONFIG_PORTAFOLIO_RECORRIDOS_2026-10-02.pdf`: registra despliegues productivos de ajustes de configuración/portafolio y persistencia de recorridos; reporta SHAs productivos `d390d6fb...` y `d278cc04...`, con esos frentes cerrados. **Refuta la hipótesis de que absolutamente nada fue lanzado antes a Producción.**
+- `BITACORA_MAESTRA_KAWVO_LINK_TRIAL_HANDOFF_2026-09-19.pdf`: describe runner productivo completado para un frente de Trial con migraciones D1 `0071–0073` y smoke productivo. Evidencia histórica, requiere confirmación en entorno.
+- `BITACORA_HANDOFF_KAWVO_LINK_POST_RELEASE_QA_2026-09-02.md`: documenta QA *posterior* a un release productivo y hotfixes pendientes. No equiparar rama Preview con Producción.
+- `BITACORA_MAESTRA_HANDOFF_KAWVO_LINK_AGENDA_MEDIA_PWA_2026-09-30.pdf`: señala que Agenda/PWA no debía darse por promovida al cerrar ese documento; migraciones Preview 0080–0082 aplicadas y publicación productiva pendiente entonces. Más adelante pudieron existir despliegues: contrastar con D1 y Worker actuales.
+- `BITACORA_MAESTRA_KAWVO_LINK_HANDOFF_2026-10-05.pdf`: registra un hotfix de login/sponsor de Producción como pendiente prioritario *a fecha del documento*, además de Free Demo. La rama actual `main` puede contener trabajos posteriores; no interpretar lo histórico como estado actual.
+- `BITACORA_MAESTRA_KAWMED_HANDOFF_2026-10-20.pdf`: confirma KawMed en QA/Preview, migraciones productivas 0090–0099 preparadas y no aplicadas en aquel cierre, y exigencia de autorizar integración con `main`.
+
+### Conclusiones de conciliación
+1. No es correcto decir que "toda la plataforma nunca estuvo en Producción". Es más preciso: **existe una Producción con releases previos, y se pretende elevar la totalidad de avances aprobados en QA sin regresiones**.
+2. El inventario debe establecer por módulo y por ambiente: release documentado, rama/SHA GitHub, migración D1 efectiva, ruta HTTP, configuración Worker y aprobación QA; cada una es evidencia distinta.
+3. Mantener aislados datos de la DB `intap_db_preview`: no copiarlos a `intap_db`. Datos de clientes, credenciales y consentimiento requieren tratamiento independiente.
+4. **Gate adicional:** los antecedentes indican incidencias reales posteriores a releases. No bastan tests de contrato o HTTP 200; las rutas de login, claim, sponsor, agendas, perfil público y flujos administrativos necesitan smoke funcional.
+5. Este documento corrige un supuesto del análisis inicial: los despliegues históricos aparecen en bitácoras, pero la versión exacta actualmente desplegada todavía necesita verificación Cloudflare.
+
+### Matriz inicial de módulos basada en bitácoras
+| Dominio | Evidencia histórica | Acción requerida |
+|---|---|---|
+| Free / Perfil público | releases anteriores documentados | verificar SHA real, QR/NFC, edición y datos |
+| Trial | runner productivo y migraciones 0071–0073 relatados | verificar Trial vigente, límites, reclamación/upgrade |
+| Sponsored / Team | releases y hotfixes descritos | verificar login, patrocinadores, multicuenta, privacidad |
+| Agenda / PWA / Media | Preview aprobada; producción pendiente en bitácora Sep 30 | verificar esquema 0080–0082 actual y ruta, smoke push |
+| Configuración / Portafolio / Recorridos | bitácora Oct 2 declara Producción completada | verificar persistencia sin regresión |
+| Free Demo / Master | bitácora Oct 5 registra pendientes; rama release Oct 19 igual a main | conciliar release efectivo vs código y D1 |
+| KawMed | bitácora Oct 20 lo conserva en Preview | 11 migraciones pendientes, no copiar seeds demo |
+
+**Secuencia recomendada:** inventario vivo Cloudflare y D1 → reconciliación contra bitácoras → pruebas end-to-end → migración compatible → publicación escalonada → verificación y actualización de main.
