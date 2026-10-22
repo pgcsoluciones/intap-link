@@ -95,3 +95,9 @@ Fuente: salida de `scripts/inventory-production-platform-2026-10-22.sh`, suminis
 El operador ejecutó curl para `https://intaprd.com/api/health`, `https://app.intaprd.com/api/health` y `https://api.intaprd.com/api/health`. Los tres devolvieron **HTTP 200** con JSON `ok:true`, `status:healthy`, `environment:production`, `worker:intap-api`. Esto confirma salud básica del Worker y conectividad por sus tres hosts; **no certifica** todos los endpoints ni compatibilidad de nuevas migraciones. Los previos 404 en `/api/` eran comprobaciones de ruta no configurada y el 503 de `/` del dominio API no debe considerarse caída global.
 
 **Próximo gate:** ensayo de migraciones sobre copia aislada de D1, verificación de compatibilidad del esquema y plano de rollback Pages/Worker. No ejecutar todavía runner anterior de KawMed.
+
+## Ensayo D1 con datos reales anonimizados en reporte — aprobado 2026-10-22
+
+El operador ejecutó `dry-run-kawmed-migrations-on-backup-2026-10-22.sh` sobre el SQL de respaldo local verificado por SHA256. Se aplicaron las **11 migraciones** 0090–0099 y 0150 en SQLite temporal, sin fallas SQL y con `PRAGMA integrity_check=ok`. La prueba antes/después mostró la misma violación de FK heredada: `profile_videos|1|profiles|0`. **Ninguna violación nueva fue introducida**. No borrar el registro de Producción sin identificar su origen; el operador aclara que los perfiles usados en QA eran ficticios, lo cual no demuestra el origen de este registro específico en `intap_db`.
+
+**Gate de integridad de migraciones: PASA con incidencia heredada documentada.** Persisten gates independientes de compatibilidad funcional, seguridad y rollback de infraestructura para el lanzamiento integral. La base productiva sigue intacta.
