@@ -111,3 +111,10 @@ Operador ejecutó `verify-kawvo-production-readonly-2026-10-22.sh` sobre Cloudfl
 - **D1** continúa con 11 migraciones KawMed pendientes; ninguna aplicada.
 
 **Importante:** no interpretar la lista (orden, columna `Status` y `3 days ago`) como prueba suficiente de deployment **activo** ni considerar `Failure` recuperable. Debe consultarse detalle del deployment efectivo de `app.intaprd.com`, configuración git/build Pages y versión del Worker `intap-api` antes de corte. La comprobación de salud de API no permite inferir su SHA publicado.
+
+## Worker productivo identificado — 2026-10-22
+La salida autenticada del operador de `wrangler deployments list --name intap-api --config wrangler.toml` registra como último despliegue (2026-10-19T06:48:47.116Z) la versión `ce72ba26-95ec-4243-8e9e-fd2e3efcaf6d` al **100%**. La versión inmediatamente anterior (2026-10-19T06:48:02Z) fue `4503fb62-0608-4e32-bdac-c357fd82f41e`. La salida lista los despliegues, pero no contiene SHA de Git del Worker: **no asumir equivalencia automática con `2391896`**.
+
+Al mismo tiempo, `intaprd.com/`, `app.intaprd.com/`, `intaprd.com/api/health` y `app.intaprd.com/api/health` retornaron 200. La consulta Pages confirma el commit productivo `2391896` en Web/App. La entrada reciente de App del mismo commit presenta `Failure`, por lo cual no sirve como rollback; confirmar deployment efectivo y preservar identificador de uno publicado con éxito mediante Dashboard antes del cambio.
+
+**Punto de restauración Worker identificado, pero no ensayado.** Antes de modificar, documentar y validar comando y permisos necesarios para rollback de Worker; las migraciones D1 no se revierten con el rollback de código.
