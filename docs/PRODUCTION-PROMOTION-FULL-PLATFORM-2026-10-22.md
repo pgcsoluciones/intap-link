@@ -89,3 +89,9 @@ Fuente: salida de `scripts/inventory-production-platform-2026-10-22.sh`, suminis
 6. Evitar confundir las advertencias de versiones con errores efectivos: CI aprobada no equivale a paridad operacional real.
 
 **Estado: inventario parcial pero útil, no autorizado para publicación.**
+
+## API productiva: health verificado por operador (2026-10-22)
+
+El operador ejecutó curl para `https://intaprd.com/api/health`, `https://app.intaprd.com/api/health` y `https://api.intaprd.com/api/health`. Los tres devolvieron **HTTP 200** con JSON `ok:true`, `status:healthy`, `environment:production`, `worker:intap-api`. Esto confirma salud básica del Worker y conectividad por sus tres hosts; **no certifica** todos los endpoints ni compatibilidad de nuevas migraciones. Los previos 404 en `/api/` eran comprobaciones de ruta no configurada y el 503 de `/` del dominio API no debe considerarse caída global.
+
+**Próximo gate:** ensayo de migraciones sobre copia aislada de D1, verificación de compatibilidad del esquema y plano de rollback Pages/Worker. No ejecutar todavía runner anterior de KawMed.
