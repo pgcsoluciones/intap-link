@@ -35,4 +35,12 @@ for (const id of migrationFiles){
  const sql=read('api/migrations/'+names[0])
  assert.doesNotMatch(sql,/kawmed_demo_laura_mendez|kawmed_ins_ex_1|kawmed_ins_accept_1/,'Demo seed in production migration: '+names[0])
 }
+const medicalProfile = read('web/src/components/medical-profile/KawMedProfile.tsx')
+for (const key of ["modal === 'schedule'", "modal === 'centers'"]) {
+ assert.ok(medicalProfile.includes(key), 'Medical modal missing: '+key)
+}
+const bookingFromModal = /footer=\{<button[^>]+className="kawmed-modal__appointment-cta"[^>]+onClick=\{\(\) => \{ setModal\(null\); setAppointmentOpen\(true\) \}\}/g
+assert.equal([...medicalProfile.matchAll(bookingFromModal)].length,2,'Both schedule and centers must offer booking CTA')
+assert.ok(medicalProfile.includes('<AppointmentRequestModal'), 'Booking form must exist')
+
 console.log('KawMed isolated integration: contract invariants OK')
