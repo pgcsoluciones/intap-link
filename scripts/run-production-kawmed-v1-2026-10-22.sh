@@ -22,7 +22,7 @@ BACKUP="$(find "$BACKUPS" -type f -name 'intap_db_before_kawmed_*.sql' -size +0c
 [ -f "$BACKUP.sha256" ] || fail "No hay hash del respaldo"
 (cd "$(dirname "$BACKUP")" && shasum -a 256 -c "$(basename "$BACKUP").sha256") || fail "Hash respaldo incorrecto"
 if command -v sqlite3 >/dev/null 2>&1; then
- TEST_DB="$(mktemp "$BACKUPS/recheck.XXXXXXXX.db")"; trap 'rm -f "$TEST_DB"' EXIT
+ TEST_DB="$(mktemp "$BACKUPS/recheck.XXXXXXXX")"; trap 'rm -f "$TEST_DB"' EXIT
  sqlite3 "$TEST_DB" < "$BACKUP" || fail "No puede restaurarse respaldo"
  [ "$(sqlite3 "$TEST_DB" 'PRAGMA integrity_check;')" = "ok" ] || fail "Respaldo corrupto"
 else fail "Se necesita sqlite3 para verificar restauración"; fi
