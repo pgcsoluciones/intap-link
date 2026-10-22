@@ -15,7 +15,7 @@ git pull --ff-only github "$BRANCH"
 git merge-base --is-ancestor github/main HEAD || fail "La rama no desciende de main"
 SHA="$(git rev-parse HEAD)"
 git merge-base --is-ancestor a0d56a6fb80b20ef6aa2febc64adab3082cd02c7 HEAD || fail "SHA de pruebas no es ancestro"
-EXTRA="$(git diff --name-only a0d56a6fb80b20ef6aa2febc64adab3082cd02c7..HEAD | grep -v "^scripts/run-production-kawmed-v1-2026-10-22.sh$" || true)"
+EXTRA="$(git diff --name-only a0d56a6fb80b20ef6aa2febc64adab3082cd02c7..HEAD | grep -Ev "^scripts/(run-production-kawmed-v1-2026-10-22\\.sh|test-kawmed-release-security-scope\\.mjs)$" || true)"
 [ -z "$EXTRA" ] || fail "Cambios de producto no validados posteriores a preflight"
 BACKUP="$(find "$BACKUPS" -type f -name 'intap_db_before_kawmed_*.sql' -size +0c -print | sort | tail -1)"
 [ -n "$BACKUP" ] || fail "No hay respaldo de D1 productiva"
@@ -48,7 +48,7 @@ EXPECTED="$(printf '%s\n' 0090_kawmed_medical_profiles_v1.sql 0091_kawmed_insura
 if grep -qE 'kawmed_demo_laura_mendez|kawmed_ins_ex_1|kawmed_ins_accept_1' api/migrations/009{0,1,2,3,8}_kawmed_*.sql; then fail "Datos de prueba en migraciones"; fi
 echo "✓ Gates aprobados: backup, pruebas, builds, exactamente 11 migraciones."
 # Bloquear despliegue hasta cierre explícito del triage de seguridad.
-[ -f "$HOME/kawmed-db-production-backups/kawmed-security-review-approved.txt" ] || fail "PENDIENTE: aprobación de revisión de dependencias. No desplegar."
+fail "DESPLIEGUE BLOQUEADO: aún falta cerrar auditoría de dependencias y autorizar un runner de release sin este bloqueo."
 (cd api && npx wrangler d1 migrations apply intap_db --remote --config wrangler.toml) 2>&1 | tee "$LOG_DIR/migrations.txt"
 # Implementar Web/App, después Worker. Guardar orígenes y reconfigurar el Worker de forma transitoria.
 (npx wrangler pages deploy app/dist --project-name intap-web2 --branch main) 2>&1 | tee "$LOG_DIR/app.txt"
