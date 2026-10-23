@@ -8,7 +8,8 @@ export default function KawMedDemoGuest(){
  if(j?.ok){setProfile(j.data.profile);setExpires(j.data.expires_at)}else setError(j?.error==='Unauthorized'?'LOGIN':j?.error||'Invitación inválida')
  }).catch(()=>setError('No se pudo verificar la invitación'))},[token])
  async function save(){setSaving(true);setError('');try{const patch:any={};for(const key of ['name','professional_prefix','specialty','subspecialty','bio','phone','whatsapp','city','province','organization'])patch[key]=profile[key]||'';patch.centers=profile.centers||[];patch.schedules=profile.schedules||[];patch.insurance_policy=profile.insurance_policy||{accepted:[],excluded:[]};patch.template=profile.template;patch.palette=profile.palette;patch.demo_agenda=profile.demo_agenda;patch.sponsor_demo=profile.sponsor_demo||undefined;const j:any=await apiPatch('/me/kawmed/demo/'+encodeURIComponent(token),patch);if(!j?.ok)throw Error(j?.error||'No se pudo guardar');setProfile(j.data.profile);alert('Cambios guardados solamente en tu copia de demostración.')}catch(e){setError(e instanceof Error?e.message:'No se pudo guardar')}finally{setSaving(false)}}
- const visitadorPhone=String(profile?.sponsor_demo?.representative_whatsapp||'').replace(/\D/g,'')
+ const rawVisitadorPhone=String(profile?.sponsor_demo?.representative_whatsapp||'').replace(/\D/g,'')
+ const visitadorPhone=rawVisitadorPhone.length===10&&/^(809|829|849)/.test(rawVisitadorPhone)?'1'+rawVisitadorPhone:rawVisitadorPhone
  const visitador=String(profile?.sponsor_demo?.representative_name||'')
  const sponsorName=String(profile?.sponsor_demo?.sponsor_name||'')
  const chatMessage=String(profile?.sponsor_demo?.representative_message_template||'Hola {visitador}, soy {medico}. Te contacto desde KawMed para conocer {patrocinador}.').replace(/\{visitador\}/gi,visitador||'visitador').replace(/\{medico\}/gi,String(profile?.name||'médico invitado')).replace(/\{patrocinador\}/gi,sponsorName)
