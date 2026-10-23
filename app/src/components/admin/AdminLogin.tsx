@@ -36,6 +36,10 @@ export default function AdminLogin() {
   const isTeamFlow = explicitTeamFlow || storedTeamFlow
   const scanCode = explicitTeamFlow ? queryScanCode : isTeamFlow ? storedScanCode : queryScanCode
   const teamCode = explicitTeamFlow ? queryTeamCode : isTeamFlow ? storedTeamCode : queryTeamCode
+  const medCode=String(searchParams.get('med_code')||sessionStorage.getItem('kawvo_kawmed_claim_code')||'').toUpperCase()
+  const medMasterCode=String(searchParams.get('med_master_code')||sessionStorage.getItem('kawvo_kawmed_master_code')||'').toUpperCase()
+  const isMedicalResume=searchParams.get('resume')==='kawmed'&&/^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medCode)
+  const isMedicalMasterResume=searchParams.get('resume')==='kawmed_master'&&/^MEDM-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medMasterCode)
   const isSponsorMasterResume = searchParams.get('resume') === 'sponsor_master' && validProduct(storedSponsorMasterCode)
 
   const validProductCode = validProduct(scanCode)
@@ -49,7 +53,7 @@ export default function AdminLogin() {
     : '', [isTeamFlow, scanCode, teamCode])
 
   useEffect(() => {
-    if (isSponsorMasterResume) setMode('login')
+    if (isSponsorMasterResume || isMedicalResume || isMedicalMasterResume) setMode('login')
     if (!hasProductContext) {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
       localStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
@@ -72,7 +76,7 @@ export default function AdminLogin() {
       return
     }
     setMode(isDraftResume || isSwitchUser ? 'login' : 'register')
-  }, [hasProductContext, isDraftResume, isSponsorMasterResume, isSwitchUser, isTeamFlow, scanCode, teamCode, validProductCode])
+  }, [hasProductContext, isDraftResume, isSponsorMasterResume, isMedicalResume, isMedicalMasterResume, isSwitchUser, isTeamFlow, scanCode, teamCode, validProductCode])
 
   const persistAuthMode = (nextMode: Mode) => {
     sessionStorage.setItem('kawvo_auth_mode', nextMode)
@@ -95,7 +99,9 @@ export default function AdminLogin() {
         const json: any = await apiPost('/auth/password/login', { email, password })
         if (json.ok) {
           persistAuthMode(mode)
-          if (isSponsorMasterResume) {
+          if (isMedicalResume || isMedicalMasterResume) {
+            window.location.assign(isMedicalResume?'/claim/kawmed?code='+encodeURIComponent(medCode):'/claim/kawmed-master?code='+encodeURIComponent(medMasterCode))
+          } else if (isSponsorMasterResume) {
             window.location.assign(`/admin/sponsor/entry?public_code=${encodeURIComponent(storedSponsorMasterCode)}`)
           } else {
             const home:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
@@ -172,9 +178,11 @@ export default function AdminLogin() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="mb-7 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isSponsorMasterResume ? 'Accede como patrocinador' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isMedicalResume||isMedicalMasterResume ? 'Verifica tu cuenta KawMed' : isSponsorMasterResume ? 'Accede como patrocinador' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
-            {isSponsorMasterResume
+            {isMedicalResume||isMedicalMasterResume
+              ? 'Accede o regístrate con el correo que deseas vincular a KawMed. Después confirmaremos la cuenta antes de activar el código.'
+              : isSponsorMasterResume
               ? 'Inicia sesión con el correo registrado para este patrocinador. Al validar la cuenta retomaremos automáticamente el Master.'
               : isTeamFlow
                 ? 'Inicia sesión con la cuenta Administrador Master para continuar preparando este dispositivo.'
