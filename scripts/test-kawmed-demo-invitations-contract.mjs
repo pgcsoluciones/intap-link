@@ -1,0 +1,16 @@
+import fs from 'node:fs'
+import assert from 'node:assert/strict'
+const read=p=>fs.readFileSync(p,'utf8')
+const api=read('api/src/kawmed-demo-invitations.ts')
+const app=read('app/src/components/admin/medical/KawMedDemoGuest.tsx')
+const schema=read('api/migrations/0151_kawmed_demo_invitations.sql')
+assert.match(schema,/CREATE TABLE IF NOT EXISTS kawmed_demo_invitations/)
+assert.match(api,/email\(actor.email\)!==email\(row.invited_email\)/)
+assert.match(api,/status==='revoked'/)
+assert.match(api,/expires_at>datetime\('now'\)/)
+assert.match(api,/sandbox_json/)
+assert.doesNotMatch(api,/UPDATE medical_profiles|DELETE FROM medical_profiles|UPDATE users|UPDATE auth_sessions/)
+assert.match(app,/No tienes permisos para cambiar credenciales/)
+assert.match(read('app/src/App.tsx'),/admin\/medical\/demo\/:token/)
+assert.match(read('api/src/preview-free-entry.ts'),/kawmed-demo-invitations/)
+console.log('KawMed demo invitation isolation contract: OK')
