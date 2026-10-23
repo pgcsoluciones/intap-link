@@ -30,6 +30,8 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const openAgenda=()=>onOpenAgenda?onOpenAgenda():window.location.assign('/admin/medical/agenda'+(scopeQuery?'?'+scopeQuery:''))
   const avatarRef=useRef<HTMLInputElement>(null),coverRef=useRef<HTMLInputElement>(null)
   const[tab,setTab]=useState<Tab>('profile')
+  const[publicationConfirm,setPublicationConfirm]=useState<'publish'|'unpublish'|null>(null)
+  const[previewOpen,setPreviewOpen]=useState(false)
   const[lifecycleBusy,setLifecycleBusy]=useState(false)
   const[showDeletion,setShowDeletion]=useState(false)
   const[deleteEmail,setDeleteEmail]=useState('')
@@ -84,6 +86,18 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     const checks=[Boolean(profile?.name),Boolean(profile?.specialty),Boolean(profile?.cover_url||profile?.avatar_url),centers.length>0,schedules.length>0]
     return{done:checks.filter(Boolean).length,total:checks.length}
   },[profile,centers.length,schedules.length])
+
+  async function changePublication(action:'publish'|'unpublish'){
+    if(busy)return
+    setBusy(true);setError('');setMessage('');setPublicationConfirm(null)
+    try{
+      const result:any=await apiPost(scoped('/me/medical-profile/publication'),{action,confirm:true})
+      if(!result?.ok)throw new Error(result?.error||'No se pudo actualizar la publicación.')
+      setProfile((current:any)=>({...current,status:result.data.status}))
+      setForm((current:any)=>({...current,status:result.data.status}))
+      setMessage(action==='publish'?'Tu perfil médico está publicado.':'El perfil médico fue despublicado. Puedes seguir editándolo.')
+    }catch(e){setError(e instanceof Error?e.message:'No se pudo modificar la publicación.')}finally{setBusy(false)}
+  }
 
   async function saveProfile(specialtyOverride?:string){
     if(!validMedicalPhone(form.phone)||!validMedicalPhone(form.whatsapp)){setError('Introduce un teléfono o WhatsApp válido.');return}
@@ -264,7 +278,12 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
 
   const Shell:any=embedded?'div':'main'
   return <Shell className={embedded?"font-['Inter'] text-slate-950":"min-h-screen bg-slate-50 px-4 py-6 font-['Inter'] text-slate-950"}><div className={embedded?"w-full space-y-5":"mx-auto w-full max-w-5xl space-y-5"}>
-    <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap gap-2">{scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white">Ver perfil público</button>}</div></div><div className="mt-4 flex flex-wrap items-center gap-2 text-sm sm:text-xs font-bold text-slate-500"><span className="rounded-full bg-emerald-50 px-3 py-2 text-emerald-700">{completeness.done}/{completeness.total} base configurada</span><span className="rounded-full bg-slate-100 px-3 py-2">{profile.status==='active'?'Publicado':profile.status==='inactive'?'Inactivo':'Borrador'}</span></div></header>
+    <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap gap-2">{scope==='doctor'&&<>
+      <button type="button" onClick={()=>setPreviewOpen(true)} className="rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800">Vista previa</button>
+      <button type="button" disabled={busy||profile.status==='active'} onClick={()=>setPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Publicado':'Publicar'}</button>
+      <button type="button" disabled={busy||profile.status!=='active'} onClick={()=>setPublicationConfirm('unpublish')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm sm:text-xs font-black text-amber-900 disabled:cursor-not-allowed disabled:opacity-40">Despublicar</button>
+      </>}
+      {scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white">Ver perfil público</button>}</div></div><div className="mt-4 flex flex-wrap items-center gap-2 text-sm sm:text-xs font-bold text-slate-500"><span className="rounded-full bg-emerald-50 px-3 py-2 text-emerald-700">{completeness.done}/{completeness.total} base configurada</span><span className="rounded-full bg-slate-100 px-3 py-2">{profile.status==='active'?'Publicado':profile.status==='inactive'?'Inactivo':'Borrador'}</span></div></header>
 
     {sponsor&&<section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">{sponsor.banner_image_url?(sponsor.cta_url?<a href={sponsor.cta_url} target="_blank" rel="noopener noreferrer"><img src={sponsor.banner_image_url} alt={sponsor.name||'Patrocinador'} className="block h-auto w-full object-contain bg-white"/></a>:<img src={sponsor.banner_image_url} alt={sponsor.name||'Patrocinador'} className="block h-auto w-full object-contain bg-white"/>):<div className="flex items-center gap-4 p-5">{sponsor.logo_url&&<img src={sponsor.logo_url} alt={sponsor.name||'Patrocinador'} className="h-14 w-14 object-contain"/>}<div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.14em] text-slate-400">Patrocinio profesional privado</p><h2 className="mt-1 text-lg font-black">{sponsor.name}</h2></div></div>}<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4"><div><p className="text-sm sm:text-xs leading-5 text-slate-500">Solo tú ves esta relación comercial. No aparece en tu perfil público para pacientes.</p>{sponsor.representative&&<p className="mt-1 text-sm sm:text-xs font-bold text-slate-700">Visitador: {sponsor.representative.name}{sponsor.representative.zone?' · '+sponsor.representative.zone:''}</p>}</div><div className="flex flex-wrap gap-2">{sponsor.representative?.url&&<a href={sponsor.representative.url} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-cyan-100 px-4 py-3 text-sm sm:text-xs font-black text-cyan-900 ring-1 ring-cyan-300 transition-colors hover:bg-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700">Contactar mi visitador</a>}{sponsor.vademecum_url&&<a href={sponsor.vademecum_url} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm sm:text-xs font-black text-cyan-700">{sponsor.vademecum_label||'Ver vademécum'}</a>}</div></div></section>}
 
@@ -320,6 +339,20 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       </div>
       {lifecycleConfirm&&<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><p className="font-bold">{lifecycleConfirm==='suspend'?'¿Confirmas que deseas suspender tu perfil médico?':'¿Confirmas que deseas reactivar tu perfil como borrador?'}</p><div className="mt-3 flex gap-3"><button type="button" disabled={lifecycleBusy} onClick={()=>void changeLifecycle(lifecycleConfirm)} className="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">Sí, confirmar</button><button type="button" disabled={lifecycleBusy} onClick={()=>setLifecycleConfirm(null)} className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold">Cancelar</button></div></div>}
     </section>}
+
+    {publicationConfirm&&<div role="dialog" aria-modal="true" aria-label="Confirmar publicación" className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
+      <p className="text-base font-black">{publicationConfirm==='publish'?'¿Publicar este perfil médico?':'¿Despublicar este perfil médico?'}</p>
+      <p className="mt-2 text-sm text-slate-700">{publicationConfirm==='publish'?'Los pacientes podrán acceder al perfil mediante su enlace público.':'El perfil dejará de estar disponible públicamente, pero conservará sus datos y su cuenta.'}</p>
+      <div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={()=>void changePublication(publicationConfirm)} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Sí, confirmar</button><button type="button" onClick={()=>setPublicationConfirm(null)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold">Cancelar</button></div>
+    </div>}
+    {previewOpen&&<div role="dialog" aria-modal="true" aria-label="Vista previa de perfil médico" className="rounded-[24px] border border-cyan-200 bg-white p-5 shadow-lg">
+      <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Vista previa del perfil</h2><p className="mt-1 text-sm text-slate-500">Vista privada de los datos guardados. No publica el perfil.</p></div><button type="button" onClick={()=>setPreviewOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold">Cerrar</button></div>
+      <div className="mx-auto mt-4 max-w-md overflow-hidden rounded-2xl border border-slate-200">
+        {(profile.cover_url||profile.avatar_url)&&<img src={profile.cover_url||profile.avatar_url} alt="Fotografía del perfil" className="aspect-[4/3] w-full object-cover"/>}
+        <div className="p-5"><h3 className="text-2xl font-black">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h3><p className="mt-1 font-bold text-cyan-700">{profile.specialty}</p>{profile.bio&&<p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{profile.bio}</p>}<p className="mt-3 text-sm text-slate-500">{[profile.city,profile.province].filter(Boolean).join(' · ')}</p><p className="mt-2 text-xs text-slate-400">Enlace previsto: /m/{profile.slug}</p></div>
+      </div>
+      {profile.status==='active'&&<button type="button" onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(profile.slug),'_blank','noopener,noreferrer')} className="mt-4 rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Abrir versión pública</button>}
+    </div>}
 
     {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:4/4.25} outputWidth={pending.kind==='avatar'?1024:1200} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await saveImage(blob,kind)}} onCancel={()=>setPending(null)}/>}
   </div></Shell>
