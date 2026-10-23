@@ -149,6 +149,12 @@ app.post('/api/v1/me/kawmed-master/claim',requireUser,async(c:any)=>{
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
   const sponsorEmail=String((master as any).contact_email||'').trim().toLowerCase()
+  if(!accountEmail||clean(body.confirm_email,254).toLowerCase()!==accountEmail)return c.json({ok:false,error:'El correo confirmado no coincide con la sesión.',code:'kawmed_account_mismatch'},403)
+  if(accountEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL&&!(String((master as any).status)==='claimed'&&claimedBy===userId)){
+    const link=await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+    const regularSponsored=await c.env.DB.prepare('SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+    if(link||regularSponsored)return c.json({ok:false,error:'Este correo ya tiene una cuenta Link. Utiliza otro correo para KawMed Master.',code:'kawmed_existing_link_account'},409)
+  }
   const sponsorId=String((master as any).sponsor_id||'')
   const alreadyMember=await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,userId).first()
   const authorizedSpecial=accountEmail===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL
