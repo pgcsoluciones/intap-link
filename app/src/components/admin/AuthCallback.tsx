@@ -62,6 +62,14 @@ export default function AuthCallback() {
           return
         }
 
+        const medicalCode=String(sessionStorage.getItem('kawvo_kawmed_claim_code')||localStorage.getItem('kawvo_kawmed_claim_code')||'').toUpperCase()
+        const medicalMasterCode=String(sessionStorage.getItem('kawvo_kawmed_master_code')||localStorage.getItem('kawvo_kawmed_master_code')||'').toUpperCase()
+        if(/^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medicalCode)&&sessionStorage.getItem('kawvo_kawmed_claim_resume')==='1'){
+          navigate('/claim/kawmed?code='+encodeURIComponent(medicalCode),{replace:true});return
+        }
+        if(/^MEDM-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medicalMasterCode)&&sessionStorage.getItem('kawvo_kawmed_master_resume')==='1'){
+          navigate('/claim/kawmed-master?code='+encodeURIComponent(medicalMasterCode),{replace:true});return
+        }
         const sponsorMasterCode = readSponsorMasterCode()
         if (sponsorMasterCode) {
           navigate(`/admin/sponsor/entry?public_code=${encodeURIComponent(sponsorMasterCode)}`, { replace: true })
