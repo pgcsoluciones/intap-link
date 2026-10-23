@@ -25,6 +25,7 @@ export default function SuperAdminKawMed(){
   const[programs,setPrograms]=useState<Program[]>([])
   const[codes,setCodes]=useState<Code[]>([])
   const[profiles,setProfiles]=useState<Profile[]>([])
+  const[demoInvitations,setDemoInvitations]=useState<any[]>([])
   const[demoProfileId,setDemoProfileId]=useState('')
   const[demoEmail,setDemoEmail]=useState('')
   const[demoHours,setDemoHours]=useState(72)
@@ -200,12 +201,15 @@ export default function SuperAdminKawMed(){
     notify('Listado MED copiado.')
   }
 
+  async function refreshDemoInvitations(){try{const j:any=await apiGet('/superadmin/kawmed/demo-invitations');if(j?.ok)setDemoInvitations(j.data||[])}catch{/* La gestión médica principal sigue disponible. */}}
+  async function revokeDemoInvitation(id:string){if(!window.confirm('¿Revocar esta invitación? El invitado perderá acceso inmediatamente.'))return;const j:any=await apiPost('/superadmin/kawmed/demo-invitations/'+encodeURIComponent(id)+'/revoke',{});if(j?.ok)await refreshDemoInvitations();else setError(j?.error||'No se pudo revocar la invitación.')}
   async function createDemoInvitation(){
     setBusy(true);setError('');setDemoLink('')
     try{
       const result:any=await apiPost('/superadmin/kawmed/demo-invitations',{medical_profile_id:demoProfileId,email:demoEmail,hours:demoHours})
       if(!result?.ok)throw new Error(result?.error||'No fue posible generar la invitación.')
       setDemoLink(String(result.data?.url||''))
+      await refreshDemoInvitations()
       setMessage('Invitación creada. Comparte el enlace únicamente con el destinatario indicado.')
     }catch(e){setError(e instanceof Error?e.message:'No se creó la invitación.')}finally{setBusy(false)}
   }
@@ -226,6 +230,8 @@ export default function SuperAdminKawMed(){
           <label className={label}>Vigencia<select className={input} value={demoHours} onChange={e=>setDemoHours(Number(e.target.value))}><option value={24}>24 horas</option><option value={72}>72 horas</option><option value={168}>7 días</option></select></label>
         </div>
         <button type="button" disabled={busy||!demoProfileId||!demoEmail.includes('@')} onClick={()=>void createDemoInvitation()} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">Generar invitación privada</button>
+        <button type="button" onClick={()=>void refreshDemoInvitations()} className="mt-4 ml-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">Ver invitaciones</button>
+        {demoInvitations.length>0&&<div className="mt-4 space-y-2">{demoInvitations.map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-3 text-sm"><div><strong>{row.invited_email}</strong><p className="text-xs text-slate-500">{row.profile_name} · {row.status} · Vence: {new Date(row.expires_at).toLocaleString('es-DO')}</p></div>{row.status!=='revoked'&&<button type="button" onClick={()=>void revokeDemoInvitation(row.id)} className="rounded-lg border border-rose-200 px-3 py-2 font-bold text-rose-700">Revocar</button>}</div>)}</div>}
         {demoLink&&<div className="mt-4 break-all rounded-xl border border-cyan-200 bg-cyan-50 p-4"><p className="mb-2 text-sm font-bold">Enlace único para el destinatario</p><a href={demoLink} className="text-sm text-cyan-800 underline" target="_blank" rel="noreferrer">{demoLink}</a><button type="button" className="ml-3 rounded-lg bg-white p-2 text-sm font-bold" onClick={()=>navigator.clipboard.writeText(demoLink)}>Copiar enlace</button></div>}
       </section>
 
