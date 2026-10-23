@@ -107,6 +107,8 @@ app.post('/api/v1/me/medical-profile/delete-account',requireUser,async(c:any)=>{
   if(Number((guard as any)?.link_profiles||0)>0||Number((guard as any)?.sponsored_profiles||0)>0||Number((guard as any)?.sponsor_members||0)>0||
      Number((guard as any)?.medical_masters||0)>0||Number((guard as any)?.owned_artifacts||0)>0||Number((guard as any)?.medical_profiles||0)!==1)
     return c.json({ok:false,error:'Esta identidad tiene otros perfiles o permisos vinculados. La eliminación requiere revisión administrativa y no se realizará automáticamente.',code:'shared_account_protected'},409)
+  const adminRole=await c.env.DB.prepare('SELECT role FROM admin_users WHERE user_id=? LIMIT 1').bind(userId).first().catch(()=>null)
+  if(adminRole)return c.json({ok:false,error:'Esta identidad tiene permisos administrativos. No puede eliminarse desde el perfil médico.',code:'admin_account_protected'},409)
   const id=String(r.profile.id)
   try{
     await c.env.DB.batch([
