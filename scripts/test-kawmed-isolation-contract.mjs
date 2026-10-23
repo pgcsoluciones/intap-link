@@ -60,6 +60,8 @@ for (const text of ["kawmed_account_mismatch", "kawmed_confirmation_required", "
 assert.ok(login.includes("isMedicalResume")&&login.includes("isMedicalMasterResume"),'MED login resume must be explicit')
 assert.ok(callback.includes("kawvo_kawmed_claim_resume")&&callback.includes("kawvo_kawmed_master_resume"),'MED magic-link callback must restore activation')
 
+assert.ok(claim.includes("Entrar a mi KawMed"),'Claimed MED codes must offer owner dashboard recovery')
+assert.ok(medicalCodes.includes("codeOwned?'already_owned':'code_unavailable'"),'Claimed MED code owner must be checked server-side')
 const masterPost=medicalCodes.split("app.post('/api/v1/me/kawmed-master/claim'")[1]?.split("app.get('/api/v1/superadmin/kawmed/codes'")[0]||''
 assert.ok(masterPost.includes("body.confirm_account!==true"),'Master claim must require consent at POST boundary')
 assert.ok(masterPost.includes("clean(body.confirm_email,254).toLowerCase()!==accountEmail"),'Master claim must verify confirmed email at POST boundary')
