@@ -233,9 +233,37 @@ app.get('/api/v1/public/kawmed/claim/:code',async(c:any)=>{
   return c.json({ok:true,data:{code,status:String((row as any).status),sponsored:Boolean((row as any).program_name),program_name:String((row as any).program_name||''),sponsor_name:String((row as any).sponsor_name||'')}})
 })
 
+app.get('/api/v1/me/kawmed/claim-check/:code',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||''),code=normalizeCode(c.req.param('code'))
+  if(!validMedCode(code))return c.json({ok:false,error:'Código MED inválido.'},422)
+  const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  const email=String((user as any)?.email||'').trim().toLowerCase()
+  const med=await c.env.DB.prepare("SELECT id FROM medical_profiles WHERE user_id=? LIMIT 1").bind(userId).first()
+  const medCode=await c.env.DB.prepare("SELECT code FROM medical_access_codes WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first()
+  const link=await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+  const sponsored=await c.env.DB.prepare("SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1").bind(userId).first()
+  const codeRow=await c.env.DB.prepare('SELECT status,claimed_by_user_id FROM medical_access_codes WHERE code=? LIMIT 1').bind(code).first()
+  if(!codeRow)return c.json({ok:false,error:'Código MED no encontrado.'},404)
+  const special=email===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL
+  const existingLink=Boolean(link||sponsored)
+  const reason=String((codeRow as any).status)!=='available'?'code_unavailable':
+    med||medCode?'already_med':
+    existingLink&&!special?'existing_link':'ready'
+  return c.json({ok:true,data:{email,authenticated:true,existing_link:existingLink,special_multiaccount:special,can_activate:reason==='ready',reason,code_status:String((codeRow as any).status)}})
+})
+
 app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),body=await c.req.json().catch(()=>({})),code=normalizeCode(body.code)
   if(!validMedCode(code))return c.json({ok:false,error:'Código MED inválido.'},422)
+  if(body.confirm_account!==true)return c.json({ok:false,error:'Confirma expresamente el correo y la activación KawMed antes de continuar.',code:'kawmed_confirmation_required'},422)
+  const checkUser=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  const checkEmail=String((checkUser as any)?.email||'').trim().toLowerCase()
+  if(!checkEmail||clean(body.confirm_email,254).toLowerCase()!==checkEmail)return c.json({ok:false,error:'La sesión no corresponde al correo confirmado. Cambia de cuenta y vuelve a validar.',code:'kawmed_account_mismatch'},403)
+  if(checkEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL){
+    const existing=await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+    const sponsored=await c.env.DB.prepare('SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+    if(existing||sponsored)return c.json({ok:false,error:'Este correo ya tiene una cuenta Kawvo Link registrada. Para evitar conflictos, utiliza otro correo para KawMed.',code:'kawmed_existing_link_account'},409)
+  }
   const prior=await c.env.DB.prepare("SELECT code,medical_profile_id FROM medical_access_codes WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first()
   if(prior)return c.json({ok:false,error:'Esta cuenta ya activó un acceso KawMed.',code:'kawmed_already_claimed',medical_profile_id:String((prior as any).medical_profile_id||'')},409)
   const access=await c.env.DB.prepare(`SELECT mac.*,p.sponsor_id,p.vademecum_url,p.vademecum_label,p.enabled AS program_enabled,st.is_active AS sponsor_active
