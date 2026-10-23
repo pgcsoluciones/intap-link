@@ -58,7 +58,12 @@ async function full(c:any,profile:any){
 }
 app.get('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
-  return c.json({ok:true,data:await full(c,r.profile)})
+  const result=await full(c,r.profile)
+  if(r.scope==='doctor'){
+    const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(r.userId).first()
+    return c.json({ok:true,data:{...result,account_email:String((user as any)?.email||'')}})
+  }
+  return c.json({ok:true,data:result})
 })
 // Lifecycle controls apply only to the authenticated doctor's medical profile.
 // Sponsor Master profiles are administered independently and cannot be altered here.
