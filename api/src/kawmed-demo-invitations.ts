@@ -33,6 +33,26 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  const accepted=await c.env.DB.prepare('SELECT insurance_name FROM medical_profile_insurances WHERE medical_profile_id=? ORDER BY sort_order').bind(profileId).all()
  const excluded=await c.env.DB.prepare('SELECT insurance_name FROM medical_profile_insurance_exclusions WHERE medical_profile_id=? ORDER BY sort_order').bind(profileId).all()
  fields.insurance_policy={accepted:(accepted.results||[]).map((x:any)=>({insurance_name:x.insurance_name})),excluded:(excluded.results||[]).map((x:any)=>({insurance_name:x.insurance_name}))}
+ // Sponsor attributes are copied only into the private guest sandbox.
+ // Never expose sponsor credentials, representative contact lists or live patient records.
+ const sponsorship=await c.env.DB.prepare(`SELECT st.name AS sponsor_name,st.logo_url,
+   p.name AS program_name,p.private_banner_image_url,p.private_cta_label,p.private_cta_url,
+   p.vademecum_label,p.vademecum_url
+   FROM medical_profile_sponsors mps
+   JOIN sponsor_tenants st ON st.id=mps.sponsor_id
+   LEFT JOIN medical_sponsor_programs p ON p.id=mps.program_id
+   WHERE mps.medical_profile_id=? AND mps.enabled=1 LIMIT 1`).bind(profileId).first()
+ fields.demo_mode=sponsorship?'sponsored':'independent'
+ fields.sponsor_demo=sponsorship?{
+   sponsor_name:String((sponsorship as any).sponsor_name||''),
+   sponsor_logo_url:String((sponsorship as any).logo_url||''),
+   program_name:String((sponsorship as any).program_name||''),
+   banner_url:String((sponsorship as any).private_banner_image_url||''),
+   cta_label:String((sponsorship as any).private_cta_label||''),
+   cta_url:String((sponsorship as any).private_cta_url||''),
+   vademecum_label:String((sponsorship as any).vademecum_label||''),
+   vademecum_url:String((sponsorship as any).vademecum_url||'')
+ }:null
  const raw=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('')
  const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
  await c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,JSON.stringify(fields)).run()
