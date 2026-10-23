@@ -25,6 +25,10 @@ export default function SuperAdminKawMed(){
   const[programs,setPrograms]=useState<Program[]>([])
   const[codes,setCodes]=useState<Code[]>([])
   const[profiles,setProfiles]=useState<Profile[]>([])
+  const[demoProfileId,setDemoProfileId]=useState('')
+  const[demoEmail,setDemoEmail]=useState('')
+  const[demoHours,setDemoHours]=useState(72)
+  const[demoLink,setDemoLink]=useState('')
   const[selected,setSelected]=useState<Program|null>(null)
   const[busy,setBusy]=useState(false)
   const[message,setMessage]=useState('')
@@ -196,12 +200,34 @@ export default function SuperAdminKawMed(){
     notify('Listado MED copiado.')
   }
 
+  async function createDemoInvitation(){
+    setBusy(true);setError('');setDemoLink('')
+    try{
+      const result:any=await apiPost('/superadmin/kawmed/demo-invitations',{medical_profile_id:demoProfileId,email:demoEmail,hours:demoHours})
+      if(!result?.ok)throw new Error(result?.error||'No fue posible generar la invitación.')
+      setDemoLink(String(result.data?.url||''))
+      setMessage('Invitación creada. Comparte el enlace únicamente con el destinatario indicado.')
+    }catch(e){setError(e instanceof Error?e.message:'No se creó la invitación.')}finally{setBusy(false)}
+  }
+
   return <SuperAdminLayout currentSection={'kawmed' as any}>
     <div className="mx-auto grid max-w-[1280px] gap-5 font-['Inter'] text-slate-950">
       <header><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">KAWMED</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">Perfiles, programas y códigos MED</h1><p className="mt-2 max-w-4xl text-sm leading-6 text-slate-500">Los códigos <strong>MED-XXX-XXX</strong> son exclusivos de KawMed. Pueden ser independientes o pertenecer a un lote patrocinado. El patrocinio médico es privado: cintillo, CTA y vademécum solo aparecen al médico autenticado y nunca al paciente.</p></header>
 
       {message&&<div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</div>}
       {error&&<div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</div>}
+
+      <section className={card}>
+        <h2 className="text-xl font-black">Invitación Demo KawMed</h2>
+        <p className="mt-2 text-sm text-slate-600">Invita a un médico a explorar una copia privada y editable de un perfil de demostración propiedad de Intapcard. Su correo debe coincidir con el de la invitación; no podrá administrar credenciales, publicar ni modificar el original.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <label className={label}>Perfil de demostración<select className={input} value={demoProfileId} onChange={e=>setDemoProfileId(e.target.value)}><option value="">Selecciona un perfil</option>{profiles.map(row=><option key={row.id} value={row.id}>{row.name} · {row.slug}</option>)}</select></label>
+          <label className={label}>Correo del invitado<input className={input} type="email" value={demoEmail} onChange={e=>setDemoEmail(e.target.value)}/></label>
+          <label className={label}>Vigencia<select className={input} value={demoHours} onChange={e=>setDemoHours(Number(e.target.value))}><option value={24}>24 horas</option><option value={72}>72 horas</option><option value={168}>7 días</option></select></label>
+        </div>
+        <button type="button" disabled={busy||!demoProfileId||!demoEmail.includes('@')} onClick={()=>void createDemoInvitation()} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">Generar invitación privada</button>
+        {demoLink&&<div className="mt-4 break-all rounded-xl border border-cyan-200 bg-cyan-50 p-4"><p className="mb-2 text-sm font-bold">Enlace único para el destinatario</p><a href={demoLink} className="text-sm text-cyan-800 underline" target="_blank" rel="noreferrer">{demoLink}</a><button type="button" className="ml-3 rounded-lg bg-white p-2 text-sm font-bold" onClick={()=>navigator.clipboard.writeText(demoLink)}>Copiar enlace</button></div>}
+      </section>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[['Programas',totals.programs],['Códigos MED',totals.codes],['Disponibles',totals.available],['Activados',totals.claimed]].map(([l,v])=><div key={String(l)} className={card}><p className="text-xs font-black uppercase tracking-[.07em] text-slate-400">{l}</p><p className="mt-2 text-3xl font-black">{v}</p></div>)}</section>
 
