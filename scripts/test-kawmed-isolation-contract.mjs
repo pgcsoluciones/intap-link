@@ -60,4 +60,10 @@ for (const text of ["kawmed_account_mismatch", "kawmed_confirmation_required", "
 assert.ok(login.includes("isMedicalResume")&&login.includes("isMedicalMasterResume"),'MED login resume must be explicit')
 assert.ok(callback.includes("kawvo_kawmed_claim_resume")&&callback.includes("kawvo_kawmed_master_resume"),'MED magic-link callback must restore activation')
 
+const homeRoute=read('api/src/account-home-route.ts')
+for(const route of ["'/admin/medical'","'/admin/sponsor/kawmed'"]) {
+ assert.ok(homeRoute.includes(route),'Medical account home-route missing: '+route)
+}
+assert.ok(homeRoute.includes("email!=='intapcard@gmail.com'"),'Special multiaccount must not be hijacked by medical home-route')
+
 console.log('KawMed isolated integration: contract invariants OK')
