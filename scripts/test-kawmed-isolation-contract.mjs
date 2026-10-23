@@ -60,6 +60,13 @@ for (const text of ["kawmed_account_mismatch", "kawmed_confirmation_required", "
 assert.ok(login.includes("isMedicalResume")&&login.includes("isMedicalMasterResume"),'MED login resume must be explicit')
 assert.ok(callback.includes("kawvo_kawmed_claim_resume")&&callback.includes("kawvo_kawmed_master_resume"),'MED magic-link callback must restore activation')
 
+const masterPost=medicalCodes.split("app.post('/api/v1/me/kawmed-master/claim'")[1]?.split("app.get('/api/v1/superadmin/kawmed/codes'")[0]||''
+assert.ok(masterPost.includes("body.confirm_account!==true"),'Master claim must require consent at POST boundary')
+assert.ok(masterPost.includes("clean(body.confirm_email,254).toLowerCase()!==accountEmail"),'Master claim must verify confirmed email at POST boundary')
+assert.ok(masterPost.includes("kawmed_existing_link_account"),'Master claim must refuse Link collision at POST boundary')
+const medPost=medicalCodes.split("app.post('/api/v1/me/kawmed/claim'")[1]?.split("async function sponsorMembership")[0]||''
+assert.ok(medPost.includes("body.confirm_account!==true"),'Independent MED claim must require consent')
+assert.ok(medPost.includes("clean(body.confirm_email,254).toLowerCase()!==checkEmail"),'Independent MED claim must verify confirmed email')
 const homeRoute=read('api/src/account-home-route.ts')
 for(const route of ["'/admin/medical'","'/admin/sponsor/kawmed'"]) {
  assert.ok(homeRoute.includes(route),'Medical account home-route missing: '+route)
