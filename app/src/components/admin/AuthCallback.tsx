@@ -62,6 +62,13 @@ export default function AuthCallback() {
           return
         }
 
+        const demoInvite=String(sessionStorage.getItem('kawmed_demo_invite')||localStorage.getItem('kawmed_demo_invite')||'')
+        if(/^[a-f0-9]{64}$/.test(demoInvite)){
+          sessionStorage.removeItem('kawmed_demo_invite')
+          localStorage.removeItem('kawmed_demo_invite')
+          navigate('/admin/medical/demo/'+demoInvite,{replace:true})
+          return
+        }
         const medicalCode=String(sessionStorage.getItem('kawvo_kawmed_claim_code')||localStorage.getItem('kawvo_kawmed_claim_code')||'').toUpperCase()
         const medicalMasterCode=String(sessionStorage.getItem('kawvo_kawmed_master_code')||localStorage.getItem('kawvo_kawmed_master_code')||'').toUpperCase()
         if(/^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medicalCode)&&(sessionStorage.getItem('kawvo_kawmed_claim_resume')==='1'||localStorage.getItem('kawvo_kawmed_claim_resume')==='1')){
