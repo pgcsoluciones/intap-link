@@ -75,4 +75,17 @@ for(const route of ["'/admin/medical'","'/admin/sponsor/kawmed'"]) {
 }
 assert.ok(homeRoute.includes("email!=='intapcard@gmail.com'"),'Special multiaccount must not be hijacked by medical home-route')
 
+const lifecycleApi=read('api/src/medical-profile-owner.ts')
+const lifecycleUi=read('app/src/components/admin/medical/MedicalDashboard.tsx')
+for(const part of ["medical-profile/suspend","medical-profile/reactivate","medical-profile/delete-account","ELIMINAR KAWMED","shared_account_protected","DELETE FROM users WHERE id=?","DELETE FROM auth_sessions WHERE user_id=?","email_released:true"]){
+ assert.ok(lifecycleApi.includes(part),'Medical lifecycle API contract missing: '+part)
+}
+for(const part of ["Suspender perfil","Reactivar perfil","Eliminar cuenta KawMed definitivamente","Confirmar eliminación definitiva","account_email"]){
+ assert.ok(lifecycleUi.includes(part),'Medical lifecycle UI missing: '+part)
+}
+assert.ok(lifecycleApi.includes("if(ownerScope(c)!=='doctor')"),'Master profile must be protected')
+assert.ok(lifecycleApi.includes("email==='intapcard@gmail.com'"),'Operator multicuenta must be protected')
+assert.ok(lifecycleApi.includes("DELETE FROM appointment_requests WHERE subject_type='medical'"),'Medical appointments must not be orphaned')
+assert.ok(lifecycleApi.includes("status='inactive',claimed_by_user_id=NULL"),'MED codes must never be reused after deletion')
+
 console.log('KawMed isolated integration: contract invariants OK')
