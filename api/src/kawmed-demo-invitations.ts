@@ -43,6 +43,7 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
    LEFT JOIN medical_sponsor_programs p ON p.id=mps.program_id
    WHERE mps.medical_profile_id=? AND mps.enabled=1 LIMIT 1`).bind(profileId).first()
  fields.demo_mode=sponsorship?'sponsored':'independent'
+ fields.demo_agenda={requests:[{id:'demo-request-1',patient_name:'Paciente de ejemplo',requested_date:'2026-11-02',requested_time:'10:00',status:'pending',reason:'Primera consulta'},{id:'demo-request-2',patient_name:'Paciente de demostración',requested_date:'2026-11-03',requested_time:'15:00',status:'confirmed',reason:'Seguimiento'}],blocked_dates:[]}
  fields.sponsor_demo=sponsorship?{
    sponsor_name:String((sponsorship as any).sponsor_name||''),
    sponsor_logo_url:String((sponsorship as any).logo_url||''),
@@ -85,6 +86,13 @@ app.patch('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
    const policy=b.insurance_policy||{}
    if(!Array.isArray(policy.accepted)||!Array.isArray(policy.excluded)||policy.accepted.length>50||policy.excluded.length>50)return c.json({ok:false,error:'Seguros de demostración inválidos.'},422)
    existing.insurance_policy={accepted:policy.accepted.map((x:any)=>({insurance_name:String(x.insurance_name||'').slice(0,120)})),excluded:policy.excluded.map((x:any)=>({insurance_name:String(x.insurance_name||'').slice(0,120)}))}
+ }
+ if(b.demo_agenda!==undefined){
+   const agenda=b.demo_agenda
+   if(!agenda||!Array.isArray(agenda.requests)||!Array.isArray(agenda.blocked_dates)||agenda.requests.length>30||agenda.blocked_dates.length>90)return c.json({ok:false,error:'Agenda de demostración inválida.'},422)
+   const prior=Array.isArray(existing.demo_agenda?.requests)?existing.demo_agenda.requests:[]
+   if(agenda.requests.some((x:any)=>!prior.some((old:any)=>old.id===x.id)))return c.json({ok:false,error:'No se permiten pacientes reales ni citas externas en la demo.'},422)
+   existing.demo_agenda={requests:agenda.requests.map((x:any)=>{const original=prior.find((v:any)=>v.id===x.id);return {...original,status:['pending','confirmed','cancelled'].includes(x.status)?x.status:original.status}}),blocked_dates:agenda.blocked_dates.map((v:any)=>String(v).slice(0,10)).filter((v:string)=>/^\\d{4}-\\d{2}-\\d{2}$/.test(v))}
  }
  const result=await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET sandbox_json=?,status='active',accepted_user_id=COALESCE(accepted_user_id,?),accepted_at=COALESCE(accepted_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status IN ('pending','active') AND expires_at>datetime('now')").bind(JSON.stringify(existing),String(actor.id),row.id).run()
  if(!result.meta?.changes)return deny(c)
