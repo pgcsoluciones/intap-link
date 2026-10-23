@@ -32,17 +32,21 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const email=String((user as any)?.email||'').trim().toLowerCase()
   if(email!=='intapcard@gmail.com'){
-    const [regularProfile,regularSponsored,medicalProfile,medicalMaster]=await Promise.all([
-      c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first(),
-      c.env.DB.prepare('SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1').bind(userId).first(),
-      c.env.DB.prepare('SELECT id,slug FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first(),
-      c.env.DB.prepare("SELECT sponsor_id FROM medical_sponsor_masters WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first()
+    const [medicalProfile,medicalMaster]=await Promise.all([
+      c.env.DB.prepare('SELECT id,slug FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first().catch(()=>null),
+      c.env.DB.prepare("SELECT sponsor_id FROM medical_sponsor_masters WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first().catch(()=>null)
     ])
-    if(!regularProfile&&!regularSponsored&&medicalProfile){
+    if(medicalProfile||medicalMaster){
+      const [regularProfile,regularSponsored]=await Promise.all([
+        c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first(),
+        c.env.DB.prepare('SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+      ])
+      if(!regularProfile&&!regularSponsored&&medicalProfile){
       return c.json({ok:true,data:{kind:'kawmed',route:'/admin/medical',medical_profile_id:String((medicalProfile as any).id||''),public_route:'/m/'+String((medicalProfile as any).slug||'')}})
     }
-    if(!regularProfile&&!regularSponsored&&medicalMaster){
+      if(!regularProfile&&!regularSponsored&&medicalMaster){
       return c.json({ok:true,data:{kind:'kawmed_sponsor',route:'/admin/sponsor/kawmed',sponsor_id:String((medicalMaster as any).sponsor_id||'')}})
+      }
     }
   }
 
