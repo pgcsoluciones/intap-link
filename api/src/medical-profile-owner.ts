@@ -60,6 +60,25 @@ app.get('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   return c.json({ok:true,data:await full(c,r.profile)})
 })
+// Lifecycle controls apply only to the authenticated doctor's medical profile.
+// Sponsor Master profiles are administered independently and cannot be altered here.
+app.post('/api/v1/me/medical-profile/suspend',requireUser,async(c:any)=>{
+  if(ownerScope(c)!=='doctor')return c.json({ok:false,error:'Operación no disponible para el perfil Master.'},403)
+  const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const body=await c.req.json().catch(()=>({}))
+  if(body.confirm!==true)return c.json({ok:false,error:'Confirma la suspensión antes de continuar.'},422)
+  await c.env.DB.prepare("UPDATE medical_profiles SET status='inactive',updated_at=datetime('now') WHERE id=? AND user_id=?").bind(String(r.profile.id),r.userId).run()
+  return c.json({ok:true,data:{status:'inactive',email_released:false}})
+})
+app.post('/api/v1/me/medical-profile/reactivate',requireUser,async(c:any)=>{
+  if(ownerScope(c)!=='doctor')return c.json({ok:false,error:'Operación no disponible para el perfil Master.'},403)
+  const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const body=await c.req.json().catch(()=>({}))
+  if(body.confirm!==true)return c.json({ok:false,error:'Confirma la reactivación.'},422)
+  await c.env.DB.prepare("UPDATE medical_profiles SET status='draft',updated_at=datetime('now') WHERE id=? AND user_id=? AND status='inactive'").bind(String(r.profile.id),r.userId).run()
+  return c.json({ok:true,data:{status:'draft',email_released:false}})
+})
+
 app.put('/api/v1/me/medical-profile/appearance',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   const b=await c.req.json().catch(()=>({}))
