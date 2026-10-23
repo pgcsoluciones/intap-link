@@ -45,6 +45,21 @@ app.patch('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
  const b=await c.req.json().catch(()=>({}))
  const existing=JSON.parse(row.sandbox_json),allowed=['name','professional_prefix','specialty','subspecialty','bio','phone','whatsapp','city','province','organization']
  for(const k of allowed)if(Object.prototype.hasOwnProperty.call(b,k)){if(typeof b[k]!=='string')return c.json({ok:false,error:'Dato inválido.'},422);existing[k]=b[k].slice(0,700)}
+ if(b.template!==undefined&&['classic','pastel'].includes(String(b.template)))existing.template=b.template
+ if(b.palette!==undefined&&['aqua','lavender','mint','peach','sky'].includes(String(b.palette)))existing.palette=b.palette
+ if(b.centers!==undefined){
+   if(!Array.isArray(b.centers)||b.centers.length>20)return c.json({ok:false,error:'Máximo 20 centros de demostración.'},422)
+   existing.centers=b.centers.map((x:any)=>({name:String(x.name||'').slice(0,120),address:String(x.address||'').slice(0,200),city:String(x.city||'').slice(0,80),province:String(x.province||'').slice(0,80),phone:String(x.phone||'').slice(0,40),map_url:String(x.map_url||'').slice(0,500)}))
+ }
+ if(b.schedules!==undefined){
+   if(!Array.isArray(b.schedules)||b.schedules.length>50)return c.json({ok:false,error:'Máximo 50 horarios de demostración.'},422)
+   existing.schedules=b.schedules.map((x:any)=>({day_of_week:Math.max(1,Math.min(7,Number(x.day_of_week)||1)),shift:String(x.shift||'').slice(0,60),start_time:/^\\d{2}:\\d{2}$/.test(String(x.start_time||''))?String(x.start_time):'08:00',end_time:/^\\d{2}:\\d{2}$/.test(String(x.end_time||''))?String(x.end_time):'12:00'}))
+ }
+ if(b.insurance_policy!==undefined){
+   const policy=b.insurance_policy||{}
+   if(!Array.isArray(policy.accepted)||!Array.isArray(policy.excluded)||policy.accepted.length>50||policy.excluded.length>50)return c.json({ok:false,error:'Seguros de demostración inválidos.'},422)
+   existing.insurance_policy={accepted:policy.accepted.map((x:any)=>({insurance_name:String(x.insurance_name||'').slice(0,120)})),excluded:policy.excluded.map((x:any)=>({insurance_name:String(x.insurance_name||'').slice(0,120)}))}
+ }
  const result=await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET sandbox_json=?,status='active',accepted_user_id=COALESCE(accepted_user_id,?),accepted_at=COALESCE(accepted_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status IN ('pending','active') AND expires_at>datetime('now')").bind(JSON.stringify(existing),String(actor.id),row.id).run()
  if(!result.meta?.changes)return deny(c)
  return c.json({ok:true,data:{profile:existing}})
