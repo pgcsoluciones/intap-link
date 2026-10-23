@@ -126,7 +126,16 @@ app.post('/api/v1/me/medical-profile/delete-account',requireUser,async(c:any)=>{
   }
   const remains=await c.env.DB.prepare('SELECT id FROM users WHERE id=? LIMIT 1').bind(userId).first()
   if(remains)return c.json({ok:false,error:'No se pudo liberar la identidad; revisa la cuenta con soporte.'},500)
-  return c.json({ok:true,data:{deleted:true,email_released:true,slug:String(r.profile.slug)}})
+  let mediaCleanupPending=false
+  try{
+    let cursor:string|undefined
+    do{
+      const page=await c.env.BUCKET.list({prefix:'medical/'+id+'/',cursor})
+      if(page.objects.length)await c.env.BUCKET.delete(page.objects.map((item:any)=>item.key))
+      cursor=page.truncated?page.cursor:undefined
+    }while(cursor)
+  }catch(err){mediaCleanupPending=true;console.error('[KawMed deletion] medical media cleanup pending',err)}
+  return c.json({ok:true,data:{deleted:true,email_released:true,slug:String(r.profile.slug),media_cleanup_pending:mediaCleanupPending}})
 })
 
 app.put('/api/v1/me/medical-profile/appearance',requireUser,async(c:any)=>{
