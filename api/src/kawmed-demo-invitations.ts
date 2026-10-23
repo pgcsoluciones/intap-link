@@ -9,6 +9,10 @@ async function user(c:any){const token=cookie(c.req.header('Cookie')||'',cookieN
 async function invitation(c:any,token:string){if(!/^[a-f0-9]{64}$/.test(token))return null;return c.env.DB.prepare("SELECT * FROM kawmed_demo_invitations WHERE token_hash=? LIMIT 1").bind(await sha(token)).first()}
 const deny=(c:any)=>c.json({ok:false,error:'Invitación no disponible o vencida.'},403)
 function snapshot(source:any){const allowed=['name','professional_prefix','specialty','subspecialty','bio','avatar_url','cover_url','phone','whatsapp','email','city','province','country','organization','template','palette','centers','schedules','insurance_policy'];return Object.fromEntries(allowed.map(k=>[k,source?.[k]??(k==='centers'||k==='schedules'?[]:k==='insurance_policy'?{accepted:[],excluded:[]}:'' )]))}
+app.get('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('viewer'),async(c:any)=>{
+ const rows=await c.env.DB.prepare("SELECT i.id,i.invited_email,i.status,i.expires_at,i.accepted_at,i.created_at,p.name AS profile_name,p.slug FROM kawmed_demo_invitations i JOIN medical_profiles p ON p.id=i.source_medical_profile_id ORDER BY i.created_at DESC LIMIT 100").all()
+ return c.json({ok:true,data:rows.results||[]})
+})
 app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_admin'),async(c:any)=>{
  const admin=await user(c),b=await c.req.json().catch(()=>({})),invited=email(b.email),profileId=String(b.medical_profile_id||'')
  if(!admin)return c.json({ok:false,error:'Inicia sesión.'},401)
