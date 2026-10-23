@@ -27,6 +27,25 @@ async function requireUser(c:any,next:any){
 app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
 
+  // Medical-only accounts receive their own home. Keep classic Link/Free/Sponsored precedence
+  // whenever this user also owns a standard public profile (including the multiaccount operator).
+  const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  const email=String((user as any)?.email||'').trim().toLowerCase()
+  if(email!=='intapcard@gmail.com'){
+    const [regularProfile,regularSponsored,medicalProfile,medicalMaster]=await Promise.all([
+      c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first(),
+      c.env.DB.prepare('SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1').bind(userId).first(),
+      c.env.DB.prepare('SELECT id,slug FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first(),
+      c.env.DB.prepare("SELECT sponsor_id FROM medical_sponsor_masters WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first()
+    ])
+    if(!regularProfile&&!regularSponsored&&medicalProfile){
+      return c.json({ok:true,data:{kind:'kawmed',route:'/admin/medical',medical_profile_id:String((medicalProfile as any).id||''),public_route:'/m/'+String((medicalProfile as any).slug||'')}})
+    }
+    if(!regularProfile&&!regularSponsored&&medicalMaster){
+      return c.json({ok:true,data:{kind:'kawmed_sponsor',route:'/admin/sponsor/kawmed',sponsor_id:String((medicalMaster as any).sponsor_id||'')}})
+    }
+  }
+
   const sponsorMembership=await c.env.DB.prepare(
     `SELECT sm.sponsor_id,sm.role,st.is_active
        FROM sponsor_members sm
