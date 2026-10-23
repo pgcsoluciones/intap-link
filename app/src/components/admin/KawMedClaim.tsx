@@ -78,7 +78,7 @@ export default function KawMedClaim(){
               {account.reason==='already_med'&&<p className="mt-2 font-semibold text-rose-700">Esta cuenta ya tiene un acceso KawMed y no puede reclamar otro código.</p>}
               {account.can_activate&&<label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>Confirmo que deseo activar KawMed con este correo y comprendo que el código es de un solo uso.</span></label>}
             </div>}
-            <a className="mt-3 block rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-bold" href={'/admin/login?resume=kawmed&med_code='+encodeURIComponent(code)}>{account?'Cambiar de cuenta / iniciar sesión':'Iniciar sesión o registrarme'}</a>
+            <a className="mt-3 block rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-bold" href={'/admin/login?resume=kawmed&med_code='+encodeURIComponent(code)} onClick={()=>{sessionStorage.setItem(RESUME_KEY,'1');sessionStorage.setItem(STORAGE_KEY,code)}}>{account?'Cambiar de cuenta / iniciar sesión':'Iniciar sesión o registrarme'}</a>
             <button type="button" onClick={()=>void activate()} disabled={loading||!confirmed||!account?.can_activate} className="mt-3 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{loading?'Activando…':'Confirmar y activar KawMed'}</button>
           </>}
         </div>}
