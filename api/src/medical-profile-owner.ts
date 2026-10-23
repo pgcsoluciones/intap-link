@@ -196,7 +196,7 @@ app.patch('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
     province:b.province!==undefined?clean(b.province,100):String(p.province||''),
     country:b.country!==undefined?clean(b.country,100):String(p.country||'República Dominicana'),
     organization:b.organization!==undefined?clean(b.organization,120):String(p.organization||''),
-    status:['draft','active','inactive'].includes(String(b.status))?String(b.status):String(p.status||'draft'),
+    status:String(p.status||'draft'), // Publication changes require explicit confirmation through /publication.
   }
   if(!next.name||!next.specialty)return c.json({ok:false,error:'Nombre y especialidad son requeridos.'},422)
   const write:any=await c.env.DB.prepare(`UPDATE medical_profiles SET slug=?,name=?,professional_prefix=?,specialty=?,subspecialty=?,bio=?,phone=?,whatsapp=?,email=?,city=?,province=?,country=?,organization=?,status=?,updated_at=datetime('now') WHERE id=? AND specialty=?`).bind(
