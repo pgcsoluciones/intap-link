@@ -37,10 +37,13 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  // Never expose sponsor credentials, representative contact lists or live patient records.
  const sponsorship=await c.env.DB.prepare(`SELECT st.name AS sponsor_name,st.logo_url,
    p.name AS program_name,p.private_banner_image_url,p.private_cta_label,p.private_cta_url,
-   p.vademecum_label,p.vademecum_url
+   p.vademecum_label,p.vademecum_url,p.representative_cta_label,p.representative_message_template,
+   mr.whatsapp AS representative_whatsapp, TRIM(COALESCE(mr.first_name,'')||' '||COALESCE(mr.last_name,'')) AS representative_name, mr.zone AS representative_zone
    FROM medical_profile_sponsors mps
    JOIN sponsor_tenants st ON st.id=mps.sponsor_id
    LEFT JOIN medical_sponsor_programs p ON p.id=mps.program_id
+   LEFT JOIN medical_access_codes mac ON mac.medical_profile_id=mps.medical_profile_id AND mac.status='claimed'
+   LEFT JOIN medical_representatives mr ON mr.id=mac.current_representative_id AND mr.active=1
    WHERE mps.medical_profile_id=? AND mps.enabled=1 LIMIT 1`).bind(profileId).first()
  fields.demo_mode=sponsorship?'sponsored':'independent'
  fields.demo_agenda={requests:[{id:'demo-request-1',patient_name:'Paciente de ejemplo',requested_date:'2026-11-02',requested_time:'10:00',status:'pending',reason:'Primera consulta'},{id:'demo-request-2',patient_name:'Paciente de demostración',requested_date:'2026-11-03',requested_time:'15:00',status:'confirmed',reason:'Seguimiento'}],blocked_dates:[]}
@@ -52,7 +55,12 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
    cta_label:String((sponsorship as any).private_cta_label||''),
    cta_url:String((sponsorship as any).private_cta_url||''),
    vademecum_label:String((sponsorship as any).vademecum_label||''),
-   vademecum_url:String((sponsorship as any).vademecum_url||'')
+   vademecum_url:String((sponsorship as any).vademecum_url||''),
+   representative_cta_label:String((sponsorship as any).representative_cta_label||'Mi visitador'),
+   representative_message_template:String((sponsorship as any).representative_message_template||'Hola {visitador}, soy {medico}. Te contacto desde KawMed para conocer {patrocinador}.'),
+   representative_name:String((sponsorship as any).representative_name||''),
+   representative_whatsapp:String((sponsorship as any).representative_whatsapp||''),
+   representative_zone:String((sponsorship as any).representative_zone||'')
  }:null
  const raw=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('')
  const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
