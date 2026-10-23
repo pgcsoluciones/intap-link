@@ -112,6 +112,12 @@ app.get('/api/v1/me/kawmed-master/access/:code',requireUser,async(c:any)=>{
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
   const sponsorEmail=String((master as any).contact_email||'').trim().toLowerCase()
+  if(!accountEmail||clean(body.confirm_email,254).toLowerCase()!==accountEmail)return c.json({ok:false,error:'El correo confirmado no coincide con la sesión.',code:'kawmed_account_mismatch'},403)
+  if(accountEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL){
+    const link=await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+    const regularSponsored=await c.env.DB.prepare('SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1').bind(userId).first()
+    if(link||regularSponsored)return c.json({ok:false,error:'Este correo ya está asociado a un perfil Link. Usa otro correo para el acceso Master KawMed.',code:'kawmed_existing_link_account'},409)
+  }
   const sponsorId=String((master as any).sponsor_id||'')
   const alreadyMember=await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,userId).first()
   const authorizedSpecial=accountEmail===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL
@@ -131,6 +137,7 @@ app.get('/api/v1/me/kawmed-master/access/:code',requireUser,async(c:any)=>{
 app.post('/api/v1/me/kawmed-master/claim',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),body=await c.req.json().catch(()=>({})),code=normalizeCode(body.code)
   if(!validMedMasterCode(code))return c.json({ok:false,error:'Código Master KawMed inválido.'},422)
+  if(body.confirm_account!==true)return c.json({ok:false,error:'Confirma tu cuenta antes de activar el Master KawMed.',code:'kawmed_confirmation_required'},422)
   const master=await c.env.DB.prepare(`SELECT msm.*,st.name AS sponsor_name,st.contact_email,st.is_active
     FROM medical_sponsor_masters msm JOIN sponsor_tenants st ON st.id=msm.sponsor_id
     WHERE msm.master_code=? LIMIT 1`).bind(code).first()
