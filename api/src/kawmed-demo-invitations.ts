@@ -88,7 +88,7 @@ app.patch('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
  }
  if(b.schedules!==undefined){
    if(!Array.isArray(b.schedules)||b.schedules.length>50)return c.json({ok:false,error:'Máximo 50 horarios de demostración.'},422)
-   existing.schedules=b.schedules.map((x:any)=>({day_of_week:Math.max(1,Math.min(7,Number(x.day_of_week)||1)),shift:String(x.shift||'').slice(0,60),start_time:/^\\d{2}:\\d{2}$/.test(String(x.start_time||''))?String(x.start_time):'08:00',end_time:/^\\d{2}:\\d{2}$/.test(String(x.end_time||''))?String(x.end_time):'12:00'}))
+   existing.schedules=b.schedules.map((x:any)=>({day_of_week:Math.max(1,Math.min(7,Number(x.day_of_week)||1)),shift:String(x.shift||'').slice(0,60),start_time:/^\d{2}:\d{2}$/.test(String(x.start_time||''))?String(x.start_time):'08:00',end_time:/^\d{2}:\d{2}$/.test(String(x.end_time||''))?String(x.end_time):'12:00'}))
  }
  if(b.insurance_policy!==undefined){
    const policy=b.insurance_policy||{}
@@ -108,7 +108,7 @@ app.patch('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
    if(!agenda||!Array.isArray(agenda.requests)||!Array.isArray(agenda.blocked_dates)||agenda.requests.length>30||agenda.blocked_dates.length>90)return c.json({ok:false,error:'Agenda de demostración inválida.'},422)
    const prior=Array.isArray(existing.demo_agenda?.requests)?existing.demo_agenda.requests:[]
    if(agenda.requests.some((x:any)=>!prior.some((old:any)=>old.id===x.id)))return c.json({ok:false,error:'No se permiten pacientes reales ni citas externas en la demo.'},422)
-   existing.demo_agenda={requests:agenda.requests.map((x:any)=>{const original=prior.find((v:any)=>v.id===x.id);return {...original,status:['pending','confirmed','cancelled'].includes(x.status)?x.status:original.status}}),blocked_dates:agenda.blocked_dates.map((v:any)=>String(v).slice(0,10)).filter((v:string)=>/^\\d{4}-\\d{2}-\\d{2}$/.test(v))}
+   existing.demo_agenda={requests:agenda.requests.map((x:any)=>{const original=prior.find((v:any)=>v.id===x.id);return {...original,status:['pending','confirmed','cancelled'].includes(x.status)?x.status:original.status}}),blocked_dates:agenda.blocked_dates.map((v:any)=>String(v).slice(0,10)).filter((v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v))}
  }
  const result=await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET sandbox_json=?,status='active',accepted_user_id=COALESCE(accepted_user_id,?),accepted_at=COALESCE(accepted_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status IN ('pending','active') AND expires_at>datetime('now')").bind(JSON.stringify(existing),String(actor.id),row.id).run()
  if(!result.meta?.changes)return deny(c)
