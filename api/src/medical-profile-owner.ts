@@ -79,6 +79,51 @@ app.post('/api/v1/me/medical-profile/reactivate',requireUser,async(c:any)=>{
   return c.json({ok:true,data:{status:'draft',email_released:false}})
 })
 
+// Hard deletion requires an unshared account and explicit typed confirmation.
+// D1 batch is transactional: a foreign-key restriction rolls back all changes.
+app.post('/api/v1/me/medical-profile/delete-account',requireUser,async(c:any)=>{
+  if(ownerScope(c)!=='doctor')return c.json({ok:false,error:'No se puede eliminar una cuenta Master por esta vía.'},403)
+  const userId=String(c.get('userId')||'')
+  const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const body=await c.req.json().catch(()=>({}))
+  const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  const email=String((user as any)?.email||'').trim().toLowerCase()
+  const phrase=String(body.confirm_phrase||'').trim().toUpperCase()
+  if(!email||email==='intapcard@gmail.com')return c.json({ok:false,error:'Esta cuenta multicuenta no puede eliminarse desde KawMed.'},403)
+  if(String(body.confirm_email||'').trim().toLowerCase()!==email||phrase!=='ELIMINAR KAWMED'||String(body.confirm_slug||'').trim()!==String(r.profile.slug))
+    return c.json({ok:false,error:'Para eliminar definitivamente confirma el correo, el enlace público y escribe ELIMINAR KAWMED.'},422)
+  const guard=await c.env.DB.prepare(`SELECT
+    (SELECT COUNT(*) FROM profiles WHERE user_id=?) AS link_profiles,
+    (SELECT COUNT(*) FROM sponsored_profiles WHERE user_id=?) AS sponsored_profiles,
+    (SELECT COUNT(*) FROM sponsor_members WHERE user_id=?) AS sponsor_members,
+    (SELECT COUNT(*) FROM medical_sponsor_masters WHERE claimed_by_user_id=?) AS medical_masters,
+    (SELECT COUNT(*) FROM medical_profiles WHERE user_id=?) AS medical_profiles`).bind(userId,userId,userId,userId,userId).first()
+  if(Number((guard as any)?.link_profiles||0)>0||Number((guard as any)?.sponsored_profiles||0)>0||Number((guard as any)?.sponsor_members||0)>0||
+     Number((guard as any)?.medical_masters||0)>0||Number((guard as any)?.medical_profiles||0)!==1)
+    return c.json({ok:false,error:'Esta identidad tiene otros perfiles o permisos vinculados. La eliminación requiere revisión administrativa y no se realizará automáticamente.',code:'shared_account_protected'},409)
+  const id=String(r.profile.id)
+  try{
+    await c.env.DB.batch([
+      c.env.DB.prepare("UPDATE medical_profiles SET status='inactive' WHERE id=? AND user_id=?").bind(id,userId),
+      c.env.DB.prepare("UPDATE medical_access_codes SET status='inactive',claimed_by_user_id=NULL,medical_profile_id=NULL,updated_at=datetime('now') WHERE claimed_by_user_id=?").bind(userId),
+      c.env.DB.prepare("DELETE FROM appointment_requests WHERE subject_type='medical' AND subject_id=?").bind(id),
+      c.env.DB.prepare("DELETE FROM appointment_blocks WHERE subject_type='medical' AND subject_id=?").bind(id),
+      c.env.DB.prepare("DELETE FROM appointment_reasons WHERE subject_type='medical' AND subject_id=?").bind(id),
+      c.env.DB.prepare("DELETE FROM appointment_availability WHERE subject_type='medical' AND subject_id=?").bind(id),
+      c.env.DB.prepare("DELETE FROM appointment_settings WHERE subject_type='medical' AND subject_id=?").bind(id),
+      c.env.DB.prepare("DELETE FROM medical_profiles WHERE id=? AND user_id=?").bind(id,userId),
+      c.env.DB.prepare("DELETE FROM auth_sessions WHERE user_id=?").bind(userId),
+      c.env.DB.prepare("DELETE FROM users WHERE id=?").bind(userId),
+    ])
+  }catch(err){
+    console.error('[KawMed account deletion] blocked by dependent records',err)
+    return c.json({ok:false,error:'No se eliminó la cuenta porque existen datos vinculados que requieren una limpieza segura. Ningún dato debe borrarse parcialmente.',code:'deletion_dependency_blocked'},409)
+  }
+  const remains=await c.env.DB.prepare('SELECT id FROM users WHERE id=? LIMIT 1').bind(userId).first()
+  if(remains)return c.json({ok:false,error:'No se pudo liberar la identidad; revisa la cuenta con soporte.'},500)
+  return c.json({ok:true,data:{deleted:true,email_released:true,slug:String(r.profile.slug)}})
+})
+
 app.put('/api/v1/me/medical-profile/appearance',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   const b=await c.req.json().catch(()=>({}))
