@@ -112,7 +112,7 @@ app.get('/api/v1/me/kawmed-master/access/:code',requireUser,async(c:any)=>{
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
   const sponsorEmail=String((master as any).contact_email||'').trim().toLowerCase()
-  const existingLink=accountEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL&&Boolean(
+  const existingLink=accountEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL&&!(String((master as any).status)==='claimed'&&String((master as any).claimed_by_user_id||'')===userId)&&Boolean(
     await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first()||
     await c.env.DB.prepare('SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1').bind(userId).first()
   )
