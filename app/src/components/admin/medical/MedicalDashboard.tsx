@@ -31,6 +31,10 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const avatarRef=useRef<HTMLInputElement>(null),coverRef=useRef<HTMLInputElement>(null)
   const[tab,setTab]=useState<Tab>('profile')
   const[lifecycleBusy,setLifecycleBusy]=useState(false)
+  const[showDeletion,setShowDeletion]=useState(false)
+  const[deleteEmail,setDeleteEmail]=useState('')
+  const[deleteSlug,setDeleteSlug]=useState('')
+  const[deletePhrase,setDeletePhrase]=useState('')
   const[lifecycleConfirm,setLifecycleConfirm]=useState<'suspend'|'reactivate'|null>(null)
   const[profile,setProfile]=useState<any>(null)
   const[form,setForm]=useState<any>({})
@@ -232,6 +236,18 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     catch(e){setError(e instanceof Error?e.message:'No pudimos guardar seguros.')}finally{setBusy(false)}
   }
 
+  async function deleteMedicalAccount(){
+    if(deleteEmail.trim().toLowerCase()!==String(profile?.email||'').trim().toLowerCase()||deleteSlug!==String(profile?.slug||'')||deletePhrase.trim().toUpperCase()!=='ELIMINAR KAWMED'){
+      setError('Confirma el correo, el enlace público y la frase ELIMINAR KAWMED.');return
+    }
+    setLifecycleBusy(true);setError('')
+    try{
+      const j:any=await apiPost('/me/medical-profile/delete-account',{confirm_email:deleteEmail,confirm_slug:deleteSlug,confirm_phrase:deletePhrase})
+      if(!j?.ok)throw new Error(j?.error||'No se pudo eliminar la cuenta.')
+      window.location.replace('/admin/login?account_deleted=kawmed')
+    }catch(e){setError(e instanceof Error?e.message:'No se pudo eliminar la cuenta.')}finally{setLifecycleBusy(false)}
+  }
+
   async function changeLifecycle(action:'suspend'|'reactivate'){
     setLifecycleBusy(true);setError('');setMessage('')
     try{
@@ -257,6 +273,17 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       <p className="mt-2 text-sm text-slate-600">Suspender oculta el perfil médico público, pero conserva la información, las citas y el correo asociado. La eliminación definitiva será una operación distinta: requerirá una confirmación reforzada y la comprobación de que el correo no pertenece a otra cuenta Link.</p>
       <div className="mt-4 flex flex-wrap gap-3">
         {profile.status!=='inactive'?<button type="button" disabled={lifecycleBusy} onClick={()=>setLifecycleConfirm('suspend')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">Suspender perfil</button>:<button type="button" disabled={lifecycleBusy} onClick={()=>setLifecycleConfirm('reactivate')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Reactivar perfil</button>}
+      </div>
+      <div className="mt-5 border-t border-rose-100 pt-4">
+        <button type="button" onClick={()=>setShowDeletion(v=>!v)} className="rounded-xl border border-rose-200 bg-white px-4 py-3 text-sm font-bold text-rose-700">{showDeletion?'Ocultar eliminación':'Eliminar cuenta KawMed definitivamente'}</button>
+        {showDeletion&&<div className="mt-4 rounded-xl border border-rose-300 bg-rose-50 p-4">
+          <h3 className="font-black text-rose-900">Eliminación irreversible y liberación del correo</h3>
+          <p className="mt-2 text-sm text-rose-800">Se elimina el perfil médico, centros, horarios y solicitudes de cita, y se intenta eliminar la identidad de acceso para liberar su correo. Un código MED ya utilizado no vuelve a estar disponible. Si esta cuenta tiene otros perfiles Link, permisos de patrocinio o registros vinculados, se bloqueará la eliminación para protegerlos.</p>
+          <label className="mt-3 block text-sm font-bold">Confirma tu correo<input value={deleteEmail} onChange={e=>setDeleteEmail(e.target.value)} placeholder={String(profile.email||'')} autoComplete="off" className={input}/></label>
+          <label className="mt-3 block text-sm font-bold">Confirma tu enlace público<input value={deleteSlug} onChange={e=>setDeleteSlug(e.target.value)} placeholder={String(profile.slug||'')} className={input}/></label>
+          <label className="mt-3 block text-sm font-bold">Escribe ELIMINAR KAWMED<input value={deletePhrase} onChange={e=>setDeletePhrase(e.target.value)} className={input}/></label>
+          <button type="button" disabled={lifecycleBusy||deleteEmail.trim().toLowerCase()!==String(profile.email||'').trim().toLowerCase()||deleteSlug!==String(profile.slug||'')||deletePhrase.trim().toUpperCase()!=='ELIMINAR KAWMED'} onClick={()=>void deleteMedicalAccount()} className="mt-4 rounded-xl bg-rose-800 px-4 py-3 text-sm font-black text-white disabled:opacity-40">Confirmar eliminación definitiva</button>
+        </div>}
       </div>
       {lifecycleConfirm&&<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><p className="font-bold">{lifecycleConfirm==='suspend'?'¿Confirmas que deseas suspender tu perfil médico?':'¿Confirmas que deseas reactivar tu perfil como borrador?'}</p><div className="mt-3 flex gap-3"><button type="button" disabled={lifecycleBusy} onClick={()=>void changeLifecycle(lifecycleConfirm)} className="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">Sí, confirmar</button><button type="button" disabled={lifecycleBusy} onClick={()=>setLifecycleConfirm(null)} className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold">Cancelar</button></div></div>}
     </section>}
