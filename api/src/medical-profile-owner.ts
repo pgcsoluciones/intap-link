@@ -102,9 +102,10 @@ app.post('/api/v1/me/medical-profile/delete-account',requireUser,async(c:any)=>{
     (SELECT COUNT(*) FROM sponsored_profiles WHERE user_id=?) AS sponsored_profiles,
     (SELECT COUNT(*) FROM sponsor_members WHERE user_id=?) AS sponsor_members,
     (SELECT COUNT(*) FROM medical_sponsor_masters WHERE claimed_by_user_id=?) AS medical_masters,
-    (SELECT COUNT(*) FROM medical_profiles WHERE user_id=?) AS medical_profiles`).bind(userId,userId,userId,userId,userId).first()
+    (SELECT COUNT(*) FROM medical_profiles WHERE user_id=?) AS medical_profiles,
+    (SELECT COUNT(*) FROM intap_artifacts WHERE owner_user_id=?) AS owned_artifacts`).bind(userId,userId,userId,userId,userId,userId).first()
   if(Number((guard as any)?.link_profiles||0)>0||Number((guard as any)?.sponsored_profiles||0)>0||Number((guard as any)?.sponsor_members||0)>0||
-     Number((guard as any)?.medical_masters||0)>0||Number((guard as any)?.medical_profiles||0)!==1)
+     Number((guard as any)?.medical_masters||0)>0||Number((guard as any)?.owned_artifacts||0)>0||Number((guard as any)?.medical_profiles||0)!==1)
     return c.json({ok:false,error:'Esta identidad tiene otros perfiles o permisos vinculados. La eliminación requiere revisión administrativa y no se realizará automáticamente.',code:'shared_account_protected'},409)
   const id=String(r.profile.id)
   try{
