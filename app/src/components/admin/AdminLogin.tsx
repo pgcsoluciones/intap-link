@@ -13,6 +13,8 @@ function validTeam(value: string) { return /^TEAM-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test
 export default function AdminLogin() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const demoInvite=String(searchParams.get('demo_invite')||sessionStorage.getItem('kawmed_demo_invite')||localStorage.getItem('kawmed_demo_invite')||'')
+  const isDemoInvite=/^[a-f0-9]{64}$/.test(demoInvite)
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,6 +55,7 @@ export default function AdminLogin() {
     : '', [isTeamFlow, scanCode, teamCode])
 
   useEffect(() => {
+    if(isDemoInvite){sessionStorage.setItem('kawmed_demo_invite',demoInvite);localStorage.setItem('kawmed_demo_invite',demoInvite);setMode('login')}
     if (isSponsorMasterResume || isMedicalResume || isMedicalMasterResume) setMode('login')
     if (!hasProductContext) {
       sessionStorage.removeItem(SCAN_PUBLIC_CODE_KEY)
@@ -99,7 +102,7 @@ export default function AdminLogin() {
         const json: any = await apiPost('/auth/password/login', { email, password })
         if (json.ok) {
           persistAuthMode(mode)
-          if (isMedicalResume || isMedicalMasterResume) {
+          if(isDemoInvite){window.location.assign('/admin/medical/demo/'+demoInvite)} else if (isMedicalResume || isMedicalMasterResume) {
             if(isMedicalResume){sessionStorage.removeItem('kawvo_kawmed_claim_resume');localStorage.removeItem('kawvo_kawmed_claim_resume')}
             if(isMedicalMasterResume){sessionStorage.removeItem('kawvo_kawmed_master_resume');localStorage.removeItem('kawvo_kawmed_master_resume')}
             window.location.assign(isMedicalResume?'/claim/kawmed?code='+encodeURIComponent(medCode):'/claim/kawmed-master?code='+encodeURIComponent(medMasterCode))
@@ -180,9 +183,9 @@ export default function AdminLogin() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="mb-7 text-center">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isMedicalResume||isMedicalMasterResume ? 'Verifica tu cuenta KawMed' : isSponsorMasterResume ? 'Accede como patrocinador' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{isDemoInvite?'Acceso invitado a KawMed':isMedicalResume||isMedicalMasterResume ? 'Verifica tu cuenta KawMed' : isSponsorMasterResume ? 'Accede como patrocinador' : isTeamFlow ? 'Confirma tu acceso' : isDraftResume ? 'Continúa tu perfil' : isSwitchUser ? 'Continúa con otra cuenta' : isScanFlow ? 'Activa tu producto' : isRegister ? 'Crea tu acceso' : 'Bienvenido de nuevo'}</h1>
           <p className="mx-auto mt-2 max-w-sm text-[15px] leading-6 text-slate-500">
-            {isMedicalResume||isMedicalMasterResume
+            {isDemoInvite?'Inicia sesión con el correo al que llegó la invitación. Entrarás a una copia privada de demostración.' : isMedicalResume||isMedicalMasterResume
               ? 'Accede o regístrate con el correo que deseas vincular a KawMed. Después confirmaremos la cuenta antes de activar el código.'
               : isSponsorMasterResume
               ? 'Inicia sesión con el correo registrado para este patrocinador. Al validar la cuenta retomaremos automáticamente el Master.'
