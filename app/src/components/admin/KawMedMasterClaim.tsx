@@ -17,6 +17,7 @@ export default function KawMedMasterClaim(){
   const[currentEmail,setCurrentEmail]=useState('')
   const[wrongAccount,setWrongAccount]=useState(false)
   const[authKnown,setAuthKnown]=useState(false)
+  const[confirmed,setConfirmed]=useState(false)
 
   async function lookup(next=code){
     const normalized=next.trim().toUpperCase();setCode(normalized);setError('');setMessage('');setContext(null)
@@ -27,7 +28,7 @@ export default function KawMedMasterClaim(){
       if(!j?.ok)throw new Error(j?.error||'No pudimos validar el Master KawMed.')
       setContext(j.data||null)
       sessionStorage.setItem(CODE_KEY,normalized);localStorage.setItem(CODE_KEY,normalized)
-      setWrongAccount(false);setCurrentEmail('');setAuthKnown(false)
+      setWrongAccount(false);setCurrentEmail('');setAuthKnown(false);setConfirmed(false)
       try{
         const access:any=await apiGet('/me/kawmed-master/access/'+encodeURIComponent(normalized))
         if(access?.ok){
@@ -42,10 +43,10 @@ export default function KawMedMasterClaim(){
   useEffect(()=>{if(valid(initial))void lookup(initial)},[])
 
   async function activate(){
-    if(!valid(code))return
+    if(!valid(code)||!confirmed||!authKnown||wrongAccount)return
     setLoading(true);setError('');setMessage('')
     try{
-      const j:any=await apiPost('/me/kawmed-master/claim',{code})
+      const j:any=await apiPost('/me/kawmed-master/claim',{code,confirm_account:true,confirm_email:currentEmail})
       if(j?.ok){
         sessionStorage.removeItem(CODE_KEY);localStorage.removeItem(CODE_KEY);sessionStorage.removeItem(RESUME_KEY);localStorage.removeItem(RESUME_KEY)
         setMessage('Master KawMed activado. Abriendo el panel del patrocinador…')
@@ -84,7 +85,10 @@ export default function KawMedMasterClaim(){
     <div className="mt-7 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
       <label className="block text-xs font-black uppercase tracking-[.1em] text-slate-500">Código Master KawMed<input value={code} onChange={e=>setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,12))} placeholder="MEDM-ABC-123" className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-center font-mono text-lg font-black tracking-[.1em] outline-none focus:border-cyan-400"/></label>
       <button type="button" onClick={()=>void lookup()} disabled={loading||!valid(code)} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black disabled:opacity-40">{loading?'Validando…':'Validar Master'}</button>
-      {context&&<div className="mt-4 rounded-2xl bg-slate-50 p-4"><div className="flex items-center gap-3">{context.logo_url&&<img src={context.logo_url} alt="" className="h-12 w-12 rounded-xl object-contain"/>}<div><p className="text-[11px] font-black uppercase tracking-[.1em] text-cyan-700">Patrocinador KawMed</p><p className="mt-1 font-black">{context.sponsor_name}</p></div></div><div className="mt-3 flex items-center justify-between"><strong className="font-mono">{context.master_code}</strong><span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-black text-emerald-700">{context.status==='claimed'?'Activado':context.status==='inactive'?'Inactivo':'Disponible'}</span></div>{authKnown&&currentEmail&&<div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"><p className="text-[11px] font-black uppercase tracking-[.08em] text-slate-400">Sesión actual</p><p className="mt-1 break-all font-bold text-slate-700">{currentEmail}</p></div>}{context.status!=='inactive'&&!wrongAccount&&<button type="button" onClick={()=>void activate()} disabled={loading} className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{loading?'Activando…':'Continuar con mi cuenta'}</button>}{wrongAccount&&<div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-left"><p className="text-sm font-black text-rose-700">Esta sesión no corresponde al correo autorizado para este patrocinador.</p><p className="mt-2 text-xs leading-5 text-rose-600">{currentEmail?<>La sesión actual es <strong>{currentEmail}</strong>. </>:null}Cierra esta sesión e inicia con la cuenta autorizada. El código Master se conservará.</p><button type="button" onClick={()=>void switchAccount()} disabled={loading} className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{loading?'Cerrando sesión…':'Cerrar sesión y usar correo autorizado'}</button></div>}</div>}
+      {context&&<div className="mt-4 rounded-2xl bg-slate-50 p-4"><div className="flex items-center gap-3">{context.logo_url&&<img src={context.logo_url} alt="" className="h-12 w-12 rounded-xl object-contain"/>}<div><p className="text-[11px] font-black uppercase tracking-[.1em] text-cyan-700">Patrocinador KawMed</p><p className="mt-1 font-black">{context.sponsor_name}</p></div></div><div className="mt-3 flex items-center justify-between"><strong className="font-mono">{context.master_code}</strong><span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-black text-emerald-700">{context.status==='claimed'?'Activado':context.status==='inactive'?'Inactivo':'Disponible'}</span></div>{authKnown&&currentEmail&&<div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"><p className="text-[11px] font-black uppercase tracking-[.08em] text-slate-400">Sesión actual</p><p className="mt-1 break-all font-bold text-slate-700">{currentEmail}</p></div>}{context.status!=='inactive'&&authKnown&&!wrongAccount&&<label className="mt-4 flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>Confirmo que este correo es el autorizado para administrar KawMed y acepto activar el Master.</span></label>}
+      {context.status!=='inactive'&&!wrongAccount&&<button type="button" onClick={()=>void activate()} disabled={loading||!confirmed||!authKnown} className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{loading?'Activando…':'Continuar con mi cuenta'}</button>}{wrongAccount&&<div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-left"><p className="text-sm font-black text-rose-700">Esta sesión no corresponde al correo autorizado para este patrocinador.</p><p className="mt-2 text-xs leading-5 text-rose-600">{currentEmail?<>La sesión actual es <strong>{currentEmail}</strong>. </>:null}Cierra esta sesión e inicia con la cuenta autorizada. El código Master se conservará.</p><button type="button" onClick={()=>void switchAccount()} disabled={loading} className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{loading?'Cerrando sesión…':'Cerrar sesión y usar correo autorizado'}</button></div>}</div>}
+      {context&&!authKnown&&<a href={'/admin/login?resume=kawmed_master&med_master_code='+encodeURIComponent(code)} onClick={()=>{sessionStorage.setItem(RESUME_KEY,'1');sessionStorage.setItem(CODE_KEY,code)}} className="mt-4 block rounded-xl border border-slate-200 p-3 text-center text-sm font-bold">Iniciar sesión con el correo autorizado</a>}
+      <div className="mt-4 flex justify-center gap-4 text-sm"><a href="/admin/login" className="font-semibold text-cyan-800">Ir a iniciar sesión</a><a href="/" className="font-semibold text-slate-600">Salir de la activación</a></div>
       {message&&<p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}
       {error&&<p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
     </div>
