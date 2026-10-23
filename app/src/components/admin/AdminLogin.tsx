@@ -100,6 +100,8 @@ export default function AdminLogin() {
         if (json.ok) {
           persistAuthMode(mode)
           if (isMedicalResume || isMedicalMasterResume) {
+            if(isMedicalResume){sessionStorage.removeItem('kawvo_kawmed_claim_resume');localStorage.removeItem('kawvo_kawmed_claim_resume')}
+            if(isMedicalMasterResume){sessionStorage.removeItem('kawvo_kawmed_master_resume');localStorage.removeItem('kawvo_kawmed_master_resume')}
             window.location.assign(isMedicalResume?'/claim/kawmed?code='+encodeURIComponent(medCode):'/claim/kawmed-master?code='+encodeURIComponent(medMasterCode))
           } else if (isSponsorMasterResume) {
             window.location.assign(`/admin/sponsor/entry?public_code=${encodeURIComponent(storedSponsorMasterCode)}`)
