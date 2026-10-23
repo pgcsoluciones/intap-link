@@ -13,4 +13,8 @@ assert.doesNotMatch(api,/UPDATE medical_profiles|DELETE FROM medical_profiles|UP
 assert.match(app,/No tienes permisos para cambiar credenciales/)
 assert.match(read('app/src/App.tsx'),/admin\/medical\/demo\/:token/)
 assert.match(read('api/src/preview-free-entry.ts'),/kawmed-demo-invitations/)
+assert.match(api,/fields.demo_mode=sponsorship\?'sponsored':'independent'/)
+assert.match(api,/fields.sponsor_demo=sponsorship/)
+assert.match(app,/KawMed patrocinado/)
+assert.match(app,/KawMed independiente/)
 console.log('KawMed demo invitation isolation contract: OK')
