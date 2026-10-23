@@ -26,7 +26,7 @@ export default function KawMedClaim(){
       const j:any=await apiGet('/public/kawmed/claim/'+encodeURIComponent(normalized))
       if(!j?.ok)throw new Error(j?.error||'No pudimos validar el código.')
       setContext(j.data||null)
-      if(j.data?.status==='available'){
+      if(j.data?.status==='available'||j.data?.status==='claimed'){
         try{const check:any=await apiGet('/me/kawmed/claim-check/'+encodeURIComponent(normalized));if(check?.ok)setAccount(check.data||null)}catch{/* Login requerido. */}
       }
       sessionStorage.setItem(STORAGE_KEY,normalized);localStorage.setItem(STORAGE_KEY,normalized)
@@ -77,6 +77,10 @@ export default function KawMedClaim(){
         {context&&<div className="mt-4 rounded-2xl bg-slate-50 p-4">
           <div className="flex items-center justify-between gap-3"><strong className="font-mono">{context.code}</strong><span className={'rounded-full px-2 py-1 text-[11px] font-black '+(context.status==='available'?'bg-emerald-50 text-emerald-700':'bg-slate-200 text-slate-600')}>{context.status==='available'?'Disponible':context.status==='claimed'?'Ya utilizado':'Inactivo'}</span></div>
           {context.sponsored?<div className="mt-3"><p className="text-[11px] font-black uppercase tracking-[.1em] text-cyan-700">Programa patrocinado</p><p className="mt-1 text-sm font-bold">{context.sponsor_name}</p><p className="mt-1 text-xs text-slate-500">{context.program_name}</p><p className="mt-3 text-xs leading-5 text-slate-500">El patrocinio se mostrará únicamente dentro de tu entorno profesional autenticado. Tus pacientes no verán al patrocinador en tu perfil público.</p></div>:<p className="mt-3 text-sm text-slate-500">Acceso KawMed independiente, sin patrocinador asociado.</p>}
+          {context.status==='claimed'&&<div className="mt-3">
+            {account?.reason==='already_owned'?<a href="/admin/medical" className="block rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white">Entrar a mi KawMed</a>:<p className="text-sm text-amber-800">Este código ya fue utilizado. Si lo activaste, inicia sesión con el correo titular para entrar a tu KawMed. No debes volver a activarlo.</p>}
+            <a href={'/admin/login?resume=kawmed&med_code='+encodeURIComponent(code)} onClick={()=>{sessionStorage.setItem(RESUME_KEY,'1');sessionStorage.setItem(STORAGE_KEY,code)}} className="mt-3 block rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-bold">Iniciar sesión con el correo titular</a>
+          </div>}
           {context.status==='available'&&<>
             {!account&&<p className="mt-4 text-sm text-amber-800">Antes de activar, inicia sesión con el correo que utilizarás exclusivamente para KawMed.</p>}
             {account&&<div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-sm">
