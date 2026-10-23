@@ -155,6 +155,23 @@ app.put('/api/v1/me/medical-profile/appearance',requireUser,async(c:any)=>{
   c.header('Cache-Control','no-store')
   return c.json({ok:true,data:{template,palette}})
 })
+app.post('/api/v1/me/medical-profile/publication',requireUser,async(c:any)=>{
+  const r=await owned(c)
+  if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
+  const body=await c.req.json().catch(()=>({}))
+  const action=String(body.action||'')
+  if(!['publish','unpublish'].includes(action))return c.json({ok:false,error:'Acción inválida.'},422)
+  if(body.confirm!==true)return c.json({ok:false,error:'Confirma el cambio de publicación.'},422)
+  const current=String(r.profile.status||'draft')
+  const desired=action==='publish'?'active':'draft'
+  if(current===desired)return c.json({ok:true,data:{status:desired,unchanged:true}})
+  if(action==='publish'&&(!String(r.profile.name||'').trim()||!String(r.profile.specialty||'').trim()||!String(r.profile.slug||'').trim()))
+    return c.json({ok:false,error:'Completa nombre, especialidad y enlace público antes de publicar.'},422)
+  const write=await c.env.DB.prepare("UPDATE medical_profiles SET status=?,updated_at=datetime('now') WHERE id=? AND status=?").bind(desired,String(r.profile.id),current).run()
+  if(Number(write?.meta?.changes||0)!==1)return c.json({ok:false,error:'El estado cambió. Actualiza y vuelve a intentar.'},409)
+  return c.json({ok:true,data:{status:desired,public_url:'/m/'+String(r.profile.slug||'')}})
+})
+
 app.patch('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   const b=await c.req.json().catch(()=>({})),p:any=r.profile
