@@ -43,4 +43,21 @@ const bookingFromModal = /footer=\{<button[^>]+className="kawmed-modal__appointm
 assert.equal([...medicalProfile.matchAll(bookingFromModal)].length,2,'Both schedule and centers must offer booking CTA')
 assert.ok(medicalProfile.includes('<AppointmentRequestModal'), 'Booking form must exist')
 
+const claim = read('app/src/components/admin/KawMedClaim.tsx')
+const master = read('app/src/components/admin/KawMedMasterClaim.tsx')
+const login = read('app/src/components/admin/AdminLogin.tsx')
+const callback = read('app/src/components/admin/AuthCallback.tsx')
+const medicalCodes = read('api/src/medical-access-codes.ts')
+for (const text of ["claim-check/", "confirm_account:true", "confirm_email:account.email", "Cerrar sesión y usar otro correo", "Ir a iniciar sesión", "Salir de la activación"]) {
+ assert.ok(claim.includes(text), 'MED account safety / escape missing: '+text)
+}
+for (const text of ["confirm_account:true", "confirm_email:currentEmail", "setWrongAccount(access.data?.allowed!==true)", "Ir a iniciar sesión", "Salir de la activación"]) {
+ assert.ok(master.includes(text), 'Master account safety / escape missing: '+text)
+}
+for (const text of ["kawmed_account_mismatch", "kawmed_confirmation_required", "kawmed_existing_link_account", "kawmed/claim-check/:code"]) {
+ assert.ok(medicalCodes.includes(text), 'Medical API security guard missing: '+text)
+}
+assert.ok(login.includes("isMedicalResume")&&login.includes("isMedicalMasterResume"),'MED login resume must be explicit')
+assert.ok(callback.includes("kawvo_kawmed_claim_resume")&&callback.includes("kawvo_kawmed_master_resume"),'MED magic-link callback must restore activation')
+
 console.log('KawMed isolated integration: contract invariants OK')
