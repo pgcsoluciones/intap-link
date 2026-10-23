@@ -254,14 +254,15 @@ app.get('/api/v1/me/kawmed/claim-check/:code',requireUser,async(c:any)=>{
   const medCode=await c.env.DB.prepare("SELECT code FROM medical_access_codes WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first()
   const link=await c.env.DB.prepare('SELECT id FROM profiles WHERE user_id=? LIMIT 1').bind(userId).first()
   const sponsored=await c.env.DB.prepare("SELECT id FROM sponsored_profiles WHERE user_id=? LIMIT 1").bind(userId).first()
-  const codeRow=await c.env.DB.prepare('SELECT status,claimed_by_user_id FROM medical_access_codes WHERE code=? LIMIT 1').bind(code).first()
+  const codeRow=await c.env.DB.prepare('SELECT status,claimed_by_user_id,medical_profile_id FROM medical_access_codes WHERE code=? LIMIT 1').bind(code).first()
   if(!codeRow)return c.json({ok:false,error:'Código MED no encontrado.'},404)
   const special=email===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL
   const existingLink=Boolean(link||sponsored)
-  const reason=String((codeRow as any).status)!=='available'?'code_unavailable':
+  const codeOwned=String((codeRow as any).status)==='claimed'&&String((codeRow as any).claimed_by_user_id||'')===userId
+  const reason=String((codeRow as any).status)!=='available'?(codeOwned?'already_owned':'code_unavailable'):
     med||medCode?'already_med':
     existingLink&&!special?'existing_link':'ready'
-  return c.json({ok:true,data:{email,authenticated:true,existing_link:existingLink,special_multiaccount:special,can_activate:reason==='ready',reason,code_status:String((codeRow as any).status)}})
+  return c.json({ok:true,data:{email,authenticated:true,existing_link:existingLink,special_multiaccount:special,can_activate:reason==='ready',reason,code_status:String((codeRow as any).status),next_url:codeOwned?'/admin/medical':null}})
 })
 
 app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
