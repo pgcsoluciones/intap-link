@@ -64,11 +64,11 @@ export default function AuthCallback() {
 
         const medicalCode=String(sessionStorage.getItem('kawvo_kawmed_claim_code')||localStorage.getItem('kawvo_kawmed_claim_code')||'').toUpperCase()
         const medicalMasterCode=String(sessionStorage.getItem('kawvo_kawmed_master_code')||localStorage.getItem('kawvo_kawmed_master_code')||'').toUpperCase()
-        if(/^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medicalCode)&&sessionStorage.getItem('kawvo_kawmed_claim_resume')==='1'){
+        if(/^MED-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medicalCode)&&(sessionStorage.getItem('kawvo_kawmed_claim_resume')==='1'||localStorage.getItem('kawvo_kawmed_claim_resume')==='1')){
           sessionStorage.removeItem('kawvo_kawmed_claim_resume');localStorage.removeItem('kawvo_kawmed_claim_resume')
           navigate('/claim/kawmed?code='+encodeURIComponent(medicalCode),{replace:true});return
         }
-        if(/^MEDM-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medicalMasterCode)&&sessionStorage.getItem('kawvo_kawmed_master_resume')==='1'){
+        if(/^MEDM-[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(medicalMasterCode)&&(sessionStorage.getItem('kawvo_kawmed_master_resume')==='1'||localStorage.getItem('kawvo_kawmed_master_resume')==='1')){
           sessionStorage.removeItem('kawvo_kawmed_master_resume');localStorage.removeItem('kawvo_kawmed_master_resume')
           navigate('/claim/kawmed-master?code='+encodeURIComponent(medicalMasterCode),{replace:true});return
         }
