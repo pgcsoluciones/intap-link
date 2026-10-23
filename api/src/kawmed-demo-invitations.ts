@@ -27,6 +27,12 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  for(const [key,sql] of Object.entries({centers:'SELECT name,address,city,province,phone,map_url FROM medical_profile_centers WHERE medical_profile_id=?',schedules:'SELECT day_of_week,shift,start_time,end_time FROM medical_profile_schedules WHERE medical_profile_id=?'})){
  const rows=await c.env.DB.prepare(sql).bind(profileId).all();fields[key]=(rows.results||[]).map((x:any)=>({...x}))
  }
+ const appearance=await c.env.DB.prepare('SELECT template,palette FROM medical_profile_appearance WHERE medical_profile_id=?').bind(profileId).first()
+ fields.template=String((appearance as any)?.template||'classic')
+ fields.palette=String((appearance as any)?.palette||'aqua')
+ const accepted=await c.env.DB.prepare('SELECT insurance_name FROM medical_profile_insurances WHERE medical_profile_id=? ORDER BY sort_order').bind(profileId).all()
+ const excluded=await c.env.DB.prepare('SELECT insurance_name FROM medical_profile_insurance_exclusions WHERE medical_profile_id=? ORDER BY sort_order').bind(profileId).all()
+ fields.insurance_policy={accepted:(accepted.results||[]).map((x:any)=>({insurance_name:x.insurance_name})),excluded:(excluded.results||[]).map((x:any)=>({insurance_name:x.insurance_name}))}
  const raw=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('')
  const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
  await c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,JSON.stringify(fields)).run()
