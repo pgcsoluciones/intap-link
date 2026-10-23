@@ -6,14 +6,13 @@ run(){ echo "▶ $*"; "$@"; }
 REMOTE=github
 BRANCH=feature/kawmed-demo-invitations-2026-10-23
 BASE=2dea1527e157fc8a434d83a749415b15d006890a
-HEAD_EXPECTED=5e97eeb408e1c2f43ce6388f6f8c114e09c6dd97
 echo "KawMed Invitaciones Demo — PREPARACION CONTROLADA, NO DESPLIEGA"
 [ -z "$(git status --porcelain)" ] || fail "Existen cambios locales sin guardar."
 run git fetch "$REMOTE" main "$BRANCH"
 [ "$(git rev-parse "$REMOTE/main")" = "$BASE" ] || fail "Main cambió; hace falta reconciliar."
 run git switch "$BRANCH"
 run git pull --ff-only "$REMOTE" "$BRANCH"
-[ "$(git rev-parse HEAD)" = "$HEAD_EXPECTED" ] || fail "La rama cambió; revisar cambios antes del despliegue."
+[ "$(git rev-parse HEAD)" = "$(git rev-parse "$REMOTE/$BRANCH")" ] || fail "La rama no coincide con la remota."
 [ "$(git merge-base "$REMOTE/main" HEAD)" = "$BASE" ] || fail "Base incorrecta"
 run git diff --check "$REMOTE/main...HEAD"
 for p in $(git diff --name-only "$REMOTE/main...HEAD"); do
