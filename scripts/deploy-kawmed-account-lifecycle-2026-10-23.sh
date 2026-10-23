@@ -14,9 +14,10 @@ run git switch "$BRANCH"
 run git pull --ff-only "$REMOTE" "$BRANCH"
 [ "$(git merge-base "$REMOTE/main" HEAD)" = "$BASE" ] || fail "Base incorrecta"
 run git diff --check "$REMOTE/main...HEAD"
-for p in $(git diff --name-only "$REMOTE/main...HEAD"); do case "$p" in api/src/medical-profile-owner.ts|app/src/components/admin/medical/MedicalDashboard.tsx|scripts/test-kawmed-isolation-contract.mjs|scripts/deploy-kawmed-account-lifecycle-2026-10-23.sh) ;; *) fail "Fuera del alcance: $p" ;; esac; done
+for p in $(git diff --name-only "$REMOTE/main...HEAD"); do case "$p" in api/src/medical-profile-owner.ts|app/src/components/admin/medical/MedicalDashboard.tsx|scripts/test-kawmed-isolation-contract.mjs|scripts/rehearse-kawmed-account-lifecycle-2026-10-23.sh|scripts/deploy-kawmed-account-lifecycle-2026-10-23.sh) ;; *) fail "Fuera del alcance: $p" ;; esac; done
 run npm ci
 run node scripts/test-kawmed-isolation-contract.mjs
+run bash scripts/rehearse-kawmed-account-lifecycle-2026-10-23.sh
 run npx tsc --noEmit -p api/tsconfig.json
 run npm run build -w app
 run npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawmed-lifecycle-api.mjs
