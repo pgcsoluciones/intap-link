@@ -60,6 +60,13 @@ export default function KawMedClaim(){
     }finally{setLoading(false)}
   }
 
+  const switchAccount=async()=>{
+    sessionStorage.setItem(STORAGE_KEY,code);localStorage.setItem(STORAGE_KEY,code)
+    sessionStorage.setItem(RESUME_KEY,'1');localStorage.setItem(RESUME_KEY,'1')
+    try{await apiPost('/auth/logout',{})}catch{/* Permitir acceso al login incluso si falla el logout remoto. */}
+    window.location.assign('/admin/login?resume=kawmed&med_code='+encodeURIComponent(code))
+  }
+
   return <main className="min-h-screen bg-slate-50 px-5 py-8 font-['Inter'] text-slate-950">
     <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[460px] flex-col justify-center">
       <div className="text-center"><p className="text-[11px] font-black uppercase tracking-[.22em] text-cyan-700">KAWMED</p><h1 className="mt-3 text-3xl font-black tracking-[-.04em]">Activa tu perfil médico</h1><p className="mt-2 text-sm leading-6 text-slate-500">Este acceso es exclusivo para perfiles profesionales KawMed.</p></div>
@@ -78,6 +85,7 @@ export default function KawMedClaim(){
               {account.reason==='already_med'&&<p className="mt-2 font-semibold text-rose-700">Esta cuenta ya tiene un acceso KawMed y no puede reclamar otro código.</p>}
               {account.can_activate&&<label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/><span>Confirmo que deseo activar KawMed con este correo y comprendo que el código es de un solo uso.</span></label>}
             </div>}
+            {account&&<button type="button" onClick={()=>void switchAccount()} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-bold">Cerrar sesión y usar otro correo</button>}
             <a className="mt-3 block rounded-xl border border-slate-300 bg-white px-4 py-3 text-center text-sm font-bold" href={'/admin/login?resume=kawmed&med_code='+encodeURIComponent(code)} onClick={()=>{sessionStorage.setItem(RESUME_KEY,'1');sessionStorage.setItem(STORAGE_KEY,code)}}>{account?'Cambiar de cuenta / iniciar sesión':'Iniciar sesión o registrarme'}</a>
             <button type="button" onClick={()=>void activate()} disabled={loading||!confirmed||!account?.can_activate} className="mt-3 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{loading?'Activando…':'Confirmar y activar KawMed'}</button>
           </>}
@@ -86,6 +94,7 @@ export default function KawMedClaim(){
         {message&&<p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}
         {error&&<p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
         <div className="mt-4 flex justify-center gap-4 text-sm"><a href="/admin/login" className="font-semibold text-cyan-800">Ir a iniciar sesión</a><a href="/" className="font-semibold text-slate-600">Salir de la activación</a></div>
+        <button type="button" onClick={()=>{sessionStorage.removeItem(STORAGE_KEY);localStorage.removeItem(STORAGE_KEY);sessionStorage.removeItem(RESUME_KEY);localStorage.removeItem(RESUME_KEY);setCode('');setContext(null);setAccount(null);setError('');setConfirmed(false)}} className="mt-3 w-full text-sm font-semibold text-slate-600">Limpiar código y empezar de nuevo</button>
       </div>
     </section>
   </main>
