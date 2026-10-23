@@ -79,7 +79,7 @@ export default function KawMedClaim(){
           {context.sponsored?<div className="mt-3"><p className="text-[11px] font-black uppercase tracking-[.1em] text-cyan-700">Programa patrocinado</p><p className="mt-1 text-sm font-bold">{context.sponsor_name}</p><p className="mt-1 text-xs text-slate-500">{context.program_name}</p><p className="mt-3 text-xs leading-5 text-slate-500">El patrocinio se mostrará únicamente dentro de tu entorno profesional autenticado. Tus pacientes no verán al patrocinador en tu perfil público.</p></div>:<p className="mt-3 text-sm text-slate-500">Acceso KawMed independiente, sin patrocinador asociado.</p>}
           {context.status==='claimed'&&<div className="mt-3">
             {account?.reason==='already_owned'?<a href="/admin/medical" className="block rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white">Entrar a mi KawMed</a>:<p className="text-sm text-amber-800">Este código ya fue utilizado. Si lo activaste, inicia sesión con el correo titular para entrar a tu KawMed. No debes volver a activarlo.</p>}
-            <a href={'/admin/login?resume=kawmed&med_code='+encodeURIComponent(code)} onClick={()=>{sessionStorage.setItem(RESUME_KEY,'1');sessionStorage.setItem(STORAGE_KEY,code)}} className="mt-3 block rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-bold">Iniciar sesión con el correo titular</a>
+            <a href={'/admin/login?resume=kawmed&med_code='+encodeURIComponent(code)} onClick={()=>{sessionStorage.setItem(RESUME_KEY,'1');localStorage.setItem(RESUME_KEY,'1');sessionStorage.setItem(STORAGE_KEY,code)}} className="mt-3 block rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-bold">Iniciar sesión con el correo titular</a>
           </div>}
           {context.status==='available'&&<>
             {!account&&<p className="mt-4 text-sm text-amber-800">Antes de activar, inicia sesión con el correo que utilizarás exclusivamente para KawMed.</p>}
@@ -97,7 +97,7 @@ export default function KawMedClaim(){
 
         {message&&<p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p>}
         {error&&<p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</p>}
-        <div className="mt-4 flex justify-center gap-4 text-sm"><a href="/admin/login" className="font-semibold text-cyan-800">Ir a iniciar sesión</a><a href="/" className="font-semibold text-slate-600">Salir de la activación</a></div>
+        <div className="mt-4 flex justify-center gap-4 text-sm"><a href="/admin/login" onClick={()=>{sessionStorage.removeItem(RESUME_KEY);localStorage.removeItem(RESUME_KEY)}} className="font-semibold text-cyan-800">Ir a iniciar sesión</a><a href="/" onClick={()=>{sessionStorage.removeItem(RESUME_KEY);localStorage.removeItem(RESUME_KEY)}} className="font-semibold text-slate-600">Salir de la activación</a></div>
         <button type="button" onClick={()=>{sessionStorage.removeItem(STORAGE_KEY);localStorage.removeItem(STORAGE_KEY);sessionStorage.removeItem(RESUME_KEY);localStorage.removeItem(RESUME_KEY);setCode('');setContext(null);setAccount(null);setError('');setConfirmed(false)}} className="mt-3 w-full text-sm font-semibold text-slate-600">Limpiar código y empezar de nuevo</button>
       </div>
     </section>
