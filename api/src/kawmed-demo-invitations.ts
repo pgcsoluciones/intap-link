@@ -87,6 +87,14 @@ app.patch('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
    if(!Array.isArray(policy.accepted)||!Array.isArray(policy.excluded)||policy.accepted.length>50||policy.excluded.length>50)return c.json({ok:false,error:'Seguros de demostración inválidos.'},422)
    existing.insurance_policy={accepted:policy.accepted.map((x:any)=>({insurance_name:String(x.insurance_name||'').slice(0,120)})),excluded:policy.excluded.map((x:any)=>({insurance_name:String(x.insurance_name||'').slice(0,120)}))}
  }
+ if(b.sponsor_demo!==undefined){
+   if(existing.demo_mode!=='sponsored'||!existing.sponsor_demo)return c.json({ok:false,error:'Esta demo no tiene patrocinio.'},403)
+   const values=b.sponsor_demo||{}
+   for(const key of ['cta_label','vademecum_label']){
+     if(values[key]!==undefined){if(typeof values[key]!=='string')return c.json({ok:false,error:'Valor de patrocinio inválido.'},422);existing.sponsor_demo[key]=values[key].slice(0,120)}
+   }
+   // Sponsor ownership, target URLs and legal associations are immutable even in demo.
+ }
  if(b.demo_agenda!==undefined){
    const agenda=b.demo_agenda
    if(!agenda||!Array.isArray(agenda.requests)||!Array.isArray(agenda.blocked_dates)||agenda.requests.length>30||agenda.blocked_dates.length>90)return c.json({ok:false,error:'Agenda de demostración inválida.'},422)
