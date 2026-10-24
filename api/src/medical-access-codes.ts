@@ -1,7 +1,7 @@
 import app from './index'
 import { requireSuperAdmin } from './lib/admin-auth'
 import { cookieNames } from './lib/cookies'
-import { SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL, resolveSponsorMembership, setSponsorContext } from './sponsored-multiprofile-access'
+import { SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL, resolveSponsorMembership, setSponsorContext, setMedicalContextCookie } from './sponsored-multiprofile-access'
 
 function clean(value:unknown,max=500){return String(value??'').trim().slice(0,max)}
 function safeUrl(value:unknown){const raw=clean(value,1200);if(!raw)return'';try{const u=new URL(raw);return u.protocol==='https:'||u.protocol==='http:'?u.toString():''}catch{return''}}
@@ -260,9 +260,9 @@ app.get('/api/v1/me/kawmed/claim-check/:code',requireUser,async(c:any)=>{
   const existingLink=Boolean(link||sponsored)
   const codeOwned=String((codeRow as any).status)==='claimed'&&String((codeRow as any).claimed_by_user_id||'')===userId
   const reason=String((codeRow as any).status)!=='available'?(codeOwned?'already_owned':'code_unavailable'):
-    med||medCode?'already_med':
+    !special&&(med||medCode)?'already_med':
     existingLink&&!special?'existing_link':'ready'
-  return c.json({ok:true,data:{email,authenticated:true,existing_link:existingLink,special_multiaccount:special,can_activate:reason==='ready',reason,code_status:String((codeRow as any).status),next_url:codeOwned?'/admin/medical':null}})
+  return c.json({ok:true,data:{email,authenticated:true,existing_link:existingLink,special_multiaccount:special,can_activate:reason==='ready',reason,code_status:String((codeRow as any).status),next_url:codeOwned?(special?'/admin/accounts':'/admin/medical'):null}})
 })
 
 app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
@@ -278,7 +278,7 @@ app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
     if(existing||sponsored)return c.json({ok:false,error:'Este correo ya tiene una cuenta Kawvo Link registrada. Para evitar conflictos, utiliza otro correo para KawMed.',code:'kawmed_existing_link_account'},409)
   }
   const prior=await c.env.DB.prepare("SELECT code,medical_profile_id FROM medical_access_codes WHERE claimed_by_user_id=? AND status='claimed' LIMIT 1").bind(userId).first()
-  if(prior)return c.json({ok:false,error:'Esta cuenta ya activó un acceso KawMed.',code:'kawmed_already_claimed',medical_profile_id:String((prior as any).medical_profile_id||'')},409)
+  if(prior&&checkEmail!==SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL)return c.json({ok:false,error:'Esta cuenta ya activó un acceso KawMed.',code:'kawmed_already_claimed',medical_profile_id:String((prior as any).medical_profile_id||'')},409)
   const access=await c.env.DB.prepare(`SELECT mac.*,p.sponsor_id,p.vademecum_url,p.vademecum_label,p.enabled AS program_enabled,st.is_active AS sponsor_active
     FROM medical_access_codes mac
     LEFT JOIN medical_sponsor_programs p ON p.id=mac.program_id
@@ -292,7 +292,7 @@ app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
   }
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const email=String((user as any)?.email||'').trim().toLowerCase()
-  let profile=await c.env.DB.prepare('SELECT id,slug FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first()
+  let profile=checkEmail===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL?null:await c.env.DB.prepare('SELECT id,slug FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first()
   let profileId=String((profile as any)?.id||''),profileSlug=String((profile as any)?.slug||''),created=false
   if(!profileId){
     profileId=crypto.randomUUID();profileSlug=await uniqueMedicalSlug(c,email||'medico')
@@ -313,6 +313,7 @@ app.post('/api/v1/me/kawmed/claim',requireUser,async(c:any)=>{
         profileId,sponsorId,String((access as any).program_id||''),String((access as any).vademecum_url||''),String((access as any).vademecum_label||'Ver vademécum')
       ).run()
   }
+  if(checkEmail===SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL)setMedicalContextCookie(c,profileId)
   return c.json({ok:true,data:{medical_profile_id:profileId,slug:profileSlug,sponsored:Boolean(sponsorId),next_url:'/admin/medical'}},201)
 })
 
