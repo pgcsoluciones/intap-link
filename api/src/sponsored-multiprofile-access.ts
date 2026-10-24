@@ -85,7 +85,7 @@ export async function setSponsorContext(c:any,userId:string,sponsorId:string){
 const MEDICAL_CONTEXT_COOKIE='kawvo_selected_medical_profile'
 export function selectedMedicalContextId(c:any){
   const header=String(c.req.header('Cookie')||'')
-  const match=header.match(/(?:^|;\\s*)kawvo_selected_medical_profile=([^;]*)/)
+  const match=header.match(/(?:^|;\s*)kawvo_selected_medical_profile=([^;]*)/)
   const id=match?decodeURIComponent(match[1]):''
   return /^[a-f0-9-]{36}$/i.test(id)?id:''
 }
