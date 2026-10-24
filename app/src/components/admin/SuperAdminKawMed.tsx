@@ -315,6 +315,7 @@ export default function SuperAdminKawMed(){
             <MedPagination page={generatedPage} total={generated.length} label="códigos creados" onChange={setGeneratedPage}/>
           </div>}
         </div>}
+        </div>
       </section>
 
       <section className={card}><h2 className="text-xl font-black">Programas patrocinados KawMed</h2><div className="mt-4 grid gap-3 lg:grid-cols-2">{programs.map(p=><button key={p.id} onClick={()=>setSelected({...p})} className={'rounded-2xl border p-4 text-left '+(selected?.id===p.id?'border-cyan-400 bg-cyan-50':'border-slate-200 bg-white')}><div className="flex items-start justify-between gap-3"><div><p className="font-black">{p.name}</p><p className="mt-1 text-xs text-slate-500">{p.sponsor_name}</p></div><span className={'rounded-full px-2 py-1 text-[11px] font-black '+(p.enabled!==0?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500')}>{p.enabled!==0?'Activo':'Inactivo'}</span></div><p className="mt-3 text-xs text-slate-500">{Number(p.codes_claimed||0)} activados de {Number(p.codes_total||0)} códigos</p></button>)}</div>
