@@ -17,7 +17,7 @@ run git pull --ff-only "$REMOTE" "$BRANCH"
 run git diff --check "$REMOTE/main...HEAD"
 for p in $(git diff --name-only "$REMOTE/main...HEAD"); do
  case "$p" in
-  api/migrations/0151_kawmed_demo_invitations.sql|api/src/kawmed-demo-invitations.ts|api/src/preview-free-entry.ts|app/src/App.tsx|app/src/components/admin/medical/KawMedDemoGuest.tsx|app/src/components/admin/AdminLogin.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/SuperAdminKawMed.tsx|scripts/test-kawmed-demo-invitations-contract.mjs|.github/workflows/quality.yml|scripts/prepare-kawmed-demo-2026-10-23.sh) ;;
+  api/migrations/0151_kawmed_demo_invitations.sql|api/src/kawmed-demo-invitations.ts|api/src/preview-free-entry.ts|app/src/App.tsx|app/src/components/admin/medical/KawMedDemoGuest.tsx|app/src/components/admin/AdminLogin.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/SuperAdminKawMed.tsx|scripts/test-kawmed-demo-invitations-contract.mjs|.github/workflows/quality.yml|scripts/prepare-kawmed-demo-2026-10-23.sh|scripts/deploy-kawmed-demo-invitations-2026-10-23.sh) ;;
   *) fail "Archivo fuera de alcance: $p" ;;
  esac
 done
