@@ -1,6 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
-import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess, setMedicalContextCookie } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -31,6 +31,10 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   // whenever this user also owns a standard public profile (including the multiaccount operator).
   const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(userId).first()
   const email=String((user as any)?.email||'').trim().toLowerCase()
+  if(email==='intapcard@gmail.com'){
+    // El login sin un código de activación explícito siempre muestra todas las cuentas.
+    return c.json({ok:true,data:{kind:'multiaccount',route:'/admin/accounts'}})
+  }
   if(email!=='intapcard@gmail.com'){
     const [medicalProfile,medicalMaster]=await Promise.all([
       c.env.DB.prepare('SELECT id,slug FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first().catch(()=>null),
@@ -118,6 +122,50 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   }
 
   return c.json({ok:true,data:{kind:'none',route:'/admin/free/onboarding/welcome'}})
+})
+
+/** Directorio de cuentas del operador especial; nunca aceptar un user_id del cliente. */
+app.get('/api/v1/me/intapcard/accounts',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
+  const [doctors,beneficiaries,sponsors,free,trials]=await Promise.all([
+    c.env.DB.prepare(`SELECT mp.id,mp.name,mp.slug,mp.status,
+      (SELECT mac.code FROM medical_access_codes mac WHERE mac.medical_profile_id=mp.id AND mac.claimed_by_user_id=? AND mac.status='claimed' LIMIT 1) AS med_code,
+      (SELECT st.name FROM medical_profile_sponsors mps JOIN sponsor_tenants st ON st.id=mps.sponsor_id WHERE mps.medical_profile_id=mp.id AND mps.enabled=1 LIMIT 1) AS sponsor_name
+      FROM medical_profiles mp WHERE mp.user_id=? ORDER BY mp.created_at DESC`).bind(userId,userId).all(),
+    c.env.DB.prepare(`SELECT sp.id,sp.business_name,sp.username,sp.status,st.name AS sponsor_name
+      FROM sponsored_profiles sp LEFT JOIN sponsor_tenants st ON st.id=sp.sponsor_id
+      WHERE sp.user_id=? AND COALESCE(sp.profile_role,'beneficiary')='beneficiary' ORDER BY sp.created_at DESC`).bind(userId).all(),
+    c.env.DB.prepare(`SELECT sm.sponsor_id,st.name,sm.role,
+      EXISTS(SELECT 1 FROM sponsored_profiles sp WHERE sp.sponsor_id=st.id AND sp.user_id=? AND sp.profile_role='sponsor_owner') AS normal_master,
+      EXISTS(SELECT 1 FROM medical_sponsor_masters msm WHERE msm.sponsor_id=st.id AND msm.claimed_by_user_id=? AND msm.status='claimed') AS medical_master
+      FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id
+      WHERE sm.user_id=? AND sm.status='active' AND st.is_active=1 ORDER BY st.name`).bind(userId,userId,userId).all(),
+    c.env.DB.prepare('SELECT id,name,slug,plan_id FROM profiles WHERE user_id=? ORDER BY created_at DESC').bind(userId).all(),
+    c.env.DB.prepare('SELECT id,name,slug,status FROM trial_profiles WHERE owner_user_id=? ORDER BY created_at DESC').bind(userId).all()
+  ])
+  const items:any[]=[]
+  for(const p of doctors.results||[])items.push({id:p.id,kind:'medical',title:p.name||p.slug||'KawMed',detail:p.med_code||p.slug||'',sponsor:p.sponsor_name||'',status:p.status})
+  for(const p of beneficiaries.results||[])items.push({id:p.id,kind:'sponsored',title:p.business_name||p.username||'Perfil patrocinado',detail:p.username||'',sponsor:p.sponsor_name||'',status:p.status})
+  for(const p of sponsors.results||[]){
+    if(Number(p.normal_master))items.push({id:p.sponsor_id,kind:'sponsor',title:p.name,detail:'Master Kawvo Link'})
+    if(Number(p.medical_master))items.push({id:p.sponsor_id,kind:'medical_master',title:p.name,detail:'Master KawMed'})
+  }
+  for(const p of free.results||[])items.push({id:p.id,kind:'free',title:p.name||p.slug||'Free',detail:p.slug||'',status:p.plan_id})
+  for(const p of trials.results||[])items.push({id:p.id,kind:'trial',title:p.name||p.slug||'Trial',detail:p.slug||'',status:p.status})
+  return c.json({ok:true,data:{items}})
+})
+
+app.post('/api/v1/me/intapcard/medical-context',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
+  const body=await c.req.json().catch(()=>({}))
+  const profileId=String(body.profile_id||'')
+  if(!/^[a-f0-9-]{36}$/i.test(profileId))return c.json({ok:false,error:'Perfil inválido.'},422)
+  const profile=await c.env.DB.prepare('SELECT id FROM medical_profiles WHERE id=? AND user_id=? LIMIT 1').bind(profileId,userId).first()
+  if(!profile)return c.json({ok:false,error:'Este perfil no pertenece a la cuenta.'},403)
+  setMedicalContextCookie(c,profileId)
+  return c.json({ok:true,data:{route:'/admin/medical'}})
 })
 
 export default app
