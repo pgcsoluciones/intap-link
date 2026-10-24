@@ -1,7 +1,7 @@
 import app from './index'
 import { sendWebPushToUser } from './pwa-push'
 import { cookieNames } from './lib/cookies'
-import { resolveSponsorMembership } from './sponsored-multiprofile-access'
+import { resolveSponsorMembership, resolveOwnedMedicalContext, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 import {
   availableAppointmentSlots,
   changeAppointmentRequestStatus,
@@ -181,9 +181,8 @@ async function ownedSubject(c:any){
   const userId=String(c.get('userId')||'')
   let profile=medicalOwnerScope(c)==='sponsor_master'
     ?await sponsorMasterMedicalProfile(c,userId)
-    :await c.env.DB.prepare(`SELECT id,user_id,slug,name,professional_prefix,specialty,whatsapp,phone,status
-      FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1`).bind(userId).first()
-  if(!profile&&medicalOwnerScope(c)!=='sponsor_master')profile=await sponsorMasterMedicalProfile(c,userId)
+    :await resolveOwnedMedicalContext(c,userId)
+  if(!profile&&medicalOwnerScope(c)!=='sponsor_master'&&!(await sponsoredMultiProfileAccess(c,userId)))profile=await sponsorMasterMedicalProfile(c,userId)
   if(!profile)return null
   const subjectId=String((profile as any).id||'')
   await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)

@@ -77,3 +77,31 @@ export async function setSponsorContext(c:any,userId:string,sponsorId:string){
   `).bind(userId,sponsorId).run()
   return true
 }
+
+/**
+ * Contexto KawMed separado del contexto de sponsor. La cookie nunca concede
+ * acceso: cada lectura valida el user_id del perfil solicitado en D1.
+ */
+const MEDICAL_CONTEXT_COOKIE='kawvo_selected_medical_profile'
+export function selectedMedicalContextId(c:any){
+  const header=String(c.req.header('Cookie')||'')
+  const match=header.match(/(?:^|;\s*)kawvo_selected_medical_profile=([^;]*)/)
+  const id=match?decodeURIComponent(match[1]):''
+  return /^[a-f0-9-]{36}$/i.test(id)?id:''
+}
+export function setMedicalContextCookie(c:any,profileId:string){
+  c.header('Set-Cookie',MEDICAL_CONTEXT_COOKIE+'='+encodeURIComponent(profileId)+'; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax',{append:true})
+}
+export async function resolveOwnedMedicalContext(c:any,userId:string){
+  if(!userId)return null
+  if(await sponsoredMultiProfileAccess(c,userId)){
+    const id=selectedMedicalContextId(c)
+    if(id){
+      return c.env.DB.prepare('SELECT * FROM medical_profiles WHERE id=? AND user_id=? LIMIT 1').bind(id,userId).first()
+    }
+    // No asignar silenciosamente el primero cuando hay varias cuentas.
+    const rows=await c.env.DB.prepare('SELECT id FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 2').bind(userId).all()
+    if((rows.results||[]).length>1)return null
+  }
+  return c.env.DB.prepare('SELECT * FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first()
+}

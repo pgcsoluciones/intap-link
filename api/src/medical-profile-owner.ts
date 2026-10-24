@@ -1,6 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
-import { resolveSponsorMembership } from './sponsored-multiprofile-access'
+import { resolveSponsorMembership, resolveOwnedMedicalContext } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+escaped+'=([^;]*)'));return match?decodeURIComponent(match[1]):null}
@@ -41,7 +41,7 @@ async function ensureSponsorMasterProfile(c:any,userId:string){
 async function owned(c:any){
   const userId=String(c.get('userId')||'')
   if(ownerScope(c)==='sponsor_master')return ensureSponsorMasterProfile(c,userId)
-  const profile=await c.env.DB.prepare("SELECT * FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1").bind(userId).first()
+  const profile=await resolveOwnedMedicalContext(c,userId)
   return profile?{userId,profile,scope:'doctor'}:null
 }
 async function full(c:any,profile:any){
