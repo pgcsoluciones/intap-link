@@ -98,7 +98,11 @@ export default function SuperAdminKawMed(){
     if(s?.ok)setSponsors(Array.isArray(s.data)?s.data:[])
     if(p?.ok)setPrograms(Array.isArray(p.data)?p.data:[])
     if(c?.ok)setCodes(Array.isArray(c.data)?c.data:[])
-    if(m?.ok)setProfiles(Array.isArray(m.data)?m.data:[])
+    if(m?.ok){
+      const rows:Profile[]=Array.isArray(m.data)?m.data:[]
+      setProfiles(rows)
+      setDemoProfileId(current=>rows.some(row=>row.id===current&&String(row.email||'').trim().toLowerCase()==='intapcard@gmail.com')?current:'')
+    }
   }
   useEffect(()=>{void load()},[])
   useEffect(()=>()=>{if(sponsorLogoPreview.startsWith('blob:'))URL.revokeObjectURL(sponsorLogoPreview)},[sponsorLogoPreview])
@@ -119,6 +123,9 @@ export default function SuperAdminKawMed(){
   }),[codes,query,status])
   const sponsoredCodes=useMemo(()=>filtered.filter(row=>Boolean(row.program_id)),[filtered])
   const independentCodes=useMemo(()=>filtered.filter(row=>!row.program_id),[filtered])
+  // El correo proviene de users.email (propietario del perfil), no del correo público del médico.
+  // El backend mantiene además la misma restricción al crear cada invitación.
+  const demoEligibleProfiles=useMemo(()=>profiles.filter(row=>String(row.email||'').trim().toLowerCase()==='intapcard@gmail.com'),[profiles])
 
   const notify=(ok:string,fail='')=>{setMessage(ok);setError(fail)}
   function chooseImage(file:File|undefined,kind:PendingImageKind){
@@ -269,7 +276,7 @@ export default function SuperAdminKawMed(){
         <h2 className="text-xl font-black">Invitación Demo KawMed</h2>
         <p className="mt-2 text-sm text-slate-600">Invita a un médico a explorar una copia privada y editable de un perfil de demostración propiedad de Intapcard. Su correo debe coincidir con el de la invitación; no podrá administrar credenciales, publicar ni modificar el original.</p>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <label className={label}>Perfil de demostración<select className={input} value={demoProfileId} onChange={e=>setDemoProfileId(e.target.value)}><option value="">Selecciona un perfil</option>{profiles.map(row=><option key={row.id} value={row.id}>{row.name} · {row.slug}</option>)}</select></label>
+          <label className={label}>Perfil de demostración<select className={input} value={demoProfileId} onChange={e=>setDemoProfileId(e.target.value)} disabled={!demoEligibleProfiles.length}><option value="">{demoEligibleProfiles.length?'Selecciona un perfil':'No hay perfiles de Intapcard disponibles'}</option>{demoEligibleProfiles.map(row=><option key={row.id} value={row.id}>{row.name} · {row.slug}</option>)}</select><span className="mt-1 block text-xs normal-case font-medium tracking-normal text-slate-500">Solo perfiles médicos cuyo propietario es intapcard@gmail.com (independientes o patrocinados).</span></label>
           <label className={label}>Correo del invitado<input className={input} type="email" value={demoEmail} onChange={e=>setDemoEmail(e.target.value)}/></label>
           <label className={label}>Vigencia<select className={input} value={demoHours} onChange={e=>setDemoHours(Number(e.target.value))}><option value={24}>24 horas</option><option value={72}>72 horas</option><option value={168}>7 días</option></select></label>
         </div>
