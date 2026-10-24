@@ -6,7 +6,7 @@ import SuperAdminLayout from './SuperAdminLayout'
 
 type Sponsor={id:string;name:string;logo_url?:string}
 type Program={id:string;sponsor_id:string;sponsor_name:string;name:string;private_banner_image_url?:string;private_cta_label?:string;private_cta_url?:string;vademecum_url?:string;vademecum_label?:string;representative_cta_label?:string;representative_message_template?:string;notes?:string;enabled?:number;codes_total?:number;codes_claimed?:number}
-type Code={id:string;code:string;status:string;station_number?:number;batch_name?:string;program_name?:string;sponsor_name?:string;claimed_email?:string;medical_name?:string;medical_slug?:string;medical_specialty?:string;medical_phone?:string;medical_email?:string;representative_name?:string;representative_zone?:string;created_at?:string;claimed_at?:string}
+type Code={id:string;code:string;status:string;program_id?:string|null;station_number?:number;batch_name?:string;program_name?:string;sponsor_name?:string;claimed_email?:string;medical_name?:string;medical_slug?:string;medical_specialty?:string;medical_phone?:string;medical_email?:string;representative_name?:string;representative_zone?:string;created_at?:string;claimed_at?:string}
 type Profile={id:string;slug:string;name:string;professional_prefix?:string;specialty?:string;status:string;email?:string;code?:string;program_name?:string;sponsor_name?:string;claimed_at?:string}
 type Generated={code:string;claim_url:string}
 type MedicalMaster={master_code:string;status:string;claim_url:string;claimed_email?:string;claimed_at?:string;already_exists?:boolean}
@@ -16,6 +16,44 @@ type PendingImage={file:File;kind:PendingImageKind}|null
 const card='rounded-[24px] border border-slate-200 bg-white p-5'
 const label='block text-[11px] font-black uppercase tracking-[.08em] text-slate-500'
 const input='mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'
+
+const MED_PAGE_SIZE=7
+type MedGroup='sponsored'|'independent'
+
+function MedPagination({page,total,onChange,label:pageLabel}:{page:number;total:number;onChange:(value:number)=>void;label:string}){
+  const pageCount=Math.max(1,Math.ceil(total/MED_PAGE_SIZE))
+  const current=Math.min(Math.max(1,page),pageCount)
+  const first=total===0?0:(current-1)*MED_PAGE_SIZE+1
+  const last=Math.min(current*MED_PAGE_SIZE,total)
+  return <nav aria-label={'Paginación de '+pageLabel} className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-600">
+    <span>{first}–{last} de {total} códigos · Página {current} de {pageCount}</span>
+    <div className="flex items-center gap-2">
+      <button type="button" disabled={current===1} onClick={()=>onChange(current-1)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40">Anterior</button>
+      <button type="button" disabled={current===pageCount} onClick={()=>onChange(current+1)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40">Siguiente</button>
+    </div>
+  </nav>
+}
+
+function MedCodesAccordion({group,title,rows,page,onPageChange,expanded,onToggle,busy,toggleCode,copyCodeClaimUrl,medicalClaimUrl}:{
+  group:MedGroup;title:string;rows:Code[];page:number;onPageChange:(value:number)=>void;expanded:boolean;onToggle:()=>void;busy:boolean;
+  toggleCode:(row:Code)=>Promise<void>;copyCodeClaimUrl:(row:Code)=>Promise<void>;medicalClaimUrl:(code:string)=>string
+}){
+  const pageCount=Math.max(1,Math.ceil(rows.length/MED_PAGE_SIZE))
+  const current=Math.min(Math.max(1,page),pageCount)
+  const visible=rows.slice((current-1)*MED_PAGE_SIZE,current*MED_PAGE_SIZE)
+  const panelId='kawmed-codes-'+group
+  return <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <button type="button" aria-expanded={expanded} aria-controls={panelId} onClick={onToggle} className="flex w-full items-center justify-between gap-3 bg-slate-50 px-4 py-4 text-left hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-600">
+      <span className="flex flex-wrap items-center gap-3"><span className="font-black text-slate-900">{title}</span><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-black text-cyan-800">{rows.length}</span></span>
+      <span aria-hidden="true" className="text-lg text-slate-500">{expanded?'▴':'▾'}</span>
+    </button>
+    {expanded&&<div id={panelId} className="border-t border-slate-200 p-3">
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-slate-200"><table className="w-full min-w-[980px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr><th className="p-3">Est.</th><th className="p-3">Código</th><th className="p-3">Estado</th><th className="p-3">Lote</th><th className="p-3">Programa / patrocinador</th><th className="p-3">Médico</th><th className="p-3">Cuenta</th><th className="p-3">Enlace</th><th className="p-3">Control</th></tr></thead><tbody>{visible.map(row=><tr key={row.code} className="border-t border-slate-100"><td className="p-3 text-base font-black">{row.station_number?String(row.station_number).padStart(3,'0'):'—'}</td><td className="p-3 font-mono font-black">{row.code}</td><td className="p-3"><span className={'rounded-full px-2 py-1 font-black '+(row.status==='claimed'?'bg-emerald-50 text-emerald-700':row.status==='inactive'?'bg-rose-50 text-rose-700':'bg-amber-50 text-amber-700')}>{row.status==='claimed'?'Activado':row.status==='inactive'?'Inactivo':'Disponible'}</span></td><td className="p-3">{row.batch_name||'—'}</td><td className="p-3"><div className="font-bold">{row.program_name||'Independiente'}</div><div className="mt-1 text-slate-400">{row.sponsor_name||'Sin patrocinador'}</div></td><td className="p-3">{row.medical_name?<><div className="font-bold">{row.medical_name}</div><div className="mt-1 text-slate-400">{row.medical_specialty||'—'} · /m/{row.medical_slug}</div><div className="mt-1 text-slate-400">{row.medical_phone||'—'}</div></>:'—'}</td><td className="p-3">{row.medical_email||row.claimed_email||'—'}</td><td className="p-3">{row.status==='available'?<div className="flex flex-col items-start gap-2"><button type="button" onClick={()=>void copyCodeClaimUrl(row)} className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 font-black text-cyan-800">Copiar enlace</button><a href={medicalClaimUrl(row.code)} target="_blank" rel="noopener noreferrer" className="font-semibold text-cyan-700 underline">Abrir activación</a></div>:row.status==='claimed'&&row.medical_slug?<a href={window.location.origin.replace('app.preview.','preview.').replace('app.','')+'/m/'+encodeURIComponent(row.medical_slug)} target="_blank" rel="noopener noreferrer" className="font-semibold text-cyan-700 underline">Ver perfil</a>:<span className="text-slate-400">{row.status==='inactive'?'Código inactivo':'—'}</span>}</td><td className="p-3">{row.status!=='claimed'?<button disabled={busy} onClick={()=>void toggleCode(row)} className="rounded-lg border border-slate-200 px-3 py-2 font-black">{row.status==='inactive'?'Reactivar':'Desactivar'}</button>:<span className="text-slate-400">Uso consumido</span>}</td></tr>)}{!rows.length&&<tr><td colSpan={9} className="p-6 text-center text-slate-400">No hay códigos que coincidan.</td></tr>}</tbody></table></div>
+      <MedPagination page={current} total={rows.length} label={title} onChange={onPageChange}/>
+    </div>}
+  </div>
+}
+
 
 export default function SuperAdminKawMed(){
   const sponsorLogoRef=useRef<HTMLInputElement>(null)
@@ -37,6 +75,10 @@ export default function SuperAdminKawMed(){
   const[generated,setGenerated]=useState<Generated[]>([])
   const[query,setQuery]=useState('')
   const[status,setStatus]=useState('all')
+  const[medOpen,setMedOpen]=useState<Record<MedGroup,boolean>>({sponsored:true,independent:false})
+  const[medPages,setMedPages]=useState<Record<MedGroup,number>>({sponsored:1,independent:1})
+  const[generatedExpanded,setGeneratedExpanded]=useState(true)
+  const[generatedPage,setGeneratedPage]=useState(1)
   const[create,setCreate]=useState({sponsor_id:'',name:'',private_banner_image_url:'',private_cta_label:'Conocer más',private_cta_url:'',vademecum_url:'',vademecum_label:'Ver vademécum',representative_cta_label:'Mi visitador',representative_message_template:'Hola {visitador}, soy {medico}. Te contacto desde mi panel KawMed y necesito información de {patrocinador}.',notes:''})
   const[batch,setBatch]=useState({program_id:'',name:'',quantity:10,notes:''})
   const[masterSponsorId,setMasterSponsorId]=useState('')
@@ -75,6 +117,8 @@ export default function SuperAdminKawMed(){
     if(!q)return true
     return [row.code,row.batch_name,row.program_name,row.sponsor_name,row.claimed_email,row.medical_name,row.medical_slug].some(v=>String(v||'').toLowerCase().includes(q))
   }),[codes,query,status])
+  const sponsoredCodes=useMemo(()=>filtered.filter(row=>Boolean(row.program_id)),[filtered])
+  const independentCodes=useMemo(()=>filtered.filter(row=>!row.program_id),[filtered])
 
   const notify=(ok:string,fail='')=>{setMessage(ok);setError(fail)}
   function chooseImage(file:File|undefined,kind:PendingImageKind){
@@ -165,7 +209,7 @@ export default function SuperAdminKawMed(){
     }catch(e){notify('',e instanceof Error?e.message:'No se pudo guardar.')}finally{setBusy(false)}
   }
   async function generateBatch(){
-    setBusy(true);setGenerated([]);notify('')
+    setBusy(true);setGenerated([]);setGeneratedPage(1);setGeneratedExpanded(true);notify('')
     try{
       const j:any=await apiPost('/superadmin/kawmed/batches',batch)
       if(!j?.ok)throw new Error(j?.error||'No se pudo generar el lote.')
@@ -258,13 +302,37 @@ export default function SuperAdminKawMed(){
           <label className={label}>Cantidad<input className={input} type="number" min={1} max={500} value={batch.quantity} onChange={e=>setBatch({...batch,quantity:Math.max(1,Math.min(500,Number(e.target.value)||1))})}/></label>
           <label className={label}>Notas<textarea className={input} value={batch.notes} onChange={e=>setBatch({...batch,notes:e.target.value})}/></label>
         </div><button onClick={()=>void generateBatch()} disabled={busy||batch.quantity<1} className="mt-4 rounded-xl bg-cyan-700 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Generar {batch.quantity} código{batch.quantity===1?'':'s'} MED</button>
-        {generated.length>0&&<div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex items-center justify-between gap-3"><div><p className="font-black text-emerald-900">Lote listo</p><p className="text-xs text-emerald-700">Cada código es único y de un solo uso.</p></div><button onClick={()=>void copyGenerated()} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-emerald-800">Copiar listado</button></div><div className="mt-3 max-h-64 overflow-auto rounded-xl bg-white">{generated.map(r=><div key={r.code} className="border-b border-slate-100 p-3 last:border-0"><strong className="font-mono text-base">{r.code}</strong><div className="mt-1 break-all text-xs text-slate-500">{r.claim_url}</div></div>)}</div></div>}</div>
+        {generated.length>0&&<div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button type="button" aria-expanded={generatedExpanded} aria-controls="kawmed-created-codes" onClick={()=>setGeneratedExpanded(value=>!value)} className="flex flex-1 items-center justify-between gap-3 rounded-lg text-left">
+              <span><span className="font-black text-emerald-900">Códigos creados ({generated.length})</span><span className="mt-1 block text-xs text-emerald-700">Lote listo · Cada código es único y de un solo uso.</span></span>
+              <span aria-hidden="true" className="text-lg text-emerald-800">{generatedExpanded?'▴':'▾'}</span>
+            </button>
+            <button type="button" onClick={()=>void copyGenerated()} className="rounded-xl bg-white px-3 py-2 text-xs font-black text-emerald-800">Copiar listado completo</button>
+          </div>
+          {generatedExpanded&&<div id="kawmed-created-codes">
+            <div className="mt-3 overflow-hidden rounded-xl bg-white">{generated.slice((Math.min(generatedPage,Math.max(1,Math.ceil(generated.length/MED_PAGE_SIZE)))-1)*MED_PAGE_SIZE,Math.min(generatedPage,Math.max(1,Math.ceil(generated.length/MED_PAGE_SIZE)))*MED_PAGE_SIZE).map(r=><div key={r.code} className="border-b border-slate-100 p-3 last:border-0"><strong className="font-mono text-base">{r.code}</strong><div className="mt-1 break-all text-xs text-slate-500">{r.claim_url}</div></div>)}</div>
+            <MedPagination page={generatedPage} total={generated.length} label="códigos creados" onChange={setGeneratedPage}/>
+          </div>}
+        </div>}
       </section>
 
       <section className={card}><h2 className="text-xl font-black">Programas patrocinados KawMed</h2><div className="mt-4 grid gap-3 lg:grid-cols-2">{programs.map(p=><button key={p.id} onClick={()=>setSelected({...p})} className={'rounded-2xl border p-4 text-left '+(selected?.id===p.id?'border-cyan-400 bg-cyan-50':'border-slate-200 bg-white')}><div className="flex items-start justify-between gap-3"><div><p className="font-black">{p.name}</p><p className="mt-1 text-xs text-slate-500">{p.sponsor_name}</p></div><span className={'rounded-full px-2 py-1 text-[11px] font-black '+(p.enabled!==0?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500')}>{p.enabled!==0?'Activo':'Inactivo'}</span></div><p className="mt-3 text-xs text-slate-500">{Number(p.codes_claimed||0)} activados de {Number(p.codes_total||0)} códigos</p></button>)}</div>
       {selected&&<div className="mt-5 grid gap-3 border-t border-slate-100 pt-5 md:grid-cols-2"><label className={label}>Nombre<input className={input} value={selected.name||''} onChange={e=>setSelected({...selected,name:e.target.value})}/></label><div><p className={label}>Cintillo privado</p><button type="button" onClick={()=>editBannerRef.current?.click()} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold">{selected.private_banner_image_url?'Cambiar cintillo':'Subir cintillo'}</button><input ref={editBannerRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const file=e.target.files?.[0];e.target.value='';chooseImage(file,'program-banner-edit')}}/>{selected.private_banner_image_url&&<img src={selected.private_banner_image_url} alt="Cintillo privado" className="mt-3 h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 object-cover"/>}<details className="mt-2"><summary className="cursor-pointer text-xs font-bold text-slate-500">Usar URL manual</summary><input className={input} value={selected.private_banner_image_url||''} onChange={e=>setSelected({...selected,private_banner_image_url:e.target.value})}/></details></div><label className={label}>CTA<input className={input} value={selected.private_cta_label||''} onChange={e=>setSelected({...selected,private_cta_label:e.target.value})}/></label><label className={label}>URL CTA<input className={input} value={selected.private_cta_url||''} onChange={e=>setSelected({...selected,private_cta_url:e.target.value})}/></label><label className={label}>Vademécum<input className={input} value={selected.vademecum_url||''} onChange={e=>setSelected({...selected,vademecum_url:e.target.value})}/></label><label className={label}>Texto vademécum<input className={input} value={selected.vademecum_label||''} onChange={e=>setSelected({...selected,vademecum_label:e.target.value})}/></label><label className={label}>CTA visitador<input className={input} value={selected.representative_cta_label||'Mi visitador'} onChange={e=>setSelected({...selected,representative_cta_label:e.target.value})}/></label><label className={label}>Mensaje WhatsApp<textarea className={input} value={selected.representative_message_template||''} onChange={e=>setSelected({...selected,representative_message_template:e.target.value})}/><span className="mt-1 block text-xs normal-case tracking-normal text-slate-500">Variables: {'{visitador}'} · {'{medico}'} · {'{patrocinador}'}</span></label><label className="flex items-center gap-2 text-sm font-bold md:col-span-2"><input type="checkbox" checked={selected.enabled!==0} onChange={e=>setSelected({...selected,enabled:e.target.checked?1:0})}/> Programa activo</label><div className="md:col-span-2"><button onClick={()=>void saveProgram()} disabled={busy} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Guardar programa</button></div></div>}</section>
 
-      <section className={card}><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black">Códigos MED</h2><p className="mt-1 text-sm text-slate-500">No comparten namespace ni flujo con productos, Demos Free, Trials o Perfil patrocinado.</p></div><div className="grid grid-cols-[1fr_150px] gap-2"><input className={input} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar código, médico, lote…"/><select className={input} value={status} onChange={e=>setStatus(e.target.value)}><option value="all">Todos</option><option value="available">Disponibles</option><option value="claimed">Activados</option><option value="inactive">Inactivos</option></select></div></div><div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200"><table className="w-full min-w-[980px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr><th className="p-3">Est.</th><th className="p-3">Código</th><th className="p-3">Estado</th><th className="p-3">Lote</th><th className="p-3">Programa / patrocinador</th><th className="p-3">Médico</th><th className="p-3">Cuenta</th><th className="p-3">Enlace</th><th className="p-3">Control</th></tr></thead><tbody>{filtered.map(row=><tr key={row.code} className="border-t border-slate-100"><td className="p-3 text-base font-black">{row.station_number?String(row.station_number).padStart(3,'0'):'—'}</td><td className="p-3 font-mono font-black">{row.code}</td><td className="p-3"><span className={'rounded-full px-2 py-1 font-black '+(row.status==='claimed'?'bg-emerald-50 text-emerald-700':row.status==='inactive'?'bg-rose-50 text-rose-700':'bg-amber-50 text-amber-700')}>{row.status==='claimed'?'Activado':row.status==='inactive'?'Inactivo':'Disponible'}</span></td><td className="p-3">{row.batch_name||'—'}</td><td className="p-3"><div className="font-bold">{row.program_name||'Independiente'}</div><div className="mt-1 text-slate-400">{row.sponsor_name||'Sin patrocinador'}</div></td><td className="p-3">{row.medical_name?<><div className="font-bold">{row.medical_name}</div><div className="mt-1 text-slate-400">{row.medical_specialty||'—'} · /m/{row.medical_slug}</div><div className="mt-1 text-slate-400">{row.medical_phone||'—'}</div></>:'—'}</td><td className="p-3">{row.medical_email||row.claimed_email||'—'}</td><td className="p-3">{row.status==='available'?<div className="flex flex-col items-start gap-2"><button type="button" onClick={()=>void copyCodeClaimUrl(row)} className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 font-black text-cyan-800">Copiar enlace</button><a href={medicalClaimUrl(row.code)} target="_blank" rel="noopener noreferrer" className="font-semibold text-cyan-700 underline">Abrir activación</a></div>:row.status==='claimed'&&row.medical_slug?<a href={window.location.origin.replace('app.preview.','preview.').replace('app.','')+'/m/'+encodeURIComponent(row.medical_slug)} target="_blank" rel="noopener noreferrer" className="font-semibold text-cyan-700 underline">Ver perfil</a>:<span className="text-slate-400">{row.status==='inactive'?'Código inactivo':'—'}</span>}</td><td className="p-3">{row.status!=='claimed'?<button disabled={busy} onClick={()=>void toggleCode(row)} className="rounded-lg border border-slate-200 px-3 py-2 font-black">{row.status==='inactive'?'Reactivar':'Desactivar'}</button>:<span className="text-slate-400">Uso consumido</span>}</td></tr>)}{!filtered.length&&<tr><td colSpan={9} className="p-6 text-center text-slate-400">No hay códigos que coincidan.</td></tr>}</tbody></table></div></section>
+      <section className={card}>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div><h2 className="text-xl font-black">Códigos MED</h2><p className="mt-1 text-sm text-slate-500">No comparten namespace ni flujo con productos, Demos Free, Trials o Perfil patrocinado.</p></div>
+          <div className="grid grid-cols-[1fr_150px] gap-2">
+            <input className={input} value={query} onChange={e=>{setQuery(e.target.value);setMedPages({sponsored:1,independent:1})}} placeholder="Buscar código, médico, lote…"/>
+            <select className={input} value={status} onChange={e=>{setStatus(e.target.value);setMedPages({sponsored:1,independent:1})}}><option value="all">Todos</option><option value="available">Disponibles</option><option value="claimed">Activados</option><option value="inactive">Inactivos</option></select>
+          </div>
+        </div>
+        <div className="mt-4 space-y-3">
+          <MedCodesAccordion group="sponsored" title="Códigos patrocinados" rows={sponsoredCodes} page={medPages.sponsored} onPageChange={value=>setMedPages(p=>({...p,sponsored:value}))} expanded={medOpen.sponsored} onToggle={()=>setMedOpen(p=>({...p,sponsored:!p.sponsored}))} busy={busy} toggleCode={toggleCode} copyCodeClaimUrl={copyCodeClaimUrl} medicalClaimUrl={medicalClaimUrl}/>
+          <MedCodesAccordion group="independent" title="Códigos independientes" rows={independentCodes} page={medPages.independent} onPageChange={value=>setMedPages(p=>({...p,independent:value}))} expanded={medOpen.independent} onToggle={()=>setMedOpen(p=>({...p,independent:!p.independent}))} busy={busy} toggleCode={toggleCode} copyCodeClaimUrl={copyCodeClaimUrl} medicalClaimUrl={medicalClaimUrl}/>
+        </div>
+      </section>
 
       <section className={card}><h2 className="text-xl font-black">Perfiles médicos</h2><div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200"><table className="w-full min-w-[900px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr><th className="p-3">Médico</th><th className="p-3">Especialidad</th><th className="p-3">Estado</th><th className="p-3">Código MED</th><th className="p-3">Programa</th><th className="p-3">Cuenta</th></tr></thead><tbody>{profiles.map(row=><tr key={row.id} className="border-t border-slate-100"><td className="p-3"><div className="font-bold">{[row.professional_prefix,row.name].filter(Boolean).join(' ')}</div><div className="mt-1 text-slate-400">/m/{row.slug}</div></td><td className="p-3">{row.specialty||'—'}</td><td className="p-3">{row.status}</td><td className="p-3 font-mono font-bold">{row.code||'—'}</td><td className="p-3"><div>{row.program_name||'Independiente'}</div><div className="mt-1 text-slate-400">{row.sponsor_name||''}</div></td><td className="p-3">{row.email||'—'}</td></tr>)}</tbody></table></div></section>
       {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='sponsor-logo'?1:3.2} outputWidth={pending.kind==='sponsor-logo'?1024:1600} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await saveCroppedImage(blob,kind)}} onCancel={()=>setPending(null)}/>}
