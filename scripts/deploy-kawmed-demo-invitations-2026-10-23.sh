@@ -16,7 +16,7 @@ run git pull --ff-only "$REMOTE" "$BRANCH"
 run git diff --check "$REMOTE/main...HEAD"
 for path in $(git diff --name-only "$REMOTE/main...HEAD"); do
   case "$path" in
-    .github/workflows/quality.yml|api/migrations/0151_kawmed_demo_invitations.sql|api/src/kawmed-demo-invitations.ts|api/src/preview-free-entry.ts|app/src/App.tsx|app/src/components/admin/AdminLogin.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/KawMedDemoGuest.tsx|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/deploy-kawmed-demo-invitations-2026-10-23.sh) ;;
+    .github/workflows/quality.yml|api/migrations/0151_kawmed_demo_invitations.sql|api/src/kawmed-demo-invitations.ts|api/src/preview-free-entry.ts|app/src/App.tsx|app/src/components/admin/AdminLogin.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/KawMedDemoGuest.tsx|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/deploy-kawmed-demo-invitations-2026-10-23.sh|scripts/prepare-kawmed-demo-2026-10-23.sh) ;;
     *) fail "Archivo fuera de alcance: $path" ;;
   esac
 done
