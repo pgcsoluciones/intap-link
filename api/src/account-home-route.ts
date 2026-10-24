@@ -1,6 +1,6 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
-import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess, setMedicalContextCookie } from './sponsored-multiprofile-access'
+import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess, setMedicalContextCookie, listSponsorAccounts, resolveSponsorMembership, setSponsorContext } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -122,6 +122,27 @@ app.get('/api/v1/me/home-route',requireUser,async(c:any)=>{
   }
 
   return c.json({ok:true,data:{kind:'none',route:'/admin/free/onboarding/welcome'}})
+})
+
+/**
+ * Contexto de patrocinador con verificación de membresía.
+ * Los selectores existentes ya consumen estas rutas.
+ */
+app.get('/api/v1/sponsor/accounts',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
+  const accounts=await listSponsorAccounts(c,userId)
+  const current=await resolveSponsorMembership(c,userId)
+  return c.json({ok:true,data:{accounts,current_sponsor_id:String((current as any)?.sponsor_id||'')}})
+})
+app.post('/api/v1/sponsor/context',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
+  const body=await c.req.json().catch(()=>({}))
+  const sponsorId=String(body.sponsor_id||'').trim()
+  if(!sponsorId||sponsorId.length>80)return c.json({ok:false,error:'Patrocinador inválido.'},422)
+  if(!(await setSponsorContext(c,userId,sponsorId)))return c.json({ok:false,error:'No perteneces a este patrocinador.'},403)
+  return c.json({ok:true,data:{sponsor_id:sponsorId}})
 })
 
 /** Directorio de cuentas del operador especial; nunca aceptar un user_id del cliente. */
