@@ -31,7 +31,7 @@ echo "▶ Validando alcance del PR"
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
   case "$path" in
-    app/src/components/admin/SuperAdminKawMed.tsx|scripts/test-kawmed-code-accordion-contract.mjs|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|.github/workflows/quality.yml) ;;
+    app/src/components/admin/SuperAdminKawMed.tsx|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|.github/workflows/quality.yml) ;;
     *) fail "Archivo fuera de alcance: $path" ;;
   esac
 done < <(git diff --name-only github/main...HEAD)
