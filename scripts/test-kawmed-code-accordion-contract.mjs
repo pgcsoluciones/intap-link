@@ -1,0 +1,26 @@
+import fs from 'node:fs'
+import assert from 'node:assert/strict'
+
+const source=fs.readFileSync('app/src/components/admin/SuperAdminKawMed.tsx','utf8')
+const api=fs.readFileSync('api/src/medical-access-codes.ts','utf8')
+
+assert.match(source,/const MED_PAGE_SIZE=7\b/,'Both MED code lists must use seven items per page')
+assert.match(source,/type MedGroup='sponsored'\|'independent'/,'The two MED code categories must be explicit')
+assert.match(source,/filtered\.filter\(row=>Boolean\(row\.program_id\)\)/,'Sponsored grouping must use the authoritative program id')
+assert.match(source,/filtered\.filter\(row=>!row\.program_id\)/,'Independent grouping must exclude sponsored codes')
+assert.match(api,/SELECT mac\.\*,b\.name AS batch_name/,'Medical API must return program_id for classification')
+assert.match(source,/rows\.slice\(\(current-1\)\*MED_PAGE_SIZE,current\*MED_PAGE_SIZE\)/,'MED accordion must paginate before rendering')
+assert.match(source,/group="sponsored" title="Códigos patrocinados"/,'Sponsored accordion missing')
+assert.match(source,/group="independent" title="Códigos independientes"/,'Independent accordion missing')
+assert.match(source,/onPageChange=\{value=>setMedPages\(p=>\(\{\.\.\.p,sponsored:value\}\)\)\}/,'Sponsored page must be independent')
+assert.match(source,/onPageChange=\{value=>setMedPages\(p=>\(\{\.\.\.p,independent:value\}\)\)\}/,'Independent page must be independent')
+assert.match(source,/aria-expanded=\{expanded\}/,'Accordion toggle must expose accessible state')
+assert.match(source,/setMedPages\(\{sponsored:1,independent:1\}\)/,'Filters must reset both pages')
+assert.match(source,/Códigos creados \(\{generated\.length\}\)/,'Recently generated codes must have a separate accordion')
+assert.match(source,/generated\.slice\(/,'Recently generated codes must be paginated')
+assert.match(source,/MedPagination page=\{generatedPage\}/,'Recently generated codes must have pagination controls')
+assert.match(source,/Copiar listado completo/,'Copy all generated codes must be retained')
+assert.match(source,/toggleCode=\{toggleCode\}/,'MED status control must be retained')
+assert.match(source,/copyCodeClaimUrl=\{copyCodeClaimUrl\}/,'MED activation link copy must be retained')
+assert.doesNotMatch(source,/filtered\.map\(row=>/,'Legacy mixed table must no longer render all rows')
+console.log('KawMed MED-code grouped accordions and 7-item pagination: OK')
