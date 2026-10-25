@@ -1,0 +1,26 @@
+import fs from 'node:fs'
+import assert from 'node:assert/strict'
+
+const read=path=>fs.readFileSync(path,'utf8')
+const web=read('web/src/App.tsx')
+const api=read('api/src/routes/medical-profile.ts')
+const proxy=read('api/src/preview-frontdoor-entry.ts')
+const config=read('api/wrangler.preview.toml')
+const runner=read('scripts/run-preview-kawmed-public-web-2026-10-25.sh')
+const dashboard=read('app/src/components/admin/medical/MedicalDashboard.tsx')
+
+assert.match(web,/path="\/m\/:slug"/,'La Web pública debe tener ruta KawMed')
+assert.match(web,/element=\{<KawMedProfile\/>\}/,'La ruta debe montar el perfil médico')
+assert.match(api,/mp\.status = 'active'/,'Los borradores no deben divulgarse públicamente')
+assert.match(proxy,/proxyPagesPreview\(request, env\.WEB_PAGES_ORIGIN, 'web-custom-domain'\)/,'Web Preview debe respetar el origen configurado')
+assert.match(config,/WEB_PAGES_ORIGIN = "https:\/\/qa-kawmed-web-1025\.intap-web2\.pages\.dev"/,'El origen persistente debe ser el alias Web KawMed')
+assert.match(runner,/npm run build:preview -w web/,'El runner debe compilar Web Preview')
+assert.match(runner,/npm run build:preview -w app/,'El runner debe conservar App integrada')
+assert.match(runner,/WEB_ORIGIN="\$\(grep/,'El origen Web debe venir del despliegue realizado')
+assert.match(runner,/APP_ORIGIN="\$\(grep/,'El origen App debe venir del despliegue realizado')
+assert.match(runner,/restore/,'El runner debe restaurar configuración versionada')
+assert.match(runner,/grep -Fq '\/m\/:slug' "\$LOG_DIR\/web-entry\.js"/,'El smoke debe verificar el bundle público real')
+assert.match(dashboard,/disabled=\{profile\.status!=='active'\}/,'El enlace público debe estar deshabilitado para borradores')
+assert.match(dashboard,/Perfil público disponible al publicar/,'La UI debe explicar que falta publicar')
+assert.match(dashboard,/La vista pública y la vista previa completa estarán disponibles cuando publiques/,'No prometer vista previa pública para borradores')
+console.log('KawMed public Preview route/origin and draft privacy contract: OK')
