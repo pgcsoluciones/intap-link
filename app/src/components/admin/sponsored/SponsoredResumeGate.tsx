@@ -10,7 +10,7 @@ function valid(value:string){return /^[A-Z2-9]{8,24}$/.test(value)}
 export default function SponsoredResumeGate(){
   const location=useLocation();const navigate=useNavigate()
   useEffect(()=>{
-    if(location.pathname==='/admin/accounts'||location.pathname==='/admin/login'||location.pathname==='/admin/check-email'||location.pathname.startsWith('/auth/')||location.pathname.startsWith('/admin/sponsored/entry')||location.pathname.startsWith('/admin/sponsor/entry'))return
+    if(location.pathname.startsWith('/admin/medical')||location.pathname.startsWith('/claim/kawmed')||location.pathname.startsWith('/trial/activate')||location.pathname==='/admin/accounts'||location.pathname==='/admin/login'||location.pathname==='/admin/check-email'||location.pathname.startsWith('/auth/')||location.pathname.startsWith('/admin/sponsored/entry')||location.pathname.startsWith('/admin/sponsor/entry'))return
     const profileCode=String(sessionStorage.getItem(PROFILE_KEY)||localStorage.getItem(PROFILE_KEY)||'').trim().toUpperCase()
     const masterCode=String(sessionStorage.getItem(MASTER_KEY)||localStorage.getItem(MASTER_KEY)||'').trim().toUpperCase()
     const panelResume=(sessionStorage.getItem(PANEL_KEY)||localStorage.getItem(PANEL_KEY))==='1'
