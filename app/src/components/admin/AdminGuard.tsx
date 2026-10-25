@@ -167,7 +167,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         }
       }
 
-      if (location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
+      if (location.pathname !== '/admin/accounts' && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         if (scanCode) {
           const scanPending: any = await apiGet('/me/artifacts/scan/pending')
             .catch(() => ({ ok: false }))
@@ -185,7 +185,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       }
 
       const pendingActivation = sessionStorage.getItem('intap_activation_public_code')
-      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
+      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/accounts' && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         navigate('/admin/artifacts/activate', { replace: true })
         return
       }
@@ -207,7 +207,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
 
       const insideOnboarding = location.pathname.startsWith('/admin/free/onboarding/')
       const insideArtifactFlow = location.pathname.startsWith('/admin/artifacts')
-      if (!insideOnboarding && !insideArtifactFlow && !insideTeamFlow && !hasTeamActivationContext) {
+      if (location.pathname !== '/admin/accounts' && !insideOnboarding && !insideArtifactFlow && !insideTeamFlow && !hasTeamActivationContext) {
         const resume = interruptedFreeOnboardingRoute(json.data)
         if (resume) {
           navigate(resume, { replace: true })
