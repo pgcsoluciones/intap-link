@@ -35,7 +35,7 @@ echo "▶ Validando alcance del PR"
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
   case "$path" in
-    .github/workflows/quality.yml|api/src/account-home-route.ts|api/src/medical-access-codes.ts|api/src/medical-appointments.ts|api/src/medical-profile-owner.ts|api/src/sponsored-multiprofile-access.ts|app/src/App.tsx|app/src/components/admin/AdminGuard.tsx|app/src/components/admin/IntapcardAccountSelector.tsx|app/src/components/admin/KawMedClaim.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/MedicalDashboard.tsx|app/src/components/admin/sponsored/SponsoredResumeGate.tsx|scripts/run-preview-intapcard-multiaccount-2026-10-24.sh|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh|scripts/test-intapcard-multiaccount-contract.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs) ;;
+    .github/workflows/quality.yml|api/src/account-home-route.ts|api/src/medical-access-codes.ts|api/src/medical-appointments.ts|api/src/medical-profile-owner.ts|api/src/sponsored-multiprofile-access.ts|app/src/App.tsx|app/src/components/admin/AdminGuard.tsx|app/src/components/admin/IntapcardAccountSelector.tsx|app/src/components/admin/KawMedClaim.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/MedicalDashboard.tsx|app/src/components/admin/sponsored/SponsoredResumeGate.tsx|scripts/run-preview-intapcard-multiaccount-2026-10-24.sh|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh|scripts/test-intapcard-multiaccount-contract.mjs|scripts/test-intapcard-kawmed-integrated-contract.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs) ;;
     *) fail "Archivo fuera de alcance: $path" ;;
   esac
 done < <(git diff --name-only github/main...HEAD)
@@ -44,6 +44,7 @@ run git diff --check github/main...HEAD
 run npm ci
 run bash -n scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh
 run node scripts/test-intapcard-multiaccount-contract.mjs
+run node scripts/test-intapcard-kawmed-integrated-contract.mjs
 run node scripts/test-kawmed-code-accordion-contract.mjs
 run node scripts/test-kawmed-isolation-contract.mjs
 run node scripts/test-kawmed-demo-invitations-contract.mjs
