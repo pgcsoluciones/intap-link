@@ -10,7 +10,7 @@ const runner=read('scripts/run-preview-kawmed-public-web-2026-10-25.sh')
 const dashboard=read('app/src/components/admin/medical/MedicalDashboard.tsx')
 
 assert.match(web,/path="\/m\/:slug"/,'La Web pública debe tener ruta KawMed')
-assert.match(web,/element=\{<KawMedProfile\/>\}/,'La ruta debe montar el perfil médico')
+assert.match(web,/element=\{<KawMedProfile\s*\/>\}/,'La ruta debe montar el perfil médico')
 assert.match(api,/mp\.status = 'active'/,'Los borradores no deben divulgarse públicamente')
 assert.match(proxy,/proxyPagesPreview\(request, env\.WEB_PAGES_ORIGIN, 'web-custom-domain'\)/,'Web Preview debe respetar el origen configurado')
 assert.match(config,/WEB_PAGES_ORIGIN = "https:\/\/qa-kawmed-web-1025\.intap-web2\.pages\.dev"/,'El origen persistente debe ser el alias Web KawMed')
