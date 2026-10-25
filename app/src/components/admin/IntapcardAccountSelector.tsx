@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPost } from '../../lib/api'
 
 type AccountItem={
-  id:string;kind:'medical'|'medical_master'|'sponsor'|'sponsored'|'free'|'trial'
+  id:string;kind:'medical'|'medical_master'|'sponsor'|'sponsored'|'free'|'paid'|'trial'
   title:string;detail?:string;sponsor?:string;status?:string
 }
 type ActivationKind='product'|'sponsored'|'sponsor_master'|'medical'|'medical_master'|'trial'
@@ -17,7 +17,7 @@ const activationKinds:{value:ActivationKind;label:string;help:string;placeholder
 const labels:Record<AccountItem['kind'],string>={
   medical:'KawMed · Perfil médico',medical_master:'KawMed · Master patrocinador',
   sponsor:'Kawvo Link · Patrocinador',sponsored:'Kawvo Link · Patrocinado',
-  free:'Kawvo Link · Free',trial:'Kawvo Link · Trial'
+  free:'Kawvo Link · Free',paid:'Kawvo Link · Link',trial:'Kawvo Link · Trial'
 }
 
 export default function IntapcardAccountSelector(){
@@ -79,6 +79,8 @@ export default function IntapcardAccountSelector(){
         window.location.assign('/admin/sponsored?profile_id='+encodeURIComponent(item.id))
       }else if(item.kind==='free'){
         window.location.assign('/admin/free')
+      }else if(item.kind==='paid'){
+        window.location.assign('/admin?account=paid')
       }else if(item.kind==='trial'){
         const host=window.location.hostname
         const origin=host==='app.preview.intaprd.com'?'https://preview.intaprd.com':'https://intaprd.com'
