@@ -32,6 +32,9 @@ export default function SponsoredResumeGate(){
     let alive=true
     apiGet('/me').then((json:any)=>{
       if(!alive||!json?.ok)return
+      // La cuenta multicuenta selecciona su perfil desde el directorio. Un código
+      // patrocinado antiguo guardado en el navegador no debe reemplazar esa elección.
+      if(String(json?.data?.email||json?.email||'').trim().toLowerCase()==='intapcard@gmail.com')return
       if(valid(masterCode)){
         navigate(`/admin/sponsor/entry?public_code=${encodeURIComponent(masterCode)}`,{replace:true})
         return
