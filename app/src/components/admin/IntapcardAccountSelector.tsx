@@ -25,6 +25,7 @@ export default function IntapcardAccountSelector(){
   const[activationKind,setActivationKind]=useState<ActivationKind>('product')
   const[activationCode,setActivationCode]=useState('')
   const[activationError,setActivationError]=useState('')
+  const[checkingActivation,setCheckingActivation]=useState(false)
   const[items,setItems]=useState<AccountItem[]>([])
   const[loading,setLoading]=useState(true)
   const[busy,setBusy]=useState('')
@@ -36,7 +37,7 @@ export default function IntapcardAccountSelector(){
   }).catch((e:Error)=>{if(alive)setError(e.message)}).finally(()=>{if(alive)setLoading(false)})
   return()=>{alive=false}},[stage])
 
-  function beginActivation(e:FormEvent<HTMLFormElement>){
+  async function beginActivation(e:FormEvent<HTMLFormElement>){
     e.preventDefault()
     setActivationError('')
     const code=activationCode.trim().toUpperCase()
@@ -58,6 +59,27 @@ export default function IntapcardAccountSelector(){
         :activationKind==='medical_master'?'El Master médico debe tener formato MEDM-XXX-XXX.'
         :'Introduce el código del producto (8 a 24 caracteres, sin espacios ni guiones).')
       return
+    }
+    // Free/Link usa profiles.user_id UNIQUE y Trial conserva su política de una
+    // prueba por usuario. No permitir que «cuenta nueva» reabra una existente.
+    if(activationKind==='product'||activationKind==='trial'){
+      setCheckingActivation(true)
+      try{
+        const directory:any=await apiGet('/me/intapcard/accounts')
+        if(!directory?.ok)throw new Error(directory?.error||'No pudimos verificar las cuentas existentes.')
+        const accounts:Array<{kind:string}>=Array.isArray(directory.data?.items)?directory.data.items:[]
+        if(activationKind==='product'&&accounts.some(account=>account.kind==='free'||account.kind==='paid')){
+          setActivationError('Este correo ya tiene un perfil Free/Link. El activador clásico no permite crear otro perfil independiente con el mismo usuario. No hemos utilizado el código ni modificado la cuenta existente.')
+          return
+        }
+        if(activationKind==='trial'&&accounts.some(account=>account.kind==='trial')){
+          setActivationError('Este correo ya tiene un Trial. La política actual no permite iniciar otra prueba independiente. No hemos consumido el token.')
+          return
+        }
+      }catch(error){
+        setActivationError(error instanceof Error?error.message:'No pudimos verificar las cuentas existentes.')
+        return
+      }finally{setCheckingActivation(false)}
     }
     // Solo navegar: el endpoint canónico valida el código, cuenta, estado y consentimiento.
     window.location.assign(target)
@@ -124,7 +146,7 @@ export default function IntapcardAccountSelector(){
             <input className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 font-mono text-base font-bold tracking-wide uppercase" value={activationCode} onChange={e=>{setActivationCode(e.target.value);setActivationError('')}} placeholder={activeKind.placeholder} autoComplete="off" required/>
           </label>
           {activationError&&<p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{activationError}</p>}
-          <button type="submit" className="w-full rounded-xl bg-slate-950 px-5 py-4 text-sm font-black text-white">Continuar con la activación</button>
+          <button type="submit" disabled={checkingActivation} className="w-full rounded-xl bg-slate-950 px-5 py-4 text-sm font-black text-white disabled:opacity-50">{checkingActivation?"Verificando cuenta…":"Continuar con la activación"}</button>
           {activationKind==='trial'&&<a href="/trial/login" className="block text-center text-sm font-bold text-cyan-800">Ir al acceso habitual de Trial</a>}
         </form>
       </section>}
