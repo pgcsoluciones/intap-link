@@ -98,10 +98,12 @@ echo "▶ Publicando Worker API Producción"
 API_HEALTH="$LOG_DIR/api-health.json"
 HTTP="$(curl -sSL -o "$API_HEALTH" -w '%{http_code}' https://api.intaprd.com/api/health)"
 [[ "$HTTP" == "200" ]] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$API_HEALTH" || fail "Health API falló; NO publicar App. Revisar Worker y recuperación."
-for endpoint in /api/v1/me/intapcard/accounts /api/v1/me/intapcard/medical-context /api/v1/me/home-route; do
+for endpoint in /api/v1/me/intapcard/accounts /api/v1/me/home-route; do
   http="$(curl -sSL -o /dev/null -w '%{http_code}' "https://app.intaprd.com$endpoint")"
-  [[ "$http" == "401" || "$http" == "405" ]] || fail "El endpoint $endpoint no protegió sesión: HTTP $http"
+  [[ "$http" == "401" ]] || fail "El endpoint $endpoint no protegió sesión: HTTP $http"
 done
+http="$(curl -sSL -o /dev/null -w '%{http_code}' -X POST 'https://app.intaprd.com/api/v1/me/intapcard/medical-context' -H 'Content-Type: application/json' --data '{"profile_id":"00000000-0000-0000-0000-000000000000"}')"
+[[ "$http" == "401" ]] || fail "El cambio de contexto médico no exigió sesión: HTTP $http"
 
 echo "▶ Publicando SOLO Admin App Producción (rama main)"
 npx wrangler pages deploy app/dist --project-name intap-web2 --branch main 2>&1 | tee "$LOG_DIR/app-deploy.log"
