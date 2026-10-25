@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# INTAP · release de KawMed + multicuenta Intapcard.
+# PREPARAR no publica. DEPLOY exige PR integrado, QA y SHA aprobado.
+set -euo pipefail
+
+ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
+REMOTE="github"
+QA_BRANCH="qa/intapcard-kawmed-combined-preview-2026-10-24"
+EXPECTED_BASE_SHA="7b6c1a2ba2f2763d017b891892f2ece416c40595"
+MIN_QA_SHA="0097ae25bec311bdf8dca7f228715fc47731828c"
+RUNNER="scripts/run-production-intapcard-kawmed-2026-10-25.sh"
+MODE="${1:-preflight}"
+LOG_DIR="$HOME/intap-release-logs/intapcard-kawmed-$(date -u +%Y%m%dT%H%M%SZ)"
+
+fail(){ printf '\n✗ ERROR: %s\n' "$*" >&2; exit 1; }
+run(){ printf '\n▶'; printf ' %q' "$@"; printf '\n'; "$@"; }
+[[ "$MODE" == "preflight" || "$MODE" == "deploy" ]] || fail "Uso: bash $RUNNER preflight|deploy"
+cd "$ROOT" || fail "No existe el repositorio local esperado"
+[[ -z "$(git status --porcelain)" ]] || fail "Hay cambios o archivos locales sin guardar; no se toca el checkout"
+run git fetch "$REMOTE" main "$QA_BRANCH"
+
+if [[ "$MODE" == "preflight" ]]; then
+  # Preflight se ejecuta desde rama QA sin tocar main, D1 ni Cloudflare.
+  if git show-ref --verify --quiet "refs/heads/$QA_BRANCH"; then
+    run git switch "$QA_BRANCH"
+  else
+    run git switch --track -c "$QA_BRANCH" "$REMOTE/$QA_BRANCH"
+  fi
+  run git pull --ff-only "$REMOTE" "$QA_BRANCH"
+  [[ "$(git rev-parse "$REMOTE/main")" == "$EXPECTED_BASE_SHA" ]] || fail "main se movió; revisar la comparación/PR antes del lanzamiento"
+  git merge-base --is-ancestor "$REMOTE/main" HEAD || fail "La rama candidata no incluye main"
+else
+  # El despliegue SOLO usa main ya fusionado en GitHub: jamás push forzado ni merge por el runner.
+  run git switch main
+  run git pull --ff-only "$REMOTE" main
+  [[ "$(git rev-parse HEAD)" == "$(git rev-parse "$REMOTE/main")" ]] || fail "El main local no coincide con remoto"
+  git merge-base --is-ancestor "$MIN_QA_SHA" HEAD || fail "PR #119 todavía no está integrado como ancestro de main (merge no-squash)"
+  [[ "${INTAP_QA_VERIFIED:-}" == "MED_SPONSOR_FREE_TRIAL_DEMO_OK" ]] || fail "Falta QA manual completo de perfiles y categorías"
+  [[ "${INTAP_RELEASE_NO_MIGRATION:-}" == "CONFIRMO_SIN_MIGRACIONES" ]] || fail "Confirmar explícitamente que este release no aplica migraciones D1"
+  INTAP_ENFORCE_PRODUCTION_APPROVAL=1 python3 scripts/production_approval_guard.py || fail "Falta aprobación explícita del SHA de Producción"
+fi
+
+[[ -z "$(git status --porcelain)" ]] || fail "Checkout sucio antes de verificaciones"
+git merge-base --is-ancestor "$EXPECTED_BASE_SHA" HEAD || fail "Baseline no es ancestro del release"
+git merge-base --is-ancestor "$MIN_QA_SHA" HEAD || fail "La integración QA aprobada no es ancestro del release"
+run git diff --check "$EXPECTED_BASE_SHA"...HEAD
+
+echo "▶ Verificando allowlist, base de release $EXPECTED_BASE_SHA"
+while IFS= read -r path; do
+  [[ -z "$path" ]] && continue
+  case "$path" in
+    .github/workflows/quality.yml|api/src/account-home-route.ts|api/src/medical-access-codes.ts|api/src/medical-appointments.ts|api/src/medical-profile-owner.ts|api/src/sponsored-multiprofile-access.ts|app/src/App.tsx|app/src/components/admin/AdminGuard.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/IntapcardAccountSelector.tsx|app/src/components/admin/KawMedClaim.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/MedicalDashboard.tsx|app/src/components/admin/sponsored/SponsoredResumeGate.tsx|scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh|scripts/run-preview-intapcard-multiaccount-2026-10-24.sh|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|scripts/test-intapcard-kawmed-integrated-contract.mjs|scripts/test-intapcard-multiaccount-contract.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/run-production-intapcard-kawmed-2026-10-25.sh) ;;
+    *) fail "Cambio inesperado desde baseline: $path" ;;
+  esac
+done < <(git diff --name-only "$EXPECTED_BASE_SHA"...HEAD)
+if git diff --name-only "$EXPECTED_BASE_SHA"...HEAD | grep -Eq '^(api/migrations|api/migrations-preview|web/|functions/|package(-lock)?\.json)';then
+  fail "Detectada migración, Web o dependencia: bloquear release"
+fi
+
+run npm ci
+run node scripts/test-intapcard-multiaccount-contract.mjs
+run node scripts/test-intapcard-kawmed-integrated-contract.mjs
+run node scripts/test-kawmed-code-accordion-contract.mjs
+run node scripts/test-kawmed-isolation-contract.mjs
+run node scripts/test-kawmed-demo-invitations-contract.mjs
+run npx tsc --noEmit -p api/tsconfig.json
+run npm run build -w app
+run bash -n "$RUNNER"
+(
+  cd api
+  run npx wrangler deploy --config wrangler.toml --dry-run
+)
+
+echo "✓ Código candidato: $(git rev-parse HEAD)"
+if [[ "$MODE" == "preflight" ]]; then
+  echo "✓ PREFLIGHT únicamente. No hubo modificaciones de Cloudflare, main ni D1."
+  echo "PENDIENTE: QA autenticado de cada cuenta y promoción del PR #119 a main."
+  echo "NO ejecutar modo deploy antes del QA y de comprobar el SHA de main integrado."
+  exit 0
+fi
+
+# Protección final de carrera: no publicar si main cambió durante las pruebas.
+[[ "$(git ls-remote "$REMOTE" refs/heads/main | cut -f1)" == "$(git rev-parse HEAD)" ]] || fail "main remoto cambió durante el build"
+mkdir -p "$LOG_DIR"
+echo "▶ Respaldo no destructivo de la D1 de Producción (NO se aplican migraciones)"
+BACKUP="$LOG_DIR/intap_db_before_release.sql"
+(
+  cd api
+  run npx wrangler d1 export intap_db --remote --config wrangler.toml --output="$BACKUP"
+)
+[[ -s "$BACKUP" ]] || fail "No se generó el respaldo D1; abortado"
+# API antes que App para evitar que App solicite endpoints ausentes
+echo "▶ Publicando Worker API Producción"
+(
+  cd api
+  npx wrangler deploy --config wrangler.toml 2>&1 | tee "$LOG_DIR/api-deploy.log"
+)
+API_HEALTH="$LOG_DIR/api-health.json"
+HTTP="$(curl -sSL -o "$API_HEALTH" -w '%{http_code}' https://api.intaprd.com/api/health)"
+[[ "$HTTP" == "200" ]] && grep -Eq '"ok"[[:space:]]*:[[:space:]]*true' "$API_HEALTH" || fail "Health API falló; NO publicar App. Revisar Worker y recuperación."
+for endpoint in /api/v1/me/intapcard/accounts /api/v1/me/intapcard/medical-context /api/v1/me/home-route; do
+  http="$(curl -sSL -o /dev/null -w '%{http_code}' "https://app.intaprd.com$endpoint")"
+  [[ "$http" == "401" || "$http" == "405" ]] || fail "El endpoint $endpoint no protegió sesión: HTTP $http"
+done
+
+echo "▶ Publicando SOLO Admin App Producción (rama main)"
+npx wrangler pages deploy app/dist --project-name intap-web2 --branch main 2>&1 | tee "$LOG_DIR/app-deploy.log"
+for url in https://app.intaprd.com/admin/login https://app.intaprd.com/admin/accounts https://app.intaprd.com/superadmin/kawmed https://app.intaprd.com/claim/kawmed; do
+  http="$(curl -sSL -o /dev/null -w '%{http_code}' "$url")"
+  [[ "$http" == "200" ]] || fail "$url respondió HTTP $http"
+done
+
+TAG="prod-intapcard-kawmed-$(date -u +%Y%m%dT%H%M%SZ)"
+run git tag -a "$TAG" -m "Intapcard multicuenta + KawMed QA-approved Production release"
+run git push "$REMOTE" "$TAG"
+echo "✓ DESPLIEGUE COMPLETADO: $(git rev-parse HEAD)"
+echo "✓ Tag: $TAG"
+echo "✓ Logs y respaldo D1: $LOG_DIR"
+echo "✓ Web pública y migraciones D1 no modificadas"
+echo "QA POST-RELEASE OBLIGATORIO: login, selector, Free, 2 sponsors, master, médicos y agenda."
