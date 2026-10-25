@@ -161,7 +161,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
           navigate(route, { replace:true })
           return
         }
-        if (genericEntry && route !== path) {
+        if (genericEntry && route !== path && !(kind === 'multiaccount' && path === '/admin' && new URLSearchParams(location.search).get('account') === 'paid')) {
           navigate(route, { replace:true })
           return
         }
