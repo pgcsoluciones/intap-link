@@ -172,7 +172,10 @@ app.get('/api/v1/me/intapcard/accounts',requireUser,async(c:any)=>{
     if(Number(p.normal_master))items.push({id:p.sponsor_id,kind:'sponsor',title:p.name,detail:'Master Kawvo Link'})
     if(Number(p.medical_master))items.push({id:p.sponsor_id,kind:'medical_master',title:p.name,detail:'Master KawMed'})
   }
-  for(const p of free.results||[])items.push({id:p.id,kind:'free',title:p.name||p.slug||'Free',detail:p.slug||'',status:p.plan_id})
+  for(const p of free.results||[]){
+    const isFree=String(p.plan_id||'free').toLowerCase()==='free'
+    items.push({id:p.id,kind:isFree?'free':'paid',title:p.name||p.slug||(isFree?'Free':'Kawvo Link'),detail:p.slug||'',status:p.plan_id})
+  }
   for(const p of trials.results||[])items.push({id:p.id,kind:'trial',title:p.name||p.slug||'Trial',detail:p.slug||'',status:p.status})
   return c.json({ok:true,data:{items}})
 })
