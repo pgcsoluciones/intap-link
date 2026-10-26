@@ -72,11 +72,23 @@ run node scripts/test-kawmed-code-accordion-contract.mjs
 run node scripts/test-kawmed-isolation-contract.mjs
 run node scripts/test-kawmed-demo-invitations-contract.mjs
 run npx tsc --noEmit -p api/tsconfig.json
-run npm run build -w web
-run npm run build -w app
-# Entradas SPA deben conservar el destino final de Producción.
-if grep -RlF 'https://app.preview.intaprd.com' app/dist/assets --include='*.js' >/dev/null;then fail "Bundle App apunta a Preview";fi
-if grep -RlF 'https://preview.intaprd.com' web/dist/assets --include='*.js' >/dev/null;then fail "Bundle Web apunta a Preview";fi
+# Vite también conserva constantes literales para ramas de Preview activadas
+# solo en dominios Preview. Esas referencias NO definen el backend activo.
+# Forzar las variables de build y verificar su configuración y salida real.
+grep -Fxq 'VITE_API_URL=https://api.intaprd.com' app/.env.production || fail "App Production API no configurada"
+grep -Fxq 'VITE_WEB_URL=https://intaprd.com' app/.env.production || fail "App Production Web no configurada"
+grep -Fxq 'VITE_API_URL=https://api.intaprd.com' web/.env.production || fail "Web Production API no configurada"
+grep -Fxq 'VITE_APP_URL=https://app.intaprd.com' web/.env.production || fail "Web Production App no configurada"
+if grep -Eiq '(^|=).*https://(app\\.)?preview\\.intaprd\\.com' app/.env.production web/.env.production;then
+  fail "Una variable de entorno de Producción apunta a Preview"
+fi
+# Evitar contaminación accidental por VITE_* exportadas en la terminal.
+run env VITE_API_URL=https://api.intaprd.com VITE_APP_URL=https://app.intaprd.com VITE_PUBLIC_ORIGIN=https://intaprd.com VITE_ENVIRONMENT=production npm run build -w web
+run env VITE_API_URL=https://api.intaprd.com VITE_WEB_URL=https://intaprd.com VITE_ENVIRONMENT=production npm run build -w app
+grep -RlF 'https://api.intaprd.com' app/dist/assets --include='*.js' >/dev/null || fail "El bundle App no contiene el API de Producción"
+grep -RlF 'https://api.intaprd.com' web/dist/assets --include='*.js' >/dev/null || fail "El bundle Web no contiene el API de Producción"
+grep -RlF 'https://app.intaprd.com' web/dist/assets --include='*.js' >/dev/null || fail "El bundle Web no contiene el destino App de Producción"
+echo "✓ Entornos y destinos efectivos de Producción validados; se permiten ramas Preview condicionadas por hostname"
 grep -RlF '/m/:slug' web/dist/assets --include='*.js' >/dev/null || fail "El bundle Web no incluye /m/:slug"
 find web/dist/assets -maxdepth 1 -name '*KawMedProfile*.js' | grep -q . || fail "Falta el bundle KawMed"
 run bash -n "$RUNNER"
