@@ -81,4 +81,41 @@ assert.doesNotMatch(kawmed,/kawmed-master-organization|masterOrganization|separa
 assert.doesNotMatch(kawmedCss,/kawmed-master-organization|kawmed-master-person|kawmed-identity--master/,'No sponsor-only header overrides in either public template')
 assert.match(kawmed,/profile\.organization \? `ORG:\$\{profile\.organization\}` : ''/,'Organization may still be included independently in contact metadata')
 
+// Protect the approved equal-size/equal-weight specialty hierarchy.
+// Both templates keep exactly the same typography for primary, additional
+// and subspecialty labels within that template.
+const equalAnchor='/* Equal visual importance for all medical specialties in Classic and Modern. */'
+const equalEnd='/* Patient accessibility: larger booking-form copy and input controls on phones. */'
+const equalStart=kawmedCss.indexOf(equalAnchor)
+const equalStop=kawmedCss.indexOf(equalEnd,equalStart)
+assert.ok(equalStart>=0&&equalStop>equalStart,'Expected final specialty equal-typography overrides')
+const equalCss=kawmedCss.slice(equalStart,equalStop)
+function cssAfter(selector){
+  const i=equalCss.indexOf(selector)
+  assert.ok(i>=0,'Missing specialty selector: '+selector)
+  const open=equalCss.indexOf('{',i)
+  const close=equalCss.indexOf('}',open)
+  assert.ok(open>=0&&close>open,'Invalid CSS for '+selector)
+  return equalCss.slice(open+1,close)
+}
+function typeSpec(block){
+  return Object.fromEntries(['font-family','font-size','line-height','font-weight','color'].map(prop=>{
+    const match=block.match(new RegExp('(?:^|[;\\s])'+prop+'\\s*:\\s*([^;\\n}]+)'))
+    assert.ok(match,'Typography missing '+prop)
+    return [prop,match[1].trim()]
+  }))
+}
+const classicPrimary=cssAfter('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-specialties .kawmed-specialty--main,')
+const classicAdditional=cssAfter('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-specialties .kawmed-specialty--additional{')
+const classicSub=cssAfter('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-subtitle{')
+const modernPrimary=cssAfter('.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-main-specialty,')
+const modernAdditional=cssAfter('.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-extra-specialty{')
+const modernSub=cssAfter('.kawmed-shell--pastel .kawmed-pastel-subspecialty{')
+assert.deepEqual(typeSpec(classicPrimary),typeSpec(classicAdditional),'Classic main/additional specialties must have equal typography')
+assert.deepEqual(typeSpec(classicPrimary),typeSpec(classicSub),'Classic subspecialty must have the same typography')
+assert.deepEqual(typeSpec(modernPrimary),typeSpec(modernAdditional),'Modern main/additional specialties must have equal typography')
+assert.deepEqual(typeSpec(modernPrimary),typeSpec(modernSub),'Modern subspecialty must have the same typography')
+assert.match(kawmed,/profile\.specialty\.split\(' \| '\)\.filter\(Boolean\)/,'Modern should render all specialty labels')
+assert.match(kawmed,/profile\.specialty\.split\(" \| "\)/,'Classic should render all specialty labels')
+
 console.log('KawMed public Preview route/origin and draft privacy contract: OK')
