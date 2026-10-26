@@ -98,9 +98,9 @@ verify_pages_html(){
   fail "La ruta Pages $label sigue sin entregar HTML. Revisar los archivos de diagnóstico."
 }
 verify_pages_html app "$APP_ORIGIN/admin/accounts"
-verify_pages_html web "$WEB_ORIGIN/m/med-intapcard"
-# Asegurar además que la raíz del mismo deployment Web sirve el HTML.
+# Distinguir si Pages no sirve la SPA en absoluto o solo falla la ruta anidada.
 verify_pages_html web-root "$WEB_ORIGIN/"
+verify_pages_html web "$WEB_ORIGIN/m/med-intapcard"
 
 BACKUP="$(mktemp)"
 cp "$CONFIG" "$BACKUP"
