@@ -2443,35 +2443,3 @@
  .kawmed-form__error,.kawmed-form__privacy{font-size:14px;line-height:1.5}
  .kawmed-form .kawmed-button--full{font-size:17px;min-height:56px}
 }
-
-
-/* Sponsor Master identity only: company first, smaller than the contact name.
-   Normal doctors and sponsored doctors preserve their existing hierarchy. */
-.kawmed-identity--master .kawmed-master-organization,
-.kawmed-shell--pastel .kawmed-pastel-hero-copy .kawmed-master-organization {
-  margin: 0 0 10px;
-  font-family: Inter, system-ui, sans-serif;
-  font-size: clamp(15px, 3.4vw, 18px);
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: 0;
-  color: #315d83;
-  text-wrap: balance;
-  overflow-wrap: anywhere;
-}
-
-.kawmed-identity--master .kawmed-master-person {
-  margin: 0 0 15px;
-  font-size: clamp(25px, 6vw, 32px);
-  line-height: 1.15;
-  font-weight: 650;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-}
-.kawmed-shell--pastel .kawmed-pastel-hero-copy .kawmed-master-person {
-  font-size: clamp(24px, 5vw, 30px);
-  line-height: 1.16;
-  font-weight: 650;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
-}
