@@ -322,6 +322,7 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
   const isMaster=Boolean(await c.env.DB.prepare('SELECT 1 FROM medical_sponsor_master_profiles WHERE medical_profile_id=? LIMIT 1').bind(subjectId).first())
   return c.json({ok:true,data:{
     is_owner:true,
+    allow_direct_actions:!(await sponsoredMultiProfileAccess(c,userId)),
     enabled:settings.enabled,
     pending_count:Number((count as any)?.n||0),
     pending:rows.results||[],
