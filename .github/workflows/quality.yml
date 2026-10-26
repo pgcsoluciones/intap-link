@@ -20,6 +20,7 @@ jobs:
       - run: node scripts/test-kawmed-isolation-contract.mjs
       - run: node scripts/test-kawmed-web-preview-route-contract.mjs
       - run: node scripts/test-kawmed-code-accordion-contract.mjs
+      - run: node scripts/test-intapcard-active-account-contract.mjs
       - run: node scripts/test-intapcard-multiaccount-contract.mjs
       - run: node scripts/test-intapcard-kawmed-integrated-contract.mjs
       - run: bash -n scripts/run-production-intapcard-kawmed-2026-10-25.sh
