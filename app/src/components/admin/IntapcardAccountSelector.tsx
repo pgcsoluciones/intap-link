@@ -89,24 +89,16 @@ export default function IntapcardAccountSelector(){
     const key=item.kind+':'+item.id
     setBusy(key);setError('')
     try{
-      if(item.kind==='medical'){
-        const j:any=await apiPost('/me/intapcard/medical-context',{profile_id:item.id})
-        if(!j?.ok)throw new Error(j?.error||'No se pudo seleccionar el perfil médico.')
-        window.location.assign('/admin/medical')
-      }else if(item.kind==='sponsor'||item.kind==='medical_master'){
-        const j:any=await apiPost('/sponsor/context',{sponsor_id:item.id})
-        if(!j?.ok)throw new Error(j?.error||'No se pudo seleccionar el patrocinador.')
-        window.location.assign(item.kind==='medical_master'?'/admin/sponsor/kawmed':'/admin/sponsor')
-      }else if(item.kind==='sponsored'){
-        window.location.assign('/admin/sponsored?profile_id='+encodeURIComponent(item.id))
-      }else if(item.kind==='free'){
-        window.location.assign('/admin/free')
-      }else if(item.kind==='paid'){
-        window.location.assign('/admin?account=paid')
-      }else if(item.kind==='trial'){
+      // All categories share ONE active identity, bound to the current login
+      // session in an HttpOnly cookie and checked against D1 ownership.
+      const response:any=await apiPost('/me/intapcard/active-account',{kind:item.kind,id:item.id})
+      if(!response?.ok)throw new Error(response?.error||'No pudimos seleccionar esta cuenta.')
+      if(item.kind==='trial'){
         const host=window.location.hostname
         const origin=host==='app.preview.intaprd.com'?'https://preview.intaprd.com':'https://intaprd.com'
         window.location.assign(origin+'/trial/mi/'+encodeURIComponent(item.id))
+      }else{
+        window.location.assign(String(response.data?.route||'/admin/accounts'))
       }
     }catch(e){setError(e instanceof Error?e.message:'No se pudo seleccionar la cuenta.');setBusy('')}
   }
