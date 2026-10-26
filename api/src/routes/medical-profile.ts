@@ -39,6 +39,7 @@ function profileResponse(profile: any, centers: any[], schedules: any[], service
     province: profile.province || null,
     country: profile.country || null,
     organization: profile.organization || null,
+    is_sponsor_master: Number(profile.is_sponsor_master || 0) === 1,
     status: profile.status,
     centers: centers.map((center) => ({
       id: center.id,
@@ -89,7 +90,9 @@ export function registerMedicalProfileRoutes(app: any) {
       const profile = await c.env.DB.prepare(
         `SELECT mp.id, mp.slug, mp.name, mp.professional_prefix, mp.specialty, mp.subspecialty, mp.bio,
                 mp.avatar_url, mp.cover_url, mp.phone, mp.whatsapp, mp.email, mp.city, mp.province, mp.country,
-                mp.organization, mp.status, COALESCE(ma.template,'classic') AS template, COALESCE(ma.palette,'aqua') AS palette
+                mp.organization, mp.status,
+                EXISTS(SELECT 1 FROM medical_sponsor_master_profiles msmp WHERE msmp.medical_profile_id=mp.id) AS is_sponsor_master,
+                COALESCE(ma.template,'classic') AS template, COALESCE(ma.palette,'aqua') AS palette
            FROM medical_profiles mp LEFT JOIN medical_profile_appearance ma ON ma.medical_profile_id=mp.id
           WHERE mp.slug = ? AND mp.status = 'active'
           LIMIT 1`
