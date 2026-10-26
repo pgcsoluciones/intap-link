@@ -122,7 +122,7 @@ app.use('/api/v1/me/*', async (c:any,next:any) => {
  * This is an extra permission boundary in addition to the per-profile DB
  * checks inside each route. Other users keep their existing behavior.
  */
-app.use('/api/v1/me/medical-profile/*', async(c:any,next:any)=>{
+const enforceIntapMedicalSelection=async(c:any,next:any)=>{
   const sessionRaw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
   if(!sessionRaw)return next() // endpoint's own auth returns 401
   const hash=await sha256Hex(sessionRaw)
@@ -133,8 +133,10 @@ app.use('/api/v1/me/medical-profile/*', async(c:any,next:any)=>{
   const required=String(c.req.query('scope')||'')==='sponsor_master'?'medical_master':'medical'
   if(!active||active.kind!==required)return c.json({ok:false,error:'Esta no es la cuenta activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
   await next()
-})
-app.use('/api/v1/me/sponsored-profile/*',async(c:any,next:any)=>{
+}
+app.use('/api/v1/me/medical-profile',enforceIntapMedicalSelection)
+app.use('/api/v1/me/medical-profile/*',enforceIntapMedicalSelection)
+const enforceIntapSponsoredSelection=async(c:any,next:any)=>{
   const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
   if(!raw)return next()
   const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
@@ -148,7 +150,9 @@ app.use('/api/v1/me/sponsored-profile/*',async(c:any,next:any)=>{
     if(id&&id!==active.id)return c.json({ok:false,error:'El perfil solicitado no es la cuenta activa.'},403)
   }
   await next()
-})
+}
+app.use('/api/v1/me/sponsored-profile',enforceIntapSponsoredSelection)
+app.use('/api/v1/me/sponsored-profile/*',enforceIntapSponsoredSelection)
 app.use('/api/v1/sponsor/*',async(c:any,next:any)=>{
   const path=String(c.req.path||'')
   if(path==='/api/v1/sponsor/context'||path==='/api/v1/sponsor/accounts')return next()
