@@ -41,12 +41,12 @@ echo "▶ Revisión del alcance: no editar datos ni migraciones"
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   case "$file" in
-    .github/workflows/quality.yml|api/wrangler.preview.toml|api/src/account-home-route.ts|api/src/medical-access-codes.ts|api/src/medical-appointments.ts|api/src/medical-profile-owner.ts|api/src/sponsored-multiprofile-access.ts|app/src/App.tsx|app/src/components/admin/AdminGuard.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/IntapcardAccountSelector.tsx|app/src/components/admin/KawMedClaim.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/MedicalDashboard.tsx|app/src/components/admin/sponsored/SponsoredResumeGate.tsx|scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh|scripts/run-preview-intapcard-multiaccount-2026-10-24.sh|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|scripts/run-production-intapcard-kawmed-2026-10-25.sh|scripts/run-preview-kawmed-public-web-2026-10-25.sh|scripts/test-intapcard-kawmed-integrated-contract.mjs|scripts/test-intapcard-multiaccount-contract.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/test-kawmed-web-preview-route-contract.mjs) ;;
+    .github/workflows/quality.yml|api/wrangler.preview.toml|api/src/account-home-route.ts|api/src/medical-access-codes.ts|api/src/medical-appointments.ts|api/src/medical-profile-owner.ts|api/src/routes/medical-profile.ts|api/src/sponsored-multiprofile-access.ts|web/src/components/medical-profile/KawMedProfile.tsx|web/src/components/medical-profile/KawMedProfile.css|web/src/components/medical-profile/types.ts|app/src/App.tsx|app/src/components/admin/AdminGuard.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/IntapcardAccountSelector.tsx|app/src/components/admin/KawMedClaim.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/MedicalDashboard.tsx|app/src/components/admin/sponsored/SponsoredResumeGate.tsx|scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh|scripts/run-preview-intapcard-multiaccount-2026-10-24.sh|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|scripts/run-production-intapcard-kawmed-2026-10-25.sh|scripts/run-preview-kawmed-public-web-2026-10-25.sh|scripts/test-intapcard-kawmed-integrated-contract.mjs|scripts/test-intapcard-multiaccount-contract.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/test-kawmed-web-preview-route-contract.mjs) ;;
     *) fail "Archivo fuera del alcance del Preview integrado: $file" ;;
   esac
 done < <(git diff --name-only github/main...HEAD)
-if git diff --name-only github/main...HEAD | grep -Eq '^(api/migrations|api/migrations-preview|web/src/|package(-lock)?\.json)'; then
-  fail "Detectados cambios de datos, frontend Web o dependencias no autorizados"
+if git diff --name-only github/main...HEAD | grep -Eq '^(api/migrations|api/migrations-preview|package(-lock)?\.json)'; then
+  fail "Detectados cambios de datos o dependencias no autorizados"
 fi
 
 run npm ci
