@@ -93,8 +93,33 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     return{done:checks.filter(item=>item.ready).length,total:checks.length,missing:checks.filter(item=>!item.ready).map(item=>item.label)}
   },[profile,centers.length,schedules.length])
 
+  // Estos tres requisitos deben coincidir con la validación real de /publication.
+  // El progreso 5/5 es una recomendación de presentación y NO bloquea la publicación.
+  const publicationReadiness=useMemo(()=>{
+    const mandatory=[
+      {label:'Nombre profesional',ready:Boolean(String(profile?.name||'').trim()),tab:'profile' as Tab},
+      {label:'Especialidad médica',ready:Boolean(String(profile?.specialty||'').trim()),tab:'profile' as Tab},
+      {label:'Enlace público (usuario)',ready:Boolean(String(profile?.slug||'').trim()),tab:'profile' as Tab},
+    ]
+    const recommended=[
+      {label:'Fotografía o portada',ready:Boolean(profile?.cover_url||profile?.avatar_url),tab:'profile' as Tab},
+      {label:'Centro de atención',ready:centers.length>0,tab:'centers' as Tab},
+      {label:'Horario de atención',ready:schedules.length>0,tab:'schedule' as Tab},
+    ]
+    const savedChangesPending=['name','specialty','slug'].some(key=>String(form?.[key]??'').trim()!==String(profile?.[key]??'').trim())
+    const missing=mandatory.filter(item=>!item.ready)
+    return {mandatory,recommended,missing,savedChangesPending,canPublish:missing.length===0&&!savedChangesPending}
+  },[profile,form?.name,form?.specialty,form?.slug,centers.length,schedules.length])
+
   async function changePublication(action:'publish'|'unpublish'){
     if(busy)return
+    if(action==='publish'&&!publicationReadiness.canPublish){
+      setError(publicationReadiness.missing.length>0
+        ?'Para publicar, completa y guarda: '+publicationReadiness.missing.map(item=>item.label).join(', ')+'.'
+        :'Guarda los cambios de nombre, especialidad o enlace público antes de publicar.')
+      setPublicationConfirm(null)
+      return
+    }
     setBusy(true);setError('');setMessage('');setPublicationConfirm(null)
     try{
       const result:any=await apiPost(scoped('/me/medical-profile/publication'),{action,confirm:true})
@@ -285,9 +310,48 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const Shell:any=embedded?'div':'main'
   return <Shell className={embedded?"font-['Inter'] text-slate-950":"min-h-screen bg-slate-50 px-4 py-6 font-['Inter'] text-slate-950"}><div className={embedded?"w-full space-y-5":"mx-auto w-full max-w-5xl space-y-5"}>
     <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap gap-2">{scope==='doctor'&&String(profile.account_email||'').trim().toLowerCase()==='intapcard@gmail.com'&&<a href="/admin/accounts" className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Cambiar cuenta</a>}{scope==='doctor'&&<button type="button" onClick={()=>setPreviewOpen(true)} className="rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800">Vista previa</button>}
-      <button type="button" disabled={busy||profile.status==='active'} onClick={()=>setPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Publicado':'Publicar'}</button>
+      <button type="button" disabled={busy||profile.status==='active'||!publicationReadiness.canPublish} aria-describedby="kawmed-publication-guidance" onClick={()=>setPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Publicado':'Publicar'}</button>
       <button type="button" disabled={busy||profile.status!=='active'} onClick={()=>setPublicationConfirm('unpublish')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm sm:text-xs font-black text-amber-900 disabled:cursor-not-allowed disabled:opacity-40">Despublicar</button>
-      {scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}</div></div><div className="mt-4 flex flex-wrap items-center gap-2 text-sm sm:text-xs font-bold text-slate-500"><span className="rounded-full bg-emerald-50 px-3 py-2 text-emerald-700">{completeness.done}/{completeness.total} base configurada</span>{completeness.missing.length>0&&<span className="rounded-full bg-amber-50 px-3 py-2 text-amber-800">Pendiente: {completeness.missing.join(', ')}</span>}<span className="rounded-full bg-slate-100 px-3 py-2">{profile.status==='active'?'Publicado':profile.status==='inactive'?'Inactivo':'Borrador'}</span></div></header>
+      {scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}</div></div><div className="mt-4 flex flex-wrap items-center gap-2 text-sm sm:text-xs font-bold text-slate-500"><span className="rounded-full bg-emerald-50 px-3 py-2 text-emerald-700">{completeness.done}/{completeness.total} presentación configurada</span>{completeness.missing.length>0&&<span className="rounded-full bg-slate-100 px-3 py-2 text-slate-600">Por mejorar: {completeness.missing.join(', ')}</span>}<span className="rounded-full bg-slate-100 px-3 py-2">{profile.status==='active'?'Publicado':profile.status==='inactive'?'Inactivo':'Borrador'}</span></div></header>
+
+    <section id="kawmed-publication-guidance" aria-labelledby="kawmed-publication-title" className={card}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 id="kawmed-publication-title" className="text-xl font-black">Requisitos para publicar</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-600">La plataforma exige tres datos guardados para publicar. Los demás elementos enriquecen la presentación, pero no impiden publicarla.</p>
+        </div>
+        <span className={'rounded-full px-3 py-2 text-xs font-black '+(publicationReadiness.canPublish?'bg-emerald-50 text-emerald-800':'bg-amber-50 text-amber-900')}>
+          {profile.status==='active'?'Perfil publicado':publicationReadiness.canPublish?'Listo para publicar':'Publicación pendiente'}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <h3 className="font-black">Obligatorios para publicar</h3>
+          <p className="mt-1 text-xs text-slate-500">{publicationReadiness.mandatory.filter(item=>item.ready).length} de {publicationReadiness.mandatory.length} completados</p>
+          <ul className="mt-3 space-y-2">
+            {publicationReadiness.mandatory.map(item=><li key={item.label} className="flex items-center justify-between gap-2 text-sm">
+              <span className="flex items-center gap-2"><span aria-hidden="true" className={item.ready?'text-emerald-700':'text-amber-800'}>{item.ready?'✓':'○'}</span><span>{item.label}</span></span>
+              <span className={item.ready?'font-bold text-emerald-800':'font-bold text-amber-900'}>{item.ready?'Listo':'Falta'}</span>
+            </li>)}
+          </ul>
+        </div>
+        <div className="rounded-2xl border border-slate-200 p-4">
+          <h3 className="font-black">Recomendados para un perfil completo</h3>
+          <p className="mt-1 text-xs text-slate-500">No bloquean la publicación.</p>
+          <ul className="mt-3 space-y-2">
+            {publicationReadiness.recommended.map(item=><li key={item.label} className="flex items-center justify-between gap-2 text-sm">
+              <span className="flex items-center gap-2"><span aria-hidden="true" className={item.ready?'text-emerald-700':'text-slate-500'}>{item.ready?'✓':'○'}</span>{item.label}</span>
+              {item.ready?<span className="font-bold text-emerald-800">Listo</span>:<button type="button" onClick={()=>setTab(item.tab)} className="font-bold text-cyan-800 underline underline-offset-2">Completar</button>}
+            </li>)}
+          </ul>
+        </div>
+      </div>
+      {profile.status!=='active'&&<div role="status" className={'mt-4 rounded-xl px-4 py-3 text-sm leading-6 '+(publicationReadiness.canPublish?'bg-emerald-50 text-emerald-900':'bg-amber-50 text-amber-900')}>
+        {publicationReadiness.missing.length>0?<p><strong>Aún no puedes publicar.</strong> Falta completar y guardar: {publicationReadiness.missing.map(item=>item.label).join(', ')}.</p>:<p><strong>Los tres requisitos obligatorios están completos.</strong> {publicationReadiness.savedChangesPending?'Guarda tus cambios recientes antes de publicar.':'Puedes utilizar el botón «Publicar» situado en el encabezado superior.'}</p>}
+        {publicationReadiness.savedChangesPending&&publicationReadiness.missing.length>0&&<p className="mt-1">Si ya completaste esos datos en el formulario, primero pulsa «Guardar perfil médico».</p>}
+        {(!publicationReadiness.canPublish)&&<button type="button" onClick={()=>setTab('profile')} className="mt-2 font-black text-cyan-900 underline underline-offset-2">Ir a los datos del perfil</button>}
+      </div>}
+    </section>
 
     {sponsor&&<section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">{sponsor.banner_image_url?(sponsor.cta_url?<a href={sponsor.cta_url} target="_blank" rel="noopener noreferrer"><img src={sponsor.banner_image_url} alt={sponsor.name||'Patrocinador'} className="block h-auto w-full object-contain bg-white"/></a>:<img src={sponsor.banner_image_url} alt={sponsor.name||'Patrocinador'} className="block h-auto w-full object-contain bg-white"/>):<div className="flex items-center gap-4 p-5">{sponsor.logo_url&&<img src={sponsor.logo_url} alt={sponsor.name||'Patrocinador'} className="h-14 w-14 object-contain"/>}<div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.14em] text-slate-400">Patrocinio profesional privado</p><h2 className="mt-1 text-lg font-black">{sponsor.name}</h2></div></div>}<div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4"><div><p className="text-sm sm:text-xs leading-5 text-slate-500">Solo tú ves esta relación comercial. No aparece en tu perfil público para pacientes.</p>{sponsor.representative&&<p className="mt-1 text-sm sm:text-xs font-bold text-slate-700">Visitador: {sponsor.representative.name}{sponsor.representative.zone?' · '+sponsor.representative.zone:''}</p>}</div><div className="flex flex-wrap gap-2">{sponsor.representative?.url&&<a href={sponsor.representative.url} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-cyan-100 px-4 py-3 text-sm sm:text-xs font-black text-cyan-900 ring-1 ring-cyan-300 transition-colors hover:bg-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700">Contactar mi visitador</a>}{sponsor.vademecum_url&&<a href={sponsor.vademecum_url} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm sm:text-xs font-black text-cyan-700">{sponsor.vademecum_label||'Ver vademécum'}</a>}</div></div></section>}
 
