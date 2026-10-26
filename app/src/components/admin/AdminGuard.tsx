@@ -106,6 +106,39 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         return
       }
 
+      // Intapcard may own several accounts. An authenticated session must not
+      // silently activate another dashboard because of a remembered sponsor,
+      // medical profile, or a stale URL in another browser tab.
+      const loggedInEmail = String(json.data?.email||'').trim().toLowerCase()
+      if (loggedInEmail === 'intapcard@gmail.com' && location.pathname !== '/admin/accounts') {
+        const selected:any = await apiGet('/me/intapcard/active-account').catch(()=>({ok:false}))
+        const active = selected?.ok ? selected.data?.active : null
+        if (!active) { navigate('/admin/accounts', {replace:true}); return }
+        const path = location.pathname
+        const kind=String(active.kind||'')
+        const allowed = (
+          (kind==='medical' && (path==='/admin/medical'||path.startsWith('/admin/medical/')) && !path.startsWith('/admin/medical/demo')) ||
+          (kind==='medical_master' && path==='/admin/sponsor/kawmed') ||
+          (kind==='sponsor' && path==='/admin/sponsor') ||
+          (kind==='sponsored' && (path==='/admin/sponsored'||path.startsWith('/admin/sponsored/')) && !path.includes('/entry') && !path.includes('/activate')) ||
+          (kind==='free' && (path==='/admin/free'||path.startsWith('/admin/free/'))) ||
+          (kind==='paid' && (path==='/admin'||path.startsWith('/admin/onboarding/')))
+        )
+        if (!allowed) {
+          navigate('/admin/accounts',{replace:true})
+          return
+        }
+        // Directly opening an old sponsored link must not reselect another
+        // profile by its URL query. Only the account chooser can switch.
+        if (kind==='sponsored') {
+          const requested=new URLSearchParams(location.search).get('profile_id')
+          if (requested && requested!==String(active.id)) {
+            navigate('/admin/accounts',{replace:true})
+            return
+          }
+        }
+      }
+
       if (delegatedDemoId && location.pathname.startsWith('/admin/free')) {
         const planId = json.data?.plan_id || json.data?.plan_code || 'free'
         if (!json.data?.profile_id || planId !== 'free') {
