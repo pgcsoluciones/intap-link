@@ -94,7 +94,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     if(actionId)return
     setActionId(id)
     try{
-      const target=ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.is_master?'?scope=sponsor_master':'')
+      const target=ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.action_scope?'?scope='+encodeURIComponent(context.action_scope):'')
       const res=await fetch(target,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:'{}'})
       const json:any=await res.json().catch(()=>null)
       if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos actualizar la solicitud.')
