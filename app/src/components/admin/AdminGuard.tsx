@@ -118,7 +118,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         const kind=String(active.kind||'')
         const allowed = (
           (kind==='medical' && (path==='/admin/medical'||path.startsWith('/admin/medical/')) && !path.startsWith('/admin/medical/demo')) ||
-          (kind==='medical_master' && path==='/admin/sponsor/kawmed') ||
+          (kind==='medical_master' && (path==='/admin/sponsor/kawmed'||(path==='/admin/medical/agenda'&&new URLSearchParams(location.search).get('scope')==='sponsor_master'))) ||
           (kind==='sponsor' && path==='/admin/sponsor') ||
           (kind==='sponsored' && (path==='/admin/sponsored'||path.startsWith('/admin/sponsored/')) && !path.includes('/entry') && !path.includes('/activate')) ||
           (kind==='free' && (path==='/admin/free'||path.startsWith('/admin/free/'))) ||
