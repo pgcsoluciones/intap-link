@@ -6,7 +6,7 @@ import { cookieNames } from './lib/cookies'
  * This is a routing isolation marker, never a substitute for DB ownership checks.
  */
 export type IntapAccountKind='medical'|'medical_master'|'sponsor'|'sponsored'|'free'|'paid'|'trial'
-export type IntapSelection={kind:IntapAccountKind;id:string}
+export type IntapSelection={kind:IntapAccountKind;id:string;tabToken?:string}
 const KEY='kawvo_intap_active_account_v1'
 const validKinds=new Set<string>(['medical','medical_master','sponsor','sponsored','free','paid','trial'])
 function cookieValue(header:string,name:string):string{
@@ -22,18 +22,25 @@ async function sessionFingerprint(c:any):Promise<string>{
 }
 export async function readIntapSelection(c:any):Promise<IntapSelection|null>{
   const value=cookieValue(String(c.req.header('Cookie')||''),KEY)
-  const m=value.match(/^(medical_master|medical|sponsor|sponsored|free|paid|trial):([a-f0-9-]{36}):([a-f0-9]{24})$/i)
+  const m=value.match(/^(medical_master|medical|sponsor|sponsored|free|paid|trial):([a-f0-9-]{36}):([a-f0-9]{24}):([a-f0-9]{32})$/i)
   if(!m||!validKinds.has(m[1]))return null
   const fingerprint=await sessionFingerprint(c)
   if(!fingerprint||m[3]!==fingerprint)return null
-  return{kind:m[1] as IntapAccountKind,id:m[2]}
+  return{kind:m[1] as IntapAccountKind,id:m[2],tabToken:m[4]}
 }
-export async function setIntapSelection(c:any,selection:IntapSelection):Promise<boolean>{
-  if(!validKinds.has(selection.kind)||!/^[a-f0-9-]{36}$/i.test(selection.id))return false
+export async function setIntapSelection(c:any,selection:IntapSelection):Promise<string>{
+  if(!validKinds.has(selection.kind)||!/^[a-f0-9-]{36}$/i.test(selection.id))return ''
   const fingerprint=await sessionFingerprint(c)
-  if(!fingerprint)return false
-  c.header('Set-Cookie',KEY+'='+encodeURIComponent(selection.kind+':'+selection.id+':'+fingerprint)+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200',{append:true})
-  return true
+  if(!fingerprint)return ''
+  // Rotates on every explicit choice, even when reselecting the same account.
+  // A form left in another tab holds the previous token and cannot write.
+  const tabToken=crypto.randomUUID().replace(/-/g,'')
+  c.header('Set-Cookie',KEY+'='+encodeURIComponent(selection.kind+':'+selection.id+':'+fingerprint+':'+tabToken)+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200',{append:true})
+  return tabToken
+}
+export function matchesActiveIntapTab(c:any,selection:IntapSelection|null):boolean{
+  const received=String(c.req.header('X-Intap-Account-Tab')||'').trim()
+  return Boolean(selection?.tabToken&&received&&received===selection.tabToken)
 }
 export function clearIntapSelection(c:any){
   c.header('Set-Cookie',KEY+'=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0',{append:true})
