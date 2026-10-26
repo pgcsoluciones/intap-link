@@ -42,6 +42,8 @@ for(const fn of ['enforceIntapMedicalSelection','enforceIntapSponsoredSelection'
 }
 assert.match(worker,/app.use\('\/api\/v1\/sponsor\/\*'/,'Sponsor APIs must guard selected category')
 assert.match(worker,/code:'intap_account_not_selected'/,'Blocked requests should identify cause')
+assert.match(worker,/const classicPrefixes=\['\/api\/v1\/me\/profile'/,'Free and Link classic profile requests must honor active account')
+assert.match(worker,/\['free','paid'\]\.includes\(active.kind\)/,'Non-Free selected account cannot edit Free or Link profile')
 assert.match(medical,/if\(ownerScope\(c\)==='sponsor_master'\)return ensureSponsorMasterProfile/,'Master editor keeps explicit scope')
 assert.match(appointments,/settings_url:isMaster\?'\/admin\/sponsor\/kawmed\?tab=profile':'\/admin\/medical'/,'Public profile must target correct editor by actual owner scope')
 assert.match(appointments,/manage_url:isMaster\?'\/admin\/sponsor\/kawmed/,"Master must not open doctor agenda")
