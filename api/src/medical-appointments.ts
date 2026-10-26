@@ -328,6 +328,7 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
     manage_url:isMaster?'/admin/medical/agenda?scope=sponsor_master':'/admin/medical/agenda',
     settings_url:isMaster?'/admin/sponsor/kawmed?tab=profile':'/admin/medical',
     is_master:isMaster,
+    action_scope:isMaster?'sponsor_master':null,
     resource_url:sponsor?.vademecum_url||'',
     resource_label:sponsor?.vademecum_label||'Ver vademécum',
     contact_url:sponsor?.representative?.url||'',
