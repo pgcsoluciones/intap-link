@@ -79,6 +79,14 @@ export default function AuthCallback() {
           sessionStorage.removeItem('kawvo_kawmed_master_resume');localStorage.removeItem('kawvo_kawmed_master_resume')
           navigate('/claim/kawmed-master?code='+encodeURIComponent(medicalMasterCode),{replace:true});return
         }
+        // El acceso ordinario de Intapcard no debe reabrir un patrocinador
+        // por un código antiguo guardado en este navegador. Las reanudaciones
+        // explícitas de KawMed, Demo y Trial ya se resolvieron arriba.
+        const resolvedHome:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
+        if(resolvedHome?.ok&&resolvedHome?.data?.kind==='multiaccount'){
+          navigate('/admin/accounts',{replace:true})
+          return
+        }
         const sponsorMasterCode = readSponsorMasterCode()
         if (sponsorMasterCode) {
           navigate(`/admin/sponsor/entry?public_code=${encodeURIComponent(sponsorMasterCode)}`, { replace: true })
@@ -114,7 +122,7 @@ export default function AuthCallback() {
           return
         }
 
-        const home:any = await apiGet('/me/home-route').catch(() => ({ ok:false }))
+        const home:any = resolvedHome
         if (home?.ok && home?.data?.route) {
           navigate(String(home.data.route), { replace:true })
           return

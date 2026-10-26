@@ -1,3 +1,4 @@
+import { readIntapSelection, matchesActiveIntapTab } from './intap-active-account'
 import { registerMedicalProfileRoutes } from './routes/medical-profile'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -88,7 +89,7 @@ function isAllowedOrigin(origin: string): boolean {
 app.use('*', cors({
   origin: (origin) => isAllowedOrigin(origin) ? origin : '',
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id', 'X-Intap-Account-Tab'],
   credentials: true,
   maxAge: 86400,
 }))
@@ -113,6 +114,102 @@ app.use('/api/v1/me/*', async (c:any,next:any) => {
   if(blocked.some(prefix=>path===prefix||path.startsWith(prefix+'/'))){
     return c.json({ok:false,error:'Esta función pertenece a la cuenta del propietario y no está disponible durante la administración Demo.',code:'free_demo_owner_only'},403)
   }
+  await next()
+})
+
+/**
+ * One active account per authenticated INTAP operator session.
+ * This is an extra permission boundary in addition to the per-profile DB
+ * checks inside each route. Other users keep their existing behavior.
+ */
+const enforceIntapMedicalSelection=async(c:any,next:any)=>{
+  // Public owner-context resolves the exact slug and verifies ownership itself.
+  // The public URL has no ?scope; do not reject sponsor Master before lookup.
+  if(String(c.req.path||'').endsWith('/appointments/public-context'))return next()
+  const sessionRaw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!sessionRaw)return next() // endpoint's own auth returns 401
+  const hash=await sha256Hex(sessionRaw)
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(hash).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  const required=String(c.req.query('scope')||'')==='sponsor_master'?'medical_master':'medical'
+  if(!active||active.kind!==required)return c.json({ok:false,error:'Esta no es la cuenta activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Esta pestaña ya no administra la cuenta activa. Vuelve a elegirla desde Multicuenta.',code:'intap_account_tab_stale'},409)
+  await next()
+}
+app.use('/api/v1/me/medical-profile',enforceIntapMedicalSelection)
+app.use('/api/v1/me/medical-profile/*',enforceIntapMedicalSelection)
+const enforceIntapSponsoredSelection=async(c:any,next:any)=>{
+  // Public owner controls authenticate then verify the exact public username in D1.
+  if(String(c.req.path||'').endsWith('/appointments/public-context'))return next()
+  const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!raw)return next()
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  const required=String(c.req.query('scope')||'')==='master'?'sponsor':'sponsored'
+  if(!active||active.kind!==required)return c.json({ok:false,error:'Selecciona la cuenta correspondiente desde Multicuenta.',code:'intap_account_not_selected'},403)
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Esta pestaña ya no administra esta cuenta.',code:'intap_account_tab_stale'},409)
+  if(required==='sponsored'){
+    const id=String(c.req.query('profile_id')||'')
+    if(id&&id!==active.id)return c.json({ok:false,error:'El perfil solicitado no es la cuenta activa.'},403)
+  }
+  await next()
+}
+app.use('/api/v1/me/sponsored-profile',enforceIntapSponsoredSelection)
+app.use('/api/v1/me/sponsored-profile/*',enforceIntapSponsoredSelection)
+app.use('/api/v1/sponsor/*',async(c:any,next:any)=>{
+  const path=String(c.req.path||'')
+  if(path==='/api/v1/sponsor/context'||path==='/api/v1/sponsor/accounts')return next()
+  const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!raw)return next()
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  const required=path.startsWith('/api/v1/sponsor/kawmed')?'medical_master':'sponsor'
+  const shared=path.startsWith('/api/v1/sponsor/settings')||path.startsWith('/api/v1/sponsor/media')
+  if(!active||(!shared&&active.kind!==required)||(shared&&!['sponsor','medical_master'].includes(active.kind)))
+    return c.json({ok:false,error:'Este patrocinador no es la cuenta activa.',code:'intap_account_not_selected'},403)
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Cambia de cuenta desde Multicuenta antes de continuar.',code:'intap_account_tab_stale'},409)
+  await next()
+})
+
+// Classic Free/Link editor requests from another tab must not mutate the
+// operator's profile while a sponsor or medical identity is selected.
+app.use('/api/v1/me/*',async(c:any,next:any)=>{
+  const path=String(c.req.path||'')
+  const classicPrefixes=['/api/v1/me/profile','/api/v1/me/contact','/api/v1/me/links',
+    '/api/v1/me/faqs','/api/v1/me/products','/api/v1/me/videos',
+    '/api/v1/me/gallery','/api/v1/me/free']
+  if(!classicPrefixes.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return next()
+  const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!raw)return next()
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  if(!active||!['free','paid'].includes(active.kind))
+    return c.json({ok:false,error:'La cuenta Free o Link no está activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  // Navigating an <a> or <iframe> to the draft Free preview is a browser
+  // document request, not a fetch: browsers cannot add X-Intap-Account-Tab.
+  // Permit ONLY this read-only GET after verifying the selected profile ID
+  // against the requested slug. All edits still require the matching tab token.
+  const freePreviewPrefix='/api/v1/me/free/profile-preview/'
+  if(c.req.method==='GET'&&path.startsWith(freePreviewPrefix)){
+    const slug=path.slice(freePreviewPrefix.length)
+    if(!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug))return c.json({ok:false,error:'Identificador de perfil no válido.'},400)
+    const owned=await c.env.DB.prepare('SELECT id FROM profiles WHERE id=? AND lower(slug)=lower(?) LIMIT 1')
+      .bind(active.id,slug).first()
+    if(!owned)return c.json({ok:false,error:'La vista previa no corresponde a la cuenta Free/Link activa.',code:'intap_account_not_selected'},403)
+    const presented=String(c.req.header('X-Intap-Account-Tab')||'').trim()
+    if(presented&&!matchesActiveIntapTab(c,active))
+      return c.json({ok:false,error:'Esta pestaña ya no administra esta cuenta.',code:'intap_account_tab_stale'},409)
+    return next()
+  }
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Esta pestaña ya no administra la cuenta Free/Link seleccionada.',code:'intap_account_tab_stale'},409)
   await next()
 })
 

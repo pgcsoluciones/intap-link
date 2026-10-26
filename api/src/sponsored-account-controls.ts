@@ -1,6 +1,7 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { listOwnedSponsoredBeneficiaryProfiles, requestedSponsoredProfileId, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { readIntapSelection } from './intap-active-account'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -35,8 +36,12 @@ app.get('/api/v1/me/sponsored-profiles',requireUser,async(c:any)=>{
 app.get('/api/v1/me/sponsored-profile/account',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
   const user=await c.env.DB.prepare(`SELECT email FROM users WHERE id=? LIMIT 1`).bind(userId).first()
-  const selectedId=requestedSponsoredProfileId(c)
+  const requestedId=requestedSponsoredProfileId(c)
   const allowed=await sponsoredMultiProfileAccess(c,userId)
+  const active=allowed?await readIntapSelection(c):null
+  if(allowed&&(!active||active.kind!=='sponsored'||(requestedId&&requestedId!==active.id)))
+    return c.json({ok:false,error:'Selecciona esta cuenta patrocinada desde el directorio multicuenta.'},403)
+  const selectedId=allowed?String(active?.id||''):requestedId
   const profile=selectedId&&allowed
     ?await c.env.DB.prepare(`SELECT sp.id,sp.username,sp.status,sp.artifact_id,a.public_code,a.product_type FROM sponsored_profiles sp LEFT JOIN intap_artifacts a ON a.id=sp.artifact_id WHERE sp.id=? AND sp.user_id=? AND sp.profile_role='beneficiary' LIMIT 1`).bind(selectedId,userId).first()
     :await c.env.DB.prepare(`SELECT sp.id,sp.username,sp.status,sp.artifact_id,a.public_code,a.product_type FROM sponsored_profiles sp LEFT JOIN intap_artifacts a ON a.id=sp.artifact_id WHERE sp.user_id=? AND sp.profile_role='beneficiary' ORDER BY sp.created_at ASC LIMIT 1`).bind(userId).first()
@@ -54,8 +59,12 @@ app.post('/api/v1/me/sponsored-profile/unlink',requireUser,async(c:any)=>{
   const accountEmail=String((user as any)?.email||'').trim().toLowerCase()
   if(!accountEmail||confirmEmail!==accountEmail)return c.json({ok:false,error:'El correo debe coincidir con el correo de acceso de esta cuenta.',code:'unlink_email_mismatch'},422)
 
-  const selectedId=requestedSponsoredProfileId(c)
+  const requestedId=requestedSponsoredProfileId(c)
   const allowed=await sponsoredMultiProfileAccess(c,userId)
+  const active=allowed?await readIntapSelection(c):null
+  if(allowed&&(!active||active.kind!=='sponsored'||(requestedId&&requestedId!==active.id)))
+    return c.json({ok:false,error:'Selecciona esta cuenta patrocinada desde el directorio multicuenta.'},403)
+  const selectedId=allowed?String(active?.id||''):requestedId
   const profile=selectedId&&allowed
     ?await c.env.DB.prepare(`SELECT id,artifact_id,username FROM sponsored_profiles WHERE id=? AND user_id=? AND profile_role='beneficiary' LIMIT 1`).bind(selectedId,userId).first()
     :await c.env.DB.prepare(`SELECT id,artifact_id,username FROM sponsored_profiles WHERE user_id=? AND profile_role='beneficiary' ORDER BY created_at ASC LIMIT 1`).bind(userId).first()

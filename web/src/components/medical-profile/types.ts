@@ -61,6 +61,7 @@ export interface KawMedProfileData {
   province: string | null
   country: string | null
   organization: string | null
+  is_sponsor_master?: boolean
   status: KawMedProfileStatus
   centers: KawMedCenter[]
   schedules: KawMedSchedule[]

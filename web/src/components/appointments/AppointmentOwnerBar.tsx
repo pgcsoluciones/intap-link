@@ -13,10 +13,14 @@ type Pending={
 }
 type Context={
   is_owner:boolean
+  allow_direct_actions?:boolean
   enabled:boolean
   pending_count:number
   pending:Pending[]
   manage_url:string
+  settings_url?:string
+  is_master?:boolean
+  action_scope?:'sponsor_master'|'master'
   resource_url?:string
   resource_label?:string
   contact_url?:string
@@ -44,9 +48,10 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   async function load(){
     try{
       const res=await fetch(ownerApiBase+'/public-context?username='+encodeURIComponent(username),{credentials:'include',cache:'no-store'})
-      if(!res.ok){if(res.status===401||res.status===403)setContext(null);return}
+      if(!res.ok){setContext(null);return}
       const json:any=await res.json().catch(()=>null)
       if(json?.ok&&json.data?.is_owner)setContext(json.data)
+      else setContext(null)
     }catch{/* visitor profile remains unaffected */}
   }
   useEffect(()=>{
@@ -90,7 +95,8 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     if(actionId)return
     setActionId(id)
     try{
-      const res=await fetch(ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:'{}'})
+      const target=ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.action_scope?'?scope='+encodeURIComponent(context.action_scope):'')
+      const res=await fetch(target,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:'{}'})
       const json:any=await res.json().catch(()=>null)
       if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos actualizar la solicitud.')
       onToast(action==='confirm'?'Cita confirmada. Ese horario ya no está disponible.':'Solicitud rechazada.')
@@ -102,7 +108,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   if(!context)return null
   const origin=manageOrigin.replace(/\/$/,'')
   const manageUrl=origin+String(context.manage_url||'/admin/sponsored/agenda')
-  const settingsUrl=origin+settingsPath
+  const settingsUrl=origin+String(context.settings_url||settingsPath)
   const resourceUrl=String(context.resource_url||'').trim()
   const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
   const contactUrl=String(context.contact_url||'').trim()
@@ -134,7 +140,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
                 <strong style={{display:'block',fontSize:13,color:'#0f172a'}}>{item.customer_name}</strong>
                 <span style={{display:'block',marginTop:3,fontSize:11.5,fontWeight:750,color:'#64748b'}}>{item.appointment_date} · {item.start_time} · {item.reason_label}</span>
                 {item.details&&<p style={{margin:'7px 0 0',fontSize:11.5,lineHeight:1.45,color:'#475569'}}>{item.details}</p>}
-                <div style={{display:'flex',gap:7,marginTop:9}}><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'confirm')} style={{...actionBtn,background:'#16a34a',color:'#fff'}}>Confirmar</button><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'reject')} style={{...actionBtn,background:'#fff',color:'#64748b',border:'1px solid #dbe4ef'}}>Rechazar</button></div>
+                {context.allow_direct_actions!==false?<div style={{display:'flex',gap:7,marginTop:9}}><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'confirm')} style={{...actionBtn,background:'#16a34a',color:'#fff'}}>Confirmar</button><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'reject')} style={{...actionBtn,background:'#fff',color:'#64748b',border:'1px solid #dbe4ef'}}>Rechazar</button></div>:<p style={{margin:'8px 0 0',fontSize:11,color:'#475569'}}>Para responder, abre la agenda de la cuenta activa.</p>}
               </article>)}
               {!context.pending.length&&<p style={{margin:0,padding:'16px 10px',textAlign:'center',fontSize:12,color:'#64748b'}}>No tienes solicitudes pendientes.</p>}
             </div>

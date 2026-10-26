@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { apiGet } from '../../lib/api'
+import { apiGet, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
 import { activeFreeDemoDelegationId, clearFreeDemoDelegation } from '../../lib/freeDemoDelegation'
 
 interface Props {
@@ -106,6 +106,47 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         return
       }
 
+      // Intapcard may own several accounts. An authenticated session must not
+      // silently activate another dashboard because of a remembered sponsor,
+      // medical profile, or a stale URL in another browser tab.
+      const loggedInEmail = String(json.data?.email||'').trim().toLowerCase()
+      if (loggedInEmail === 'intapcard@gmail.com' && location.pathname !== '/admin/accounts') {
+        const selected:any = await apiGet('/me/intapcard/active-account').catch(()=>({ok:false}))
+        const active = selected?.ok ? selected.data?.active : null
+        if (!active) { navigate('/admin/accounts', {replace:true}); return }
+        if (!selected.data?.tab_session_valid) {
+          const fresh=String(selected.data?.new_tab_token||'')
+          const local=String(sessionStorage.getItem(INTAP_ACTIVE_TAB_STORAGE)||'')
+          // Fresh cross-domain public->App navigation may attach to the already
+          // selected account. A stale old tab cannot silently renew its token.
+          if (!local && /^[a-f0-9]{32}$/.test(fresh)) sessionStorage.setItem(INTAP_ACTIVE_TAB_STORAGE,fresh)
+          else {navigate('/admin/accounts',{replace:true});return}
+        }
+        const path = location.pathname
+        const kind=String(active.kind||'')
+        const allowed = (
+          (kind==='medical' && (path==='/admin/medical'||path.startsWith('/admin/medical/')) && !path.startsWith('/admin/medical/demo')) ||
+          (kind==='medical_master' && (path==='/admin/sponsor/kawmed'||(path==='/admin/medical/agenda'&&new URLSearchParams(location.search).get('scope')==='sponsor_master'))) ||
+          (kind==='sponsor' && (path==='/admin/sponsor'||(path==='/admin/sponsored/agenda'&&new URLSearchParams(location.search).get('scope')==='master'))) ||
+          (kind==='sponsored' && (path==='/admin/sponsored'||path.startsWith('/admin/sponsored/')) && !path.includes('/entry') && !path.includes('/activate')) ||
+          (kind==='free' && (path==='/admin/free'||path.startsWith('/admin/free/'))) ||
+          (kind==='paid' && (path==='/admin'||path.startsWith('/admin/onboarding/')))
+        )
+        if (!allowed) {
+          navigate('/admin/accounts',{replace:true})
+          return
+        }
+        // Directly opening an old sponsored link must not reselect another
+        // profile by its URL query. Only the account chooser can switch.
+        if (kind==='sponsored') {
+          const requested=new URLSearchParams(location.search).get('profile_id')
+          if (requested && requested!==String(active.id)) {
+            navigate('/admin/accounts',{replace:true})
+            return
+          }
+        }
+      }
+
       if (delegatedDemoId && location.pathname.startsWith('/admin/free')) {
         const planId = json.data?.plan_id || json.data?.plan_code || 'free'
         if (!json.data?.profile_id || planId !== 'free') {
@@ -161,13 +202,13 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
           navigate(route, { replace:true })
           return
         }
-        if (genericEntry && route !== path) {
+        if (genericEntry && route !== path && !(kind === 'multiaccount' && path === '/admin' && new URLSearchParams(location.search).get('account') === 'paid')) {
           navigate(route, { replace:true })
           return
         }
       }
 
-      if (location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
+      if (location.pathname !== '/admin/accounts' && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         if (scanCode) {
           const scanPending: any = await apiGet('/me/artifacts/scan/pending')
             .catch(() => ({ ok: false }))
@@ -185,7 +226,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
       }
 
       const pendingActivation = sessionStorage.getItem('intap_activation_public_code')
-      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
+      if (pendingActivation && json.data?.profile_id && location.pathname !== '/admin/accounts' && location.pathname !== '/admin/artifacts/activate' && !insideTeamFlow && !hasTeamActivationContext) {
         navigate('/admin/artifacts/activate', { replace: true })
         return
       }
@@ -207,7 +248,7 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
 
       const insideOnboarding = location.pathname.startsWith('/admin/free/onboarding/')
       const insideArtifactFlow = location.pathname.startsWith('/admin/artifacts')
-      if (!insideOnboarding && !insideArtifactFlow && !insideTeamFlow && !hasTeamActivationContext) {
+      if (location.pathname !== '/admin/accounts' && !insideOnboarding && !insideArtifactFlow && !insideTeamFlow && !hasTeamActivationContext) {
         const resume = interruptedFreeOnboardingRoute(json.data)
         if (resume) {
           navigate(resume, { replace: true })

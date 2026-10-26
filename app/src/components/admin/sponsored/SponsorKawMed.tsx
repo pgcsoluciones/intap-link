@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
-import { API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
+import { activeIntapTabHeaders, API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import FreeCredentials from '../free/FreeCredentials'
@@ -28,6 +28,7 @@ export default function SponsorKawMed(){
   const[data,setData]=useState<Overview|null>(null)
   const[sponsorAccounts,setSponsorAccounts]=useState<any[]>([])
   const[currentSponsorId,setCurrentSponsorId]=useState('')
+  const[isIntapMulticuenta,setIsIntapMulticuenta]=useState(false)
   const[loading,setLoading]=useState(true)
   const[busy,setBusy]=useState(false)
   const[message,setMessage]=useState('')
@@ -50,7 +51,8 @@ export default function SponsorKawMed(){
   async function load(){
     setLoading(true);setError('')
     try{
-      const[j,accounts]:any[]=await Promise.all([apiGet('/sponsor/kawmed/overview'),apiGet('/sponsor/accounts')])
+      const[j,accounts,active]:any[]=await Promise.all([apiGet('/sponsor/kawmed/overview'),apiGet('/sponsor/accounts'),apiGet('/me/intapcard/active-account').catch(()=>({ok:false}))])
+      setIsIntapMulticuenta(Boolean(active?.ok&&active.data?.active?.kind==='medical_master'))
       if(!j?.ok)throw new Error(j?.error||'No pudimos abrir KawMed.')
       setData(j.data)
       const programs=Array.isArray(j.data?.programs)?j.data.programs:[]
@@ -64,6 +66,7 @@ export default function SponsorKawMed(){
 
   async function changeSponsorAccount(sponsorId:string){
     if(!sponsorId||sponsorId===currentSponsorId)return
+    if(isIntapMulticuenta){window.location.assign('/admin/accounts');return}
     setBusy(true);setError('')
     try{const j:any=await apiPost('/sponsor/context',{sponsor_id:sponsorId});if(!j?.ok)throw new Error(j?.error||'No pudimos cambiar de patrocinador.');window.location.assign('/admin/sponsor/kawmed')}
     catch(e){setError(e instanceof Error?e.message:'No pudimos cambiar de patrocinador.');setBusy(false)}
@@ -88,7 +91,7 @@ export default function SponsorKawMed(){
       const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='logo'?1024:1600,quality:.82,baseName:kind==='logo'?'logo':'kawmed-banner'})
       const fd=new FormData();fd.append('file',optimized,optimized.name)
       const uploadKind=kind==='logo'?'logo':'banner'
-      const res=await fetch(`${API_BASE}/sponsor/media?kind=${uploadKind}`,{method:'POST',credentials:'include',body:fd})
+      const res=await fetch(`${API_BASE}/sponsor/media?kind=${uploadKind}`,{method:'POST',credentials:'include',headers:activeIntapTabHeaders(),body:fd})
       const j:any=await res.json().catch(()=>null)
       if(!res.ok||!j?.ok||!j.url)throw new Error(j?.error||'No pudimos subir la imagen.')
       if(kind==='logo'){
@@ -153,7 +156,7 @@ export default function SponsorKawMed(){
   const tabClass=(name:Tab)=>'rounded-2xl px-4 py-3 text-sm font-black '+(tab===name?'bg-slate-950 text-white':'border border-slate-200 bg-white text-slate-600')
 
   return <main className="min-h-screen bg-slate-50 px-4 py-6 font-['Inter'] text-slate-950"><div className="mx-auto max-w-[1280px] space-y-5">
-    <header className={card}><div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">KAWMED · PANEL MASTER</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{data.sponsor.name}</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Tu presentación médica de ejemplo, identidad privada de patrocinio, códigos MED, visitadores y trazabilidad.</p>{sponsorAccounts.length>1&&<label className="mt-3 block max-w-sm text-[11px] font-black uppercase tracking-[.08em] text-slate-500">Cuenta patrocinada<select value={currentSponsorId} onChange={e=>void changeSponsorAccount(e.target.value)} disabled={busy} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-900">{sponsorAccounts.map(account=><option key={account.sponsor_id} value={account.sponsor_id}>{account.name}{Number(account.has_kawmed)===1?' · KawMed':''}</option>)}</select></label>}</div><div className="flex flex-wrap items-start gap-2">{masterCode&&<div className="rounded-2xl bg-cyan-50 px-4 py-3 text-sm"><p className="text-[10px] font-black uppercase tracking-[.12em] text-cyan-700">Master KawMed</p><p className="mt-1 font-mono font-black">{masterCode}</p><button onClick={()=>void copy(masterUrl,'master')} className="mt-1 text-[11px] font-bold text-cyan-700 underline">{copied==='master'?'✓ Copiado':'Copiar acceso'}</button></div>}{hasNormalMaster&&<button onClick={()=>window.location.assign('/admin/sponsor')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">Patrocinio general</button>}<button onClick={()=>void logout()} disabled={busy} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">Cerrar sesión</button></div></div>
+    <header className={card}><div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"><div><p className="text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">KAWMED · PANEL MASTER</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{data.sponsor.name}</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Tu presentación médica de ejemplo, identidad privada de patrocinio, códigos MED, visitadores y trazabilidad.</p>{sponsorAccounts.length>1&&!isIntapMulticuenta&&<label className="mt-3 block max-w-sm text-[11px] font-black uppercase tracking-[.08em] text-slate-500">Cuenta patrocinada<select value={currentSponsorId} onChange={e=>void changeSponsorAccount(e.target.value)} disabled={busy} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-900">{sponsorAccounts.map(account=><option key={account.sponsor_id} value={account.sponsor_id}>{account.name}{Number(account.has_kawmed)===1?' · KawMed':''}</option>)}</select></label>}</div><div className="flex flex-wrap items-start gap-2">{masterCode&&<div className="rounded-2xl bg-cyan-50 px-4 py-3 text-sm"><p className="text-[10px] font-black uppercase tracking-[.12em] text-cyan-700">Master KawMed</p><p className="mt-1 font-mono font-black">{masterCode}</p><button onClick={()=>void copy(masterUrl,'master')} className="mt-1 text-[11px] font-bold text-cyan-700 underline">{copied==='master'?'✓ Copiado':'Copiar acceso'}</button></div>}{isIntapMulticuenta&&<button type="button" onClick={()=>window.location.assign('/admin/accounts')} className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm font-black text-cyan-900">Cambiar cuenta</button>}{hasNormalMaster&&!isIntapMulticuenta&&<button onClick={()=>window.location.assign('/admin/sponsor')} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">Patrocinio general</button>}<button onClick={()=>void logout()} disabled={busy} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">Cerrar sesión</button></div></div>
       <nav className="mt-5 flex flex-wrap gap-2"><button onClick={()=>setTab('profile')} className={tabClass('profile')}>Mi presentación</button><button onClick={()=>setTab('identity')} className={tabClass('identity')}>Identidad de patrocinio</button><button onClick={()=>setTab('codes')} className={tabClass('codes')}>Códigos y trazabilidad</button><button onClick={()=>setTab('account')} className={tabClass('account')}>Credenciales</button></nav>
     </header>
 

@@ -1,0 +1,130 @@
+import fs from 'node:fs'
+import assert from 'node:assert/strict'
+
+const read=path=>fs.readFileSync(path,'utf8')
+const web=read('web/src/App.tsx')
+const api=read('api/src/routes/medical-profile.ts')
+const proxy=read('api/src/preview-frontdoor-entry.ts')
+const config=read('api/wrangler.preview.toml')
+const runner=read('scripts/run-preview-kawmed-public-web-2026-10-25.sh')
+const dashboard=read('app/src/components/admin/medical/MedicalDashboard.tsx')
+
+assert.match(web,/path="\/m\/:slug"/,'La Web pública debe tener ruta KawMed')
+assert.match(web,/element=\{<KawMedProfile\s*\/>\}/,'La ruta debe montar el perfil médico')
+assert.match(api,/mp\.status = 'active'/,'Los borradores no deben divulgarse públicamente')
+assert.match(proxy,/proxyPagesPreview\(request, env\.WEB_PAGES_ORIGIN, 'web-custom-domain'\)/,'Web Preview debe respetar el origen configurado')
+assert.match(config,/WEB_PAGES_ORIGIN = "https:\/\/qa-kawmed-web-1025\.intap-web2\.pages\.dev"/,'El origen persistente debe ser el alias Web KawMed')
+assert.match(runner,/npm run build:preview -w web/,'El runner debe compilar Web Preview')
+assert.match(runner,/npm run build:preview -w app/,'El runner debe conservar App integrada')
+assert.match(runner,/WEB_ORIGIN="\$\(grep/,'El origen Web debe venir del despliegue realizado')
+assert.match(runner,/APP_ORIGIN="\$\(grep/,'El origen App debe venir del despliegue realizado')
+assert.match(runner,/restore/,'El runner debe restaurar configuración versionada')
+assert.match(runner,/grep -Fq '\/m\/:slug' "\$LOG_DIR\/web-entry\.js"/,'El smoke debe verificar el bundle público real')
+assert.match(runner,/verify_pages_html web "\$WEB_ORIGIN\/m\/med-intapcard"/,'El despliegue debe comprobar la ruta Web antes de activar el Worker')
+assert.match(runner,/for attempt in 1 2 3 4 5 6 7 8 9 10 11 12/,'Dar tiempo acotado a la distribución de Pages')
+assert.match(runner,/Se bloquea el cambio de Worker Preview/,'Ante fallos persistentes se debe mantener la ruta Preview anterior')
+assert.match(runner,/verify_pages_html web-root "\$WEB_ORIGIN\/"/,'Diferenciar el fallo de ruta del fallo de origen Web')
+assert.match(runner,/Accept: text\/html/,'Las sondas deben simular navegaciones HTML')
+
+assert.match(dashboard,/disabled=\{profile\.status!=='active'\}/,'El enlace público debe estar deshabilitado para borradores')
+assert.match(dashboard,/Perfil público disponible al publicar/,'La UI debe explicar que falta publicar')
+assert.match(dashboard,/La vista pública y la vista previa completa estarán disponibles cuando publiques/,'No prometer vista previa pública para borradores')
+const medicalApi=read('api/src/medical-profile-owner.ts')
+const controls=dashboard.split('Vista previa</button>}')[1]?.split("{scope==='doctor'&&<button onClick")[0]||''
+assert.match(controls,/openPublicationConfirm\('publish'\)/,'Master debe mostrar Publicar')
+assert.match(controls,/openPublicationConfirm\('unpublish'\)/,'Master debe mostrar Despublicar')
+assert.match(dashboard,/setPublicationConfirm\(action\)/,'Ambas acciones deben abrir la confirmación de su propio contexto')
+const header=dashboard.slice(dashboard.indexOf('    <header className={card}>'),dashboard.indexOf('</header>')+9)
+assert.ok(header.includes('id="kawmed-publication-confirmation"'),'La confirmación debe estar dentro del encabezado, junto a los botones')
+assert.equal((dashboard.match(/id="kawmed-publication-confirmation"/g)||[]).length,1,'Debe existir un solo panel de confirmación')
+assert.doesNotMatch(dashboard,/aria-modal="true" aria-label="Confirmar publicación"/,'No debe quedar un diálogo modal ficticio al final de la página')
+assert.match(dashboard,/role="group" aria-label=\{publicationConfirm===/,'El panel cercano no debe fingir ser modal')
+assert.match(dashboard,/publicationConfirmRef\.current\?\.focus\(\)/,'El foco debe ir al botón de confirmación')
+assert.match(dashboard,/cancelPublicationConfirm/,'Cancelar debe devolver el foco a la acción original')
+assert.match(dashboard,/event\.key==='Escape'/,'Escape debe cerrar la confirmación sin publicar')
+assert.match(dashboard,/aria-live="polite"/,'El éxito debe anunciarse a tecnologías de asistencia')
+assert.match(dashboard,/publicationPending==='publish'\?'Publicando…'/,'Debe informar que la publicación está en curso')
+assert.match(dashboard,/publicationPending==='unpublish'\?'Despublicando…'/,'Debe informar que la despublicación está en curso')
+assert.match(dashboard,/role="alert"/,'Errores de publicación deben verse junto a la acción')
+assert.match(dashboard,/motion-reduce:transition-none/,'Debe respetar preferencias de movimiento reducido')
+assert.match(dashboard,/const headerActionMotion=/,'Las acciones superiores deben compartir una interacción coherente')
+assert.match(dashboard,/hover:bg-slate-50 '\+headerActionMotion/,'Cambiar cuenta y notificaciones deben reaccionar')
+assert.match(dashboard,/hover:bg-cyan-50 '\+headerActionMotion/,'Vista previa debe reaccionar')
+assert.match(dashboard,/animate-spin rounded-full/,'El proceso de publicación debe indicar carga visible')
+assert.match(dashboard,/motion-reduce:animate-none/,'El spinner debe respetar movimiento reducido')
+assert.match(dashboard,/motion-safe:animate-\[fade-in_180ms_ease-out_both\]/,'La confirmación debe tener una entrada suave y válida')
+
+assert.match(dashboard,/Requisitos para publicar/,'La pantalla debe informar requisitos de publicación')
+assert.match(dashboard,/Obligatorios para publicar/,'El usuario debe distinguir los datos obligatorios')
+assert.match(dashboard,/Recomendados para un perfil completo/,'Las recomendaciones no deben confundirse con requisitos')
+assert.match(dashboard,/No bloquean la publicación/,'Explicar expresamente que el progreso 5\/5 no bloquea')
+assert.match(dashboard,/Boolean\(String\(profile\?\.name\|\|''\)\.trim\(\)\)/,'La publicación comprueba nombre guardado')
+assert.match(dashboard,/Boolean\(String\(profile\?\.specialty\|\|''\)\.trim\(\)\)/,'La publicación comprueba especialidad guardada')
+assert.match(dashboard,/Boolean\(String\(profile\?\.slug\|\|''\)\.trim\(\)\)/,'La publicación comprueba slug guardado')
+assert.match(dashboard,/disabled=\{busy\|\|profile\.status==='active'\|\|!publicationReadiness\.canPublish\}/,'No habilitar Publicar con requisitos faltantes o cambios importantes sin guardar')
+assert.match(dashboard,/publicationReadiness\.missing\.map\(item=>item\.label\)\.join\(', '\)/,'El usuario debe recibir la lista concreta de campos faltantes')
+assert.match(dashboard,/Ir a los datos del perfil/,'Los campos obligatorios deben tener un camino de corrección')
+assert.match(dashboard,/Por mejorar: \{completeness\.missing\.join\(', '\)\}/,'No presentar recomendaciones como impedimento')
+assert.match(medicalApi,/ownerScope\(c\)==='sponsor_master'/,'El API Master debe usar contexto autorizado')
+assert.match(medicalApi,/app\.post\('\/api\/v1\/me\/medical-profile\/publication',requireUser/,'El endpoint requiere sesión')
+assert.match(medicalApi,/owner=await owned\(c\)|const r=await owned\(c\)/,'El endpoint debe resolver el perfil autorizado')
+assert.match(medicalApi,/Confirma el cambio de publicación/,'La publicación requiere confirmación')
+
+// The Master is a real demonstration of the doctor's presentation.
+// Sponsor company is NEVER injected into the doctor's visible name.
+const kawmed=read('web/src/components/medical-profile/KawMedProfile.tsx')
+const kawmedCss=read('web/src/components/medical-profile/KawMedProfile.css')
+assert.match(api,/display_name: \[profile\.professional_prefix, profile\.name\]\.filter\(Boolean\)\.join\(' '\)/,'Public medical name must be built from stored prefix and name only')
+assert.match(api,/organization: profile\.organization \|\| null/,'Organization remains independent profile data')
+assert.equal((kawmed.match(/<h1>\{profile\.display_name\}<\/h1>/g)||[]).length,2,'Classic and Modern must display only stored medical name')
+assert.doesNotMatch(kawmed,/kawmed-master-organization|masterOrganization|separateSponsorMasterName|separateMasterHeading/,'Never append or prepend sponsor to Master medical identity')
+assert.doesNotMatch(kawmedCss,/kawmed-master-organization|kawmed-master-person|kawmed-identity--master/,'No sponsor-only header overrides in either public template')
+assert.match(kawmed,/profile\.organization \? `ORG:\$\{profile\.organization\}` : ''/,'Organization may still be included independently in contact metadata')
+
+// Protect the approved equal-size/equal-weight specialty hierarchy.
+// Both templates keep exactly the same typography for primary, additional
+// and subspecialty labels within that template.
+const equalAnchor='/* Equal visual importance for all medical specialties in Classic and Modern. */'
+const equalEnd='/* Patient accessibility: larger booking-form copy and input controls on phones. */'
+const equalStart=kawmedCss.indexOf(equalAnchor)
+const equalStop=kawmedCss.indexOf(equalEnd,equalStart)
+assert.ok(equalStart>=0&&equalStop>equalStart,'Expected final specialty equal-typography overrides')
+const equalCss=kawmedCss.slice(equalStart,equalStop)
+function cssAfter(selector){
+  const i=equalCss.indexOf(selector)
+  assert.ok(i>=0,'Missing specialty selector: '+selector)
+  const open=equalCss.indexOf('{',i)
+  const close=equalCss.indexOf('}',open)
+  assert.ok(open>=0&&close>open,'Invalid CSS for '+selector)
+  return equalCss.slice(open+1,close)
+}
+function typeSpec(block){
+  return Object.fromEntries(['font-family','font-size','line-height','font-weight','color'].map(prop=>{
+    const match=block.match(new RegExp('(?:^|[;\\s])'+prop+'\\s*:\\s*([^;\\n}]+)'))
+    assert.ok(match,'Typography missing '+prop)
+    return [prop,match[1].trim()]
+  }))
+}
+const classicPrimary=cssAfter('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-specialties .kawmed-specialty--main,')
+const classicAdditional=cssAfter('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-specialties .kawmed-specialty--additional{')
+const classicSub=cssAfter('.kawmed-shell:not(.kawmed-shell--pastel) .kawmed-identity .kawmed-subtitle{')
+const modernPrimary=cssAfter('.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-main-specialty,')
+const modernAdditional=cssAfter('.kawmed-shell--pastel .kawmed-pastel-hero-specialties .kawmed-pastel-extra-specialty{')
+const modernSub=cssAfter('.kawmed-shell--pastel .kawmed-pastel-subspecialty{')
+assert.deepEqual(typeSpec(classicPrimary),typeSpec(classicAdditional),'Classic main/additional specialties must have equal typography')
+assert.deepEqual(typeSpec(classicPrimary),typeSpec(classicSub),'Classic subspecialty must have the same typography')
+assert.deepEqual(typeSpec(modernPrimary),typeSpec(modernAdditional),'Modern main/additional specialties must have equal typography')
+assert.deepEqual(typeSpec(modernPrimary),typeSpec(modernSub),'Modern subspecialty must have the same typography')
+assert.match(kawmed,/profile\.specialty\.split\(' \| '\)\.filter\(Boolean\)/,'Modern should render all specialty labels')
+assert.match(kawmed,/profile\.specialty\.split\(" \| "\)/,'Classic should render all specialty labels')
+
+// Editable public identity UX: clear labels and helpful copy, not sample data.
+assert.match(dashboard,/Presentación \(Sobre mí\)<textarea/,'Bio field must be labeled Presentación (Sobre mí)')
+assert.match(dashboard,/placeholder="Cuéntales a tus pacientes quién eres, tu experiencia profesional y cómo puedes ayudarles\."/,'Bio placeholder should describe identity and experience')
+assert.match(dashboard,/>Usuario<input className=\{input\} value=\{form\.slug\|\|''\}/,'User label must reuse the existing public slug')
+assert.match(dashboard,/placeholder="@usuario"/,'Public user input must show @usuario example')
+assert.match(dashboard,/slug:e\.target\.value\.replace\(\/\^@\+\/, ''\)/,'Entering @usuario must strip the presentation-only @ symbol')
+assert.match(dashboard,/el símbolo @ no forma parte de la dirección/,'Explain difference between illustrative @ and actual URL')
+assert.match(dashboard,/slug:form\.slug,name:form\.name/,'Saving must still use the original slug field')
+
+console.log('KawMed public Preview route/origin and draft privacy contract: OK')

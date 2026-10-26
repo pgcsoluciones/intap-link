@@ -18,6 +18,13 @@ jobs:
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=critical
       - run: node scripts/test-kawmed-isolation-contract.mjs
+      - run: node scripts/test-kawmed-web-preview-route-contract.mjs
+      - run: node scripts/test-kawmed-code-accordion-contract.mjs
+      - run: node scripts/test-intapcard-active-account-contract.mjs
+      - run: node scripts/test-intapcard-multiaccount-contract.mjs
+      - run: node scripts/test-intapcard-kawmed-integrated-contract.mjs
+      - run: bash -n scripts/run-production-intapcard-kawmed-2026-10-25.sh
+      - run: bash -n scripts/run-preview-kawmed-public-web-2026-10-25.sh
       - run: node scripts/test-kawmed-demo-invitations-contract.mjs
       - run: node scripts/test-ai-profile-assistant-contract.mjs
       - run: npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-ai-api.mjs
