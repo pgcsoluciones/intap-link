@@ -47,6 +47,8 @@ assert.match(dashboard,/publicationPending==='publish'\?'Publicando…'/,'Debe i
 assert.match(dashboard,/publicationPending==='unpublish'\?'Despublicando…'/,'Debe informar que la despublicación está en curso')
 assert.match(dashboard,/role="alert"/,'Errores de publicación deben verse junto a la acción')
 assert.match(dashboard,/motion-reduce:transition-none/,'Debe respetar preferencias de movimiento reducido')
+assert.match(dashboard,/animate-spin rounded-full/,'El proceso de publicación debe indicar carga visible')
+assert.match(dashboard,/motion-reduce:animate-none/,'El spinner debe respetar movimiento reducido')
 assert.match(dashboard,/motion-safe:animate-\[fade-in_180ms_ease-out_both\]/,'La confirmación debe tener una entrada suave y válida')
 
 assert.match(dashboard,/Requisitos para publicar/,'La pantalla debe informar requisitos de publicación')
