@@ -73,11 +73,34 @@ WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG_DIR/
 [[ -n "$WEB_ORIGIN" ]] || fail "No se obtuvo origen inmutable de Web"
 grep -Fq "$WEB_ALIAS" "$LOG_DIR/web-pages.log" || fail "El alias Web no coincide con el persistido en Wrangler. No modificar el Worker."
 
-# Confirma que Pages publica la ruta de la SPA antes de repuntar el front door.
-for url in "$APP_ORIGIN/admin/accounts" "$WEB_ORIGIN/m/med-intapcard"; do
-  http="$(curl -sSL -o /dev/null -w '%{http_code}' "$url")"
-  [[ "$http" == "200" ]] || fail "Origen Pages incorrecto: $url respondió HTTP $http"
-done
+# Cloudflare Pages puede responder temporalmente 404 al nuevo deployment
+# mientras sus assets/Functions se propagan. Comprobar el HTML real, sin saltar
+# la barrera de seguridad: jamás cambiar el Worker Preview si falla esta fase.
+verify_pages_html(){
+  local label="$1" url="$2" code="" attempt="" html="$LOG_DIR/$1-origin.html"
+  local headers="$LOG_DIR/$1-origin-headers.txt"
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    code="$(curl -sSL --connect-timeout 10 --max-time 25 \
+      -H 'Accept: text/html' -D "$headers" -o "$html" \
+      -w '%{http_code}' "$url" || true)"
+    if [[ "$code" == "200" ]] && grep -Eiq '<!doctype html|<html[[:space:]>]' "$html"; then
+      echo "✓ Pages $label entregó HTML (HTTP 200, intento $attempt)"
+      return 0
+    fi
+    echo "  Pages $label HTTP ${code:-error} (intento $attempt/12)."
+    [[ "$attempt" == "12" ]] || sleep 5
+  done
+  echo "▶ Diagnóstico Pages $label: respuesta final HTTP ${code:-error}" >&2
+  echo "  URL: $url" >&2
+  echo "  Cabeceras: $headers" >&2
+  echo "  Respuesta: $html" >&2
+  echo "  Se bloquea el cambio de Worker Preview para no romper rutas existentes." >&2
+  fail "La ruta Pages $label sigue sin entregar HTML. Revisar los archivos de diagnóstico."
+}
+verify_pages_html app "$APP_ORIGIN/admin/accounts"
+verify_pages_html web "$WEB_ORIGIN/m/med-intapcard"
+# Asegurar además que la raíz del mismo deployment Web sirve el HTML.
+verify_pages_html web-root "$WEB_ORIGIN/"
 
 BACKUP="$(mktemp)"
 cp "$CONFIG" "$BACKUP"
@@ -108,8 +131,7 @@ for path in /admin/accounts /admin/medical /superadmin/kawmed; do
   http="$(curl -sSL -o /dev/null -w '%{http_code}' "https://app.preview.intaprd.com$path")"
   [[ "$http" == "200" ]] || fail "Admin App rota: $path HTTP $http"
 done
-http="$(curl -sSL -o /dev/null -w '%{http_code}' 'https://preview.intaprd.com/m/med-intapcard')"
-[[ "$http" == "200" ]] || fail "La ruta médica pública no entrega Web SPA: HTTP $http"
+verify_pages_html web-custom 'https://preview.intaprd.com/m/med-intapcard'
 # La ruta debe estar realmente en el JS servido, no solo responder index.html.
 curl -fsSL 'https://preview.intaprd.com/m/med-intapcard' -o "$LOG_DIR/public-index.html"
 JS_PATH="$(grep -Eo '(/assets/[^" ]+\.js)' "$LOG_DIR/public-index.html" | head -1)"
