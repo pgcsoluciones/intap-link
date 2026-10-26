@@ -1,6 +1,7 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess, setMedicalContextCookie, listSponsorAccounts, resolveSponsorMembership, setSponsorContext } from './sponsored-multiprofile-access'
+import { clearIntapSelection, readIntapSelection, setIntapSelection, type IntapAccountKind } from './intap-active-account'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -178,6 +179,62 @@ app.get('/api/v1/me/intapcard/accounts',requireUser,async(c:any)=>{
   }
   for(const p of trials.results||[])items.push({id:p.id,kind:'trial',title:p.name||p.slug||'Trial',detail:p.slug||'',status:p.status})
   return c.json({ok:true,data:{items}})
+})
+
+/**
+ * Central, explicit selection. A stored sponsor_id or doctor cookie alone NEVER
+ * establishes which account Intapcard is currently administering.
+ */
+async function ownedChoice(c:any,userId:string,kind:IntapAccountKind,id:string){
+  let query='', params:any[]=[id,userId]
+  switch(kind){
+    case 'medical':query='SELECT 1 FROM medical_profiles WHERE id=? AND user_id=? LIMIT 1';break
+    case 'sponsored':query="SELECT 1 FROM sponsored_profiles WHERE id=? AND user_id=? AND COALESCE(profile_role,'beneficiary')='beneficiary' LIMIT 1";break
+    case 'free':query="SELECT 1 FROM profiles WHERE id=? AND user_id=? AND LOWER(COALESCE(plan_id,'free'))='free' LIMIT 1";break
+    case 'paid':query="SELECT 1 FROM profiles WHERE id=? AND user_id=? AND LOWER(COALESCE(plan_id,'free'))<>'free' LIMIT 1";break
+    case 'trial':query='SELECT 1 FROM trial_profiles WHERE id=? AND owner_user_id=? LIMIT 1';break
+    case 'sponsor':query=`SELECT 1 FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id
+      WHERE sm.sponsor_id=? AND sm.user_id=? AND sm.status='active' AND st.is_active=1
+      AND EXISTS(SELECT 1 FROM sponsored_profiles sp WHERE sp.sponsor_id=sm.sponsor_id AND sp.user_id=sm.user_id AND sp.profile_role='sponsor_owner') LIMIT 1`;break
+    case 'medical_master':query=`SELECT 1 FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id
+      WHERE sm.sponsor_id=? AND sm.user_id=? AND sm.status='active' AND st.is_active=1
+      AND EXISTS(SELECT 1 FROM medical_sponsor_masters msm WHERE msm.sponsor_id=sm.sponsor_id AND msm.claimed_by_user_id=sm.user_id AND msm.status='claimed') LIMIT 1`;break
+  }
+  if(!query)return false
+  const row=await c.env.DB.prepare(query).bind(...params).first()
+  return Boolean(row)
+}
+const accountRoute:Record<IntapAccountKind,string>={
+  medical:'/admin/medical',medical_master:'/admin/sponsor/kawmed',
+  sponsor:'/admin/sponsor',sponsored:'/admin/sponsored',
+  free:'/admin/free',paid:'/admin?account=paid',trial:'/trial/login'
+}
+app.get('/api/v1/me/intapcard/active-account',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
+  const selected=await readIntapSelection(c)
+  if(!selected||!(await ownedChoice(c,userId,selected.kind,selected.id)))return c.json({ok:true,data:{active:null}})
+  return c.json({ok:true,data:{active:{...selected,route:accountRoute[selected.kind]}}})
+})
+app.post('/api/v1/me/intapcard/active-account',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
+  const body=await c.req.json().catch(()=>({}))
+  const kind=String(body.kind||'') as IntapAccountKind
+  const id=String(body.id||'')
+  if(!/^[a-f0-9-]{36}$/i.test(id)||!(await ownedChoice(c,userId,kind,id)))return c.json({ok:false,error:'No tienes acceso a esa cuenta.'},403)
+  // Persist backing contexts ONLY for the chosen category; no cross-category inference.
+  if(kind==='medical')setMedicalContextCookie(c,id)
+  if((kind==='sponsor'||kind==='medical_master')&&!(await setSponsorContext(c,userId,id)))
+    return c.json({ok:false,error:'No tienes acceso a ese patrocinador.'},403)
+  if(!(await setIntapSelection(c,{kind,id})))return c.json({ok:false,error:'Sesión inválida. Inicia sesión nuevamente.'},401)
+  return c.json({ok:true,data:{kind,id,route:accountRoute[kind]}})
+})
+app.post('/api/v1/me/intapcard/leave-account',requireUser,async(c:any)=>{
+  const userId=String(c.get('userId')||'')
+  if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
+  clearIntapSelection(c)
+  return c.json({ok:true,data:{route:'/admin/accounts'}})
 })
 
 app.post('/api/v1/me/intapcard/medical-context',requireUser,async(c:any)=>{
