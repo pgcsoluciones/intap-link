@@ -93,7 +93,8 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     if(actionId)return
     setActionId(id)
     try{
-      const res=await fetch(ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:'{}'})
+      const target=ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.is_master?'?scope=sponsor_master':'')
+      const res=await fetch(target,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:'{}'})
       const json:any=await res.json().catch(()=>null)
       if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos actualizar la solicitud.')
       onToast(action==='confirm'?'Cita confirmada. Ese horario ya no está disponible.':'Solicitud rechazada.')
