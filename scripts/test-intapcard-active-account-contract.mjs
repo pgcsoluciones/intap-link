@@ -77,4 +77,20 @@ assert.match(apiClient,/X-Intap-Account-Tab/,'Client must send tab token on API 
 assert.match(worker,/matchesActiveIntapTab\(c,active\)/,'Backend must compare tab token before mutating accounts')
 assert.match(medPanel,/headers:activeIntapTabHeaders\(\)/,'Medical image uploads must include selected tab')
 assert.match(ownerBar,/context.allow_direct_actions!==false/,'Public profile must not offer direct mutation outside a selected tab')
+// Free preview is a GET document/iframe navigation (no custom tab headers).
+// The exception must never grant writes or preview a different selected profile.
+const freePanel=read('app/src/components/admin/free/FreeDashboard.tsx')
+const freeEditor=read('app/src/components/admin/free/FreeVisualEditor.tsx')
+const freePreview=read('api/src/free-profile-preview.ts')
+assert.match(freePanel,/href=\{delegatedDemo&&publicUrl\?publicUrl:`\/api\/v1\/me\/free\/profile-preview\//,'Free dashboard opens the browser-navigation preview endpoint')
+assert.match(freeEditor,/\/api\/v1\/me\/free\/profile-preview\//,'Free visual editor iframe uses the same preview endpoint')
+assert.match(worker,/c\.req\.method==='GET'&&path\.startsWith\(freePreviewPrefix\)/,'Only GET navigation may omit tab header')
+assert.match(worker,/const owned=await c\.env\.DB\.prepare\('SELECT id FROM profiles WHERE id=\? AND lower\(slug\)=lower\(\?\) LIMIT 1'\)/,'Preview slug must match the exactly selected profile ID')
+assert.match(worker,/\.bind\(active\.id,slug\)\.first\(\)/,'Preview may not resolve an unrelated profile')
+assert.match(worker,/if\(!owned\)return c\.json\(/,'Wrong selected profile must remain blocked')
+assert.match(worker,/if\(presented&&!matchesActiveIntapTab\(c,active\)\)/,'A supplied stale tab header must still be rejected')
+assert.match(worker,/if\(!matchesActiveIntapTab\(c,active\)\)return c\.json/,'All other Free/Link APIs remain tab-protected')
+assert.match(freePreview,/requireProfileOwner/,'Preview still requires a valid login session and owner ownership')
+assert.match(freePreview,/SELECT id FROM profiles WHERE user_id = \? AND lower\(slug\) = lower\(\?\)/,'Preview endpoint must independently enforce owner access')
+
 console.log('INTAP explicit active session, sponsor/medical isolation and public owner links: OK')
