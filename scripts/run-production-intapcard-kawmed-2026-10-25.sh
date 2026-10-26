@@ -74,6 +74,9 @@ run node scripts/test-kawmed-demo-invitations-contract.mjs
 run npx tsc --noEmit -p api/tsconfig.json
 run npm run build -w web
 run npm run build -w app
+# Entradas SPA deben conservar el destino final de Producción.
+if grep -RlF 'https://app.preview.intaprd.com' app/dist/assets --include='*.js' >/dev/null;then fail "Bundle App apunta a Preview";fi
+if grep -RlF 'https://preview.intaprd.com' web/dist/assets --include='*.js' >/dev/null;then fail "Bundle Web apunta a Preview";fi
 grep -RlF '/m/:slug' web/dist/assets --include='*.js' >/dev/null || fail "El bundle Web no incluye /m/:slug"
 find web/dist/assets -maxdepth 1 -name '*KawMedProfile*.js' | grep -q . || fail "Falta el bundle KawMed"
 run bash -n "$RUNNER"
@@ -86,7 +89,7 @@ echo "▶ Preflight SQL solo lectura: esquema real de D1 Producción"
 # sin leer datos de perfiles ni cambiar la base.
 (
   cd api
-  run npx wrangler d1 execute intap_db --remote --config wrangler.toml --command "SELECT (SELECT id FROM users LIMIT 0) AS users_ok,(SELECT plan_id FROM profiles LIMIT 0) AS profiles_ok,(SELECT profile_role FROM sponsored_profiles LIMIT 0) AS sponsored_ok,(SELECT sponsor_id FROM sponsor_members LIMIT 0) AS sponsor_members_ok,(SELECT id FROM sponsor_tenants LIMIT 0) AS sponsors_ok,(SELECT sponsor_id FROM sponsor_user_context LIMIT 0) AS sponsor_context_ok,(SELECT owner_user_id FROM trial_profiles LIMIT 0) AS trial_ok,(SELECT user_id FROM medical_profiles LIMIT 0) AS med_ok,(SELECT medical_profile_id FROM medical_access_codes LIMIT 0) AS medical_codes_ok,(SELECT medical_profile_id FROM medical_profile_sponsors LIMIT 0) AS medical_sponsor_ok,(SELECT claimed_by_user_id FROM medical_sponsor_masters LIMIT 0) AS med_master_ok;"
+  run npx wrangler d1 execute intap_db --remote --config wrangler.toml --command "SELECT (SELECT id FROM users LIMIT 0) AS users_ok,(SELECT plan_id FROM profiles LIMIT 0) AS profiles_ok,(SELECT profile_role FROM sponsored_profiles LIMIT 0) AS sponsored_ok,(SELECT sponsor_id FROM sponsor_members LIMIT 0) AS sponsor_members_ok,(SELECT id FROM sponsor_tenants LIMIT 0) AS sponsors_ok,(SELECT sponsor_id FROM sponsor_user_context LIMIT 0) AS sponsor_context_ok,(SELECT owner_user_id FROM trial_profiles LIMIT 0) AS trial_ok,(SELECT user_id FROM medical_profiles LIMIT 0) AS med_ok,(SELECT medical_profile_id FROM medical_access_codes LIMIT 0) AS medical_codes_ok,(SELECT medical_profile_id FROM medical_profile_sponsors LIMIT 0) AS medical_sponsor_ok,(SELECT claimed_by_user_id FROM medical_sponsor_masters LIMIT 0) AS med_master_ok,(SELECT medical_profile_id FROM medical_sponsor_master_profiles LIMIT 0) AS med_master_profile_ok,(SELECT session_hash FROM auth_sessions LIMIT 0) AS session_hash_ok,(SELECT revoked_at FROM auth_sessions LIMIT 0) AS session_revocation_ok;"
 )
 echo "✓ Código candidato: $(git rev-parse HEAD)"
 if [[ "$MODE" == "preflight" ]]; then
