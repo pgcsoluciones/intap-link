@@ -123,6 +123,9 @@ app.use('/api/v1/me/*', async (c:any,next:any) => {
  * checks inside each route. Other users keep their existing behavior.
  */
 const enforceIntapMedicalSelection=async(c:any,next:any)=>{
+  // Public owner-context resolves the exact slug and verifies ownership itself.
+  // The public URL has no ?scope; do not reject sponsor Master before lookup.
+  if(String(c.req.path||'').endsWith('/appointments/public-context'))return next()
   const sessionRaw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
   if(!sessionRaw)return next() // endpoint's own auth returns 401
   const hash=await sha256Hex(sessionRaw)
