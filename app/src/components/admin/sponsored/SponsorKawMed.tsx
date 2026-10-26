@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
-import { API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
+import { activeIntapTabHeaders, API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import FreeCredentials from '../free/FreeCredentials'
@@ -91,7 +91,7 @@ export default function SponsorKawMed(){
       const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='logo'?1024:1600,quality:.82,baseName:kind==='logo'?'logo':'kawmed-banner'})
       const fd=new FormData();fd.append('file',optimized,optimized.name)
       const uploadKind=kind==='logo'?'logo':'banner'
-      const res=await fetch(`${API_BASE}/sponsor/media?kind=${uploadKind}`,{method:'POST',credentials:'include',body:fd})
+      const res=await fetch(`${API_BASE}/sponsor/media?kind=${uploadKind}`,{method:'POST',credentials:'include',headers:activeIntapTabHeaders(),body:fd})
       const j:any=await res.json().catch(()=>null)
       if(!res.ok||!j?.ok||!j.url)throw new Error(j?.error||'No pudimos subir la imagen.')
       if(kind==='logo'){
