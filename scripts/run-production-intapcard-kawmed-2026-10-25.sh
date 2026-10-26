@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # INTAP · release de KawMed + multicuenta Intapcard.
 # PREPARAR no publica. DEPLOY exige PR integrado, QA y SHA aprobado.
+# API -> Web (intap-link) -> App (intap-web2), sin migraciones.
 set -euo pipefail
 
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
@@ -49,22 +50,32 @@ echo "▶ Verificando allowlist, base de release $EXPECTED_BASE_SHA"
 while IFS= read -r path; do
   [[ -z "$path" ]] && continue
   case "$path" in
-    .github/workflows/quality.yml|api/wrangler.preview.toml|api/src/account-home-route.ts|api/src/medical-access-codes.ts|api/src/medical-appointments.ts|api/src/medical-profile-owner.ts|api/src/sponsored-multiprofile-access.ts|app/src/App.tsx|app/src/components/admin/AdminGuard.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/IntapcardAccountSelector.tsx|app/src/components/admin/KawMedClaim.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/MedicalDashboard.tsx|app/src/components/admin/sponsored/SponsoredResumeGate.tsx|scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh|scripts/run-preview-intapcard-multiaccount-2026-10-24.sh|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|scripts/test-intapcard-kawmed-integrated-contract.mjs|scripts/test-intapcard-multiaccount-contract.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/run-production-intapcard-kawmed-2026-10-25.sh|scripts/run-preview-kawmed-public-web-2026-10-25.sh|scripts/test-kawmed-web-preview-route-contract.mjs) ;;
+    .github/workflows/quality.yml|api/src/account-home-route.ts|api/src/index.ts|api/src/intap-active-account.ts|api/src/medical-access-codes.ts|api/src/medical-appointments.ts|api/src/medical-profile-owner.ts|api/src/routes/medical-profile.ts|api/src/sponsored-account-controls.ts|api/src/sponsored-appointments.ts|api/src/sponsored-multiprofile-access.ts|api/src/sponsored-profile-scope.ts|api/wrangler.preview.toml|app/src/App.tsx|app/src/components/admin/AdminGuard.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/IntapcardAccountSelector.tsx|app/src/components/admin/KawMedClaim.tsx|app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/medical/MedicalDashboard.tsx|app/src/components/admin/sponsored/SponsorDashboard.tsx|app/src/components/admin/sponsored/SponsorKawMed.tsx|app/src/components/admin/sponsored/SponsoredDashboard.tsx|app/src/components/admin/sponsored/SponsoredResumeGate.tsx|app/src/lib/api.ts|scripts/run-preview-intapcard-kawmed-integrated-2026-10-24.sh|scripts/run-preview-intapcard-multiaccount-2026-10-24.sh|scripts/run-preview-kawmed-med-codes-ui-2026-10-23.sh|scripts/run-preview-kawmed-public-web-2026-10-25.sh|scripts/run-production-intapcard-kawmed-2026-10-25.sh|scripts/test-intapcard-active-account-contract.mjs|scripts/test-intapcard-kawmed-integrated-contract.mjs|scripts/test-intapcard-multiaccount-contract.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/test-kawmed-web-preview-route-contract.mjs|web/src/components/appointments/AppointmentOwnerBar.tsx|web/src/components/medical-profile/types.ts) ;;
     *) fail "Cambio inesperado desde baseline: $path" ;;
   esac
 done < <(git diff --name-only "$EXPECTED_BASE_SHA"...HEAD)
-if git diff --name-only "$EXPECTED_BASE_SHA"...HEAD | grep -Eq '^(api/migrations|api/migrations-preview|web/|functions/|package(-lock)?\.json)';then
-  fail "Detectada migración, Web o dependencia: bloquear release"
+if git diff --name-only "$EXPECTED_BASE_SHA"...HEAD | grep -Eq '^(api/migrations|api/migrations-preview|functions/|package(-lock)?\.json)';then
+  fail "Detectada migración, Pages Functions o dependencia fuera del alcance: bloquear release"
 fi
+test -f docs/CLOUDFLARE_PAGES_ARCHITECTURE.md || fail "Falta contrato de proyectos Cloudflare"
+grep -Fq '`web/` → Pages `intap-link`' docs/CLOUDFLARE_PAGES_ARCHITECTURE.md || fail "Destino Web no verificado"
+grep -Fq '`app/` → Pages `intap-web2`' docs/CLOUDFLARE_PAGES_ARCHITECTURE.md || fail "Destino App no verificado"
 
 run npm ci
+# El conteo total de npm incluye devDependencies: exigir cero fallos CRÍTICOS en dependencias productivas.
+run npm audit --omit=dev --audit-level=critical
+run node scripts/test-intapcard-active-account-contract.mjs
+run node scripts/test-kawmed-web-preview-route-contract.mjs
 run node scripts/test-intapcard-multiaccount-contract.mjs
 run node scripts/test-intapcard-kawmed-integrated-contract.mjs
 run node scripts/test-kawmed-code-accordion-contract.mjs
 run node scripts/test-kawmed-isolation-contract.mjs
 run node scripts/test-kawmed-demo-invitations-contract.mjs
 run npx tsc --noEmit -p api/tsconfig.json
+run npm run build -w web
 run npm run build -w app
+grep -RlF '/m/:slug' web/dist/assets --include='*.js' >/dev/null || fail "El bundle Web no incluye /m/:slug"
+find web/dist/assets -maxdepth 1 -name '*KawMedProfile*.js' | grep -q . || fail "Falta el bundle KawMed"
 run bash -n "$RUNNER"
 (
   cd api
@@ -111,11 +122,43 @@ done
 http="$(curl -sSL -o /dev/null -w '%{http_code}' -X POST 'https://app.intaprd.com/api/v1/me/intapcard/medical-context' -H 'Content-Type: application/json' --data '{"profile_id":"00000000-0000-0000-0000-000000000000"}')"
 [[ "$http" == "401" ]] || fail "El cambio de contexto médico no exigió sesión: HTTP $http"
 
-echo "▶ Publicando SOLO Admin App Producción (rama main)"
+echo "▶ Publicando Web pública Producción en su proyecto propietario intap-link (rama main)"
+npx wrangler pages deploy web/dist --project-name intap-link --branch main 2>&1 | tee "$LOG_DIR/web-deploy.log"
+WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-link\.pages\.dev' "$LOG_DIR/web-deploy.log" | tail -1 || true)"
+[[ -n "$WEB_ORIGIN" ]] || fail "No se obtuvo el deployment inmutable de Web"
+
+echo "▶ Publicando Admin App Producción en intap-web2 (rama main)"
 npx wrangler pages deploy app/dist --project-name intap-web2 --branch main 2>&1 | tee "$LOG_DIR/app-deploy.log"
-for url in https://app.intaprd.com/admin/login https://app.intaprd.com/admin/accounts https://app.intaprd.com/superadmin/kawmed https://app.intaprd.com/claim/kawmed; do
+APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG_DIR/app-deploy.log" | tail -1 || true)"
+[[ -n "$APP_ORIGIN" ]] || fail "No se obtuvo el deployment inmutable de App"
+
+# Verificar assets, no solo status 200 de una SPA que puede entregar bundle anterior.
+verify_frontend(){
+  local label="$1" origin="$2" url="$3" dist="$4" expected="" attempts=0
+  expected="$(grep -Eo '/assets/[^" ]+\.js' "$dist/index.html" | head -1)"
+  [[ -n "$expected" ]] || fail "No se encontró el bundle principal de $label"
+  local output="$LOG_DIR/$label-home.html" status=""
+  for attempts in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    status="$(curl -sSL --max-time 25 -H 'Accept: text/html' -o "$output" -w '%{http_code}' "$url" || true)"
+    if [[ "$status" == "200" ]] && grep -Fq "$expected" "$output";then
+      echo "✓ $label sirve el bundle aprobado $expected desde $url (intento $attempts)"
+      curl -fsSL "$url$expected" -o "$LOG_DIR/$label-bundle.js" || fail "No se pudo leer el JS $label"
+      return 0
+    fi
+    [[ "$attempts" == "12" ]] || sleep 5
+  done
+  fail "$label no sirve el bundle aprobado después de 12 intentos. HTTP $status; revisar $output y Cloudflare antes de cerrar release"
+}
+verify_frontend web "$WEB_ORIGIN" "https://intaprd.com/m/laboratorios-doctores-mallen-med" web/dist
+verify_frontend app "$APP_ORIGIN" "https://app.intaprd.com/admin/accounts" app/dist
+
+for url in https://intaprd.com/m/laboratorios-doctores-mallen-med https://app.intaprd.com/admin/login https://app.intaprd.com/admin/accounts https://app.intaprd.com/superadmin/kawmed https://app.intaprd.com/claim/kawmed; do
   http="$(curl -sSL -o /dev/null -w '%{http_code}' "$url")"
   [[ "$http" == "200" ]] || fail "$url respondió HTTP $http"
+done
+for endpoint in /api/v1/me/intapcard/active-account /api/v1/me/intapcard/accounts /api/v1/me/medical-profile;do
+  code="$(curl -sSL -o /dev/null -w '%{http_code}' "https://app.intaprd.com$endpoint")"
+  [[ "$code" == "401" ]] || fail "$endpoint no exige sesión: HTTP $code"
 done
 
 TAG="prod-intapcard-kawmed-$(date -u +%Y%m%dT%H%M%SZ)"
@@ -124,5 +167,5 @@ run git push "$REMOTE" "$TAG"
 echo "✓ DESPLIEGUE COMPLETADO: $(git rev-parse HEAD)"
 echo "✓ Tag: $TAG"
 echo "✓ Logs y respaldo D1: $LOG_DIR"
-echo "✓ Web pública y migraciones D1 no modificadas"
+echo "✓ Web pública + App actualizadas; migraciones D1 no modificadas"
 echo "QA POST-RELEASE OBLIGATORIO: login, selector, Free, 2 sponsors, master, médicos y agenda."
