@@ -1,3 +1,4 @@
+import { readIntapSelection } from './intap-active-account'
 import { registerMedicalProfileRoutes } from './routes/medical-profile'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -113,6 +114,54 @@ app.use('/api/v1/me/*', async (c:any,next:any) => {
   if(blocked.some(prefix=>path===prefix||path.startsWith(prefix+'/'))){
     return c.json({ok:false,error:'Esta función pertenece a la cuenta del propietario y no está disponible durante la administración Demo.',code:'free_demo_owner_only'},403)
   }
+  await next()
+})
+
+/**
+ * One active account per authenticated INTAP operator session.
+ * This is an extra permission boundary in addition to the per-profile DB
+ * checks inside each route. Other users keep their existing behavior.
+ */
+app.use('/api/v1/me/medical-profile/*', async(c:any,next:any)=>{
+  const sessionRaw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!sessionRaw)return next() // endpoint's own auth returns 401
+  const hash=await sha256Hex(sessionRaw)
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(hash).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  const required=String(c.req.query('scope')||'')==='sponsor_master'?'medical_master':'medical'
+  if(!active||active.kind!==required)return c.json({ok:false,error:'Esta no es la cuenta activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  await next()
+})
+app.use('/api/v1/me/sponsored-profile/*',async(c:any,next:any)=>{
+  const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!raw)return next()
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  const required=String(c.req.query('scope')||'')==='master'?'sponsor':'sponsored'
+  if(!active||active.kind!==required)return c.json({ok:false,error:'Selecciona la cuenta correspondiente desde Multicuenta.',code:'intap_account_not_selected'},403)
+  if(required==='sponsored'){
+    const id=String(c.req.query('profile_id')||'')
+    if(id&&id!==active.id)return c.json({ok:false,error:'El perfil solicitado no es la cuenta activa.'},403)
+  }
+  await next()
+})
+app.use('/api/v1/sponsor/*',async(c:any,next:any)=>{
+  const path=String(c.req.path||'')
+  if(path==='/api/v1/sponsor/context'||path==='/api/v1/sponsor/accounts')return next()
+  const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!raw)return next()
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  const required=path.startsWith('/api/v1/sponsor/kawmed')?'medical_master':'sponsor'
+  const shared=path.startsWith('/api/v1/sponsor/settings')||path.startsWith('/api/v1/sponsor/media')
+  if(!active||(!shared&&active.kind!==required)||(shared&&!['sponsor','medical_master'].includes(active.kind)))
+    return c.json({ok:false,error:'Este patrocinador no es la cuenta activa.',code:'intap_account_not_selected'},403)
   await next()
 })
 
