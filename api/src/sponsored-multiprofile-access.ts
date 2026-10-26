@@ -57,6 +57,9 @@ export async function resolveSponsorMembership(c:any,userId:string){
       `).bind(userId,requested).first()
       if(selected)return selected
     }
+    // Do not reopen the oldest sponsor if the explicit selected account context
+    // and the persisted sponsor context diverge (e.g. another browser tab).
+    return null
   }
   return c.env.DB.prepare(`
     SELECT sm.sponsor_id,sm.role,st.name,st.slug,st.sponsor_type,st.logo_url,st.is_active
