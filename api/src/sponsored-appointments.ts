@@ -239,7 +239,7 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending'").bind(subjectId).first()
   const pending=rows.results||[]
   const manageUrl=await appointmentManageUrl(c,profile)
-  return c.json({ok:true,data:{is_owner:true,enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending,
+  return c.json({ok:true,data:{is_owner:true,allow_direct_actions:!(await sponsoredMultiProfileAccess(c,userId)),enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending,
     manage_url:manageUrl,settings_url:isMaster?'/admin/sponsor':'/admin/sponsored?profile_id='+encodeURIComponent(subjectId),
     action_scope:isMaster?'master':null}})
 })
