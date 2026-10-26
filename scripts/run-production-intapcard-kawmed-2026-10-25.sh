@@ -79,7 +79,7 @@ grep -Fxq 'VITE_API_URL=https://api.intaprd.com' app/.env.production || fail "Ap
 grep -Fxq 'VITE_WEB_URL=https://intaprd.com' app/.env.production || fail "App Production Web no configurada"
 grep -Fxq 'VITE_API_URL=https://api.intaprd.com' web/.env.production || fail "Web Production API no configurada"
 grep -Fxq 'VITE_APP_URL=https://app.intaprd.com' web/.env.production || fail "Web Production App no configurada"
-if grep -Eiq '(^|=).*https://(app\\.)?preview\\.intaprd\\.com' app/.env.production web/.env.production;then
+if grep -Eiq '(^|=).*https://(app\.)?preview\.intaprd\.com' app/.env.production web/.env.production;then
   fail "Una variable de entorno de Producción apunta a Preview"
 fi
 # Evitar contaminación accidental por VITE_* exportadas en la terminal.
