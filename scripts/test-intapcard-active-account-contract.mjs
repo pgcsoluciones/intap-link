@@ -44,7 +44,7 @@ assert.match(worker,/app.use\('\/api\/v1\/sponsor\/\*'/,'Sponsor APIs must guard
 assert.match(worker,/code:'intap_account_not_selected'/,'Blocked requests should identify cause')
 assert.match(medical,/if\(ownerScope\(c\)==='sponsor_master'\)return ensureSponsorMasterProfile/,'Master editor keeps explicit scope')
 assert.match(appointments,/settings_url:isMaster\?'\/admin\/sponsor\/kawmed\?tab=profile':'\/admin\/medical'/,'Public profile must target correct editor by actual owner scope')
-assert.match(appointments,/manage_url:isMaster\?'\/admin\/sponsor\/kawmed/,'Master must not open doctor's agenda')
+assert.match(appointments,/manage_url:isMaster\?'\/admin\/sponsor\/kawmed/,"Master must not open doctor agenda")
 assert.match(ownerBar,/context.settings_url\|\|settingsPath/,'Owner bar uses server-verified editor URL')
 assert.match(ownerBar,/else setContext\(null\)/,'Old owner controls must disappear when account changes')
 assert.match(medProfile,/settingsPath="\/admin\/medical"/,'Doctor fallback remains for ordinary users')
