@@ -169,6 +169,25 @@ app.use('/api/v1/sponsor/*',async(c:any,next:any)=>{
   await next()
 })
 
+// Classic Free/Link editor requests from another tab must not mutate the
+// operator's profile while a sponsor or medical identity is selected.
+app.use('/api/v1/me/*',async(c:any,next:any)=>{
+  const path=String(c.req.path||'')
+  const classicPrefixes=['/api/v1/me/profile','/api/v1/me/contact','/api/v1/me/links',
+    '/api/v1/me/faqs','/api/v1/me/products','/api/v1/me/videos',
+    '/api/v1/me/gallery','/api/v1/me/free']
+  if(!classicPrefixes.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return next()
+  const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
+  if(!raw)return next()
+  const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
+    WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first()
+  if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
+  const active=await readIntapSelection(c)
+  if(!active||!['free','paid'].includes(active.kind))
+    return c.json({ok:false,error:'La cuenta Free o Link no está activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  await next()
+})
+
 registerDemoViralRoutes(app)
 registerDemoAiRoutes(app)
 
