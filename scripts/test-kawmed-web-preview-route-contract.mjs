@@ -118,4 +118,13 @@ assert.deepEqual(typeSpec(modernPrimary),typeSpec(modernSub),'Modern subspecialt
 assert.match(kawmed,/profile\.specialty\.split\(' \| '\)\.filter\(Boolean\)/,'Modern should render all specialty labels')
 assert.match(kawmed,/profile\.specialty\.split\(" \| "\)/,'Classic should render all specialty labels')
 
+// Editable public identity UX: clear labels and helpful copy, not sample data.
+assert.match(dashboard,/Presentación \(Sobre mí\)<textarea/,'Bio field must be labeled Presentación (Sobre mí)')
+assert.match(dashboard,/placeholder="Cuéntales a tus pacientes quién eres, tu experiencia profesional y cómo puedes ayudarles\."/,'Bio placeholder should describe identity and experience')
+assert.match(dashboard,/>Usuario<input className=\{input\} value=\{form\.slug\|\|''\}/,'User label must reuse the existing public slug')
+assert.match(dashboard,/placeholder="@usuario"/,'Public user input must show @usuario example')
+assert.match(dashboard,/slug:e\.target\.value\.replace\(\/\^@\+\/, ''\)/,'Entering @usuario must strip the presentation-only @ symbol')
+assert.match(dashboard,/el símbolo @ no forma parte de la dirección/,'Explain difference between illustrative @ and actual URL')
+assert.match(dashboard,/slug:form\.slug,name:form\.name/,'Saving must still use the original slug field')
+
 console.log('KawMed public Preview route/origin and draft privacy contract: OK')
