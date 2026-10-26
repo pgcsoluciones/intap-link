@@ -31,6 +31,11 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const avatarRef=useRef<HTMLInputElement>(null),coverRef=useRef<HTMLInputElement>(null)
   const[tab,setTab]=useState<Tab>('profile')
   const[publicationConfirm,setPublicationConfirm]=useState<'publish'|'unpublish'|null>(null)
+  const[publicationPending,setPublicationPending]=useState<'publish'|'unpublish'|null>(null)
+  const[publicationNotice,setPublicationNotice]=useState<{kind:'success'|'error';text:string}|null>(null)
+  const publicationConfirmRef=useRef<HTMLButtonElement>(null)
+  const publicationPublishTriggerRef=useRef<HTMLButtonElement>(null)
+  const publicationUnpublishTriggerRef=useRef<HTMLButtonElement>(null)
   const[previewOpen,setPreviewOpen]=useState(false)
   const[lifecycleBusy,setLifecycleBusy]=useState(false)
   const[showDeletion,setShowDeletion]=useState(false)
@@ -51,6 +56,19 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const[message,setMessage]=useState('')
   const[feedback,setFeedback]=useState<{area:Tab;text:string}|null>(null)
   const showSaved=(area:Tab,text:string)=>{setFeedback({area,text});setMessage('')}
+  const openPublicationConfirm=(action:'publish'|'unpublish')=>{
+    if(busy)return
+    setPublicationNotice(null)
+    setPublicationConfirm(action)
+  }
+  const cancelPublicationConfirm=()=>{
+    if(publicationPending)return
+    const action=publicationConfirm
+    setPublicationConfirm(null)
+    if(action==='publish')publicationPublishTriggerRef.current?.focus()
+    if(action==='unpublish')publicationUnpublishTriggerRef.current?.focus()
+  }
+  useEffect(()=>{if(publicationConfirm&&!publicationPending)publicationConfirmRef.current?.focus()},[publicationConfirm])
   const[pending,setPending]=useState<PendingImage>(null)
   const[newCenter,setNewCenter]=useState({name:'',address:'',city:'',province:'',phone:'',map_url:''})
   const[editingCenter,setEditingCenter]=useState<any>(null)
@@ -120,14 +138,19 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       setPublicationConfirm(null)
       return
     }
-    setBusy(true);setError('');setMessage('');setPublicationConfirm(null)
+    setBusy(true);setPublicationPending(action);setPublicationNotice(null);setError('');setMessage('')
     try{
       const result:any=await apiPost(scoped('/me/medical-profile/publication'),{action,confirm:true})
       if(!result?.ok)throw new Error(result?.error||'No se pudo actualizar la publicación.')
       setProfile((current:any)=>({...current,status:result.data.status}))
       setForm((current:any)=>({...current,status:result.data.status}))
-      setMessage(action==='publish'?'Tu perfil médico está publicado.':'El perfil médico fue despublicado. Puedes seguir editándolo.')
-    }catch(e){setError(e instanceof Error?e.message:'No se pudo modificar la publicación.')}finally{setBusy(false)}
+      const confirmedMessage=action==='publish'?'Perfil publicado correctamente. Ya está disponible en su enlace público.':'Perfil despublicado correctamente. Ya no está disponible públicamente.'
+      setPublicationNotice({kind:'success',text:confirmedMessage})
+      setPublicationConfirm(null)
+    }catch(e){
+      const text=e instanceof Error?e.message:'No se pudo modificar la publicación.'
+      setPublicationNotice({kind:'error',text})
+    }finally{setPublicationPending(null);setBusy(false)}
   }
 
   async function saveProfile(specialtyOverride?:string){
@@ -310,9 +333,24 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const Shell:any=embedded?'div':'main'
   return <Shell className={embedded?"font-['Inter'] text-slate-950":"min-h-screen bg-slate-50 px-4 py-6 font-['Inter'] text-slate-950"}><div className={embedded?"w-full space-y-5":"mx-auto w-full max-w-5xl space-y-5"}>
     <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap gap-2">{scope==='doctor'&&String(profile.account_email||'').trim().toLowerCase()==='intapcard@gmail.com'&&<a href="/admin/accounts" className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Cambiar cuenta</a>}{scope==='doctor'&&<button type="button" onClick={()=>setPreviewOpen(true)} className="rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800">Vista previa</button>}
-      <button type="button" disabled={busy||profile.status==='active'||!publicationReadiness.canPublish} aria-describedby="kawmed-publication-guidance" onClick={()=>setPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Publicado':'Publicar'}</button>
-      <button type="button" disabled={busy||profile.status!=='active'} onClick={()=>setPublicationConfirm('unpublish')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm sm:text-xs font-black text-amber-900 disabled:cursor-not-allowed disabled:opacity-40">Despublicar</button>
-      {scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}</div></div><div className="mt-4 flex flex-wrap items-center gap-2 text-sm sm:text-xs font-bold text-slate-500"><span className="rounded-full bg-emerald-50 px-3 py-2 text-emerald-700">{completeness.done}/{completeness.total} presentación configurada</span>{completeness.missing.length>0&&<span className="rounded-full bg-slate-100 px-3 py-2 text-slate-600">Por mejorar: {completeness.missing.join(', ')}</span>}<span className="rounded-full bg-slate-100 px-3 py-2">{profile.status==='active'?'Publicado':profile.status==='inactive'?'Inactivo':'Borrador'}</span></div></header>
+      <button ref={publicationPublishTriggerRef} type="button" disabled={busy||profile.status==='active'||!publicationReadiness.canPublish} aria-describedby="kawmed-publication-guidance" aria-expanded={publicationConfirm==='publish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-emerald-800 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='publish'?'Publicando…':profile.status==='active'?'Publicado':'Publicar'}</button>
+      <button ref={publicationUnpublishTriggerRef} type="button" disabled={busy||profile.status!=='active'} aria-expanded={publicationConfirm==='unpublish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('unpublish')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm sm:text-xs font-black text-amber-900 shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-amber-100 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='unpublish'?'Despublicando…':'Despublicar'}</button>
+      {scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black">Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className="rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}</div></div>
+      {publicationConfirm&&<div className="mt-4 flex justify-end">
+        <div id="kawmed-publication-confirmation" role="group" aria-label={publicationConfirm==='publish'?'Confirmar publicación de perfil':'Confirmar despublicación de perfil'} onKeyDown={event=>{if(event.key==='Escape'&&!publicationPending){cancelPublicationConfirm()}}} className="w-full max-w-lg rounded-2xl border border-cyan-200 bg-cyan-50 p-4 shadow-md motion-safe:animate-[fadeIn_180ms_ease-out]">
+          <p className="text-base font-black text-slate-950">{publicationConfirm==='publish'?'¿Publicar este perfil médico?':'¿Despublicar este perfil médico?'}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{publicationConfirm==='publish'?'Tus pacientes podrán consultar este perfil mediante su enlace público.':'El perfil dejará de mostrarse a tus pacientes, pero se conservarán sus datos.'}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button ref={publicationConfirmRef} type="button" disabled={busy} onClick={()=>void changePublication(publicationConfirm)} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition-[background-color,transform,box-shadow] duration-200 hover:bg-slate-800 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 motion-reduce:transition-none disabled:cursor-wait disabled:opacity-60" aria-busy={Boolean(publicationPending)}>
+              {publicationPending?(publicationPending==='publish'?'Publicando…':'Despublicando…'):(publicationConfirm==='publish'?'Sí, publicar':'Sí, despublicar')}
+            </button>
+            <button type="button" disabled={busy} onClick={cancelPublicationConfirm} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black transition-[background-color,transform] duration-200 hover:bg-slate-100 active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50">Cancelar</button>
+          </div>
+          {publicationNotice?.kind==='error'&&<p role="alert" className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">{publicationNotice.text}</p>}
+        </div>
+      </div>}
+      {publicationNotice?.kind==='success'&&<p role="status" aria-live="polite" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">{publicationNotice.text}</p>}
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm sm:text-xs font-bold text-slate-500"><span className="rounded-full bg-emerald-50 px-3 py-2 text-emerald-700">{completeness.done}/{completeness.total} presentación configurada</span>{completeness.missing.length>0&&<span className="rounded-full bg-slate-100 px-3 py-2 text-slate-600">Por mejorar: {completeness.missing.join(', ')}</span>}<span className="rounded-full bg-slate-100 px-3 py-2">{profile.status==='active'?'Publicado':profile.status==='inactive'?'Inactivo':'Borrador'}</span></div></header>
 
     <section id="kawmed-publication-guidance" aria-labelledby="kawmed-publication-title" className={card}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -408,11 +446,6 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       {lifecycleConfirm&&<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><p className="font-bold">{lifecycleConfirm==='suspend'?'¿Confirmas que deseas suspender tu perfil médico?':'¿Confirmas que deseas reactivar tu perfil como borrador?'}</p><div className="mt-3 flex gap-3"><button type="button" disabled={lifecycleBusy} onClick={()=>void changeLifecycle(lifecycleConfirm)} className="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">Sí, confirmar</button><button type="button" disabled={lifecycleBusy} onClick={()=>setLifecycleConfirm(null)} className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold">Cancelar</button></div></div>}
     </section>}
 
-    {publicationConfirm&&<div role="dialog" aria-modal="true" aria-label="Confirmar publicación" className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
-      <p className="text-base font-black">{publicationConfirm==='publish'?'¿Publicar este perfil médico?':'¿Despublicar este perfil médico?'}</p>
-      <p className="mt-2 text-sm text-slate-700">{publicationConfirm==='publish'?'Los pacientes podrán acceder al perfil mediante su enlace público.':'El perfil dejará de estar disponible públicamente, pero conservará sus datos y su cuenta.'}</p>
-      <div className="mt-4 flex flex-wrap gap-3"><button type="button" disabled={busy} onClick={()=>void changePublication(publicationConfirm)} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Sí, confirmar</button><button type="button" onClick={()=>setPublicationConfirm(null)} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold">Cancelar</button></div>
-    </div>}
     {previewOpen&&<div role="dialog" aria-modal="true" aria-label="Vista previa de perfil médico" className="rounded-[24px] border border-cyan-200 bg-white p-5 shadow-lg">
       <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Vista previa del perfil</h2><p className="mt-1 text-sm text-slate-500">Vista privada de los datos guardados. No publica el perfil.</p></div><button type="button" onClick={()=>setPreviewOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold">Cerrar</button></div>
       <div className="mx-auto mt-4 max-w-md overflow-hidden rounded-2xl border border-slate-200">
