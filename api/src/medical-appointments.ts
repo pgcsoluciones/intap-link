@@ -316,12 +316,17 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending'").bind(subjectId).first()
   const sponsor=await medicalSponsorContext(c,subjectId)
+  // The public profile does not carry an admin scope in its URL. Derive the
+  // actual owner type from the verified profile, never from ?scope or a stale
+  // previously-selected doctor.
+  const isMaster=Boolean(await c.env.DB.prepare('SELECT 1 FROM medical_sponsor_master_profiles WHERE medical_profile_id=? LIMIT 1').bind(subjectId).first())
   return c.json({ok:true,data:{
     is_owner:true,
     enabled:settings.enabled,
     pending_count:Number((count as any)?.n||0),
     pending:rows.results||[],
-    manage_url:medicalOwnerScope(c)==='sponsor_master'?'/admin/sponsor/kawmed?tab=profile&agenda=1':'/admin/medical/agenda',
+    manage_url:isMaster?'/admin/sponsor/kawmed?tab=profile&agenda=1':'/admin/medical/agenda',
+    settings_url:isMaster?'/admin/sponsor/kawmed?tab=profile':'/admin/medical',
     resource_url:sponsor?.vademecum_url||'',
     resource_label:sponsor?.vademecum_label||'Ver vademécum',
     contact_url:sponsor?.representative?.url||'',
