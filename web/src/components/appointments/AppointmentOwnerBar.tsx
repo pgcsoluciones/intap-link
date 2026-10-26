@@ -140,7 +140,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
                 <strong style={{display:'block',fontSize:13,color:'#0f172a'}}>{item.customer_name}</strong>
                 <span style={{display:'block',marginTop:3,fontSize:11.5,fontWeight:750,color:'#64748b'}}>{item.appointment_date} · {item.start_time} · {item.reason_label}</span>
                 {item.details&&<p style={{margin:'7px 0 0',fontSize:11.5,lineHeight:1.45,color:'#475569'}}>{item.details}</p>}
-                <div style={{display:'flex',gap:7,marginTop:9}}><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'confirm')} style={{...actionBtn,background:'#16a34a',color:'#fff'}}>Confirmar</button><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'reject')} style={{...actionBtn,background:'#fff',color:'#64748b',border:'1px solid #dbe4ef'}}>Rechazar</button></div>
+                {context.allow_direct_actions!==false?<div style={{display:'flex',gap:7,marginTop:9}}><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'confirm')} style={{...actionBtn,background:'#16a34a',color:'#fff'}}>Confirmar</button><button type="button" disabled={Boolean(actionId)} onClick={()=>void act(item.id,'reject')} style={{...actionBtn,background:'#fff',color:'#64748b',border:'1px solid #dbe4ef'}}>Rechazar</button></div>:<p style={{margin:'8px 0 0',fontSize:11,color:'#475569'}}>Para responder, abre la agenda de la cuenta activa.</p>}
               </article>)}
               {!context.pending.length&&<p style={{margin:0,padding:'16px 10px',textAlign:'center',fontSize:12,color:'#64748b'}}>No tienes solicitudes pendientes.</p>}
             </div>
