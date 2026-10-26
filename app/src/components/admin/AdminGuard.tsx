@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { apiGet } from '../../lib/api'
+import { apiGet, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
 import { activeFreeDemoDelegationId, clearFreeDemoDelegation } from '../../lib/freeDemoDelegation'
 
 interface Props {
@@ -114,6 +114,14 @@ export default function AdminGuard({ children, requireProfile = true, planScope 
         const selected:any = await apiGet('/me/intapcard/active-account').catch(()=>({ok:false}))
         const active = selected?.ok ? selected.data?.active : null
         if (!active) { navigate('/admin/accounts', {replace:true}); return }
+        if (!selected.data?.tab_session_valid) {
+          const fresh=String(selected.data?.new_tab_token||'')
+          const local=String(sessionStorage.getItem(INTAP_ACTIVE_TAB_STORAGE)||'')
+          // Fresh cross-domain public->App navigation may attach to the already
+          // selected account. A stale old tab cannot silently renew its token.
+          if (!local && /^[a-f0-9]{32}$/.test(fresh)) sessionStorage.setItem(INTAP_ACTIVE_TAB_STORAGE,fresh)
+          else {navigate('/admin/accounts',{replace:true});return}
+        }
         const path = location.pathname
         const kind=String(active.kind||'')
         const allowed = (
