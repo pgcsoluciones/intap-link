@@ -30,6 +30,13 @@ type ApiResponse = {
 
 type ModalName = 'schedule' | 'centers' | 'location' | 'insurance' | null
 
+function separateSponsorMasterName(displayName:string, organization:string):string {
+  const full=displayName.replace(/\s+/g,' ').trim()
+  const company=organization.replace(/\s+/g,' ').trim()
+  if(!company||!full.toLocaleLowerCase('es').endsWith(company.toLocaleLowerCase('es')))return full
+  return full.slice(0,-company.length).replace(/[\s,|·:–—-]+$/u,'').trim()
+}
+
 function formatTime(value: string): string {
   const [rawHour = '0', rawMinute = '00'] = value.split(':')
   const hour = Number(rawHour)
@@ -302,6 +309,9 @@ export default function KawMedProfile() {
 
   const heroImage = profile.cover_url || profile.avatar_url || '/assets/kawmed/laura-mendez-hero.jpg'
   const primaryCenter = profile.centers[0] || null
+  const masterOrganization=profile.is_sponsor_master?String(profile.organization||'').trim():''
+  const masterPerson=masterOrganization?separateSponsorMasterName(profile.display_name,masterOrganization):profile.display_name
+  const separateMasterHeading=Boolean(masterOrganization&&masterPerson)
   const isPastel = (previewTemplate === 'pastel' || previewTemplate === 'classic' ? previewTemplate : profile.template) === 'pastel'
   const effectivePalette = previewPalette && ['aqua','lavender','mint','peach','sky'].includes(previewPalette) ? previewPalette : profile.palette
   const palette: 'aqua' | 'lavender' | 'mint' | 'peach' | 'sky' = effectivePalette && ['aqua','lavender','mint','peach','sky'].includes(effectivePalette) ? effectivePalette as 'aqua' | 'lavender' | 'mint' | 'peach' | 'sky' : 'aqua'
@@ -326,14 +336,16 @@ export default function KawMedProfile() {
           <img className="kawmed-hero__image" src={heroImage} alt={profile.display_name} />
           <div className="kawmed-hero__shade" />
           {isPastel ? <div className="kawmed-pastel-hero-copy">
-            <h1>{profile.display_name}</h1>
+            {separateMasterHeading&&<p className="kawmed-master-organization">{masterOrganization}</p>}
+            <h1 className={separateMasterHeading?'kawmed-master-person':''}>{separateMasterHeading?masterPerson:profile.display_name}</h1>
             <div className="kawmed-pastel-hero-specialties">{profile.specialty.split(' | ').filter(Boolean).map((name,index)=><p className={index===0?'kawmed-pastel-main-specialty':'kawmed-pastel-extra-specialty'} key={index}>{name.trim()}</p>)}</div>
             {profile.subspecialty?<p className="kawmed-pastel-subspecialty">{profile.subspecialty}</p>:null}
           </div>:null}
         </section>
 
-        {!isPastel?<section className="kawmed-identity">
-          <h1>{profile.display_name}</h1>
+        {!isPastel?<section className={'kawmed-identity'+(separateMasterHeading?' kawmed-identity--master':'')}>
+          {separateMasterHeading&&<p className="kawmed-master-organization">{masterOrganization}</p>}
+          <h1 className={separateMasterHeading?'kawmed-master-person':''}>{separateMasterHeading?masterPerson:profile.display_name}</h1>
           <div className="kawmed-specialties">{profile.specialty.split(" | ").map((name,index)=><p className={index===0?"kawmed-specialty kawmed-specialty--main":"kawmed-specialty kawmed-specialty--additional"} key={index}>{name.trim()}</p>)}</div>
           {profile.subspecialty ? <p className="kawmed-subtitle">{profile.subspecialty}</p> : null}
         </section>:null}
