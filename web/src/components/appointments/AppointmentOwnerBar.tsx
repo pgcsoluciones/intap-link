@@ -19,6 +19,7 @@ type Context={
   manage_url:string
   settings_url?:string
   is_master?:boolean
+  action_scope?:'sponsor_master'|'master'
   resource_url?:string
   resource_label?:string
   contact_url?:string
