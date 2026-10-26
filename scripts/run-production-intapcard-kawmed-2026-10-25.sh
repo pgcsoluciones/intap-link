@@ -157,7 +157,13 @@ verify_frontend(){
     status="$(curl -sSL --max-time 25 -H 'Accept: text/html' -o "$output" -w '%{http_code}' "$url" || true)"
     if [[ "$status" == "200" ]] && grep -Fq "$expected" "$output";then
       echo "✓ $label sirve el bundle aprobado $expected desde $url (intento $attempts)"
-      curl -fsSL "$url$expected" -o "$LOG_DIR/$label-bundle.js" || fail "No se pudo leer el JS $label"
+      # El asset es absoluto (/assets/...), no relativo al path /admin/... o /m/...
+      local custom_root="${url#*://}"
+      custom_root="${url%%/${custom_root#*/}}"
+      # El URL del deployment inmutable y el dominio custom deben servir el mismo asset.
+      curl -fsSL --max-time 25 "$origin$expected" -o "$LOG_DIR/$label-bundle-origin.js" || fail "El deployment inmutable $label no sirve $expected"
+      curl -fsSL --max-time 25 "$custom_root$expected" -o "$LOG_DIR/$label-bundle-custom.js" || fail "El dominio $label no sirve $expected"
+      cmp -s "$LOG_DIR/$label-bundle-origin.js" "$LOG_DIR/$label-bundle-custom.js" || fail "El bundle $label servido por el dominio custom difiere del deployment aprobado"
       return 0
     fi
     [[ "$attempts" == "12" ]] || sleep 5
