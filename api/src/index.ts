@@ -140,6 +140,8 @@ const enforceIntapMedicalSelection=async(c:any,next:any)=>{
 app.use('/api/v1/me/medical-profile',enforceIntapMedicalSelection)
 app.use('/api/v1/me/medical-profile/*',enforceIntapMedicalSelection)
 const enforceIntapSponsoredSelection=async(c:any,next:any)=>{
+  // Public owner controls authenticate then verify the exact public username in D1.
+  if(String(c.req.path||'').endsWith('/appointments/public-context'))return next()
   const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
   if(!raw)return next()
   const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
