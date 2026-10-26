@@ -142,6 +142,11 @@ app.post('/api/v1/sponsor/context',requireUser,async(c:any)=>{
   const body=await c.req.json().catch(()=>({}))
   const sponsorId=String(body.sponsor_id||'').trim()
   if(!sponsorId||sponsorId.length>80)return c.json({ok:false,error:'Patrocinador inválido.'},422)
+  if(await sponsoredMultiProfileAccess(c,userId)){
+    const active=await readIntapSelection(c)
+    if(!active||!['sponsor','medical_master'].includes(active.kind)||active.id!==sponsorId||!matchesActiveIntapTab(c,active))
+      return c.json({ok:false,error:'Cambiar de cuenta requiere volver al directorio Multicuenta.'},403)
+  }
   if(!(await setSponsorContext(c,userId,sponsorId)))return c.json({ok:false,error:'No perteneces a este patrocinador.'},403)
   return c.json({ok:true,data:{sponsor_id:sponsorId}})
 })
@@ -249,6 +254,9 @@ app.post('/api/v1/me/intapcard/medical-context',requireUser,async(c:any)=>{
   if(!/^[a-f0-9-]{36}$/i.test(profileId))return c.json({ok:false,error:'Perfil inválido.'},422)
   const profile=await c.env.DB.prepare('SELECT id FROM medical_profiles WHERE id=? AND user_id=? LIMIT 1').bind(profileId,userId).first()
   if(!profile)return c.json({ok:false,error:'Este perfil no pertenece a la cuenta.'},403)
+  const active=await readIntapSelection(c)
+  if(!active||active.kind!=='medical'||active.id!==profileId||!matchesActiveIntapTab(c,active))
+    return c.json({ok:false,error:'Vuelve al directorio Multicuenta para seleccionar este médico.'},403)
   setMedicalContextCookie(c,profileId)
   return c.json({ok:true,data:{route:'/admin/medical'}})
 })
