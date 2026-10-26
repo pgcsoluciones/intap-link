@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { API_BASE, apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../../lib/api'
+import { activeIntapTabHeaders, API_BASE, apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import MedicalCenterLocationPicker from './MedicalCenterLocationPicker'
@@ -239,7 +239,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     try{
       const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='avatar'?1024:1600,quality:.82,baseName:'kawmed-'+kind})
       const fd=new FormData();fd.append('file',optimized,optimized.name)
-      const res=await fetch(`${API_BASE}/me/medical-profile/media?kind=${kind}${scopeQuery?'&'+scopeQuery:''}`,{method:'POST',credentials:'include',body:fd})
+      const res=await fetch(`${API_BASE}/me/medical-profile/media?kind=${kind}${scopeQuery?'&'+scopeQuery:''}`,{method:'POST',credentials:'include',headers:activeIntapTabHeaders(),body:fd})
       const j:any=await res.json().catch(()=>null)
       if(!res.ok||!j?.ok||!j.url)throw new Error(j?.error||'No pudimos subir la imagen.')
       setProfile((p:any)=>({...p,[kind==='avatar'?'avatar_url':'cover_url']:j.url}))
