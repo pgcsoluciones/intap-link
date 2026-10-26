@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FaAddressCard, FaCalendarAlt, FaClock, FaInstagram, FaMapMarkerAlt, FaWhatsapp } from 'react-icons/fa'
-import { API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
+import { activeIntapTabHeaders, API_BASE, apiGet, apiPatch, apiPost } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import FreeSupportPanel from '../free/FreeSupportPanel'
@@ -76,7 +76,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     try{
       const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='avatar'?400:kind==='hero'?1200:1400,quality:.82,baseName:kind})
       const fd=new FormData();fd.append('file',optimized,optimized.name)
-      const res=await fetch(`${API_BASE}/me/sponsored-profile/media?kind=${kind}${profileScopeParam}`,{method:'POST',credentials:'include',body:fd})
+      const res=await fetch(`${API_BASE}/me/sponsored-profile/media?kind=${kind}${profileScopeParam}`,{method:'POST',credentials:'include',headers:activeIntapTabHeaders(),body:fd})
       const json:any=await res.json().catch(()=>null);if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.')
       const url=String(json.url||'')
       if(kind==='avatar')setForm((v:any)=>({...v,avatar_url:url}))
@@ -104,7 +104,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
         try{
           const optimized=await optimizeImageBlobForUpload(file,{maxDimension:1400,quality:.82,baseName:`gallery-${i+1}`})
           const fd=new FormData();fd.append('file',optimized,optimized.name)
-          const res=await fetch(`${API_BASE}/me/sponsored-profile/media?kind=gallery${profileScopeParam}`,{method:'POST',credentials:'include',body:fd})
+          const res=await fetch(`${API_BASE}/me/sponsored-profile/media?kind=gallery${profileScopeParam}`,{method:'POST',credentials:'include',headers:activeIntapTabHeaders(),body:fd})
           const json:any=await res.json().catch(()=>null)
           if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos subir la imagen.')
           uploaded.push({url:String(json.url||''),title:''})
