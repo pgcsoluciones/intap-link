@@ -50,6 +50,12 @@ assert.match(prod,/wrangler pages deploy app\/dist --project-name intap-web2 --b
 assert.doesNotMatch(prod,/wrangler pages deploy web\/dist --project-name intap-web2/,'Never publish public web to admin project')
 assert.match(prod,/verify_frontend web.*intaprd\.com\/m\/laboratorios-doctores-mallen-med/,'Verify real public Web asset served by production domain')
 assert.match(prod,/verify_frontend app.*app\.intaprd\.com\/admin\/accounts/,'Verify real app asset served by production domain')
+assert.match(prod,/custom_root="\$\{url%%\/\$\{custom_root#\*\/\}\}"/,'Assets must resolve from the domain root rather than the profile route')
+assert.match(prod,/curl -fsSL --max-time 25 "\$origin\$expected"/,'Immutable Pages deployment must serve the approved asset')
+assert.match(prod,/curl -fsSL --max-time 25 "\$custom_root\$expected"/,'Custom production domain must serve the approved asset')
+assert.match(prod,/cmp -s "\$LOG_DIR\/\$label-bundle-origin\.js" "\$LOG_DIR\/\$label-bundle-custom\.js"/,'Actual JS from custom and immutable Pages deployments must match')
+assert.doesNotMatch(prod,/curl -fsSL "\$url\$expected"/,'Never append assets to SPA routes')
+
 assert.match(prod,/VITE_ENVIRONMENT=production npm run build -w app/,'Production app must not inherit Preview build mode')
 assert.match(prod,/VITE_API_URL=https:\/\/api\.intaprd\.com VITE_WEB_URL=https:\/\/intaprd\.com/,'App build must target actual production backend and public site')
 assert.match(prod,/VITE_APP_URL=https:\/\/app\.intaprd\.com VITE_PUBLIC_ORIGIN=https:\/\/intaprd\.com/,'Public Web build must target actual production destinations')
