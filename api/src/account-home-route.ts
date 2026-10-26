@@ -1,7 +1,7 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { listOwnedSponsoredBeneficiaryProfiles, sponsoredMultiProfileAccess, setMedicalContextCookie, listSponsorAccounts, resolveSponsorMembership, setSponsorContext } from './sponsored-multiprofile-access'
-import { clearIntapSelection, readIntapSelection, setIntapSelection, type IntapAccountKind } from './intap-active-account'
+import { clearIntapSelection, readIntapSelection, setIntapSelection, matchesActiveIntapTab, type IntapAccountKind } from './intap-active-account'
 
 async function sha256Hex(input:string){
   const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
@@ -214,7 +214,10 @@ app.get('/api/v1/me/intapcard/active-account',requireUser,async(c:any)=>{
   if(!(await sponsoredMultiProfileAccess(c,userId)))return c.json({ok:false,error:'No autorizado.'},403)
   const selected=await readIntapSelection(c)
   if(!selected||!(await ownedChoice(c,userId,selected.kind,selected.id)))return c.json({ok:true,data:{active:null}})
-  return c.json({ok:true,data:{active:{...selected,route:accountRoute[selected.kind]}}})
+  return c.json({ok:true,data:{active:{kind:selected.kind,id:selected.id,route:accountRoute[selected.kind]},tab_session_valid:matchesActiveIntapTab(c,selected),
+    // A genuinely new tab may attach to the already-selected account; a tab
+    // presenting a stale token is NEVER silently refreshed.
+    new_tab_token:!String(c.req.header('X-Intap-Account-Tab')||'').trim()?selected.tabToken:null}})
 })
 app.post('/api/v1/me/intapcard/active-account',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
@@ -227,8 +230,9 @@ app.post('/api/v1/me/intapcard/active-account',requireUser,async(c:any)=>{
   if(kind==='medical')setMedicalContextCookie(c,id)
   if((kind==='sponsor'||kind==='medical_master')&&!(await setSponsorContext(c,userId,id)))
     return c.json({ok:false,error:'No tienes acceso a ese patrocinador.'},403)
-  if(!(await setIntapSelection(c,{kind,id})))return c.json({ok:false,error:'Sesión inválida. Inicia sesión nuevamente.'},401)
-  return c.json({ok:true,data:{kind,id,route:accountRoute[kind]}})
+  const tabToken=await setIntapSelection(c,{kind,id})
+  if(!tabToken)return c.json({ok:false,error:'Sesión inválida. Inicia sesión nuevamente.'},401)
+  return c.json({ok:true,data:{kind,id,route:accountRoute[kind],tab_token:tabToken}})
 })
 app.post('/api/v1/me/intapcard/leave-account',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||'')
