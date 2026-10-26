@@ -20,6 +20,12 @@ assert.match(runner,/WEB_ORIGIN="\$\(grep/,'El origen Web debe venir del desplie
 assert.match(runner,/APP_ORIGIN="\$\(grep/,'El origen App debe venir del despliegue realizado')
 assert.match(runner,/restore/,'El runner debe restaurar configuración versionada')
 assert.match(runner,/grep -Fq '\/m\/:slug' "\$LOG_DIR\/web-entry\.js"/,'El smoke debe verificar el bundle público real')
+assert.match(runner,/verify_pages_html web "\$WEB_ORIGIN\/m\/med-intapcard"/,'El despliegue debe comprobar la ruta Web antes de activar el Worker')
+assert.match(runner,/for attempt in 1 2 3 4 5 6 7 8 9 10 11 12/,'Dar tiempo acotado a la distribución de Pages')
+assert.match(runner,/Se bloquea el cambio de Worker Preview/,'Ante fallos persistentes se debe mantener la ruta Preview anterior')
+assert.match(runner,/verify_pages_html web-root "\$WEB_ORIGIN\/"/,'Diferenciar el fallo de ruta del fallo de origen Web')
+assert.match(runner,/Accept: text\/html/,'Las sondas deben simular navegaciones HTML')
+
 assert.match(dashboard,/disabled=\{profile\.status!=='active'\}/,'El enlace público debe estar deshabilitado para borradores')
 assert.match(dashboard,/Perfil público disponible al publicar/,'La UI debe explicar que falta publicar')
 assert.match(dashboard,/La vista pública y la vista previa completa estarán disponibles cuando publiques/,'No prometer vista previa pública para borradores')
