@@ -13,6 +13,7 @@ type Pending={
 }
 type Context={
   is_owner:boolean
+  allow_direct_actions?:boolean
   enabled:boolean
   pending_count:number
   pending:Pending[]
