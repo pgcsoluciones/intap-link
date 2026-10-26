@@ -17,6 +17,7 @@ type Context={
   pending_count:number
   pending:Pending[]
   manage_url:string
+  settings_url?:string
   resource_url?:string
   resource_label?:string
   contact_url?:string
@@ -44,9 +45,10 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   async function load(){
     try{
       const res=await fetch(ownerApiBase+'/public-context?username='+encodeURIComponent(username),{credentials:'include',cache:'no-store'})
-      if(!res.ok){if(res.status===401||res.status===403)setContext(null);return}
+      if(!res.ok){setContext(null);return}
       const json:any=await res.json().catch(()=>null)
       if(json?.ok&&json.data?.is_owner)setContext(json.data)
+      else setContext(null)
     }catch{/* visitor profile remains unaffected */}
   }
   useEffect(()=>{
@@ -102,7 +104,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   if(!context)return null
   const origin=manageOrigin.replace(/\/$/,'')
   const manageUrl=origin+String(context.manage_url||'/admin/sponsored/agenda')
-  const settingsUrl=origin+settingsPath
+  const settingsUrl=origin+String(context.settings_url||settingsPath)
   const resourceUrl=String(context.resource_url||'').trim()
   const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
   const contactUrl=String(context.contact_url||'').trim()
