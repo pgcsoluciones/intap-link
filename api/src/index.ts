@@ -193,6 +193,22 @@ app.use('/api/v1/me/*',async(c:any,next:any)=>{
   const active=await readIntapSelection(c)
   if(!active||!['free','paid'].includes(active.kind))
     return c.json({ok:false,error:'La cuenta Free o Link no está activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  // Navigating an <a> or <iframe> to the draft Free preview is a browser
+  // document request, not a fetch: browsers cannot add X-Intap-Account-Tab.
+  // Permit ONLY this read-only GET after verifying the selected profile ID
+  // against the requested slug. All edits still require the matching tab token.
+  const freePreviewPrefix='/api/v1/me/free/profile-preview/'
+  if(c.req.method==='GET'&&path.startsWith(freePreviewPrefix)){
+    const slug=path.slice(freePreviewPrefix.length)
+    if(!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug))return c.json({ok:false,error:'Identificador de perfil no válido.'},400)
+    const owned=await c.env.DB.prepare('SELECT id FROM profiles WHERE id=? AND lower(slug)=lower(?) LIMIT 1')
+      .bind(active.id,slug).first()
+    if(!owned)return c.json({ok:false,error:'La vista previa no corresponde a la cuenta Free/Link activa.',code:'intap_account_not_selected'},403)
+    const presented=String(c.req.header('X-Intap-Account-Tab')||'').trim()
+    if(presented&&!matchesActiveIntapTab(c,active))
+      return c.json({ok:false,error:'Esta pestaña ya no administra esta cuenta.',code:'intap_account_tab_stale'},409)
+    return next()
+  }
   if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Esta pestaña ya no administra la cuenta Free/Link seleccionada.',code:'intap_account_tab_stale'},409)
   await next()
 })
