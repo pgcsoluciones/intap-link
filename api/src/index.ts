@@ -1,4 +1,4 @@
-import { readIntapSelection } from './intap-active-account'
+import { readIntapSelection, matchesActiveIntapTab } from './intap-active-account'
 import { registerMedicalProfileRoutes } from './routes/medical-profile'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -89,7 +89,7 @@ function isAllowedOrigin(origin: string): boolean {
 app.use('*', cors({
   origin: (origin) => isAllowedOrigin(origin) ? origin : '',
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id', 'X-Intap-Account-Tab'],
   credentials: true,
   maxAge: 86400,
 }))
@@ -135,6 +135,7 @@ const enforceIntapMedicalSelection=async(c:any,next:any)=>{
   const active=await readIntapSelection(c)
   const required=String(c.req.query('scope')||'')==='sponsor_master'?'medical_master':'medical'
   if(!active||active.kind!==required)return c.json({ok:false,error:'Esta no es la cuenta activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Esta pestaña ya no administra la cuenta activa. Vuelve a elegirla desde Multicuenta.',code:'intap_account_tab_stale'},409)
   await next()
 }
 app.use('/api/v1/me/medical-profile',enforceIntapMedicalSelection)
@@ -150,6 +151,7 @@ const enforceIntapSponsoredSelection=async(c:any,next:any)=>{
   const active=await readIntapSelection(c)
   const required=String(c.req.query('scope')||'')==='master'?'sponsor':'sponsored'
   if(!active||active.kind!==required)return c.json({ok:false,error:'Selecciona la cuenta correspondiente desde Multicuenta.',code:'intap_account_not_selected'},403)
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Esta pestaña ya no administra esta cuenta.',code:'intap_account_tab_stale'},409)
   if(required==='sponsored'){
     const id=String(c.req.query('profile_id')||'')
     if(id&&id!==active.id)return c.json({ok:false,error:'El perfil solicitado no es la cuenta activa.'},403)
@@ -171,6 +173,7 @@ app.use('/api/v1/sponsor/*',async(c:any,next:any)=>{
   const shared=path.startsWith('/api/v1/sponsor/settings')||path.startsWith('/api/v1/sponsor/media')
   if(!active||(!shared&&active.kind!==required)||(shared&&!['sponsor','medical_master'].includes(active.kind)))
     return c.json({ok:false,error:'Este patrocinador no es la cuenta activa.',code:'intap_account_not_selected'},403)
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Cambia de cuenta desde Multicuenta antes de continuar.',code:'intap_account_tab_stale'},409)
   await next()
 })
 
@@ -190,6 +193,7 @@ app.use('/api/v1/me/*',async(c:any,next:any)=>{
   const active=await readIntapSelection(c)
   if(!active||!['free','paid'].includes(active.kind))
     return c.json({ok:false,error:'La cuenta Free o Link no está activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  if(!matchesActiveIntapTab(c,active))return c.json({ok:false,error:'Esta pestaña ya no administra la cuenta Free/Link seleccionada.',code:'intap_account_tab_stale'},409)
   await next()
 })
 
