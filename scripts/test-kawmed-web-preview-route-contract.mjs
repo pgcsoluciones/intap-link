@@ -23,4 +23,14 @@ assert.match(runner,/grep -Fq '\/m\/:slug' "\$LOG_DIR\/web-entry\.js"/,'El smoke
 assert.match(dashboard,/disabled=\{profile\.status!=='active'\}/,'El enlace público debe estar deshabilitado para borradores')
 assert.match(dashboard,/Perfil público disponible al publicar/,'La UI debe explicar que falta publicar')
 assert.match(dashboard,/La vista pública y la vista previa completa estarán disponibles cuando publiques/,'No prometer vista previa pública para borradores')
+const medicalApi=read('api/src/medical-profile-owner.ts')
+const controls=dashboard.split('Vista previa</button>}')[1]?.split("{scope==='doctor'&&<button onClick")[0]||''
+assert.match(controls,/setPublicationConfirm\('publish'\)/,'Master debe mostrar Publicar')
+assert.match(controls,/setPublicationConfirm\('unpublish'\)/,'Master debe mostrar Despublicar')
+assert.match(dashboard,/Pendiente: \{completeness\.missing\.join\(', '\)\}/,'El progreso debe explicar campos que faltan')
+assert.match(medicalApi,/ownerScope\(c\)==='sponsor_master'/,'El API Master debe usar contexto autorizado')
+assert.match(medicalApi,/app\.post\('\/api\/v1\/me\/medical-profile\/publication',requireUser/,'El endpoint requiere sesión')
+assert.match(medicalApi,/owner=await owned\(c\)|const r=await owned\(c\)/,'El endpoint debe resolver el perfil autorizado')
+assert.match(medicalApi,/Confirma el cambio de publicación/,'La publicación requiere confirmación')
+
 console.log('KawMed public Preview route/origin and draft privacy contract: OK')
