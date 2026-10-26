@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { apiGet, apiPost } from '../../lib/api'
+import { apiGet, apiPost, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
 
 type AccountItem={
   id:string;kind:'medical'|'medical_master'|'sponsor'|'sponsored'|'free'|'paid'|'trial'
@@ -93,6 +93,9 @@ export default function IntapcardAccountSelector(){
       // session in an HttpOnly cookie and checked against D1 ownership.
       const response:any=await apiPost('/me/intapcard/active-account',{kind:item.kind,id:item.id})
       if(!response?.ok)throw new Error(response?.error||'No pudimos seleccionar esta cuenta.')
+      const token=String(response.data?.tab_token||'')
+      if(!/^[a-f0-9]{32}$/.test(token))throw new Error('No se pudo activar la sesión exclusiva de esta cuenta.')
+      sessionStorage.setItem(INTAP_ACTIVE_TAB_STORAGE,token)
       if(item.kind==='trial'){
         const host=window.location.hostname
         const origin=host==='app.preview.intaprd.com'?'https://preview.intaprd.com':'https://intaprd.com'
