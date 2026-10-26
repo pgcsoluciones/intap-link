@@ -342,7 +342,10 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
           <p className="mt-1 text-sm leading-6 text-slate-700">{publicationConfirm==='publish'?'Tus pacientes podrán consultar este perfil mediante su enlace público.':'El perfil dejará de mostrarse a tus pacientes, pero se conservarán sus datos.'}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button ref={publicationConfirmRef} type="button" disabled={busy} onClick={()=>void changePublication(publicationConfirm)} className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition-[background-color,transform,box-shadow] duration-200 hover:bg-slate-800 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 motion-reduce:transition-none disabled:cursor-wait disabled:opacity-60" aria-busy={Boolean(publicationPending)}>
-              {publicationPending?(publicationPending==='publish'?'Publicando…':'Despublicando…'):(publicationConfirm==='publish'?'Sí, publicar':'Sí, despublicar')}
+              <span className="inline-flex items-center gap-2">
+                {publicationPending&&<span aria-hidden="true" className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none"/>}
+                {publicationPending?(publicationPending==='publish'?'Publicando…':'Despublicando…'):(publicationConfirm==='publish'?'Sí, publicar':'Sí, despublicar')}
+              </span>
             </button>
             <button type="button" disabled={busy} onClick={cancelPublicationConfirm} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black transition-[background-color,transform] duration-200 hover:bg-slate-100 active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-50">Cancelar</button>
           </div>
