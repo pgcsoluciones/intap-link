@@ -1,3 +1,5 @@
+import { readIntapSelection } from './intap-active-account'
+
 export const SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL='intapcard@gmail.com'
 
 export async function sponsoredMultiProfileAccess(c:any,userId:string){
@@ -42,8 +44,11 @@ export async function resolveSponsorMembership(c:any,userId:string){
   if(!userId)return null
   const multi=await sponsoredMultiProfileAccess(c,userId)
   if(multi){
+    const active=await readIntapSelection(c)
+    // No implicit sponsor fallback from a doctor, Free or other active identity.
+    if(!active||!['sponsor','medical_master'].includes(active.kind))return null
     const context=await c.env.DB.prepare(`SELECT sponsor_id FROM sponsor_user_context WHERE user_id=? LIMIT 1`).bind(userId).first().catch(()=>null)
-    const requested=String((context as any)?.sponsor_id||'')
+    const requested=active.id===String((context as any)?.sponsor_id||'')?active.id:''
     if(requested){
       const selected=await c.env.DB.prepare(`
         SELECT sm.sponsor_id,sm.role,st.name,st.slug,st.sponsor_type,st.logo_url,st.is_active
@@ -96,12 +101,9 @@ export async function resolveOwnedMedicalContext(c:any,userId:string){
   if(!userId)return null
   if(await sponsoredMultiProfileAccess(c,userId)){
     const id=selectedMedicalContextId(c)
-    if(id){
-      return c.env.DB.prepare('SELECT * FROM medical_profiles WHERE id=? AND user_id=? LIMIT 1').bind(id,userId).first()
-    }
-    // No asignar silenciosamente el primero cuando hay varias cuentas.
-    const rows=await c.env.DB.prepare('SELECT id FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 2').bind(userId).all()
-    if((rows.results||[]).length>1)return null
+    const active=await readIntapSelection(c)
+    if(!active||active.kind!=='medical'||active.id!==id)return null
+    return c.env.DB.prepare('SELECT * FROM medical_profiles WHERE id=? AND user_id=? LIMIT 1').bind(active.id,userId).first()
   }
   return c.env.DB.prepare('SELECT * FROM medical_profiles WHERE user_id=? ORDER BY created_at ASC LIMIT 1').bind(userId).first()
 }
