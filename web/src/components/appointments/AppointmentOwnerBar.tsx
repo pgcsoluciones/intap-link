@@ -18,6 +18,7 @@ type Context={
   pending:Pending[]
   manage_url:string
   settings_url?:string
+  is_master?:boolean
   resource_url?:string
   resource_label?:string
   contact_url?:string
