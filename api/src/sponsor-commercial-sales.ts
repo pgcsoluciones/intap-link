@@ -23,7 +23,7 @@ app.get('/api/v1/sponsor/commercial/sellers',async(c:any)=>{
  const ctx=await authorized(c);if(!ctx)return c.json({ok:false,error:'Acceso comercial no habilitado para esta empresa.'},403)
  const [reps,assignments]=await Promise.all([
  c.env.DB.prepare("SELECT * FROM sponsor_sales_representatives WHERE sponsor_id=? ORDER BY active DESC,first_name,last_name").bind(ctx.sponsorId).all(),
- c.env.DB.prepare("SELECT a.*,sa.artifact_id,ia.public_code FROM sponsor_sales_assignments a JOIN sponsor_artifacts sa ON sa.id=a.sponsor_artifact_id JOIN intap_artifacts ia ON ia.id=sa.artifact_id WHERE a.sponsor_id=? ORDER BY a.assigned_at DESC").bind(ctx.sponsorId).all()
+ c.env.DB.prepare("SELECT a.*,sa.artifact_id,ia.public_code FROM sponsor_sales_assignments a JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id JOIN intap_artifacts ia ON ia.id=sa.artifact_id WHERE a.sponsor_id=? ORDER BY a.assigned_at DESC").bind(ctx.sponsorId).all()
  ])
  return c.json({ok:true,data:{sellers:reps.results||[],assignments:assignments.results||[]}})
 })
@@ -56,12 +56,12 @@ app.post('/api/v1/sponsor/commercial/assign',async(c:any)=>{
  const seller=await c.env.DB.prepare("SELECT id FROM sponsor_sales_representatives WHERE id=? AND sponsor_id=? AND active=1").bind(repId,ctx.sponsorId).first()
  if(!seller)return c.json({ok:false,error:'Vendedor no disponible para este patrocinador.'},404)
  const placeholders=distinct.map(()=>'?').join(',')
- const artifacts=await c.env.DB.prepare("SELECT sa.id,ia.public_code FROM sponsor_artifacts sa JOIN intap_artifacts ia ON ia.id=sa.artifact_id WHERE sa.sponsor_id=? AND COALESCE(sa.artifact_role,'beneficiary')<>'master' AND ia.public_code IN ("+placeholders+")").bind(ctx.sponsorId,...distinct).all()
+ const artifacts=await c.env.DB.prepare("SELECT sa.artifact_id AS id,ia.public_code FROM sponsor_artifacts sa JOIN intap_artifacts ia ON ia.id=sa.artifact_id WHERE sa.sponsor_id=? AND COALESCE(sa.artifact_role,'beneficiary')<>'master' AND ia.public_code IN ("+placeholders+")").bind(ctx.sponsorId,...distinct).all()
  const found=artifacts.results||[];if(found.length!==distinct.length)return c.json({ok:false,error:'Los códigos deben pertenecer todos a este patrocinador y no ser Master.'},422)
  const group=trim(body.group_label,120),ops:any[]=[]
  for(const item of found){
-  ops.push(c.env.DB.prepare("UPDATE sponsor_sales_assignments SET active=0,ended_at=datetime('now') WHERE sponsor_id=? AND sponsor_artifact_id=? AND active=1").bind(ctx.sponsorId,item.id))
-  ops.push(c.env.DB.prepare("INSERT INTO sponsor_sales_assignments(id,sponsor_id,sponsor_artifact_id,representative_id,group_label,assigned_by_user_id) VALUES (?,?,?,?,?,?)").bind(crypto.randomUUID(),ctx.sponsorId,item.id,repId,group,ctx.userId))
+  ops.push(c.env.DB.prepare("UPDATE sponsor_sales_assignments SET active=0,ended_at=datetime('now') WHERE sponsor_id=? AND artifact_id=? AND active=1").bind(ctx.sponsorId,item.id))
+  ops.push(c.env.DB.prepare("INSERT INTO sponsor_sales_assignments(id,sponsor_id,artifact_id,representative_id,group_label,assigned_by_user_id) VALUES (?,?,?,?,?,?)").bind(crypto.randomUUID(),ctx.sponsorId,item.id,repId,group,ctx.userId))
  }
  await c.env.DB.batch(ops)
  return c.json({ok:true,assigned:found.length})
@@ -114,7 +114,7 @@ app.get('/api/v1/me/sponsored-profile/commercial-links',async(c:any)=>{
  const resource:any=active.has('commercial_catalog')||active.has('commercial_vademecum')?await c.env.DB.prepare("SELECT resource_url,resource_label FROM sponsor_commercial_resources WHERE sponsor_id=?").bind(sponsorId).first():null
  let seller:any=null
  if(active.has('commercial_seller')&&profile.artifact_id){
- seller=await c.env.DB.prepare("SELECT r.first_name,r.last_name,r.whatsapp FROM sponsor_sales_assignments a JOIN sponsor_sales_representatives r ON r.id=a.representative_id AND r.sponsor_id=a.sponsor_id AND r.active=1 JOIN sponsor_artifacts sa ON sa.id=a.sponsor_artifact_id AND sa.sponsor_id=a.sponsor_id WHERE a.sponsor_id=? AND sa.artifact_id=? AND a.active=1 ORDER BY a.assigned_at DESC LIMIT 1").bind(sponsorId,String(profile.artifact_id)).first()
+ seller=await c.env.DB.prepare("SELECT r.first_name,r.last_name,r.whatsapp FROM sponsor_sales_assignments a JOIN sponsor_sales_representatives r ON r.id=a.representative_id AND r.sponsor_id=a.sponsor_id AND r.active=1 JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id AND sa.sponsor_id=a.sponsor_id WHERE a.sponsor_id=? AND sa.artifact_id=? AND a.active=1 ORDER BY a.assigned_at DESC LIMIT 1").bind(sponsorId,String(profile.artifact_id)).first()
  }
  const digits=String(seller?.whatsapp||'').replace(/[^0-9]/g,'')
  const contact_url=digits.length>=7&&digits.length<=15?'https://wa.me/'+digits:''
