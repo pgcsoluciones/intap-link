@@ -257,7 +257,7 @@ export default function SuperAdminKawMed(){
   async function createDemoInvitation(){
     setBusy(true);setError('');setDemoLink('')
     try{
-      const result:any=await apiPost('/superadmin/kawmed/demo-invitations',{medical_profile_id:demoProfileId,email:demoEmail,hours:demoHours})
+      const result:any=await apiPost('/superadmin/kawmed/demo-invitations',{medical_profile_id:demoProfileId,email:demoEmail,hours:demoHours,live_access:true})
       if(!result?.ok)throw new Error(result?.error||'No fue posible generar la invitación.')
       setDemoLink(String(result.data?.url||''))
       await refreshDemoInvitations()
@@ -273,8 +273,8 @@ export default function SuperAdminKawMed(){
       {error&&<div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</div>}
 
       <section className={card}>
-        <h2 className="text-xl font-black">Invitación Demo KawMed</h2>
-        <p className="mt-2 text-sm text-slate-600">Invita a un médico a explorar una copia privada y editable de un perfil de demostración propiedad de Intapcard. Su correo debe coincidir con el de la invitación; no podrá administrar credenciales, publicar ni modificar el original.</p>
+        <h2 className="text-xl font-black">Invitación de administrador KawMed</h2>
+        <p className="mt-2 text-sm text-slate-600">Invita temporalmente a otro administrador a editar el perfil médico original de Intapcard. Verá el mismo panel, podrá cambiar datos, imágenes, plantillas, centros, seguros, agenda y publicación en tiempo real. No podrá cambiar credenciales, propiedad ni eliminar la cuenta. La simulación y el reclamo de cuentas permanecen independientes.</p>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <label className={label}>Perfil de demostración<select className={input} value={demoProfileId} onChange={e=>setDemoProfileId(e.target.value)} disabled={!demoEligibleProfiles.length}><option value="">{demoEligibleProfiles.length?'Selecciona un perfil':'No hay perfiles de Intapcard disponibles'}</option>{demoEligibleProfiles.map(row=><option key={row.id} value={row.id}>{row.name} · {row.slug}</option>)}</select><span className="mt-1 block text-xs normal-case font-medium tracking-normal text-slate-500">Solo perfiles médicos cuyo propietario es intapcard@gmail.com (independientes o patrocinados).</span></label>
           <label className={label}>Correo del invitado<input className={input} type="email" value={demoEmail} onChange={e=>setDemoEmail(e.target.value)}/></label>
