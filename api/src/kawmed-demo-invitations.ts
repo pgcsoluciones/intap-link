@@ -1,6 +1,7 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { requireSuperAdmin } from './lib/admin-auth'
+import { liveGuestInvitation, sessionActor } from './kawmed-live-guest'
 
 const email=(v:unknown)=>String(v||'').trim().toLowerCase().slice(0,254)
 const sha=async(v:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))).map(b=>b.toString(16).padStart(2,'0')).join('')
@@ -69,12 +70,22 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  const raw=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('')
  const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
  await c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,JSON.stringify(fields)).run()
+ if(b.live_access===true){
+   await c.env.DB.prepare("INSERT INTO kawmed_demo_live_access(invitation_id,medical_profile_id,owner_user_id) VALUES(?,?,?)").bind(id,profileId,String((profile as any).user_id)).run()
+ }
  return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')+'/admin/medical/demo/'+raw}},201)
 })
 app.get('/api/v1/me/kawmed/demo-invitations',async(c:any)=>{
  const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
  const records=await c.env.DB.prepare("SELECT i.id,i.expires_at,i.status,p.name AS profile_name FROM kawmed_demo_invitations i JOIN medical_profiles p ON p.id=i.source_medical_profile_id WHERE lower(i.invited_email)=? AND i.status IN ('pending','active') AND i.expires_at>datetime('now') ORDER BY i.created_at DESC LIMIT 20").bind(email(actor.email)).all()
  return c.json({ok:true,data:(records.results||[]).map((i:any)=>({id:String(i.id),profile_name:String(i.profile_name),expires_at:String(i.expires_at),url:'/admin/medical/demo/i-'+String(i.id)}))})
+})
+app.get('/api/v1/me/kawmed/live-access/:token',async(c:any)=>{
+ const actor:any=await sessionActor(c)
+ if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
+ const grant:any=await liveGuestInvitation(c,String(actor.email),String(c.req.param('token')||''))
+ if(!grant)return c.json({ok:false,error:'Invitación no disponible para esta cuenta.'},403)
+ return c.json({ok:true,data:{medical_profile_id:grant.medical_profile_id,expires_at:grant.expires_at,guest_editor:true}})
 })
 app.get('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
  const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
