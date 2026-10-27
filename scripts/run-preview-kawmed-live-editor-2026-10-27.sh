@@ -52,7 +52,7 @@ echo "▶ Migración 0152 aditiva, solo Preview"
 (cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --file=migrations/0152_kawmed_live_guest_access.sql)
 echo "▶ Pages Preview App y Web pública"
 npx wrangler pages deploy web/dist --project-name intap-web2 --branch "$WEB_BRANCH" 2>&1 | tee "$LOG_DIR/web-pages.log"
-WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\\.intap-web2\\.pages\\.dev' "$LOG_DIR/web-pages.log" | tail -1)"
+WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG_DIR/web-pages.log" | tail -1)"
 [[ -n "$WEB_ORIGIN" ]] || fail "URL de Web pública no obtenida"
 grep -Fq "https://qa-kawmed-web-1025.intap-web2.pages.dev" "$LOG_DIR/web-pages.log" || fail "Alias de Web no coincide"
 npx wrangler pages deploy app/dist --project-name intap-web2 --branch "$APP_BRANCH" 2>&1 | tee "$LOG_DIR/pages.log"
