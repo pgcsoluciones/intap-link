@@ -65,4 +65,16 @@ app.post('/api/v1/sponsor/commercial/assign',async(c:any)=>{
  await c.env.DB.batch(ops)
  return c.json({ok:true,assigned:found.length})
 })
+app.get('/api/v1/sponsor/commercial/config',async(c:any)=>{
+ const raw=cookie(c.req.header('Cookie')||'',cookieNames(c.env).session)
+ if(!raw)return c.json({ok:false,error:'Sin sesión.'},401)
+ const s=await c.env.DB.prepare("SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1").bind(await digest(raw)).first()
+ if(!s)return c.json({ok:false,error:'Sin sesión.'},401)
+ const membership=await resolveSponsorMembership(c,String((s as any).user_id||''))
+ if(!membership)return c.json({ok:false,error:'Sin patrocinador seleccionado.'},403)
+ const sponsorId=String((membership as any).sponsor_id)
+ const rows=await c.env.DB.prepare("SELECT module_code,enabled FROM sponsor_module_grants WHERE sponsor_id=? AND module_code IN ('commercial_visitor','commercial_seller','commercial_vademecum','commercial_catalog')").bind(sponsorId).all()
+ const grants=Object.fromEntries((rows.results||[]).map((r:any)=>[r.module_code,Number(r.enabled)===1]))
+ return c.json({ok:true,data:{contact:grants.commercial_visitor?'visitor':grants.commercial_seller?'seller':'none',resource:grants.commercial_vademecum?'vademecum':grants.commercial_catalog?'catalog':'none',can_manage:['owner','admin'].includes(String((membership as any).role))}})
+})
 export default app
