@@ -28,6 +28,17 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  // Only the privileged operator's own demonstration profile can be shared.
  const owner=await c.env.DB.prepare('SELECT email FROM users WHERE id=?').bind(String((profile as any).user_id||'')).first()
  if(email((owner as any)?.email)!=='intapcard@gmail.com')return c.json({ok:false,error:'Solamente los perfiles demo de Intapcard se pueden invitar.'},403)
+ // Live edit is a separate authorization: never create a simulated medical profile.
+ if(b.live_access===true){
+   const raw=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('')
+   const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
+   const previous=await c.env.DB.prepare("SELECT i.id FROM kawmed_demo_invitations i JOIN kawmed_demo_live_access l ON l.invitation_id=i.id WHERE lower(i.invited_email)=? AND i.status IN ('pending','active')").bind(invited).all()
+   const statements=(previous.results||[]).map((r:any)=>c.env.DB.prepare("UPDATE kawmed_demo_invitations SET status='revoked',updated_at=datetime('now') WHERE id=?").bind(String(r.id)))
+   statements.push(c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,'{}'))
+   statements.push(c.env.DB.prepare("INSERT INTO kawmed_demo_live_access(invitation_id,medical_profile_id,owner_user_id) VALUES(?,?,?)").bind(id,profileId,String((profile as any).user_id)))
+   await c.env.DB.batch(statements)
+   return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:String(c.env.APP_URL||'https://app.intaprd.com').replace(/\\/$/,'')+'/admin/medical/demo/'+raw,live_access:true}},201)
+ }
  const fields=snapshot(profile)
  for(const [key,sql] of Object.entries({centers:'SELECT name,address,city,province,phone,map_url FROM medical_profile_centers WHERE medical_profile_id=?',schedules:'SELECT day_of_week,shift,start_time,end_time FROM medical_profile_schedules WHERE medical_profile_id=?'})){
  const rows=await c.env.DB.prepare(sql).bind(profileId).all();fields[key]=(rows.results||[]).map((x:any)=>({...x}))
@@ -70,9 +81,6 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  const raw=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('')
  const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
  await c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,JSON.stringify(fields)).run()
- if(b.live_access===true){
-   await c.env.DB.prepare("INSERT INTO kawmed_demo_live_access(invitation_id,medical_profile_id,owner_user_id) VALUES(?,?,?)").bind(id,profileId,String((profile as any).user_id)).run()
- }
  return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')+'/admin/medical/demo/'+raw}},201)
 })
 app.get('/api/v1/me/kawmed/demo-invitations',async(c:any)=>{
