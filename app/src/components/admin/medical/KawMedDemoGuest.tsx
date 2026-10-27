@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { apiGet, apiPatch } from '../../../lib/api'
+import { apiGet, apiPatch, apiPost } from '../../../lib/api'
 import MedicalDashboard from './MedicalDashboard'
 export default function KawMedDemoGuest(){
  const {token=''}=useParams()
  const[liveAccess,setLiveAccess]=useState(false)
  const[profile,setProfile]=useState<any>(null),[tab,setTab]=useState<'profile'|'centers'|'schedules'|'insurance'|'appearance'|'agenda'>('profile'),[error,setError]=useState(''),[saving,setSaving]=useState(false),[expires,setExpires]=useState('')
  useEffect(()=>{apiGet('/me/kawmed/live-access/'+encodeURIComponent(token)).then((grant:any)=>{
- if(grant?.ok){setExpires(grant.data.expires_at);setLiveAccess(true);return}
+ if(grant?.ok){setExpires(grant.data.expires_at);setLiveAccess(true);void apiPost('/me/kawmed/live-access/'+encodeURIComponent(token)+'/activate',{}).catch(()=>undefined);return}
  return apiGet('/me/kawmed/demo/'+encodeURIComponent(token)).then((j:any)=>{
  if(j?.ok){setProfile(j.data.profile);setExpires(j.data.expires_at)}else setError(j?.error==='Unauthorized'?'LOGIN':j?.error||'Invitación inválida')
  })
