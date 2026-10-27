@@ -102,7 +102,8 @@ export default function IntapcardAccountSelector(){
         const origin=host==='app.preview.intaprd.com'?'https://preview.intaprd.com':'https://intaprd.com'
         window.location.assign(origin+'/trial/mi/'+encodeURIComponent(item.id))
       }else{
-        window.location.assign(String(response.data?.route||'/admin/accounts'))
+        const route=String(response.data?.route||'/admin/accounts')
+        window.location.assign(item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route)
       }
     }catch(e){setError(e instanceof Error?e.message:'No se pudo seleccionar la cuenta.');setBusy('')}
   }
