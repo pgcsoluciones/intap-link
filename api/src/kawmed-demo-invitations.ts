@@ -37,7 +37,7 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
    statements.push(c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,'{}'))
    statements.push(c.env.DB.prepare("INSERT INTO kawmed_demo_live_access(invitation_id,medical_profile_id,owner_user_id) VALUES(?,?,?)").bind(id,profileId,String((profile as any).user_id)))
    await c.env.DB.batch(statements)
-   return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:String(c.env.APP_URL||'https://app.intaprd.com').replace(/\\/$/,'')+'/admin/medical/demo/'+raw,live_access:true}},201)
+   return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:String(c.env.APP_URL||'https://app.intaprd.com').replace(/[/]$/,'')+'/admin/medical/demo/'+raw,live_access:true}},201)
  }
  const fields=snapshot(profile)
  for(const [key,sql] of Object.entries({centers:'SELECT name,address,city,province,phone,map_url FROM medical_profile_centers WHERE medical_profile_id=?',schedules:'SELECT day_of_week,shift,start_time,end_time FROM medical_profile_schedules WHERE medical_profile_id=?'})){
@@ -85,7 +85,7 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
 })
 app.get('/api/v1/me/kawmed/demo-invitations',async(c:any)=>{
  const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
- const records=await c.env.DB.prepare("SELECT i.id,i.expires_at,i.status,p.name AS profile_name FROM kawmed_demo_invitations i JOIN medical_profiles p ON p.id=i.source_medical_profile_id WHERE lower(i.invited_email)=? AND i.status IN ('pending','active') AND i.expires_at>datetime('now') ORDER BY i.created_at DESC LIMIT 20").bind(email(actor.email)).all()
+ const records=await c.env.DB.prepare("SELECT i.id,i.expires_at,i.status,p.name AS profile_name FROM kawmed_demo_invitations i JOIN kawmed_demo_live_access l ON l.invitation_id=i.id JOIN medical_profiles p ON p.id=l.medical_profile_id WHERE lower(i.invited_email)=? AND i.status IN ('pending','active') AND datetime(i.expires_at)>datetime('now') AND i.rowid=(SELECT MAX(recent.rowid) FROM kawmed_demo_invitations recent JOIN kawmed_demo_live_access latest ON latest.invitation_id=recent.id WHERE lower(recent.invited_email)=lower(i.invited_email)) LIMIT 1").bind(email(actor.email)).all()
  return c.json({ok:true,data:(records.results||[]).map((i:any)=>({id:String(i.id),profile_name:String(i.profile_name),expires_at:String(i.expires_at),url:'/admin/medical/demo/i-'+String(i.id)}))})
 })
 app.get('/api/v1/me/kawmed/live-access/:token',async(c:any)=>{
@@ -152,5 +152,16 @@ app.patch('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
 })
 app.post('/api/v1/superadmin/kawmed/demo-invitations/:id/revoke',requireSuperAdmin('super_admin'),async(c:any)=>{
  await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET status='revoked',updated_at=datetime('now') WHERE id=?").bind(c.req.param('id')).run()
+ return c.json({ok:true})
+})
+
+app.post('/api/v1/superadmin/kawmed/demo-invitations/:id/delete',requireSuperAdmin('super_admin'),async(c:any)=>{
+ const id=String(c.req.param('id')||'')
+ const existing=await c.env.DB.prepare("SELECT id FROM kawmed_demo_invitations WHERE id=? LIMIT 1").bind(id).first()
+ if(!existing)return c.json({ok:false,error:'Invitación no encontrada.'},404)
+ await c.env.DB.batch([
+   c.env.DB.prepare("DELETE FROM kawmed_demo_live_access WHERE invitation_id=?").bind(id),
+   c.env.DB.prepare("DELETE FROM kawmed_demo_invitations WHERE id=?").bind(id)
+ ])
  return c.json({ok:true})
 })
