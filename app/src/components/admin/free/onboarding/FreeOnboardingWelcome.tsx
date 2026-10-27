@@ -8,6 +8,7 @@ export default function FreeOnboardingWelcome() {
   const navigate = useNavigate()
   const [leaving, setLeaving] = useState(false)
   const [guestInvitation, setGuestInvitation] = useState('')
+  const [invitedDemos, setInvitedDemos] = useState<Array<{id:string;profile_name:string;url:string;expires_at:string}>>([])
   const [resolvingAccount, setResolvingAccount] = useState(true)
 
   useEffect(() => {
@@ -20,6 +21,7 @@ export default function FreeOnboardingWelcome() {
     }
 
     let alive = true
+    apiGet('/me/kawmed/demo-invitations').then((response:any)=>{if(alive && response?.ok && Array.isArray(response.data))setInvitedDemos(response.data)}).catch(()=>undefined)
     apiGet('/me/home-route')
       .then((json:any) => {
         if (!alive) return
@@ -51,6 +53,11 @@ export default function FreeOnboardingWelcome() {
           <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Bienvenido a Kawlink</h1>
           <p className="mt-3 text-[15px] leading-6 text-slate-500">Tu cuenta está activa, pero todavía no tiene una presentación vinculada. Elige cómo quieres continuar.</p>
 
+          {invitedDemos.length>0 && <section className="mt-6 rounded-2xl border border-cyan-300 bg-cyan-50 p-4">
+            <p className="text-xs font-black uppercase tracking-wider text-cyan-700">Tus invitaciones KawMed</p>
+            <p className="mt-2 text-sm text-slate-600">Tienes acceso a una demostración con este correo. No necesitas activar un dispositivo.</p>
+            {invitedDemos.map(invite=><button key={invite.id} type="button" onClick={()=>window.location.assign(invite.url)} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-left text-sm font-extrabold text-white">Entrar como invitado · {invite.profile_name}</button>)}
+          </section>}
           {guestInvitation && <section className="mt-6 rounded-2xl border border-cyan-300 bg-cyan-50 p-4">
             <p className="text-xs font-black uppercase tracking-wider text-cyan-700">Tienes una invitación KawMed pendiente</p>
             <p className="mt-2 text-sm text-slate-600">Tu acceso como invitado no requiere un dispositivo Kawvo ni crear una presentación.</p>
