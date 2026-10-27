@@ -89,7 +89,7 @@ function isAllowedOrigin(origin: string): boolean {
 app.use('*', cors({
   origin: (origin) => isAllowedOrigin(origin) ? origin : '',
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id', 'X-Intap-Account-Tab'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id', 'X-Intap-Account-Tab', 'X-KawMed-Delegate'],
   credentials: true,
   maxAge: 86400,
 }))
@@ -389,9 +389,17 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   const email = String(body.email || '').trim().toLowerCase()
   const authFlow = body?.flow === 'trial' ? 'trial' : body?.flow === 'free_demo_claim' ? 'free_demo_claim' : ''
   const leadToken = authFlow === 'trial' && /^[a-f0-9]{64}$/i.test(String(body?.lead_token||'')) ? String(body.lead_token) : ''
+  const demoInvite = /^(?:[a-f0-9]{64}|i-[a-f0-9-]{36})$/i.test(String(body?.demo_invite||'')) ? String(body.demo_invite).toLowerCase() : ''
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return c.json({ ok: false, error: 'Email inválido' }, 400)
 
+  if (demoInvite) {
+    const invitation = demoInvite.startsWith('i-')
+      ? await c.env.DB.prepare("SELECT i.invited_email FROM kawmed_demo_invitations i JOIN kawmed_demo_live_access g ON g.invitation_id=i.id WHERE i.id=? AND i.status IN ('pending','active') AND datetime(i.expires_at)>datetime('now') AND i.rowid=(SELECT MAX(r.rowid) FROM kawmed_demo_invitations r JOIN kawmed_demo_live_access l ON l.invitation_id=r.id WHERE lower(r.invited_email)=lower(i.invited_email)) LIMIT 1").bind(demoInvite.slice(2)).first()
+      : await c.env.DB.prepare("SELECT invited_email FROM kawmed_demo_invitations WHERE token_hash=? AND status IN ('pending','active') AND expires_at>datetime('now') LIMIT 1").bind(await sha256Hex(demoInvite)).first()
+    if (!invitation || String((invitation as any).invited_email||'').trim().toLowerCase() !== email)
+      return c.json({ok:false,error:'Esta invitación no está disponible para ese correo. Utiliza el correo invitado o solicita otra invitación.'},403)
+  }
   if (authFlow === 'free_demo_claim' && !(await getActiveFreeDemoClaim(c)))
     return c.json({ok:false,error:'El acceso de reclamo expiró.',code:'claim_expired'},401)
 
@@ -425,7 +433,7 @@ app.post('/api/v1/auth/magic-link/start', async (c) => {
   // El callback se construye desde APP_URL server-side: producción usa
   // app.intaprd.com y Preview usa app.preview.intaprd.com.
   const appUrl = configuredAppUrl(c)
-  const magicLink = `${appUrl}/auth/callback?token=${rawToken}${authFlow ? `&flow=${encodeURIComponent(authFlow)}` : ''}${leadToken ? `&lead_token=${encodeURIComponent(leadToken)}` : ''}`
+  const magicLink = `${appUrl}/auth/callback?token=${rawToken}${authFlow ? `&flow=${encodeURIComponent(authFlow)}` : ''}${leadToken ? `&lead_token=${encodeURIComponent(leadToken)}` : ''}${demoInvite ? `&demo_invite=${encodeURIComponent(demoInvite)}` : ''}`
   const resendKey = (c.env as any).RESEND_API_KEY
   const resendFrom = (c.env as any).RESEND_FROM
 

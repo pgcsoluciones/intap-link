@@ -11,6 +11,13 @@ export function activeIntapTabHeaders():Record<string,string>{
   }catch{return{}}
 }
 
+export function kawmedGuestHeaders(path:string):Record<string,string>{
+  if(typeof window==='undefined'||!path.startsWith('/me/medical-profile'))return {}
+  const match=window.location.pathname.match(/^\/admin\/medical\/demo\/([^/]+)(?:\/agenda)?$/)
+  const token=String(match?.[1]||'')
+  return token.length===64||token.startsWith('i-')?{'X-KawMed-Delegate':token}:{}
+}
+
 function buildApiUrl(path: string): string {
   const withLeadingSlash = path.startsWith('/') ? path : `/${path}`
   const normalizedPath = withLeadingSlash.length > 1 && withLeadingSlash.endsWith('/')
@@ -21,7 +28,7 @@ function buildApiUrl(path: string): string {
 
 export async function apiGet<T = any>(path: string): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
-    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders() },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders(), ...kawmedGuestHeaders(path) },
     credentials: 'include',
   })
   return res.json()
@@ -30,7 +37,7 @@ export async function apiGet<T = any>(path: string): Promise<T> {
 export async function apiPost<T = any>(path: string, body: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders() },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders(), ...kawmedGuestHeaders(path) },
     credentials: 'include',
     body: JSON.stringify(body),
   })
@@ -40,7 +47,7 @@ export async function apiPost<T = any>(path: string, body: unknown): Promise<T> 
 export async function apiPut<T = any>(path: string, body: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders() },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders(), ...kawmedGuestHeaders(path) },
     credentials: 'include',
     body: JSON.stringify(body),
   })
@@ -50,7 +57,7 @@ export async function apiPut<T = any>(path: string, body: unknown): Promise<T> {
 export async function apiPatch<T = any>(path: string, body: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders() },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders(), ...kawmedGuestHeaders(path) },
     credentials: 'include',
     body: JSON.stringify(body),
   })
@@ -60,7 +67,7 @@ export async function apiPatch<T = any>(path: string, body: unknown): Promise<T>
 export async function apiDelete<T = any>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders() },
+    headers: { 'Content-Type': 'application/json', ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders(), ...kawmedGuestHeaders(path) },
     credentials: 'include',
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
@@ -71,7 +78,7 @@ export async function apiDelete<T = any>(path: string, body?: unknown): Promise<
 export async function apiUpload<T = any>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: 'POST',
-    headers: { ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders() },
+    headers: { ...delegatedFreeDemoHeaders(path), ...activeIntapTabHeaders(), ...kawmedGuestHeaders(path) },
     credentials: 'include',
     body: formData,
   })

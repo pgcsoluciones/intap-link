@@ -14,6 +14,8 @@ type Pending={
 type Context={
   is_owner:boolean
   allow_direct_actions?:boolean
+  is_guest_editor?:boolean
+  sponsor_banner_url?:string
   enabled:boolean
   pending_count:number
   pending:Pending[]
@@ -114,6 +116,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   const contactUrl=String(context.contact_url||'').trim()
   const contactLabel=String(context.contact_label||'Contacto').trim()||'Contacto'
   return <div className={mobileMenu?'kawmed-owner-header':''} style={{position:'sticky',top:0,zIndex:58,background:'rgba(255,255,255,.96)',backdropFilter:'blur(12px)',borderBottom:'1px solid #e2e8f0',fontFamily:'Inter,system-ui,sans-serif'}}>
+    {context.is_guest_editor&&<p style={{maxWidth:520,margin:'0 auto',padding:'7px 12px 0',fontSize:11,fontWeight:850,color:'#0e7490'}}>ADMINISTRADOR INVITADO · ACCESO TEMPORAL</p>}
     <div className="kawmed-owner-header__row" style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
       <div className="kawmed-owner-header__desktop-links" style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
         <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>{settingsLabel}</button>

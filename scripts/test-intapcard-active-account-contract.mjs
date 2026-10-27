@@ -48,8 +48,8 @@ assert.match(worker,/code:'intap_account_not_selected'/,'Blocked requests should
 assert.match(worker,/const classicPrefixes=\['\/api\/v1\/me\/profile'/,'Free and Link classic profile requests must honor active account')
 assert.match(worker,/\['free','paid'\]\.includes\(active.kind\)/,'Non-Free selected account cannot edit Free or Link profile')
 assert.match(medical,/if\(ownerScope\(c\)==='sponsor_master'\)return ensureSponsorMasterProfile/,'Master editor keeps explicit scope')
-assert.match(appointments,/settings_url:isMaster\?'\/admin\/sponsor\/kawmed\?tab=profile':'\/admin\/medical'/,'Public profile must target correct editor by actual owner scope')
-assert.match(appointments,/manage_url:isMaster\?'\/admin\/medical\/agenda\?scope=sponsor_master'/,'Master appointment link must preserve its scope')
+assert.match(appointments,/settings_url:guestGrant\?[^\n]*:isMaster\?'\/admin\/sponsor\/kawmed\?tab=profile':'\/admin\/medical'/,'Public profile must target correct editor by actual owner scope')
+assert.match(appointments,/manage_url:guestGrant\?[^\n]*:isMaster\?'\/admin\/medical\/agenda\?scope=sponsor_master'/,'Master appointment link must preserve its scope')
 assert.match(appointments,/is_master:isMaster/,'Owner bar must receive actual owner classification')
 assert.match(worker,/endsWith\('\/appointments\/public-context'\)\)return next\(\)/,'Owner context must resolve slug instead of relying on query scope')
 assert.match(guard,/path==='\/admin\/medical\/agenda'&&new URLSearchParams\(location.search\)\.get\('scope'\)==='sponsor_master'/,'Master agenda must remain within selected Master scope')
@@ -75,7 +75,7 @@ assert.match(chooser,/sessionStorage.setItem\(INTAP_ACTIVE_TAB_STORAGE,token\)/,
 assert.match(guard,/if \(!selected.data\?\.tab_session_valid\)/,'Route guard must reject stale tab tokens')
 assert.match(apiClient,/X-Intap-Account-Tab/,'Client must send tab token on API requests')
 assert.match(worker,/matchesActiveIntapTab\(c,active\)/,'Backend must compare tab token before mutating accounts')
-assert.match(medPanel,/headers:activeIntapTabHeaders\(\)/,'Medical image uploads must include selected tab')
+assert.match(medPanel,/\.\.\.activeIntapTabHeaders\(\)/,'Medical image uploads must include selected tab')
 assert.match(ownerBar,/context.allow_direct_actions!==false/,'Public profile must not offer direct mutation outside a selected tab')
 // Free preview is a GET document/iframe navigation (no custom tab headers).
 // The exception must never grant writes or preview a different selected profile.

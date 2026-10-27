@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { activeIntapTabHeaders, API_BASE, apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../../lib/api'
+import { activeIntapTabHeaders, kawmedGuestHeaders, API_BASE, apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import MedicalCenterLocationPicker from './MedicalCenterLocationPicker'
 
-type Tab='profile'|'centers'|'schedule'|'insurance'|'appearance'
+type Tab='profile'|'centers'|'schedule'|'insurance'|'appearance'|'public'
 type MedicalDashboardProps={scope?:'doctor'|'sponsor_master';embedded?:boolean;onOpenAgenda?:()=>void}
 type PendingImage={file:File;kind:'avatar'|'cover'}|null
 const MEDICAL_SPECIALTIES=["Medicina general","Medicina familiar","Medicina interna","Pediatría","Neonatología","Medicina del adolescente","Ginecología","Obstetricia","Ginecología y obstetricia","Medicina materno-fetal","Endocrinología reproductiva e infertilidad","Oncología ginecológica","Oftalmología","Oftalmología pediátrica","Retinología","Glaucomatología","Ortopedia y traumatología","Ortopedia pediátrica","Cirugía de columna","Cirugía de mano","Medicina deportiva","Cirugía general","Cirugía pediátrica","Cirugía plástica y reconstructiva","Cirugía cardiovascular","Cirugía torácica","Cirugía vascular","Neurocirugía","Cirugía maxilofacial","Coloproctología","Cardiología","Cardiología pediátrica","Cardiología intervencionista","Electrofisiología cardíaca","Dermatología","Dermatología pediátrica","Endocrinología","Endocrinología pediátrica","Diabetología","Gastroenterología","Gastroenterología pediátrica","Hepatología","Neumología","Neumología pediátrica","Neurología","Neurología pediátrica","Neurofisiología clínica","Nefrología","Nefrología pediátrica","Urología","Urología pediátrica","Otorrinolaringología","Otorrinolaringología pediátrica","Psiquiatría","Psiquiatría infantil y adolescente","Oncología médica","Oncología pediátrica","Radioterapia oncológica","Hematología","Hematología pediátrica","Infectología","Infectología pediátrica","Reumatología","Reumatología pediátrica","Geriatría","Anestesiología","Anestesiología pediátrica","Medicina del dolor","Radiología diagnóstica","Radiología intervencionista","Neurorradiología","Medicina nuclear","Medicina de emergencias","Medicina crítica y cuidados intensivos","Medicina física y rehabilitación","Fisiatría","Alergología e inmunología clínica","Genética médica","Anatomía patológica","Patología clínica","Medicina forense","Medicina ocupacional","Medicina preventiva y salud pública","Epidemiología","Medicina paliativa","Medicina del sueño","Toxicología médica","Medicina hiperbárica","Nutriología clínica","Odontología","Ortodoncia","Endodoncia","Periodoncia","Odontopediatría","Cirugía bucal y maxilofacial"]
@@ -27,8 +27,30 @@ function publicOrigin(){
 
 export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAgenda}:MedicalDashboardProps={}){
   const scopeQuery=scope==='sponsor_master'?'scope=sponsor_master':''
+  const isLiveGuest=/^\/admin\/medical\/demo\//.test(window.location.pathname)
   const scoped=(path:string)=>path+(scopeQuery?(path.includes('?')?'&':'?')+scopeQuery:'')
   const openAgenda=()=>onOpenAgenda?onOpenAgenda():window.location.assign('/admin/medical/agenda'+(scopeQuery?'?'+scopeQuery:''))
+  const[pwaInstalled,setPwaInstalled]=useState(()=>window.matchMedia('(display-mode: standalone)').matches||Boolean((window.navigator as any).standalone))
+  const[showPwaHelp,setShowPwaHelp]=useState(false)
+  const[signingOut,setSigningOut]=useState(false)
+  const installPwa=async()=>{
+    if(pwaInstalled)return
+    const prompt=(window as any).__kawvoInstallPrompt
+    if(!prompt){setShowPwaHelp(true);return}
+    try{
+      await prompt.prompt()
+      const choice=await prompt.userChoice
+      ;(window as any).__kawvoInstallPrompt=null
+      if(choice?.outcome==='accepted'){localStorage.setItem('kawvo_pwa_installed','1');setPwaInstalled(true)}
+    }catch{setShowPwaHelp(true)}
+  }
+  const logoutKawMed=async()=>{
+    if(signingOut)return
+    setSigningOut(true)
+    try{await apiPost('/auth/logout',{})}catch{/* La pantalla de login vuelve a validar la sesión. */}
+    window.location.replace('/admin/login')
+  }
+
   const avatarRef=useRef<HTMLInputElement>(null),coverRef=useRef<HTMLInputElement>(null)
   const[tab,setTab]=useState<Tab>('profile')
   const[publicationConfirm,setPublicationConfirm]=useState<'publish'|'unpublish'|null>(null)
@@ -239,7 +261,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     try{
       const optimized=await optimizeImageBlobForUpload(blob,{maxDimension:kind==='avatar'?1024:1600,quality:.82,baseName:'kawmed-'+kind})
       const fd=new FormData();fd.append('file',optimized,optimized.name)
-      const res=await fetch(`${API_BASE}/me/medical-profile/media?kind=${kind}${scopeQuery?'&'+scopeQuery:''}`,{method:'POST',credentials:'include',headers:activeIntapTabHeaders(),body:fd})
+      const res=await fetch(`${API_BASE}/me/medical-profile/media?kind=${kind}${scopeQuery?'&'+scopeQuery:''}`,{method:'POST',credentials:'include',headers:{...activeIntapTabHeaders(),...kawmedGuestHeaders('/me/medical-profile/media')},body:fd})
       const j:any=await res.json().catch(()=>null)
       if(!res.ok||!j?.ok||!j.url)throw new Error(j?.error||'No pudimos subir la imagen.')
       setProfile((p:any)=>({...p,[kind==='avatar'?'avatar_url':'cover_url']:j.url}))
@@ -333,10 +355,23 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
 
   const Shell:any=embedded?'div':'main'
   return <Shell className={embedded?"font-['Inter'] text-slate-950":"min-h-screen bg-slate-50 px-4 py-6 font-['Inter'] text-slate-950"}><div className={embedded?"w-full space-y-5":"mx-auto w-full max-w-5xl space-y-5"}>
-    <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap gap-2">{scope==='doctor'&&String(profile.account_email||'').trim().toLowerCase()==='intapcard@gmail.com'&&<a href="/admin/accounts" className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Cambiar cuenta</a>}{scope==='doctor'&&<button type="button" onClick={()=>setPreviewOpen(true)} className={'rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800 hover:bg-cyan-50 '+headerActionMotion}>Vista previa</button>}
+    <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap items-start justify-end gap-2">
+        <button type="button" onClick={()=>void installPwa()} disabled={pwaInstalled} className="rounded-full bg-cyan-700 px-6 py-3 text-sm font-black text-white shadow-md ring-2 ring-cyan-100 transition hover:bg-cyan-800 disabled:bg-emerald-100 disabled:text-emerald-800 disabled:shadow-none">{pwaInstalled?'App instalada':'Instalar app Kawvo'}</button>
+        <button type="button" onClick={()=>void logoutKawMed()} disabled={signingOut} className="rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">{signingOut?'Saliendo…':'Cerrar sesión'}</button>
+      </div></div><div className="mt-4 flex flex-wrap gap-2">{scope==='doctor'&&String(profile.account_email||'').trim().toLowerCase()==='intapcard@gmail.com'&&<a href="/admin/accounts" className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Cambiar cuenta</a>}{scope==='doctor'&&<button type="button" onClick={()=>setPreviewOpen(true)} className={'rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800 hover:bg-cyan-50 '+headerActionMotion}>Vista previa</button>}
       <button ref={publicationPublishTriggerRef} type="button" disabled={busy||profile.status==='active'||!publicationReadiness.canPublish} aria-describedby="kawmed-publication-guidance" aria-expanded={publicationConfirm==='publish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-emerald-800 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='publish'?'Publicando…':profile.status==='active'?'Publicado':'Publicar'}</button>
       <button ref={publicationUnpublishTriggerRef} type="button" disabled={busy||profile.status!=='active'} aria-expanded={publicationConfirm==='unpublish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('unpublish')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm sm:text-xs font-black text-amber-900 shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-amber-100 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='unpublish'?'Despublicando…':'Despublicar'}</button>
-      {scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className={'rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 '+headerActionMotion}>{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}</div></div>
+      {scope==='doctor'&&<button onClick={()=>window.location.assign('/admin/medical/notifications')} className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Notificaciones{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className={'rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 '+headerActionMotion}>{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}
+      </div>
+      {showPwaHelp&&<div className="fixed inset-0 z-[140] flex items-end justify-center bg-slate-950/55 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Cómo instalar Kawvo" onMouseDown={event=>{if(event.target===event.currentTarget)setShowPwaHelp(false)}}>
+        <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
+          <div className="flex items-center justify-between"><h2 className="text-lg font-black">Instalar app Kawvo</h2><button type="button" onClick={()=>setShowPwaHelp(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
+          <p className="mt-4 text-sm leading-6 text-slate-600">Abre esta dirección en el dispositivo donde quieres instalar Kawvo:</p>
+          <a href={window.location.origin+(isLiveGuest?window.location.pathname:'/admin/medical')} className="mt-2 block break-all rounded-xl bg-slate-50 px-3 py-3 text-sm font-bold text-cyan-700 underline">{window.location.origin+(isLiveGuest?window.location.pathname:'/admin/medical')}</a>
+          <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>iPhone o iPad · Safari</strong></p><p>1. Abre el enlace en Safari.</p><p>2. Pulsa Compartir y selecciona <strong>Agregar a pantalla de inicio</strong>.</p><p>3. Confirma con Agregar.</p></div>
+          <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>Android · Chrome</strong></p><p>1. Abre el enlace en Chrome.</p><p>2. En el menú de tres puntos selecciona <strong>Instalar aplicación</strong> o <strong>Agregar a pantalla principal</strong>.</p><p>3. Confirma la instalación.</p></div>
+        </article>
+      </div>}
       {publicationConfirm&&<div className="mt-4 flex justify-end">
         <div id="kawmed-publication-confirmation" role="group" aria-label={publicationConfirm==='publish'?'Confirmar publicación de perfil':'Confirmar despublicación de perfil'} onKeyDown={event=>{if(event.key==='Escape'&&!publicationPending){cancelPublicationConfirm()}}} className="w-full max-w-lg rounded-2xl border border-cyan-200 bg-cyan-50 p-4 shadow-md motion-safe:animate-[fade-in_180ms_ease-out_both]">
           <p className="text-base font-black text-slate-950">{publicationConfirm==='publish'?'¿Publicar este perfil médico?':'¿Despublicar este perfil médico?'}</p>
@@ -402,7 +437,18 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     {message&&<div className="rounded-2xl bg-emerald-50 px-4 py-3 text-base sm:text-sm font-bold text-emerald-700">{message}</div>}
     {error&&<div className="rounded-2xl bg-rose-50 px-4 py-3 text-base sm:text-sm font-bold text-rose-700">{error}</div>}
 
-    <nav className="grid grid-cols-2 gap-2 rounded-[22px] border border-slate-200 bg-white p-2 sm:grid-cols-6">{([['profile','Perfil'],['centers','Centros'],['schedule','Horarios'],['insurance','Seguros'],['appearance','Apariencia'],['agenda','Agenda']] as [Tab|'agenda',string][]).map(([key,title])=><button key={key} onClick={()=>key==='agenda'?openAgenda():setTab(key)} className={'rounded-2xl px-3 py-3 text-base sm:text-sm font-black '+(tab===key?'bg-slate-950 text-white':'text-slate-500 hover:bg-slate-50')}>{title}</button>)}</nav>
+    <nav className="grid grid-cols-2 gap-2 rounded-[22px] border border-slate-200 bg-white p-2 sm:grid-cols-6">{(([...([['profile','Perfil'],['centers','Centros'],['schedule','Horarios'],['insurance','Seguros'],['appearance','Apariencia'],['agenda','Agenda']] as [Tab|'agenda',string][]),...(isLiveGuest?[['public','Vista publicada'] as [Tab,string]]:[])])).map(([key,title])=><button key={key} onClick={()=>key==='agenda'?openAgenda():setTab(key)} className={'rounded-2xl px-3 py-3 text-base sm:text-sm font-black '+(tab===key?'bg-slate-950 text-white':'text-slate-500 hover:bg-slate-50')}>{title}</button>)}</nav>
+
+    {tab==='public'&&isLiveGuest&&<section className={card}>
+      <h2 className="text-xl font-black">Vista publicada · modo administrador</h2>
+      <p className="mt-2 text-sm text-slate-600">Esta es la presentación que ven los pacientes. La sección de patrocinio mostrada arriba pertenece únicamente a tu administración privada. Cambia cualquier dato desde las pestañas del mismo panel.</p>
+      {slug&&profile.status==='active'?<>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <iframe title="Perfil KawMed publicado" src={publicOrigin()+'/m/'+encodeURIComponent(slug)} className="h-[720px] w-full border-0" loading="lazy"/>
+        </div>
+        <a href={publicOrigin()+'/m/'+encodeURIComponent(slug)} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block rounded-xl border border-cyan-200 px-4 py-3 text-sm font-black text-cyan-800">Abrir presentación pública en otra pestaña</a>
+      </>:<p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Este perfil todavía no está publicado.</p>}
+    </section>}
 
     {tab==='appearance'&&<section className={card}>
       <h2 className="text-xl font-black">Apariencia del perfil</h2>
@@ -430,7 +476,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
 
     {tab==='insurance'&&<section className={card}><h2 className="text-xl font-black">Seguros médicos</h2><p className="mt-1 text-base sm:text-sm text-slate-500">Publica los seguros que aceptas y, por separado, los planes o coberturas que son excepción.</p><div className="mt-4 grid gap-4 md:grid-cols-2"><div><details className="mb-3 rounded-2xl border border-cyan-100 bg-cyan-50/50 p-3"><summary className="cursor-pointer text-base sm:text-sm font-bold text-cyan-900">Seleccionar seguros de la lista</summary><div className="mt-3 grid gap-2 sm:grid-cols-2"><label className="col-span-full flex items-center gap-2 rounded-lg bg-white p-2 text-sm sm:text-xs font-black"><input type="checkbox" checked={selectedInsurer(acceptedText,'Todos los seguros')} onChange={e=>setAcceptedText(current=>e.target.checked?'Todos los seguros':current.split('\n').filter(name=>name.trim()!=='Todos los seguros').join('\n'))}/>Todos los seguros</label>{MEDICAL_INSURERS.map(name=><label key={name} className="flex items-center gap-2 text-sm sm:text-xs font-semibold text-slate-700"><input type="checkbox" checked={selectedInsurer(acceptedText,name)} disabled={selectedInsurer(acceptedText,'Todos los seguros')} onChange={e=>setAcceptedText(current=>toggleInsurer(current,name,e.target.checked))}/>{name}</label>)}</div><p className="mt-3 text-sm sm:text-xs text-slate-500">«Todos los seguros» publica una sola opción; indica las excepciones a la derecha. También puedes elegir ARS específicas o escribir otras debajo.</p></details><label className={label}>Seguros aceptados<textarea className={input} rows={8} value={acceptedText} onChange={e=>setAcceptedText(e.target.value)} placeholder={'ARS Humano\nARS Universal\nMAPFRE Salud'}/><span className="mt-1 block text-sm sm:text-xs normal-case tracking-normal text-slate-400">También puedes escribir otros seguros aquí, uno por línea.</span></label></div><label className={label}>Excepciones / no aceptados<textarea className={input} rows={8} value={excludedText} onChange={e=>setExcludedText(e.target.value)} placeholder={'Plan específico X\nSeguro Y'}/><span className="mt-1 block text-sm sm:text-xs normal-case tracking-normal text-slate-400">Uno por línea. Solo agrega excepciones reales.</span></label></div><button onClick={()=>void saveInsurance()} disabled={busy} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-base sm:text-sm font-black text-white disabled:opacity-40">Guardar seguros</button>{feedback?.area==='insurance'&&<p role="status" className="mt-2 text-base sm:text-sm font-semibold text-emerald-700">{feedback.text}</p>}</section>}
 
-    {scope==='doctor'&&<section className={card}>
+    {scope==='doctor'&&!isLiveGuest&&<section className={card}>
       <h2 className="text-xl font-black">Estado y administración de la cuenta</h2>
       <p className="mt-2 text-sm text-slate-600">Suspender oculta el perfil médico público, pero conserva la información, las citas y el correo asociado. La eliminación definitiva será una operación distinta: requerirá una confirmación reforzada y la comprobación de que el correo no pertenece a otra cuenta Link.</p>
       <div className="mt-4 flex flex-wrap gap-3">

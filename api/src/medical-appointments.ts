@@ -2,6 +2,7 @@ import app from './index'
 import { sendWebPushToUser } from './pwa-push'
 import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership, resolveOwnedMedicalContext, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { liveGuestBySlug } from './kawmed-live-guest'
 import {
   availableAppointmentSlots,
   changeAppointmentRequestStatus,
@@ -309,6 +310,8 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
     const sponsorProfile=await sponsorMasterMedicalProfile(c,userId)
     if(sponsorProfile&&String((sponsorProfile as any).slug||'').toLowerCase()===slug)profile=sponsorProfile
   }
+  const guestGrant:any=!profile?await liveGuestBySlug(c,userId,slug):null
+  if(guestGrant)profile=guestGrant
   if(!profile)return c.json({ok:false,error:'Not owner'},403)
   const subjectId=String((profile as any).id||'')
   await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
@@ -322,13 +325,15 @@ app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,asy
   const isMaster=Boolean(await c.env.DB.prepare('SELECT 1 FROM medical_sponsor_master_profiles WHERE medical_profile_id=? LIMIT 1').bind(subjectId).first())
   return c.json({ok:true,data:{
     is_owner:true,
-    allow_direct_actions:!(await sponsoredMultiProfileAccess(c,userId)),
+    allow_direct_actions:!guestGrant&&!(await sponsoredMultiProfileAccess(c,userId)),
     enabled:settings.enabled,
     pending_count:Number((count as any)?.n||0),
     pending:rows.results||[],
-    manage_url:isMaster?'/admin/medical/agenda?scope=sponsor_master':'/admin/medical/agenda',
-    settings_url:isMaster?'/admin/sponsor/kawmed?tab=profile':'/admin/medical',
+    manage_url:guestGrant?'/admin/medical/demo/i-'+String(guestGrant.invitation_id)+'/agenda':isMaster?'/admin/medical/agenda?scope=sponsor_master':'/admin/medical/agenda',
+    settings_url:guestGrant?'/admin/medical/demo/i-'+String(guestGrant.invitation_id):isMaster?'/admin/sponsor/kawmed?tab=profile':'/admin/medical',
     is_master:isMaster,
+    is_guest_editor:Boolean(guestGrant),
+    sponsor_banner_url:sponsor?.banner_image_url||'',
     action_scope:isMaster?'sponsor_master':null,
     resource_url:sponsor?.vademecum_url||'',
     resource_label:sponsor?.vademecum_label||'Ver vademécum',
