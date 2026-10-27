@@ -24,6 +24,9 @@ export async function liveGuestProfile(c:any,userId:string){
  WHERE ${where} AND lower(i.invited_email)=lower(guest.email)
  AND lower(owner.email)='intapcard@gmail.com'
  AND i.status IN ('pending','active') AND datetime(i.expires_at)>datetime('now')
+ AND i.rowid=(SELECT MAX(recent.rowid) FROM kawmed_demo_invitations recent
+ JOIN kawmed_demo_live_access latest ON latest.invitation_id=recent.id
+ WHERE lower(recent.invited_email)=lower(i.invited_email))
  LIMIT 1`).bind(userId,key).first()
  return row||null
 }
@@ -38,5 +41,8 @@ export async function liveGuestInvitation(c:any,guestEmail:string,requested:stri
  JOIN medical_profiles p ON p.id=g.medical_profile_id AND p.user_id=g.owner_user_id
  JOIN users owner ON owner.id=g.owner_user_id
  WHERE ${field}=? AND lower(i.invited_email)=? AND lower(owner.email)='intapcard@gmail.com'
- AND i.status IN ('pending','active') AND datetime(i.expires_at)>datetime('now') LIMIT 1`).bind(key,normalize(guestEmail)).first()
+ AND i.status IN ('pending','active') AND datetime(i.expires_at)>datetime('now')
+ AND i.rowid=(SELECT MAX(recent.rowid) FROM kawmed_demo_invitations recent
+ JOIN kawmed_demo_live_access latest ON latest.invitation_id=recent.id
+ WHERE lower(recent.invited_email)=lower(i.invited_email)) LIMIT 1`).bind(key,normalize(guestEmail)).first()
 }
