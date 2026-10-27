@@ -50,6 +50,8 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   const[locating,setLocating]=useState(false)
   const[viewMode,setViewMode]=useState<'edit'|'preview'>('edit')
   const[galleryBatchProgress,setGalleryBatchProgress]=useState('');const[agendaEnabled,setAgendaEnabled]=useState(false)
+  const[isIntapMulticuenta,setIsIntapMulticuenta]=useState(false)
+  useEffect(()=>{if(isMaster)return;apiGet('/me/intapcard/active-account').then((r:any)=>setIsIntapMulticuenta(Boolean(r?.ok&&r.data?.active?.kind==='sponsored'))).catch(()=>undefined)},[isMaster])
   const[form,setForm]=useState<any>({username:'',business_name:'',specialization:'',what_we_do:'',avatar_url:'',hero_url:'',map_url:'',show_avatar:true,phone:'',whatsapp:'',email:'',instagram:'',address:'',schedule:emptySchedule,gallery:[],gallery_title:'Catálogo',palette_id:'blue',quote_button_visible:true,appointment_button_visible:false})
 
   function beginFeedback(target:FeedbackTarget){setFeedbackTarget(target);setError('');setMessage('')}
@@ -152,6 +154,12 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   return<main className="min-h-screen bg-[#f7f9fc] px-4 py-7 font-['Inter'] text-slate-950"><div data-sponsored-tour-ready={hasUsername?'1':'0'} className="mx-auto max-w-[820px] space-y-5">
     <header className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(15,23,42,.04)]"><div className="flex items-center gap-4"><div className="h-16 w-16 overflow-hidden rounded-full border border-slate-200 bg-slate-100">{form.avatar_url?<img src={form.avatar_url} alt="" className="h-full w-full object-cover"/>:<div className="grid h-full place-items-center text-2xl text-slate-400">👤</div>}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-xl font-black">{form.business_name||'Mi presentación'}</h1><span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[.08em] text-violet-700">Patrocinado</span></div><p className="mt-1 truncate text-sm font-semibold text-slate-500">{form.username?`@${form.username}`:'Usuario pendiente'}{form.specialization?` · ${form.specialization}`:''}</p><p className="mt-1 text-xs text-slate-400">{data.sponsor?.name?`Impulsado por ${data.sponsor.name}`:'Perfil patrocinado permanente'}</p></div><span className={`rounded-full px-3 py-2 text-xs font-black ${data.status==='published'?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}`}>{data.status==='published'?'Publicado':'Borrador'}</span></div></header>
 
+    {!isMaster&&<nav aria-label="Acciones del perfil patrocinado" className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-white p-3 sm:grid-cols-4">
+      <button type="button" onClick={()=>{setViewMode('edit');window.scrollTo({top:0,behavior:'smooth'})}} className="rounded-xl bg-slate-100 px-3 py-3 text-sm font-bold">Editar perfil</button>
+      <button type="button" onClick={()=>window.location.assign(agendaManageUrl)} className="rounded-xl bg-slate-100 px-3 py-3 text-sm font-bold">Agenda</button>
+      <a href="/admin/sponsored/notifications" className="rounded-xl bg-slate-100 px-3 py-3 text-center text-sm font-bold">Notificaciones</a>
+      {isIntapMulticuenta&&<button type="button" onClick={()=>window.location.assign('/admin/accounts')} className="rounded-xl bg-cyan-50 px-3 py-3 text-sm font-black text-cyan-800">Cambiar cuenta</button>}
+    </nav>}
     {!hasUsername&&<SponsoredStarterOnboarding mode={isMaster?'master':'beneficiary'} profileId={selectedProfileId||undefined} onComplete={load}/>}
 
     {hasUsername&&<>
