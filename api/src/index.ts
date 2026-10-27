@@ -89,7 +89,7 @@ function isAllowedOrigin(origin: string): boolean {
 app.use('*', cors({
   origin: (origin) => isAllowedOrigin(origin) ? origin : '',
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id', 'X-Intap-Account-Tab'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Kawvo-Free-Demo-Id', 'X-Intap-Account-Tab', 'X-KawMed-Delegate'],
   credentials: true,
   maxAge: 86400,
 }))
