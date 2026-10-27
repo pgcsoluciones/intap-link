@@ -27,3 +27,11 @@ CREATE TABLE IF NOT EXISTS sponsor_sales_assignments (
 );
 CREATE INDEX IF NOT EXISTS idx_sponsor_sales_assignment_lookup ON sponsor_sales_assignments(sponsor_id,sponsor_artifact_id,active);
 CREATE INDEX IF NOT EXISTS idx_sponsor_sales_assignment_rep ON sponsor_sales_assignments(sponsor_id,representative_id,active);
+
+-- Recurso comercial elegido por Super Admin; nunca visible al público por defecto.
+CREATE TABLE IF NOT EXISTS sponsor_commercial_resources (
+ sponsor_id TEXT PRIMARY KEY REFERENCES sponsor_tenants(id) ON DELETE CASCADE,
+ resource_url TEXT NOT NULL DEFAULT '',
+ resource_label TEXT NOT NULL DEFAULT '',
+ updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
