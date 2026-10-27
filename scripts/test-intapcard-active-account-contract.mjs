@@ -107,7 +107,6 @@ assert.match(worker,/if\(previewNavigation\)return c\.redirect\('\/admin\/accoun
 
 const sponsorApi=read('api/src/sponsored-profiles.ts')
 const sponsorMedia=read('api/src/sponsored-media.ts')
-const sponsorUi=read('app/src/components/admin/sponsored/SponsorDashboard.tsx')
 const chooserUi=read('app/src/components/admin/IntapcardAccountSelector.tsx')
 assert.match(sponsorApi,/import \{ resolveSponsorMembership \}/,'Sponsor API must import selected sponsor resolution')
 assert.match(sponsorApi,/const membership=await resolveSponsorMembership\(c,userId\);const tenant=/,'Sponsor details must use selected membership')
