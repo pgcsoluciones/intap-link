@@ -74,7 +74,28 @@ app.get('/api/v1/sponsor/commercial/config',async(c:any)=>{
  if(!membership)return c.json({ok:false,error:'Sin patrocinador seleccionado.'},403)
  const sponsorId=String((membership as any).sponsor_id)
  const rows=await c.env.DB.prepare("SELECT module_code,enabled FROM sponsor_module_grants WHERE sponsor_id=? AND module_code IN ('commercial_visitor','commercial_seller','commercial_vademecum','commercial_catalog')").bind(sponsorId).all()
+ const resourceRow=await c.env.DB.prepare('SELECT resource_url,resource_label FROM sponsor_commercial_resources WHERE sponsor_id=?').bind(sponsorId).first()
  const grants=Object.fromEntries((rows.results||[]).map((r:any)=>[r.module_code,Number(r.enabled)===1]))
- return c.json({ok:true,data:{contact:grants.commercial_visitor?'visitor':grants.commercial_seller?'seller':'none',resource:grants.commercial_vademecum?'vademecum':grants.commercial_catalog?'catalog':'none',can_manage:['owner','admin'].includes(String((membership as any).role))}})
+ return c.json({ok:true,data:{contact:grants.commercial_visitor?'visitor':grants.commercial_seller?'seller':'none',resource:grants.commercial_vademecum?'vademecum':grants.commercial_catalog?'catalog':'none',resource_url:String((resourceRow as any)?.resource_url||''),resource_label:String((resourceRow as any)?.resource_label||''),can_manage:['owner','admin'].includes(String((membership as any).role))}})
 })
+
+import { requireSuperAdmin } from './lib/admin-auth'
+app.get('/api/v1/superadmin/sponsors/:id/commercial-resource',requireSuperAdmin('viewer'),async(c:any)=>{
+ const id=String(c.req.param('id')||'')
+ const sponsor=await c.env.DB.prepare('SELECT id FROM sponsor_tenants WHERE id=?').bind(id).first()
+ if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
+ const row=await c.env.DB.prepare('SELECT resource_url,resource_label FROM sponsor_commercial_resources WHERE sponsor_id=?').bind(id).first()
+ return c.json({ok:true,data:row||{resource_url:'',resource_label:''}})
+})
+app.patch('/api/v1/superadmin/sponsors/:id/commercial-resource',requireSuperAdmin('super_admin'),async(c:any)=>{
+ const id=String(c.req.param('id')||''),body=await c.req.json().catch(()=>({}))
+ const sponsor=await c.env.DB.prepare('SELECT id FROM sponsor_tenants WHERE id=?').bind(id).first()
+ if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
+ const url=trim(body.resource_url,1200),label=trim(body.resource_label,80)
+ if(url){let parsed:URL;try{parsed=new URL(url)}catch{return c.json({ok:false,error:'URL inválida.'},422)}
+ if(parsed.protocol!=='https:'||parsed.username||parsed.password)return c.json({ok:false,error:'Solo se permiten enlaces HTTPS seguros.'},422)}
+ await c.env.DB.prepare("INSERT INTO sponsor_commercial_resources(sponsor_id,resource_url,resource_label) VALUES (?,?,?) ON CONFLICT(sponsor_id) DO UPDATE SET resource_url=excluded.resource_url,resource_label=excluded.resource_label,updated_at=datetime('now')").bind(id,url,label).run()
+ return c.json({ok:true})
+})
+
 export default app
