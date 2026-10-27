@@ -1,4 +1,5 @@
 import { readIntapSelection } from './intap-active-account'
+import { delegateHeader, liveGuestProfile } from './kawmed-live-guest'
 
 export const SPONSORED_MULTIPROFILE_AUTHORIZED_EMAIL='intapcard@gmail.com'
 
@@ -102,6 +103,7 @@ export function setMedicalContextCookie(c:any,profileId:string){
 }
 export async function resolveOwnedMedicalContext(c:any,userId:string){
   if(!userId)return null
+  if(delegateHeader(c))return liveGuestProfile(c,userId)
   if(await sponsoredMultiProfileAccess(c,userId)){
     const id=selectedMedicalContextId(c)
     const active=await readIntapSelection(c)
