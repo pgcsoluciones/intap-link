@@ -58,6 +58,17 @@ grep -Fq "https://qa-kawmed-web-1025.intap-web2.pages.dev" "$LOG_DIR/web-pages.l
 npx wrangler pages deploy app/dist --project-name intap-web2 --branch "$APP_BRANCH" 2>&1 | tee "$LOG_DIR/pages.log"
 APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG_DIR/pages.log" | tail -1)"
 [[ -n "$APP_ORIGIN" ]] || fail "URL de Pages no obtenida"
+verify_pages(){
+ local url="$1" target="$2" status=""
+ for attempt in 1 2 3 4 5 6 7 8 9 10;do
+   status="$(curl -sSL --max-time 30 -o "$target" -w '%{http_code}' "$url" || true)"
+   if [[ "$status" == "200" ]] && grep -Eiq '<!doctype html|<html[[:space:]>]' "$target";then return 0;fi
+   [[ "$attempt" == 10 ]] || sleep 5
+ done
+ fail "Pages no sirvió HTML correcto: $url HTTP $status"
+}
+verify_pages "$APP_ORIGIN/admin/login" "$LOG_DIR/app-check.html"
+verify_pages "$WEB_ORIGIN/m/med-intapcard" "$LOG_DIR/web-check.html"
 BACKUP="$(mktemp)"
 cp "$CONFIG" "$BACKUP"
 APP_ORIGIN="$APP_ORIGIN" WEB_ORIGIN="$WEB_ORIGIN" python3 - <<'PY'
