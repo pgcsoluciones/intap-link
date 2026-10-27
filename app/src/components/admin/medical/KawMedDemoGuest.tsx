@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { apiGet, apiPatch } from '../../../lib/api'
+import MedicalDashboard from './MedicalDashboard'
 export default function KawMedDemoGuest(){
  const {token=''}=useParams()
+ const[liveAccess,setLiveAccess]=useState(false)
  const[profile,setProfile]=useState<any>(null),[tab,setTab]=useState<'profile'|'centers'|'schedules'|'insurance'|'appearance'|'agenda'>('profile'),[error,setError]=useState(''),[saving,setSaving]=useState(false),[expires,setExpires]=useState('')
- useEffect(()=>{apiGet('/me/kawmed/demo/'+encodeURIComponent(token)).then((j:any)=>{
+ useEffect(()=>{apiGet('/me/kawmed/live-access/'+encodeURIComponent(token)).then((grant:any)=>{
+ if(grant?.ok){setExpires(grant.data.expires_at);setLiveAccess(true);return}
+ return apiGet('/me/kawmed/demo/'+encodeURIComponent(token)).then((j:any)=>{
  if(j?.ok){setProfile(j.data.profile);setExpires(j.data.expires_at)}else setError(j?.error==='Unauthorized'?'LOGIN':j?.error||'Invitación inválida')
+ })
  }).catch(()=>setError('No se pudo verificar la invitación'))},[token])
  async function save(){setSaving(true);setError('');try{const patch:any={};for(const key of ['name','professional_prefix','specialty','subspecialty','bio','phone','whatsapp','city','province','organization'])patch[key]=profile[key]||'';patch.centers=profile.centers||[];patch.schedules=profile.schedules||[];patch.insurance_policy=profile.insurance_policy||{accepted:[],excluded:[]};patch.template=profile.template;patch.palette=profile.palette;patch.demo_agenda=profile.demo_agenda;patch.sponsor_demo=profile.sponsor_demo||undefined;const j:any=await apiPatch('/me/kawmed/demo/'+encodeURIComponent(token),patch);if(!j?.ok)throw Error(j?.error||'No se pudo guardar');setProfile(j.data.profile);alert('Cambios guardados solamente en tu copia de demostración.')}catch(e){setError(e instanceof Error?e.message:'No se pudo guardar')}finally{setSaving(false)}}
  const rawVisitadorPhone=String(profile?.sponsor_demo?.representative_whatsapp||'').replace(/\D/g,'')
@@ -15,6 +20,7 @@ export default function KawMedDemoGuest(){
  const chatMessage=String(profile?.sponsor_demo?.representative_message_template||'Hola {visitador}, soy {medico}. Te contacto desde KawMed para conocer {patrocinador}.').replace(/\{visitador\}/gi,visitador||'visitador').replace(/\{medico\}/gi,String(profile?.name||'médico invitado')).replace(/\{patrocinador\}/gi,sponsorName)
  const whatsappUrl=visitadorPhone.length>=10&&visitadorPhone.length<=15?'https://wa.me/'+visitadorPhone+'?text='+encodeURIComponent(chatMessage):''
  const fields:[string,string][]=[['professional_prefix','Prefijo'],['name','Nombre'],['specialty','Especialidad'],['subspecialty','Subespecialidad'],['bio','Presentación'],['phone','Teléfono'],['whatsapp','WhatsApp'],['city','Ciudad'],['province','Provincia'],['organization','Organización']]
+ if(liveAccess)return <MedicalDashboard onOpenAgenda={()=>window.location.assign('/admin/medical/demo/'+encodeURIComponent(token)+'/agenda')}/>
  return <main className="min-h-screen bg-slate-50 p-5 font-sans"><div className="mx-auto max-w-3xl space-y-5">
  <header className="rounded-2xl bg-white p-6 shadow-sm"><p className="text-xs font-bold uppercase tracking-widest text-cyan-700">KawMed · Invitación privada</p><h1 className="mt-2 text-2xl font-bold">Explora el panel médico</h1><p className="mt-2 text-sm text-slate-600">Esta es tu copia personal de demostración. Puedes editarla sin alterar el perfil del propietario. No tienes permisos para cambiar credenciales, publicar, borrar cuentas ni administrar patrocinadores.</p>{expires&&<p className="mt-2 text-xs text-slate-500">Acceso válido hasta: {new Date(expires).toLocaleString('es-DO')}</p>}</header>
  {error==='LOGIN'?<section className="rounded-xl bg-white p-6"><p>Debes iniciar sesión con el correo al que se envió esta invitación.</p><a className="mt-3 inline-block rounded-lg bg-slate-950 px-4 py-3 font-bold text-white" href={'/admin/login?demo_invite='+encodeURIComponent(token)}>Entrar con mi correo</a></section>:error&&<section role="alert" className="rounded-xl bg-rose-50 p-4 text-rose-800"><p>{error==='Invitación no disponible o vencida.'?'No se pudo abrir esta invitación. Puede que la sesión actual pertenezca a otro correo, o que el enlace haya vencido.':'No se pudo validar tu acceso: '+error}</p><a className="mt-3 inline-block rounded-lg bg-slate-950 px-4 py-3 font-bold text-white" href={'/admin/login?demo_invite='+encodeURIComponent(token)}>Entrar con el correo invitado</a></section>}
