@@ -7,6 +7,8 @@ const NFC_INTEREST_URL = 'https://nfc.kawvoia.com'
 export default function FreeOnboardingWelcome() {
   const navigate = useNavigate()
   const [leaving, setLeaving] = useState(false)
+  const [rejectError,setRejectError] = useState('')
+  const [rejecting,setRejecting] = useState(false)
   const [invitedDemos, setInvitedDemos] = useState<Array<{id:string;profile_name:string;url:string;expires_at:string}>>([])
   const [resolvingAccount, setResolvingAccount] = useState(true)
   const [resolvingInvitations, setResolvingInvitations] = useState(true)
@@ -41,21 +43,38 @@ export default function FreeOnboardingWelcome() {
     window.location.replace('/admin/login')
   }
 
+  const rejectInvite=async()=>{
+    if(!invitedDemos[0]||rejecting)return
+    setRejecting(true);setRejectError('')
+    try{
+      const answer:any=await apiPost('/me/kawmed/demo-invitations/'+encodeURIComponent(invitedDemos[0].id)+'/reject',{})
+      if(!answer?.ok)throw new Error(answer?.error||'No se pudo rechazar la invitación.')
+      setInvitedDemos([])
+      navigate('/admin/artifacts', {replace:true})
+    }catch(e){setRejectError(e instanceof Error?e.message:'No se pudo rechazar la invitación.');setRejecting(false)}
+  }
+
   if (resolvingAccount || resolvingInvitations) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">{invitedDemos.length?'KAWMED · ACCESO AUTORIZADO':'KAWVO LINK'}</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{invitedDemos.length?'Invitación KawMed':'Bienvenido a Kawlink'}</h1>
-          <p className="mt-3 text-[15px] leading-6 text-slate-500">{invitedDemos.length?'Te han invitado a administrar un perfil médico real. El acceso está asociado a tu correo y tiene una vigencia definida.':'Tu cuenta está activa, pero todavía no tiene una presentación vinculada. Elige cómo quieres continuar.'}</p>
-
-          {invitedDemos.length>0 && <section className="mt-6 rounded-2xl border border-cyan-300 bg-cyan-50 p-4">
-            <p className="text-xs font-black uppercase tracking-wider text-cyan-700">Administración temporal del perfil</p>
-            <p className="mt-2 text-sm text-slate-600">{invitedDemos[0].profile_name}. Tendrás el mismo panel del médico, sin acceso a credenciales. No necesitas un dispositivo.</p>
-            <button type="button" onClick={()=>window.location.assign(invitedDemos[0].url)} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white">Aceptar invitación y abrir KawMed</button>
-          </section>}
+          {invitedDemos.length>0 ? <>
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWMED</p>
+            <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Invitación KawMed</h1>
+            <p className="mt-5 text-[15px] leading-6 text-slate-600">Te han invitado a administrar el siguiente perfil:</p>
+            <p className="mt-3 text-xl font-bold text-slate-950">{invitedDemos[0].profile_name}</p>
+            <div className="mt-7 grid gap-3">
+              <button type="button" onClick={()=>window.location.assign(invitedDemos[0].url)} disabled={rejecting} className="w-full rounded-xl bg-slate-950 px-4 py-3.5 text-sm font-extrabold text-white disabled:opacity-50">Aceptar</button>
+              <button type="button" onClick={()=>void rejectInvite()} disabled={rejecting} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-700 disabled:opacity-50">{rejecting?'Rechazando…':'Rechazar'}</button>
+              {rejectError&&<p role="alert" className="text-sm text-rose-700">{rejectError}</p>}
+            </div>
+          </> : <>
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
+            <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Bienvenido a Kawlink</h1>
+            <p className="mt-3 text-[15px] leading-6 text-slate-500">Tu cuenta está activa, pero todavía no tiene una presentación vinculada. Elige cómo quieres continuar.</p>
+          </>}
           {invitedDemos.length===0 && <>
           <div className="mt-6 grid gap-3">
             <button type="button" onClick={() => navigate('/admin/artifacts/activate?start=1')} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-left text-white transition hover:bg-slate-800">
@@ -70,11 +89,11 @@ export default function FreeOnboardingWelcome() {
           </div>
 
           </>}
-          <div className="mt-6 border-t border-slate-100 pt-4">
+          {invitedDemos.length===0 && <div className="mt-6 border-t border-slate-100 pt-4">
             <button type="button" onClick={() => void logout()} disabled={leaving} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
               {leaving ? 'Saliendo…' : 'Cerrar sesión'}
             </button>
-          </div>
+          </div>}
         </div>
       </section>
     </main>
