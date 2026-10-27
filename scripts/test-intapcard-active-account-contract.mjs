@@ -104,4 +104,17 @@ assert.match(sponsoredUi,/Cambiar cuenta/,'Sponsored account must expose multicu
 assert.match(sponsoredUi,/window\.location\.assign\('\/admin\/accounts'\)/,'Sponsored account must navigate to account selector')
 assert.match(worker,/if\(previewNavigation\)return c\.redirect\('\/admin\/accounts',302\)/,'Inactive Free browser preview navigates to account selector without leaking profile')
 
+
+const sponsorApi=read('api/src/sponsored-profiles.ts')
+const sponsorMedia=read('api/src/sponsored-media.ts')
+const chooserUi=read('app/src/components/admin/IntapcardAccountSelector.tsx')
+assert.match(sponsorApi,/import \{ resolveSponsorMembership \}/,'Sponsor API must import selected sponsor resolution')
+assert.match(sponsorApi,/const membership=await resolveSponsorMembership\(c,userId\);const tenant=/,'Sponsor details must use selected membership')
+assert.match(sponsorApi,/app\.get\('\/api\/v1\/sponsor\/artifacts'.*resolveSponsorMembership/,'Sponsor codes must be isolated by tenant')
+assert.match(sponsorApi,/app\.patch\('\/api\/v1\/sponsor\/settings'.*resolveSponsorMembership/,'Sponsor settings must be isolated by tenant')
+assert.match(sponsorMedia,/const membership=await resolveSponsorMembership\(c,requester\)/,'Sponsor uploads must use the selected tenant')
+assert.match(chooserUi,/sponsor_id='\+encodeURIComponent\(item\.id\)/,'Sponsor navigation carries exact internal tenant ID')
+assert.match(sponsorUi,/tenantId!==selectedId/,'Sponsor panel must reject wrong selected tenant')
+assert.match(sponsorUi,/tenantId!==activeId/,'Sponsor panel must reject stale account data')
+
 console.log('INTAP explicit active session, sponsor/medical isolation and public owner links: OK')
