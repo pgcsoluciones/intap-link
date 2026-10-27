@@ -7,13 +7,11 @@ const NFC_INTEREST_URL = 'https://nfc.kawvoia.com'
 export default function FreeOnboardingWelcome() {
   const navigate = useNavigate()
   const [leaving, setLeaving] = useState(false)
-  const [guestInvitation, setGuestInvitation] = useState('')
   const [invitedDemos, setInvitedDemos] = useState<Array<{id:string;profile_name:string;url:string;expires_at:string}>>([])
   const [resolvingAccount, setResolvingAccount] = useState(true)
+  const [resolvingInvitations, setResolvingInvitations] = useState(true)
 
   useEffect(() => {
-    const pending = String(new URLSearchParams(window.location.search).get('demo_invite') || sessionStorage.getItem('kawmed_demo_invite') || localStorage.getItem('kawmed_demo_invite') || '')
-    if (/^[a-f0-9]{64}$/.test(pending)) setGuestInvitation(pending)
     const params = new URLSearchParams(window.location.search)
     if (params.get('profile_deleted') === '1') {
       navigate('/admin/artifacts', { replace: true })
@@ -21,7 +19,7 @@ export default function FreeOnboardingWelcome() {
     }
 
     let alive = true
-    apiGet('/me/kawmed/demo-invitations').then((response:any)=>{if(alive && response?.ok && Array.isArray(response.data))setInvitedDemos(response.data)}).catch(()=>undefined)
+    apiGet('/me/kawmed/demo-invitations').then((response:any)=>{if(alive && response?.ok && Array.isArray(response.data))setInvitedDemos(response.data.slice(0,1))}).catch(()=>undefined).finally(()=>{if(alive)setResolvingInvitations(false)})
     apiGet('/me/home-route')
       .then((json:any) => {
         if (!alive) return
@@ -43,26 +41,22 @@ export default function FreeOnboardingWelcome() {
     window.location.replace('/admin/login')
   }
 
-  if (resolvingAccount) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
+  if (resolvingAccount || resolvingInvitations) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] px-5 py-8 font-['Inter'] text-slate-950">
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-[430px] flex-col justify-center">
         <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">KAWVO LINK</p>
-          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Bienvenido a Kawlink</h1>
-          <p className="mt-3 text-[15px] leading-6 text-slate-500">Tu cuenta está activa, pero todavía no tiene una presentación vinculada. Elige cómo quieres continuar.</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-600">{invitedDemos.length?'KAWMED · ACCESO AUTORIZADO':'KAWVO LINK'}</p>
+          <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">{invitedDemos.length?'Invitación KawMed':'Bienvenido a Kawlink'}</h1>
+          <p className="mt-3 text-[15px] leading-6 text-slate-500">{invitedDemos.length?'Te han invitado a administrar un perfil médico real. El acceso está asociado a tu correo y tiene una vigencia definida.':'Tu cuenta está activa, pero todavía no tiene una presentación vinculada. Elige cómo quieres continuar.'}</p>
 
           {invitedDemos.length>0 && <section className="mt-6 rounded-2xl border border-cyan-300 bg-cyan-50 p-4">
-            <p className="text-xs font-black uppercase tracking-wider text-cyan-700">Tus invitaciones KawMed</p>
-            <p className="mt-2 text-sm text-slate-600">Tienes acceso a una demostración con este correo. No necesitas activar un dispositivo.</p>
-            {invitedDemos.map(invite=><button key={invite.id} type="button" onClick={()=>window.location.assign(invite.url)} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-left text-sm font-extrabold text-white">Entrar como invitado · {invite.profile_name}</button>)}
+            <p className="text-xs font-black uppercase tracking-wider text-cyan-700">Administración temporal del perfil</p>
+            <p className="mt-2 text-sm text-slate-600">{invitedDemos[0].profile_name}. Tendrás el mismo panel del médico, sin acceso a credenciales. No necesitas un dispositivo.</p>
+            <button type="button" onClick={()=>window.location.assign(invitedDemos[0].url)} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white">Aceptar invitación y abrir KawMed</button>
           </section>}
-          {guestInvitation && <section className="mt-6 rounded-2xl border border-cyan-300 bg-cyan-50 p-4">
-            <p className="text-xs font-black uppercase tracking-wider text-cyan-700">Tienes una invitación KawMed pendiente</p>
-            <p className="mt-2 text-sm text-slate-600">Tu acceso como invitado no requiere un dispositivo Kawvo ni crear una presentación.</p>
-            <button type="button" onClick={() => window.location.assign('/admin/medical/demo/'+encodeURIComponent(guestInvitation))} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white">Entrar como invitado KawMed</button>
-          </section>}
+          {invitedDemos.length===0 && <>
           <div className="mt-6 grid gap-3">
             <button type="button" onClick={() => navigate('/admin/artifacts/activate?start=1')} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-left text-white transition hover:bg-slate-800">
               <span className="block text-sm font-extrabold">Ya tengo un dispositivo Kawvo</span>
@@ -75,6 +69,7 @@ export default function FreeOnboardingWelcome() {
             </a>
           </div>
 
+          </>}
           <div className="mt-6 border-t border-slate-100 pt-4">
             <button type="button" onClick={() => void logout()} disabled={leaving} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-extrabold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
               {leaving ? 'Saliendo…' : 'Cerrar sesión'}
