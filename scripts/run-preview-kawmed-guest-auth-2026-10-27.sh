@@ -19,7 +19,7 @@ git merge-base --is-ancestor github/main HEAD || fail "La rama no incluye main a
 git diff --check github/main...HEAD
 while IFS= read -r file; do
   case "$file" in
-    api/src/index.ts|api/src/kawmed-demo-invitations.ts|app/src/components/admin/AdminLogin.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/medical/KawMedDemoGuest.tsx|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/run-preview-kawmed-guest-auth-2026-10-27.sh) ;;
+    api/src/index.ts|api/src/kawmed-demo-invitations.ts|app/src/components/admin/AdminLogin.tsx|app/src/components/admin/AuthCallback.tsx|app/src/components/admin/medical/KawMedDemoGuest.tsx|app/src/components/admin/free/onboarding/FreeOnboardingWelcome.tsx|scripts/test-kawmed-demo-invitations-contract.mjs|scripts/run-preview-kawmed-guest-auth-2026-10-27.sh) ;;
     *) fail "Archivo fuera de alcance: $file" ;;
   esac
 done < <(git diff --name-only github/main...HEAD)
