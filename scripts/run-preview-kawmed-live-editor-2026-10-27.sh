@@ -25,8 +25,11 @@ while IFS= read -r file; do
   *) fail "Cambio fuera de alcance: $file" ;;
  esac
 done < <(git diff --name-only github/main...HEAD)
-if git diff --name-only github/main...HEAD | grep -Eq '^(api/migrations/(?!0152)|package(-lock)?\.json|web/)';then
- fail "Migración, paquete o Web fuera de alcance"
+if git diff --name-only github/main...HEAD | grep -E '^(package(-lock)?\.json|web/)' >/dev/null; then
+ fail "Dependencias o Web fuera de alcance"
+fi
+if git diff --name-only github/main...HEAD | grep '^api/migrations/' | grep -v '^api/migrations/0152_kawmed_live_guest_access\.sql$' >/dev/null; then
+ fail "Migración fuera de alcance"
 fi
 echo "▶ Contratos"
 node scripts/test-kawmed-live-guest-contract.mjs
