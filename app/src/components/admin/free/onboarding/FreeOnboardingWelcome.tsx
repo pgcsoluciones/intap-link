@@ -7,9 +7,12 @@ const NFC_INTEREST_URL = 'https://nfc.kawvoia.com'
 export default function FreeOnboardingWelcome() {
   const navigate = useNavigate()
   const [leaving, setLeaving] = useState(false)
+  const [guestInvitation, setGuestInvitation] = useState('')
   const [resolvingAccount, setResolvingAccount] = useState(true)
 
   useEffect(() => {
+    const pending = String(new URLSearchParams(window.location.search).get('demo_invite') || sessionStorage.getItem('kawmed_demo_invite') || localStorage.getItem('kawmed_demo_invite') || '')
+    if (/^[a-f0-9]{64}$/.test(pending)) setGuestInvitation(pending)
     const params = new URLSearchParams(window.location.search)
     if (params.get('profile_deleted') === '1') {
       navigate('/admin/artifacts', { replace: true })
@@ -48,6 +51,11 @@ export default function FreeOnboardingWelcome() {
           <h1 className="mt-3 text-[30px] font-black leading-tight tracking-[-0.04em]">Bienvenido a Kawlink</h1>
           <p className="mt-3 text-[15px] leading-6 text-slate-500">Tu cuenta está activa, pero todavía no tiene una presentación vinculada. Elige cómo quieres continuar.</p>
 
+          {guestInvitation && <section className="mt-6 rounded-2xl border border-cyan-300 bg-cyan-50 p-4">
+            <p className="text-xs font-black uppercase tracking-wider text-cyan-700">Tienes una invitación KawMed pendiente</p>
+            <p className="mt-2 text-sm text-slate-600">Tu acceso como invitado no requiere un dispositivo Kawvo ni crear una presentación.</p>
+            <button type="button" onClick={() => window.location.assign('/admin/medical/demo/'+encodeURIComponent(guestInvitation))} className="mt-3 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-extrabold text-white">Entrar como invitado KawMed</button>
+          </section>}
           <div className="mt-6 grid gap-3">
             <button type="button" onClick={() => navigate('/admin/artifacts/activate?start=1')} className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-left text-white transition hover:bg-slate-800">
               <span className="block text-sm font-extrabold">Ya tengo un dispositivo Kawvo</span>
