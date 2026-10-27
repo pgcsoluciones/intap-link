@@ -93,4 +93,15 @@ assert.match(worker,/if\(!matchesActiveIntapTab\(c,active\)\)return c\.json/,'Al
 assert.match(freePreview,/requireProfileOwner/,'Preview still requires a valid login session and owner ownership')
 assert.match(freePreview,/SELECT id FROM profiles WHERE user_id = \? AND lower\(slug\) = lower\(\?\)/,'Preview endpoint must independently enforce owner access')
 
+const accountsUi=read('app/src/components/admin/IntapcardAccountSelector.tsx')
+const sponsorUi=read('app/src/components/admin/sponsored/SponsorDashboard.tsx')
+const sponsoredUi=read('app/src/components/admin/sponsored/SponsoredDashboard.tsx')
+assert.match(accountsUi,/Cerrar sesión/,'Account selector must provide logout')
+assert.match(accountsUi,/apiPost\('\/auth\/logout'/,'Logout must invalidate the remote session')
+assert.match(sponsorUi,/const PAGE_SIZE=10/,'Sponsor codes must be paginated')
+assert.match(sponsorUi,/pageItems\.map\(item/,'Sponsor must render only paginated codes')
+assert.match(sponsoredUi,/Cambiar cuenta/,'Sponsored account must expose multicuenta return')
+assert.match(sponsoredUi,/window\.location\.assign\('\/admin\/accounts'\)/,'Sponsored account must navigate to account selector')
+assert.match(worker,/if\(previewNavigation\)return c\.redirect\('\/admin\/accounts',302\)/,'Inactive Free browser preview navigates to account selector without leaking profile')
+
 console.log('INTAP explicit active session, sponsor/medical isolation and public owner links: OK')

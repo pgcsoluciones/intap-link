@@ -191,8 +191,14 @@ app.use('/api/v1/me/*',async(c:any,next:any)=>{
     WHERE a.session_hash=? AND a.expires_at>datetime('now') AND a.revoked_at IS NULL LIMIT 1`).bind(await sha256Hex(raw)).first()
   if(String((row as any)?.email||'').trim().toLowerCase()!=='intapcard@gmail.com')return next()
   const active=await readIntapSelection(c)
-  if(!active||!['free','paid'].includes(active.kind))
+  if(!active||!['free','paid'].includes(active.kind)){
+    // A browser preview navigation cannot fix an inactive account by itself.
+    // Send the user to the explicit selector, never disclose another profile.
+    const previewNavigation=c.req.method==='GET'&&path.startsWith('/api/v1/me/free/profile-preview/')
+      &&String(c.req.header('Accept')||'').includes('text/html')
+    if(previewNavigation)return c.redirect('/admin/accounts',302)
     return c.json({ok:false,error:'La cuenta Free o Link no está activa. Selecciónala desde Multicuenta.',code:'intap_account_not_selected'},403)
+  }
   // Navigating an <a> or <iframe> to the draft Free preview is a browser
   // document request, not a fetch: browsers cannot add X-Intap-Account-Tab.
   // Permit ONLY this read-only GET after verifying the selected profile ID
