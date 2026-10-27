@@ -13,7 +13,11 @@ trap restore EXIT
 cd "$ROOT" || fail "Repositorio local no disponible"
 [[ -z "$(git status --porcelain)" ]] || fail "Hay cambios locales; no desplegar"
 git fetch github main "$BRANCH"
-git switch "$BRANCH"
+if git show-ref --verify --quiet "refs/heads/$BRANCH";then
+ git switch "$BRANCH"
+else
+ git switch --track "github/$BRANCH"
+fi
 git pull --ff-only github "$BRANCH"
 git merge-base --is-ancestor github/main HEAD || fail "Rama no incluye main actual"
 git diff --check github/main...HEAD
