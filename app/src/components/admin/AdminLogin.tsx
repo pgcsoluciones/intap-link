@@ -116,7 +116,7 @@ export default function AdminLogin() {
           setError(json.error || 'Correo o contraseña incorrectos.')
         }
       } else {
-        const json: any = await apiPost('/auth/magic-link/start', { email, mode })
+        const json: any = await apiPost('/auth/magic-link/start', { email, mode, ...(isDemoInvite ? {demo_invite:demoInvite} : {}) })
         if (json.ok) {
           sessionStorage.setItem('magic_link_email', email)
           persistAuthMode(mode)
