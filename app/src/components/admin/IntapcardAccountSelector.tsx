@@ -30,6 +30,7 @@ export default function IntapcardAccountSelector(){
   const[loading,setLoading]=useState(true)
   const[busy,setBusy]=useState('')
   const[error,setError]=useState('')
+  const[signingOut,setSigningOut]=useState(false)
   useEffect(()=>{if(stage!=='existing')return;let alive=true;setLoading(true);setError('');apiGet('/me/intapcard/accounts').then((r:any)=>{
     if(!alive)return
     if(!r?.ok)throw new Error(r?.error||'No se pudieron cargar las cuentas.')
@@ -106,10 +107,22 @@ export default function IntapcardAccountSelector(){
     }catch(e){setError(e instanceof Error?e.message:'No se pudo seleccionar la cuenta.');setBusy('')}
   }
 
+  async function signOut(){
+    if(signingOut)return
+    setSigningOut(true);setError('')
+    try{
+      const result:any=await apiPost('/auth/logout',{})
+      if(!result?.ok)throw new Error(result?.error||'No se pudo cerrar la sesión.')
+      sessionStorage.removeItem(INTAP_ACTIVE_TAB_STORAGE)
+      window.location.replace('/admin/login')
+    }catch(e){setError(e instanceof Error?e.message:'No se pudo cerrar la sesión.');setSigningOut(false)}
+  }
+
   const activeKind=activationKinds.find(kind=>kind.value===activationKind)!
   return <main className="min-h-screen bg-slate-50 px-4 py-8 font-['Inter'] text-slate-950">
     <div className="mx-auto max-w-[1020px] space-y-5">
       <header className="rounded-[28px] border border-slate-200 bg-white p-6">
+        <div className="flex justify-end"><button type="button" disabled={signingOut} onClick={()=>void signOut()} className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-black text-rose-700 disabled:opacity-50">{signingOut?"Cerrando sesión…":"Cerrar sesión"}</button></div>
         <p className="text-xs font-black uppercase tracking-[.14em] text-cyan-700">Intapcard · Multicuenta</p>
         <h1 className="mt-2 text-3xl font-black">{stage==='choice'?'¿Qué deseas hacer?':stage==='new'?'Agregar una cuenta nueva':'Gestionar cuentas existentes'}</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">{stage==='choice'?'Puedes activar una cuenta nueva con su código o elegir una cuenta que ya esté vinculada a este correo.':stage==='new'?'Indica la categoría y su código. Continuarás por el proceso de activación normal, sin sustituir ninguna cuenta anterior.':'Estas son las cuentas asociadas a tu correo. Elige exactamente cuál deseas administrar.'}</p>
