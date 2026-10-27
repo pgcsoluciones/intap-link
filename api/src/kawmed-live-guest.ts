@@ -46,3 +46,20 @@ export async function liveGuestInvitation(c:any,guestEmail:string,requested:stri
  JOIN kawmed_demo_live_access latest ON latest.invitation_id=recent.id
  WHERE lower(recent.invited_email)=lower(i.invited_email)) LIMIT 1`).bind(key,normalize(guestEmail)).first()
 }
+
+export async function liveGuestBySlug(c:any,userId:string,slug:string){
+ if(!userId||!slug)return null
+ const row=await c.env.DB.prepare(`SELECT p.*,i.id AS invitation_id FROM kawmed_demo_live_access grant_access
+ JOIN kawmed_demo_invitations i ON i.id=grant_access.invitation_id
+ JOIN medical_profiles p ON p.id=grant_access.medical_profile_id AND p.user_id=grant_access.owner_user_id
+ JOIN users guest ON guest.id=?
+ JOIN users owner ON owner.id=grant_access.owner_user_id
+ WHERE p.slug=? AND lower(i.invited_email)=lower(guest.email)
+ AND lower(owner.email)='intapcard@gmail.com'
+ AND i.status IN ('pending','active') AND datetime(i.expires_at)>datetime('now')
+ AND i.rowid=(SELECT MAX(recent.rowid) FROM kawmed_demo_invitations recent
+ JOIN kawmed_demo_live_access latest ON latest.invitation_id=recent.id
+ WHERE lower(recent.invited_email)=lower(i.invited_email))
+ LIMIT 1`).bind(userId,slug).first()
+ return row||null
+}
