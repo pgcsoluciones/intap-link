@@ -1,11 +1,12 @@
 import app from './index'
 import { cookieNames } from './lib/cookies'
+import { delegateHeader } from './kawmed-live-guest'
 import { resolveSponsorMembership, resolveOwnedMedicalContext } from './sponsored-multiprofile-access'
 
 async function sha256Hex(input:string){const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function parseCookie(header:string,name:string){const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+escaped+'=([^;]*)'));return match?decodeURIComponent(match[1]):null}
 async function sessionUserId(c:any){const raw=parseCookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!raw)return'';const row=await c.env.DB.prepare("SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1").bind(await sha256Hex(raw)).first();return row?String((row as any).user_id||''):''}
-async function requireUser(c:any,next:any){const id=await sessionUserId(c);if(!id)return c.json({ok:false,error:'Unauthorized'},401);c.set('userId',id);await next()}
+async function requireUser(c:any,next:any){const id=await sessionUserId(c);if(!id)return c.json({ok:false,error:'Unauthorized'},401);if(delegateHeader(c) && /\/medical-profile\/(?:delete-account|suspend|reactivate)(?:\/|$)/.test(new URL(c.req.url).pathname))return c.json({ok:false,error:'El administrador invitado no puede cambiar propiedad ni eliminar o suspender cuentas.'},403);c.set('userId',id);await next()}
 const clean=(v:unknown,max=500)=>String(v??'').trim().slice(0,max)
 const cleanSlug=(v:unknown)=>clean(v,80).toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'')
 function ext(file:File){const byType:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'};return byType[file.type]||''}
@@ -60,6 +61,7 @@ app.get('/api/v1/me/medical-profile',requireUser,async(c:any)=>{
   const r=await owned(c);if(!r)return c.json({ok:false,error:'Perfil médico no encontrado.'},404)
   const result=await full(c,r.profile)
   if(r.scope==='doctor'){
+    if(delegateHeader(c))return c.json({ok:true,data:{...result,guest_editor:true}})
     const user=await c.env.DB.prepare('SELECT email FROM users WHERE id=? LIMIT 1').bind(r.userId).first()
     return c.json({ok:true,data:{...result,account_email:String((user as any)?.email||'')}})
   }
