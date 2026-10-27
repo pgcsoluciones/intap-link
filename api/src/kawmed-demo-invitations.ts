@@ -65,7 +65,7 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  const raw=Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('')
  const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
  await c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,JSON.stringify(fields)).run()
- return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:'https://app.intaprd.com/admin/medical/demo/'+raw}},201)
+ return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')+'/admin/medical/demo/'+raw}},201)
 })
 app.get('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
  const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
