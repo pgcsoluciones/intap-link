@@ -7,7 +7,7 @@ export default function KawMedDemoGuest(){
  const[liveAccess,setLiveAccess]=useState(false)
  const[profile,setProfile]=useState<any>(null),[tab,setTab]=useState<'profile'|'centers'|'schedules'|'insurance'|'appearance'|'agenda'>('profile'),[error,setError]=useState(''),[saving,setSaving]=useState(false),[expires,setExpires]=useState('')
  useEffect(()=>{apiGet('/me/kawmed/live-access/'+encodeURIComponent(token)).then((grant:any)=>{
- if(grant?.ok){setExpires(grant.data.expires_at);setLiveAccess(true);void apiPost('/me/kawmed/live-access/'+encodeURIComponent(token)+'/activate',{}).catch(()=>undefined);return}
+ if(grant?.ok){return apiPost('/me/kawmed/live-access/'+encodeURIComponent(token)+'/activate',{}).then((accepted:any)=>{if(accepted?.ok){setExpires(grant.data.expires_at);setLiveAccess(true)}else setError(accepted?.error||'No se pudo aceptar la invitación.')})}
  return apiGet('/me/kawmed/demo/'+encodeURIComponent(token)).then((j:any)=>{
  if(j?.ok){setProfile(j.data.profile);setExpires(j.data.expires_at)}else setError(j?.error==='Unauthorized'?'LOGIN':j?.error||'Invitación inválida')
  })
