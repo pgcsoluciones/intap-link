@@ -63,7 +63,7 @@ export default function AuthCallback() {
         }
 
         const demoInvite=String(searchParams.get('demo_invite')||sessionStorage.getItem('kawmed_demo_invite')||localStorage.getItem('kawmed_demo_invite')||'')
-        if(/^[a-f0-9]{64}$/.test(demoInvite)){
+        if(/^(?:[a-f0-9]{64}|i-[a-f0-9-]{36})$/.test(demoInvite)){
           sessionStorage.removeItem('kawmed_demo_invite')
           localStorage.removeItem('kawmed_demo_invite')
           navigate('/admin/medical/demo/'+demoInvite,{replace:true})
