@@ -93,7 +93,7 @@ app.patch('/api/v1/superadmin/sponsors/:id/commercial-resource',requireSuperAdmi
  if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
  const url=trim(body.resource_url,1200),label=trim(body.resource_label,80)
  if(url){let parsed:URL;try{parsed=new URL(url)}catch{return c.json({ok:false,error:'URL inválida.'},422)}
- if(parsed.protocol!=='https:'||parsed.username||parsed.password)return c.json({ok:false,error:'Solo se permiten enlaces HTTPS seguros.'},422)}
+ if(parsed.protocol!=='https:'||parsed.username||parsed.password)return c.json({ok:false,error:'Solo se permiten enlaces HTTPS seguros.'},422)
  }
  await c.env.DB.prepare("INSERT INTO sponsor_commercial_resources(sponsor_id,resource_url,resource_label) VALUES (?,?,?) ON CONFLICT(sponsor_id) DO UPDATE SET resource_url=excluded.resource_url,resource_label=excluded.resource_label,updated_at=datetime('now')").bind(id,url,label).run()
  return c.json({ok:true})
