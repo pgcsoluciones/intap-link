@@ -75,7 +75,7 @@ assert.match(chooser,/sessionStorage.setItem\(INTAP_ACTIVE_TAB_STORAGE,token\)/,
 assert.match(guard,/if \(!selected.data\?\.tab_session_valid\)/,'Route guard must reject stale tab tokens')
 assert.match(apiClient,/X-Intap-Account-Tab/,'Client must send tab token on API requests')
 assert.match(worker,/matchesActiveIntapTab\(c,active\)/,'Backend must compare tab token before mutating accounts')
-assert.match(medPanel,/headers:activeIntapTabHeaders\(\)/,'Medical image uploads must include selected tab')
+assert.match(medPanel,/\.\.\.activeIntapTabHeaders\(\)/,'Medical image uploads must include selected tab')
 assert.match(ownerBar,/context.allow_direct_actions!==false/,'Public profile must not offer direct mutation outside a selected tab')
 // Free preview is a GET document/iframe navigation (no custom tab headers).
 // The exception must never grant writes or preview a different selected profile.
