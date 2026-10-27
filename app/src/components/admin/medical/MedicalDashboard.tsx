@@ -4,7 +4,7 @@ import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization
 import ImageCropModal from '../ImageCropModal'
 import MedicalCenterLocationPicker from './MedicalCenterLocationPicker'
 
-type Tab='profile'|'centers'|'schedule'|'insurance'|'appearance'
+type Tab='profile'|'centers'|'schedule'|'insurance'|'appearance'|'public'
 type MedicalDashboardProps={scope?:'doctor'|'sponsor_master';embedded?:boolean;onOpenAgenda?:()=>void}
 type PendingImage={file:File;kind:'avatar'|'cover'}|null
 const MEDICAL_SPECIALTIES=["Medicina general","Medicina familiar","Medicina interna","Pediatría","Neonatología","Medicina del adolescente","Ginecología","Obstetricia","Ginecología y obstetricia","Medicina materno-fetal","Endocrinología reproductiva e infertilidad","Oncología ginecológica","Oftalmología","Oftalmología pediátrica","Retinología","Glaucomatología","Ortopedia y traumatología","Ortopedia pediátrica","Cirugía de columna","Cirugía de mano","Medicina deportiva","Cirugía general","Cirugía pediátrica","Cirugía plástica y reconstructiva","Cirugía cardiovascular","Cirugía torácica","Cirugía vascular","Neurocirugía","Cirugía maxilofacial","Coloproctología","Cardiología","Cardiología pediátrica","Cardiología intervencionista","Electrofisiología cardíaca","Dermatología","Dermatología pediátrica","Endocrinología","Endocrinología pediátrica","Diabetología","Gastroenterología","Gastroenterología pediátrica","Hepatología","Neumología","Neumología pediátrica","Neurología","Neurología pediátrica","Neurofisiología clínica","Nefrología","Nefrología pediátrica","Urología","Urología pediátrica","Otorrinolaringología","Otorrinolaringología pediátrica","Psiquiatría","Psiquiatría infantil y adolescente","Oncología médica","Oncología pediátrica","Radioterapia oncológica","Hematología","Hematología pediátrica","Infectología","Infectología pediátrica","Reumatología","Reumatología pediátrica","Geriatría","Anestesiología","Anestesiología pediátrica","Medicina del dolor","Radiología diagnóstica","Radiología intervencionista","Neurorradiología","Medicina nuclear","Medicina de emergencias","Medicina crítica y cuidados intensivos","Medicina física y rehabilitación","Fisiatría","Alergología e inmunología clínica","Genética médica","Anatomía patológica","Patología clínica","Medicina forense","Medicina ocupacional","Medicina preventiva y salud pública","Epidemiología","Medicina paliativa","Medicina del sueño","Toxicología médica","Medicina hiperbárica","Nutriología clínica","Odontología","Ortodoncia","Endodoncia","Periodoncia","Odontopediatría","Cirugía bucal y maxilofacial"]
@@ -403,7 +403,18 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     {message&&<div className="rounded-2xl bg-emerald-50 px-4 py-3 text-base sm:text-sm font-bold text-emerald-700">{message}</div>}
     {error&&<div className="rounded-2xl bg-rose-50 px-4 py-3 text-base sm:text-sm font-bold text-rose-700">{error}</div>}
 
-    <nav className="grid grid-cols-2 gap-2 rounded-[22px] border border-slate-200 bg-white p-2 sm:grid-cols-6">{([['profile','Perfil'],['centers','Centros'],['schedule','Horarios'],['insurance','Seguros'],['appearance','Apariencia'],['agenda','Agenda']] as [Tab|'agenda',string][]).map(([key,title])=><button key={key} onClick={()=>key==='agenda'?openAgenda():setTab(key)} className={'rounded-2xl px-3 py-3 text-base sm:text-sm font-black '+(tab===key?'bg-slate-950 text-white':'text-slate-500 hover:bg-slate-50')}>{title}</button>)}</nav>
+    <nav className="grid grid-cols-2 gap-2 rounded-[22px] border border-slate-200 bg-white p-2 sm:grid-cols-6">{(([...([['profile','Perfil'],['centers','Centros'],['schedule','Horarios'],['insurance','Seguros'],['appearance','Apariencia'],['agenda','Agenda']] as [Tab|'agenda',string][]),...(isLiveGuest?[['public','Vista publicada'] as [Tab,string]]:[])])).map(([key,title])=><button key={key} onClick={()=>key==='agenda'?openAgenda():setTab(key)} className={'rounded-2xl px-3 py-3 text-base sm:text-sm font-black '+(tab===key?'bg-slate-950 text-white':'text-slate-500 hover:bg-slate-50')}>{title}</button>)}</nav>
+
+    {tab==='public'&&isLiveGuest&&<section className={card}>
+      <h2 className="text-xl font-black">Vista publicada · modo administrador</h2>
+      <p className="mt-2 text-sm text-slate-600">Esta es la presentación que ven los pacientes. La sección de patrocinio mostrada arriba pertenece únicamente a tu administración privada. Cambia cualquier dato desde las pestañas del mismo panel.</p>
+      {slug&&profile.status==='active'?<>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <iframe title="Perfil KawMed publicado" src={publicOrigin()+'/m/'+encodeURIComponent(slug)} className="h-[720px] w-full border-0" loading="lazy"/>
+        </div>
+        <a href={publicOrigin()+'/m/'+encodeURIComponent(slug)} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block rounded-xl border border-cyan-200 px-4 py-3 text-sm font-black text-cyan-800">Abrir presentación pública en otra pestaña</a>
+      </>:<p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">Este perfil todavía no está publicado.</p>}
+    </section>}
 
     {tab==='appearance'&&<section className={card}>
       <h2 className="text-xl font-black">Apariencia del perfil</h2>
