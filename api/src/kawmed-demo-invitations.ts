@@ -88,6 +88,13 @@ app.get('/api/v1/me/kawmed/demo-invitations',async(c:any)=>{
  const records=await c.env.DB.prepare("SELECT i.id,i.expires_at,i.status,p.name AS profile_name FROM kawmed_demo_invitations i JOIN kawmed_demo_live_access l ON l.invitation_id=i.id JOIN medical_profiles p ON p.id=l.medical_profile_id WHERE lower(i.invited_email)=? AND i.status IN ('pending','active') AND datetime(i.expires_at)>datetime('now') AND i.rowid=(SELECT MAX(recent.rowid) FROM kawmed_demo_invitations recent JOIN kawmed_demo_live_access latest ON latest.invitation_id=recent.id WHERE lower(recent.invited_email)=lower(i.invited_email)) LIMIT 1").bind(email(actor.email)).all()
  return c.json({ok:true,data:(records.results||[]).map((i:any)=>({id:String(i.id),profile_name:String(i.profile_name),expires_at:String(i.expires_at),url:'/admin/medical/demo/i-'+String(i.id)}))})
 })
+app.post('/api/v1/me/kawmed/demo-invitations/:id/reject',async(c:any)=>{
+ const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
+ const id=String(c.req.param('id')||'')
+ const updated=await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET status='revoked',updated_at=datetime('now') WHERE id=? AND lower(invited_email)=? AND status IN ('pending','active') AND EXISTS (SELECT 1 FROM kawmed_demo_live_access l WHERE l.invitation_id=kawmed_demo_invitations.id)").bind(id,email(actor.email)).run()
+ if(Number(updated.meta?.changes||0)!==1)return c.json({ok:false,error:'Invitación no disponible.'},404)
+ return c.json({ok:true})
+})
 app.get('/api/v1/me/kawmed/live-access/:token',async(c:any)=>{
  const actor:any=await sessionActor(c)
  if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
