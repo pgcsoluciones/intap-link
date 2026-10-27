@@ -87,6 +87,14 @@ app.get('/api/v1/me/kawmed/live-access/:token',async(c:any)=>{
  if(!grant)return c.json({ok:false,error:'Invitación no disponible para esta cuenta.'},403)
  return c.json({ok:true,data:{medical_profile_id:grant.medical_profile_id,expires_at:grant.expires_at,guest_editor:true}})
 })
+app.post('/api/v1/me/kawmed/live-access/:token/activate',async(c:any)=>{
+ const actor:any=await sessionActor(c)
+ if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
+ const grant:any=await liveGuestInvitation(c,String(actor.email),String(c.req.param('token')||''))
+ if(!grant)return deny(c)
+ await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET status='active',accepted_user_id=COALESCE(accepted_user_id,?),accepted_at=COALESCE(accepted_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status IN ('pending','active') AND datetime(expires_at)>datetime('now')").bind(String(actor.id),String(grant.id)).run()
+ return c.json({ok:true,data:{medical_profile_id:grant.medical_profile_id}})
+})
 app.get('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
  const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
  const row:any=await invitation(c,c.req.param('token'))
