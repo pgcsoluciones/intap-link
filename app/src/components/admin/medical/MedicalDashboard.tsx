@@ -366,7 +366,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
         <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
           <div className="flex items-center justify-between"><h2 className="text-lg font-black">Instalar app Kawvo</h2><button type="button" onClick={()=>setShowPwaHelp(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
           <p className="mt-4 text-sm leading-6 text-slate-600">Abre esta dirección en el dispositivo donde quieres instalar Kawvo:</p>
-          <a href={window.location.origin+'/admin/medical'} className="mt-2 block break-all rounded-xl bg-slate-50 px-3 py-3 text-sm font-bold text-cyan-700 underline">{window.location.origin+'/admin/medical'}</a>
+          <a href={window.location.origin+(isLiveGuest?window.location.pathname:'/admin/medical')} className="mt-2 block break-all rounded-xl bg-slate-50 px-3 py-3 text-sm font-bold text-cyan-700 underline">{window.location.origin+(isLiveGuest?window.location.pathname:'/admin/medical')}</a>
           <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>iPhone o iPad · Safari</strong></p><p>1. Abre el enlace en Safari.</p><p>2. Pulsa Compartir y selecciona <strong>Agregar a pantalla de inicio</strong>.</p><p>3. Confirma con Agregar.</p></div>
           <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>Android · Chrome</strong></p><p>1. Abre el enlace en Chrome.</p><p>2. En el menú de tres puntos selecciona <strong>Instalar aplicación</strong> o <strong>Agregar a pantalla principal</strong>.</p><p>3. Confirma la instalación.</p></div>
         </article>
