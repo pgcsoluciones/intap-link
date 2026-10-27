@@ -38,7 +38,7 @@ assert.match(api,/email\(\(owner as any\)\?\.email\)!=='intapcard@gmail\.com'/,'
 const auth=read('api/src/index.ts')
 const login=read('app/src/components/admin/AdminLogin.tsx')
 const callback=read('app/src/components/admin/AuthCallback.tsx')
-assert.match(auth,/const demoInvite = \/\^\[a-f0-9\]\{64\}\$/i,'Auth start debe aceptar el token de invitación')
+assert.match(auth,/const demoInvite = \/\^\(\?:\[a-f0-9\]\{64\}/i,'Auth start debe aceptar el token de invitación y su referencia vigente')
 assert.match(auth,/FROM kawmed_demo_invitations WHERE token_hash=/)
 assert.match(auth,/invited_email\|\|''\)\.trim\(\)\.toLowerCase\(\) !== email/)
 assert.match(auth,/&demo_invite=\$\{encodeURIComponent\(demoInvite\)\}/)
