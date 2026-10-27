@@ -6,7 +6,11 @@ const email=(v:unknown)=>String(v||'').trim().toLowerCase().slice(0,254)
 const sha=async(v:string)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v)))).map(b=>b.toString(16).padStart(2,'0')).join('')
 function cookie(header:string,name:string){return header.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1)||''}
 async function user(c:any){const token=cookie(c.req.header('Cookie')||'',cookieNames(c.env).session);if(!token)return null;return c.env.DB.prepare("SELECT u.id,u.email FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.session_hash=? AND s.revoked_at IS NULL AND s.expires_at>datetime('now') LIMIT 1").bind(await sha(decodeURIComponent(token))).first()}
-async function invitation(c:any,token:string){if(!/^[a-f0-9]{64}$/.test(token))return null;return c.env.DB.prepare("SELECT * FROM kawmed_demo_invitations WHERE token_hash=? LIMIT 1").bind(await sha(token)).first()}
+async function invitation(c:any,token:string){
+ if(/^i-[a-f0-9-]{36}$/.test(token))return c.env.DB.prepare("SELECT * FROM kawmed_demo_invitations WHERE id=? LIMIT 1").bind(token.slice(2)).first()
+ if(!/^[a-f0-9]{64}$/.test(token))return null
+ return c.env.DB.prepare("SELECT * FROM kawmed_demo_invitations WHERE token_hash=? LIMIT 1").bind(await sha(token)).first()
+}
 const deny=(c:any)=>c.json({ok:false,error:'Invitación no disponible o vencida.'},403)
 function snapshot(source:any){const allowed=['name','professional_prefix','specialty','subspecialty','bio','avatar_url','cover_url','phone','whatsapp','email','city','province','country','organization','template','palette','centers','schedules','insurance_policy'];return Object.fromEntries(allowed.map(k=>[k,source?.[k]??(k==='centers'||k==='schedules'?[]:k==='insurance_policy'?{accepted:[],excluded:[]}:'' )]))}
 app.get('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('viewer'),async(c:any)=>{
@@ -66,6 +70,11 @@ app.post('/api/v1/superadmin/kawmed/demo-invitations',requireSuperAdmin('super_a
  const id=crypto.randomUUID(),expires=new Date(Date.now()+duration*3600000).toISOString()
  await c.env.DB.prepare("INSERT INTO kawmed_demo_invitations(id,owner_user_id,source_medical_profile_id,invited_email,token_hash,expires_at,sandbox_json) VALUES(?,?,?,?,?,?,?)").bind(id,String((profile as any).user_id),profileId,invited,await sha(raw),expires,JSON.stringify(fields)).run()
  return c.json({ok:true,data:{id,email:invited,expires_at:expires,url:String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')+'/admin/medical/demo/'+raw}},201)
+})
+app.get('/api/v1/me/kawmed/demo-invitations',async(c:any)=>{
+ const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
+ const records=await c.env.DB.prepare("SELECT i.id,i.expires_at,i.status,p.name AS profile_name FROM kawmed_demo_invitations i JOIN medical_profiles p ON p.id=i.source_medical_profile_id WHERE lower(i.invited_email)=? AND i.status IN ('pending','active') AND i.expires_at>datetime('now') ORDER BY i.created_at DESC LIMIT 20").bind(email(actor.email)).all()
+ return c.json({ok:true,data:(records.results||[]).map((i:any)=>({id:String(i.id),profile_name:String(i.profile_name),expires_at:String(i.expires_at),url:'/admin/medical/demo/i-'+String(i.id)}))})
 })
 app.get('/api/v1/me/kawmed/demo/:token',async(c:any)=>{
  const actor=await user(c);if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
