@@ -77,25 +77,7 @@ import os,re
 p=Path('api/wrangler.preview.toml')
 s=p.read_text()
 for key,env in [('APP_PAGES_ORIGIN','APP_ORIGIN'),('WEB_PAGES_ORIGIN','WEB_ORIGIN')]:
- s,count=re.subn(r'^'+key+r' = ".*"
-p.write_text(s)
-PY
-echo "▶ Worker API Preview"
-(cd api && npx wrangler deploy --config wrangler.preview.toml --dry-run && npx wrangler deploy --config wrangler.preview.toml) 2>&1 | tee "$LOG_DIR/api.log"
-restore
-BACKUP=""
-[[ -z "$(git status --porcelain)" ]] || fail "El runner dejó cambios locales"
-for route in /admin/login /superadmin/kawmed; do
- HTTP="$(curl -sSL --max-time 30 -o /dev/null -w '%{http_code}' "https://app.preview.intaprd.com$route")"
- [[ "$HTTP" == 200 ]] || fail "Ruta Preview $route HTTP $HTTP"
-done
-HTTP="$(curl -sSL --max-time 30 -o /dev/null -w '%{http_code}' "https://app.preview.intaprd.com/api/v1/me/kawmed/live-access/i-00000000-0000-0000-0000-000000000000")"
-[[ "$HTTP" == 401 ]] || fail "Acceso delegado no exige sesión: $HTTP"
-echo "✓ Preview actualizado, sin cambios en Producción ni Simular/Reclamar"
-echo "✓ App $APP_ORIGIN"
-echo "✓ Web publicada $WEB_ORIGIN"
-echo "✓ D1 backup: $LOG_DIR/intap_db_preview_before_live_guest.sql"
-,key+' = "'+os.environ[env]+'"',s,count=1,flags=re.M)
+ s,count=re.subn('^'+key+' = '+chr(34)+'.*'+chr(34)+'$',key+' = '+chr(34)+os.environ[env]+chr(34),s,count=1,flags=re.M)
  if count!=1:raise SystemExit(key+' no encontrado')
 p.write_text(s)
 PY
@@ -112,4 +94,5 @@ HTTP="$(curl -sSL --max-time 30 -o /dev/null -w '%{http_code}' "https://app.prev
 [[ "$HTTP" == 401 ]] || fail "Acceso delegado no exige sesión: $HTTP"
 echo "✓ Preview actualizado, sin cambios en Producción ni Simular/Reclamar"
 echo "✓ App $APP_ORIGIN"
+echo "✓ Web publicada $WEB_ORIGIN"
 echo "✓ D1 backup: $LOG_DIR/intap_db_preview_before_live_guest.sql"
