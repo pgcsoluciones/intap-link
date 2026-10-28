@@ -223,7 +223,7 @@ app.post('/api/v1/superadmin/kawmed/batches',requireSuperAdmin('super_admin'),as
   const startLabel=Number((lastLabel as any)?.last||0)
   if(startLabel+quantity>32767)return c.json({ok:false,error:'Se agotó la serie física de cuatro caracteres KawMed.'},409)
   const alphabet='0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
-  const shortLabel=(n:number)=>{let value=n+325,part='';for(let j=0;j<3;j++){part=alphabet[value%alphabet.length]+part;value=Math.floor(value/alphabet.length)}return 'M'+part}
+  const shortLabel=(n:number)=>{let value=n+340,part='';for(let j=0;j<3;j++){part=alphabet[value%alphabet.length]+part;value=Math.floor(value/alphabet.length)}return 'M'+part}
   codes.forEach((item,i)=>{item.display_code=shortLabel(startLabel+i+1);item.physical_sequence=startLabel+i+1})
   const statements:any[]=[c.env.DB.prepare('INSERT INTO medical_code_batches(id,program_id,name,quantity,notes,created_by_admin_user_id) VALUES(?,?,?,?,?,?)').bind(id,programId||null,name,quantity,clean(body.notes,500),adminId||null)]
   for(const item of codes){statements.push(c.env.DB.prepare("INSERT INTO medical_access_codes(id,code,batch_id,program_id,station_number,status,created_by_admin_user_id) VALUES(?,?,?,?,?,'available',?)").bind(item.id,item.code,id,programId||null,item.station_number,adminId||null));statements.push(c.env.DB.prepare('INSERT INTO medical_display_identifiers(medical_code_id,display_code,sequence_number) VALUES(?,?,?)').bind(item.id,item.display_code,item.physical_sequence))}
