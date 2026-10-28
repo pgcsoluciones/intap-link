@@ -19,7 +19,7 @@ git diff --check github/main...HEAD
 while IFS= read -r file;do
  [[ -z "$file" ]]&&continue
  case "$file" in
-  api/migrations/0153_sponsor_sales_representatives.sql|api/src/preview-free-entry.ts|api/src/sponsored-scan.ts|api/src/sponsor-commercial-sales.ts|app/src/components/admin/SuperAdminSponsors.tsx|web/src/components/ArtifactLinkResolver.tsx|app/src/components/admin/sponsored/SponsorDashboard.tsx|app/src/components/admin/sponsored/SponsorCommercialSellers.tsx|app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/run-preview-sponsor-commercial-2026-10-27.sh|scripts/test-sponsor-commercial-contract.mjs|scripts/test-intapcard-active-account-contract.mjs) ;;
+  api/migrations/0153_sponsor_sales_representatives.sql|api/migrations/0154_artifact_display_identifiers.sql|api/src/sponsored-code-generation.ts|api/src/sponsored-profiles.ts|api/src/preview-free-entry.ts|api/src/sponsored-scan.ts|api/src/sponsor-commercial-sales.ts|app/src/components/admin/SuperAdminSponsors.tsx|web/src/components/ArtifactLinkResolver.tsx|app/src/components/admin/sponsored/SponsorDashboard.tsx|app/src/components/admin/sponsored/SponsorCommercialSellers.tsx|app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/run-preview-sponsor-commercial-2026-10-27.sh|scripts/test-sponsor-commercial-contract.mjs|scripts/test-intapcard-active-account-contract.mjs) ;;
   *) fail "Archivo fuera de alcance: $file";;
  esac
 done < <(git diff --name-only github/main...HEAD)
@@ -36,6 +36,8 @@ echo "▶ Respaldo completo D1 Preview"
 [[ -s "$LOG/intap_db_preview_before_sponsor_commercial.sql" ]] || fail "No hay respaldo válido"
 echo "▶ Migración aditiva 0153 SOLO Preview"
 (cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --file=migrations/0153_sponsor_sales_representatives.sql)
+echo "▶ Migración aditiva 0154 SOLO Preview"
+(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --file=migrations/0154_artifact_display_identifiers.sql)
 echo "▶ Web de escaneo Preview (rama aislada)"
 npx wrangler pages deploy web/dist --project-name intap-web2 --branch qa-kawvo-sponsor-scan-2026-10-28 2>&1 | tee "$LOG/web-pages.log"
 WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/web-pages.log" | tail -1)"
