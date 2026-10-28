@@ -23,7 +23,7 @@ app.get('/api/v1/sponsor/commercial/sellers',async(c:any)=>{
  const ctx=await authorized(c);if(!ctx)return c.json({ok:false,error:'Acceso comercial no habilitado para esta empresa.'},403)
  const [reps,assignments]=await Promise.all([
  c.env.DB.prepare("SELECT * FROM sponsor_sales_representatives WHERE sponsor_id=? ORDER BY active DESC,first_name,last_name").bind(ctx.sponsorId).all(),
- c.env.DB.prepare("SELECT a.*,sa.artifact_id,ia.public_code FROM sponsor_sales_assignments a JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id JOIN intap_artifacts ia ON ia.id=sa.artifact_id WHERE a.sponsor_id=? ORDER BY a.assigned_at DESC").bind(ctx.sponsorId).all()
+ c.env.DB.prepare("SELECT a.*,sa.artifact_id,ia.public_code,(r.first_name || ' ' || r.last_name) AS representative_name FROM sponsor_sales_assignments a JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id AND sa.sponsor_id=a.sponsor_id JOIN intap_artifacts ia ON ia.id=sa.artifact_id JOIN sponsor_sales_representatives r ON r.id=a.representative_id AND r.sponsor_id=a.sponsor_id WHERE a.sponsor_id=? ORDER BY a.assigned_at DESC").bind(ctx.sponsorId).all()
  ])
  return c.json({ok:true,data:{sellers:reps.results||[],assignments:assignments.results||[]}})
 })
