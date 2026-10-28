@@ -29,6 +29,8 @@ assert.match(profiles,/LEFT JOIN artifact_display_identifiers di ON di.artifact_
 assert.match(profiles,/sp.phone AS business_phone/)
 assert.match(profiles,/sp.whatsapp AS business_whatsapp/)
 assert.match(app,/item.business_phone\|\|item.business_whatsapp/)
+assert.match(app,/business_phone:String\(a.business_phone\|\|''\)/)
+assert.match(sellers,/Tel\.: \{a.business_phone\|\|a.business_whatsapp\}/)
 assert.match(app,/Comercio pendiente de registrar/)
 assert.match(app,/Gestión de patrocinio/)
 assert.match(app,/Cliente o comercio/)
