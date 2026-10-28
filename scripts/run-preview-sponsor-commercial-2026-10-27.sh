@@ -36,6 +36,10 @@ echo "▶ Respaldo completo D1 Preview"
 [[ -s "$LOG/intap_db_preview_before_sponsor_commercial.sql" ]] || fail "No hay respaldo válido"
 echo "▶ Migración aditiva 0153 SOLO Preview"
 (cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --file=migrations/0153_sponsor_sales_representatives.sql)
+echo "▶ Web de escaneo Preview (rama aislada)"
+npx wrangler pages deploy web/dist --project-name intap-web2 --branch qa-kawvo-sponsor-scan-2026-10-28 2>&1 | tee "$LOG/web-pages.log"
+WEB_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\\.intap-web2\\.pages\\.dev' "$LOG/web-pages.log" | tail -1)"
+[[ -n "$WEB_ORIGIN" ]] || fail "No se obtuvo URL de Web"
 echo "▶ App Pages Preview"
 npx wrangler pages deploy app/dist --project-name intap-web2 --branch qa-intapcard-kawmed-combined-preview-2026-10-24 2>&1 | tee "$LOG/app-pages.log"
 APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/app-pages.log" | tail -1)"
@@ -44,13 +48,25 @@ HTTP="$(curl -sSL --max-time 30 -o /dev/null -w '%{http_code}' "$APP_ORIGIN/admi
 [[ "$HTTP" == 200 ]] || fail "App Preview HTTP $HTTP"
 BACKUP="$(mktemp)"
 cp "$CONFIG" "$BACKUP"
-APP_ORIGIN="$APP_ORIGIN" python3 - <<'PY'
+APP_ORIGIN="$APP_ORIGIN" WEB_ORIGIN="$WEB_ORIGIN" python3 - <<'PY'
 from pathlib import Path
 import os,re
 p=Path('api/wrangler.preview.toml')
 s=p.read_text()
 s,n=re.subn(r'^APP_PAGES_ORIGIN = ".*"$','APP_PAGES_ORIGIN = "'+os.environ['APP_ORIGIN']+'"',s,count=1,flags=re.M)
 if n!=1:raise SystemExit('APP_PAGES_ORIGIN no encontrado')
+s,n=re.subn(r'^WEB_PAGES_ORIGIN = ".*"
+echo "▶ API Worker Preview"
+(cd api && npx wrangler deploy --config wrangler.preview.toml --dry-run && npx wrangler deploy --config wrangler.preview.toml) 2>&1 | tee "$LOG/api.log"
+restore
+BACKUP=""
+[[ -z "$(git status --porcelain)" ]] || fail "Configuración no restaurada"
+echo "✓ Comercial Preview desplegado; Producción y KawMed sin cambios"
+echo "✓ App: $APP_ORIGIN"
+echo "✓ Web escaneo: $WEB_ORIGIN"
+echo "✓ Backup: $LOG/intap_db_preview_before_sponsor_commercial.sql"
+,'WEB_PAGES_ORIGIN = "'+os.environ['WEB_ORIGIN']+'"',s,count=1,flags=re.M)
+if n!=1:raise SystemExit('WEB_PAGES_ORIGIN no encontrado')
 p.write_text(s)
 PY
 echo "▶ API Worker Preview"
