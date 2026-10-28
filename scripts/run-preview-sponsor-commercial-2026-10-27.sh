@@ -53,20 +53,10 @@ from pathlib import Path
 import os,re
 p=Path('api/wrangler.preview.toml')
 s=p.read_text()
-s,n=re.subn(r'^APP_PAGES_ORIGIN = ".*"$','APP_PAGES_ORIGIN = "'+os.environ['APP_ORIGIN']+'"',s,count=1,flags=re.M)
-if n!=1:raise SystemExit('APP_PAGES_ORIGIN no encontrado')
-s,n=re.subn(r'^WEB_PAGES_ORIGIN = ".*"
-echo "▶ API Worker Preview"
-(cd api && npx wrangler deploy --config wrangler.preview.toml --dry-run && npx wrangler deploy --config wrangler.preview.toml) 2>&1 | tee "$LOG/api.log"
-restore
-BACKUP=""
-[[ -z "$(git status --porcelain)" ]] || fail "Configuración no restaurada"
-echo "✓ Comercial Preview desplegado; Producción y KawMed sin cambios"
-echo "✓ App: $APP_ORIGIN"
-echo "✓ Web escaneo: $WEB_ORIGIN"
-echo "✓ Backup: $LOG/intap_db_preview_before_sponsor_commercial.sql"
-,'WEB_PAGES_ORIGIN = "'+os.environ['WEB_ORIGIN']+'"',s,count=1,flags=re.M)
-if n!=1:raise SystemExit('WEB_PAGES_ORIGIN no encontrado')
+for key in ('APP_PAGES_ORIGIN','WEB_PAGES_ORIGIN'):
+    value=os.environ['APP_ORIGIN' if key=='APP_PAGES_ORIGIN' else 'WEB_ORIGIN']
+    s,n=re.subn(r'^'+key+r' = ".*"$',key+' = "'+value+'"',s,count=1,flags=re.M)
+    if n!=1:raise SystemExit(key+' no encontrado')
 p.write_text(s)
 PY
 echo "▶ API Worker Preview"
@@ -76,4 +66,5 @@ BACKUP=""
 [[ -z "$(git status --porcelain)" ]] || fail "Configuración no restaurada"
 echo "✓ Comercial Preview desplegado; Producción y KawMed sin cambios"
 echo "✓ App: $APP_ORIGIN"
+echo "✓ Web escaneo: $WEB_ORIGIN"
 echo "✓ Backup: $LOG/intap_db_preview_before_sponsor_commercial.sql"
