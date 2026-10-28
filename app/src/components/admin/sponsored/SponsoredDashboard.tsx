@@ -40,6 +40,8 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   const[commercialLinks,setCommercialLinks]=useState<{contact_url:string;contact_label:string;resource_url:string;resource_label:string}>({contact_url:'',contact_label:'',resource_url:'',resource_label:''})
   const[data,setData]=useState<any>(null)
   const[loading,setLoading]=useState(true)
+  const[publicationReminder,setPublicationReminder]=useState(false)
+  const remindedProfiles=useRef(new Set<string>())
   const[saving,setSaving]=useState(false)
   const[uploading,setUploading]=useState('')
   const[pending,setPending]=useState<PendingImage>(null)
@@ -73,6 +75,8 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     {label:'Portada',done:Boolean(form.hero_url)},
   ]
   const essentialsReady=essentials.every(item=>item.done)
+  const canPublishNow=Boolean(data?.username&&data?.business_name&&data?.specialization&&data?.what_we_do&&(data?.whatsapp||data?.phone))
+  useEffect(()=>{const key=String(data?.id||data?.username||'');if(!key||loading)return;if(data?.status==='published'){setPublicationReminder(false);return}if(canPublishNow&&!remindedProfiles.current.has(key)){remindedProfiles.current.add(key);setPublicationReminder(true)}},[data,loading,canPublishNow])
   const palette=palettes.find(item=>item[0]===form.palette_id)||palettes[0]
 
   async function uploadImage(blob:Blob,kind:'avatar'|'hero'|'gallery'){
@@ -165,11 +169,12 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     </nav>}
     {!hasUsername&&<SponsoredStarterOnboarding mode={isMaster?'master':'beneficiary'} profileId={selectedProfileId||undefined} onComplete={load}/>}
 
+    {publicationReminder&&canPublishNow&&data?.status!=='published'&&<div role="dialog" aria-modal="true" aria-label="Tu perfil todavía no está publicado" className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/60 p-5"><div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 className="text-xl font-black text-slate-950">Tu perfil aún no está publicado</h2><p className="mt-3 text-sm leading-6 text-slate-600">Ya completaste los requisitos mínimos. Para que tus clientes puedan ver tu presentación, presiona <strong>Publicar presentación</strong>.</p><div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={()=>{setPublicationReminder(false);void togglePublish()}} className="rounded-xl bg-cyan-700 px-5 py-3 text-sm font-black text-white">Publicar ahora</button><button type="button" onClick={()=>setPublicationReminder(false)} className="rounded-xl border px-5 py-3 text-sm font-bold">Más tarde</button></div></div></div>}
     {hasUsername&&<>
       <section className={section}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div><p className="text-[11px] font-black uppercase tracking-[.12em] text-slate-400">Estado de publicación</p><h2 className="mt-1 text-lg font-black">{data.status==='published'?'Tu presentación está publicada':'Tu presentación está en borrador'}</h2><p className="mt-1 text-sm text-slate-500">{data.status==='published'?'Está visible para tus clientes.':'Publícala cuando tengas listos tus datos principales.'}</p></div>
-          <button type="button" onClick={()=>void togglePublish()} disabled={saving} className={`shrink-0 rounded-2xl px-5 py-3 text-sm font-black disabled:opacity-40 ${data.status==='published'?'border border-slate-200 bg-white text-slate-700':'bg-cyan-600 text-white'}`}>{saving?'Procesando…':data.status==='published'?'Despublicar':'Publicar presentación'}</button>
+          <button type="button" onClick={()=>void togglePublish()} disabled={saving} className={`shrink-0 rounded-2xl px-5 py-3 text-sm font-black disabled:opacity-40 ${data.status==='published'?'border border-slate-200 bg-white text-slate-700':canPublishNow?'bg-cyan-600 text-white animate-pulse motion-reduce:animate-none':'bg-cyan-600 text-white'}`}>{saving?'Procesando…':data.status==='published'?'Despublicar':'Publicar presentación'}</button>
         </div>
         {feedback('actions')}
       </section>
