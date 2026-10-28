@@ -850,6 +850,13 @@ app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
   const activationId = crypto.randomUUID()
   const activationHash = await hashActivationCode(activationCode)
 
+  const lastPhysical=await c.env.DB.prepare("SELECT COALESCE(MAX(sequence_number),0) AS last FROM artifact_display_identifiers WHERE product_line='L'").first()
+  const physicalSeq=Number((lastPhysical as any)?.last||0)+1
+  if(physicalSeq>32767)return c.json({ok:false,error:'Serie física Link agotada.'},409)
+  const physicalAlphabet='0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+  let v=physicalSeq+325,part=''
+  for(let j=0;j<3;j++){part=physicalAlphabet[v%physicalAlphabet.length]+part;v=Math.floor(v/physicalAlphabet.length)}
+  const displayCode='L'+part
   try {
     await c.env.DB.batch([
       c.env.DB.prepare(
@@ -857,6 +864,7 @@ app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
           (id, public_code, product_type, status, created_at, updated_at)
          VALUES (?, ?, ?, 'available', datetime('now'), datetime('now'))`
       ).bind(artifactId, publicCode, productType),
+      c.env.DB.prepare('INSERT INTO artifact_display_identifiers(artifact_id,display_code,product_line,sequence_number) VALUES (?,?,?,?)').bind(artifactId,displayCode,'L',physicalSeq),
       c.env.DB.prepare(
         `INSERT INTO artifact_activation_codes
           (id, artifact_id, activation_code_hash, status, expires_at, created_at)
@@ -873,6 +881,7 @@ app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
     data: {
       id: artifactId,
       public_code: publicCode,
+      display_code: displayCode,
       activation_code: activationCode,
       product_type: productType,
       status: 'available',
