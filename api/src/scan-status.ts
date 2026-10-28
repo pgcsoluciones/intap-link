@@ -51,12 +51,13 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
   if (!isPublicCodeShape(publicCode)) return c.json({ ok: false, error: 'Producto no válido.' }, 400)
 
   const artifact = await c.env.DB.prepare(
-    `SELECT a.id, a.public_code, a.product_type, a.status, a.owner_user_id, a.profile_id,
+    `SELECT a.id, a.public_code, di.display_code, a.product_type, a.status, a.owner_user_id, a.profile_id,
             p.slug AS profile_slug, p.user_id AS profile_user_id, p.is_active AS profile_is_active, p.is_published AS profile_is_published,
             tm.id AS team_member_id, tm.user_id AS team_member_user_id, tm.status AS team_member_status, tm.admin_role AS team_admin_role,
             tw.id AS team_id, tw.name AS team_name, tw.master_profile_id AS team_master_profile_id,
             mp.slug AS team_master_slug, mp.name AS team_master_name
        FROM intap_artifacts a
+       LEFT JOIN artifact_display_identifiers di ON di.artifact_id=a.id
        LEFT JOIN profiles p ON p.id = a.profile_id
        LEFT JOIN team_members tm ON tm.artifact_id = a.id
        LEFT JOIN team_workspaces tw ON tw.id = tm.team_id
@@ -73,7 +74,7 @@ app.post('/api/v1/public/artifacts/scan/status', async (c: any) => {
   const teamMemberId = String((artifact as any).team_member_id || '')
   const teamMemberUserId = String((artifact as any).team_member_user_id || '')
   const currentUserId = teamMemberUserId ? await sessionUserId(c) : null
-  const base = { public_code: publicCode, product_type: productType, label: productLabel(productType) }
+  const base = { public_code: publicCode, display_code: String((artifact as any).display_code||''), product_type: productType, label: productLabel(productType) }
 
   // Un producto Team ya vinculado nunca vuelve a mostrar activación.
   if (teamMemberId) {
