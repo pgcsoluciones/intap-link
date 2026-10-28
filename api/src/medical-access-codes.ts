@@ -244,11 +244,11 @@ app.patch('/api/v1/superadmin/kawmed/codes/:code/status',requireSuperAdmin('supe
 
 app.get('/api/v1/public/kawmed/claim/:code',async(c:any)=>{
   const code=normalizeCode(c.req.param('code'));if(!validMedCode(code))return c.json({ok:false,error:'Código MED inválido.'},400)
-  const row=await c.env.DB.prepare(`SELECT mac.code,mac.status,p.name AS program_name,st.name AS sponsor_name
-    FROM medical_access_codes mac LEFT JOIN medical_sponsor_programs p ON p.id=mac.program_id LEFT JOIN sponsor_tenants st ON st.id=p.sponsor_id
+  const row=await c.env.DB.prepare(`SELECT mac.code,mac.status,mdi.display_code,p.name AS program_name,st.name AS sponsor_name
+    FROM medical_access_codes mac LEFT JOIN medical_display_identifiers mdi ON mdi.medical_code_id=mac.id LEFT JOIN medical_sponsor_programs p ON p.id=mac.program_id LEFT JOIN sponsor_tenants st ON st.id=p.sponsor_id
     WHERE mac.code=? LIMIT 1`).bind(code).first()
   if(!row)return c.json({ok:false,error:'Código MED no encontrado.'},404)
-  return c.json({ok:true,data:{code,status:String((row as any).status),sponsored:Boolean((row as any).program_name),program_name:String((row as any).program_name||''),sponsor_name:String((row as any).sponsor_name||'')}})
+  return c.json({ok:true,data:{code,display_code:String((row as any).display_code||''),status:String((row as any).status),sponsored:Boolean((row as any).program_name),program_name:String((row as any).program_name||''),sponsor_name:String((row as any).sponsor_name||'')}})
 })
 
 app.get('/api/v1/me/kawmed/claim-check/:code',requireUser,async(c:any)=>{
