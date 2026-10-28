@@ -854,7 +854,7 @@ app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
   const physicalSeq=Number((lastPhysical as any)?.last||0)+1
   if(physicalSeq>32767)return c.json({ok:false,error:'Serie física Link agotada.'},409)
   const physicalAlphabet='0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
-  let v=physicalSeq+325,part=''
+  let v=physicalSeq+340,part=''
   for(let j=0;j<3;j++){part=physicalAlphabet[v%physicalAlphabet.length]+part;v=Math.floor(v/physicalAlphabet.length)}
   const displayCode='L'+part
   try {
