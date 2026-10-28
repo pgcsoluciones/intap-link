@@ -15,7 +15,7 @@ function appOrigin() {
 }
 
 type ProductState = 'loading' | 'sponsored_pending_activation' | 'pending_activation' | 'profile_draft' | 'profile_draft_owner' | 'team_unassigned' | 'team_pending' | 'team_unavailable' | 'blocked' | 'unavailable' | 'not_ready' | 'later' | 'error'
-type ArtifactInfo = { public_code?: string; product_type?: string; label?: string }
+type ArtifactInfo = { public_code?: string; display_code?: string; product_type?: string; label?: string }
 
 export default function ArtifactLinkResolver() {
   const { publicCode = '' } = useParams()
@@ -105,7 +105,7 @@ export default function ArtifactLinkResolver() {
     <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: '#f7f9fc', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <section style={cardStyle}>
         <img src={KAWVO_COMPACT_LOGO} alt="Kawvo" style={{ display: 'block', width: 124, maxWidth: '48%', height: 36, objectFit: 'contain', margin: '0 auto' }} />
-        {artifact?.product_type==='keychain'&&<div style={{marginTop:18,padding:14,border:'1px solid #bae6fd',borderRadius:14,background:'#f0f9ff',textAlign:'left'}}><strong style={{display:'block',color:'#0c4a6e'}}>Llavero NFC</strong><span style={{display:'block',marginTop:5,fontSize:13,color:'#475569'}}>Código: <strong>{artifact.public_code||code}</strong></span>{(state==='pending_activation'||state==='sponsored_pending_activation')&&<span style={{display:'block',marginTop:5,fontSize:13,fontWeight:700,color:'#047857'}}>Listo para ser activado</span>}</div>}
+        {artifact?.product_type==='keychain'&&<div style={{marginTop:18,padding:14,border:'1px solid #bae6fd',borderRadius:14,background:'#f0f9ff',textAlign:'left'}}><strong style={{display:'block',color:'#0c4a6e'}}>Llavero NFC{artifact.display_code?' No. '+artifact.display_code:''}</strong><span style={{display:'block',marginTop:5,fontSize:13,color:'#475569'}}>Código: <strong>{artifact.public_code||code}</strong></span>{(state==='pending_activation'||state==='sponsored_pending_activation')&&<span style={{display:'block',marginTop:5,fontSize:13,fontWeight:700,color:'#047857'}}>Listo para ser activado</span>}</div>}
 
         {state === 'pending_activation' && (
           <>
