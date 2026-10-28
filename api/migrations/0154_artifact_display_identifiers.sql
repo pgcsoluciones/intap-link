@@ -10,3 +10,12 @@ CREATE TABLE IF NOT EXISTS artifact_display_identifiers (
  FOREIGN KEY(artifact_id) REFERENCES intap_artifacts(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_artifact_display_line ON artifact_display_identifiers(product_line,sequence_number);
+
+-- KawMed codes have their own identity table (not an intap_artifact).
+CREATE TABLE IF NOT EXISTS medical_display_identifiers (
+ medical_code_id TEXT PRIMARY KEY,
+ display_code TEXT NOT NULL UNIQUE CHECK (length(display_code)=4 AND substr(display_code,1,1)='M'),
+ sequence_number INTEGER NOT NULL UNIQUE CHECK (sequence_number BETWEEN 1 AND 32767),
+ created_at TEXT NOT NULL DEFAULT (datetime('now')),
+ FOREIGN KEY(medical_code_id) REFERENCES medical_access_codes(id) ON DELETE CASCADE
+);
