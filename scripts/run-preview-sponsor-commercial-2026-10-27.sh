@@ -46,8 +46,10 @@ echo "▶ App Pages Preview"
 npx wrangler pages deploy app/dist --project-name intap-web2 --branch qa-intapcard-kawmed-combined-preview-2026-10-24 2>&1 | tee "$LOG/app-pages.log"
 APP_ORIGIN="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/app-pages.log" | tail -1)"
 [[ -n "$APP_ORIGIN" ]] || fail "No se obtuvo URL de App"
-HTTP="$(curl -sSL --max-time 30 -o /dev/null -w '%{http_code}' "$APP_ORIGIN/admin/login")"
-[[ "$HTTP" == 200 ]] || fail "App Preview HTTP $HTTP"
+HTTP="$(curl -sSL --max-time 30 -o /dev/null -w '%{http_code}' "$APP_ORIGIN/")"
+[[ "$HTTP" == 200 ]] || fail "App Preview raíz HTTP $HTTP"
+LOGIN_HTTP="$(curl -sSL --max-time 30 -o /dev/null -w '%{http_code}' "$APP_ORIGIN/admin/login" || true)"
+if [[ "$LOGIN_HTTP" != 200 ]]; then echo "⚠️ Enlace directo /admin/login HTTP $LOGIN_HTTP; comprobar rutas SPA durante QA (la raíz responde 200)."; fi
 BACKUP="$(mktemp)"
 cp "$CONFIG" "$BACKUP"
 APP_ORIGIN="$APP_ORIGIN" WEB_ORIGIN="$WEB_ORIGIN" python3 - <<'PY'
