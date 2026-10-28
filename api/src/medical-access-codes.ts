@@ -219,11 +219,17 @@ app.post('/api/v1/superadmin/kawmed/batches',requireSuperAdmin('super_admin'),as
     if(!code)throw new Error('No se pudo completar un lote de códigos MED únicos.')
     codes.push({id:crypto.randomUUID(),code,station_number:i+1})
   }
+  const lastLabel=await c.env.DB.prepare('SELECT COALESCE(MAX(sequence_number),0) AS last FROM medical_display_identifiers').first()
+  const startLabel=Number((lastLabel as any)?.last||0)
+  if(startLabel+quantity>32767)return c.json({ok:false,error:'Se agotó la serie física de cuatro caracteres KawMed.'},409)
+  const alphabet='0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const shortLabel=(n:number)=>{let value=n+325,part='';for(let j=0;j<3;j++){part=alphabet[value%alphabet.length]+part;value=Math.floor(value/alphabet.length)}return 'M'+part}
+  codes.forEach((item,i)=>{item.display_code=shortLabel(startLabel+i+1);item.physical_sequence=startLabel+i+1})
   const statements:any[]=[c.env.DB.prepare('INSERT INTO medical_code_batches(id,program_id,name,quantity,notes,created_by_admin_user_id) VALUES(?,?,?,?,?,?)').bind(id,programId||null,name,quantity,clean(body.notes,500),adminId||null)]
-  for(const item of codes)statements.push(c.env.DB.prepare("INSERT INTO medical_access_codes(id,code,batch_id,program_id,station_number,status,created_by_admin_user_id) VALUES(?,?,?,?,?,'available',?)").bind(item.id,item.code,id,programId||null,item.station_number,adminId||null))
+  for(const item of codes){statements.push(c.env.DB.prepare("INSERT INTO medical_access_codes(id,code,batch_id,program_id,station_number,status,created_by_admin_user_id) VALUES(?,?,?,?,?,'available',?)").bind(item.id,item.code,id,programId||null,item.station_number,adminId||null));statements.push(c.env.DB.prepare('INSERT INTO medical_display_identifiers(medical_code_id,display_code,sequence_number) VALUES(?,?,?)').bind(item.id,item.display_code,item.physical_sequence))}
   await c.env.DB.batch(statements)
   const appUrl=String(c.env.APP_URL||'https://app.intaprd.com').replace(/\/$/,'')
-  return c.json({ok:true,data:{batch_id:id,name,quantity,sponsored:Boolean(programId),codes:codes.map(x=>({code:x.code,station_number:x.station_number,claim_url:appUrl+'/claim/kawmed?code='+encodeURIComponent(x.code)}))}},201)
+  return c.json({ok:true,data:{batch_id:id,name,quantity,sponsored:Boolean(programId),codes:codes.map(x=>({code:x.code,station_number:x.station_number,display_code:x.display_code,claim_url:appUrl+'/claim/kawmed?code='+encodeURIComponent(x.code)}))}},201)
 })
 
 app.patch('/api/v1/superadmin/kawmed/codes/:code/status',requireSuperAdmin('super_admin'),async(c:any)=>{
