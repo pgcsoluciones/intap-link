@@ -14,7 +14,7 @@ function appOrigin() {
   return host.includes('preview') ? 'https://app.preview.intaprd.com' : 'https://app.intaprd.com'
 }
 
-type ProductState = 'loading' | 'pending_activation' | 'profile_draft' | 'profile_draft_owner' | 'team_unassigned' | 'team_pending' | 'team_unavailable' | 'blocked' | 'unavailable' | 'not_ready' | 'later' | 'error'
+type ProductState = 'loading' | 'sponsored_pending_activation' | 'pending_activation' | 'profile_draft' | 'profile_draft_owner' | 'team_unassigned' | 'team_pending' | 'team_unavailable' | 'blocked' | 'unavailable' | 'not_ready' | 'later' | 'error'
 type ArtifactInfo = { public_code?: string; product_type?: string; label?: string }
 
 export default function ArtifactLinkResolver() {
