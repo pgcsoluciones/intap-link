@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const scan=readFileSync('web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx','utf8')
+const admin=readFileSync('app/src/components/admin/SuperAdminSponsors.tsx','utf8')
+const api=readFileSync('api/src/sponsored-scan.ts','utf8')
+const generate=readFileSync('api/src/sponsored-code-generation.ts','utf8')
+assert.match(api,/display_code:String\(\(row as any\)\.display_code\|\|''\)/)
+assert.match(generate,/display_code:i\.displayCode/)
+assert.match(scan,/artifact\.display_code/)
+assert.match(scan,/artifact\.public_code/)
+assert.match(scan,/artifact\.product_type/)
+assert.match(scan,/Identificación del producto patrocinado/)
+assert.match(scan,/Código NFC:/)
+assert.match(admin,/row\.display_code/)
+assert.match(admin,/generated\.map\(i=>`\$\{i\.display_code/)
+console.log('Sponsored welcome and physical identifiers end-to-end static contract: OK')
