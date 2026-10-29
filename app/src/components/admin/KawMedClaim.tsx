@@ -86,6 +86,7 @@ export default function KawMedClaim(){
       <p className="text-sm text-slate-600">{context?.status==='available'?'Lista para activar':context?.status==='claimed'?'Estación ya activada':'Estación no disponible para activar'}</p>
       {context?.sponsored&&<p className="text-sm text-slate-600">Programa KawMed patrocinado: <strong>{context?.sponsor_name}</strong></p>}
       <button type="button" onClick={()=>setStep('identity')} className="w-full rounded-xl bg-slate-950 px-4 py-4 text-sm font-black text-white">Continuar</button>
+      <button type="button" onClick={()=>{sessionStorage.removeItem(STORAGE_KEY);localStorage.removeItem(STORAGE_KEY);sessionStorage.removeItem(RESUME_KEY);localStorage.removeItem(RESUME_KEY);window.location.replace('https://intaprd.com/')}} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700">Salir / Activar luego</button>
      </div>:<>
      <p className="text-xs font-black uppercase tracking-wide text-cyan-800">{owned?'Recuperar mi KawMed':step==='identity'?'Cuenta':'Confirmación'}</p>
      {owned?<div className="mt-4 space-y-3">
