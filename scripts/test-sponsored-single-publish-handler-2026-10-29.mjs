@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const owner=readFileSync('api/src/sponsored-owner-flow.ts','utf8')
+const profiles=readFileSync('api/src/sponsored-profiles.ts','utf8')
+const entry=readFileSync('api/src/preview-free-entry.ts','utf8')
+const scope=readFileSync('api/src/sponsored-profile-scope.ts','utf8')
+const dashboard=readFileSync('app/src/components/admin/sponsored/SponsoredDashboard.tsx','utf8')
+assert.equal((owner.match(/app\.post\('\/api\/v1\/me\/sponsored-profile\/publish'/g)||[]).length,0)
+assert.equal((profiles.match(/app\.post\('\/api\/v1\/me\/sponsored-profile\/publish'/g)||[]).length,1)
+assert.match(profiles,/resolveOwnedSponsoredProfile\(c,String\(c\.get\('userId'\)\|\|''\),sponsoredProfileScope\(c\)\)/)
+assert.match(profiles,/profile_role\|\|'beneficiary'\)!=='sponsor_owner'/)
+assert.match(profiles,/app\.post\('\/api\/v1\/me\/sponsored-profile\/unpublish'/)
+assert.match(entry,/import '\.\/sponsored-profiles'/)
+assert.match(scope,/active\.kind!=='sponsored'/)
+assert.match(scope,/active\.kind!=='sponsor'/)
+assert.match(dashboard,/profileParams\.set\('scope','master'\)/)
+assert.match(dashboard,/profileParams\.set\('profile_id',selectedProfileId\)/)
+console.log('Sponsored publication single handler and strict multiaccount scope contract: OK')
