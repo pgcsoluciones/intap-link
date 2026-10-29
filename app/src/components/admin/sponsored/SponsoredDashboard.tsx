@@ -61,7 +61,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   function beginFeedback(target:FeedbackTarget){setFeedbackTarget(target);setError('');setMessage('')}
   const feedback=(target:FeedbackTarget)=>feedbackTarget===target&&(message||error)?<p className={`mt-2 rounded-xl px-3 py-2 text-sm font-semibold ${error?'bg-rose-50 text-rose-700':'bg-emerald-50 text-emerald-700'}`}>{error||message}</p>:null
 
-  async function load(){setLoading(true);try{const json:any=await apiGet(`/me/sponsored-profile${profileScopeQuery}`);if(!json?.ok)throw new Error(json?.error||'No pudimos cargar tu perfil.');setData(json.data);if(json.data){setForm((current:any)=>({...current,...json.data,quote_button_visible:json.data.quote_button_visible!==false,appointment_button_visible:json.data.appointment_button_visible===true,schedule:Array.isArray(json.data.schedule)&&json.data.schedule.length?json.data.schedule:emptySchedule,gallery:Array.isArray(json.data.gallery)?json.data.gallery:[]}));setPreviewQuery(String(json.data.address||''));setSelectedLocation(Boolean(json.data.map_url));try{const agenda:any=await apiGet(`/me/sponsored-profile/appointments${profileScopeQuery}`);setAgendaEnabled(Boolean(agenda?.ok&&agenda.data?.settings?.enabled))}catch{setAgendaEnabled(false)}}}catch(e){setFeedbackTarget('actions');setError(e instanceof Error?e.message:'No pudimos cargar tu perfil.')}finally{setLoading(false)}}
+  async function load(){setLoading(true);try{const json:any=await apiGet(`/me/sponsored-profile${profileScopeQuery}`);if(!json?.ok)throw new Error(json?.error||'No pudimos cargar tu perfil.');setData(json.data);if(json.data){setForm((current:any)=>({...current,...json.data,quote_button_visible:json.data.quote_button_visible!==false,appointment_button_visible:json.data.appointment_button_visible===true,schedule:Array.isArray(json.data.schedule)&&json.data.schedule.length?json.data.schedule:emptySchedule,gallery:Array.isArray(json.data.gallery)?json.data.gallery:[]}));setPreviewQuery(String(json.data.address||''));setSelectedLocation(Boolean(json.data.map_url));void apiGet(`/me/sponsored-profile/appointments${profileScopeQuery}`).then((agenda:any)=>setAgendaEnabled(Boolean(agenda?.ok&&agenda.data?.settings?.enabled))).catch(()=>setAgendaEnabled(false))}}catch(e){setFeedbackTarget('actions');setError(e instanceof Error?e.message:'No pudimos cargar tu perfil.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
 
   const publicUrl=useMemo(()=>form.username?`${publicOrigin()}/p/${form.username}`:'',[form.username])
@@ -147,16 +147,25 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   async function togglePublish(){beginFeedback('actions');setSaving(true);try{
     const wasPublished=data?.status==='published'
     if(!wasPublished){
-      // La API valida datos persistidos. Guardar primero evita publicar una versión anterior del formulario.
       const saved:any=await apiPatch(`/me/sponsored-profile${profileScopeQuery}`,profilePayload())
       if(!saved?.ok)throw new Error(saved?.error||'No pudimos guardar el perfil antes de publicarlo.')
     }
     const route=wasPublished?`/me/sponsored-profile/unpublish${profileScopeQuery}`:`/me/sponsored-profile/publish${profileScopeQuery}`
     const json:any=await apiPost(route,{})
     if(!json?.ok)throw new Error(Array.isArray(json?.missing)&&json.missing.length?`Antes de publicar completa: ${json.missing.join(', ')}.`:json?.error||'No pudimos actualizar el estado.')
-    setMessage(wasPublished?'Perfil despublicado.':'Perfil guardado y publicado.')
-    await load();setFeedbackTarget('actions')
-  }catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.');await load().catch(()=>undefined)}finally{setSaving(false)}}
+    // No indicar éxito hasta verificar el perfil exacto y su estado persistido con GET autenticado.
+    const verified:any=await apiGet(`/me/sponsored-profile${profileScopeQuery}`)
+    const expected=wasPublished?'draft':'published'
+    if(!verified?.ok||!verified?.data||String(verified.data.id)!==String(data?.id)||verified.data.status!==expected){
+      throw new Error('La API respondió a la solicitud, pero no confirmó el nuevo estado del perfil seleccionado. Comprueba la cuenta activa e inténtalo nuevamente.')
+    }
+    setData(verified.data)
+    setMessage(wasPublished?'Perfil despublicado y confirmado.':'Perfil publicado y confirmado.')
+    void load()
+  }catch(e){
+    setError(e instanceof Error?e.message:'No pudimos confirmar el cambio de publicación.')
+  }finally{setSaving(false)}}
+
   async function copy(){if(!publicUrl)return;beginFeedback('actions');await navigator.clipboard.writeText(publicUrl);setMessage('Enlace copiado.')}
   async function downloadQr(){if(!publicUrl)return;beginFeedback('actions');try{const QRCode=await import('qrcode');const dataUrl=await QRCode.toDataURL(publicUrl,{width:1400,margin:3,errorCorrectionLevel:'H'});const a=document.createElement('a');a.href=dataUrl;a.download=`${form.username}-qr.png`;a.click();setMessage('QR generado.')}catch{setError('No pudimos generar el QR.')}}
 
@@ -187,7 +196,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
       <section className={section}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div><p className="text-[11px] font-black uppercase tracking-[.12em] text-slate-400">Estado de publicación</p><h2 className="mt-1 text-lg font-black">{data.status==='published'?'Tu presentación está publicada':'Tu presentación está en borrador'}</h2><p className="mt-1 text-sm text-slate-500">{data.status==='published'?'Está visible para tus clientes.':'Publícala cuando tengas listos tus datos principales.'}</p></div>
-          <button type="button" onClick={()=>void togglePublish()} disabled={saving} className={`shrink-0 rounded-2xl px-5 py-3 text-sm font-black disabled:opacity-40 ${data.status==='published'?'border border-slate-200 bg-white text-slate-700':canPublishNow?'bg-cyan-600 text-white animate-pulse motion-reduce:animate-none':'bg-cyan-600 text-white'}`}>{saving?'Procesando…':data.status==='published'?'Despublicar':'Publicar presentación'}</button>
+          <button type="button" onClick={()=>void togglePublish()} disabled={saving} className={`shrink-0 rounded-2xl px-5 py-3 text-sm font-black disabled:opacity-40 ${data.status==='published'?'border border-slate-200 bg-white text-slate-700':canPublishNow?'bg-cyan-600 text-white':'bg-cyan-600 text-white'}`}>{saving?'Procesando…':data.status==='published'?'Despublicar':'Publicar presentación'}</button>
         </div>
         {feedback('actions')}
       </section>
