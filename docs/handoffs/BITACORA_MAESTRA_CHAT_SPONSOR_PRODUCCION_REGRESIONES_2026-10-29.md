@@ -1,5 +1,5 @@
 # BITÁCORA MAESTRA DE HANDOFF · Kawvo Link / Intap · patrocinio, NFC, despliegue productivo y regresiones
-**Corte:** 29 de octubre de 2026. **Alcance:** conversación completa de esta etapa, desde la trazabilidad y los cambios comerciales de patrocinados (28/oct) hasta la auditoría forense y correcciones iniciadas (29/oct). **Destinatario:** siguiente programador/agente técnico. **Prioridad siguiente:** P0, corrección integral de regresiones de publicación, vista previa y multicuenta en Free, patrocinados y KawMed.  
+**Corte:** 29 de octubre de 2026. **Alcance:** conversación completa de esta etapa, desde la trazabilidad y los cambios comerciales de patrocinados (28/oct) hasta la auditoría forense y correcciones iniciadas (29/oct). **Destinatario:** siguiente programador/agente técnico. **Prioridad siguiente:** P0, corrección integral de regresiones de publicación, vista previa y multicuenta en Free, patrocinados y KawMed.
 **Estado crítico:** hubo despliegue EFECTIVO a Producción del commit `0994d9e5` el 29/oct; los cambios posteriores en la rama **NO deben darse por desplegados**. No reejecutar el runner de Producción a ciegas. No fusionar el PR sin nueva aprobación.
 
 ## 0. Identificación y reglas de operación
@@ -120,7 +120,7 @@
 Tabla `sponsor_sales_representatives`:
 `id` PK, `sponsor_id` FK → sponsor_tenants, `employee_code`, `first_name`, `last_name`, `whatsapp`, `email`, `zone`, `territory`, `active`, `created_at`, `updated_at`. Índice por sponsor/active.
 Tabla `sponsor_sales_assignments`:
-`id`, `sponsor_id`, `artifact_id`, `representative_id`, `group_label`, `assigned_by_user_id`, `assigned_at`, `ended_at`, `active`. Índices por sponsor/artifact/active y sponsor/representative/active. Reasignación debe conservar historial (no borrar eventos anteriores). 
+`id`, `sponsor_id`, `artifact_id`, `representative_id`, `group_label`, `assigned_by_user_id`, `assigned_at`, `ended_at`, `active`. Índices por sponsor/artifact/active y sponsor/representative/active. Reasignación debe conservar historial (no borrar eventos anteriores).
 Tabla `sponsor_commercial_resources`:
 `sponsor_id` PK/FK, `resource_url`, `resource_label`, `updated_at`; recurso comercial privado elegido por SuperAdmin; no exposición pública por defecto.
 Guard de acceso en API valida sesión auth, membership de sponsor owner/admin y concesión `sponsor_module_grants` para `commercial_seller` o `commercial_visitor`. Cada sponsor ve exclusivamente los suyos. Importación Excel y módulos comerciales fueron implementados sin mezclar con visitadores KawMed.
