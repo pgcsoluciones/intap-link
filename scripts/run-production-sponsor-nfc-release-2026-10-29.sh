@@ -3,7 +3,7 @@
 set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feature/kawvo-sponsor-commercial-controls-2026-10-27"
-EXPECTED_SHA="779e3e6470ac9061021535d1b3dadfac998bdadd"
+APPROVED_BASE="779e3e6470ac9061021535d1b3dadfac998bdadd"
 LOG="$HOME/intap-release-logs/kawvo-production-$(date -u +%Y%m%dT%H%M%SZ)"
 fail(){ echo "ERROR · DETENIDO: $*" >&2; exit 1; }
 [[ "${KAWVO_RELEASE_PRODUCTION:-}" == "APROBADO" ]] || fail "Se requiere KAWVO_RELEASE_PRODUCTION=APROBADO"
