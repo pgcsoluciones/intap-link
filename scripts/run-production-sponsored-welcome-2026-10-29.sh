@@ -42,7 +42,7 @@ for spec in "WEB|https://intaprd.com|web/dist|$WEB" "APP|https://app.intaprd.com
  [[ "$ok" == 1 ]] || { echo "$label NO verificado tras deploy; no repetir automáticamente"; exit 1; }
  echo "$label $asset checksum OK" | tee -a "$LOG/verification.txt"
 done
-for url in https://intaprd.com/l/IHLVLVDME7X https://app.intaprd.com/admin/login https://api.intaprd.com/api/health;do
+for url in https://intaprd.com/ https://app.intaprd.com/admin/login https://api.intaprd.com/api/health;do
  status="$(curl -L -sS --max-time 25 -o /dev/null -w '%{http_code}' "$url" || true)"
  echo "$url HTTP $status" | tee -a "$LOG/verification.txt"
 done
