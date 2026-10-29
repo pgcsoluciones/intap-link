@@ -173,15 +173,16 @@ app.post('/api/v1/me/kawmed-master/claim',requireUser,async(c:any)=>{
 app.get('/api/v1/superadmin/kawmed/codes',requireSuperAdmin('viewer'),async(c:any)=>{
   const q=clean(c.req.query('q'),80),status=clean(c.req.query('status'),20),program=clean(c.req.query('program_id'),80)
   const where:string[]=['1=1'],binds:any[]=[]
-  if(q){where.push('(mac.code LIKE ? OR COALESCE(u.email,\'\') LIKE ? OR COALESCE(mp.name,\'\') LIKE ? OR COALESCE(b.name,\'\') LIKE ?)');const like='%'+q+'%';binds.push(like,like,like,like)}
+  if(q){where.push('(mac.code LIKE ? OR COALESCE(mdi.display_code,\'\') LIKE ? OR COALESCE(u.email,\'\') LIKE ? OR COALESCE(mp.name,\'\') LIKE ? OR COALESCE(b.name,\'\') LIKE ?)');const like='%'+q+'%';binds.push(like,like,like,like,like)}
   if(['available','claimed','inactive'].includes(status)){where.push('mac.status=?');binds.push(status)}
   if(program){where.push('mac.program_id=?');binds.push(program)}
-  const rows=await c.env.DB.prepare(`SELECT mac.*,b.name AS batch_name,p.name AS program_name,st.name AS sponsor_name,
+  const rows=await c.env.DB.prepare(`SELECT mac.*,mdi.display_code,b.name AS batch_name,p.name AS program_name,st.name AS sponsor_name,
     u.email AS claimed_email,mp.name AS medical_name,mp.slug AS medical_slug,mp.specialty AS medical_specialty,
     COALESCE(mp.whatsapp,mp.phone) AS medical_phone,mp.email AS medical_email,
     mr.id AS representative_id,TRIM(COALESCE(mr.first_name,'')||' '||COALESCE(mr.last_name,'')) AS representative_name,
     mr.whatsapp AS representative_whatsapp,mr.zone AS representative_zone
     FROM medical_access_codes mac
+    LEFT JOIN medical_display_identifiers mdi ON mdi.medical_code_id=mac.id
     LEFT JOIN medical_code_batches b ON b.id=mac.batch_id
     LEFT JOIN medical_sponsor_programs p ON p.id=mac.program_id
     LEFT JOIN sponsor_tenants st ON st.id=p.sponsor_id
