@@ -23,6 +23,11 @@ node scripts/test-intapcard-kawmed-integrated-contract.mjs
 node scripts/test-sponsor-commercial-contract.mjs
 npx tsc --noEmit -p api/tsconfig.json
 npm run build -w app
+# Compara permisos por slug y nombre de módulo; no muestra usuarios ni escribe permisos.
+SQL="SELECT st.slug, g.module_code, g.enabled FROM sponsor_module_grants g JOIN sponsor_tenants st ON st.id=g.sponsor_id WHERE g.module_code IN ('commercial_seller','commercial_visitor','commercial_catalog','commercial_vademecum') ORDER BY st.slug, g.module_code"
+(cd api && npx wrangler d1 execute intap_db_preview --remote --config wrangler.preview.toml --command="$SQL") > "$LOG/commercial-preview.txt" 2>&1 || { echo "No se pudo auditar grants en Preview"; exit 1; }
+(cd api && npx wrangler d1 execute intap_db --remote --config wrangler.toml --command="$SQL") > "$LOG/commercial-production.txt" 2>&1 || { echo "No se pudo auditar grants en Producción"; exit 1; }
+echo "Auditoría comercial de ambos entornos guardada en $LOG. No se transfirieron permisos."
 SQL="SELECT name FROM sqlite_master WHERE type='table' AND name='medical_display_identifiers'"
 (cd api && npx wrangler d1 execute intap_db --remote --config wrangler.toml --command="$SQL") > "$LOG/med-schema.txt" 2>&1
 grep -q medical_display_identifiers "$LOG/med-schema.txt" || { echo "Tabla MED falta; detenido";exit 1; }
