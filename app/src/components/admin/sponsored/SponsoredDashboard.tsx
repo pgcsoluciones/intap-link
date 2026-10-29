@@ -142,8 +142,21 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   }
   const agendaManageUrl=isMaster?'/admin/sponsored/agenda?scope=master':selectedProfileId?'/admin/sponsored/agenda?profile_id='+encodeURIComponent(selectedProfileId):'/admin/sponsored/agenda'
 
-  async function saveAll(){beginFeedback('actions');setSaving(true);try{const payload={business_name:form.business_name,specialization:form.specialization,what_we_do:form.what_we_do,avatar_url:form.avatar_url,hero_url:form.hero_url,map_url:form.map_url,show_avatar:form.show_avatar,phone:normalizePhone(form.phone||''),whatsapp:normalizePhone(form.whatsapp||''),email:form.email,instagram:form.instagram,address:form.address,schedule:form.schedule,gallery:form.gallery,gallery_title:form.gallery_title,palette_id:form.palette_id,quote_button_visible:form.quote_button_visible!==false,appointment_button_visible:form.appointment_button_visible===true};const json:any=await apiPatch(`/me/sponsored-profile${profileScopeQuery}`,payload);if(!json?.ok)throw new Error(json?.error||'No pudimos guardar los cambios.');setMessage('Cambios guardados.');await load();setFeedbackTarget('actions')}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar los cambios.')}finally{setSaving(false)}}
-  async function togglePublish(){beginFeedback('actions');setSaving(true);try{const route=data?.status==='published'?`/me/sponsored-profile/unpublish${profileScopeQuery}`:`/me/sponsored-profile/publish${profileScopeQuery}`;const json:any=await apiPost(route,{});if(!json?.ok)throw new Error(Array.isArray(json?.missing)&&json.missing.length?`Antes de publicar completa: ${json.missing.join(', ')}.`:json?.error||'No pudimos actualizar el estado.');setMessage(data?.status==='published'?'Perfil despublicado.':'Perfil publicado.');await load();setFeedbackTarget('actions')}catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.')}finally{setSaving(false)}}
+  function profilePayload(){return {business_name:form.business_name,specialization:form.specialization,what_we_do:form.what_we_do,avatar_url:form.avatar_url,hero_url:form.hero_url,map_url:form.map_url,show_avatar:form.show_avatar,phone:normalizePhone(form.phone||''),whatsapp:normalizePhone(form.whatsapp||''),email:form.email,instagram:form.instagram,address:form.address,schedule:form.schedule,gallery:form.gallery,gallery_title:form.gallery_title,palette_id:form.palette_id,quote_button_visible:form.quote_button_visible!==false,appointment_button_visible:form.appointment_button_visible===true}}
+  async function saveAll(){beginFeedback('actions');setSaving(true);try{const json:any=await apiPatch(`/me/sponsored-profile${profileScopeQuery}`,profilePayload());if(!json?.ok)throw new Error(json?.error||'No pudimos guardar los cambios.');setMessage('Cambios guardados.');await load();setFeedbackTarget('actions')}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar los cambios.')}finally{setSaving(false)}}
+  async function togglePublish(){beginFeedback('actions');setSaving(true);try{
+    const wasPublished=data?.status==='published'
+    if(!wasPublished){
+      // La API valida datos persistidos. Guardar primero evita publicar una versión anterior del formulario.
+      const saved:any=await apiPatch(`/me/sponsored-profile${profileScopeQuery}`,profilePayload())
+      if(!saved?.ok)throw new Error(saved?.error||'No pudimos guardar el perfil antes de publicarlo.')
+    }
+    const route=wasPublished?`/me/sponsored-profile/unpublish${profileScopeQuery}`:`/me/sponsored-profile/publish${profileScopeQuery}`
+    const json:any=await apiPost(route,{})
+    if(!json?.ok)throw new Error(Array.isArray(json?.missing)&&json.missing.length?`Antes de publicar completa: ${json.missing.join(', ')}.`:json?.error||'No pudimos actualizar el estado.')
+    setMessage(wasPublished?'Perfil despublicado.':'Perfil guardado y publicado.')
+    await load();setFeedbackTarget('actions')
+  }catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.');await load().catch(()=>undefined)}finally{setSaving(false)}}
   async function copy(){if(!publicUrl)return;beginFeedback('actions');await navigator.clipboard.writeText(publicUrl);setMessage('Enlace copiado.')}
   async function downloadQr(){if(!publicUrl)return;beginFeedback('actions');try{const QRCode=await import('qrcode');const dataUrl=await QRCode.toDataURL(publicUrl,{width:1400,margin:3,errorCorrectionLevel:'H'});const a=document.createElement('a');a.href=dataUrl;a.download=`${form.username}-qr.png`;a.click();setMessage('QR generado.')}catch{setError('No pudimos generar el QR.')}}
 
