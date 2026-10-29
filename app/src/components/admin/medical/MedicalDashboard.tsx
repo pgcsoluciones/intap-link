@@ -60,6 +60,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const publicationPublishTriggerRef=useRef<HTMLButtonElement>(null)
   const publicationUnpublishTriggerRef=useRef<HTMLButtonElement>(null)
   const[previewOpen,setPreviewOpen]=useState(false)
+  const[readyPromptDismissed,setReadyPromptDismissed]=useState(false)
   const[lifecycleBusy,setLifecycleBusy]=useState(false)
   const[showDeletion,setShowDeletion]=useState(false)
   const[deleteEmail,setDeleteEmail]=useState('')
@@ -496,14 +497,15 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       {lifecycleConfirm&&<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><p className="font-bold">{lifecycleConfirm==='suspend'?'¿Confirmas que deseas suspender tu perfil médico?':'¿Confirmas que deseas reactivar tu perfil como borrador?'}</p><div className="mt-3 flex gap-3"><button type="button" disabled={lifecycleBusy} onClick={()=>void changeLifecycle(lifecycleConfirm)} className="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">Sí, confirmar</button><button type="button" disabled={lifecycleBusy} onClick={()=>setLifecycleConfirm(null)} className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold">Cancelar</button></div></div>}
     </section>}
 
-    {previewOpen&&<div role="dialog" aria-modal="true" aria-label="Vista previa de perfil médico" className="rounded-[24px] border border-cyan-200 bg-white p-5 shadow-lg">
+    {scope==='doctor'&&profile.status!=='active'&&publicationReadiness.canPublish&&!readyPromptDismissed&&<div role="dialog" aria-modal="true" aria-label="Perfil médico listo para publicar" className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/60 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-lg font-black">Tu perfil médico está listo para publicar</h2><p className="mt-2 text-sm text-slate-600">Los datos obligatorios están guardados. Puedes publicarlo ahora o continuar editándolo.</p><div className="mt-4 flex gap-2"><button type="button" onClick={()=>{setReadyPromptDismissed(true);openPublicationConfirm('publish')}} className="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Revisar publicación</button><button type="button" onClick={()=>setReadyPromptDismissed(true)} className="rounded-xl border px-4 py-2 text-sm font-bold">Más tarde</button></div></div></div>}
+    {previewOpen&&<div role="dialog" aria-modal="true" aria-label="Vista previa de perfil médico" className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 pt-12"><div className="w-full max-w-xl rounded-[24px] border border-cyan-200 bg-white p-5 shadow-2xl">
       <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Vista previa del perfil</h2><p className="mt-1 text-sm text-slate-500">Vista privada de los datos guardados. No publica el perfil.</p></div><button type="button" onClick={()=>setPreviewOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold">Cerrar</button></div>
       <div className="mx-auto mt-4 max-w-md overflow-hidden rounded-2xl border border-slate-200">
         {(profile.cover_url||profile.avatar_url)&&<img src={profile.cover_url||profile.avatar_url} alt="Fotografía del perfil" className="aspect-[4/3] w-full object-cover"/>}
         <div className="p-5"><h3 className="text-2xl font-black">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h3><p className="mt-1 font-bold text-cyan-700">{profile.specialty}</p>{profile.bio&&<p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{profile.bio}</p>}<p className="mt-3 text-sm text-slate-500">{[profile.city,profile.province].filter(Boolean).join(' · ')}</p><p className="mt-2 text-xs text-slate-400">Enlace previsto: /m/{profile.slug}</p></div>
       </div>
       {profile.status==='active'&&<button type="button" onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(profile.slug),'_blank','noopener,noreferrer')} className="mt-4 rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Abrir versión pública</button>}
-    </div>}
+    </div></div>}
 
     {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:4/4.25} outputWidth={pending.kind==='avatar'?1024:1200} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await saveImage(blob,kind)}} onCancel={()=>setPending(null)}/>}
   </div></Shell>
