@@ -9,7 +9,7 @@ git pull --ff-only github fix/physical-id-terminology-2026-10-29
 git merge-base --is-ancestor 4e838bb2 HEAD
 git diff --check 4e838bb2..HEAD
 while IFS= read -r p;do case "$p" in
-app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/SuperAdminSponsors.tsx|web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx|scripts/test-med-physical-display-read-contract.mjs|scripts/test-physical-id-ui-labels-2026-10-29.mjs|scripts/run-prod-physical-id-labels-2026-10-29.sh) ;;
+app/src/components/admin/SuperAdminKawMed.tsx|app/src/components/admin/SuperAdminSponsors.tsx|web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx|docs/handoffs/PENDIENTES_POST_RECONCILIACION_PURGA_SEGURA_2026-10-29.md|scripts/test-med-physical-display-read-contract.mjs|scripts/test-physical-id-ui-labels-2026-10-29.mjs|scripts/run-prod-physical-id-labels-2026-10-29.sh) ;;
 *) echo "Fuera de alcance: $p";exit 1;; esac;done < <(git diff --name-only 4e838bb2..HEAD)
 node scripts/test-med-physical-display-read-contract.mjs
 node scripts/test-physical-id-ui-labels-2026-10-29.mjs
