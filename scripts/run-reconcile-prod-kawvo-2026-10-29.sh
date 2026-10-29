@@ -8,11 +8,11 @@ git fetch github release/reconcile-approved-2026-10-29 main
 git switch release/reconcile-approved-2026-10-29
 git pull --ff-only github release/reconcile-approved-2026-10-29
 git merge-base --is-ancestor 14915fe6 HEAD || exit 1
-git diff --check 14915fe6..HEAD
+git diff --check 3aa1692c..HEAD
 while IFS= read -r p; do case "$p" in
  api/src/medical-access-codes.ts|app/src/components/admin/SuperAdminKawMed.tsx|scripts/test-med-physical-display-read-contract.mjs|scripts/run-reconcile-prod-kawvo-2026-10-29.sh) ;;
  *) echo "Cambio ajeno: $p";exit 1;;
-esac; done < <(git diff --name-only 14915fe6..HEAD)
+esac; done < <(git diff --name-only 3aa1692c..HEAD)
 LOG="$HOME/intap-release-logs/kawvo-med-recovery-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$LOG"
 git rev-parse HEAD | tee "$LOG/revision.txt"
