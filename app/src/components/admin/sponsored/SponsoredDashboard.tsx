@@ -54,7 +54,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   const[viewMode,setViewMode]=useState<'edit'|'preview'>('edit')
   const[galleryBatchProgress,setGalleryBatchProgress]=useState('');const[agendaEnabled,setAgendaEnabled]=useState(false)
   const[isIntapMulticuenta,setIsIntapMulticuenta]=useState(false)
-  useEffect(()=>{if(isMaster)return;apiGet('/me/intapcard/active-account').then((r:any)=>setIsIntapMulticuenta(Boolean(r?.ok&&r.data?.active?.kind==='sponsored'))).catch(()=>undefined)},[isMaster])
+  useEffect(()=>{if(isMaster)return;apiGet('/me/intapcard/active-account').then((r:any)=>setIsIntapMulticuenta(Boolean(selectedProfileId||r?.ok&&r.data?.active?.kind==='sponsored'))).catch(()=>setIsIntapMulticuenta(Boolean(selectedProfileId)))},[isMaster,selectedProfileId])
   useEffect(()=>{if(isMaster)return;apiGet(`/me/sponsored-profile/commercial-links${profileScopeQuery}`).then((r:any)=>{if(r?.ok)setCommercialLinks(r.data)}).catch(()=>undefined)},[isMaster,profileScopeQuery])
   const[form,setForm]=useState<any>({username:'',business_name:'',specialization:'',what_we_do:'',avatar_url:'',hero_url:'',map_url:'',show_avatar:true,phone:'',whatsapp:'',email:'',instagram:'',address:'',schedule:emptySchedule,gallery:[],gallery_title:'Catálogo',palette_id:'blue',quote_button_visible:true,appointment_button_visible:false})
 
@@ -75,7 +75,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     {label:'Portada',done:Boolean(form.hero_url)},
   ]
   const essentialsReady=essentials.every(item=>item.done)
-  const canPublishNow=Boolean(data?.username&&data?.business_name&&data?.specialization&&data?.what_we_do&&(data?.whatsapp||data?.phone))
+  const canPublishNow=Boolean(String(data?.username||'').trim()&&String(data?.business_name||'').trim()&&String(data?.specialization||'').trim()&&String(data?.what_we_do||'').trim()&&(String(data?.whatsapp||'').trim()||String(data?.phone||'').trim()))
   useEffect(()=>{const key=String(data?.id||data?.username||'');if(!key||loading)return;if(data?.status==='published'){setPublicationReminder(false);return}if(canPublishNow&&!remindedProfiles.current.has(key)){remindedProfiles.current.add(key);setPublicationReminder(true)}},[data,loading,canPublishNow])
   const palette=palettes.find(item=>item[0]===form.palette_id)||palettes[0]
 
@@ -169,7 +169,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     </nav>}
     {!hasUsername&&<SponsoredStarterOnboarding mode={isMaster?'master':'beneficiary'} profileId={selectedProfileId||undefined} onComplete={load}/>}
 
-    {publicationReminder&&canPublishNow&&data?.status!=='published'&&<div role="dialog" aria-modal="true" aria-label="Tu perfil todavía no está publicado" className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/60 p-5"><div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 className="text-xl font-black text-slate-950">Tu perfil aún no está publicado</h2><p className="mt-3 text-sm leading-6 text-slate-600">Ya completaste los requisitos mínimos. Para que tus clientes puedan ver tu presentación, presiona <strong>Publicar presentación</strong>.</p><div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={()=>{setPublicationReminder(false);void togglePublish()}} className="rounded-xl bg-cyan-700 px-5 py-3 text-sm font-black text-white">Publicar ahora</button><button type="button" onClick={()=>setPublicationReminder(false)} className="rounded-xl border px-5 py-3 text-sm font-bold">Más tarde</button></div></div></div>}
+    {publicationReminder&&canPublishNow&&data?.status!=='published'&&<div role="dialog" aria-modal="true" aria-label="Tu perfil todavía no está publicado" className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/60 p-5"><div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 className="text-xl font-black text-slate-950">Tu perfil aún no está publicado</h2><p className="mt-3 text-sm leading-6 text-slate-600">Los datos obligatorios guardados cumplen las condiciones de publicación; la fotografía y la portada pueden seguir pendientes. Para que tus clientes puedan ver tu presentación, presiona <strong>Publicar presentación</strong>.</p><div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={()=>{setPublicationReminder(false);void togglePublish()}} className="rounded-xl bg-cyan-700 px-5 py-3 text-sm font-black text-white">Publicar ahora</button><button type="button" onClick={()=>setPublicationReminder(false)} className="rounded-xl border px-5 py-3 text-sm font-bold">Más tarde</button></div></div></div>}
     {hasUsername&&<>
       <section className={section}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
