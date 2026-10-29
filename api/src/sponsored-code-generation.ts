@@ -12,12 +12,18 @@ app.post('/api/v1/superadmin/sponsors/:id/generate-batch',requireSuperAdmin('sup
   const sponsorId=String(c.req.param('id')||'');const sponsor=await c.env.DB.prepare(`SELECT id,name FROM sponsor_tenants WHERE id=? LIMIT 1`).bind(sponsorId).first();if(!sponsor)return c.json({ok:false,error:'Patrocinador no encontrado.'},404)
   const body=await c.req.json().catch(()=>({}));const quantity=Math.floor(Number(body.quantity||0));if(!Number.isFinite(quantity)||quantity<1||quantity>500)return c.json({ok:false,error:'La cantidad debe estar entre 1 y 500.'},422)
   const productType=PRODUCT_TYPES.has(String(body.product_type))?String(body.product_type):'keychain';const batchId=crypto.randomUUID();const batchName=clean(body.batch_name,100)||`Lote ${new Date().toISOString().slice(0,10)}`;const city=clean(body.city,80);const zone=clean(body.zone,80);const notes=clean(body.notes,240)
-  const generated:any[]=[];for(let i=0;i<quantity;i++)generated.push(await buildArtifact(c,productType))
+  // Allocate immutable physical labels for NEW items only; never backfill existing printed stock.
+  const last=await c.env.DB.prepare("SELECT COALESCE(MAX(sequence_number),0) AS last FROM artifact_display_identifiers WHERE product_line='P'").first()
+  const start=Number((last as any)?.last||0)
+  if(start+quantity>32767)return c.json({ok:false,error:'Se agotó la numeración de cuatro caracteres para patrocinados.'},409)
+  const chars='0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const numberLabel=(n:number)=>{let v=n+340,code='';for(let k=0;k<3;k++){code=chars[v%chars.length]+code;v=Math.floor(v/chars.length)}return 'P'+code}
+  const generated:any[]=[];for(let i=0;i<quantity;i++){const a=await buildArtifact(c,productType);generated.push({...a,displayCode:numberLabel(start+i+1),sequenceNumber:start+i+1})}
   const statements:any[]=[c.env.DB.prepare(`INSERT INTO sponsor_batches (id,sponsor_id,name,quantity,city,zone,notes) VALUES (?,?,?,?,?,?,?)`).bind(batchId,sponsorId,batchName,quantity,city,zone,notes)]
-  for(const item of generated){statements.push(c.env.DB.prepare(`INSERT INTO intap_artifacts (id,public_code,product_type,status,created_at,updated_at) VALUES (?,?,?,'available',datetime('now'),datetime('now'))`).bind(item.artifactId,item.publicCode,item.productType));statements.push(c.env.DB.prepare(`INSERT INTO artifact_activation_codes (id,artifact_id,activation_code_hash,status,created_at) VALUES (?,?,?,'active',datetime('now'))`).bind(item.activationId,item.artifactId,item.activationHash));statements.push(c.env.DB.prepare(`INSERT INTO sponsor_artifacts (sponsor_id,artifact_id,batch_id,status,artifact_role) VALUES (?,?,?,'available','beneficiary')`).bind(sponsorId,item.artifactId,batchId))}
+  for(const item of generated){statements.push(c.env.DB.prepare(`INSERT INTO intap_artifacts (id,public_code,product_type,status,created_at,updated_at) VALUES (?,?,?,'available',datetime('now'),datetime('now'))`).bind(item.artifactId,item.publicCode,item.productType));statements.push(c.env.DB.prepare('INSERT INTO artifact_display_identifiers(artifact_id,display_code,product_line,sequence_number) VALUES (?,?,?,?)').bind(item.artifactId,item.displayCode,'P',item.sequenceNumber));statements.push(c.env.DB.prepare(`INSERT INTO artifact_activation_codes (id,artifact_id,activation_code_hash,status,created_at) VALUES (?,?,?,'active',datetime('now'))`).bind(item.activationId,item.artifactId,item.activationHash));statements.push(c.env.DB.prepare(`INSERT INTO sponsor_artifacts (sponsor_id,artifact_id,batch_id,status,artifact_role) VALUES (?,?,?,'available','beneficiary')`).bind(sponsorId,item.artifactId,batchId))}
   await c.env.DB.batch(statements)
   const web=String(c.env.WEB_URL||'https://intaprd.com').replace(/\/$/,'')
-  return c.json({ok:true,data:{batch_id:batchId,batch_name:batchName,quantity,product_type:productType,codes:generated.map(i=>({public_code:i.publicCode,public_url:`${web}/l/${encodeURIComponent(i.publicCode)}`}))}},201)
+  return c.json({ok:true,data:{batch_id:batchId,batch_name:batchName,quantity,product_type:productType,codes:generated.map(i=>({display_code:i.displayCode,public_code:i.publicCode,public_url:`${web}/l/${encodeURIComponent(i.publicCode)}`}))}},201)
 })
 
 app.post('/api/v1/superadmin/sponsors/:id/generate-master',requireSuperAdmin('super_admin'),async(c:any)=>{
