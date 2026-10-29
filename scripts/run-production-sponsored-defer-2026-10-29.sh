@@ -6,11 +6,11 @@ cd "$HOME/Desktop/intap-link-universal-bilingual-audit"
 git fetch github fix/sponsored-activation-defer-loop-2026-10-29
 git switch fix/sponsored-activation-defer-loop-2026-10-29
 git pull --ff-only github fix/sponsored-activation-defer-loop-2026-10-29
-git merge-base --is-ancestor 76de144a HEAD || exit 1
-git diff --check 76de144a..HEAD
+git merge-base --is-ancestor cb12480a HEAD || exit 1
+git diff --check cb12480a..HEAD
 while IFS= read -r p;do case "$p" in
 app/src/components/admin/sponsored/SponsoredActivation.tsx|scripts/test-sponsored-activation-defer-contract.mjs|scripts/run-production-sponsored-defer-2026-10-29.sh) ;;
-*) echo "Cambio fuera de alcance: $p";exit 1;; esac;done < <(git diff --name-only 76de144a..HEAD)
+*) echo "Cambio fuera de alcance: $p";exit 1;; esac;done < <(git diff --name-only cb12480a..HEAD)
 LOG="$HOME/intap-release-logs/kawvo-sponsored-defer-$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$LOG"
 git rev-parse HEAD | tee "$LOG/commit.txt"
