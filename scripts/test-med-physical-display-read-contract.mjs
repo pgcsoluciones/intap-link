@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const api=readFileSync('api/src/medical-access-codes.ts','utf8')
+const admin=readFileSync('app/src/components/admin/SuperAdminKawMed.tsx','utf8')
+const migration=readFileSync('api/migrations/0154_artifact_display_identifiers.sql','utf8')
+assert.match(migration,/CREATE TABLE IF NOT EXISTS medical_display_identifiers/)
+assert.match(api,/LEFT JOIN medical_display_identifiers mdi ON mdi\.medical_code_id=mac\.id/)
+assert.match(api,/SELECT mac\.\*,mdi\.display_code,b\.name AS batch_name/)
+assert.match(api,/COALESCE\(mdi\.display_code/)
+assert.match(admin,/display_code\?:string\|null/)
+assert.match(admin,/>ID físico</)
+assert.match(admin,/row\.display_code\|\|'—'/)
+assert.match(admin,/row\.station_number/)
+assert.match(admin,/row\.code/)
+console.log('MED short physical IDs read-only contract: OK')
