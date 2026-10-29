@@ -16,7 +16,7 @@ export default function KawMedClaim(){
  const[loading,setLoading]=useState(true)
  const[busy,setBusy]=useState(false)
  const[error,setError]=useState('')
- const[step,setStep]=useState<'identity'|'confirm'>('identity')
+ const[step,setStep]=useState<'scan'|'identity'|'confirm'>('scan')
 
  useEffect(()=>{
   let active=true
@@ -67,7 +67,7 @@ export default function KawMedClaim(){
    if(result?.error==='Unauthorized'){signIn();return}
    // If another tab just activated the code, refresh its owner status rather than creating a second profile.
    const check:any=await apiGet('/me/kawmed/claim-check/'+encodeURIComponent(code)).catch(()=>null)
-   if(check?.ok&&check.data?.reason==='already_owned'){setAccount(check.data);setContext((prev:any)=>({...prev,status:'claimed'}));setStep('identity');return}
+   if(check?.ok&&check.data?.reason==='already_owned'){setAccount(check.data);setContext((prev:any)=>({...prev,status:'claimed'}));setStep('scan');return}
    throw Error(result?.error||'No fue posible activar KawMed.')
   }catch(e){setError(e instanceof Error?e.message:'No fue posible activar KawMed.')}
   finally{setBusy(false)}
@@ -79,7 +79,15 @@ export default function KawMedClaim(){
    <header className="text-center"><p className="text-xs font-black uppercase tracking-widest text-cyan-700">KAWMED</p><h1 className="mt-3 text-3xl font-black">Activa tu perfil médico</h1><p className="mt-2 text-sm text-slate-500">Tu enlace se comprueba automáticamente y conserva tu progreso.</p></header>
    <div className="mt-7 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
     {loading?<div role="status" className="py-8 text-center text-sm font-semibold text-slate-600">Verificando tu enlace…</div>:error&&!context?<p role="alert" className="rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">{error}</p>:<>
-     <p className="text-xs font-black uppercase tracking-wide text-cyan-800">{owned?'Recuperar mi KawMed':step==='identity'?'Paso 1 de 2 · Cuenta':'Paso 2 de 2 · Confirmación'}</p>
+     {step==='scan'?<div className="space-y-4">
+      <p className="text-xs font-black uppercase tracking-wide text-cyan-800">Identificación de estación · KawMed</p>
+      <h2 className="text-xl font-black">Estación {context?.display_code||'sin ID físico'}</h2>
+      <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-500">Código NFC</p><p className="mt-1 font-mono text-base font-black tracking-wide">{context?.code||code}</p></div>
+      <p className="text-sm text-slate-600">{context?.status==='available'?'Lista para activar':context?.status==='claimed'?'Estación ya activada':'Estación no disponible para activar'}</p>
+      {context?.sponsored&&<p className="text-sm text-slate-600">Programa KawMed patrocinado: <strong>{context?.sponsor_name}</strong></p>}
+      <button type="button" onClick={()=>setStep('identity')} className="w-full rounded-xl bg-slate-950 px-4 py-4 text-sm font-black text-white">Continuar</button>
+     </div>:<>
+     <p className="text-xs font-black uppercase tracking-wide text-cyan-800">{owned?'Recuperar mi KawMed':step==='identity'?'Cuenta':'Confirmación'}</p>
      {owned?<div className="mt-4 space-y-3">
       <h2 className="text-xl font-black">Este KawMed ya es tuyo</h2>
       <p className="text-sm text-slate-600">Tu información guardada y el perfil en borrador siguen disponibles. Continúa configurándolo o administra tu perfil publicado.</p>
@@ -104,6 +112,7 @@ export default function KawMedClaim(){
       <button type="button" disabled={busy||!canActivate} onClick={()=>void activate()} className="w-full rounded-xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:opacity-40">{busy?'Activando…':'Confirmar y activar KawMed'}</button>
       <button type="button" onClick={()=>setStep('identity')} className="w-full text-sm font-bold text-cyan-800">Volver a la cuenta</button>
      </div>}
+     </>}
      {error&&<p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
     </>}
    </div>
