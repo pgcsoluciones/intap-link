@@ -9,7 +9,7 @@ git pull --ff-only github fix/sponsored-publish-verify-2026-10-29
 git merge-base --is-ancestor fcb4bdcc HEAD
 git diff --check fcb4bdcc..HEAD
 while IFS= read -r p;do case "$p" in
-app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/test-sponsored-publish-readback-contract.mjs|scripts/run-prod-sponsored-publish-verify-2026-10-29.sh) ;;
+app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/test-sponsored-publish-readback-contract.mjs|docs/handoffs/QA_PUBLICACION_PATROCINADA_RECONCILIACION_2026-10-29.md|scripts/run-prod-sponsored-publish-verify-2026-10-29.sh) ;;
 *) echo "Fuera de alcance: $p";exit 1;;esac;done < <(git diff --name-only fcb4bdcc..HEAD)
 node scripts/test-sponsored-publish-readback-contract.mjs
 node scripts/test-kawvo-publication-regression-contract.mjs
