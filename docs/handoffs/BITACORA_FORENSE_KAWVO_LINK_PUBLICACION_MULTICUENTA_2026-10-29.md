@@ -1,6 +1,6 @@
 # BITÁCORA MAESTRA DE CONTINUIDAD · KAWVO LINK / KAWMED / PATROCINADO / FREE
-**Fecha:** 29 de octubre de 2026 · **Ámbito:** investigación de regresiones, publicación, vista previa, multicuenta y recordatorios.  
-**Repositorio privado:** `pgcsoluciones/intap-link` · **rama de trabajo:** `feature/kawvo-sponsor-commercial-controls-2026-10-27` · **PR:** #126.  
+**Fecha:** 29 de octubre de 2026 · **Ámbito:** investigación de regresiones, publicación, vista previa, multicuenta y recordatorios.
+**Repositorio privado:** `pgcsoluciones/intap-link` · **rama de trabajo:** `feature/kawvo-sponsor-commercial-controls-2026-10-27` · **PR:** #126.
 **Regla:** esta bitácora **NO** certifica que las correcciones estén publicadas ni autoriza otro deploy productivo.
 
 ## 1. Contexto de Producción: lo comprobado
