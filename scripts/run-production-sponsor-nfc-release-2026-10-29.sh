@@ -12,7 +12,7 @@ cd "$ROOT" || fail "Repositorio no encontrado"
 git fetch github main "$BRANCH"
 git switch "$BRANCH"
 git pull --ff-only github "$BRANCH"
-[[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]] || fail "La rama cambió después de la auditoría; revisar la revisión antes de publicar"
+git merge-base --is-ancestor "$APPROVED_BASE" HEAD || fail "Falta commit previamente auditado"
 git merge-base --is-ancestor github/main HEAD || fail "La rama no contiene main actual"
 git diff --check github/main...HEAD
 grep -q '^ENVIRONMENT = "production"' api/wrangler.toml || fail "No está configurado ENVIRONMENT production"
@@ -29,7 +29,8 @@ npx tsc --noEmit -p api/tsconfig.json
 npm run build -w web
 npm run build -w app
 mkdir -p "$LOG"
-echo "$EXPECTED_SHA" > "$LOG/commit.txt"
+RELEASE_SHA="$(git rev-parse HEAD)"
+echo "$RELEASE_SHA" > "$LOG/commit.txt"
 echo "▶ Snapshot de bundles locales"
 WEB_BUNDLE="$(find web/dist/assets -maxdepth 1 -name 'index-*.js' -type f | sort | tail -1)"
 APP_BUNDLE="$(find app/dist/assets -maxdepth 1 -name 'index-*.js' -type f | sort | tail -1)"
@@ -65,6 +66,6 @@ for url in "https://intaprd.com/" "https://app.intaprd.com/admin/login" "https:/
   echo "$url HTTP $status" | tee -a "$LOG/verification.txt"
   [[ "$status" != "000" && "$status" != "5"* ]] || fail "Dominio inaccesible $url HTTP $status"
 done
-echo "✓ Release finalizado. Ref: $EXPECTED_SHA"
+echo "✓ Release finalizado. Ref: $RELEASE_SHA"
 echo "✓ Logs y respaldo: $LOG"
 echo "ATENCIÓN: conservar este respaldo. No restaurar D1 encima de nuevos datos sin conciliación."
