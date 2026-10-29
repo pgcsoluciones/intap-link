@@ -8,7 +8,7 @@ assert.match(api,/LEFT JOIN medical_display_identifiers mdi ON mdi\.medical_code
 assert.match(api,/SELECT mac\.\*,mdi\.display_code,b\.name AS batch_name/)
 assert.match(api,/COALESCE\(mdi\.display_code/)
 assert.match(admin,/display_code\?:string\|null/)
-assert.match(admin,/>ID físico</)
+assert.match(admin,/>Estación</)
 assert.match(admin,/row\.display_code\|\|'—'/)
 assert.match(admin,/row\.station_number/)
 assert.match(admin,/row\.code/)
