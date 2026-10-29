@@ -243,3 +243,51 @@ npx tsc --noEmit -p api/tsconfig.json
 npm run build:preview -w app
 ```
 **No hay instrucciones de despliegue productivo aquí deliberadamente.** Primero resolver P0, aislar Preview y obtener aceptación técnica real.
+
+
+## 10. ACTUALIZACIÓN FINAL DEL HANDOFF · Solicitud del 29/oct, 03:53–04:00 RD
+
+### Respuesta inequívoca: ¿se subieron al repositorio las correcciones posteriores al despliegue?
+**Sí.** Los cambios de UX de patrocinado, KawMed y Free ya aparecen en la rama remota de GitHub, junto con la prueba `scripts/test-kawvo-publication-regression-contract.mjs` y otros informes forenses. **No equivalen a despliegue productivo**. En la última comparación consultada en esta conversación, la rama tenía **102 commits de ventaja sobre `main` y ninguno por detrás**, y la lista de archivos cambiados incluía las tres pantallas. Ese contador es variable: no fijarlo como valor permanente.
+
+### Documento rector y documentos complementarios existentes en el repo
+1. Este archivo `docs/handoffs/BITACORA_MAESTRA_CHAT_SPONSOR_PRODUCCION_REGRESIONES_2026-10-29.md`: inventario del chat, cronología y ejecución histórica.
+2. `docs/handoffs/BITACORA_FORENSE_KAWVO_MULTICUENTA_PUBLICACION_2026-10-29.md`: hipótesis fundamentadas, rutas y pendientes de reproducción.
+3. `docs/handoffs/BITACORA_FORENSE_KAWVO_LINK_PUBLICACION_MULTICUENTA_2026-10-29.md`: informe forense complementario; contrastar antes de duplicar arreglos.
+4. `docs/handoffs/KAWVO_RELEASE_GATE_SPONSOR_NFC_2026-10-28.md`: checklist previo a release, precauciones de numeración y rollback.
+5. `docs/CLOUDFLARE_PAGES_ARCHITECTURE.md`: arquitectura vinculante para las rutas de Pages y Worker.
+6. `scripts/test-kawvo-publication-regression-contract.mjs`: **prueba contractual estática**, NO E2E auténtico con sesión ni prueba de todos los casos indicados por el usuario.
+
+### Cambios post-Producción registrados en el repo (NO afirmarlos resueltos en vivo)
+- `app/src/components/admin/sponsored/SponsoredDashboard.tsx`: normaliza con `trim()` la comprobación del recordatorio; la navegación detecta también `selectedProfileId` explícito y maneja error de detección multicuenta; el aviso diferencia requisitos obligatorios de foto/portada recomendadas. **Limitación:** aún hace falta demostrar con respuesta autenticada del backend la transición publicado → borrador → publicado y el ámbito real de la cuenta activa.
+- `app/src/components/admin/medical/MedicalDashboard.tsx`: añade aviso «Tu perfil médico está listo para publicar», con «Revisar publicación»/«Más tarde»; convierte la vista previa de borrador de un panel ubicado al final de la página a una superposición `fixed`, visible sin publicar. No interpretar la existencia de JSX como confirmación de flujo E2E.
+- `app/src/components/admin/free/FreeDashboard.tsx`: la rama registra modificaciones posteriores al release para aviso de perfil Free listo para publicar. La condición deberá seguir la preparación real guardada en el backend y no repetirse hasta cerrar una sesión.
+- `scripts/test-kawvo-publication-regression-contract.mjs`: contiene aserciones sobre texto, avisos y guardias de cuenta, pero no reproduce pulsaciones en navegador ni cambios reales en D1.
+- Registro de commits post-Producción vinculados en esta conversación: `edefc90d` patrocinado y `6d10e5b1` KawMed. Hay commits adicionales en la rama que se deben inspeccionar con `git log`; no declarar esos commits desplegados.
+
+### P0 — PASO PRÓXIMO OBLIGATORIO (pedido explícito del usuario)
+**Cerrar la auditoría forense y las regresiones de publicación y multicuenta antes de cualquier otro despliegue productivo.**
+
+Criterios de aceptación, por separado para cada categoría:
+1. **Patrocinado beneficiario**: iniciar con sesión propia y también con cuenta patrocinada seleccionada desde administrador; el `profile_id` resuelto debe mantenerse idéntico al de editar/guardar/publicar/despublicar. Demostrar transición `draft → published → draft → published`, con respuesta real API y persistencia; cuando falle, registrar código HTTP y campo `missing`. No tocar el perfil de otra cuenta.
+2. **Patrocinado master**: comprobar que barra/menú y roles funcionan sin mezclar datos del sponsor ni mostrar opciones destinadas al beneficiario. El aviso no puede afirmar «completo» si faltan requisitos realmente obligatorios.
+3. **KawMed independiente**: comprobar que aparece el recordatorio al guardar nombre, especialidad y slug; que «Más tarde» conserva borrador y que la vista previa privada funciona sin publicar. Verificar botón «Vista previa» junto a «Cambiar cuenta» en multicuenta. Alinear textos de centros y horarios en todos los puntos visibles, incluidos plural/singular correctos.
+4. **Free**: completar los requisitos verdaderos (incluida identidad confirmada, fotografía real y portada según reglas existentes), probar aviso de publicación, «Más tarde», publicación y despublicación; no confundir delegación Demo/Team con cuenta Free normal.
+5. **Notificaciones patrocinadas**: `Notificaciones · Próximamente` es placeholder documentado, no funcionalidad completada. Investigar implementación aprobada histórica antes de sustituir o declarar regresión.
+6. **Reconciliación de ramas**: comparar PRs y bitácoras de Preview históricamente aprobadas con `main`, HEAD del PR #126, commit efectivamente desplegado `0994d9e5` y las dos Pages productivas; elaborar matriz «aprobado / integrado en rama / publicado / comprobado en UI» para cada módulo. No asumir que HTTP 200 prueba comportamiento de publicación.
+7. **Cierre**: un release exclusivo de hotfix de regresiones, con respaldo verificado, build/test, Preview correcto y aceptación funcional. No volver a correr migraciones 0153/0154 salvo investigación que lo justifique; ya se aplicaron a D1 Producción.
+
+### Evidencia temporal de Producción que debe preservarse
+- Auditoría D1 previo al release: `intap_artifacts=440`, `sponsor_artifacts=30`, `medical_access_codes=8` (no sumar como entidades distintas sin reconciliar).
+- Backup anterior a la modificación: `~/intap-release-logs/kawvo-production-20261029T050318Z/intap_db_before_release.sql`. Nunca subir ese SQL con datos personales a GitHub.
+- Migración `0153` ejecutó 6 consultas y `0154` 3 consultas; ambos comandos completaron en Producción.
+- Worker versión productiva `7708f331-a575-40eb-82a7-a491a5a25e22`; web `https://a85441d9.intap-link.pages.dev`; app `https://7c8a5eab.intap-web2.pages.dev`.
+- Hashes de bundles publicados verificados contra locales: Web `index-DLC-1pX1.js`, App `index-BQfvMZ-s.js`. La ruta raíz `api.intaprd.com/` devolvió 503 en el script y lo detuvo después de publicar todo; los **endpoints verdaderos `/api/health` devolvieron HTTP 200 y `status=healthy`** en los tres dominios. No confundir `/api/v1/health` (404) con ruta válida.
+- Las vistas de Perfil/Free/Medical que fallan son reportes de usuario posteriores al despliegue; ninguna sonda de salud certifica que esas operaciones funcionen.
+
+### Instrucciones de seguridad del próximo programador
+- Trabajar en PR #126 o subrama explícitamente segregada; registrar cambios antes de continuar.
+- **No fusionar ni desplegar automáticamente** por petición antigua: la prioridad actual es terminar las regresiones y presentar evidencia, no repetir publicación.
+- Antes de modificar el backend de scopes, inspeccionar `api/src/sponsored-profile-scope.ts`, `api/src/sponsored-profiles.ts`, `api/src/index.ts`, `app/src/components/admin/IntapcardAccountSelector.tsx`, `app/src/lib/api.ts` y los encabezados de cuenta activa.
+- Para la UI revisar `SponsoredDashboard.tsx`, `MedicalDashboard.tsx`, `FreeDashboard.tsx`, `SponsorDashboard.tsx` y `SponsorCommercialSellers.tsx`; nunca hacer edición a ciegas de textos que expresan reglas backend diferentes.
+- Registrar cualquier anomalía como **confirmada**, **hipótesis** o **pendiente de QA**; separar siempre commit GitHub, prueba CI, Preview desplegado, Producción desplegada y aceptación humana.
