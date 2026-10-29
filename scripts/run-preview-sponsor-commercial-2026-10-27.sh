@@ -19,13 +19,14 @@ git diff --check github/main...HEAD
 while IFS= read -r file;do
  [[ -z "$file" ]]&&continue
  case "$file" in
-  docs/handoffs/KAWVO_RELEASE_GATE_SPONSOR_NFC_2026-10-28.md|api/migrations/0153_sponsor_sales_representatives.sql|api/migrations/0154_artifact_display_identifiers.sql|api/src/sponsored-code-generation.ts|api/src/medical-access-codes.ts|api/src/index.ts|api/src/scan-status.ts|api/src/sponsored-profiles.ts|api/src/preview-free-entry.ts|api/src/sponsored-scan.ts|api/src/sponsor-commercial-sales.ts|app/src/components/admin/SuperAdminSponsors.tsx|web/src/components/ArtifactLinkResolver.tsx|app/src/components/admin/sponsored/SponsorDashboard.tsx|app/src/components/admin/sponsored/SponsorCommercialSellers.tsx|app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/run-preview-sponsor-commercial-2026-10-27.sh|scripts/test-nfc-physical-identifier-release.mjs|scripts/test-sponsor-commercial-contract.mjs|scripts/test-intapcard-active-account-contract.mjs) ;;
+  docs/handoffs/KAWVO_RELEASE_GATE_SPONSOR_NFC_2026-10-28.md|api/migrations/0153_sponsor_sales_representatives.sql|api/migrations/0154_artifact_display_identifiers.sql|api/src/sponsored-code-generation.ts|api/src/medical-access-codes.ts|api/src/index.ts|api/src/scan-status.ts|api/src/sponsored-profiles.ts|api/src/preview-free-entry.ts|api/src/sponsored-scan.ts|api/src/sponsor-commercial-sales.ts|app/src/components/admin/SuperAdminSponsors.tsx|web/src/components/ArtifactLinkResolver.tsx|app/src/components/admin/sponsored/SponsorDashboard.tsx|app/src/components/admin/sponsored/SponsorCommercialSellers.tsx|app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/run-preview-sponsor-commercial-2026-10-27.sh|scripts/test-kawvo-publication-regression-contract.mjs|scripts/test-nfc-physical-identifier-release.mjs|scripts/test-sponsor-commercial-contract.mjs|scripts/test-intapcard-active-account-contract.mjs) ;;
   *) fail "Archivo fuera de alcance: $file";;
  esac
 done < <(git diff --name-only github/main...HEAD)
 echo "▶ Pruebas y build"
 node scripts/test-sponsor-commercial-contract.mjs
 node scripts/test-nfc-physical-identifier-release.mjs
+node scripts/test-kawvo-publication-regression-contract.mjs
 node scripts/test-intapcard-active-account-contract.mjs
 node scripts/test-intapcard-kawmed-integrated-contract.mjs
 npx tsc --noEmit -p api/tsconfig.json
