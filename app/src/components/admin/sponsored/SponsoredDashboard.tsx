@@ -154,7 +154,14 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     const route=wasPublished?`/me/sponsored-profile/unpublish${profileScopeQuery}`:`/me/sponsored-profile/publish${profileScopeQuery}`
     const json:any=await apiPost(route,{})
     if(!json?.ok)throw new Error(Array.isArray(json?.missing)&&json.missing.length?`Antes de publicar completa: ${json.missing.join(', ')}.`:json?.error||'No pudimos actualizar el estado.')
-    setMessage(wasPublished?'Perfil despublicado.':'Perfil guardado y publicado.')
+    // Confirmar estado persistido del mismo perfil; no anunciar éxito por un POST solamente.
+    const verified:any=await apiGet(`/me/sponsored-profile${profileScopeQuery}`)
+    const expected=wasPublished?'draft':'published'
+    if(!verified?.ok||!verified?.data||String(verified.data.id)!==String(data?.id)||verified.data.status!==expected){
+      throw new Error('No se confirmó el estado de publicación del perfil seleccionado. Comprueba la cuenta activa antes de intentar otra vez.')
+    }
+    setData(verified.data)
+    setMessage(wasPublished?'Perfil despublicado y confirmado.':'Perfil publicado y confirmado.')
     await load();setFeedbackTarget('actions')
   }catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.');await load().catch(()=>undefined)}finally{setSaving(false)}}
   async function copy(){if(!publicUrl)return;beginFeedback('actions');await navigator.clipboard.writeText(publicUrl);setMessage('Enlace copiado.')}
