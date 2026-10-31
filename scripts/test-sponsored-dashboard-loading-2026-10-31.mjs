@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+const app=readFileSync('app/src/components/admin/sponsored/SponsoredDashboard.tsx','utf8')
+assert.match(app,/async function load\(\{background=false\}:\{background\?:boolean\}=\{\}\)/)
+assert.match(app,/if\(!background\)setLoading\(true\)/)
+assert.match(app,/finally\{if\(!background\)setLoading\(false\)\}/)
+assert.match(app,/useEffect\(\(\)=>\{void load\(\)\},\[\]\)/)
+assert.match(app,/Cargando presentación…/)
+assert.match(app,/role="status" aria-live="polite"/)
+assert.match(app,/await load\(\{background:true\}\);setFeedbackTarget\('actions'\)/)
+assert.match(app,/await load\(\{background:true\}\)\.catch\(\(\)=>undefined\)/)
+assert.doesNotMatch(app,/await load\(\);setFeedbackTarget\('actions'\)/)
+assert.match(app,/const verified:any=await apiGet\(`\/me\/sponsored-profile\$\{profileScopeQuery\}`\)/)
+assert.match(app,/verified\.data\.status!==expected/)
+console.log('Sponsored dashboard initial loading and background refresh: OK')
