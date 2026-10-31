@@ -61,7 +61,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   function beginFeedback(target:FeedbackTarget){setFeedbackTarget(target);setError('');setMessage('')}
   const feedback=(target:FeedbackTarget)=>feedbackTarget===target&&(message||error)?<p className={`mt-2 rounded-xl px-3 py-2 text-sm font-semibold ${error?'bg-rose-50 text-rose-700':'bg-emerald-50 text-emerald-700'}`}>{error||message}</p>:null
 
-  async function load(){setLoading(true);try{const json:any=await apiGet(`/me/sponsored-profile${profileScopeQuery}`);if(!json?.ok)throw new Error(json?.error||'No pudimos cargar tu perfil.');setData(json.data);if(json.data){setForm((current:any)=>({...current,...json.data,quote_button_visible:json.data.quote_button_visible!==false,appointment_button_visible:json.data.appointment_button_visible===true,schedule:Array.isArray(json.data.schedule)&&json.data.schedule.length?json.data.schedule:emptySchedule,gallery:Array.isArray(json.data.gallery)?json.data.gallery:[]}));setPreviewQuery(String(json.data.address||''));setSelectedLocation(Boolean(json.data.map_url));try{const agenda:any=await apiGet(`/me/sponsored-profile/appointments${profileScopeQuery}`);setAgendaEnabled(Boolean(agenda?.ok&&agenda.data?.settings?.enabled))}catch{setAgendaEnabled(false)}}}catch(e){setFeedbackTarget('actions');setError(e instanceof Error?e.message:'No pudimos cargar tu perfil.')}finally{setLoading(false)}}
+  async function load({background=false}:{background?:boolean}={}){if(!background)setLoading(true);try{const json:any=await apiGet(`/me/sponsored-profile${profileScopeQuery}`);if(!json?.ok)throw new Error(json?.error||'No pudimos cargar tu perfil.');setData(json.data);if(json.data){setForm((current:any)=>({...current,...json.data,quote_button_visible:json.data.quote_button_visible!==false,appointment_button_visible:json.data.appointment_button_visible===true,schedule:Array.isArray(json.data.schedule)&&json.data.schedule.length?json.data.schedule:emptySchedule,gallery:Array.isArray(json.data.gallery)?json.data.gallery:[]}));setPreviewQuery(String(json.data.address||''));setSelectedLocation(Boolean(json.data.map_url));try{const agenda:any=await apiGet(`/me/sponsored-profile/appointments${profileScopeQuery}`);setAgendaEnabled(Boolean(agenda?.ok&&agenda.data?.settings?.enabled))}catch{setAgendaEnabled(false)}}}catch(e){setFeedbackTarget('actions');setError(e instanceof Error?e.message:'No pudimos cargar tu perfil.')}finally{if(!background)setLoading(false)}}
   useEffect(()=>{void load()},[])
 
   const publicUrl=useMemo(()=>form.username?`${publicOrigin()}/p/${form.username}`:'',[form.username])
@@ -143,7 +143,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   const agendaManageUrl=isMaster?'/admin/sponsored/agenda?scope=master':selectedProfileId?'/admin/sponsored/agenda?profile_id='+encodeURIComponent(selectedProfileId):'/admin/sponsored/agenda'
 
   function profilePayload(){return {business_name:form.business_name,specialization:form.specialization,what_we_do:form.what_we_do,avatar_url:form.avatar_url,hero_url:form.hero_url,map_url:form.map_url,show_avatar:form.show_avatar,phone:normalizePhone(form.phone||''),whatsapp:normalizePhone(form.whatsapp||''),email:form.email,instagram:form.instagram,address:form.address,schedule:form.schedule,gallery:form.gallery,gallery_title:form.gallery_title,palette_id:form.palette_id,quote_button_visible:form.quote_button_visible!==false,appointment_button_visible:form.appointment_button_visible===true}}
-  async function saveAll(){beginFeedback('actions');setSaving(true);try{const json:any=await apiPatch(`/me/sponsored-profile${profileScopeQuery}`,profilePayload());if(!json?.ok)throw new Error(json?.error||'No pudimos guardar los cambios.');setMessage('Cambios guardados.');await load();setFeedbackTarget('actions')}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar los cambios.')}finally{setSaving(false)}}
+  async function saveAll(){beginFeedback('actions');setSaving(true);try{const json:any=await apiPatch(`/me/sponsored-profile${profileScopeQuery}`,profilePayload());if(!json?.ok)throw new Error(json?.error||'No pudimos guardar los cambios.');setMessage('Cambios guardados.');await load({background:true});setFeedbackTarget('actions')}catch(e){setError(e instanceof Error?e.message:'No pudimos guardar los cambios.')}finally{setSaving(false)}}
   async function togglePublish(){beginFeedback('actions');setSaving(true);try{
     const wasPublished=data?.status==='published'
     if(!wasPublished){
@@ -162,12 +162,12 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     }
     setData(verified.data)
     setMessage(wasPublished?'Perfil despublicado y confirmado.':'Perfil publicado y confirmado.')
-    await load();setFeedbackTarget('actions')
-  }catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.');await load().catch(()=>undefined)}finally{setSaving(false)}}
+    await load({background:true});setFeedbackTarget('actions')
+  }catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar el estado.');await load({background:true}).catch(()=>undefined)}finally{setSaving(false)}}
   async function copy(){if(!publicUrl)return;beginFeedback('actions');await navigator.clipboard.writeText(publicUrl);setMessage('Enlace copiado.')}
   async function downloadQr(){if(!publicUrl)return;beginFeedback('actions');try{const QRCode=await import('qrcode');const dataUrl=await QRCode.toDataURL(publicUrl,{width:1400,margin:3,errorCorrectionLevel:'H'});const a=document.createElement('a');a.href=dataUrl;a.download=`${form.username}-qr.png`;a.click();setMessage('QR generado.')}catch{setError('No pudimos generar el QR.')}}
 
-  if(loading)return<main className="min-h-screen bg-[#f7f9fc]"/>
+  if(loading)return<main className="min-h-screen bg-[#f7f9fc] px-5 py-10 font-['Inter'] text-slate-950"><div role="status" aria-live="polite" className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6 text-center"><p className="text-sm font-semibold text-slate-600">Cargando presentación…</p></div></main>
   if(!data)return<main className="min-h-screen bg-[#f7f9fc] px-5 py-10 font-['Inter']"><div className="mx-auto max-w-xl rounded-3xl border border-slate-200 bg-white p-6"><h1 className="text-2xl font-black">Perfil patrocinado</h1><p className="mt-2 text-slate-500">{error||'No tienes un perfil patrocinado activo.'}</p></div></main>
 
   const field='mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold outline-none focus:border-cyan-400'
