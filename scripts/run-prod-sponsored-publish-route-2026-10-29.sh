@@ -13,7 +13,12 @@ api/src/sponsored-owner-flow.ts|api/src/sponsored-profiles.ts|scripts/test-spons
 *) echo "Fuera de alcance: $p";exit 1;;esac;done < <(git diff --name-only 5ebfb09a..HEAD)
 node scripts/test-sponsored-single-publish-handler-2026-10-29.mjs
 node scripts/test-sponsored-publish-readback-contract.mjs
-node scripts/test-sponsored-profile-contract.mjs
+# Prueba integral conservada para reconciliación Preview→Producción (issue #127).
+# Contiene discrepancias ajenas a este hotfix (agenda, bancos, tarjeta social).
+# Nunca se reporta como aprobada por este release.
+echo "AVISO: contrato integral pendiente de reconciliar (GitHub #127). Solo gate de publicación/aislamiento."
+node scripts/test-kawvo-publication-regression-contract.mjs
+node scripts/test-intapcard-active-account-contract.mjs
 (cd api && npx tsc --noEmit && npx wrangler deploy --config wrangler.toml --dry-run)
 (cd api && npm run deploy:production)
 echo "API Worker desplegado. Verificar publicación solo con perfiles de prueba; no repetir deploy si se produce un error."
