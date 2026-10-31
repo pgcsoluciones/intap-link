@@ -10,7 +10,7 @@ git merge-base --is-ancestor 71005035 HEAD
 git diff --check 71005035..HEAD
 while IFS= read -r p; do
   case "$p" in
-    app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/test-sponsored-master-toolbar-2026-10-31.mjs|scripts/run-prod-sponsored-master-toolbar-2026-10-31.sh) ;;
+    app/src/components/admin/sponsored/SponsoredDashboard.tsx|scripts/test-sponsored-master-toolbar-2026-10-31.mjs|scripts/test-kawvo-publication-regression-contract.mjs|scripts/run-prod-sponsored-master-toolbar-2026-10-31.sh) ;;
     *) echo "Fuera de alcance: $p"; exit 1 ;;
   esac
 done < <(git diff --name-only 71005035..HEAD)
