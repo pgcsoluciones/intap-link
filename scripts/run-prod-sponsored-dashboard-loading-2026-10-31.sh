@@ -19,7 +19,7 @@ node scripts/test-sponsored-publish-readback-contract.mjs
 node scripts/test-kawvo-publication-regression-contract.mjs
 node scripts/test-intapcard-active-account-contract.mjs
 npm run build -w app
-asset="$(grep -Eo '/assets/index-[A-Za-z0-9_-]+\\.js' app/dist/index.html | head -1)"
+asset="$(grep -Eo '/assets/index-[A-Za-z0-9_-]+\.js' app/dist/index.html | head -1)"
 [[ -n "$asset" ]] || exit 1
 expected="$(shasum -a 256 "app/dist$asset" | awk '{print $1}')"
 npx wrangler pages deploy app/dist --project-name intap-web2 --branch main
