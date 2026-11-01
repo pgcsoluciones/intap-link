@@ -77,6 +77,7 @@ app.get('/api/v1/superadmin/sponsors/:id/artifacts',requireSuperAdmin('viewer'),
     b.name AS batch_name,b.city,b.zone
     FROM sponsor_artifacts sa
     JOIN intap_artifacts a ON a.id=sa.artifact_id
+    LEFT JOIN artifact_display_identifiers di ON di.artifact_id=a.id
     LEFT JOIN sponsored_profiles sp ON sp.id=sa.sponsored_profile_id
     LEFT JOIN users u ON u.id=COALESCE(sp.user_id,sa.beneficiary_user_id)
     LEFT JOIN sponsor_batches b ON b.id=sa.batch_id
