@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 
 type Links={contact_url:string;contact_label:string;resource_url:string;resource_label:string}
 type Props={username:string;apiOrigin:string}
@@ -42,4 +42,4 @@ export default function SponsoredCommercialOwnerBar({username,apiOrigin}:Props){
  </nav>
 }
 
-const linkStyle:React.CSSProperties={display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:999,padding:'9px 15px',background:'#fff',border:'1px solid #67e8f9',fontSize:12,fontWeight:800,color:'#155e75',textDecoration:'none',maxWidth:'100%'}
+const linkStyle:CSSProperties={display:'inline-flex',alignItems:'center',justifyContent:'center',borderRadius:999,padding:'9px 15px',background:'#fff',border:'1px solid #67e8f9',fontSize:12,fontWeight:800,color:'#155e75',textDecoration:'none',maxWidth:'100%'}
