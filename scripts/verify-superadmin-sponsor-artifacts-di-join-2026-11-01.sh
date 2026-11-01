@@ -9,7 +9,7 @@ git merge-base --is-ancestor 951d9976 HEAD
 git diff --check 951d9976..HEAD
 while IFS= read -r p; do
   case "$p" in
-    api/src/sponsored-profiles.ts|scripts/test-superadmin-sponsor-artifacts-di-join-2026-11-01.mjs|scripts/test-sponsored-profile-contract.mjs|scripts/verify-superadmin-sponsor-artifacts-di-join-2026-11-01.sh) ;;
+    api/src/sponsored-profiles.ts|scripts/test-superadmin-sponsor-artifacts-di-join-2026-11-01.mjs|scripts/verify-superadmin-sponsor-artifacts-di-join-2026-11-01.sh) ;;
     *) echo "Archivo fuera del alcance: $p"; exit 1 ;;
   esac
 done < <(git diff --name-only 951d9976..HEAD)
@@ -41,10 +41,36 @@ LEFT JOIN sponsor_batches b ON b.id=sa.batch_id
 WHERE 1=0
 SQL
 )
+# Cloudflare D1 has intermittently returned HTTP 7403 to the same authenticated
+# account despite successful SELECT 1 queries. Retry ONLY this transient code;
+# schema errors and all other errors fail closed immediately.
+d1_select_with_retry(){
+  local db="$1" config="$2" statement="$3" label="$4"
+  local attempt=1 output=''
+  while [ "$attempt" -le 3 ]; do
+    if output=$(cd api && npx --no-install wrangler d1 execute "$db" --remote --config "$config" --command "$statement" 2>&1); then
+      printf '%s: consulta de esquema OK (intento %s).\n' "$label" "$attempt"
+      return 0
+    fi
+    if [[ "$output" != *"[code: 7403]"* ]]; then
+      echo "$label: fallo distinto de 7403; verificación detenida." >&2
+      printf '%s\n' "$output" >&2
+      return 1
+    fi
+    if [ "$attempt" -eq 3 ]; then
+      echo "$label: Cloudflare 7403 persiste tras 3 intentos; NO desplegar." >&2
+      return 1
+    fi
+    echo "$label: Cloudflare 7403, reintento controlado $attempt/3..."
+    sleep "$attempt"
+    attempt=$((attempt+1))
+  done
+  return 1
+}
 for entry in "intap_db_preview|wrangler.preview.toml|PREVIEW" "intap_db|wrangler.toml|PRODUCCION"; do
   IFS='|' read -r db config label <<< "$entry"
   printf '\n===== %s: validar SQL sin leer filas =====\n' "$label"
-  (cd api && npx --no-install wrangler d1 execute "$db" --remote --config "$config" --command "$SQL_COUNT")
-  (cd api && npx --no-install wrangler d1 execute "$db" --remote --config "$config" --command "$SQL_DETAIL")
+  d1_select_with_retry "$db" "$config" "$SQL_COUNT" "$label/COUNT"
+  d1_select_with_retry "$db" "$config" "$SQL_DETAIL" "$label/DETALLE"
 done
 echo "VALIDACION COMPLETA. No se desplegó ni se modificaron datos."
