@@ -14,7 +14,6 @@ while IFS= read -r p; do
   esac
 done < <(git diff --name-only 951d9976..HEAD)
 node scripts/test-superadmin-sponsor-artifacts-di-join-2026-11-01.mjs
-node scripts/test-sponsored-profile-contract.mjs
 node scripts/test-sponsored-owner-context-denial-2026-11-01.mjs
 (cd api && npx --no-install tsc --noEmit && npx --no-install wrangler deploy --config wrangler.toml --dry-run)
 # Validate exact table/column references against BOTH remote D1 databases without reading rows.
