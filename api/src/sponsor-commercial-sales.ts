@@ -141,6 +141,10 @@ app.get('/api/v1/me/sponsored-commercial-public-context',async(c:any)=>{
  const profile:any=await c.env.DB.prepare("SELECT id,user_id,username,sponsor_id,profile_role,artifact_id FROM sponsored_profiles WHERE lower(username)=? AND user_id=? LIMIT 1").bind(username,userId).first()
  if(!profile)return c.json({ok:false,error:'Perfil no autorizado.'},403)
  const master=String(profile.profile_role||'beneficiary')==='sponsor_owner'
+ if(master){
+  const member=await c.env.DB.prepare("SELECT 1 FROM sponsor_members sm JOIN sponsor_tenants st ON st.id=sm.sponsor_id WHERE sm.sponsor_id=? AND sm.user_id=? AND sm.status='active' AND st.is_active=1 AND sm.role IN ('owner','admin') LIMIT 1").bind(String(profile.sponsor_id||''),userId).first()
+  if(!member)return c.json({ok:false,error:'Patrocinador no autorizado.'},403)
+ }
  if(await sponsoredMultiProfileAccess(c,userId)){
   const selected=await readIntapSelection(c)
   const allowed=selected&&(master
