@@ -328,6 +328,7 @@ has(appointmentModal,'AppointmentRequestModal','adaptador patrocinado reutiliza 
 has(appointmentModal,"/appointments'",'adaptador patrocinado apunta al endpoint de agenda del perfil')
 has(appointmentRequest,'Nombre *','agenda solicita nombre')
 has(appointmentRequest,'Teléfono / WhatsApp *','agenda solicita teléfono / WhatsApp obligatorio')
+has(appointmentRequest,'form.phone.trim()','agenda requiere el teléfono en la validación de envío')
 has(appointmentRequest,'Correo','agenda permite correo opcional')
 has(appointmentRequest,'type="date"','agenda usa selector de fecha')
 has(appointmentRequest,'Hora disponible *','agenda solo ofrece horas disponibles')
