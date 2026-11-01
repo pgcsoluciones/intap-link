@@ -228,11 +228,15 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
   const role=String((profile as any).profile_role||'beneficiary')
   const isMaster=role==='sponsor_owner'
   if(await sponsoredMultiProfileAccess(c,userId)){
+    // Distinguish missing selection, wrong account category and wrong account ID
+    // without exposing IDs, tokens or private appointment data. Never auto-select.
     const active=await readIntapSelection(c)
-    if(!active||(isMaster
-      ?active.kind!=='sponsor'||active.id!==String((profile as any).sponsor_id||'')
-      :active.kind!=='sponsored'||active.id!==subjectId))
-      return c.json({ok:false,error:'Este perfil no es la cuenta activa. Selecciónala desde Multicuenta.'},403)
+    const ownerSelectionError='Este perfil no es la cuenta activa. Selecciónala desde Multicuenta.'
+    if(!active)return c.json({ok:false,error:ownerSelectionError,code:'owner_selection_missing'},403)
+    const requiredKind=isMaster?'sponsor':'sponsored'
+    if(active.kind!==requiredKind)return c.json({ok:false,error:ownerSelectionError,code:'owner_account_category_mismatch'},403)
+    const requiredId=isMaster?String((profile as any).sponsor_id||''):subjectId
+    if(active.id!==requiredId)return c.json({ok:false,error:ownerSelectionError,code:'owner_account_identity_mismatch'},403)
   }
   const settings=await getAppointmentSettings(c.env.DB,'sponsored',subjectId)
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
