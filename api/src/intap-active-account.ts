@@ -8,6 +8,9 @@ import { cookieNames } from './lib/cookies'
 export type IntapAccountKind='medical'|'medical_master'|'sponsor'|'sponsored'|'free'|'paid'|'trial'
 export type IntapSelection={kind:IntapAccountKind;id:string;tabToken?:string}
 const KEY='kawvo_intap_active_account_v1'
+// Login sessions and their cookies expire after 30 days. The account selection
+// remains bound to the login-session fingerprint and is never chosen implicitly.
+const LOGIN_SESSION_MAX_AGE_SECONDS=30*24*60*60
 const validKinds=new Set<string>(['medical','medical_master','sponsor','sponsored','free','paid','trial'])
 function cookieValue(header:string,name:string):string{
   const match=header.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))
@@ -35,7 +38,7 @@ export async function setIntapSelection(c:any,selection:IntapSelection):Promise<
   // Rotates on every explicit choice, even when reselecting the same account.
   // A form left in another tab holds the previous token and cannot write.
   const tabToken=crypto.randomUUID().replace(/-/g,'')
-  c.header('Set-Cookie',KEY+'='+encodeURIComponent(selection.kind+':'+selection.id+':'+fingerprint+':'+tabToken)+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200',{append:true})
+  c.header('Set-Cookie',KEY+'='+encodeURIComponent(selection.kind+':'+selection.id+':'+fingerprint+':'+tabToken)+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age='+LOGIN_SESSION_MAX_AGE_SECONDS,{append:true})
   return tabToken
 }
 export function matchesActiveIntapTab(c:any,selection:IntapSelection|null):boolean{
