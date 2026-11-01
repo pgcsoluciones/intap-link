@@ -2,6 +2,8 @@ import app from './index'
 import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 import { resolveOwnedSponsoredProfile } from './sponsored-profile-scope'
+import { sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { readIntapSelection } from './intap-active-account'
 
 async function digest(input:string){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}
 function cookie(header:string,name:string){const esc=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+esc+'=([^;]*)'));return match?decodeURIComponent(match[1]):''}
@@ -120,6 +122,55 @@ app.get('/api/v1/me/sponsored-profile/commercial-links',async(c:any)=>{
  const contact_url=digits.length>=7&&digits.length<=15?'https://wa.me/'+digits:''
  const resource_url=String(resource?.resource_url||'')
  return c.json({ok:true,data:{contact_label:contact_url?(active.has('commercial_visitor')?'Mi visitador':'Mi vendedor'):'',contact_url,resource_label:resource_url?(String(resource?.resource_label||'')||(active.has('commercial_catalog')?'Catálogo':'Vademécum')):'',resource_url}})
+})
+
+/**
+ * Private commercial links over a PUBLIC profile page.
+ * Authenticate the person AND match the exact slug, ownership, active account,
+ * enabled module, sponsor membership and physical artifact assignment.
+ * This is a read-only request. Never infer the user's active multicuenta profile.
+ */
+app.get('/api/v1/me/sponsored-commercial-public-context',async(c:any)=>{
+ const username=trim(c.req.query('username'),100).toLowerCase()
+ if(!/^[a-z0-9-]{1,100}$/.test(username))return c.json({ok:false,error:'Perfil inválido.'},400)
+ const raw=cookie(c.req.header('Cookie')||'',cookieNames(c.env).session)
+ if(!raw)return c.json({ok:false,error:'Sin sesión.'},401)
+ const session=await c.env.DB.prepare("SELECT user_id FROM auth_sessions WHERE session_hash=? AND expires_at>datetime('now') AND revoked_at IS NULL LIMIT 1").bind(await digest(raw)).first()
+ if(!session)return c.json({ok:false,error:'Sin sesión.'},401)
+ const userId=String((session as any).user_id||'')
+ const profile:any=await c.env.DB.prepare("SELECT id,user_id,username,sponsor_id,profile_role,artifact_id FROM sponsored_profiles WHERE lower(username)=? AND user_id=? LIMIT 1").bind(username,userId).first()
+ if(!profile)return c.json({ok:false,error:'Perfil no autorizado.'},403)
+ const master=String(profile.profile_role||'beneficiary')==='sponsor_owner'
+ if(await sponsoredMultiProfileAccess(c,userId)){
+  const selected=await readIntapSelection(c)
+  const allowed=selected&&(master
+   ?selected.kind==='sponsor'&&selected.id===String(profile.sponsor_id||'')
+   :selected.kind==='sponsored'&&selected.id===String(profile.id||''))
+  if(!allowed)return c.json({ok:false,error:'Este perfil no es la cuenta activa.'},403)
+ }
+ const sponsorId=String(profile.sponsor_id||'')
+ const grants=await c.env.DB.prepare("SELECT module_code FROM sponsor_module_grants WHERE sponsor_id=? AND enabled=1 AND module_code IN ('commercial_seller','commercial_visitor','commercial_catalog','commercial_vademecum')").bind(sponsorId).all()
+ const enabled=new Set((grants.results||[]).map((row:any)=>String(row.module_code)))
+ const resource:any=enabled.has('commercial_catalog')||enabled.has('commercial_vademecum')
+   ?await c.env.DB.prepare("SELECT resource_url,resource_label FROM sponsor_commercial_resources WHERE sponsor_id=?").bind(sponsorId).first():null
+ let seller:any=null
+ // Master sponsorship codes are not assigned to sales representatives.
+ if(!master&&(enabled.has('commercial_seller')||enabled.has('commercial_visitor'))&&profile.artifact_id){
+  seller=await c.env.DB.prepare("SELECT r.whatsapp FROM sponsor_sales_assignments a JOIN sponsor_sales_representatives r ON r.id=a.representative_id AND r.sponsor_id=a.sponsor_id AND r.active=1 JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id AND sa.sponsor_id=a.sponsor_id WHERE a.sponsor_id=? AND sa.artifact_id=? AND a.active=1 ORDER BY a.assigned_at DESC LIMIT 1").bind(sponsorId,String(profile.artifact_id)).first()
+ }
+ const digits=String(seller?.whatsapp||'').replace(/[^0-9]/g,'')
+ const contactUrl=digits.length>=7&&digits.length<=15?'https://wa.me/'+digits:''
+ const rawResourceUrl=String(resource?.resource_url||'').trim()
+ let resourceUrl=''
+ try{
+  const parsed=new URL(rawResourceUrl)
+  if(parsed.protocol==='https:'&&!parsed.username&&!parsed.password)resourceUrl=parsed.href
+ }catch{/* no authorized resource URL configured */}
+ c.header('Cache-Control','private, no-store')
+ return c.json({ok:true,data:{
+  contact_url:contactUrl,contact_label:contactUrl?(enabled.has('commercial_visitor')?'Mi visitador':'Mi vendedor'):'',
+  resource_url:resourceUrl,resource_label:resourceUrl?(String(resource?.resource_label||'').trim()||(enabled.has('commercial_catalog')?'Catálogo':'Vademécum')):''
+ }})
 })
 
 export default app
