@@ -11,7 +11,7 @@ git merge-base --is-ancestor ee466727 HEAD
 git diff --check ee466727..HEAD
 while IFS= read -r file; do
   case "$file" in
-    api/src/sponsored-appointments.ts|scripts/test-sponsored-owner-context-denial-2026-11-01.mjs|scripts/run-prod-sponsored-owner-context-diagnostic-2026-11-01.sh) ;;
+    api/src/sponsored-appointments.ts|scripts/test-sponsored-owner-context-denial-2026-11-01.mjs|scripts/test-intapcard-active-account-contract.mjs|scripts/run-prod-sponsored-owner-context-diagnostic-2026-11-01.sh) ;;
     *) echo "Cambio no autorizado: $file"; exit 1 ;;
   esac
 done < <(git diff --name-only ee466727..HEAD)
