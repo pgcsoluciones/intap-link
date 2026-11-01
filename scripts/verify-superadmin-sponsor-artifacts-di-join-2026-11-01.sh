@@ -9,7 +9,7 @@ git merge-base --is-ancestor 951d9976 HEAD
 git diff --check 951d9976..HEAD
 while IFS= read -r p; do
   case "$p" in
-    api/src/sponsored-profiles.ts|scripts/test-superadmin-sponsor-artifacts-di-join-2026-11-01.mjs|scripts/verify-superadmin-sponsor-artifacts-di-join-2026-11-01.sh) ;;
+    api/src/sponsored-profiles.ts|scripts/test-superadmin-sponsor-artifacts-di-join-2026-11-01.mjs|scripts/test-sponsored-profile-contract.mjs|scripts/verify-superadmin-sponsor-artifacts-di-join-2026-11-01.sh) ;;
     *) echo "Archivo fuera del alcance: $p"; exit 1 ;;
   esac
 done < <(git diff --name-only 951d9976..HEAD)
