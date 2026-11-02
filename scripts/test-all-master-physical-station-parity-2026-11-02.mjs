@@ -48,6 +48,6 @@ assert.match(linkProvision, /artifact_display_identifiers\(artifact_id,display_c
 assert.match(linkProvision, /displayCode,'L',physicalSeq/)
 assert.match(linkProvision, /display_code: displayCode/)
 assert.match(scan, /di\.display_code/)
-assert.match(scan, /LEFT JOIN artifact_display_identifiers di ON di\.artifact_id = a\.id/)
+assert.match(scan, /LEFT JOIN artifact_display_identifiers di ON di\.artifact_id\s*=\s*a\.id/)
 
 console.log('Physical-station source parity M/P/L and all sponsor Master panels: OK (static contract)')
