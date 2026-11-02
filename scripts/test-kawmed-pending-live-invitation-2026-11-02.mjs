@@ -26,7 +26,7 @@ assert.match(editor,editGuard,'editor real requiere invitación active')
 assert.doesNotMatch(editor,readGuard,'nunca permitir edición con invitación pending')
 
 for(const [name,source] of [['consulta',activation],['editor',editor]]){
-  assert.match(source,/JOIN kawmed_demo_live_access /,name+' exige grant live')
+  assert.match(source,/(?:FROM|JOIN) kawmed_demo_live_access /,name+' exige grant live')
   assert.match(source,/p.id=g.medical_profile_id AND p.user_id=g.owner_user_id/,name+' exige propietario del perfil')
   assert.match(source,/lower\(owner.email\)='intapcard@gmail.com'/,name+' restringe propietario autorizado')
   assert.match(source,/i.rowid=\(SELECT MAX\(recent.rowid\)/,name+' exige invitación vigente más reciente')
@@ -36,7 +36,7 @@ assert.match(activation,/lower\(i.invited_email\)=\?/,'el correo del invitado de
 assert.match(activation,/normalize\(guestEmail\)/,'normalización del correo invitado')
 assert.match(editor,/lower\(i.invited_email\)=lower\(guest.email\)/,'editor identifica sesión activa de invitado')
 assert.match(editor,/delegateHeader\(c\)/,'edición requiere delegado en el request')
-assert.match(activation,/JOIN kawmed_demo_invitations i ON i.id=g.invitation_id/,'la invitación debe existir')
+assert.match(activation,/FROM kawmed_demo_invitations i JOIN kawmed_demo_live_access g ON g.invitation_id=i.id/,'la invitación debe existir')
 assert.match(api,/if\(b.live_access===true\)/,'conservar generación real distinguible de demo aislada')
 assert.match(api,/INSERT INTO kawmed_demo_live_access/,'grant se genera solamente para live')
 assert.match(api,/liveGuestInvitation\(c,String\(actor.email\),String\(c.req.param\('token'\)\|\|''\)\)/,'GET y POST validan correo invitado')
