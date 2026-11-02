@@ -357,7 +357,7 @@ app.get('/api/v1/sponsor/kawmed/overview',async(c:any)=>{
       (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.current_representative_id=mr.id) codes_total,
       (SELECT COUNT(*) FROM medical_access_codes mac WHERE mac.current_representative_id=mr.id AND mac.status='claimed') doctors_active
       FROM medical_representatives mr WHERE mr.sponsor_id=? ORDER BY mr.active DESC,mr.first_name,mr.last_name`).bind(sponsorId).all(),
-    c.env.DB.prepare(`SELECT mac.id,mac.code,mac.status,mac.station_number,mac.claimed_at,mac.batch_id,
+    c.env.DB.prepare(`SELECT mac.id,mac.code,mac.status,mac.station_number,mdi.display_code,mac.claimed_at,mac.batch_id,
       b.name AS batch_name,p.id AS program_id,p.name AS program_name,
       mp.id AS medical_profile_id,mp.name AS medical_name,mp.professional_prefix,mp.specialty AS medical_specialty,
       COALESCE(NULLIF(mp.whatsapp,''),mp.phone) AS medical_phone,COALESCE(NULLIF(mp.email,''),u.email) AS medical_email,mp.slug AS medical_slug,
@@ -366,6 +366,7 @@ app.get('/api/v1/sponsor/kawmed/overview',async(c:any)=>{
       cra.group_label AS assignment_group,cra.assigned_at AS representative_assigned_at
       FROM medical_access_codes mac
       JOIN medical_sponsor_programs p ON p.id=mac.program_id
+      LEFT JOIN medical_display_identifiers mdi ON mdi.medical_code_id=mac.id
       LEFT JOIN medical_code_batches b ON b.id=mac.batch_id
       LEFT JOIN medical_profiles mp ON mp.id=mac.medical_profile_id
       LEFT JOIN users u ON u.id=mac.claimed_by_user_id
