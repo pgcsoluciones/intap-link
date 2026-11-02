@@ -26,7 +26,7 @@ node scripts/test-sponsored-owner-commercial-links-2026-11-02.mjs
 node scripts/test-sponsored-owner-context-denial-2026-11-01.mjs
 echo "===== Compilación Web ====="
 (cd web && npm run build)
-grep -R -Fq '.kawmed-owner-header__mobile-menu' web/dist/assets --include='*.css' || {
+grep -Fq '.kawmed-owner-header__mobile-menu' web/dist/assets/*.css || {
   echo "No se publicó CSS hamburguesa en build; abortando."
   exit 1
 }
