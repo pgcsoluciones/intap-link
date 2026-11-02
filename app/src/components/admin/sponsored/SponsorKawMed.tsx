@@ -9,7 +9,7 @@ import MedicalDashboard from '../medical/MedicalDashboard'
 type Tab='profile'|'identity'|'codes'|'account'
 type Rep={id:string;employee_code?:string;first_name:string;last_name?:string;whatsapp:string;email?:string;zone?:string;territory?:string;active?:number;codes_total?:number;doctors_active?:number}
 type Batch={id:string;name:string;program_name?:string;codes_total?:number;codes_claimed?:number}
-type Code={id:string;code:string;status:string;station_number?:number|null;batch_id?:string;batch_name?:string;program_name?:string;medical_name?:string;professional_prefix?:string;medical_specialty?:string;medical_phone?:string;medical_email?:string;medical_slug?:string;representative_id?:string;representative_first_name?:string;representative_last_name?:string;representative_whatsapp?:string;representative_zone?:string;assignment_group?:string;representative_assigned_at?:string;claimed_at?:string}
+type Code={id:string;code:string;status:string;display_code?:string|null;station_number?:number|null;batch_id?:string;batch_name?:string;program_name?:string;medical_name?:string;professional_prefix?:string;medical_specialty?:string;medical_phone?:string;medical_email?:string;medical_slug?:string;representative_id?:string;representative_first_name?:string;representative_last_name?:string;representative_whatsapp?:string;representative_zone?:string;assignment_group?:string;representative_assigned_at?:string;claimed_at?:string}
 type Program={id:string;name:string;private_banner_image_url?:string;private_cta_label?:string;private_cta_url?:string;vademecum_url?:string;vademecum_label?:string;representative_cta_label?:string;representative_message_template?:string;enabled?:number}
 type Overview={sponsor:{id:string;name:string;role:string;logo_url?:string;banner_image_url?:string;contact_email?:string;contact_whatsapp?:string;website_url?:string};master?:{master_code?:string;status?:string;claimed_at?:string}|null;programs:Program[];batches:Batch[];representatives:Rep[];codes:Code[]}
 type PendingImage={file:File;kind:'logo'|'program-banner'}|null
@@ -18,7 +18,7 @@ const input='mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-
 const label='block text-[11px] font-black uppercase tracking-[.08em] text-slate-500'
 const card='rounded-[24px] border border-slate-200 bg-white p-5'
 function repName(rep?:Partial<Rep>|null){return [rep?.first_name,rep?.last_name].filter(Boolean).join(' ').trim()||'Sin asignar'}
-function station(code:Code){return code.station_number?String(code.station_number).padStart(3,'0'):'—'}
+function station(code:Code){return String(code.display_code||'').trim()||'—'}
 function appOrigin(){const h=window.location.hostname.toLowerCase();return h.includes('preview')?'https://app.preview.intaprd.com':'https://app.intaprd.com'}
 
 export default function SponsorKawMed(){
