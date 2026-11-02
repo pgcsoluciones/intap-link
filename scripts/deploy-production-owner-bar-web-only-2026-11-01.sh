@@ -2,7 +2,7 @@
 # #130 — Corrección Web-only de la barra del propietario patrocinado/Free/MED.
 # No toca API, App, D1 ni Preview. Requiere autorización explícita del operador.
 set -euo pipefail
-[[ "$KAWVO_OWNER_BAR_WEB_DEPLOY_APPROVED" == "SI" ]] || {
+[[ "${KAWVO_OWNER_BAR_WEB_DEPLOY_APPROVED:-}" == "SI" ]] || {
   echo "Aprobación requerida: KAWVO_OWNER_BAR_WEB_DEPLOY_APPROVED=SI"
   exit 1
 }
