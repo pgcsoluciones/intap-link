@@ -20,11 +20,11 @@ CHANGED="$(git diff --name-only "$BASE"..HEAD)"
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   case "$file" in
-    api/src/medical-access-codes.ts|app/src/components/admin/sponsored/SponsorKawMed.tsx|scripts/test-all-master-physical-station-parity-2026-11-02.mjs|scripts/run-preview-all-master-physical-station-parity-2026-11-02.sh) ;;
+    api/src/medical-access-codes.ts|app/src/components/admin/sponsored/SponsorKawMed.tsx|scripts/test-all-master-physical-station-parity-2026-11-02.mjs|scripts/test-kawmed-code-accordion-contract.mjs|scripts/run-preview-all-master-physical-station-parity-2026-11-02.sh) ;;
     *) fail "Archivo ajeno al PR #136: $file" ;;
   esac
 done <<< "$CHANGED"
-for f in api/src/medical-access-codes.ts app/src/components/admin/sponsored/SponsorKawMed.tsx scripts/test-all-master-physical-station-parity-2026-11-02.mjs scripts/run-preview-all-master-physical-station-parity-2026-11-02.sh; do
+for f in api/src/medical-access-codes.ts app/src/components/admin/sponsored/SponsorKawMed.tsx scripts/test-all-master-physical-station-parity-2026-11-02.mjs scripts/test-kawmed-code-accordion-contract.mjs scripts/run-preview-all-master-physical-station-parity-2026-11-02.sh; do
   grep -Fxq "$f" <<< "$CHANGED" || fail "Falta archivo esperado: $f"
 done
 [[ "$(git diff --numstat "$BASE"..HEAD -- api/src/medical-access-codes.ts)" == "$(printf '2\t1\tapi/src/medical-access-codes.ts')" ]] || fail "API no coincide con el alcance previsto."
