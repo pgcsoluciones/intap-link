@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { FaBars, FaBell, FaCalendarAlt, FaTimes } from 'react-icons/fa'
 
+// The App saves the active Multicuenta cookie through api.intaprd.com in
+// Production; this owner-only fetch must use that SAME host. The cookie is
+// intentionally host-scoped. Preview uses app.preview.intaprd.com and remains
+// unchanged. Editing/Agenda destinations still point to the App.
+function ownerSessionApiBase(base:string):string{
+  try{
+    const url=new URL(base)
+    if(url.protocol==='https:'&&url.hostname==='app.intaprd.com')url.hostname='api.intaprd.com'
+    return url.toString().replace(/\/$/,'')
+  }catch{return base}
+}
+
 type Palette={accent:string;accentSoft:string;text:string}
 type Pending={
   id:string
@@ -49,7 +61,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
 
   async function load(){
     try{
-      const res=await fetch(ownerApiBase+'/public-context?username='+encodeURIComponent(username),{credentials:'include',cache:'no-store'})
+      const res=await fetch(ownerSessionApiBase(ownerApiBase)+'/public-context?username='+encodeURIComponent(username),{credentials:'include',cache:'no-store'})
       if(!res.ok){setContext(null);return}
       const json:any=await res.json().catch(()=>null)
       if(json?.ok&&json.data?.is_owner)setContext(json.data)
@@ -97,7 +109,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     if(actionId)return
     setActionId(id)
     try{
-      const target=ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.action_scope?'?scope='+encodeURIComponent(context.action_scope):'')
+      const target=ownerSessionApiBase(ownerApiBase)+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.action_scope?'?scope='+encodeURIComponent(context.action_scope):'')
       const res=await fetch(target,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:'{}'})
       const json:any=await res.json().catch(()=>null)
       if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos actualizar la solicitud.')
