@@ -2,6 +2,7 @@ import app from './index'
 import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 import { resolveOwnedSponsoredProfile } from './sponsored-profile-scope'
+import { resolveSponsoredCommercialLinks } from './sponsored-commercial-links-core'
 
 async function digest(input:string){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}
 function cookie(header:string,name:string){const esc=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+esc+'=([^;]*)'));return match?decodeURIComponent(match[1]):''}
@@ -108,18 +109,8 @@ app.get('/api/v1/me/sponsored-profile/commercial-links',async(c:any)=>{
  if(!session)return c.json({ok:false,error:'Sin sesión.'},401)
  const owned=await resolveOwnedSponsoredProfile(c,String((session as any).user_id||''),'beneficiary')
  if(!owned)return c.json({ok:false,error:'Perfil no autorizado.'},403)
- const profile:any=owned,sponsorId=String(profile.sponsor_id||'')
- const grants=await c.env.DB.prepare("SELECT module_code,enabled FROM sponsor_module_grants WHERE sponsor_id=? AND module_code IN ('commercial_seller','commercial_visitor','commercial_catalog','commercial_vademecum')").bind(sponsorId).all()
- const active=new Set((grants.results||[]).filter((x:any)=>Number(x.enabled)===1).map((x:any)=>String(x.module_code)))
- const resource:any=active.has('commercial_catalog')||active.has('commercial_vademecum')?await c.env.DB.prepare("SELECT resource_url,resource_label FROM sponsor_commercial_resources WHERE sponsor_id=?").bind(sponsorId).first():null
- let seller:any=null
- if((active.has('commercial_seller')||active.has('commercial_visitor'))&&profile.artifact_id){
- seller=await c.env.DB.prepare("SELECT r.first_name,r.last_name,r.whatsapp FROM sponsor_sales_assignments a JOIN sponsor_sales_representatives r ON r.id=a.representative_id AND r.sponsor_id=a.sponsor_id AND r.active=1 JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id AND sa.sponsor_id=a.sponsor_id WHERE a.sponsor_id=? AND sa.artifact_id=? AND a.active=1 ORDER BY a.assigned_at DESC LIMIT 1").bind(sponsorId,String(profile.artifact_id)).first()
- }
- const digits=String(seller?.whatsapp||'').replace(/[^0-9]/g,'')
- const contact_url=digits.length>=7&&digits.length<=15?'https://wa.me/'+digits:''
- const resource_url=String(resource?.resource_url||'')
- return c.json({ok:true,data:{contact_label:contact_url?(active.has('commercial_visitor')?'Mi visitador':'Mi vendedor'):'',contact_url,resource_label:resource_url?(String(resource?.resource_label||'')||(active.has('commercial_catalog')?'Catálogo':'Vademécum')):'',resource_url}})
+ const commercial=await resolveSponsoredCommercialLinks(c.env.DB,owned as any)
+ return c.json({ok:true,data:commercial})
 })
 
 export default app
