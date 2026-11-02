@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { FaBars, FaBell, FaCalendarAlt, FaTimes } from 'react-icons/fa'
+import './AppointmentOwnerBar.mobile.css'
 
 // The App saves the active Multicuenta cookie through api.intaprd.com in
 // Production; this owner-only fetch must use that SAME host. The cookie is
