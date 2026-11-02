@@ -4,6 +4,7 @@ import { cookieNames } from './lib/cookies'
 import { resolveOwnedSponsoredProfile, sponsoredProfileScope } from './sponsored-profile-scope'
 import { readIntapSelection } from './intap-active-account'
 import { sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
+import { resolveSponsoredCommercialLinks, EMPTY_SPONSORED_COMMERCIAL_LINKS } from './sponsored-commercial-links-core'
 import {
   availableAppointmentSlots,
   changeAppointmentRequestStatus,
@@ -222,7 +223,7 @@ app.post('/api/v1/me/sponsored-profile/appointments/requests/:id/:action',requir
 app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),username=cleanUsername(c.req.query('username'))
   if(!username)return c.json({ok:false,error:'Perfil inválido.'},400)
-  const profile=await c.env.DB.prepare('SELECT id,sponsor_id,username,business_name,user_id,profile_role FROM sponsored_profiles WHERE username=? AND user_id=? LIMIT 1').bind(username,userId).first()
+  const profile=await c.env.DB.prepare('SELECT id,sponsor_id,artifact_id,username,business_name,user_id,profile_role FROM sponsored_profiles WHERE username=? AND user_id=? LIMIT 1').bind(username,userId).first()
   if(!profile)return c.json({ok:false,error:'Not owner'},403)
   const subjectId=String((profile as any).id||'')
   const role=String((profile as any).profile_role||'beneficiary')
@@ -243,9 +244,16 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending'").bind(subjectId).first()
   const pending=rows.results||[]
   const manageUrl=await appointmentManageUrl(c,profile)
+  // The exact owner and active Multicuenta identity were verified above.
+  // Commercial data is strictly optional: a commercial query failure must NOT
+  // remove Configuración, Agenda or the notification bell.
+  const commercial=await resolveSponsoredCommercialLinks(c.env.DB,profile).catch(()=>{
+    console.error('[sponsored-owner-commercial-links] unable to resolve optional links')
+    return {...EMPTY_SPONSORED_COMMERCIAL_LINKS}
+  })
   return c.json({ok:true,data:{is_owner:true,allow_direct_actions:!(await sponsoredMultiProfileAccess(c,userId)),enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending,
     manage_url:manageUrl,settings_url:isMaster?'/admin/sponsor':'/admin/sponsored?profile_id='+encodeURIComponent(subjectId),
-    action_scope:isMaster?'master':null}})
+    action_scope:isMaster?'master':null,...commercial}})
 })
 
 export default app
