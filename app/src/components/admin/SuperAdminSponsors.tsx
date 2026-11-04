@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api'
 import SuperAdminLayout from './SuperAdminLayout'
 
 type Sponsor={id:string;name:string;slug?:string;profile_slug?:string;sponsor_type:string;logo_url?:string;contact_email?:string;contact_whatsapp?:string;website_url?:string;is_active?:number;bank_account_limit?:number;products_total?:number;products_activated?:number;profiles_published?:number}
 type Member={user_id:string;email?:string;name?:string;role?:string;status?:string}
 type GeneratedCode={public_code:string;public_url:string;display_code?:string}
-type SponsorArtifact={public_code:string;public_url:string;product_type?:string;artifact_status?:string;status?:string;artifact_role?:string;activated_at?:string;created_at?:string;username?:string;business_name?:string;email?:string;profile_status?:string;batch_name?:string;city?:string;zone?:string;banner_enabled?:number}
+type SponsorArtifact={public_code:string;public_url:string;display_code?:string|null;product_type?:string;artifact_status?:string;status?:string;artifact_role?:string;activated_at?:string;created_at?:string;username?:string;business_name?:string;email?:string;profile_status?:string;batch_name?:string;city?:string;zone?:string;banner_enabled?:number}
 
 const input='mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'
 const label='block text-[11px] font-black uppercase tracking-[.08em] text-slate-500'
@@ -38,13 +38,102 @@ export default function SuperAdminSponsors(){
   const[codeStatus,setCodeStatus]=useState('all')
   const[codeRole,setCodeRole]=useState('all')
   const[bannerUpdating,setBannerUpdating]=useState('')
+  // Lock responses to the tenant that initiated them: switching a sponsor must not display another sponsor's data.
+  const selectedSponsorIdRef=useRef('')
+  const codeRequestIdRef=useRef(0)
+  function chooseSponsor(item:Sponsor){
+    if(saving||bannerUpdating)return
+    selectedSponsorIdRef.current=item.id
+    codeRequestIdRef.current+=1
+    setSelected({...item})
+    setBatch({batch_name:'',quantity:10,product_type:'keychain',city:'',zone:'',notes:''})
+    setGenerated([])
+    setMaster(null)
+    setExistingCodes('')
+    setMemberEmail('')
+    setMembers([])
+    setCommercialResource({resource_url:'',resource_label:''})
+    setModules({bank_accounts:false,commercial_contact:'none',commercial_resource:'none'})
+    setCodes([])
+    setCodeTotal(0)
+    setCodePage(1)
+    setCodePages(1)
+    setCodeQuery('')
+    setCodeStatus('all')
+    setCodeRole('all')
+    setBannerUpdating('')
+    setError('')
+    setMessage('')
+    setNoticeScope('')
+    setCodesLoading(true)
+  }
 
   async function load(){setLoading(true);startNotice('load');try{const json:any=await apiGet('/superadmin/sponsors');if(!json?.ok)throw new Error(json?.error||'No se pudieron cargar los patrocinadores.');setItems(Array.isArray(json.data)?json.data:[])}catch(e){setError(e instanceof Error?e.message:'No se pudieron cargar.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[])
-  useEffect(()=>{if(!selected){setMembers([]);setCommercialResource({resource_url:'',resource_label:''});setModules({bank_accounts:false,commercial_contact:'none',commercial_resource:'none'});setCodes([]);setCodeTotal(0);return}Promise.all([apiGet(`/superadmin/sponsors/${selected.id}/members`),apiGet(`/superadmin/sponsors/${selected.id}/modules`)]).then(([m,g]:any[])=>{if(m?.ok)setMembers(Array.isArray(m.data)?m.data:[]);if(g?.ok){const rows=Array.isArray(g.data)?g.data:[];setModules({bank_accounts:rows.some((r:any)=>r.module_code==='bank_accounts'&&Number(r.enabled)===1),commercial_contact:rows.some((r:any)=>r.module_code==='commercial_visitor'&&Number(r.enabled)===1)?'visitor':rows.some((r:any)=>r.module_code==='commercial_seller'&&Number(r.enabled)===1)?'seller':'none',commercial_resource:rows.some((r:any)=>r.module_code==='commercial_vademecum'&&Number(r.enabled)===1)?'vademecum':rows.some((r:any)=>r.module_code==='commercial_catalog'&&Number(r.enabled)===1)?'catalog':'none'})}}).catch(()=>undefined);setGenerated([]);setMaster(null);setCodeQuery('');setCodeStatus('all');setCodeRole('all');setCodePage(1);apiGet(`/superadmin/sponsors/${selected.id}/commercial-resource`).then((r:any)=>{if(r?.ok)setCommercialResource({resource_url:r.data?.resource_url||'',resource_label:r.data?.resource_label||''})}).catch(()=>undefined);void loadCodes(1,{q:'',status:'all',role:'all'})},[selected?.id])
+  useEffect(()=>{
+    const sponsorId=selected?.id||''
+    let live=true
+    if(!sponsorId){
+      selectedSponsorIdRef.current=''
+      setMembers([])
+      setCommercialResource({resource_url:'',resource_label:''})
+      setModules({bank_accounts:false,commercial_contact:'none',commercial_resource:'none'})
+      setCodes([])
+      setCodeTotal(0)
+      setCodesLoading(false)
+      return
+    }
+    Promise.all([apiGet(`/superadmin/sponsors/${sponsorId}/members`),apiGet(`/superadmin/sponsors/${sponsorId}/modules`)]).then(([m,g]:any[])=>{
+      if(!live||selectedSponsorIdRef.current!==sponsorId)return
+      setMembers(m?.ok&&Array.isArray(m.data)?m.data:[])
+      if(g?.ok){
+        const rows=Array.isArray(g.data)?g.data:[]
+        setModules({
+          bank_accounts:rows.some((r:any)=>r.module_code==='bank_accounts'&&Number(r.enabled)===1),
+          commercial_contact:rows.some((r:any)=>r.module_code==='commercial_visitor'&&Number(r.enabled)===1)?'visitor':rows.some((r:any)=>r.module_code==='commercial_seller'&&Number(r.enabled)===1)?'seller':'none',
+          commercial_resource:rows.some((r:any)=>r.module_code==='commercial_vademecum'&&Number(r.enabled)===1)?'vademecum':rows.some((r:any)=>r.module_code==='commercial_catalog'&&Number(r.enabled)===1)?'catalog':'none'
+        })
+      }
+    }).catch(()=>undefined)
+    apiGet(`/superadmin/sponsors/${sponsorId}/commercial-resource`).then((result:any)=>{
+      if(!live||selectedSponsorIdRef.current!==sponsorId)return
+      setCommercialResource(result?.ok?{resource_url:result.data?.resource_url||'',resource_label:result.data?.resource_label||''}:{resource_url:'',resource_label:''})
+    }).catch(()=>undefined)
+    void loadCodes(1,{q:'',status:'all',role:'all'})
+    return ()=>{live=false}
+  },[selected?.id])
 
   const totals=useMemo(()=>({sponsors:items.length,products:items.reduce((a,i)=>a+Number(i.products_total||0),0),active:items.reduce((a,i)=>a+Number(i.products_activated||0),0),published:items.reduce((a,i)=>a+Number(i.profiles_published||0),0)}),[items])
-  async function loadCodes(page=1,filters?:{q?:string;status?:string;role?:string}){if(!selected)return;setCodesLoading(true);try{const q=filters?.q??codeQuery;const status=filters?.status??codeStatus;const role=filters?.role??codeRole;const params=new URLSearchParams({page:String(page),page_size:'10'});if(q.trim())params.set('q',q.trim());if(status!=='all')params.set('status',status);if(role!=='all')params.set('role',role);const json:any=await apiGet(`/superadmin/sponsors/${selected.id}/artifacts?${params.toString()}`);if(!json?.ok)throw new Error(json?.error||'No se pudieron cargar los códigos.');setCodes(Array.isArray(json.data)?json.data:[]);const p=json.pagination||{};setCodePage(Number(p.page||1));setCodePages(Math.max(1,Number(p.pages||1)));setCodeTotal(Number(p.total||0))}catch(e){startNotice('codes');setError(e instanceof Error?e.message:'No se pudieron cargar los códigos.')}finally{setCodesLoading(false)}}
+  async function loadCodes(page=1,filters?:{q?:string;status?:string;role?:string}){
+    if(!selected)return
+    const sponsorId=selected.id
+    const requestId=++codeRequestIdRef.current
+    setCodesLoading(true)
+    try{
+      const q=filters?.q??codeQuery
+      const status=filters?.status??codeStatus
+      const role=filters?.role??codeRole
+      const params=new URLSearchParams({page:String(page),page_size:'10'})
+      if(q.trim())params.set('q',q.trim())
+      if(status!=='all')params.set('status',status)
+      if(role!=='all')params.set('role',role)
+      const json:any=await apiGet(`/superadmin/sponsors/${sponsorId}/artifacts?${params.toString()}`)
+      if(selectedSponsorIdRef.current!==sponsorId||codeRequestIdRef.current!==requestId)return
+      if(!json?.ok)throw new Error(json?.error||'No se pudieron cargar los códigos.')
+      setCodes(Array.isArray(json.data)?json.data:[])
+      const p=json.pagination||{}
+      setCodePage(Number(p.page||1))
+      setCodePages(Math.max(1,Number(p.pages||1)))
+      setCodeTotal(Number(p.total||0))
+    }catch(e){
+      if(selectedSponsorIdRef.current===sponsorId&&codeRequestIdRef.current===requestId){
+        startNotice('codes')
+        setError(e instanceof Error?e.message:'No se pudieron cargar los códigos.')
+      }
+    }finally{
+      if(selectedSponsorIdRef.current===sponsorId&&codeRequestIdRef.current===requestId)setCodesLoading(false)
+    }
+  }
   const startNotice=(scope:string)=>{setNoticeScope(scope);setError('');setMessage('')}
   const feedback=(scope:string)=>noticeScope===scope?<>{message&&<p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{message}</p>}{error&&<p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm font-bold text-rose-600">{error}</p>}</>:null
 
@@ -68,7 +157,7 @@ export default function SuperAdminSponsors(){
 
     <section className={card}><h2 className="text-xl font-black">Registrar patrocinador</h2><p className="mt-1 text-sm text-slate-500">El correo es el que se validará cuando el propietario active su código Master. El slug público puede dejarse vacío para que lo elija después.</p><div className="mt-4 grid gap-3 md:grid-cols-2"><label className={label}>Nombre<input className={input} value={create.name} onChange={e=>setCreate({...create,name:e.target.value})}/></label><label className={label}>Slug público · opcional<input className={input} value={create.slug} onChange={e=>setCreate({...create,slug:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'')})}/></label><label className={label}>Tipo<select className={input} value={create.sponsor_type} onChange={e=>setCreate({...create,sponsor_type:e.target.value})}><option value="merchant">Comercio</option><option value="brand">Marca</option></select></label><label className={label}>Correo propietario<input className={input} type="email" value={create.contact_email} onChange={e=>setCreate({...create,contact_email:e.target.value})}/></label><label className={label}>WhatsApp<input className={input} value={create.contact_whatsapp} onChange={e=>setCreate({...create,contact_whatsapp:e.target.value})}/></label><label className={label}>Web<input className={input} value={create.website_url} onChange={e=>setCreate({...create,website_url:e.target.value})}/></label></div><button onClick={()=>void createSponsor()} disabled={saving||!create.name||!create.contact_email} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-40">Crear patrocinador</button>{feedback('create')}</section>
 
-    <section className={card}><h2 className="text-xl font-black">Patrocinadores registrados</h2>{loading?<p className="mt-4 text-sm text-slate-500">Cargando…</p>:<div className="mt-4 grid gap-3 lg:grid-cols-2">{items.map(item=><button key={item.id} type="button" onClick={()=>setSelected({...item})} className={`rounded-2xl border p-4 text-left ${selected?.id===item.id?'border-cyan-400 bg-cyan-50':'border-slate-200 bg-white'}`}><div className="flex items-center justify-between gap-3"><div><p className="font-black">{item.name}</p><p className="mt-1 text-xs text-slate-500">{item.sponsor_type==='brand'?'Marca':'Comercio'} · {item.contact_email||'sin correo'}</p></div><span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-black">{item.is_active===0?'Activaciones pausadas':'Activaciones habilitadas'}</span></div><div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-500"><span>{item.products_total||0} productos</span><span>{item.products_activated||0} activos</span><span>{item.profiles_published||0} publicados</span></div></button>)}</div>}</section>
+    <section className={card}><h2 className="text-xl font-black">Patrocinadores registrados</h2>{loading?<p className="mt-4 text-sm text-slate-500">Cargando…</p>:<div className="mt-4 grid gap-3 lg:grid-cols-2">{items.map(item=><button key={item.id} type="button" onClick={()=>chooseSponsor(item)} disabled={saving||Boolean(bannerUpdating)} className={`rounded-2xl border p-4 text-left ${selected?.id===item.id?'border-cyan-400 bg-cyan-50':'border-slate-200 bg-white'}`}><div className="flex items-center justify-between gap-3"><div><p className="font-black">{item.name}</p><p className="mt-1 text-xs text-slate-500">{item.sponsor_type==='brand'?'Marca':'Comercio'} · {item.contact_email||'sin correo'}</p></div><span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-black">{item.is_active===0?'Activaciones pausadas':'Activaciones habilitadas'}</span></div><div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-500"><span>{item.products_total||0} productos</span><span>{item.products_activated||0} activos</span><span>{item.profiles_published||0} publicados</span></div></button>)}</div>}</section>
 
     {selected&&<>
       <section className="grid gap-5 xl:grid-cols-2"><div className={card}><h2 className="text-xl font-black">Configuración del patrocinador</h2><div className="mt-4 grid gap-3"><label className={label}>Nombre<input className={input} value={selected.name||''} onChange={e=>setSelected({...selected,name:e.target.value})}/></label><label className={label}>Slug público · opcional<input className={input} value={selected.profile_slug??''} onChange={e=>setSelected({...selected,profile_slug:e.target.value.toLowerCase().replace(/[^a-z0-9-]/g,'')})}/></label><label className={label}>Tipo<select className={input} value={selected.sponsor_type||'merchant'} onChange={e=>setSelected({...selected,sponsor_type:e.target.value})}><option value="merchant">Comercio</option><option value="brand">Marca</option></select></label><label className={label}>Correo propietario<input className={input} type="email" value={selected.contact_email||''} onChange={e=>setSelected({...selected,contact_email:e.target.value})}/></label><label className={label}>WhatsApp<input className={input} value={selected.contact_whatsapp||''} onChange={e=>setSelected({...selected,contact_whatsapp:e.target.value})}/></label><label className={label}>Web<input className={input} value={selected.website_url||''} onChange={e=>setSelected({...selected,website_url:e.target.value})}/></label><label className={label}>Cuentas bancarias permitidas<select className={input} value={selected.bank_account_limit||3} onChange={e=>setSelected({...selected,bank_account_limit:Number(e.target.value)})}><option value={2}>2 cuentas</option><option value={3}>3 cuentas</option><option value={4}>4 cuentas</option><option value={5}>5 cuentas</option></select><span className="mt-1 block text-xs normal-case tracking-normal text-slate-500">Límite por cada perfil patrocinado de este tenant.</span></label><div className="rounded-2xl border border-slate-200 bg-slate-50 p-3"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={selected.is_active!==0} onChange={e=>setSelected({...selected,is_active:e.target.checked?1:0})}/> Permitir nuevas activaciones</label><p className="mt-1 text-xs leading-5 text-slate-500">Este control solo permite o pausa la activación de nuevos códigos del patrocinador. No apaga perfiles ya publicados ni controla el cintillo; el cintillo se activa o desactiva individualmente junto a cada código.</p></div></div><button onClick={()=>void saveSponsor()} disabled={saving} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Guardar</button>{feedback('sponsor')}</div>
@@ -81,9 +170,9 @@ export default function SuperAdminSponsors(){
 
       <section className={card}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between"><div><h2 className="text-xl font-black">Códigos del patrocinador</h2><p className="mt-1 text-sm leading-6 text-slate-500">Listado persistente de todos los códigos vinculados a <strong>{selected.name}</strong>, incluyendo lotes anteriores y el Master.</p></div><div className="text-sm font-black text-slate-500">{codeTotal} código{codeTotal===1?'':'s'}</div></div>
-        <div className="mt-4 grid gap-2 md:grid-cols-[1fr_170px_170px_auto]"><input className={input} value={codeQuery} onChange={e=>setCodeQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void loadCodes(1)}} placeholder="Buscar código, lote, cliente, correo o usuario"/><select className={input} value={codeStatus} onChange={e=>{const v=e.target.value;setCodeStatus(v);void loadCodes(1,{status:v})}}><option value="all">Todos los estados</option><option value="available">Pendientes</option><option value="activated">Activados</option><option value="inactive">Inactivos</option></select><select className={input} value={codeRole} onChange={e=>{const v=e.target.value;setCodeRole(v);void loadCodes(1,{role:v})}}><option value="all">Todos los tipos</option><option value="beneficiary">Beneficiarios</option><option value="master">Master</option></select><button type="button" onClick={()=>void loadCodes(1)} className="mt-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Buscar</button></div>
+        <div className="mt-4 grid gap-2 md:grid-cols-[1fr_170px_170px_auto]"><input className={input} value={codeQuery} onChange={e=>setCodeQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void loadCodes(1)}} placeholder="Buscar ID físico, código NFC, lote, cliente o correo"/><select className={input} value={codeStatus} onChange={e=>{const v=e.target.value;setCodeStatus(v);void loadCodes(1,{status:v})}}><option value="all">Todos los estados</option><option value="available">Pendientes</option><option value="activated">Activados</option><option value="inactive">Inactivos</option></select><select className={input} value={codeRole} onChange={e=>{const v=e.target.value;setCodeRole(v);void loadCodes(1,{role:v})}}><option value="all">Todos los tipos</option><option value="beneficiary">Beneficiarios</option><option value="master">Master</option></select><button type="button" onClick={()=>void loadCodes(1)} className="mt-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Buscar</button></div>
         {feedback('codes')}
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white"><table className="w-full min-w-[1180px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr><th className="p-3">#</th><th className="p-3">Código / URL</th><th className="p-3">Cintillo</th><th className="p-3">Producto</th><th className="p-3">Tipo</th><th className="p-3">Estado</th><th className="p-3">Cliente / perfil</th><th className="p-3">Correo</th><th className="p-3">Lote / zona</th></tr></thead><tbody>{codesLoading?<tr><td colSpan={9} className="p-6 text-center text-slate-400">Cargando códigos…</td></tr>:codes.length===0?<tr><td colSpan={9} className="p-6 text-center text-slate-400">No hay códigos que coincidan con este filtro.</td></tr>:codes.map((row,i)=><tr key={row.public_code} className="border-t border-slate-100 align-top"><td className="p-3 text-slate-400">{(codePage-1)*10+i+1}</td><td className="p-3"><div className="font-black text-slate-900">{row.public_code}</div><a href={row.public_url} target="_blank" rel="noreferrer" className="mt-1 block max-w-[300px] break-all font-semibold text-cyan-700 underline">{row.public_url}</a></td><td className="p-3">{row.artifact_role==='beneficiary'?<button type="button" onClick={()=>void toggleBanner(row,Number(row.banner_enabled??1)!==1)} disabled={bannerUpdating===row.public_code} aria-pressed={Number(row.banner_enabled??1)===1} className={`inline-flex min-w-[88px] items-center justify-center rounded-full px-3 py-2 font-black transition ${Number(row.banner_enabled??1)===1?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500'} disabled:opacity-40`}>{bannerUpdating===row.public_code?'Guardando…':Number(row.banner_enabled??1)===1?'Activo':'Inactivo'}</button>:<span className="text-slate-400">No aplica</span>}</td><td className="p-3">{row.product_type||'—'}</td><td className="p-3"><span className={`rounded-full px-2 py-1 font-black ${row.artifact_role==='master'?'bg-violet-50 text-violet-700':'bg-slate-100 text-slate-600'}`}>{row.artifact_role==='master'?'Master':'Beneficiario'}</span></td><td className="p-3"><span className={`rounded-full px-2 py-1 font-black ${row.status==='activated'?'bg-emerald-50 text-emerald-700':row.status==='inactive'?'bg-rose-50 text-rose-700':'bg-amber-50 text-amber-700'}`}>{row.status==='activated'?'Activado':row.status==='inactive'?'Inactivo':'Pendiente'}</span></td><td className="p-3"><div className="font-bold text-slate-700">{row.business_name||'—'}</div><div className="mt-1 text-slate-400">{row.username?`/p/${row.username}`:row.profile_status||'Sin perfil'}</div></td><td className="p-3"><div className="max-w-[220px] break-all font-semibold text-slate-600">{row.email||'—'}</div></td><td className="p-3"><div>{row.batch_name||'—'}</div><div className="mt-1 text-slate-400">{[row.city,row.zone].filter(Boolean).join(' · ')||'—'}</div></td></tr>)}</tbody></table></div>
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white"><table className="w-full min-w-[1180px] text-left text-xs"><thead className="bg-slate-50 text-slate-400"><tr><th className="p-3">#</th><th className="p-3">Código / URL</th><th className="p-3">Cintillo</th><th className="p-3">Producto</th><th className="p-3">Tipo</th><th className="p-3">Estado</th><th className="p-3">Cliente / perfil</th><th className="p-3">Correo</th><th className="p-3">Lote / zona</th></tr></thead><tbody>{codesLoading?<tr><td colSpan={9} className="p-6 text-center text-slate-400">Cargando códigos…</td></tr>:codes.length===0?<tr><td colSpan={9} className="p-6 text-center text-slate-400">No hay códigos que coincidan con este filtro.</td></tr>:codes.map((row,i)=><tr key={row.public_code} className="border-t border-slate-100 align-top"><td className="p-3 text-slate-400">{(codePage-1)*10+i+1}</td><td className="p-3">{row.display_code&&<div className="mb-1 inline-flex rounded-md bg-cyan-50 px-2 py-1 font-black text-cyan-800">Estación {row.display_code}</div>}<div className="font-black text-slate-900">{row.public_code}</div><a href={row.public_url} target="_blank" rel="noreferrer" className="mt-1 block max-w-[300px] break-all font-semibold text-cyan-700 underline">{row.public_url}</a></td><td className="p-3">{row.artifact_role==='beneficiary'?<button type="button" onClick={()=>void toggleBanner(row,Number(row.banner_enabled??1)!==1)} disabled={bannerUpdating===row.public_code} aria-pressed={Number(row.banner_enabled??1)===1} className={`inline-flex min-w-[88px] items-center justify-center rounded-full px-3 py-2 font-black transition ${Number(row.banner_enabled??1)===1?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500'} disabled:opacity-40`}>{bannerUpdating===row.public_code?'Guardando…':Number(row.banner_enabled??1)===1?'Activo':'Inactivo'}</button>:<span className="text-slate-400">No aplica</span>}</td><td className="p-3">{row.product_type||'—'}</td><td className="p-3"><span className={`rounded-full px-2 py-1 font-black ${row.artifact_role==='master'?'bg-violet-50 text-violet-700':'bg-slate-100 text-slate-600'}`}>{row.artifact_role==='master'?'Master':'Beneficiario'}</span></td><td className="p-3"><span className={`rounded-full px-2 py-1 font-black ${row.status==='activated'?'bg-emerald-50 text-emerald-700':row.status==='inactive'?'bg-rose-50 text-rose-700':'bg-amber-50 text-amber-700'}`}>{row.status==='activated'?'Activado':row.status==='inactive'?'Inactivo':'Pendiente'}</span></td><td className="p-3"><div className="font-bold text-slate-700">{row.business_name||'—'}</div><div className="mt-1 text-slate-400">{row.username?`/p/${row.username}`:row.profile_status||'Sin perfil'}</div></td><td className="p-3"><div className="max-w-[220px] break-all font-semibold text-slate-600">{row.email||'—'}</div></td><td className="p-3"><div>{row.batch_name||'—'}</div><div className="mt-1 text-slate-400">{[row.city,row.zone].filter(Boolean).join(' · ')||'—'}</div></td></tr>)}</tbody></table></div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-semibold text-slate-500">Página {codePage} de {codePages} · {codeTotal} registros</p><div className="flex gap-2"><button type="button" onClick={()=>void loadCodes(codePage-1)} disabled={codesLoading||codePage<=1} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black disabled:opacity-35">← Anterior</button><button type="button" onClick={()=>void loadCodes(codePage+1)} disabled={codesLoading||codePage>=codePages} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black disabled:opacity-35">Siguiente →</button></div></div>
       </section>
 

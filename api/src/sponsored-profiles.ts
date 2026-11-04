@@ -59,7 +59,7 @@ app.get('/api/v1/superadmin/sponsors/:id/artifacts',requireSuperAdmin('viewer'),
 
   const where:string[]=['sa.sponsor_id=?']
   const binds:any[]=[sponsorId]
-  if(q){where.push(`(UPPER(a.public_code) LIKE ? OR UPPER(COALESCE(b.name,'')) LIKE ? OR UPPER(COALESCE(sp.business_name,'')) LIKE ? OR UPPER(COALESCE(sp.username,'')) LIKE ? OR UPPER(COALESCE(u.email,'')) LIKE ?)`);const like=`%${q}%`;binds.push(like,like,like,like,like)}
+  if(q){where.push(`(UPPER(a.public_code) LIKE ? OR UPPER(COALESCE(di.display_code,'')) LIKE ? OR UPPER(COALESCE(b.name,'')) LIKE ? OR UPPER(COALESCE(sp.business_name,'')) LIKE ? OR UPPER(COALESCE(sp.username,'')) LIKE ? OR UPPER(COALESCE(u.email,'')) LIKE ?)`);const like=`%${q}%`;binds.push(like,like,like,like,like,like)}
   if(status&&['available','activated','inactive'].includes(status)){where.push('sa.status=?');binds.push(status)}
   if(role&&['master','beneficiary'].includes(role)){where.push('sa.artifact_role=?');binds.push(role)}
   const whereSql=where.join(' AND ')
