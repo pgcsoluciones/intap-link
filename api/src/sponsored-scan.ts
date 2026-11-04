@@ -64,6 +64,16 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   const beneficiary=String((row as any).sponsored_user_id||(row as any).beneficiary_user_id||(row as any).owner_user_id||'')
   const resolvedProfileId=String((row as any).sponsored_profile_id_resolved||(row as any).sponsored_profile_id||'')
 
+  // Authorized sponsor managers inspect their own physical stations before any beneficiary
+  // redirect. This is read-only and must never consume an activation, even if already claimed.
+  const sponsorRole=String((sponsorMembership as any)?.role||'')
+  if(sponsorRole==='owner'||sponsorRole==='admin'){
+    const inspectedStatus=resolvedProfileId||sponsoredStatus==='activated'||artifactStatus==='activated'?'activated':
+      sponsoredStatus==='inactive'||['revoked','suspended'].includes(artifactStatus)?'inactive':'available'
+    return c.json({ok:true,state:'sponsored_sponsor_inspection',artifact,sponsor,inspection_status:inspectedStatus,
+      manage_url:`${configuredAppUrl(c)}/admin/sponsor?code=${encodeURIComponent(publicCode)}`})
+  }
+
   // Treat a resolved profile association as activated even when legacy rows have
   // a stale sponsor_artifacts status. This avoids sending the owner back through
   // consent after the first successful claim. Once activated, commercial inactivity cannot remove or block the beneficiary public profile.
@@ -73,10 +83,6 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
     const multiProfileOwner=Boolean(isOwner&&resolvedProfileId&&await sponsoredMultiProfileAccess(c,String(currentUserId||'')))
     const ownerPanelUrl=multiProfileOwner?`${configuredAppUrl(c)}/admin/sponsored?profile_id=${encodeURIComponent(resolvedProfileId)}`:`${configuredAppUrl(c)}/admin/sponsored`
     return c.json({ok:true,state:isOwner?'sponsored_draft_owner':'sponsored_draft',artifact,sponsor,message:isOwner?'Tu presentación patrocinada todavía está en construcción.':'Esta presentación todavía está en construcción.',next_url:isOwner?ownerPanelUrl:null,login_url:isOwner?null:`${configuredAppUrl(c)}/admin/sponsored/entry?public_code=${encodeURIComponent(publicCode)}`})
-  }
-
-  if(sponsorMembership){
-    return c.json({ok:true,state:'sponsored_sponsor_inspection',artifact,sponsor,message:`Este producto pertenece a tu patrocinio. Código ${publicCode}. Estado: pendiente de activación.`,manage_url:`${configuredAppUrl(c)}/admin/sponsor?code=${encodeURIComponent(publicCode)}`})
   }
 
   if(sponsoredStatus==='inactive')return c.json({ok:true,state:'blocked',artifact,sponsor,message:'Este producto patrocinado está inactivo.'})
