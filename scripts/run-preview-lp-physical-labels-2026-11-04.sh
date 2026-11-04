@@ -20,11 +20,11 @@ CHANGED="$(git diff --name-only "$BASE"..HEAD)"
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   case "$file" in
-    api/src/index.ts|api/src/sponsored-profiles.ts|app/src/components/admin/SuperAdminArtifacts.tsx|app/src/components/admin/SuperAdminSponsors.tsx|scripts/test-lp-superadmin-physical-label-visibility-2026-11-04.mjs|scripts/run-preview-lp-physical-labels-2026-11-04.sh) ;;
+    api/src/index.ts|api/src/sponsored-profiles.ts|app/src/components/admin/SuperAdminArtifacts.tsx|app/src/components/admin/SuperAdminSponsors.tsx|scripts/test-lp-superadmin-physical-label-visibility-2026-11-04.mjs|scripts/run-preview-lp-physical-labels-2026-11-04.sh|scripts/run-production-lp-physical-labels-2026-11-04.sh) ;;
     *) fail "Archivo ajeno al PR #138: $file" ;;
   esac
 done <<< "$CHANGED"
-for f in api/src/index.ts api/src/sponsored-profiles.ts app/src/components/admin/SuperAdminArtifacts.tsx app/src/components/admin/SuperAdminSponsors.tsx scripts/test-lp-superadmin-physical-label-visibility-2026-11-04.mjs scripts/run-preview-lp-physical-labels-2026-11-04.sh; do
+for f in api/src/index.ts api/src/sponsored-profiles.ts app/src/components/admin/SuperAdminArtifacts.tsx app/src/components/admin/SuperAdminSponsors.tsx scripts/test-lp-superadmin-physical-label-visibility-2026-11-04.mjs scripts/run-preview-lp-physical-labels-2026-11-04.sh scripts/run-production-lp-physical-labels-2026-11-04.sh; do
   grep -Fxq "$f" <<< "$CHANGED" || fail "Falta archivo esperado: $f"
 done
 [[ "$(git diff --numstat "$BASE"..HEAD -- api/src/index.ts)" == "$(printf '5\t3\tapi/src/index.ts')" ]] || fail "Cambio L API fuera del alcance."
