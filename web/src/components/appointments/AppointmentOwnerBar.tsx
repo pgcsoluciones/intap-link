@@ -41,9 +41,9 @@ type Context={
   contact_url?:string
   contact_label?:string
 }
-function contactIcon(label:string){
+function contactIcon(label:string,url:string){
   const normalized=label.toLocaleLowerCase('es').trim()
-  if(normalized.includes('whatsapp'))return <FaWhatsapp aria-hidden="true" />
+  if(/(?:wa\.me|whatsapp\.com)/i.test(url)||normalized.includes('whatsapp'))return <FaWhatsapp aria-hidden="true" />
   if(normalized.includes('visitador'))return <FaUserMd aria-hidden="true" />
   if(normalized.includes('vendedor'))return <FaUserTie aria-hidden="true" />
   return <FaUserCircle aria-hidden="true" />
@@ -149,14 +149,14 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     <div className="kawmed-owner-header__row" style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
       <div className="kawmed-owner-header__desktop-links" style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
         <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}><FaUserCircle aria-hidden="true" style={{color:palette.accent,fontSize:19,flexShrink:0}}/>{settingsLabel}</button>
-        {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'inline-flex',fontSize:19,flexShrink:0}}>{contactIcon(contactLabel)}</span>{contactLabel}</a>}
+        {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'inline-flex',fontSize:19,flexShrink:0}}>{contactIcon(contactLabel,contactUrl)}</span>{contactLabel}</a>}
         {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'inline-flex',fontSize:19,flexShrink:0}}>{resourceIcon(resourceLabel)}</span>{resourceLabel}</a>}
       </div>
       {mobileMenu&&<div className="kawmed-owner-header__mobile-menu" ref={menuRef}>
         <button type="button" className="kawmed-owner-header__menu-button" aria-label="Abrir menú del perfil" aria-expanded={menuOpen} aria-controls="kawmed-owner-links" onClick={()=>setMenuOpen(value=>!value)}><FaBars /><span>Menú</span></button>
         {menuOpen&&<nav className="kawmed-owner-header__dropdown" id="kawmed-owner-links" aria-label="Opciones de mi perfil">
           <a href={settingsUrl} onClick={()=>setMenuOpen(false)}><FaUserCircle aria-hidden="true"/>{settingsLabel}</a>
-          {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{contactIcon(contactLabel)}{contactLabel}</a>}
+          {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{contactIcon(contactLabel,contactUrl)}{contactLabel}</a>}
           {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{resourceIcon(resourceLabel)}{resourceLabel}</a>}
         </nav>}
       </div>}
