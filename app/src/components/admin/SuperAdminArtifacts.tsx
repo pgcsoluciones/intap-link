@@ -10,6 +10,7 @@ type CodeStatus = 'active' | 'used' | 'revoked' | 'expired' | 'none'
 type CreatedArtifact = {
   id: string
   public_code: string
+  display_code?: string | null
   activation_code: string
   product_type: ProductType
   status: ArtifactStatus
@@ -20,6 +21,7 @@ type CreatedArtifact = {
 type ArtifactItem = {
   id: string
   public_code: string
+  display_code?: string | null
   product_type: ProductType
   status: ArtifactStatus
   owner_user_id?: string | null
@@ -234,6 +236,7 @@ export default function SuperAdminArtifacts() {
     if (!batchResults.length) return
     const rows = batchResults.map(item => ({
       'Tipo de producto': productLabel(item.product_type),
+      'Identificador físico': item.display_code || '—',
       'Código público': item.public_code,
       'Código secreto': item.activation_code,
       'URL física permanente': item.public_url,
@@ -244,8 +247,8 @@ export default function SuperAdminArtifacts() {
     const workbook = XLSX.utils.book_new()
     const worksheet = XLSX.utils.json_to_sheet(rows)
     worksheet['!cols'] = [
-      { wch: 22 }, { wch: 18 }, { wch: 28 }, { wch: 48 },
-      { wch: 16 }, { wch: 22 }, { wch: 24 },
+      { wch: 22 }, { wch: 20 }, { wch: 18 }, { wch: 28 },
+      { wch: 48 }, { wch: 16 }, { wch: 22 }, { wch: 24 },
     ]
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Códigos INTAP')
     XLSX.writeFile(workbook, `intap-codigos-${productType}-${new Date().toISOString().slice(0, 10)}.xlsx`)
@@ -427,7 +430,7 @@ export default function SuperAdminArtifacts() {
             <div className="mt-5 grid gap-3">
               <ValueRow label="Código de activación · secreto" value={created.activation_code} actionLabel={copied === 'activation' ? 'Copiado' : 'Copiar código'} onAction={() => void copyValue('activation', created.activation_code)} strong />
               <ValueRow label="URL pública permanente" value={created.public_url} actionLabel={copied === 'url' ? 'Copiada' : 'Copiar URL'} onAction={() => void copyValue('url', created.public_url)} />
-              <div className="grid gap-3 sm:grid-cols-2"><InfoBox label="Código público" value={created.public_code} /><InfoBox label="Estado" value={STATUS_LABELS[created.status]} /></div>
+              <div className="grid gap-3 sm:grid-cols-2"><InfoBox label="Identificador físico" value={created.display_code || '—'} /><InfoBox label="Código público" value={created.public_code} /><InfoBox label="Estado" value={STATUS_LABELS[created.status]} /></div>
             </div>
             <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800">{created.warning || 'El código secreto no puede recuperarse después. Si se pierde antes de utilizarse, Super Admin puede revocarlo y emitir uno nuevo.'}</p>
           </section>
@@ -445,8 +448,8 @@ export default function SuperAdminArtifacts() {
             </div>
             <div className="mt-5 max-h-[360px] overflow-auto rounded-2xl bg-white">
               <table className="w-full min-w-[760px] text-left text-xs">
-                <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400"><tr><th className="p-3">#</th><th className="p-3">Código público</th><th className="p-3">Código activación · secreto</th><th className="p-3">URL permanente</th></tr></thead>
-                <tbody>{batchResults.map((item, index) => <tr key={item.id} className="border-t border-slate-100"><td className="p-3 font-bold">{index + 1}</td><td className="p-3 font-mono font-black">{item.public_code}</td><td className="p-3 font-mono font-black text-violet-700">{item.activation_code}</td><td className="p-3 font-mono text-[11px]">{item.public_url}</td></tr>)}</tbody>
+                <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400"><tr><th className="p-3">#</th><th className="p-3">Identificador físico</th><th className="p-3">Código público</th><th className="p-3">Código activación · secreto</th><th className="p-3">URL permanente</th></tr></thead>
+                <tbody>{batchResults.map((item, index) => <tr key={item.id} className="border-t border-slate-100"><td className="p-3 font-bold">{index + 1}</td><td className="p-3 font-mono font-black">{item.display_code || '—'}</td><td className="p-3 font-mono font-black">{item.public_code}</td><td className="p-3 font-mono font-black text-violet-700">{item.activation_code}</td><td className="p-3 font-mono text-[11px]">{item.public_url}</td></tr>)}</tbody>
               </table>
             </div>
           </section>
@@ -456,7 +459,7 @@ export default function SuperAdminArtifacts() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Inventario</p><h2 className="mt-1 text-2xl font-black">Productos generados</h2><p className="mt-1 text-xs text-slate-400">15 códigos por página para mantener la gestión rápida y ordenada.</p></div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              <input value={query} onChange={event => setQuery(event.target.value.toUpperCase())} placeholder="Código público, email o slug" className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400" />
+              <input value={query} onChange={event => setQuery(event.target.value.toUpperCase())} placeholder="Identificador físico, código público, email o slug" className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400" />
               <select value={productFilter} onChange={event => setProductFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold"><option value="">Todos los productos</option>{PRODUCT_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
               <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold"><option value="">Todos los estados</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
               <button onClick={() => { setPage(1); void loadInventory() }} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white">Buscar</button>
@@ -465,11 +468,12 @@ export default function SuperAdminArtifacts() {
 
           <div className="mt-6 overflow-x-auto">
             <table className="w-full min-w-[960px] text-left text-sm">
-              <thead className="text-[11px] uppercase tracking-wide text-slate-400"><tr><th className="border-b p-3">Código</th><th className="border-b p-3">Producto</th><th className="border-b p-3">Estado</th><th className="border-b p-3">Código activación</th><th className="border-b p-3">Propietario</th><th className="border-b p-3">Destino</th><th className="border-b p-3">Creado</th><th className="border-b p-3"></th></tr></thead>
+              <thead className="text-[11px] uppercase tracking-wide text-slate-400"><tr><th className="border-b p-3">Código</th><th className="border-b p-3">Identificador físico</th><th className="border-b p-3">Producto</th><th className="border-b p-3">Estado</th><th className="border-b p-3">Código activación</th><th className="border-b p-3">Propietario</th><th className="border-b p-3">Destino</th><th className="border-b p-3">Creado</th><th className="border-b p-3"></th></tr></thead>
               <tbody>
                 {pagedArtifacts.map(item => (
                   <tr key={item.id} className="border-b border-slate-100 align-top">
                     <td className="p-3 font-mono font-black">{item.public_code}</td>
+                    <td className="p-3 font-mono font-black">{item.display_code || '—'}</td>
                     <td className="p-3">{productLabel(item.product_type)}</td>
                     <td className="p-3"><Badge>{STATUS_LABELS[item.status] || item.status}</Badge></td>
                     <td className="p-3"><Badge>{CODE_LABELS[item.activation_code_status || 'none']}</Badge>{item.activation_code_used_at && <div className="mt-1 text-[10px] text-slate-400">{formatDate(item.activation_code_used_at)}</div>}</td>
@@ -479,7 +483,7 @@ export default function SuperAdminArtifacts() {
                     <td className="p-3"><button onClick={() => { setRotatedCode(''); void openDetail(item) }} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700">Gestionar</button></td>
                   </tr>
                 ))}
-                {!loadingInventory && filteredArtifacts.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-slate-400">No hay productos con estos filtros.</td></tr>}
+                {!loadingInventory && filteredArtifacts.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-slate-400">No hay productos con estos filtros.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -504,6 +508,7 @@ export default function SuperAdminArtifacts() {
             <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">Gestionar producto</p><h2 className="mt-1 font-mono text-2xl font-black">{selected.public_code}</h2><p className="mt-1 text-sm text-slate-500">{productLabel(selected.product_type)}</p></div><button onClick={() => setSelected(null)} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black">✕</button></div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <InfoBox label="Identificador físico" value={selected.display_code || '—'} />
               <InfoBox label="Estado producto" value={STATUS_LABELS[selected.status]} />
               <InfoBox label="Estado código" value={CODE_LABELS[selected.activation_code_status || 'none']} />
               <InfoBox label="Activado" value={formatDate(selected.activated_at)} />
