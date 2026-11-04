@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs'
 
 const src=readFileSync('app/src/components/admin/SuperAdminSponsors.tsx','utf8')
 const medical=readFileSync('app/src/components/admin/KawMedClaim.tsx','utf8')
+const sponsoredActivation=readFileSync('app/src/components/admin/sponsored/SponsoredActivation.tsx','utf8')
 const p=(a,b)=>{const x=src.indexOf(a),y=src.indexOf(b,x+a.length);assert.ok(x>=0&&y>x,'Missing segment: '+a);return src.slice(x,y)}
 const chooser=p('function chooseSponsor(item:Sponsor){','  async function load(){')
 assert.match(src,/useRef\(/, 'Sponsor change guarded by a ref')
@@ -25,4 +26,7 @@ assert.match(codes,/if\(selectedSponsorIdRef\.current===sponsorId&&codeRequestId
 assert.match(medical,/Estación \{context\?\.display_code\|\|'sin ID físico'\}/,'MED first scan retains physical ID')
 assert.match(medical,/Salir \/ Activar luego/,'MED first scan retains exit')
 assert.match(medical,/import\.meta\.env\.VITE_WEB_URL/,'MED exit respects Preview Web URL instead of hardcoded Production')
-console.log('PASS: sponsor switch resets batch/commercial modules and guards late reads; KawMed initial scan and exit preserved')
+assert.match(sponsoredActivation,/Activar luego/,'Sponsored second-stage exit exists')
+assert.match(sponsoredActivation,/import\.meta\.env\.VITE_WEB_URL/,'Sponsored second-stage exit respects Preview origin')
+assert.match(sponsoredActivation,/Aceptar y activar mi presentación/,'Sponsored second-stage CTA must be product-neutral')
+console.log('PASS: tenant switch isolation, KawMed first scan and sponsored exit in matching environment')
