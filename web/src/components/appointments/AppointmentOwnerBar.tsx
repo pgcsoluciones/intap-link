@@ -135,7 +135,16 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     finally{setActionId('')}
   }
 
-  if(!context)return null
+  // Free editor preview needs the return-to-editor control inside a header even before
+  // the owner-context request finishes. Do not show admin actions without is_owner.
+  if(!context){
+    if(settingsPath!=='/admin/free/account'||new URLSearchParams(window.location.search).get('preview')!=='1')return null
+    return <div className="kawmed-owner-header" style={{position:'sticky',top:0,zIndex:58,background:'rgba(255,255,255,.96)',borderBottom:'1px solid #e2e8f0',fontFamily:'Inter,system-ui,sans-serif'}}>
+      <div className="kawmed-owner-header__row" style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',minHeight:52,boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'flex-start'}}>
+        <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}}/>
+      </div>
+    </div>
+  }
   const origin=manageOrigin.replace(/\/$/,'')
   const manageUrl=origin+String(context.manage_url||'/admin/sponsored/agenda')
   const settingsUrl=origin+String(context.settings_url||settingsPath)
@@ -147,6 +156,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     {context.is_guest_editor&&<p style={{maxWidth:520,margin:'0 auto',padding:'7px 12px 0',fontSize:11,fontWeight:850,color:'#0e7490'}}>ADMINISTRADOR INVITADO · ACCESO TEMPORAL</p>}
     <div className="kawmed-owner-header__row" style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
       <div className="kawmed-owner-header__desktop-links" style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
+        <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}}/>
         <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}><FaUserCircle aria-hidden="true" style={{color:palette.accent,fontSize:19,flexShrink:0}}/>{settingsLabel}</button>
         {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'inline-flex',fontSize:19,flexShrink:0}}>{contactIcon(contactLabel,contactUrl)}</span>{contactLabel}</a>}
         {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'inline-flex',fontSize:19,flexShrink:0}}>{resourceIcon(resourceLabel)}</span>{resourceLabel}</a>}
@@ -154,13 +164,13 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
       {mobileMenu&&<div className="kawmed-owner-header__mobile-menu" ref={menuRef}>
         <button type="button" className="kawmed-owner-header__menu-button" aria-label="Abrir menú del perfil" aria-expanded={menuOpen} aria-controls="kawmed-owner-links" onClick={()=>setMenuOpen(value=>!value)}><FaBars /><span>Menú</span></button>
         {menuOpen&&<nav className="kawmed-owner-header__dropdown" id="kawmed-owner-links" aria-label="Opciones de mi perfil">
+          <div id="free-preview-edit-mobile-slot" style={{display:'flex',alignItems:'center'}}/>
           <a href={settingsUrl} onClick={()=>setMenuOpen(false)}><FaUserCircle aria-hidden="true"/>{settingsLabel}</a>
           {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{contactIcon(contactLabel,contactUrl)}{contactLabel}</a>}
           {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{resourceIcon(resourceLabel)}{resourceLabel}</a>}
         </nav>}
       </div>}
       <div style={{display:'flex',alignItems:'center',gap:7}}>
-        <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}} />
         <button type="button" onClick={()=>window.location.assign(manageUrl)} style={{...pill,borderColor:palette.accent+'44',background:palette.accentSoft,color:palette.text}}><FaCalendarAlt aria-hidden="true"/>Agenda</button>
         <div ref={popoverRef} style={{position:'relative'}}>
           <button type="button" aria-label="Solicitudes de agenda" onClick={()=>setOpen(value=>!value)} style={{...pill,position:'relative',background:context.pending_count?'#fee2e2':'#f8fafc',color:context.pending_count?'#b91c1c':'#475569',borderColor:context.pending_count?'#fecaca':'#e2e8f0'}}><FaBell aria-hidden="true"/>{context.pending_count>0&&<b style={{minWidth:18,height:18,borderRadius:99,display:'grid',placeItems:'center',background:'#dc2626',color:'#fff',fontSize:10}}>{context.pending_count}</b>}</button>
