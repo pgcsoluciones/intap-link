@@ -8,7 +8,7 @@ const chooser=p('function chooseSponsor(item:Sponsor){','  async function load()
 assert.match(src,/useRef\(/, 'Sponsor change guarded by a ref')
 assert.match(chooser,/selectedSponsorIdRef\.current=item\.id/, 'Synchronously bind active sponsor before UI update')
 assert.match(chooser,/setBatch\(\{batch_name:'',quantity:10,product_type:'keychain',city:'',zone:'',notes:''\}\)/,'Never reuse prior sponsor batch parameters')
-for(const val of ['setGenerated([])','setMaster(null)','setExistingCodes(\\'\\')','setCommercialResource({resource_url:\\'\\',resource_label:\\'\\'})','setModules({bank_accounts:false,commercial_contact:\\'none\\',commercial_resource:\\'none\\'})','setMembers([])','setCodes([])','setCodeQuery(\\'\\')','setCodeStatus(\\'all\\')','setCodeRole(\\'all\\')','setError(\\'\\')','setMessage(\\'\\')']){
+for(const val of ["setGenerated([])","setMaster(null)","setExistingCodes('')","setCommercialResource({resource_url:'',resource_label:''})","setModules({bank_accounts:false,commercial_contact:'none',commercial_resource:'none'})","setMembers([])","setCodes([])","setCodeQuery('')","setCodeStatus('all')","setCodeRole('all')","setError('')","setMessage('')"]){
   assert.ok(chooser.includes(val),'Missing tenant-switch reset: '+val)
 }
 assert.match(src,/onClick=\{\(\)=>chooseSponsor\(item\)\} disabled=\{saving\}/,'Use isolated selection handler')
