@@ -943,6 +943,7 @@ function normalizeSuperAdminArtifact(c: any, row: any) {
   return {
     id: row.id,
     public_code: row.public_code,
+    display_code: row.display_code ?? null,
     product_type: row.product_type,
     status: row.status,
     owner_user_id: row.owner_user_id ?? null,
@@ -966,7 +967,7 @@ function normalizeSuperAdminArtifact(c: any, row: any) {
 
 const SUPERADMIN_ARTIFACT_SELECT = `
   SELECT
-    a.id, a.public_code, a.product_type, a.status,
+    a.id, a.public_code, di.display_code, a.product_type, a.status,
     a.owner_user_id, a.profile_id, a.activated_at, a.created_at, a.updated_at,
     u.email AS owner_email,
     p.slug AS profile_slug, p.name AS profile_name,
@@ -981,6 +982,7 @@ const SUPERADMIN_ARTIFACT_SELECT = `
     ac.created_at AS activation_code_created_at,
     cl.claim_at AS claim_at
   FROM intap_artifacts a
+  LEFT JOIN artifact_display_identifiers di ON di.artifact_id = a.id
   LEFT JOIN users u ON u.id = a.owner_user_id
   LEFT JOIN profiles p ON p.id = a.profile_id
   LEFT JOIN artifact_activation_codes ac
@@ -1008,8 +1010,8 @@ app.get('/api/v1/superadmin/artifacts', requireSuperAdmin('viewer'), async (c) =
   if (status) { conditions.push('a.status = ?'); bindings.push(status) }
   if (q) {
     const like = `%${q}%`
-    conditions.push('(a.public_code LIKE ? OR u.email LIKE ? OR p.slug LIKE ? OR p.name LIKE ?)')
-    bindings.push(like, like, like, like)
+    conditions.push('(a.public_code LIKE ? OR di.display_code LIKE ? OR u.email LIKE ? OR p.slug LIKE ? OR p.name LIKE ?)')
+    bindings.push(like, like, like, like, like)
   }
   const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : ''
 
