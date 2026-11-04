@@ -31,7 +31,7 @@ done
 [[ "$(git diff --numstat "$BASE"..HEAD -- api/src/sponsored-profiles.ts)" == "$(printf '1\t1\tapi/src/sponsored-profiles.ts')" ]] || fail "Cambio P API fuera del alcance."
 [[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/SuperAdminArtifacts.tsx)" == "$(printf '13\t8\tapp/src/components/admin/SuperAdminArtifacts.tsx')" ]] || fail "Cambio L App fuera del alcance."
 [[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/KawMedClaim.tsx)" == "$(printf '1\t1\tapp/src/components/admin/KawMedClaim.tsx')" ]] || fail "Salida KawMed fuera del alcance."
-[[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/SuperAdminSponsors.tsx)" == "$(printf '93\t7\tapp/src/components/admin/SuperAdminSponsors.tsx')" ]] || fail "Cambio P App fuera del alcance."
+[[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/SuperAdminSponsors.tsx)" == "$(printf '96\t7\tapp/src/components/admin/SuperAdminSponsors.tsx')" ]] || fail "Cambio P App fuera del alcance."
 [[ -z "$(git diff --name-only "$BASE"..HEAD -- web api/migrations)" ]] || fail "Web o migraciones inesperadas."
 grep -Fxq 'name = "intap-api-preview"' api/wrangler.preview.toml || fail "Worker no es Preview."
 grep -Fxq 'main = "src/preview-frontdoor-entry.ts"' api/wrangler.preview.toml || fail "Frontdoor Preview modificado."
