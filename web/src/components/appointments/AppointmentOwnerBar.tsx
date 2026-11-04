@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { FaBars, FaBell, FaBook, FaBookMedical, FaBullhorn, FaCalendarAlt, FaFileAlt, FaLink, FaTimes, FaUserCircle, FaUserMd, FaUserTie, FaWhatsapp } from 'react-icons/fa'
+import { FaBars, FaBell, FaBook, FaBookMedical, FaCalendarAlt, FaFileAlt, FaLink, FaTimes, FaUserCircle, FaUserMd, FaUserTie, FaWhatsapp } from 'react-icons/fa'
 import './AppointmentOwnerBar.mobile.css'
 
 // The App saves the active Multicuenta cookie through api.intaprd.com in
@@ -50,7 +50,6 @@ function contactIcon(label:string,url:string){
 }
 function resourceIcon(label:string){
   const normalized=label.toLocaleLowerCase('es').trim()
-  if(normalized.includes('promoci')||normalized.includes('oferta'))return <FaBullhorn aria-hidden="true" />
   if(normalized.includes('vadem'))return <FaBookMedical aria-hidden="true" />
   if(normalized.includes('catálogo')||normalized.includes('catalogo'))return <FaBook aria-hidden="true" />
   if(normalized.includes('documento')||normalized.includes('archivo'))return <FaFileAlt aria-hidden="true" />
@@ -68,7 +67,7 @@ type Props={
   onToast:(message:string)=>void
 }
 
-export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Configuración',palette,onToast,mobileMenu=false}:Props){
+export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Mi perfil',palette,onToast,mobileMenu=false}:Props){
   const[context,setContext]=useState<Context|null>(null)
   const[open,setOpen]=useState(false)
   const[menuOpen,setMenuOpen]=useState(false)
