@@ -29,9 +29,9 @@ match(bar,/json\?\.ok&&json\.data\?\.is_owner/,'Links shown only to authorized o
 for(const [icon,label] of [['FaUserCircle','profile'],['FaWhatsapp','WhatsApp'],['FaUserMd','visitador'],['FaUserTie','vendedor'],['FaBookMedical','vademecum'],['FaBook','catalogo'],['FaBullhorn','promociones'],['FaLink','generic resource'],['FaCalendarAlt','agenda'],['FaBell','notifications']]){
   assert.ok(bar.includes(icon),'Missing '+label+' icon '+icon)
 }
-match(bar,/\{contactIcon\(contactLabel\)\}\{contactLabel\}/,'Mobile contact displays icon and unchanged label')
+match(bar,/\{contactIcon\(contactLabel,contactUrl\)\}\{contactLabel\}/,'Mobile contact displays icon and unchanged label')
 match(bar,/\{resourceIcon\(resourceLabel\)\}\{resourceLabel\}/,'Mobile resource displays icon and unchanged label')
-match(bar,/\{contactIcon\(contactLabel\)\}<\/span>\{contactLabel\}/,'Desktop contact displays icon and unchanged label')
+match(bar,/\{contactIcon\(contactLabel,contactUrl\)\}<\/span>\{contactLabel\}/,'Desktop contact displays icon and unchanged label')
 match(bar,/\{resourceIcon\(resourceLabel\)\}<\/span>\{resourceLabel\}/,'Desktop resource displays icon and unchanged label')
 match(css,/\.kawmed-owner-header__dropdown a svg/,'Mobile icons remain legible')
 match(css,/@media\(max-width:700px\)/,'Small-screen toolbar uses the existing menu')
