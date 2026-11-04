@@ -55,7 +55,7 @@ export default function SponsoredAwareArtifactResolver(){
     </>:
     payload?.state==='sponsored_sponsor_inspection'?<>
       <h1 style={{fontSize:25,margin:'8px 0 10px'}}>Identificación del dispositivo</h1>
-      <p style={{color:'#64748b',lineHeight:1.5,margin:'0 0 20px',fontSize:14}}>Este producto pertenece a tu patrocinio y está pendiente de activación.</p>
+      <p style={{color:'#64748b',lineHeight:1.5,margin:'0 0 20px',fontSize:14}}>Producto de tu patrocinio · {payload.inspection_status==='activated'?'Activado':payload.inspection_status==='inactive'?'Inactivo':'Pendiente de activación'}</p>
       <div aria-label="Identificación privada de estación" style={{margin:'0 0 20px',padding:18,borderRadius:16,background:'#f0f9ff',border:'1px solid #bae6fd',textAlign:'left'}}>
         <span style={{display:'block',fontSize:12,fontWeight:800,color:'#0369a1'}}>Identificador físico</span>
         <strong style={{display:'block',marginTop:6,fontSize:24,color:'#0f172a'}}>{physicalId||'Sin ID físico'}</strong>
