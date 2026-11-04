@@ -27,12 +27,14 @@ while IFS= read -r file; do
     web/src/components/appointments/AppointmentOwnerBar.mobile.css|\
     web/src/components/medical-profile/KawMedProfile.tsx|\
     web/src/components/sponsored/SponsoredProfile.tsx|\
+    web/src/components/free-profile/IntapLinkGratisProfile.tsx|\
     scripts/test-owner-toolbar-contextual-icons-2026-11-04.mjs|\
+    scripts/test-owner-toolbar-icons-multivariant-2026-11-04.mjs|\
     scripts/run-preview-owner-toolbar-icons-2026-11-04.sh) ;;
     *) fail "Archivo fuera de alcance: $file" ;;
   esac
 done <<< "$CHANGED"
-for file in web/src/components/appointments/AppointmentOwnerBar.tsx web/src/components/appointments/AppointmentOwnerBar.mobile.css web/src/components/medical-profile/KawMedProfile.tsx web/src/components/sponsored/SponsoredProfile.tsx scripts/test-owner-toolbar-contextual-icons-2026-11-04.mjs scripts/run-preview-owner-toolbar-icons-2026-11-04.sh; do
+for file in web/src/components/appointments/AppointmentOwnerBar.tsx web/src/components/appointments/AppointmentOwnerBar.mobile.css web/src/components/medical-profile/KawMedProfile.tsx web/src/components/sponsored/SponsoredProfile.tsx web/src/components/free-profile/IntapLinkGratisProfile.tsx scripts/test-owner-toolbar-contextual-icons-2026-11-04.mjs scripts/test-owner-toolbar-icons-multivariant-2026-11-04.mjs scripts/run-preview-owner-toolbar-icons-2026-11-04.sh; do
   grep -Fxq "$file" <<< "$CHANGED" || fail "Falta archivo previsto: $file"
 done
 
@@ -44,6 +46,7 @@ grep -Fxq 'APP_PAGES_ORIGIN = "https://qa-kawmed-guest-current-2026.intap-web2.p
 echo "===== Pruebas y compilación Web ====="
 npm ci
 node scripts/test-owner-toolbar-contextual-icons-2026-11-04.mjs
+node scripts/test-owner-toolbar-icons-multivariant-2026-11-04.mjs
 node scripts/test-sponsored-activation-landing-cleanup-2026-11-04.mjs
 node scripts/test-all-master-physical-station-parity-2026-11-02.mjs
 npm run build:preview -w web
@@ -85,6 +88,6 @@ check_bundle "$PUBLIC_PREVIEW" "public"
 [[ -z "$(git status --porcelain)" ]] || fail "Hay cambios locales inesperados al finalizar."
 
 echo "BARRA DE PROPIETARIO PREVIEW ACTUALIZADA: $PUBLIC_PREVIEW"
-echo "Prueba manual: perfil KawMed + patrocinado, escritorio y móvil, y verificar enlaces."
+echo "Prueba manual: Link/Free independiente, multicuenta, KawMed y patrocinado; escritorio y móvil, verificar textos y destinos."
 echo "La Web pública y el frontdoor sirven los bundles correctos; API, App, Producción, D1 y R2 sin cambios."
 echo "Logs: $LOG_DIR"
