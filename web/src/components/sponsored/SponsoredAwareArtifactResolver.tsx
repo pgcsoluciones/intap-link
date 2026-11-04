@@ -45,16 +45,27 @@ export default function SponsoredAwareArtifactResolver(){
     payload?.state==='sponsored_pending_activation'?<>
       <h1 style={{fontSize:26,lineHeight:1.24,margin:'6px 0 10px'}}>Activa tu presentación digital</h1>
       <p style={{fontSize:14,color:'#64748b',lineHeight:1.55,margin:'0 0 20px'}}>Personaliza tu perfil profesional en pocos pasos.</p>
-      <div aria-label="Identificación del producto patrocinado" style={{margin:'0 0 22px',padding:'16px 18px',border:'1px solid #bae6fd',borderRadius:18,background:'#f0f9ff',textAlign:'left'}}>
-        <span style={{display:'block',fontSize:11,fontWeight:800,color:'#0369a1',textTransform:'uppercase',letterSpacing:1}}>Tu producto patrocinado</span>
-        <strong style={{display:'block',marginTop:7,fontSize:19,color:'#0f172a'}}>{productLabel}{physicalId?' · '+physicalId:''}</strong>
-        <span style={{display:'block',marginTop:6,fontSize:12,color:'#64748b'}}>Código del producto: <strong style={{fontFamily:'monospace',color:'#475569'}}>{activationCode}</strong></span>
+      <div aria-label="Producto patrocinado" style={{margin:'0 0 22px',padding:'15px 18px',border:'1px solid #bae6fd',borderRadius:18,background:'#f0f9ff',textAlign:'center'}}>
+        <span style={{display:'block',fontSize:11,fontWeight:800,color:'#0369a1',textTransform:'uppercase',letterSpacing:1}}>Producto patrocinado</span>
+        <strong style={{display:'block',marginTop:7,fontSize:19,color:'#0f172a'}}>{productLabel}</strong>
       </div>
       <button type="button" onClick={()=>go(payload.next_url)} style={primary}>Activar ahora</button>
       <button type="button" onClick={()=>window.location.assign('/')} style={secondary}>Activar después</button>
       <p style={{margin:'13px 0 0',fontSize:12,lineHeight:1.5,color:'#64748b'}}>Puedes activarlo más adelante volviendo a escanearlo.</p>
     </>:
-    payload?.state==='sponsored_sponsor_inspection'?<><div style={{width:52,height:52,borderRadius:'50%',background:'#ecfeff',color:'#0891b2',display:'grid',placeItems:'center',margin:'4px auto 16px',fontSize:22,fontWeight:900}}>i</div><h1 style={{fontSize:26,margin:'0 0 8px'}}>Este producto es de tu patrocinio</h1><p style={{color:'#64748b',lineHeight:1.6}}>{payload.message}</p><div style={{margin:'16px 0',padding:14,borderRadius:16,background:'#f8fafc',fontWeight:900}}>Código {code}</div><button type="button" onClick={()=>go(payload.manage_url)} style={primary}>Ver en mi panel</button><p style={{margin:'12px 0 0',fontSize:12,color:'#94a3b8'}}>Esta consulta es solo informativa. El producto no ha sido activado ni reclamado.</p></>:
+    payload?.state==='sponsored_sponsor_inspection'?<>
+      <h1 style={{fontSize:25,margin:'8px 0 10px'}}>Identificación del dispositivo</h1>
+      <p style={{color:'#64748b',lineHeight:1.5,margin:'0 0 20px',fontSize:14}}>Este producto pertenece a tu patrocinio y está pendiente de activación.</p>
+      <div aria-label="Identificación privada de estación" style={{margin:'0 0 20px',padding:18,borderRadius:16,background:'#f0f9ff',border:'1px solid #bae6fd',textAlign:'left'}}>
+        <span style={{display:'block',fontSize:12,fontWeight:800,color:'#0369a1'}}>Identificador físico</span>
+        <strong style={{display:'block',marginTop:6,fontSize:24,color:'#0f172a'}}>{physicalId||'Sin ID físico'}</strong>
+        <span style={{display:'block',marginTop:10,fontSize:14,fontWeight:700,color:'#334155'}}>{productLabel}</span>
+        <span style={{display:'block',marginTop:6,fontSize:12,color:'#475569'}}>Código NFC/QR: <strong style={{fontFamily:'monospace'}}>{activationCode}</strong></span>
+      </div>
+      <button type="button" onClick={()=>go(payload.manage_url)} style={primary}>Administrar en mi panel</button>
+      <button type="button" onClick={()=>window.location.assign('/')} style={secondary}>Salir</button>
+      <p style={{margin:'12px 0 0',fontSize:12,color:'#64748b'}}>Esta inspección no activa ni reclama el dispositivo.</p>
+    </>:
     payload?.state==='sponsored_master'?<><h1 style={{fontSize:26,margin:'8px 0'}}>Llavero Master</h1><p style={{color:'#64748b',lineHeight:1.6}}>{payload.message}</p><div style={{margin:'16px 0',padding:14,borderRadius:16,background:'#f8fafc',fontWeight:900}}>Código {code}</div><button type="button" onClick={()=>go(payload.manage_url)} style={primary}>Abrir panel de patrocinio</button></>:
     payload?.state==='sponsored_master_login'?<><h1 style={{fontSize:26,margin:'8px 0'}}>Llavero Master</h1><p style={{color:'#64748b',lineHeight:1.6}}>{payload.message}</p><div style={{margin:'16px 0',padding:14,borderRadius:16,background:'#f8fafc',fontWeight:900}}>Código {code}</div><button type="button" onClick={()=>go(payload.login_url)} style={primary}>Iniciar sesión como patrocinador</button></>:
     payload?.state==='sponsored_draft_owner'?<><h1 style={{fontSize:26,margin:'8px 0'}}>Tu presentación está en construcción</h1><p style={{color:'#64748b',lineHeight:1.6}}>Personaliza tu presentación y coloca tus datos reales antes de publicarla.</p><button type="button" onClick={()=>go(payload.next_url)} style={primary}>Seguir configurando</button></>:
