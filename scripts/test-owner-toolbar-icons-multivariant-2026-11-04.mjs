@@ -16,8 +16,9 @@ match(med,/settingsPath="\/admin\/medical"/,'KawMed existing settings destinatio
 match(sponsor,/settingsLabel="Mi perfil"/,'Sponsored label changed from Editar mi perfil')
 match(sponsor,/settingsPath="\/admin\/sponsored"/,'Sponsored existing settings destination is untouched')
 match(sponsor,/mobileMenu settingsLabel="Mi perfil"/,'Sponsored mobile owner menu is retained')
-match(bar,/settingsLabel='Configuración'/,'Free default label remains unchanged')
+match(bar,/settingsLabel='Mi perfil'/,'Free, Link and other owner variants show Mi perfil by default')
 match(bar,/const settingsUrl=origin\+String\(context\.settings_url\|\|settingsPath\)/,'Settings URL and account scope preserved')
+assert.doesNotMatch(bar,/FaBullhorn|normalized\.includes\('promoci'\)/,'No invented Promociones entry')
 match(bar,/const resourceUrl=String\(context\.resource_url\|\|''\)\.trim\(\)/,'Resource URL preserved')
 match(bar,/const contactUrl=String\(context\.contact_url\|\|''\)\.trim\(\)/,'Contact URL preserved')
 match(bar,/href=\{contactUrl\} target="_blank" rel="noopener noreferrer"/,'Contact URL untouched')
@@ -26,7 +27,7 @@ match(bar,/window\.location\.assign\(manageUrl\)/,'Agenda URL untouched')
 match(bar,/ownerSessionApiBase\(ownerApiBase\)/,'Owner cookie/session lookup stays on the correct origin')
 match(bar,/json\?\.ok&&json\.data\?\.is_owner/,'Links shown only to authorized owner')
 // Icons are derived from existing labels; no link text, grant, or URL changes.
-for(const [icon,label] of [['FaUserCircle','profile'],['FaWhatsapp','WhatsApp'],['FaUserMd','visitador'],['FaUserTie','vendedor'],['FaBookMedical','vademecum'],['FaBook','catalogo'],['FaBullhorn','promociones'],['FaLink','generic resource'],['FaCalendarAlt','agenda'],['FaBell','notifications']]){
+for(const [icon,label] of [['FaUserCircle','profile'],['FaWhatsapp','WhatsApp'],['FaUserMd','visitador'],['FaUserTie','vendedor'],['FaBookMedical','vademecum'],['FaBook','catalogo'],['FaLink','generic resource'],['FaCalendarAlt','agenda'],['FaBell','notifications']]){
   assert.ok(bar.includes(icon),'Missing '+label+' icon '+icon)
 }
 match(bar,/\{contactIcon\(contactLabel,contactUrl\)\}\{contactLabel\}/,'Mobile contact displays icon and unchanged label')
