@@ -32,6 +32,7 @@ while IFS= read -r f; do
     app/src/components/admin/KawMedClaim.tsx|\
     app/src/components/admin/SuperAdminArtifacts.tsx|\
     app/src/components/admin/SuperAdminSponsors.tsx|\
+    app/src/components/admin/sponsored/SponsoredActivation.tsx|\
     scripts/test-lp-superadmin-physical-label-visibility-2026-11-04.mjs|\
     scripts/test-superadmin-sponsor-tenant-switch-2026-11-04.mjs|\
     scripts/run-preview-lp-physical-labels-2026-11-04.sh|\
@@ -39,13 +40,14 @@ while IFS= read -r f; do
     *) fail "Archivo inesperado respecto al release aprobado: $f" ;;
   esac
 done <<< "$CHANGED"
-for f in api/src/index.ts api/src/sponsored-profiles.ts app/src/components/admin/KawMedClaim.tsx app/src/components/admin/SuperAdminArtifacts.tsx app/src/components/admin/SuperAdminSponsors.tsx scripts/test-lp-superadmin-physical-label-visibility-2026-11-04.mjs scripts/test-superadmin-sponsor-tenant-switch-2026-11-04.mjs scripts/run-preview-lp-physical-labels-2026-11-04.sh scripts/run-production-lp-physical-labels-2026-11-04.sh; do
+for f in api/src/index.ts api/src/sponsored-profiles.ts app/src/components/admin/KawMedClaim.tsx app/src/components/admin/SuperAdminArtifacts.tsx app/src/components/admin/SuperAdminSponsors.tsx app/src/components/admin/sponsored/SponsoredActivation.tsx scripts/test-lp-superadmin-physical-label-visibility-2026-11-04.mjs scripts/test-superadmin-sponsor-tenant-switch-2026-11-04.mjs scripts/run-preview-lp-physical-labels-2026-11-04.sh scripts/run-production-lp-physical-labels-2026-11-04.sh; do
   grep -Fxq "$f" <<< "$CHANGED" || fail "Falta archivo requerido: $f"
 done
 [[ "$(git diff --numstat "$BASE"..HEAD -- api/src/index.ts)" == "$(printf '5\t3\tapi/src/index.ts')" ]] || fail "Cambio L API fuera del alcance."
 [[ "$(git diff --numstat "$BASE"..HEAD -- api/src/sponsored-profiles.ts)" == "$(printf '1\t1\tapi/src/sponsored-profiles.ts')" ]] || fail "Cambio P API fuera del alcance."
 [[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/SuperAdminArtifacts.tsx)" == "$(printf '13\t8\tapp/src/components/admin/SuperAdminArtifacts.tsx')" ]] || fail "Cambio L App fuera del alcance."
 [[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/KawMedClaim.tsx)" == "$(printf '1\t1\tapp/src/components/admin/KawMedClaim.tsx')" ]] || fail "Salida KawMed fuera del alcance."
+[[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/sponsored/SponsoredActivation.tsx)" == "$(printf '2\t2\tapp/src/components/admin/sponsored/SponsoredActivation.tsx')" ]] || fail "Salida patrocinada fuera del alcance."
 [[ "$(git diff --numstat "$BASE"..HEAD -- app/src/components/admin/SuperAdminSponsors.tsx)" == "$(printf '96\t7\tapp/src/components/admin/SuperAdminSponsors.tsx')" ]] || fail "Cambio P App fuera del alcance."
 [[ -z "$(git diff --name-only "$BASE"..HEAD -- api/migrations api/wrangler.toml api/wrangler.preview.toml web)" ]] || fail "Se han introducido migraciones o cambios de configuración/Web inesperados."
 
