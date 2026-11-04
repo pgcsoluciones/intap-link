@@ -53,7 +53,7 @@ grep -Fxq 'WEB_URL = "https://intaprd.com"' api/wrangler.toml || fail "WEB_URL n
 grep -Fxq 'database_name = "intap_db"' api/wrangler.toml || fail "D1 de Producción incorrecta."
 grep -Fxq 'database_id = "3a2d724d-5938-4777-a63e-423bb41862c0"' api/wrangler.toml || fail "ID D1 incorrecto."
 grep -Fxq 'bucket_name = "intap-r2"' api/wrangler.toml || fail "R2 de Producción incorrecto."
-grep -Fxq 'VITE_API_URL=https://app.intaprd.com' app/.env.production || fail "App build no apunta a API Producción."
+grep -Fxq 'VITE_API_URL=https://api.intaprd.com' app/.env.production || fail "App build no apunta a API Producción."
 
 check_private(){
   local status
@@ -72,7 +72,7 @@ node scripts/test-kawmed-isolation-contract.mjs
 npm run build -w app
 MAIN_ASSET="$(grep -Eo '/assets/index-[A-Za-z0-9_-]+\.js' app/dist/index.html | head -1 || true)"
 [[ -n "$MAIN_ASSET" && -f "app/dist$MAIN_ASSET" ]] || fail "Falta bundle compilado de App."
-grep -R -l -F 'app.intaprd.com' app/dist/assets/*.js >/dev/null || fail "El JS compilado no apunta a Producción."
+grep -R -l -F 'api.intaprd.com' app/dist/assets/*.js >/dev/null || fail "El JS compilado no apunta a API Producción."
 echo "===== Estado previo de seguridad en Producción ====="
 check_private
 
