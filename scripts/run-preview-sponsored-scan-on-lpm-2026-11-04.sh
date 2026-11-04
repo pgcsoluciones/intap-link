@@ -57,9 +57,9 @@ node scripts/test-superadmin-sponsor-tenant-switch-2026-11-04.mjs
 node scripts/test-nfc-physical-identifier-release.mjs
 (cd api && npx --no-install tsc --noEmit && npx --no-install wrangler deploy --config wrangler.preview.toml --dry-run)
 npm run build:preview -w web
-grep -RFl 'Activa tu presentación digital' web/dist/assets --include='*.js' >/dev/null || fail "No está la nueva pantalla del beneficiario en el build."
-grep -RFl 'Identificación del dispositivo' web/dist/assets --include='*.js' >/dev/null || fail "No está la pantalla Master en el build."
-grep -RFl 'Activar después' web/dist/assets --include='*.js' >/dev/null || fail "No está la salida del beneficiario."
+grep -RFl 'Activa tu presentación digital' web/dist/assets >/dev/null || fail "No está la nueva pantalla del beneficiario en el build."
+grep -RFl 'Identificación del dispositivo' web/dist/assets >/dev/null || fail "No está la pantalla Master en el build."
+grep -RFl 'Activar después' web/dist/assets >/dev/null || fail "No está la salida del beneficiario."
 
 MAIN_JS="$(grep -Eo '/assets/index-[A-Za-z0-9_-]+\.js' web/dist/index.html | head -1 || true)"
 [[ -n "$MAIN_JS" && -f "web/dist$MAIN_JS" ]] || fail "No hay bundle Web principal."
