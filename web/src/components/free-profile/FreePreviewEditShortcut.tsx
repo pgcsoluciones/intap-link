@@ -1,41 +1,43 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+type Slots={desktop:HTMLElement|null;mobile:HTMLElement|null}
+
 export default function FreePreviewEditShortcut() {
-  const [slot,setSlot]=useState<HTMLElement|null|undefined>(undefined)
-
-  if (typeof window === 'undefined') return null
-  const params = new URLSearchParams(window.location.search)
-  if (params.get('preview') !== '1') return null
-  if (params.get('embedded') === '1') return null
-
-  const appUrl = (import.meta.env.VITE_APP_URL || 'https://app.intaprd.com').replace(/\/$/, '')
+  const [slots,setSlots]=useState<Slots>({desktop:null,mobile:null})
+  const params=typeof window==='undefined'?new URLSearchParams():new URLSearchParams(window.location.search)
+  const isPreview=params.get('preview')==='1'&&params.get('embedded')!=='1'
+  const appUrl=(import.meta.env.VITE_APP_URL||'https://app.intaprd.com').replace(/\/$/,'')
 
   useEffect(()=>{
-    const find=()=>setSlot(document.getElementById('free-preview-edit-slot'))
+    if(!isPreview)return
+    const find=()=>{
+      const desktop=document.getElementById('free-preview-edit-slot')
+      const mobile=document.getElementById('free-preview-edit-mobile-slot')
+      setSlots(previous=>previous.desktop===desktop&&previous.mobile===mobile?previous:{desktop,mobile})
+    }
     find()
     const observer=new MutationObserver(find)
     observer.observe(document.body,{childList:true,subtree:true})
     return()=>observer.disconnect()
-  },[])
+  },[isPreview])
+
+  if(!isPreview)return null
 
   const link=(
     <a
       href={`${appUrl}/admin/free`}
-      aria-label="Volver a editar mi perfil"
-      style={{ display:'inline-flex',alignItems:'center',gap:6,minHeight:34,padding:'7px 10px',borderRadius:999,background:'#07111f',color:'#fff',fontFamily:'Inter, system-ui, sans-serif',fontSize:11.5,fontWeight:900,textDecoration:'none',boxShadow:'0 8px 18px rgba(15,23,42,.18)',border:'1px solid rgba(255,255,255,.18)',whiteSpace:'nowrap' }}
+      aria-label="Volver a edición del perfil"
+      style={{display:'inline-flex',alignItems:'center',gap:6,minHeight:34,padding:'7px 10px',borderRadius:999,background:'#07111f',color:'#fff',fontFamily:'Inter, system-ui, sans-serif',fontSize:11.5,fontWeight:900,textDecoration:'none',whiteSpace:'nowrap'}}
     >
       <span aria-hidden="true">←</span>
       <span>Volver a edición</span>
     </a>
   )
 
-  if(slot===undefined)return null
-  if(slot)return createPortal(link,slot)
-
-  return (
-    <div style={{ position:'fixed',top:14,left:12,right:12,zIndex:2147483000,display:'flex',justifyContent:'center',pointerEvents:'none' }}>
-      <span style={{pointerEvents:'auto'}}>{link}</span>
-    </div>
-  )
+  // Only render inside the shared owner bar. Never place a fixed overlay above it.
+  return <>
+    {slots.desktop&&createPortal(link,slots.desktop,'free-preview-desktop')}
+    {slots.mobile&&createPortal(link,slots.mobile,'free-preview-mobile')}
+  </>
 }
