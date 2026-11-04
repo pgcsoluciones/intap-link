@@ -15,7 +15,7 @@ export default function SponsoredActivation(){
     // Posponer no activa ni reclama el producto. Limpia cualquier reanudación implícita.
     sessionStorage.removeItem(KEY);localStorage.removeItem(KEY)
     sessionStorage.removeItem(PANEL_KEY);localStorage.removeItem(PANEL_KEY)
-    window.location.replace('https://intaprd.com/')
+    window.location.replace(String(import.meta.env.VITE_WEB_URL||'https://intaprd.com').replace(/\/$/,'')+'/')
   }
 
   function enterSponsoredPanel(nextUrl='/admin/sponsored'){
@@ -40,6 +40,6 @@ export default function SponsoredActivation(){
     <button type="button" onClick={activateLater} className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-black text-slate-700">Activar luego</button>
     {resumePanelUrl&&<button type="button" onClick={()=>enterSponsoredPanel(resumePanelUrl)} className="mt-4 w-full rounded-2xl bg-cyan-700 px-4 py-4 text-sm font-black text-white">Abrir mi presentación en borrador</button>}
     {error&&<p className="mt-4 rounded-xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-600">{error}</p>}
-    {!error&&!resumePanelUrl&&<><button type="button" onClick={()=>void activate()} disabled={loading||!accepted} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{loading?'Preparando…':requiresLogin?'Continuar e iniciar sesión':'Aceptar y activar mi llavero'}</button><p className="mt-4 text-xs leading-5 text-slate-400">Tu presentación patrocinada será permanente y podrás personalizar tus datos cuando quieras.</p></>}
+    {!error&&!resumePanelUrl&&<><button type="button" onClick={()=>void activate()} disabled={loading||!accepted} className="mt-6 w-full rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{loading?'Preparando…':requiresLogin?'Continuar e iniciar sesión' :'Aceptar y activar mi presentación'}</button><p className="mt-4 text-xs leading-5 text-slate-400">Tu presentación patrocinada será permanente y podrás personalizar tus datos cuando quieras.</p></>}
   </div></section></main>
 }
