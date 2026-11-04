@@ -7,7 +7,7 @@ const med=readFileSync('web/src/components/medical-profile/KawMedProfile.tsx','u
 const sponsor=readFileSync('web/src/components/sponsored/SponsoredProfile.tsx','utf8')
 
 assert.match(bar, /function contactIcon\(label:string,url:string\)/, 'Contact icons must follow existing dynamic labels')
-assert.match(bar, /wa\\\.me\|whatsapp\\\.com/, 'WhatsApp icon for named contacts with WhatsApp URLs')
+assert.ok(bar.includes("wa\\.me|whatsapp\\.com"), 'WhatsApp icon for named contacts with WhatsApp URLs')
 assert.match(bar, /normalized\.includes\('visitador'\)/, 'Visitador icon')
 assert.match(bar, /normalized\.includes\('vendedor'\)/, 'Seller icon')
 assert.match(bar, /normalized\.includes\('promoci'\)/, 'Promotion icon')
