@@ -3,6 +3,8 @@ import {readFileSync} from 'node:fs'
 
 const ui=readFileSync('web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx','utf8')
 const api=readFileSync('api/src/sponsored-scan.ts','utf8')
+const independentScan=readFileSync('web/src/components/ArtifactLinkResolver.tsx','utf8')
+const medClaim=readFileSync('app/src/components/admin/KawMedClaim.tsx','utf8')
 const first="payload?.state==='sponsored_pending_activation'?<>"
 const next="payload?.state==='sponsored_sponsor_inspection'?<>"
 const a=ui.indexOf(first),b=ui.indexOf(next,a)
@@ -11,7 +13,9 @@ const view=ui.slice(a,b)
 assert.match(view,/Activa tu presentación digital/,'Clear activation title')
 assert.match(view,/Personaliza tu perfil profesional en pocos pasos/,'One helpful sentence')
 assert.match(view,/\{productLabel\}/,'Product type still visible to beneficiary')
-assert.doesNotMatch(view,/physicalId|activationCode/,'Private physical/NFC inspection details should not appear on beneficiary splash')
+assert.match(view,/Estación \/ ID físico:/,'Beneficiary must see the physical P station ID to confirm the device')
+assert.match(view,/\{physicalId\}/,'Physical identifier must use persistent code, not batch ordinal')
+assert.doesNotMatch(view,/activationCode/,'Additional NFC/QR code remains exclusive to authenticated sponsor inspection')
 assert.match(view,/onClick=\{\(\)=>go\(payload\.next_url\)\}/,'Existing claim URL stays intact')
 assert.match(view,/>Activar ahora<\/button>/,'Product-neutral primary CTA')
 assert.match(view,/>Activar después<\/button>/,'Deferral action retained')
@@ -40,4 +44,7 @@ assert.match(api,/inspection_status:inspectedStatus/,'Station status is returned
 assert.match(api,/sponsor_members WHERE sponsor_id=\? AND user_id=\? AND status='active'/,'Inspection authorized by sponsor membership')
 assert.doesNotMatch(api.slice(sponsorInspection,publicRedirect),/\.run\(\)|\/me\/sponsored-profile\/claim/,'Inspection never performs activation writes')
 assert.match(api,/return c\.json\(\{ok:true,state:'activated'/,'Ordinary beneficiary redirect remains intact')
+assert.match(independentScan,/Estación \/ ID físico:/,'Every L scan can display its persistent physical label')
+assert.match(independentScan,/artifact\?\.product_type==='keychain'\|\|Boolean\(artifact\?\.display_code\)/,'Other product types with physical ID also show their label')
+assert.match(medClaim,/Estación \{context\?\.display_code\|\|'sin ID físico'\}/,'M MED first screen still shows the physical station')
 console.log('PASS: concise sponsored activation, contextual product labels, preserved claim and same-origin deferral')
