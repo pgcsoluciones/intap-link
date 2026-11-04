@@ -48,6 +48,7 @@ export default function SponsoredAwareArtifactResolver(){
       <div aria-label="Producto patrocinado" style={{margin:'0 0 22px',padding:'15px 18px',border:'1px solid #bae6fd',borderRadius:18,background:'#f0f9ff',textAlign:'center'}}>
         <span style={{display:'block',fontSize:11,fontWeight:800,color:'#0369a1',textTransform:'uppercase',letterSpacing:1}}>Producto patrocinado</span>
         <strong style={{display:'block',marginTop:7,fontSize:19,color:'#0f172a'}}>{productLabel}</strong>
+        {physicalId&&<span style={{display:'block',marginTop:9,fontSize:13,color:'#475569'}}>Estación / ID físico: <strong style={{color:'#0f172a',fontFamily:'monospace',fontSize:15}}>{physicalId}</strong></span>}
       </div>
       <button type="button" onClick={()=>go(payload.next_url)} style={primary}>Activar ahora</button>
       <button type="button" onClick={()=>window.location.assign('/')} style={secondary}>Activar después</button>
