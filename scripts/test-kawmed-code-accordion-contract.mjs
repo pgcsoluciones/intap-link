@@ -8,7 +8,7 @@ assert.match(source,/const MED_PAGE_SIZE=7\b/,'Both MED code lists must use seve
 assert.match(source,/type MedGroup='sponsored'\|'independent'/,'The two MED code categories must be explicit')
 assert.match(source,/filtered\.filter\(row=>Boolean\(row\.program_id\)\)/,'Sponsored grouping must use the authoritative program id')
 assert.match(source,/filtered\.filter\(row=>!row\.program_id\)/,'Independent grouping must exclude sponsored codes')
-assert.match(api,/SELECT mac\.\*,b\.name AS batch_name/,'Medical API must return program_id for classification')
+assert.match(api,/SELECT mac\.\*,mdi\.display_code,b\.name AS batch_name/,'Medical API must return program_id via mac.* and physical display_code for classification')
 assert.match(source,/rows\.slice\(\(current-1\)\*MED_PAGE_SIZE,current\*MED_PAGE_SIZE\)/,'MED accordion must paginate before rendering')
 assert.match(source,/group="sponsored" title="Códigos patrocinados"/,'Sponsored accordion missing')
 assert.match(source,/group="independent" title="Códigos independientes"/,'Independent accordion missing')
