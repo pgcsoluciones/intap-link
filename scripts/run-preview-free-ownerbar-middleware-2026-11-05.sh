@@ -15,10 +15,10 @@ git pull --ff-only github "$BRANCH"
 git merge-base --is-ancestor "$BASE" HEAD || fail "No incluye release previo"
 git diff --check "$BASE"..HEAD
 CHANGED="$(git diff --name-only "$BASE"..HEAD)"
-for file in api/src/index.ts api/src/free-appointments.ts scripts/test-free-ownerbar-multicuenta-middleware-2026-11-05.mjs scripts/run-preview-free-ownerbar-middleware-2026-11-05.sh; do
+for file in api/src/index.ts api/src/free-appointments.ts scripts/test-free-ownerbar-multicuenta-middleware-2026-11-05.mjs scripts/test-free-multicuenta-ownerbar-preview-slot-2026-11-04.mjs scripts/run-preview-free-ownerbar-middleware-2026-11-05.sh; do
   grep -Fxq "$file" <<< "$CHANGED" || fail "Falta archivo: $file"
 done
-[[ "$(printf '%s\n' "$CHANGED" | grep -c .)" -eq 4 ]] || fail "Archivos inesperados en el diff"
+[[ "$(printf '%s\n' "$CHANGED" | grep -c .)" -eq 5 ]] || fail "Archivos inesperados en el diff"
 CFG="api/wrangler.preview.toml"
 grep -Fxq 'name = "intap-api-preview"' "$CFG" || fail "Worker equivocado"
 grep -Fxq 'main = "src/preview-frontdoor-entry.ts"' "$CFG" || fail "Entry equivocado"
