@@ -55,7 +55,7 @@ echo '===== Esquema D1 Producción, SOLO SELECT ====='
 SQL="SELECT name FROM sqlite_master WHERE type='table' AND name IN ('intap_artifacts','sponsor_artifacts','sponsor_tenants','sponsored_profiles','artifact_display_identifiers','medical_display_identifiers','sponsor_sales_representatives','sponsor_sales_assignments','sponsor_commercial_resources') ORDER BY name;"
 (cd api && npx --no-install wrangler d1 execute intap_db --remote --command "$SQL") 2>&1 | tee "$LOG_DIR/schema-tables.txt"
 for table in intap_artifacts sponsor_artifacts sponsor_tenants sponsored_profiles artifact_display_identifiers medical_display_identifiers sponsor_sales_representatives sponsor_sales_assignments sponsor_commercial_resources; do
-  grep -Fq "\"$table\"" "$LOG_DIR/schema-tables.txt" || grep -Fq "│ $table " "$LOG_DIR/schema-tables.txt" || fail "D1 Producción aún no confirma tabla $table; revisar migraciones antes de cualquier despliegue"
+  grep -Fq "$table" "$LOG_DIR/schema-tables.txt" || fail "D1 Producción aún no confirma tabla $table; revisar migraciones antes de cualquier despliegue"
 done
 
 echo
