@@ -24,7 +24,7 @@ assert.match(shortcut,/href=\{\`\$\{appUrl\}\/admin\/free\`\}/,'Editor return UR
 assert.match(api,/import \{ readIntapSelection \} from '\.\/intap-active-account'/,'Multicuenta selection checked server-side')
 const ctx=api.slice(api.indexOf("app.get('/api/v1/me/free/appointments/public-context'"))
 assert.match(ctx,/WHERE lower\(slug\)=\? AND user_id=\?/,'Proof of actual user ownership')
-assert.match(ctx,/if\(selected&&\(selected\.kind!=='free'\|\|selected\.id!==subjectId\)\)/,'Do not disclose another selected account')
+assert.match(ctx,/if\(!selected\|\|selected\.kind!=='free'\|\|selected\.id!==subjectId\)/,'Require explicitly selected matching Free account in multicuenta')
 assert.match(ctx,/is_owner:true/,'Only owner receives interactive context')
 assert.match(other,/settingsLabel="Mi perfil"/,'Sponsored label regression')
 assert.match(med,/settingsLabel="Mi perfil"/,'KawMed label regression')

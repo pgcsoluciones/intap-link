@@ -185,6 +185,11 @@ app.use('/api/v1/me/*',async(c:any,next:any)=>{
     '/api/v1/me/faqs','/api/v1/me/products','/api/v1/me/videos',
     '/api/v1/me/gallery','/api/v1/me/free']
   if(!classicPrefixes.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return next()
+  // Like sponsored and KawMed, public owner-context is a read-only GET from
+  // the public Web origin, which has no App tab token. Its endpoint authenticates
+  // the session and checks the exact selected Free profile in D1.
+  // Never exempt edits, appointment mutations, or other Free API routes.
+  if(c.req.method==='GET'&&path==='/api/v1/me/free/appointments/public-context')return next()
   const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
   if(!raw)return next()
   const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
