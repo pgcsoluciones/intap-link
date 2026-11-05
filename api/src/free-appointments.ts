@@ -2,6 +2,7 @@ import app from './index'
 import { sendWebPushToUser } from './pwa-push'
 import { cookieNames } from './lib/cookies'
 import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
+import { readIntapSelection } from './intap-active-account'
 import {
   availableAppointmentSlots,
   changeAppointmentRequestStatus,
@@ -265,6 +266,12 @@ app.get('/api/v1/me/free/appointments/public-context',requireUser,async(c:any)=>
   const profile=await c.env.DB.prepare("SELECT id,slug,name,user_id FROM profiles WHERE lower(slug)=? AND user_id=? AND lower(COALESCE(plan_id,'free'))='free' LIMIT 1").bind(slug,userId).first()
   if(!profile)return c.json({ok:false,error:'Not owner'},403)
   const subjectId=String((profile as any).id||'')
+  // A multicuenta session can only expose owner controls for its explicitly selected Free profile.
+  // A public profile URL or another tab must never silently switch the account context.
+  const selected=await readIntapSelection(c)
+  if(selected&&(selected.kind!=='free'||selected.id!==subjectId)){
+    return c.json({ok:false,error:'Selecciona este perfil Free desde Multicuenta.'},403)
+  }
   const settings=await getAppointmentSettings(c.env.DB,'free',subjectId)
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='free' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='free' AND subject_id=? AND status='pending'").bind(subjectId).first()
