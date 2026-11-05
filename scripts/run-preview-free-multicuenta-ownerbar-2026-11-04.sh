@@ -94,7 +94,11 @@ cmp -s "web/dist$MAIN_JS" "$LOG_DIR/pages.js" || fail "JS de Pages no coincide c
 echo "===== Worker API/frontdoor Preview (preserva App L/P/M) ====="
 (cd api && npx --no-install wrangler deploy --config wrangler.preview.toml) 2>&1 | tee "$LOG_DIR/worker.log"
 verify_html "$PUBLIC_PREVIEW/l/$SAMPLE_CODE" "$LOG_DIR/domain.html"
-verify_html "$PUBLIC_PREVIEW/intap3?preview=1" "$LOG_DIR/free-preview.html"
+# A Free draft preview requires a signed editor session; unauthenticated curl MUST NOT
+# expect the public SPA HTML. Validate the public Free route instead.
+verify_html "$PUBLIC_PREVIEW/intap3" "$LOG_DIR/free-public.html"
+DRAFT_PREVIEW_STATUS="$(curl -sS --max-time 30 -o "$LOG_DIR/free-draft-no-session.txt" -w '%{http_code}' "$PUBLIC_PREVIEW/intap3?preview=1" || true)"
+[[ "$DRAFT_PREVIEW_STATUS" == "401" || "$DRAFT_PREVIEW_STATUS" == "403" ]] || fail "Vista previa Free sin sesión respondió HTTP $DRAFT_PREVIEW_STATUS; se esperaba 401/403."
 verify_html "$PUBLIC_PREVIEW/m/med-intapcard" "$LOG_DIR/domain-medical.html"
 verify_html "$PUBLIC_PREVIEW/" "$LOG_DIR/domain-root.html"
 curl -fsSL --max-time 35 "$PUBLIC_PREVIEW$MAIN_JS" -o "$LOG_DIR/domain.js"
