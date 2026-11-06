@@ -1,6 +1,8 @@
 name = "intap-api-preview"
 main = "src/preview-frontdoor-entry.ts"
 compatibility_date = "2024-02-08"
+# Keep existing Preview dashboard variables when validating production-specific routing.
+keep_vars = true
 workers_dev = true
 
 [triggers]
