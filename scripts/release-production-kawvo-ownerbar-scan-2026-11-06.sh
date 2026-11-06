@@ -9,7 +9,7 @@ OLD_API="a74d6e25-63c6-4c84-beac-3ad39ba723de"
 OLD_WEB_SHA="444f3da79a85a87baa739f1eafac87891607885d"
 OLD_WEB_DEPLOY="f0dc59ed-f341-4d3d-ae77-f6588bcc4eb8"
 OLD_APP_SHA="bd1b99ac3462ed772ad36dfdaa667f1da5fbb93e"
-EXPECTED_BRANCH_HEAD="TO_BE_UPDATED"
+SOURCE_LOCK="b5daca23716230341af0cff63f6b07a501ed0c73"
 fail(){ echo "DETENIDO: $*" >&2; exit 1; }
 cd "$ROOT" || fail "Repositorio no disponible."
 [[ -z "$(git status --porcelain)" ]] || fail "Existen cambios no guardados."
@@ -17,12 +17,14 @@ git fetch github "$BRANCH"
 git switch "$BRANCH"
 git pull --ff-only github "$BRANCH"
 # Pin this single release revision: disallow an accidental later commit.
-[[ "$(git rev-parse HEAD)" == "$EXPECTED_BRANCH_HEAD" ]] || fail "Release modificado desde su aprobación."
+git merge-base --is-ancestor "$SOURCE_LOCK" HEAD || fail "Origen de release no aprobado."
+RELEASE_CHANGES="$(git diff --name-only "$SOURCE_LOCK"..HEAD)"
+[[ "$RELEASE_CHANGES" == "scripts/release-production-kawvo-ownerbar-scan-2026-11-06.sh" ]] || fail "Se cambiaron archivos fuera del runner desde el preflight aprobado."
 grep -Fxq 'keep_vars = true' api/wrangler.toml || fail "No está activa la protección de variables."
 
 echo "===== Preflight estricto desde el commit EXACTO ====="
 bash scripts/preflight-production-kawvo-ownerbar-scan-2026-11-06.sh
-[[ "$(git rev-parse HEAD)" == "$EXPECTED_BRANCH_HEAD" ]] || fail "Cambió el origen durante preflight."
+[[ "$(git diff --name-only "$SOURCE_LOCK"..HEAD)" == "scripts/release-production-kawvo-ownerbar-scan-2026-11-06.sh" ]] || fail "Cambió código de producto durante preflight."
 MAIN_JS="$(grep -Eo '/assets/index-[A-Za-z0-9_-]+\.js' web/dist/index.html | head -n1 || true)"
 [[ -n "$MAIN_JS" && -f "web/dist$MAIN_JS" ]] || fail "No existe el JS compilado y verificado."
 
