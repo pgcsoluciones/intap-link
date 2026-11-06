@@ -185,6 +185,20 @@ app.use('/api/v1/me/*',async(c:any,next:any)=>{
     '/api/v1/me/faqs','/api/v1/me/products','/api/v1/me/videos',
     '/api/v1/me/gallery','/api/v1/me/free']
   if(!classicPrefixes.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return next()
+  // In Production, App fetches account selection from api.intaprd.com and
+  // that selection cookie is intentionally host-only. Browser document/iframe
+  // previews still link to app.intaprd.com/api/... and carry no tab header.
+  // Redirect ONLY the GET HTML navigation to the existing canonical API host;
+  // the destination still checks login, selected profile ID, slug and owner.
+  // Avoid widening the cookie scope or bypassing multicuenta authorization.
+  if(c.req.method==='GET'&&path.startsWith('/api/v1/me/free/profile-preview/')
+    &&String(c.env.ENVIRONMENT||'').toLowerCase()==='production'
+    &&String(c.req.header('Accept')||'').includes('text/html')){
+    const requested=new URL(c.req.url)
+    if(requested.hostname==='app.intaprd.com'){
+      return c.redirect('https://api.intaprd.com'+requested.pathname+requested.search,302)
+    }
+  }
   // Like sponsored and KawMed, public owner-context is a read-only GET from
   // the public Web origin, which has no App tab token. Its endpoint authenticates
   // the session and checks the exact selected Free profile in D1.
