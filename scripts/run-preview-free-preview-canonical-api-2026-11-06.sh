@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Preview-only QA for Production's cross-host Free profile-preview redirect.
 set -euo pipefail
-[[ "\${KAWVO_FREE_PREVIEW_QA_APPROVED:-}" == "SI" ]] || { echo "DETENIDO: requiere autorización SI para actualizar SOLO API Preview"; exit 1; }
+[[ "${KAWVO_FREE_PREVIEW_QA_APPROVED:-}" == "SI" ]] || { echo "DETENIDO: requiere autorización SI para actualizar SOLO API Preview"; exit 1; }
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="fix/prod-free-preview-multicuenta-canonical-api-2026-11-06"
 BASE="31d4a6614c8e33aad04efe89fc8d683b2c1c203c"
