@@ -1,6 +1,8 @@
 name = "intap-api"
 main = "src/preview-free-entry.ts"
 compatibility_date = "2024-02-08"
+# Preserve Production dashboard variables when publishing a new Worker version.
+keep_vars = true
 
 [triggers]
 crons = ["17 5 * * *", "17 * * * *"]
