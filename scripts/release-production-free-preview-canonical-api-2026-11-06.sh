@@ -61,7 +61,10 @@ check_pages(){
   local web app
   npx --no-install wrangler pages deployment list --project-name intap-link --environment production > "$LOG/production-web-versions.txt"
   web="$(grep -F '│ Production' "$LOG/production-web-versions.txt" | head -n1 || true)"
-  [[ "$web" == *'31d4a661'* ]] || fail "Web Producción cambió; no combinar versiones"
+  # Wrangler Pages CLI imprime solo 7 caracteres del source commit (31d4a66),
+  # no el prefijo de 8 usado en logs del release (31d4a661).
+  # Fijamos ADEMÁS el deployment inmutable para no aceptar otra versión.
+  [[ "$web" == *'│ main'* && "$web" == *'│ 31d4a66 '* && "$web" == *'1672b41a.intap-link.pages.dev'* ]] || fail "Web Producción cambió; no combinar versiones"
   npx --no-install wrangler pages deployment list --project-name intap-web2 --environment production > "$LOG/production-app-versions.txt"
   app="$(grep -F '│ Production' "$LOG/production-app-versions.txt" | head -n1 || true)"
   [[ "$app" == *'bd1b99a'* ]] || fail "App Producción cambió; no combinar versiones"
