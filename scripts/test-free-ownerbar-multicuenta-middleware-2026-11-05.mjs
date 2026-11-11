@@ -25,7 +25,7 @@ assert.match(route,/const multi=await sponsoredMultiProfileAccess\(c,userId\)/,'
 assert.match(route,/if\(!selected\|\|selected\.kind!=='free'\|\|selected\.id!==subjectId\)/,'Exact selection type and identity required')
 assert.match(route,/code:'owner_account_selection_mismatch'/,'Safe failure code')
 assert.match(route,/allow_direct_actions:!multi/,'No public direct mutations for multicuenta')
-assert.match(route,/settings_url:'\/admin\/free\/account'/,'Same admin destination')
+assert.match(route,/manage_url:'\/admin\/free\/agenda',settings_url:'\/admin\/free'/,'Mi perfil opens Free editor; Agenda remains separate')
 assert.match(web,/credentials:'include'/,'Owner session credentials included')
 assert.match(web,/if\(json\?\.ok&&json\.data\?\.is_owner\)setContext\(json\.data\)/,'No owner bar for visitors')
 assert.match(freeProfile,/\{showOwnerBar && <AppointmentOwnerBar/,'Free mounts shared ownerbar')
