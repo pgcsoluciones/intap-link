@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const ui=readFileSync('web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx','utf8')
+const api=readFileSync('api/src/sponsored-scan.ts','utf8')
+const medical=readFileSync('app/src/components/admin/KawMedClaim.tsx','utf8')
+const medApi=readFileSync('api/src/medical-access-codes.ts','utf8')
+
+const first="payload?.state==='sponsored_pending_activation'?<>"
+const next="payload?.state==='sponsored_sponsor_inspection'?<>"
+const begin=ui.indexOf(first),end=ui.indexOf(next,begin)
+assert.ok(begin>=0&&end>begin,'beneficiary-only screen delimiters preserved')
+const beneficiary=ui.slice(begin,end)
+
+assert.match(medical,/Identificación de estación · KawMed/,'KawMed identifies station')
+assert.match(medical,/Estación \{context\?\.display_code\|\|'sin ID físico'\}/,'KawMed shows physical reference')
+assert.match(medical,/Código NFC/,'KawMed shows NFC code')
+assert.match(medApi,/mdi\.display_code/,'KawMed public endpoint selects station reference')
+assert.match(api,/di\.display_code/,'Sponsored scan also selects physical station reference')
+assert.match(api,/public_code:publicCode,display_code:String\(\(row as any\)\.display_code\|\|''\)/,'Sponsored scan returns stable public and physical codes')
+assert.match(beneficiary,/Identificación de estación · Kawvo Link/,'Same identity section as KawMed')
+assert.match(beneficiary,/Estación \{physicalId\|\|'sin ID físico'\}/,'Show original physical display code; do not invent one')
+assert.match(beneficiary,/Código NFC\/QR/,'Clear NFC/QR permanent code label')
+assert.match(beneficiary,/\{activationCode\}/,'Public scan code displayed; not the one-time activation secret')
+assert.match(ui,/const activationCode=String\(artifact\.public_code\|\|code\)\.trim\(\)/,'Displayed code comes only from permanent public URL')
+assert.match(beneficiary,/Producto patrocinado · \{productLabel\}/,'Keep exact device type for assignments')
+assert.match(beneficiary,/Lista para activar/,'Only ready-to-activate state uses identification panel')
+assert.match(beneficiary,/Programa patrocinado:/,'Keep sponsor identity')
+assert.match(beneficiary,/overflowWrap:'anywhere'/,'Long NFC IDs wrap on small screens')
+assert.doesNotMatch(beneficiary,/one_time_code|activation_token|claim_secret|activation_codes/,'Never reveal one-time claim token')
+assert.match(beneficiary,/go\(payload\.next_url\)/,'Activation CTA target unchanged')
+assert.match(beneficiary,/>Activar después<\/button>/,'Deferral CTA preserved')
+assert.match(api,/artifact_activation_codes WHERE artifact_id=\?/,'Activation prerequisite remains server-verified')
+assert.match(api,/state:'sponsored_pending_activation'/,'No change to pending state or backend')
+const sponsorOnly=ui.slice(end,ui.indexOf("payload?.state==='sponsored_master'?<>",end))
+assert.match(sponsorOnly,/Identificación privada de estación/,'Sponsor private inspection remains separate')
+assert.match(sponsorOnly,/Administrar en mi panel/,'Sponsor may still manage from private screen')
+assert.match(api,/if\(sponsorRole==='owner'\|\|sponsorRole==='admin'\)/,'Authorized sponsor path remains separate')
+assert.match(api,/state:'activated'/,'Published beneficiary redirect preserved')
+console.log('PASS: Sponsored beneficiary scans match KawMed station identity; stable codes and mobile layout; claim/role separation untouched')
