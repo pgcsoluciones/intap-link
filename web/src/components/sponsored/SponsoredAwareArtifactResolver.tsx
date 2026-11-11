@@ -45,9 +45,16 @@ export default function SponsoredAwareArtifactResolver(){
     payload?.state==='sponsored_pending_activation'?<>
       <h1 style={{fontSize:26,lineHeight:1.24,margin:'6px 0 10px'}}>Activa tu presentación digital</h1>
       <p style={{fontSize:14,color:'#64748b',lineHeight:1.55,margin:'0 0 20px'}}>Personaliza tu perfil profesional en pocos pasos.</p>
-      <div aria-label="Producto patrocinado" style={{margin:'0 0 22px',padding:'15px 18px',border:'1px solid #bae6fd',borderRadius:18,background:'#f0f9ff',textAlign:'center'}}>
-        <span style={{display:'block',fontSize:11,fontWeight:800,color:'#0369a1',textTransform:'uppercase',letterSpacing:1}}>Producto patrocinado</span>
-        <strong style={{display:'block',marginTop:7,fontSize:19,color:'#0f172a'}}>{productLabel}</strong>
+      <div aria-label="Identificación de estación patrocinada" style={{margin:'0 0 22px',padding:'16px 18px',border:'1px solid #bae6fd',borderRadius:18,background:'#f0f9ff',textAlign:'left',minWidth:0}}>
+        <span style={{display:'block',fontSize:11,fontWeight:850,color:'#0369a1',textTransform:'uppercase',letterSpacing:.7}}>Identificación de estación · Kawvo Link</span>
+        <strong style={{display:'block',marginTop:10,fontSize:22,color:'#0f172a',overflowWrap:'anywhere'}}>Estación {physicalId||'sin ID físico'}</strong>
+        <div style={{marginTop:12,padding:'11px 12px',borderRadius:12,background:'#fff'}}>
+          <span style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b'}}>Código NFC/QR</span>
+          <strong style={{display:'block',marginTop:5,fontSize:15,fontFamily:'monospace',color:'#0f172a',overflowWrap:'anywhere'}}>{activationCode}</strong>
+        </div>
+        <span style={{display:'block',marginTop:12,fontSize:12,fontWeight:850,color:'#0369a1',textTransform:'uppercase'}}>Producto patrocinado · {productLabel}</span>
+        <span style={{display:'block',marginTop:8,fontSize:13,color:'#475569'}}>Lista para activar</span>
+        <span style={{display:'block',marginTop:8,fontSize:12,color:'#475569'}}>Programa patrocinado: <strong>{sponsor.name||'Patrocinador'}</strong></span>
       </div>
       <button type="button" onClick={()=>go(payload.next_url)} style={primary}>Activar ahora</button>
       <button type="button" onClick={()=>window.location.assign('/')} style={secondary}>Activar después</button>
