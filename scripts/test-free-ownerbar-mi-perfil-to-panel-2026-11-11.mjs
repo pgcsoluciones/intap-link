@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
+
+const api=readFileSync('api/src/free-appointments.ts','utf8')
+const bar=readFileSync('web/src/components/appointments/AppointmentOwnerBar.tsx','utf8')
+const free=readFileSync('web/src/components/free-profile/IntapLinkGratisProfile.tsx','utf8')
+const shortcut=readFileSync('web/src/components/free-profile/FreePreviewEditShortcut.tsx','utf8')
+const account=readFileSync('app/src/components/admin/free/FreeAccount.tsx','utf8')
+const routes=readFileSync('app/src/App.tsx','utf8')
+
+const p=api.indexOf("app.get('/api/v1/me/free/appointments/public-context'")
+assert.ok(p>0,'Free owner context endpoint exists')
+const body=api.slice(p,api.indexOf("\nexport default app",p))
+assert.match(body,/requireUser/,'Owner context requires authentication')
+assert.match(body,/SELECT id,slug,name,user_id FROM profiles/,'Owner context checks specific profile')
+assert.match(body,/selected\.kind!=='free'\|\|selected\.id!==subjectId/,'Multicuenta still verifies exact selected Free profile')
+assert.match(body,/manage_url:'\/admin\/free\/agenda',settings_url:'\/admin\/free'/,'Owner context points Mi perfil to the editing panel, Agenda unchanged')
+assert.doesNotMatch(body,/settings_url:'\/admin\/free\/account'/,'Owner bar must not open Mi cuenta')
+assert.match(bar,/const settingsUrl=origin\+String\(context\.settings_url\|\|settingsPath\)/,'Bar honors server settings route')
+assert.match(bar,/window\.location\.assign\(settingsUrl\)/,'Desktop follows server settings route')
+assert.match(bar,/href=\{settingsUrl\}/,'Mobile follows server settings route')
+assert.match(bar,/settingsLabel='Mi perfil'/,'Button remains Mi perfil')
+assert.match(free,/settingsPath="\/admin\/free\/account"/,'Fallback preview slot remains unchanged')
+assert.match(shortcut,/href=\{\x60\$\{appUrl\}\/admin\/free\x60\}/,'Return to editor remains on Free panel')
+assert.match(account,/navigate\('\/admin\/free'\)/,'Mi cuenta retains back-to-panel navigation')
+assert.match(routes,/path="\/admin\/free" element=/,'Editing panel route exists')
+assert.match(routes,/path="\/admin\/free\/account" element=/,'Account settings route remains separate')
+console.log('PASS: Mi perfil -> /admin/free editing panel; Mi cuenta + Agenda stay separate; owner and multicuenta checks unchanged')
