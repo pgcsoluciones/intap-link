@@ -18,7 +18,8 @@ CHANGED="$(git diff --name-only "$BASE"..HEAD)"
 EXPECTED="$(printf '%s\n' \
  api/src/free-appointments.ts \
  scripts/run-preview-free-ownerbar-mi-perfil-2026-11-11.sh \
- scripts/test-free-ownerbar-mi-perfil-to-panel-2026-11-11.mjs)"
+ scripts/test-free-ownerbar-mi-perfil-to-panel-2026-11-11.mjs \
+ scripts/test-free-ownerbar-multicuenta-middleware-2026-11-05.mjs)"
 [[ "$CHANGED" == "$EXPECTED" ]] || { printf "Cambios inesperados:\n%s\n" "$CHANGED"; fail "Alcance no aprobado"; }
 grep -Fxq 'name = "intap-api-preview"' api/wrangler.preview.toml || fail "Worker distinto"
 grep -Fxq 'main = "src/preview-frontdoor-entry.ts"' api/wrangler.preview.toml || fail "Entrada distinta"
