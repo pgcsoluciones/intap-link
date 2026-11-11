@@ -279,7 +279,7 @@ app.get('/api/v1/me/free/appointments/public-context',requireUser,async(c:any)=>
   const settings=await getAppointmentSettings(c.env.DB,'free',subjectId)
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='free' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='free' AND subject_id=? AND status='pending'").bind(subjectId).first()
-  return c.json({ok:true,data:{is_owner:true,allow_direct_actions:!multi,enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending:rows.results||[],manage_url:'/admin/free/agenda',settings_url:'/admin/free/account'}})
+  return c.json({ok:true,data:{is_owner:true,allow_direct_actions:!multi,enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending:rows.results||[],manage_url:'/admin/free/agenda',settings_url:'/admin/free'}})
 })
 
 export default app
