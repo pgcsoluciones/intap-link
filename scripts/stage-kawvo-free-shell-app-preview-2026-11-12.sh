@@ -6,9 +6,9 @@ set -euo pipefail
   exit 1
 }
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
-BRANCH="feature/kawvo-unified-shell-free-preview-2026-11-12"
-BASE="b089bcdc1c82dce9c4e87e08ddee003503e0bd0c"
-APP_BRANCH="qa-kawvo-free-shell-1112"
+BRANCH="feature/kawvo-free-shell-approved-desktop-2026-11-12"
+BASE="142d26a515bd7eeaeea6b8ef6cfdf16658953d5b"
+APP_BRANCH="qa-kawvo-free-desktop-g1-1112"
 fail(){ echo "DETENIDO: $*" >&2; exit 1; }
 cd "$ROOT" || fail "Repo inexistente"
 [[ -z "$(git status --porcelain)" ]] || fail "Hay cambios locales; no se cambiará rama"
@@ -19,14 +19,10 @@ git merge-base --is-ancestor "$BASE" HEAD || fail "No coincide rama base"
 git diff --check "$BASE"..HEAD
 CHANGED="$(git diff --name-only "$BASE"..HEAD)"
 EXPECTED="$(printf '%s\n' \
- app/src/App.tsx \
  app/src/components/admin/free/KawvoFreeShellPreview.tsx \
- app/src/components/admin/shared/KawvoPagedList.tsx \
- docs/architecture/KAWVO_LARGE_LIST_SEARCH_FILTER_PAGINATION_CONTRACT_2026-11-12.md \
- scripts/audit-kawvo-dependencies-readonly-2026-11-12.sh \
- scripts/run-kawvo-free-shell-preview-qa-2026-11-12.sh \
+ scripts/run-kawvo-free-shell-approved-desktop-qa-2026-11-12.sh \
  scripts/stage-kawvo-free-shell-app-preview-2026-11-12.sh \
- scripts/test-kawvo-free-shell-preview-isolation-2026-11-12.mjs)"
+ scripts/test-kawvo-free-shell-desktop-parity-2026-11-12.mjs)"
 [[ "$CHANGED" == "$EXPECTED" ]] || { printf '%s\n' "$CHANGED"; fail "Diff fuera de allowlist"; }
 [[ -z "$(git diff --name-only "$BASE"..HEAD -- web/ api/ package.json package-lock.json app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/AdminGuard.tsx)" ]] || fail "Módulo protegido modificado"
 grep -Fxq 'VITE_API_URL=https://app.preview.intaprd.com' app/.env.preview || fail "API destino no es Preview"
@@ -42,6 +38,14 @@ echo "LOG: $LOG"
 npm run app:build:preview 2>&1 | tee "$LOG/build.log"
 [[ -f app/dist/index.html ]] || fail "Falta App construida"
 grep -q 'assets/index-' app/dist/index.html || fail "Falta bundle JS de App"
+echo "Verificando baseline activo Worker Preview; nunca se cambiará el front door."
+ACTIVE="$(npx --no-install wrangler deployments status --name intap-api-preview --json 2>"$LOG/worker-stderr.log")" || fail "No se pudo consultar Worker Preview"
+printf '%s\n' "$ACTIVE" > "$LOG/worker-status.json"
+printf '%s' "$ACTIVE" | grep -Fq '"23405a5b-e9ca-4247-843d-28cc4f236eaa"' || fail "Worker Preview cambió; bloquear stage para revisar baseline"
+ACTIVE_VERSION="$(npx --no-install wrangler versions view 23405a5b-e9ca-4247-843d-28cc4f236eaa --name intap-api-preview --json 2>"$LOG/worker-version-stderr.log")" || fail "No se pudo consultar variables del Worker"
+printf '%s\n' "$ACTIVE_VERSION" > "$LOG/worker-version.json"
+printf '%s' "$ACTIVE_VERSION" | grep -Fq 'qa-kawmed-guest-current-2026.intap-web2.pages.dev' || fail "Origen App Preview ya cambió; revisar primero"
+printf '%s' "$ACTIVE_VERSION" | grep -Fq 'qa-sponsor-scan-1104.intap-link.pages.dev' || fail "Origen Web Preview ya cambió; revisar primero"
 echo "Preflight del Preview actualmente activo (solo lectura)."
 curl -sS -L --max-time 30 -o "$LOG/current-preview-login.html" -w 'App Preview actual: HTTP %{http_code}\n' "https://app.preview.intaprd.com/admin/login" | tee "$LOG/current-preview-http.txt"
 [[ "$(tail -n1 "$LOG/current-preview-http.txt" | sed 's/.*HTTP //')" == "200" ]] || fail "Preview actual no es saludable; abortar stage"
