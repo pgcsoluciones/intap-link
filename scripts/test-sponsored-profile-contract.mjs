@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 
 function read(path){return fs.readFileSync(path,'utf8')}
-function has(text,needle,label){if(!text.includes(needle))throw new Error(`Falta contrato: ${label}`)}
+const missingContracts=[]
+function has(text,needle,label){if(!text.includes(needle))missingContracts.push(label)}
 
 const entry=read('api/src/preview-free-entry.ts')
 const scan=read('api/src/sponsored-scan.ts')
@@ -641,4 +642,8 @@ has(multiMigration,'DROP TRIGGER IF EXISTS trg_sponsored_profiles_one_beneficiar
 has(multiMigration,"lower(trim(COALESCE(u.email,''))) = 'intapcard@gmail.com'",'trigger exceptúa únicamente correo autorizado')
 has(multiMigration,"sp.profile_role = 'beneficiary'",'trigger conserva límite para beneficiarios normales')
 
-console.log('Sponsored Profile V1 contract checks: OK')
+if(missingContracts.length){
+  console.error('Contratos patrocinados no encontrados ('+missingContracts.length+'):')
+  for(const [index,label] of missingContracts.entries())console.error((index+1)+'. '+label)
+  process.exitCode=1
+}else console.log('Sponsored Profile V1 contract checks: OK')
