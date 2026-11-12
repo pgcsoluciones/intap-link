@@ -143,7 +143,43 @@ export default function SponsorKawMed(){
   async function assignQuantity(){if(!repId||!batchId||quantity<1)return;setBusy(true);setError('');setMessage('');try{const j:any=await apiPost('/sponsor/kawmed/assign',{representative_id:repId,batch_id:batchId,quantity,group_label:groupLabel});if(!j?.ok)throw new Error(j?.error||'No pudimos asignar.');setMessage(j.data?.assigned+' estaciones del lote asignadas al visitador.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos asignar.')}finally{setBusy(false)}}
   async function createRep(){setBusy(true);setError('');setMessage('');try{const j:any=await apiPost('/sponsor/kawmed/representatives',newRep);if(!j?.ok)throw new Error(j?.error||'No pudimos registrar el visitador.');setNewRep({employee_code:'',first_name:'',last_name:'',whatsapp:'',email:'',zone:'',territory:''});setMessage('Visitador registrado.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos registrar.')}finally{setBusy(false)}}
   function downloadTemplate(){const ws=XLSX.utils.json_to_sheet([{Codigo:'V001',Nombre:'Carlos',Apellido:'Perez',WhatsApp:'8095551234',Correo:'carlos@empresa.com',Zona:'Distrito Nacional',Territorio:'Centro'}]);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Visitadores');XLSX.writeFile(wb,'plantilla-visitadores-kawmed.xlsx')}
-  async function readExcel(file:File){try{const buffer=await file.arrayBuffer(),wb=XLSX.read(buffer,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];const raw:any[]=XLSX.utils.sheet_to_json(ws,{defval:''});const rows=raw.slice(0,1000).map(row=>({employee_code:row.Codigo||row.codigo||row.employee_code||'',first_name:row.Nombre||row.nombre||row.first_name||'',last_name:row.Apellido||row.apellido||row.last_name||'',whatsapp:row.WhatsApp||row.whatsapp||row.Telefono||row.telefono||'',email:row.Correo||row.correo||row.Email||row.email||'',zone:row.Zona||row.zona||'',territory:row.Territorio||row.territorio||''})).filter(r=>String(r.first_name).trim()&&String(r.whatsapp).trim());setImportRows(rows);setMessage(rows.length+' colaboradores listos para importar.');setError('')}catch{setError('No pudimos leer el archivo Excel. Usa la plantilla KawMed.')}}
+  async function readExcel(file:File){
+    // Fast, clear limits BEFORE invoking any spreadsheet parser. The limits are
+    // defense in depth; a patched XLSX parser is still required (security #154).
+    setImportRows([])
+    setError('')
+    setMessage('')
+    const MAX_IMPORT_BYTES=5*1024*1024
+    if(!/\.(xlsx|xls|csv)$/i.test(file.name)){
+      setError('Archivo no admitido. Usa una plantilla .xlsx, .xls o .csv.')
+      return
+    }
+    if(file.size<=0||file.size>MAX_IMPORT_BYTES){
+      setError('El archivo debe contener datos y pesar como máximo 5 MB.')
+      return
+    }
+    try{
+      const buffer=await file.arrayBuffer()
+      // Stop after header and 1,000 records; do not materialize the entire sheet.
+      const wb=XLSX.read(buffer,{type:'array',sheetRows:1001})
+      const ws=wb.Sheets[wb.SheetNames[0]]
+      if(!ws)throw new Error('missing_sheet')
+      const raw:any[]=XLSX.utils.sheet_to_json(ws,{defval:''})
+      const rows=raw.slice(0,1000).map(row=>({
+        employee_code:row.Codigo||row.codigo||row.employee_code||'',
+        first_name:row.Nombre||row.nombre||row.first_name||'',
+        last_name:row.Apellido||row.apellido||row.last_name||'',
+        whatsapp:row.WhatsApp||row.whatsapp||row.Telefono||row.telefono||'',
+        email:row.Correo||row.correo||row.Email||row.email||'',
+        zone:row.Zona||row.zona||'',
+        territory:row.Territorio||row.territorio||''
+      })).filter(r=>String(r.first_name).trim()&&String(r.whatsapp).trim())
+      setImportRows(rows)
+      setMessage(rows.length+' colaboradores listos para importar.')
+    }catch{
+      setError('No pudimos leer el archivo Excel. Usa la plantilla KawMed.')
+    }
+  }
   async function importExcel(){if(!importRows.length)return;setBusy(true);setError('');setMessage('');try{const j:any=await apiPost('/sponsor/kawmed/representatives/import',{rows:importRows});if(!j?.ok)throw new Error(j?.error||'No pudimos importar.');setMessage((j.data?.accepted||0)+' visitadores importados/actualizados.');setImportRows([]);await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos importar.')}finally{setBusy(false)}}
   async function toggleRep(rep:Rep){setBusy(true);setError('');setMessage('');try{const j:any=await apiPatch('/sponsor/kawmed/representatives/'+encodeURIComponent(rep.id),{active:rep.active===0});if(!j?.ok)throw new Error(j?.error||'No pudimos actualizar.');setMessage('Visitador actualizado.');await load()}catch(e){setError(e instanceof Error?e.message:'No pudimos actualizar.')}finally{setBusy(false)}}
   async function copy(value:string,key:string){try{await navigator.clipboard.writeText(value);setCopied(key);window.setTimeout(()=>setCopied(v=>v===key?'':v),1500)}catch{setError('No pudimos copiar.')}}
