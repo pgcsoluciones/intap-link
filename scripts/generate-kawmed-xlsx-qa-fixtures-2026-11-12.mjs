@@ -13,7 +13,9 @@ const writeBook=(name, data)=>{
  const sheet=XLSX.utils.json_to_sheet(data,{header:fields})
  const book=XLSX.utils.book_new()
  XLSX.utils.book_append_sheet(book,sheet,'Visitadores')
- // Use Node's filesystem explicitly: SheetJS ESM writeFile may use a browser-only writer under Node 24.\n const bytes=XLSX.write(book,{type:'buffer',bookType:'xlsx'})\n writeFileSync(resolve(directory,name),Buffer.from(bytes))
+ // Use Node's filesystem explicitly: SheetJS ESM writeFile may use a browser-only writer under Node 24.
+ const bytes=XLSX.write(book,{type:'buffer',bookType:'xlsx'})
+ writeFileSync(resolve(directory,name),Buffer.from(bytes))
 }
 writeBook('01-visitadores-validos-3.xlsx',[1,2,3].map(row))
 writeBook('02-visitadores-1000.xlsx',Array.from({length:1000},(_,i)=>row(i+1)))
