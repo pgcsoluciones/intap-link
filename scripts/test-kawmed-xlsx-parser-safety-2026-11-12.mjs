@@ -25,7 +25,11 @@ assert.match(resolved,/^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.20\.3\/xlsx-0\.20\.
 assert.equal(version,'0.20.3','Only reviewed patched xlsx 0.20.3 allowed')
 const XLSXModule=await import('xlsx')
 const XLSX=XLSXModule.default||XLSXModule
-assert.equal(XLSX.version,'0.20.3','Runtime module must match patched lock')
+const installed=JSON.parse(readFileSync('node_modules/xlsx/package.json','utf8'))
+assert.equal(installed.version,'0.20.3','Installed SheetJS package must match patched lock')
+assert.equal(typeof XLSX.read,'function','SheetJS must expose Excel reader')
+assert.equal(typeof XLSX.write,'function','SheetJS must expose Excel writer')
+assert.equal(typeof XLSX.utils?.sheet_to_json,'function','SheetJS must expose sheet parser')
 const columns=['Codigo','Nombre','Apellido','WhatsApp','Correo','Zona','Territorio']
 const input={Codigo:'V001',Nombre:'Carlos',Apellido:'Pérez',WhatsApp:'8095551234',Correo:'carlos@example.com',Zona:'Distrito Nacional',Territorio:'Centro'}
 const sheet=XLSX.utils.json_to_sheet([input])
