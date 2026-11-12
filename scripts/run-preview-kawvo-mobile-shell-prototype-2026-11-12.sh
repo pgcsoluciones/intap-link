@@ -22,12 +22,14 @@ git diff --check "$BASE"..HEAD
 CHANGED="$(git diff --name-only "$BASE"..HEAD)"
 EXPECTED="$(printf '%s\n' \
  prototypes/kawvo-mobile-shell-2026-11-12/index.html \
- scripts/run-preview-kawvo-mobile-shell-prototype-2026-11-12.sh)"
+ scripts/run-preview-kawvo-mobile-shell-prototype-2026-11-12.sh \
+ scripts/test-kawvo-sponsor-shell-prototype-2026-11-12.mjs)"
 [[ "$CHANGED" == "$EXPECTED" ]] || {
   printf '%s\n' "$CHANGED"
   fail "Archivos fuera de la allowlist (sólo prototipo + runner)"
 }
 [[ -f "$SOURCE/index.html" ]] || fail "Prototipo no encontrado"
+node scripts/test-kawvo-sponsor-shell-prototype-2026-11-12.mjs
 grep -Fq 'PROTOTIPO INTERACTIVO' "$SOURCE/index.html" || fail "Falta aviso de demostración"
 grep -Fq 'var roles={' "$SOURCE/index.html" || fail "Falta selector de roles"
 grep -Fq 'var tabs=' "$SOURCE/index.html" || fail "Falta navegación común"
