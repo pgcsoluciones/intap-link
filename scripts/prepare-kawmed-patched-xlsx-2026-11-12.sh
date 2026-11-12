@@ -39,6 +39,12 @@ node scripts/test-kawmed-isolation-contract.mjs
 node scripts/test-intapcard-active-account-contract.mjs
 node scripts/test-kawmed-demo-invitations-contract.mjs
 node scripts/test-sponsored-profile-contract.mjs
+if [[ "$(printenv KAWVO_XLSX_PREFLIGHT_ONLY 2>/dev/null || true)" == "SI" ]]; then
+  SUCCESS=1
+  echo "PASS: preflight; no npm install ni cambios de dependencias."
+  echo "LOG: $LOG"
+  exit 0
+fi
 echo "▶ Resolviendo el paquete oficial SheetJS corregido, sin modificar API ni Cloudflare"
 npm install --workspace=app --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund "xlsx@$PKGURL" 2>&1 | tee "$LOG/npm-lock.txt"
 grep -Fq "$PKGURL" app/package.json || fail "Dependencia no fijada"
