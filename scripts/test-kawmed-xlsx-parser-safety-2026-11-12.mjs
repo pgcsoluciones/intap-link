@@ -23,7 +23,8 @@ const version=String(lock.packages?.['node_modules/xlsx']?.version||'')
 assert.match(spec,/^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.20\.3\/xlsx-0\.20\.3\.tgz$/,'Pinned patched SheetJS source required')
 assert.match(resolved,/^https:\/\/cdn\.sheetjs\.com\/xlsx-0\.20\.3\/xlsx-0\.20\.3\.tgz$/,'Lockfile must resolve to official patched archive')
 assert.equal(version,'0.20.3','Only reviewed patched xlsx 0.20.3 allowed')
-const XLSX=await import('xlsx')
+const XLSXModule=await import('xlsx')
+const XLSX=XLSXModule.default||XLSXModule
 assert.equal(XLSX.version,'0.20.3','Runtime module must match patched lock')
 const columns=['Codigo','Nombre','Apellido','WhatsApp','Correo','Zona','Territorio']
 const input={Codigo:'V001',Nombre:'Carlos',Apellido:'Pérez',WhatsApp:'8095551234',Correo:'carlos@example.com',Zona:'Distrito Nacional',Territorio:'Centro'}
