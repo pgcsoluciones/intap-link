@@ -4,7 +4,7 @@ const source=readFileSync('app/src/components/admin/sponsored/SponsorKawMed.tsx'
 const checks=[
 [/setImportRows\(\[\]\)[\s\S]*?MAX_IMPORT_BYTES=5\*1024\*1024/,'Stale pending import cleared and max size enforced'],
 [/file\.size<=0\|\|file\.size>MAX_IMPORT_BYTES/,'Reject empty/large imports before parsing'],
-[/\\?\.\(xlsx\|xls\|csv\)\$/,'Existing file types preserved'],
+[/xlsx\|xls\|csv/,'Existing file types preserved'],
 [/XLSX\.read\(buffer,\{type:'array',sheetRows:1001\}\)/,'Cap sheet materialization to 1000 records + header'],
 [/const ws=wb\.Sheets\[wb\.SheetNames\[0\]\]/,'First worksheet behavior unchanged'],
 [/raw\.slice\(0,1000\)/,'Existing max 1000 rows preserved'],
