@@ -58,7 +58,6 @@ export default function KawvoFreeShellPreview(){
   })
   const routeById=new Map(modules.map(item=>[item.id,item.path]))
   const agendaRoute=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')?home.agenda_route:''
-  const viewPath=String(home?.public_route||'')
   const completion=profile.freeReadiness
   const missing=Array.isArray(completion?.missing)?completion?.missing:[]
   const published=Number(profile.is_published)===1
