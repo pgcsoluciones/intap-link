@@ -18,7 +18,9 @@ for (const route of ['/trial/login','/admin/sponsored','/admin/sponsor','/supera
  assert.ok(app.includes('path="'+route+'"'), 'Existing App route missing: '+route)
 }
 assert.ok(owner.includes('mobileMenu?:boolean') && owner.includes('mobileMenu=false'), 'Mobile menu must remain opt-in')
-assert.ok(owner.includes("settingsLabel='Configuración'"), 'Owner settings label default must be preserved')
+// The approved OwnerBar contract now uses “Mi perfil” (see the source branch).
+// Keep the current owner return-to-editor behavior rather than reverting UI to an old label.
+assert.ok(owner.includes("settingsLabel='Mi perfil'"), 'Approved owner Mi perfil label must be preserved')
 assert.ok(modal.includes('detailsPlaceholder?:string'), 'Medical details placeholder must be optional')
 assert.ok(modal.includes("detailsPlaceholder||'Ej.:"), 'Legacy appointment placeholder fallback must remain')
 for (const name of ['sponsoredMultiProfileAccess','requestedSponsoredProfileId','listOwnedSponsoredBeneficiaryProfiles','resolveSponsorMembership','setSponsorContext']) {
