@@ -63,8 +63,18 @@ export default function KawvoFreeShellPreview(){
   const published=Number(profile.is_published)===1
   const button='min-h-12 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800'
   const go=(id:string)=>{const path=routeById.get(id);if(path)navigate(path)}
-  const menu:[Tab,string,string][]=[['home','⌂','Inicio'],['profile','◉','Perfil'],['agenda','▦','Agenda'],['more','☷','Más']]
-  return <main className="min-h-[100dvh] bg-[#f7f9fc] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter'] text-slate-950">
+  const menu:[Tab,string,string][]=[['home','⌂','Inicio'],['profile','◉','Perfil'],['agenda','▦','Agenda'],['more','☷','Más']].filter(([key])=>key!=='agenda'||Boolean(agendaRoute)) as [Tab,string,string][]
+  return <main className="min-h-[100dvh] bg-[#f1f5f7] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter'] text-slate-950 md:pl-[244px] md:pb-0">
+    {/* Desktop navigation follows the approved demo; mobile retains the bottom navigation. */}
+    <aside aria-label="Menú lateral Kawvo" className="fixed inset-y-0 left-0 hidden w-[244px] flex-col bg-[#f1f5f7] px-4 py-4 md:flex">
+      <div className="flex h-full flex-col rounded-[24px] border border-slate-200 bg-white p-4">
+        <div className="mb-8 flex items-center gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#123241] text-lg font-black text-white">K</div><div className="min-w-0"><strong className="block text-base">Kawvo</strong><span className="text-xs text-slate-500">Una experiencia</span></div></div>
+        <nav aria-label="Secciones de Kawvo" className="flex flex-col gap-2">
+          {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><span aria-hidden="true" className="w-5 text-lg">{icon}</span>{label}</button>)}
+        </nav>
+        <p className="mt-auto pt-6 text-xs leading-5 text-slate-500">Vista experimental de interfaz. Las acciones reales conservan sus permisos.</p>
+      </div>
+    </aside>
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3">
       <div className="mx-auto flex max-w-3xl items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div><button type="button" onClick={()=>navigate('/admin/free')} className="min-h-11 rounded-xl border border-slate-200 px-3 text-xs font-bold">Panel actual</button></div>
     </header>
@@ -89,7 +99,7 @@ export default function KawvoFreeShellPreview(){
       {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} title="Cuenta y herramientas"/></>}
       <p className="pt-3 text-center text-xs text-slate-500">Versión experimental · los flujos reales se mantienen en sus rutas originales.</p>
     </section>
-    <nav aria-label="Navegación Kawvo" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 gap-1 border-t border-slate-200 bg-white px-2 pb-[calc(7px+env(safe-area-inset-bottom))] pt-2 md:mx-auto md:max-w-3xl">
+    <nav aria-label="Navegación Kawvo" className={"fixed inset-x-0 bottom-0 z-20 grid gap-1 border-t border-slate-200 bg-white px-2 pb-[calc(7px+env(safe-area-inset-bottom))] pt-2 md:hidden "+(agendaRoute?"grid-cols-4":"grid-cols-3")}>
       {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold '+(tab===key?'bg-cyan-50 text-cyan-900':'text-slate-600')}><span aria-hidden="true" className="text-lg">{icon}</span>{label}</button>)}
     </nav>
   </main>
