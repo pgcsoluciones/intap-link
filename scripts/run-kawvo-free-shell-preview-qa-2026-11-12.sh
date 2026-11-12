@@ -22,7 +22,9 @@ EXPECTED="$(printf '%s\n' \
  app/src/components/admin/free/KawvoFreeShellPreview.tsx \
  app/src/components/admin/shared/KawvoPagedList.tsx \
  docs/architecture/KAWVO_LARGE_LIST_SEARCH_FILTER_PAGINATION_CONTRACT_2026-11-12.md \
+ scripts/audit-kawvo-dependencies-readonly-2026-11-12.sh \
  scripts/run-kawvo-free-shell-preview-qa-2026-11-12.sh \
+ scripts/stage-kawvo-free-shell-app-preview-2026-11-12.sh \
  scripts/test-kawvo-free-shell-preview-isolation-2026-11-12.mjs)"
 [[ "$CHANGED" == "$EXPECTED" ]] || { printf '%s\n' "$CHANGED"; fail "Archivos fuera del alcance"; }
 [[ -z "$(git diff --name-only "$BASE"..HEAD -- web/ api/ app/.env.preview app/.env.production app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/AdminGuard.tsx)" ]] || fail "Áreas protegidas alteradas"
