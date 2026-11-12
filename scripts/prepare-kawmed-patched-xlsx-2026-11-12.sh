@@ -15,9 +15,12 @@ git pull --ff-only github "$BRANCH"
 git merge-base --is-ancestor "github/$BASE" HEAD || fail "Rama base incorrecta"
 git diff --check "github/$BASE"..HEAD
 CHANGED="$(git diff --name-only "github/$BASE"..HEAD)"
-EXPECTED="$(printf '%s\n' app/src/components/admin/sponsored/SponsorKawMed.tsx scripts/prepare-kawmed-patched-xlsx-2026-11-12.sh scripts/test-kawmed-xlsx-parser-safety-2026-11-12.mjs)"
+EXPECTED="$(printf '%s\n' app/src/components/admin/sponsored/SponsorKawMed.tsx scripts/prepare-kawmed-patched-xlsx-2026-11-12.sh scripts/test-kawmed-isolation-contract.mjs scripts/test-kawmed-xlsx-parser-safety-2026-11-12.mjs)"
 [[ "$CHANGED" == "$EXPECTED" ]] || { echo "$CHANGED"; fail "Cambios fuera de allowlist"; }
 [[ -z "$(git diff --name-only "github/$BASE"..HEAD -- api/ web/ app/src/App.tsx)" ]] || fail "Áreas protegidas modificadas"
+[[ "$(git show "github/$BASE:web/src/components/appointments/AppointmentOwnerBar.tsx" | shasum -a 256)" == "$(shasum -a 256 web/src/components/appointments/AppointmentOwnerBar.tsx)" ]] || fail "OwnerBar no coincide con base aprobada"
+grep -Fq "settingsLabel='Mi perfil'" web/src/components/appointments/AppointmentOwnerBar.tsx || fail "Mi perfil aprobado no está presente"
+grep -Fq "owner.includes(\"settingsLabel='Mi perfil'\")" scripts/test-kawmed-isolation-contract.mjs || fail "Test de OwnerBar no corresponde al contrato aprobado"
 mkdir -p "$HOME/intap-release-logs"
 LOG="$(mktemp -d "$HOME/intap-release-logs/kawmed-xlsx-security-2026-11-12-XXXXXXXX")"
 echo "LOG: $LOG"
@@ -26,6 +29,11 @@ cp package-lock.json "$LOG/package-lock.before.json"
 SUCCESS=0
 rollback(){ if [[ "$SUCCESS" != "1" ]];then echo "Restaurando manifiestos tras error";git restore -- app/package.json package-lock.json || true;fi; }
 trap rollback EXIT
+echo "▶ Preflight de contratos existentes ANTES de instalar dependencias"
+node scripts/test-kawmed-isolation-contract.mjs
+node scripts/test-intapcard-active-account-contract.mjs
+node scripts/test-kawmed-demo-invitations-contract.mjs
+node scripts/test-sponsored-profile-contract.mjs
 echo "▶ Resolviendo el paquete oficial SheetJS corregido, sin modificar API ni Cloudflare"
 npm install --workspace=app --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund "xlsx@$PKGURL" 2>&1 | tee "$LOG/npm-lock.txt"
 grep -Fq "$PKGURL" app/package.json || fail "Dependencia no fijada"
