@@ -32,5 +32,5 @@ assert.match(contract,/búsqueda, filtrado y paginación DEBEN suceder en API\/D
 assert.match(contract,/roles/,'All role scopes included')
 assert.match(free,/Tu presentación está lista para publicar/,'Approved ready-to-publish dialog retained')
 assert.match(free,/apiPut\('\/me\/profile'/,'Approved publish API untouched')
-assert.match(routes,/kawvo_free_mobile/,'Existing mobile route UX available')
+assert.match(routes,/kawvo-free-mobile/,'Existing mobile route UX available')
 console.log('PASS: opt-in Preview-only Free shell, existing publication and role guards, bounded search/filter/pagination contract')
