@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
 import KawvoPagedList, { type KawvoListItem } from '../shared/KawvoPagedList'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
+import { getKawvoShellReturn, type KawvoShellListState, type KawvoShellReturn, type KawvoShellTab } from './KawvoShellReturn'
 
-type Tab='home'|'profile'|'agenda'|'more'
-type Profile={name?:string|null;slug?:string|null;is_published?:number;avatar_url?:string|null;freeReadiness?:{ready?:boolean;missing?:string[]}}
+type Tab=KawvoShellTab
+type Profile={profile_id?:string|number|null;name?:string|null;slug?:string|null;is_published?:number;avatar_url?:string|null;freeReadiness?:{ready?:boolean;missing?:string[]}}
 type Home={route?:string;public_route?:string|null;agenda_route?:string|null;multiple_profiles?:boolean}
 type Team={role?:'none'|'master'|'member';member?:{permissions?:string[]}}
 const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boolean})[]=[
@@ -25,6 +26,8 @@ const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boole
 /** Opt-in Preview-only route. Existing FreeDashboard, its readiness and publication actions stay authoritative. */
 export default function KawvoFreeShellPreview(){
   const navigate=useNavigate()
+  const location=useLocation()
+  const incomingReturn=getKawvoShellReturn(location.state)
   const [tab,setTab]=useState<Tab>('home')
   const [profile,setProfile]=useState<Profile|null>(null)
   const [home,setHome]=useState<Home|null>(null)
@@ -48,6 +51,14 @@ export default function KawvoFreeShellPreview(){
       .finally(()=>{if(active)setBusy(false)})
     return()=>{active=false}
   },[enabled])
+  // Return state is scoped to this navigation and this authenticated profile only.
+  useEffect(()=>{
+    if(!enabled||!profile||!incomingReturn)return
+    const activeAccount=String(profile.profile_id||profile.slug||'')
+    if(incomingReturn.kawvoShellAccount!==activeAccount)return
+    const agendaAvailable=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')
+    setTab(incomingReturn.kawvoShellTab==='agenda'&&!agendaAvailable?'home':incomingReturn.kawvoShellTab)
+  },[enabled,profile,home,location.key])
   if(!enabled)return <Navigate to="/admin/free" replace/>
   if(busy)return <main role="status" className="min-h-screen bg-slate-50 p-8 text-center text-sm">Cargando espacio Kawvo…</main>
   if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate('/admin/free')} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
@@ -76,8 +87,13 @@ export default function KawvoFreeShellPreview(){
   // Match the existing FreeDashboard public-link fallback when home-route is temporarily unavailable.
   const publicUrl=publicRoute?webUrl+publicRoute:accountSlug?`${webUrl}/${encodeURIComponent(accountSlug)}`:''
   const button='min-h-12 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800'
-  const shellReturnState={kawvoShellReturn:true}
-  const go=(id:string)=>{const path=routeById.get(id);if(path)navigate(path,{state:shellReturnState})}
+  const accountIdentity=String(profile.profile_id||profile.slug||'')
+  const verifiedReturn=incomingReturn?.kawvoShellAccount===accountIdentity?incomingReturn:null
+  const shellReturnState:KawvoShellReturn={kawvoShellReturn:true,kawvoShellTab:tab,kawvoShellAccount:accountIdentity}
+  const go=(id:string,listState?:KawvoShellListState)=>{
+    const path=routeById.get(id)
+    if(path)navigate(path,{state:{...shellReturnState,kawvoShellList:listState,kawvoShellItem:id}})
+  }
   const openAgenda=()=>{if(agendaRoute)navigate(agendaRoute,{state:shellReturnState})}
   const nextAction=()=>{
     if(published){setTab('profile');return}
@@ -134,9 +150,9 @@ export default function KawvoFreeShellPreview(){
         </div>
         {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
-      {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} title="Secciones del perfil"/></>}
+      {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
       {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<div className="rounded-2xl border bg-white p-4"><p className="text-sm text-slate-600">Tu calendario y solicitudes conservan las reglas actuales.</p><button onClick={openAgenda} className="mt-3 min-h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Abrir Agenda</button></div>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
-      {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} title="Cuenta y herramientas"/></>}
+      {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/></>}
       <p className="pt-3 text-center text-xs text-slate-500">Versión experimental · los flujos reales se mantienen en sus rutas originales.</p>
     </section>
     <nav aria-label="Navegación Kawvo" className={"fixed inset-x-0 bottom-0 z-20 grid gap-1 border-t border-slate-200 bg-white px-2 pb-[calc(7px+env(safe-area-inset-bottom))] pt-2 md:hidden "+(agendaRoute?"grid-cols-4":"grid-cols-3")}>
