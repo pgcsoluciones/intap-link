@@ -82,7 +82,21 @@ try {
     checkedFetch(ORIGINAL+originEntry).then(r=>r.arrayBuffer()).then(b=>Buffer.from(b))
   ])
   assert.equal(sha(stageJs),sha(localJs),'JS de Pages nuevo difiere del local')
-  const auth=json(run('npx',['--no-install','wrangler','auth','token','--json']))
+  // Older local Wrangler builds predate the officially documented auth token command
+  // (Cloudflare changelog 2025-12-18). Use a temporary current CLI, not npm install
+  // in the project or a new Cloudflare login. Keep credentials exclusively in memory.
+  // Errors are sanitized: never emit output from a token-producing process.
+  let auth
+  try {
+    auth=json(run('npx',['--no-install','wrangler','auth','token','--json']))
+  } catch {
+    console.log('Wrangler local no admite auth token; consultando CLI vigente temporal sin alterar dependencias.')
+    try {
+      auth=json(run('npx',['--yes','--package=wrangler@latest','--','wrangler','auth','token','--json']))
+    } catch {
+      throw Error('No fue posible obtener credenciales de Wrangler usando CLI compatible. No hubo cambios en Cloudflare.')
+    }
+  }
   let headers
   if((auth.type==='oauth'||auth.type==='api_token')&&auth.token){
     headers={Authorization:'Bearer '+auth.token}
