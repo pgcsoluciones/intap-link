@@ -99,14 +99,14 @@ try {
     const present=bases.filter(existsSync)
     assert.equal(present.length,1,'No hay un único archivo legacy de sesión Wrangler; no se extraen tokens de ubicaciones inciertas')
     const config=readFileSync(present[0],'utf8')
-    const tokenMatch=config.match(/^oauth_token\\s*=\\s*"([^"\\r\\n]+)"/m)
+    const tokenMatch=config.match(/^oauth_token\s*=\s*"([^"\r\n]+)"/m)
     assert(tokenMatch,'Wrangler usa keychain u otro método no accesible; no se extraen credenciales ni se modifica sesión')
     headers={Authorization:'Bearer '+tokenMatch[1]}
   }
   // Account id remains an explicit, validated input. Avoid relying on whoami --json
   // across Wrangler versions and never output the 32-byte ID or authentication header.
   const workerConfig=readFileSync('api/wrangler.preview.toml','utf8')
-  const accountMatches=[...workerConfig.matchAll(/^account_id\\s*=\\s*"([a-f0-9]{32})"\\s*$/gmi)]
+  const accountMatches=[...workerConfig.matchAll(/^account_id\s*=\s*"([a-f0-9]{32})"\s*$/gmi)]
   assert.equal(accountMatches.length,1,'No hay cuenta Preview única en Wrangler; detenido')
   const account=process.env.CLOUDFLARE_ACCOUNT_ID||accountMatches[0][1]
   assert(/^[a-f0-9]{32}$/i.test(account),'La cuenta Cloudflare no es válida')
