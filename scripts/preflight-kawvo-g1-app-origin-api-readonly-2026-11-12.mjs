@@ -82,32 +82,31 @@ try {
     checkedFetch(ORIGINAL+originEntry).then(r=>r.arrayBuffer()).then(b=>Buffer.from(b))
   ])
   assert.equal(sha(stageJs),sha(localJs),'JS de Pages nuevo difiere del local')
-  // Older local Wrangler builds predate the officially documented auth token command
-  // (Cloudflare changelog 2025-12-18). Use a temporary current CLI, not npm install
-  // in the project or a new Cloudflare login. Keep credentials exclusively in memory.
-  // Errors are sanitized: never emit output from a token-producing process.
-  let auth
-  try {
-    auth=json(run('npx',['--no-install','wrangler','auth','token','--json']))
-  } catch {
-    console.log('Wrangler local no admite auth token; consultando CLI vigente temporal sin alterar dependencias.')
-    try {
-      auth=json(run('npx',['--yes','--package=wrangler@latest','--','wrangler','auth','token','--json']))
-    } catch {
-      throw Error('No fue posible obtener credenciales de Wrangler usando CLI compatible. No hubo cambios en Cloudflare.')
-    }
-  }
+  // Respect the existing local Wrangler login. Never invoke npx downloads or print credentials.
+  // Mac Wrangler's historical global state is under ~/Library/Preferences/.wrangler.
+  // This code reads the access token only in memory, for GET; never reads/stores refresh token.
   let headers
-  if((auth.type==='oauth'||auth.type==='api_token')&&auth.token){
-    headers={Authorization:'Bearer '+auth.token}
-  }else if(auth.type==='api_key'&&auth.key&&auth.email){
-    headers={'X-Auth-Email':auth.email,'X-Auth-Key':auth.key}
-  }else throw Error('Wrangler auth token --json no produjo un método compatible; no revelar credenciales')
-  const who=json(run('npx',['--no-install','wrangler','whoami','--json']))
-  const ids=accountIDs(who)
-  const account=process.env.CLOUDFLARE_ACCOUNT_ID|| (ids.length===1?ids[0]:'')
-  assert(/^[a-f0-9]{32}$/i.test(account),'No pude determinar cuenta Cloudflare de forma inequívoca')
-  if(ids.length&& !ids.includes(account))throw Error('Cuenta indicada no está en membresías Wrangler')
+  if(process.env.CLOUDFLARE_API_TOKEN){
+    headers={Authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN}
+  }else if(process.env.CLOUDFLARE_API_KEY&&process.env.CLOUDFLARE_EMAIL){
+    headers={'X-Auth-Email':process.env.CLOUDFLARE_EMAIL,'X-Auth-Key':process.env.CLOUDFLARE_API_KEY}
+  }else{
+    const bases=[
+      join(homedir(),'Library','Preferences','.wrangler','config','default.toml'),
+      join(homedir(),'.wrangler','config','default.toml'),
+      join(homedir(),'.config','.wrangler','config','default.toml')
+    ]
+    const present=bases.filter(existsSync)
+    assert.equal(present.length,1,'No hay un único archivo legacy de sesión Wrangler; no se extraen tokens de ubicaciones inciertas')
+    const config=readFileSync(present[0],'utf8')
+    const tokenMatch=config.match(/^oauth_token\\s*=\\s*"([^"\\r\\n]+)"/m)
+    assert(tokenMatch,'Wrangler usa keychain u otro método no accesible; no se extraen credenciales ni se modifica sesión')
+    headers={Authorization:'Bearer '+tokenMatch[1]}
+  }
+  // Account id remains an explicit, validated input. Avoid relying on whoami --json
+  // across Wrangler versions and never output the 32-byte ID or authentication header.
+  const account=process.env.CLOUDFLARE_ACCOUNT_ID||''
+  assert(/^[a-f0-9]{32}$/i.test(account),'CLOUDFLARE_ACCOUNT_ID no establecido; se requiere la cuenta existente (no crear otra)')
   const endpoint='https://api.cloudflare.com/client/v4/accounts/'+account+'/workers/scripts/'+WORKER+'/settings'
   const settings=await bodyJson(await checkedFetch(endpoint,headers))
   assert(Array.isArray(settings.bindings),'Cloudflare settings sin bindings')
@@ -145,4 +144,4 @@ try {
   console.log('COMMIT: '+EXPECTED_COMMIT)
   console.log('REPORTE: '+dir+'/report.json')
   console.log('NO SE HA CAMBIADO PREVIEW. Activación de Worker permanece bloqueada hasta procedimiento verificado.')
-}catch(e){fail(e.message)}
+}catch(e){fail((e && e.name === 'AssertionError') ? e.message : 'Preflight no completado; no hubo cambios. Revise entorno de cuenta/autenticación, sin compartir tokens ni archivos de sesión.')}
