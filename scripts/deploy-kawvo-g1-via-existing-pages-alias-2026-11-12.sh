@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# SAFETY HOLD: The previous deploy generated a different Pages alias
-# (qa-kawmed-guest-current-2026-5vvy) and DID NOT update App Preview.
-# The branch owning the existing origin must be read from Pages API first.
-echo "DETENIDO: runner de alias deshabilitado. Ejecutar auditoría de alias Pages solo lectura." >&2
-exit 1
+# G1: branch determined by Cloudflare Pages deployment history (2026-11-13).
+# Alias currently used by Worker: qa-kawmed-guest-current-2026.intap-web2.pages.dev
+# Its REAL Pages branch: qa-kawmed-guest-current-2026-11-02
+# Never modify Worker, bindings, OAuth, D1/R2, web or Production.
 
 # G1 Preview: deploy App UI through existing Pages branch alias only. Never touch Worker.
 set -euo pipefail
@@ -16,7 +15,7 @@ ALIAS="https://qa-kawmed-guest-current-2026.intap-web2.pages.dev"
 WEB="https://qa-sponsor-scan-1104.intap-link.pages.dev"
 STAGE="https://d1451e86.intap-web2.pages.dev"
 HOST="https://app.preview.intaprd.com"
-PAGES_BRANCH="qa-kawmed-guest-current-2026"
+PAGES_BRANCH="qa-kawmed-guest-current-2026-11-02"
 stop(){ echo "DETENIDO: $*" >&2; exit 1; }
 [[ "$(printenv KAWVO_G1_PAGES_APPROVED 2>/dev/null || true)" == "SI" ]] || stop "Requiere autorización KAWVO_G1_PAGES_APPROVED=SI"
 cd "$ROOT" || stop "Checkout no disponible"
@@ -66,6 +65,7 @@ if [[ "$OLD_JS" == "$JS" ]]; then
 else
   echo "▶ Publicando SOLO Pages en la rama asociada a App Preview; Worker no se toca"
   npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$PAGES_BRANCH" --commit-hash "$UI_COMMIT" 2>&1 | tee "$LOG/pages-deploy.log" || stop "Falló Pages"
+  grep -Fq "$ALIAS" "$LOG/pages-deploy.log" || stop "Pages no confirmó el alias esperado. NO desplegar otra vez; revisar log."
 fi
 OK=0
 for i in 1 2 3 4 5 6; do
@@ -81,7 +81,7 @@ const fs=require('fs'),[file,id]=process.argv.slice(2),x=JSON.parse(fs.readFileS
 if(!Array.isArray(x.versions)||x.versions.length!==1||x.versions[0].version_id!==id||Number(x.versions[0].percentage)!==100)throw Error('Worker no quedó en versión original')
 NODE
 [[ "$OK" == 1 ]] || stop "Pages publicado pero dominio no sirve el bundle G1; NO reintentar a ciegas"
-echo "PASS: APP PREVIEW ACTUALIZADO usando alias Pages existente"
+echo "PASS: APP PREVIEW ACTUALIZADO mediante la rama real qa-kawmed-guest-current-2026-11-02"
 echo "PASS: WORKER ORIGINAL INTACTO al 100%, sin PATCH ni redeploy"
 echo "PASS: bundle del dominio autenticado idéntico al QA aprobado"
 echo "QA: $HOST/admin/free/shell-preview?kawvo_shell=1"
