@@ -73,7 +73,8 @@ export default function KawvoFreeShellPreview(){
   const nextActionLabel=published?'Administrar mi presentación':readyToPublish?'Revisar y publicar':'Continuar configuración'
   const webUrl=String(import.meta.env.VITE_WEB_URL||'https://preview.intaprd.com').replace(/\/$/,'')
   const publicRoute=typeof home?.public_route==='string'&&home.public_route.startsWith('/')&&!home.public_route.startsWith('//')?home.public_route:''
-  const publicUrl=publicRoute?webUrl+publicRoute:''
+  // Match the existing FreeDashboard public-link fallback when home-route is temporarily unavailable.
+  const publicUrl=publicRoute?webUrl+publicRoute:accountSlug?`${webUrl}/${encodeURIComponent(accountSlug)}`:''
   const button='min-h-12 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800'
   const shellReturnState={kawvoShellReturn:true}
   const go=(id:string)=>{const path=routeById.get(id);if(path)navigate(path,{state:shellReturnState})}
