@@ -1,7 +1,7 @@
 # Kawvo — G2.1 · Auditoría y primer enlace directo de navegación Free
-**Corte:** 13 de noviembre de 2026  
-**Contrato obligatorio:** `docs/architecture/KAWVO_UNIFIED_UI_MASTER_ROADMAP_CONTRACT_2026-11-12.md` (PR #156) y `KAWVO_MOBILE_FIRST_UNIFIED_SHELL_CONTRACT_2026-11-11.md` (PR #150).  
-**Prototipo visual aprobado:** https://qa-kawvo-shell-1112.intap-link.pages.dev/  
+**Corte:** 13 de noviembre de 2026
+**Contrato obligatorio:** `docs/architecture/KAWVO_UNIFIED_UI_MASTER_ROADMAP_CONTRACT_2026-11-12.md` (PR #156) y `KAWVO_MOBILE_FIRST_UNIFIED_SHELL_CONTRACT_2026-11-11.md` (PR #150).
+**Prototipo visual aprobado:** https://qa-kawvo-shell-1112.intap-link.pages.dev/
 **Gate:** G2 (consolidación Free), lote G2.1. **Estado:** código preparado para QA local; NO constituye PASS funcional ni release.
 
 ## 1. Punto de partida, rama y seguridad
