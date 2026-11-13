@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
 import KawvoPagedList, { type KawvoListItem } from '../shared/KawvoPagedList'
+import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
 
 type Tab='home'|'profile'|'agenda'|'more'
 type Profile={name?:string|null;slug?:string|null;is_published?:number;avatar_url?:string|null;freeReadiness?:{ready?:boolean;missing?:string[]}}
@@ -30,6 +31,7 @@ export default function KawvoFreeShellPreview(){
   const [team,setTeam]=useState<Team|null>(null)
   const [busy,setBusy]=useState(true)
   const [error,setError]=useState('')
+  const [shareMessage,setShareMessage]=useState('')
   // Explicit opt-in; never available on production hostname or production build.
   const enabled=import.meta.env.MODE==='preview'&&window.location.hostname==='app.preview.intaprd.com'&&new URLSearchParams(window.location.search).get('kawvo_shell')==='1'
   useEffect(()=>{
@@ -71,9 +73,30 @@ export default function KawvoFreeShellPreview(){
   const nextActionLabel=published?'Administrar mi presentación':readyToPublish?'Revisar y publicar':'Continuar configuración'
   const webUrl=String(import.meta.env.VITE_WEB_URL||'https://preview.intaprd.com').replace(/\/$/,'')
   const publicRoute=typeof home?.public_route==='string'&&home.public_route.startsWith('/')&&!home.public_route.startsWith('//')?home.public_route:''
-  const publicUrl=publicRoute?webUrl+publicRoute:''
+  // Match the existing FreeDashboard public-link fallback when home-route is temporarily unavailable.
+  const publicUrl=publicRoute?webUrl+publicRoute:accountSlug?`${webUrl}/${encodeURIComponent(accountSlug)}`:''
   const button='min-h-12 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800'
-  const go=(id:string)=>{const path=routeById.get(id);if(path)navigate(path)}
+  const shellReturnState={kawvoShellReturn:true}
+  const go=(id:string)=>{const path=routeById.get(id);if(path)navigate(path,{state:shellReturnState})}
+  const openAgenda=()=>{if(agendaRoute)navigate(agendaRoute,{state:shellReturnState})}
+  const nextAction=()=>{
+    if(published){setTab('profile');return}
+    // Publication is deliberately left in the existing FreeDashboard, with its readiness and server checks.
+    if(readyToPublish){navigate('/admin/free');return}
+    navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})
+  }
+  const previewHref=accountSlug?(isFreeDemoDelegationActive()&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/${encodeURIComponent(accountSlug)}?full=1`):''
+  const sharePublicUrl=async()=>{
+    if(!published||!publicUrl)return
+    setShareMessage('')
+    try{
+      if(navigator.share){await navigator.share({title:accountName,url:publicUrl});setShareMessage('Perfil listo para compartir.');return}
+      await navigator.clipboard.writeText(publicUrl)
+      setShareMessage('Enlace copiado para compartir.')
+    }catch(error:unknown){
+      if((error as {name?:string}|null)?.name!=='AbortError')setShareMessage('No pudimos abrir el menú para compartir.')
+    }
+  }
   const menu:[Tab,string,string][]=[['home','⌂','Inicio'],['profile','◉','Perfil'],['agenda','▦','Agenda'],['more','☷','Más']].filter(([key])=>key!=='agenda'||Boolean(agendaRoute)) as [Tab,string,string][]
   return <main className="min-h-[100dvh] bg-[#f1f5f7] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter'] text-slate-950 md:pl-[244px] md:pb-0">
     {/* Desktop navigation follows the approved demo; mobile retains the bottom navigation. */}
@@ -101,17 +124,18 @@ export default function KawvoFreeShellPreview(){
           :readyToPublish?<p className="mt-3 rounded-xl bg-cyan-50 px-3 py-3 text-sm text-cyan-950">Tu perfil cumple los requisitos indicados por el sistema. Revisa y confirma la publicación desde el panel actual.</p>
           :missing.length>0?<div className="mt-3 rounded-xl bg-amber-50 px-3 py-3"><p className="text-sm font-bold text-amber-950">Siguiente paso: completar tu presentación</p><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-amber-950">{missing.slice(0,3).map((item,i)=><li key={i}>{item}</li>)}</ul>{missing.length>3&&<p className="mt-2 text-xs text-amber-900">Y {missing.length-3} requisito(s) más en tu panel.</p>}</div>
           :<p className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-700">Revisa los requisitos en tu panel antes de publicar. El avance no se calcula con datos incompletos.</p>}
-          <button type="button" onClick={()=>navigate('/admin/free')} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{nextActionLabel}</button>
+          <button type="button" onClick={nextAction} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{nextActionLabel}</button>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button onClick={()=>setTab('profile')} className={button}><span className="mb-2 block text-xl">✎</span>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y contenido</span></button>
-          <button onClick={()=>navigate('/admin/free')} className={button}><span className="mb-2 block text-xl">◉</span>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Abrir desde el panel actual</span></button>
-          {agendaRoute?<button onClick={()=>navigate(agendaRoute)} className={button}><span className="mb-2 block text-xl">▦</span>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>:<button onClick={()=>setTab('more')} className={button}><span className="mb-2 block text-xl">⚙</span>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Configuración</span></button>}
-          <button onClick={()=>navigate('/admin/free')} className={button}><span className="mb-2 block text-xl">↗</span>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">Desde el panel actual{publicUrl?' · enlace disponible':''}</span></button>
+          {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><span className="mb-2 block text-xl">◉</span>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Abrir la vista previa de tu presentación</span></a>:<button type="button" disabled className={button+" opacity-50"}><span className="mb-2 block text-xl">◉</span>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Completa tu usuario primero</span></button>}
+          {agendaRoute?<button onClick={openAgenda} className={button}><span className="mb-2 block text-xl">▦</span>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>:<button onClick={()=>setTab('more')} className={button}><span className="mb-2 block text-xl">⚙</span>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Configuración</span></button>}
+          <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><span className="mb-2 block text-xl">↗</span>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">{published&&publicUrl?'Compartir enlace público':'Disponible al publicar tu perfil'}</span></button>
         </div>
+        {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
       {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} title="Secciones del perfil"/></>}
-      {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<div className="rounded-2xl border bg-white p-4"><p className="text-sm text-slate-600">Tu calendario y solicitudes conservan las reglas actuales.</p><button onClick={()=>navigate(agendaRoute)} className="mt-3 min-h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Abrir Agenda</button></div>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
+      {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<div className="rounded-2xl border bg-white p-4"><p className="text-sm text-slate-600">Tu calendario y solicitudes conservan las reglas actuales.</p><button onClick={openAgenda} className="mt-3 min-h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Abrir Agenda</button></div>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
       {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} title="Cuenta y herramientas"/></>}
       <p className="pt-3 text-center text-xs text-slate-500">Versión experimental · los flujos reales se mantienen en sus rutas originales.</p>
     </section>
