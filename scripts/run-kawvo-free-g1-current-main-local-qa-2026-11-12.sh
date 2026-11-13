@@ -18,6 +18,7 @@ EXPECTED="$(printf '%s\n' \
  app/src/components/admin/free/KawvoFreeShellPreview.tsx \
  app/src/components/admin/shared/KawvoPagedList.tsx \
  docs/architecture/KAWVO_LARGE_LIST_SEARCH_FILTER_PAGINATION_CONTRACT_2026-11-12.md \
+ scripts/preflight-kawvo-g1-active-origin-readonly-2026-11-12.sh \
  scripts/run-kawvo-free-g1-current-main-local-qa-2026-11-12.sh \
  scripts/test-kawvo-free-shell-desktop-parity-2026-11-12.mjs \
  scripts/test-kawvo-free-shell-preview-isolation-2026-11-12.mjs)"
