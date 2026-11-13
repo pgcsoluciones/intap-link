@@ -38,7 +38,7 @@ QA real tras **futuro** Pages App Preview (no despliegue en este lote):
 ## 4. Seguridad, reversión y estado
 - Este PR se apila sobre #159, sin merge a `main` ni despliegue Prod.
 - Runner local: `scripts/run-kawvo-g2-free-return-list-local-qa-2026-11-13.sh`, ejecuta solo pruebas y compila; **sin Cloudflare**.
-- Los snapshots actuales de G2.1 en App Preview permanecen intactos hasta que se diseñe un runner **App Pages-only** nuevo con el alias real y el bundle previo verificado; nunca reutilizar el runner G2.1 de hash fijo para un build nuevo.
+- El runner `scripts/deploy-kawvo-g2-2-free-app-pages-preview-2026-11-13.sh` conserva la técnica **App Pages-only**: valida el G2.1 activo contra el Pages inmutable obtenido del log real `kawvo-g2-pages-wEFuXIXO/publish.log`, comprueba rama propietaria, Worker, 35 bindings y orígenes, publica primero en stage aislado y solo luego reemplaza el bundle App Preview. Conserva referencia de retorno a G2.1. **Nunca** reutilizar el runner G2.1 de hash fijo para un build nuevo. Este runner aún NO está ejecutado hasta recibir evidencias del Terminal.
 - No ejecutar `wrangler deploy` ni reconfigurar `APP_PAGES_ORIGIN`; el riesgo conocido afecta servicios médicos/sponsor.
 - Si una prueba falla: STOP, mantener G2.1 operativo. Si más adelante se despliega Pages, retener referencia al artefacto inmutable para poder reconstruir/republicar el estado anterior.
 
