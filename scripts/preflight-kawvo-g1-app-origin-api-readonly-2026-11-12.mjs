@@ -105,8 +105,12 @@ try {
   }
   // Account id remains an explicit, validated input. Avoid relying on whoami --json
   // across Wrangler versions and never output the 32-byte ID or authentication header.
-  const account=process.env.CLOUDFLARE_ACCOUNT_ID||''
-  assert(/^[a-f0-9]{32}$/i.test(account),'CLOUDFLARE_ACCOUNT_ID no establecido; se requiere la cuenta existente (no crear otra)')
+  const workerConfig=readFileSync('api/wrangler.preview.toml','utf8')
+  const accountMatches=[...workerConfig.matchAll(/^account_id\\s*=\\s*"([a-f0-9]{32})"\\s*$/gmi)]
+  assert.equal(accountMatches.length,1,'No hay cuenta Preview única en Wrangler; detenido')
+  const account=process.env.CLOUDFLARE_ACCOUNT_ID||accountMatches[0][1]
+  assert(/^[a-f0-9]{32}$/i.test(account),'La cuenta Cloudflare no es válida')
+  assert.equal(account.toLowerCase(),accountMatches[0][1].toLowerCase(),'Cuenta env difiere de Wrangler Preview')
   const endpoint='https://api.cloudflare.com/client/v4/accounts/'+account+'/workers/scripts/'+WORKER+'/settings'
   const settings=await bodyJson(await checkedFetch(endpoint,headers))
   assert(Array.isArray(settings.bindings),'Cloudflare settings sin bindings')
