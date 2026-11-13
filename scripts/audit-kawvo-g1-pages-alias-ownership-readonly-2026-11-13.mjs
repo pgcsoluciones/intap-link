@@ -46,12 +46,12 @@ async function api(url,headers){
       .slice(0,3).map(x=>String(x.code||'unknown')).join(',')
     const details=(Array.isArray(body?.errors)?body.errors:[])
       .slice(0,2).map(x=>String(x.message||'').slice(0,140)
-        .replace(/\\b[a-f0-9]{32}\\b/gi,'[cuenta]')
-        .replace(/Bearer\\s+\\S+/gi,'Bearer [oculto]')).join(' | ')
+        .replace(/\b[a-f0-9]{32}\b/gi,'[cuenta]')
+        .replace(/Bearer\s+\S+/gi,'Bearer [oculto]')).join(' | ')
     throw Error('Cloudflare Pages GET HTTP '+response.status+'; codes='+codes+'; '+details+'; sin modificaciones.')
   }
   if(!Array.isArray(body.result))throw Error('Cloudflare Pages GET no devolvió una lista.')
-  return body.result
+  return {items:body.result,info:body.result_info||{}}
 }
 function reportEntry(d){
   const branch=d.deployment_trigger?.metadata?.branch
@@ -79,7 +79,7 @@ try{
   for(let p=1;p<=25;p++){
     // Official endpoint works without query params; do not request per_page=100.
     // Use Cloudflare default pagination and only vary page for later requests.
-    const items=await api(p===1?prefix:prefix+'?page='+p,headers)
+    const {items,info}=await api(p===1?prefix:prefix+'?page='+p,headers)
     pages++
     if(!items.length)break
     for(const d of items){
@@ -93,7 +93,8 @@ try{
     }
     // Continue until both alias owners and new deployment details are found.
     if(matches.has('origen_del_worker')&&matches.has('alias_nuevo')&&matches.has('despliegue_ac86d677'))break
-    if(items.length<20)break
+    if(Number.isInteger(info.total_pages) && p>=info.total_pages)break
+    if(!Number.isInteger(info.total_pages) && items.length<20)break
   }
   const result={
     operation:'READ ONLY — Cloudflare Pages deployment history',
