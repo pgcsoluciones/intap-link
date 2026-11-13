@@ -26,6 +26,14 @@ const origin=(list,name)=>{
   return all[0].text
 }
 const map=list=>new Map(list.map(b=>[b.name,b.type]))
+// Cloudflare GET /scripts/:name/versions returns {result:{items:[...]}}
+// not a result array. Preserve strict fail-closed behavior on any other shape.
+const listedVersions=result=>{
+  assert(result && !Array.isArray(result) && Array.isArray(result.items),'Formato inesperado del listado de versiones de Cloudflare')
+  assert(result.items.length>0,'Cloudflare devolvió listado de versiones vacío')
+  assert(result.items.every(v=>uuid(v.id)),'El listado contiene identificadores de versión inválidos')
+  return result.items
+}
 const uuid=x=>/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(String(x))
 const equals=(a,b)=>assert.deepEqual([...map(a)].sort(),[...map(b)].sort(),'Cloudflare cambió bindings')
 const entry=html=>{
@@ -122,8 +130,8 @@ try {
   const bs=bindingList(current)
   assert.equal(origin(bs,'APP_PAGES_ORIGIN'),BEFORE_APP,'APP_PAGES_ORIGIN ya cambió')
   assert.equal(origin(bs,'WEB_PAGES_ORIGIN'),BEFORE_WEB,'WEB_PAGES_ORIGIN ya cambió')
-  assert(Array.isArray(versions)&&versions.length>0,'No existe listado de versiones')
-  assert.equal(versions[0].id,BEFORE_VERSION,'Última versión no coincide con la activa; herencia no es segura')
+  const beforeVersions=listedVersions(versions)
+  assert.equal(beforeVersions[0].id,BEFORE_VERSION,'Última versión no coincide con la activa; herencia no es segura')
   assert.equal(await htmlEntry(PAGE+'/admin/login'),await htmlEntry(BEFORE_APP+'/admin/login'),'Dominio no sirve Pages anterior')
   const expected=await htmlEntry(AFTER_APP+'/admin/login')
   assert.equal(expected,entry(readFileSync('app/dist/index.html','utf8')),'Candidato no coincide con compilación')
@@ -154,8 +162,7 @@ try {
   assert.equal(origin(afterBs,'WEB_PAGES_ORIGIN'),BEFORE_WEB,'Origen WEB cambió')
   // The PATCH may create a new version without activating it; if so deploy
   // exactly the new latest version at 100%, using the documented deployment API.
-  const v2=await api(versionsUrl+'?per_page=5',headers)
-  assert(Array.isArray(v2)&&v2.length>0&&uuid(v2[0].id),'No existe versión nueva identificable')
+  const v2=listedVersions(await api(versionsUrl+'?per_page=5',headers))
   const next=v2[0].id
   if(deploymentStatus()===BEFORE_VERSION){
     assert.notEqual(next,BEFORE_VERSION,'PATCH no generó versión nueva desplegable')
