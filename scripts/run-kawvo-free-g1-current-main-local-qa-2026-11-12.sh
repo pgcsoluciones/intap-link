@@ -20,6 +20,7 @@ EXPECTED="$(printf '%s\n' \
  docs/architecture/KAWVO_G1_PREVIEW_CUTOVER_ROLLBACK_GATE_2026-11-12.md \
  docs/architecture/KAWVO_LARGE_LIST_SEARCH_FILTER_PAGINATION_CONTRACT_2026-11-12.md \
  scripts/preflight-kawvo-g1-active-origin-readonly-2026-11-12.sh \
+ scripts/preflight-kawvo-g1-app-origin-api-readonly-2026-11-12.mjs \
  scripts/run-kawvo-free-g1-current-main-local-qa-2026-11-12.sh \
  scripts/stage-kawvo-free-g1-current-main-isolated-2026-11-12.sh \
  scripts/compare-kawvo-g1-live-app-routes-2026-11-12.mjs \
