@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPatch } from '../../../lib/api'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './KawvoShellReturn'
 
 type SupportTicketDetail = {
   id: string
@@ -40,8 +41,9 @@ export default function FreeNotifications() {
   const navigate = useNavigate()
   const location = useLocation()
   const fromAccount = new URLSearchParams(location.search).get('from') === 'account'
-  const backPath = fromAccount ? '/admin/free/account' : '/admin/free'
-  const backLabel = fromAccount ? 'Regresar a Mi cuenta' : 'Regresar al panel principal'
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
+  const backPath = fromAccount ? '/admin/free/account' : shellReturn ? KAWVO_SHELL_PREVIEW_ROUTE : '/admin/free'
+  const backLabel = fromAccount ? 'Regresar a Mi cuenta' : shellReturn ? 'Volver a mi espacio Kawvo' : 'Regresar al panel principal'
   const [items, setItems] = useState<NotificationItem[]>([])
   const [selected, setSelected] = useState<NotificationItem | null>(null)
   const [loading, setLoading] = useState(true)
@@ -130,7 +132,7 @@ export default function FreeNotifications() {
     <main className="min-h-screen bg-white pb-24 font-['Inter'] text-slate-900">
       <section className="mx-auto w-full max-w-[560px] px-5 pt-6">
         <div className="flex items-center gap-3 pb-5">
-          <button type="button" onClick={() => navigate(backPath)} aria-label={backLabel} className="text-[34px] font-light leading-none text-slate-500">←</button>
+          <button type="button" onClick={() => navigate(backPath,shellReturn?{state:shellReturn}:undefined)} aria-label={backLabel} className="text-[34px] font-light leading-none text-slate-500">←</button>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{fromAccount ? 'Mi cuenta' : 'Panel principal'}</p>
             <h1 className="text-[30px] font-black tracking-[-0.04em] text-slate-950">Notificaciones</h1>

@@ -31,12 +31,12 @@ assert.match(shell,/navigator\.clipboard\.writeText\(publicUrl\)/,'Fallback copi
 assert.match(legacy,/disabled=\{!me\?\.is_published\}/,'Legacy share visibility remains unchanged')
 
 // Return state is passed only by navigation; it is not a new source of permissions.
-assert.match(shell,/const go=\(id:string\)=>\{const path=routeById\.get\(id\);if\(path\)navigate\(path,\{state:shellReturnState\}\)\}/,'Existing modules receive an explicit shell return marker')
+assert.match(shell,/const go=\(id:string,listState\?:KawvoShellListState\)=>\{/,'Existing modules receive an explicit shell return marker')
+assert.match(shell,/if\(path\)navigate\(path,\{state:\{\.\.\.shellReturnState,kawvoShellList:listState,kawvoShellItem:id\}\}\)/,'List and module context is retained in navigation only')
 assert.match(shell,/if\(agendaRoute\)navigate\(agendaRoute,\{state:shellReturnState\}\)/,'Agenda receives the same marker')
-assert.match(buttons,/location\.state as \{kawvoShellReturn\?:boolean\}\|null/,'Shared back button checks only current route state')
-assert.match(buttons,/import\.meta\.env\.MODE === 'preview'/,'Return shortcut is restricted to Preview builds')
-assert.match(buttons,/window\.location\.hostname === 'app\.preview\.intaprd\.com'/,'Return shortcut is restricted to Preview host')
-assert.match(buttons,/if \(returnToShell\) \{[\s\S]*?navigate\('\/admin\/free\/shell-preview\?kawvo_shell=1'\)/,'Back button returns to shell only on explicit state')
+assert.match(buttons,/getKawvoShellReturn\(location\.state\)/,'Shared back button validates navigation state')
+assert.match(buttons,/isKawvoShellPreviewHost\(\)/,'Return shortcut is restricted to Preview builds and host')
+assert.match(buttons,/if \(returnContext\) \{[\s\S]*?navigate\(KAWVO_SHELL_PREVIEW_ROUTE, \{state:returnContext\}\)/,'Back button returns to the shell with the original tab context')
 assert.match(buttons,/onClick\(event\)/,'Original back behavior remains for all other sessions')
 assert.match(agenda,/location\.state as \{kawvoShellReturn\?:boolean\}\|null/,'Agenda respects original navigation state')
 assert.match(agenda,/returnToShell\?'\/admin\/free\/shell-preview\?kawvo_shell=1':'\/admin\/free\/account'/,'Agenda retains original return path as fallback')

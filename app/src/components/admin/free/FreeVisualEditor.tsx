@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet, apiPatch, apiPut } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
 import type { FreePublicationReadiness } from './FreeFirstRunGuide'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
+import { getKawvoShellReturn, isKawvoShellPreviewHost } from './KawvoShellReturn'
 
 type LayoutId = 'impacto' | 'personal' | 'esencial'
 type PaletteId = 'intap' | 'oceano' | 'esmeralda' | 'violeta' | 'coral' | 'grafito' | 'arena'
@@ -55,6 +56,8 @@ const sectionLinks: SectionLink[] = [
 
 export default function FreeVisualEditor() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
   const delegatedDemo = isFreeDemoDelegationActive()
   const editScrollRef = useRef(0)
   const [loading, setLoading] = useState(true)
@@ -278,7 +281,7 @@ export default function FreeVisualEditor() {
                   const iconClass = isAvailable ? 'bg-white text-slate-600' : completed ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-800'
                   const badgeClass = isAvailable ? 'bg-slate-200 text-slate-600' : completed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'
                   return (
-                    <button key={item.to} type="button" onClick={() => navigate(item.to)} className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition hover:shadow-sm ${cardClass}`}>
+                    <button key={item.to} type="button" onClick={() => navigate(item.to, shellReturn ? {state:{...shellReturn,kawvoShellViaEditor:true}} : undefined)} className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition hover:shadow-sm ${cardClass}`}>
                       <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg font-black shadow-sm ${iconClass}`}>{completed ? '✓' : item.icon}</span>
                       <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="block text-sm font-black text-slate-900">{item.title}</span><span className={`rounded-full px-2 py-1 text-[9px] font-black uppercase ${badgeClass}`}>{status}</span></span><span className="mt-1 block text-xs font-medium leading-5 text-slate-500">{item.text}</span></span>
                     </button>
