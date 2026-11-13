@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Kawvo G1: compare all admin route strings active vs candidate; NO deployment or mutation.
+set -euo pipefail
+ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
+BRANCH="feature/kawvo-free-g1-current-main-integration-2026-11-12"
+fail(){ echo "DETENIDO: $*" >&2; exit 1; }
+cd "$ROOT" || fail "Checkout no disponible"
+[[ "$(git branch --show-current)" == "$BRANCH" ]] || fail "Rama incorrecta"
+[[ -z "$(git status --porcelain)" ]] || fail "Cambios locales sin guardar"
+mkdir -p "$HOME/intap-release-logs"
+LOG="$(mktemp -d "$HOME/intap-release-logs/kawvo-g1-route-audit-XXXXXXXX")"
+echo "LOG: $LOG"
+ACTIVE_ORIGIN="https://qa-kawmed-guest-current-2026.intap-web2.pages.dev"
+STAGE_ORIGIN="https://ec6dcb72.intap-web2.pages.dev"
+mkdir -p "$LOG/active" "$LOG/candidate"
+curl -fsSL --max-time 40 "https://app.preview.intaprd.com/admin/login" -o "$LOG/domain.html" || fail "Dominio Preview no responde"
+curl -fsSL --max-time 40 "$ACTIVE_ORIGIN/admin/login" -o "$LOG/active.html" || fail "Origen activo no responde"
+curl -fsSL --max-time 40 "$STAGE_ORIGIN/admin/login" -o "$LOG/candidate.html" || fail "QA aislado no responde"
+get_entry(){ grep -Eo '/assets/index-[^"]+\.js' "$1" | head -1; }
+DOMAIN_ENTRY="$(get_entry "$LOG/domain.html")"
+ACTIVE_ENTRY="$(get_entry "$LOG/active.html")"
+STAGE_ENTRY="$(get_entry "$LOG/candidate.html")"
+[[ -n "$DOMAIN_ENTRY" && "$DOMAIN_ENTRY" == "$ACTIVE_ENTRY" ]] || fail "El dominio activo ya no coincide con el origen guardado"
+[[ -n "$STAGE_ENTRY" ]] || fail "Stage sin entry JS"
+curl -fsSL --max-time 60 "$ACTIVE_ORIGIN$ACTIVE_ENTRY" -o "$LOG/active/entry.js" || fail "JS activo inaccesible"
+curl -fsSL --max-time 60 "$STAGE_ORIGIN$STAGE_ENTRY" -o "$LOG/candidate/entry.js" || fail "JS candidato inaccesible"
+node scripts/compare-kawvo-g1-live-app-routes-2026-11-12.mjs "$LOG/active" "$LOG/candidate" "$LOG/routes-report.json" | tee "$LOG/summary.txt"
+echo "ACTUAL: $ACTIVE_ENTRY"
+echo "CANDIDATA: $STAGE_ENTRY"
+echo "PASS: auditoría estática read-only realizada; NO promueve, NO valida compatibilidad de OAuth, agenda ni permisos."
+echo "LOG: $LOG"
