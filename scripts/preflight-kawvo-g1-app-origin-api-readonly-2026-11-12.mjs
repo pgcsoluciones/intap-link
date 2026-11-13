@@ -47,7 +47,9 @@ function accountIDs(root) {
 }
 try {
   assert.equal(run('git',['branch','--show-current']).trim(),EXPECTED_BRANCH,'Rama G1 incorrecta')
-  assert.equal(run('git',['rev-parse','HEAD']).trim(),EXPECTED_COMMIT,'Cambió HEAD G1: nueva compilación necesaria')
+  // The staging commit can be an ancestor: later docs/QA scripts do not change the App bundle.
+  run('git',['merge-base','--is-ancestor',EXPECTED_COMMIT,'HEAD'])
+  run('git',['diff','--exit-code',EXPECTED_COMMIT,'HEAD','--','app/'])
   assert.equal(run('git',['status','--porcelain']).trim(),'','Hay archivos modificados localmente')
   assert(existsSync('app/dist/index.html'),'Falta compilación local')
   const html=readFileSync('app/dist/index.html','utf8')
