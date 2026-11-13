@@ -10,6 +10,6 @@ export default function FreeAppointments(){
   return <AppointmentManager
     apiBase="/me/free/appointments"
     title="Horario y agenda"
-    onBack={()=>navigate(returnToShell?'/admin/free/shell-preview?kawvo_shell=1':'/admin/free/account')}
+    onBack={()=>navigate(returnToShell?'/admin/free/shell-preview?kawvo_shell=1':'/admin/free/account',returnToShell?{state:location.state}:undefined)}
   />
 }
