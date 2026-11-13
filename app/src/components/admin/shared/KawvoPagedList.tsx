@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { KawvoShellListState } from '../free/KawvoShellReturn'
 
 /**
  * Reusable client-side navigation list for small, already-bounded sets only.
@@ -8,12 +9,16 @@ export type KawvoListItem = { id:string; title:string; detail?:string; group?:st
 type Props = {
   items:KawvoListItem[]
   pageSize?:number
-  onOpen:(id:string)=>void
+  onOpen:(id:string, listState?:KawvoShellListState)=>void
   title?:string
+  paginated?:boolean
+  initialState?:KawvoShellListState
+  focusItemId?:string
 }
-export default function KawvoPagedList({items,pageSize=6,onOpen,title='Opciones disponibles'}:Props){
-  const [query,setQuery]=useState('')
-  const [group,setGroup]=useState('all')
+export default function KawvoPagedList({items,pageSize=6,onOpen,title='Opciones disponibles',paginated=true,initialState,focusItemId}:Props){
+  const [query,setQuery]=useState(initialState?.query||'')
+  const [group,setGroup]=useState(initialState?.group||'all')
+  const didRestoreFocus=useRef(false)
   const [page,setPage]=useState(1)
   const groups=useMemo(()=>Array.from(new Set(items.map(item=>item.group||'General'))),[items])
   const filtered=useMemo(()=>{
@@ -23,8 +28,16 @@ export default function KawvoPagedList({items,pageSize=6,onOpen,title='Opciones 
   const size=Math.max(1,Math.min(25,Math.floor(pageSize)||6))
   const pages=Math.max(1,Math.ceil(filtered.length/size))
   const safePage=Math.min(page,pages)
-  const visible=filtered.slice((safePage-1)*size,safePage*size)
+  const visible=paginated?filtered.slice((safePage-1)*size,safePage*size):filtered
   useEffect(()=>{setPage(1)},[query,group])
+  useEffect(()=>{
+    if(!focusItemId||didRestoreFocus.current)return
+    didRestoreFocus.current=true
+    const frame=window.requestAnimationFrame(()=>{
+      document.getElementById('kawvo-menu-item-'+focusItemId)?.scrollIntoView({block:'center',behavior:'auto'})
+    })
+    return()=>window.cancelAnimationFrame(frame)
+  },[focusItemId])
   return <section aria-label={title} className="space-y-3">
     <label className="block text-sm font-semibold text-slate-700" htmlFor="kawvo-shell-search">Buscar una función</label>
     <input id="kawvo-shell-search" type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Ej.: contacto, portafolio, ubicación…" className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-offset-2 focus-visible:outline-2 focus-visible:outline-cyan-700"/>
@@ -32,11 +45,11 @@ export default function KawvoPagedList({items,pageSize=6,onOpen,title='Opciones 
       <button type="button" aria-pressed={group==='all'} onClick={()=>setGroup('all')} className={'min-h-11 rounded-full border px-4 text-sm font-semibold '+(group==='all'?'border-cyan-700 bg-cyan-50 text-cyan-900':'border-slate-200 bg-white')}>Todos</button>
       {groups.map(g=><button type="button" key={g} aria-pressed={group===g} onClick={()=>setGroup(g)} className={'min-h-11 rounded-full border px-4 text-sm font-semibold '+(group===g?'border-cyan-700 bg-cyan-50 text-cyan-900':'border-slate-200 bg-white')}>{g}</button>)}
     </div>
-    <p className="text-xs text-slate-500" role="status" aria-live="polite">{filtered.length} resultado{filtered.length===1?'':'s'} · página {safePage} de {pages}</p>
+    <p className="text-xs text-slate-500" role="status" aria-live="polite">{filtered.length} resultado{filtered.length===1?'':'s'}{paginated?` · página ${safePage} de ${pages}`:''}</p>
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      {visible.length?visible.map(item=><button type="button" key={item.id} disabled={item.disabled} onClick={()=>onOpen(item.id)} className="flex min-h-16 w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50 disabled:opacity-50"><span className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">{item.title}</strong>{item.detail&&<span className="mt-1 block text-xs text-slate-600">{item.detail}</span>}</span><span aria-hidden="true" className="text-slate-400">›</span></button>):<div className="p-5 text-sm text-slate-600">No encontramos resultados. Prueba otra búsqueda o selecciona «Todos».</div>}
+      {visible.length?visible.map(item=><button type="button" key={item.id} id={'kawvo-menu-item-'+item.id} disabled={item.disabled} onClick={()=>onOpen(item.id,{query,group})} className="flex min-h-16 w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50 disabled:opacity-50"><span className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">{item.title}</strong>{item.detail&&<span className="mt-1 block text-xs text-slate-600">{item.detail}</span>}</span><span aria-hidden="true" className="text-slate-400">›</span></button>):<div className="p-5 text-sm text-slate-600">No encontramos resultados. Prueba otra búsqueda o selecciona «Todos».</div>}
     </div>
-    {pages>1&&<nav aria-label="Paginación de funciones" className="flex items-center justify-between gap-3">
+    {paginated&&pages>1&&<nav aria-label="Paginación de funciones" className="flex items-center justify-between gap-3">
       <button type="button" disabled={safePage===1} onClick={()=>setPage(safePage-1)} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold disabled:opacity-40">Anterior</button>
       <span className="text-xs text-slate-600">{safePage} / {pages}</span>
       <button type="button" disabled={safePage===pages} onClick={()=>setPage(safePage+1)} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold disabled:opacity-40">Siguiente</button>
