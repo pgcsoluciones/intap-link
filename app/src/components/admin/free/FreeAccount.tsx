@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiDelete, apiGet, apiPost, apiUpload } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
@@ -10,6 +10,7 @@ import FreeSupportPanel from './FreeSupportPanel'
 import FreeAccountGuidedTour from './FreeAccountGuidedTour'
 import FreeExperienceSettings from './FreeExperienceSettings'
 import { isFreeDemoDelegationActive, clearFreeDemoDelegation } from '../../../lib/freeDemoDelegation'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './KawvoShellReturn'
 
 type MeData = {
   email?: string | null
@@ -84,6 +85,9 @@ function SettingsRow({ icon, label, detail, badge, onClick, href, danger = false
 
 export default function FreeAccount() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
+  const backToProfile = () => navigate(shellReturn ? KAWVO_SHELL_PREVIEW_ROUTE : '/admin/free', shellReturn ? {state:shellReturn} : undefined)
   const delegatedDemo = isFreeDemoDelegationActive()
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const [me, setMe] = useState<MeData | null>(null)
@@ -185,7 +189,7 @@ export default function FreeAccount() {
     }
   }
 
-  const openNotifications = () => navigate('/admin/free/notifications?from=account')
+  const openNotifications = () => navigate('/admin/free/notifications?from=account',shellReturn?{state:shellReturn}:undefined)
 
   const previewQr = async () => {
     if (!publicUrl || qrBusy) return
@@ -337,7 +341,7 @@ export default function FreeAccount() {
 
       <main className="min-h-screen bg-white pb-24 font-['Inter'] text-slate-900">
         <section className="mx-auto w-full max-w-[430px] px-5 pt-6">
-          <div className="flex items-center justify-between gap-3 pb-5"><div className="flex items-center gap-3"><button type="button" onClick={() => navigate('/admin/free')} aria-label="Volver" className="text-[34px] font-light leading-none text-slate-500">←</button><h1 className="text-[32px] font-black tracking-[-0.045em] text-slate-950">Mi cuenta</h1></div><button type="button" onClick={() => window.dispatchEvent(new Event('kawvo:account-tour:start'))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Recorrido</button></div>
+          <div className="flex items-center justify-between gap-3 pb-5"><div className="flex items-center gap-3"><button type="button" onClick={backToProfile} aria-label="Volver" className="text-[34px] font-light leading-none text-slate-500">←</button><h1 className="text-[32px] font-black tracking-[-0.045em] text-slate-950">Mi cuenta</h1></div><button type="button" onClick={() => window.dispatchEvent(new Event('kawvo:account-tour:start'))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700">Recorrido</button></div>
 
           <SectionTitle>CUENTA</SectionTitle>
           <div className="overflow-hidden rounded-[22px] bg-[#f5f5f5]">
