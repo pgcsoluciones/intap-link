@@ -24,7 +24,8 @@ EXPECTED="$(printf '%s\n' \
   app/src/components/admin/free/FreeAppointments.tsx \
   docs/architecture/KAWVO_G2_1_FREE_NAVIGATION_AUDIT_2026-11-13.md \
   scripts/test-kawvo-g2-free-direct-access-contract-2026-11-13.mjs \
-  scripts/run-kawvo-g2-free-direct-access-local-qa-2026-11-13.sh | LC_ALL=C sort)"
+  scripts/run-kawvo-g2-free-direct-access-local-qa-2026-11-13.sh \
+  scripts/deploy-kawvo-g2-free-app-pages-preview-2026-11-13.sh | LC_ALL=C sort)"
 CHANGED="$(git diff --name-only "$BASE_SHA" HEAD | LC_ALL=C sort)"
 [[ "$CHANGED" == "$EXPECTED" ]] || {
   printf 'ESPERADOS:\n%s\nENCONTRADOS:\n%s\n' "$EXPECTED" "$CHANGED"
@@ -33,6 +34,7 @@ CHANGED="$(git diff --name-only "$BASE_SHA" HEAD | LC_ALL=C sort)"
 git diff --check "$BASE_SHA" HEAD || fail "Diff tiene errores de espacios o conflictos"
 git diff --quiet "$BASE_SHA" HEAD -- api/ web/ shared/ app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/medical/ app/src/components/admin/sponsored/ package.json package-lock.json || fail "Archivo o zona protegida modificada"
 bash -n "scripts/run-kawvo-g2-free-direct-access-local-qa-2026-11-13.sh" || fail "Runner Bash inválido"
+bash -n "scripts/deploy-kawvo-g2-free-app-pages-preview-2026-11-13.sh" || fail "Runner Pages Bash inválido"
 node --check "scripts/test-kawvo-g2-free-direct-access-contract-2026-11-13.mjs" || fail "Test JS inválido"
 node scripts/test-kawvo-free-shell-preview-isolation-2026-11-12.mjs || fail "Regresión aislamiento G1"
 node scripts/test-kawvo-free-shell-desktop-parity-2026-11-12.mjs || fail "Regresión escritorio/móvil G1"
