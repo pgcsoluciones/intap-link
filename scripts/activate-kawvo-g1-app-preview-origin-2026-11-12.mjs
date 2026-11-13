@@ -8,6 +8,12 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import assert from 'node:assert/strict'
 
+// SAFETY HOLD (2026-11-12): PATCH returned only APP_PAGES_ORIGIN in response;
+// rollback was requested but not independently verified. No further writes until
+// original deployed Worker and all 35 bindings have been confirmed read-only.
+console.error('BLOCKED: ACTIVADOR G1 DESHABILITADO. Verificar rollback del Worker y 35 bindings antes de cualquier otro cambio.')
+process.exit(1)
+
 const WORKER='intap-api-preview'
 const BEFORE_VERSION='23405a5b-e9ca-4247-843d-28cc4f236eaa'
 const BEFORE_APP='https://qa-kawmed-guest-current-2026.intap-web2.pages.dev'
