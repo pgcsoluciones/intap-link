@@ -17,6 +17,7 @@ EXPECTED="$(printf '%s\n' \
  app/src/App.tsx \
  app/src/components/admin/free/KawvoFreeShellPreview.tsx \
  app/src/components/admin/shared/KawvoPagedList.tsx \
+ docs/architecture/KAWVO_G1_PREVIEW_CUTOVER_ROLLBACK_GATE_2026-11-12.md \
  docs/architecture/KAWVO_LARGE_LIST_SEARCH_FILTER_PAGINATION_CONTRACT_2026-11-12.md \
  scripts/preflight-kawvo-g1-active-origin-readonly-2026-11-12.sh \
  scripts/run-kawvo-free-g1-current-main-local-qa-2026-11-12.sh \
