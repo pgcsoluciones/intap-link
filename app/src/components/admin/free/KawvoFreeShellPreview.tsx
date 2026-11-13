@@ -62,8 +62,13 @@ export default function KawvoFreeShellPreview(){
   const routeById=new Map(modules.map(item=>[item.id,item.path]))
   const agendaRoute=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')?home.agenda_route:''
   const completion=profile.freeReadiness
-  const missing=Array.isArray(completion?.missing)?completion?.missing:[]
+  const missing=Array.isArray(completion?.missing)?completion.missing.filter(item=>typeof item==='string'&&item.trim().length>0):[]
   const published=Number(profile.is_published)===1
+  // Only the server readiness result can say "ready"; never derive a percentage from incomplete fields.
+  const readyToPublish=!published&&completion?.ready===true
+  const publicationLabel=published?'Publicado':readyToPublish?'Listo para publicar':'Borrador'
+  const publicationStyle=published?'bg-emerald-50 text-emerald-800':readyToPublish?'bg-cyan-50 text-cyan-900':'bg-amber-50 text-amber-900'
+  const nextActionLabel=published?'Administrar mi presentación':readyToPublish?'Revisar y publicar':'Continuar configuración'
   const webUrl=String(import.meta.env.VITE_WEB_URL||'https://preview.intaprd.com').replace(/\/$/,'')
   const publicRoute=typeof home?.public_route==='string'&&home.public_route.startsWith('/')&&!home.public_route.startsWith('//')?home.public_route:''
   const publicUrl=publicRoute?webUrl+publicRoute:''
@@ -90,10 +95,13 @@ export default function KawvoFreeShellPreview(){
       {tab==='home'&&<>
         <div><h1 className="text-2xl font-black">Mi espacio Kawvo</h1><p className="mt-1 text-sm text-slate-600">Todo organizado para trabajar desde tu celular.</p></div>
         <div className="rounded-3xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center gap-3">{profile.avatar_url?<img src={profile.avatar_url} alt="" className="h-14 w-14 rounded-xl object-cover"/>:<div className="grid h-14 w-14 place-items-center rounded-xl bg-slate-100 text-2xl">◉</div>}<div className="min-w-0 flex-1"><h2 className="truncate text-lg font-bold">{accountName}</h2><p className="mt-1 text-xs text-slate-600">{published?'Perfil publicado':'Borrador'}</p></div></div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2"><span className={'rounded-full px-3 py-1 text-xs font-bold '+(published?'bg-emerald-50 text-emerald-800':'bg-amber-50 text-amber-900')}>{published?'Publicado':'Borrador'}</span><span className="text-xs text-slate-500">Estado de publicación confirmado por tu cuenta</span></div>
-          {!published&&<p className="mt-4 rounded-xl bg-amber-50 px-3 py-3 text-sm text-amber-900">{missing.length?'Requisitos pendientes: '+missing.join(', '):'Continúa en el panel actual para comprobar si puedes publicar.'}</p>}
-          <button type="button" onClick={()=>navigate('/admin/free')} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{published?'Administrar mi presentación':'Continuar configuración y publicación'}</button>
+          <div className="flex items-center gap-3">{profile.avatar_url?<img src={profile.avatar_url} alt="" className="h-14 w-14 rounded-xl object-cover"/>:<div className="grid h-14 w-14 place-items-center rounded-xl bg-slate-100 text-2xl">◉</div>}<div className="min-w-0 flex-1"><h2 className="truncate text-lg font-bold">{accountName}</h2><p className="mt-1 text-xs text-slate-600">Mi presentación digital · Free</p></div></div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-bold">Estado de mi presentación</h3><span className={'rounded-full px-3 py-1 text-xs font-bold '+publicationStyle}>{publicationLabel}</span></div>
+          {published?<p className="mt-3 text-sm text-slate-600">Tu presentación está publicada. Puedes seguir editándola desde los módulos habituales.</p>
+          :readyToPublish?<p className="mt-3 rounded-xl bg-cyan-50 px-3 py-3 text-sm text-cyan-950">Tu perfil cumple los requisitos indicados por el sistema. Revisa y confirma la publicación desde el panel actual.</p>
+          :missing.length>0?<div className="mt-3 rounded-xl bg-amber-50 px-3 py-3"><p className="text-sm font-bold text-amber-950">Siguiente paso: completar tu presentación</p><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-amber-950">{missing.slice(0,3).map((item,i)=><li key={i}>{item}</li>)}</ul>{missing.length>3&&<p className="mt-2 text-xs text-amber-900">Y {missing.length-3} requisito(s) más en tu panel.</p>}</div>
+          :<p className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-700">Revisa los requisitos en tu panel antes de publicar. El avance no se calcula con datos incompletos.</p>}
+          <button type="button" onClick={()=>navigate('/admin/free')} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{nextActionLabel}</button>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button onClick={()=>setTab('profile')} className={button}><span className="mb-2 block text-xl">✎</span>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y contenido</span></button>
