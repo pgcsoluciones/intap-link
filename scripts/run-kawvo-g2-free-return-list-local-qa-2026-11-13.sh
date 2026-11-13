@@ -28,7 +28,8 @@ EXPECTED="$(printf '%s\n' \
   docs/architecture/KAWVO_G2_2_FREE_RETURN_AND_MENU_HANDOFF_2026-11-13.md \
   scripts/test-kawvo-g2-free-direct-access-contract-2026-11-13.mjs \
   scripts/test-kawvo-g2-free-return-list-contract-2026-11-13.mjs \
-  scripts/run-kawvo-g2-free-return-list-local-qa-2026-11-13.sh | LC_ALL=C sort)"
+  scripts/run-kawvo-g2-free-return-list-local-qa-2026-11-13.sh \
+  scripts/deploy-kawvo-g2-2-free-app-pages-preview-2026-11-13.sh | LC_ALL=C sort)"
 CHANGED="$(git diff --name-only "$BASE_SHA" HEAD | LC_ALL=C sort)"
 [[ "$CHANGED" == "$EXPECTED" ]] || {
   printf 'ESPERADOS:\n%s\nACTUALES:\n%s\n' "$EXPECTED" "$CHANGED"
@@ -37,6 +38,7 @@ CHANGED="$(git diff --name-only "$BASE_SHA" HEAD | LC_ALL=C sort)"
 git diff --check "$BASE_SHA" HEAD || fail "Diff con errores"
 git diff --quiet "$BASE_SHA" HEAD -- api/ web/ shared/ app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/appointments/ app/src/components/admin/medical/ app/src/components/admin/sponsored/ package.json package-lock.json || fail "Zona protegida alterada"
 bash -n scripts/run-kawvo-g2-free-return-list-local-qa-2026-11-13.sh || fail "Sintaxis Bash inválida"
+bash -n scripts/deploy-kawvo-g2-2-free-app-pages-preview-2026-11-13.sh || fail "Sintaxis script Pages inválida"
 node --check scripts/test-kawvo-g2-free-direct-access-contract-2026-11-13.mjs || fail "Sintaxis test G2.1"
 node --check scripts/test-kawvo-g2-free-return-list-contract-2026-11-13.mjs || fail "Sintaxis test G2.2"
 node scripts/test-kawvo-free-shell-preview-isolation-2026-11-12.mjs || fail "Regresión opt-in G1"
