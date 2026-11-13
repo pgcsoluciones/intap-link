@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# SAFETY HOLD: The previous deploy generated a different Pages alias
+# (qa-kawmed-guest-current-2026-5vvy) and DID NOT update App Preview.
+# The branch owning the existing origin must be read from Pages API first.
+echo "DETENIDO: runner de alias deshabilitado. Ejecutar auditoría de alias Pages solo lectura." >&2
+exit 1
+
 # G1 Preview: deploy App UI through existing Pages branch alias only. Never touch Worker.
 set -euo pipefail
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
