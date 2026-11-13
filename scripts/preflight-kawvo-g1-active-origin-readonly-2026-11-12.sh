@@ -38,7 +38,7 @@ visit(v);
 function origin(n){const list=nodes.filter(x=>x.name===n);if(list.length!==1)throw Error('No hay un binding único para '+n);return list[0].text}
 const currentApp=origin('APP_PAGES_ORIGIN'),currentWeb=origin('WEB_PAGES_ORIGIN');
 if(currentApp!==app||currentWeb!==web)throw Error('La configuración del Worker cambió; no promover');
-fs.writeFileSync(out,'WORKER_VERSION='+process.env.KAWVO_G1_WORKER_NOTE+'\nAPP_PAGES_ORIGIN='+currentApp+'\nWEB_PAGES_ORIGIN='+currentWeb+'\n');
+fs.writeFileSync(out,'APP_PAGES_ORIGIN='+currentApp+'\nWEB_PAGES_ORIGIN='+currentWeb+'\n');
 console.log('Origen App activo:',currentApp);
 console.log('Origen Web activo:',currentWeb);
 NODE
