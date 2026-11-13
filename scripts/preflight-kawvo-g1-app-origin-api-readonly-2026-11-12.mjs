@@ -106,7 +106,7 @@ try {
   // Read account from existing Wrangler identity, not the stale preview TOML.
   // Never output the credentials or inferred account IDs.
   const whoamiOutput=run('npx',['--no-install','wrangler','whoami'])
-  const ids=[...new Set((whoamiOutput.match(/\\b[a-f0-9]{32}\\b/gi)||[]).map(x=>x.toLowerCase()))]
+  const ids=[...new Set((whoamiOutput.match(/\b[a-f0-9]{32}\b/gi)||[]).map(x=>x.toLowerCase()))]
   const account=process.env.CLOUDFLARE_ACCOUNT_ID|| (ids.length===1?ids[0]:'')
   assert(/^[a-f0-9]{32}$/i.test(account),'Wrangler tiene varias cuentas o no informó ID. Indica CLOUDFLARE_ACCOUNT_ID existente en el entorno; sin configurar nada nuevo.')
   if(ids.length&&!ids.includes(account.toLowerCase()))throw Error('Cuenta indicada no coincide con la identidad de Wrangler')
