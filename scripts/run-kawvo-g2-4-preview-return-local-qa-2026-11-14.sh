@@ -24,6 +24,7 @@ EXPECTED="$(printf '%s\n' \
  web/src/components/appointments/AppointmentOwnerBar.tsx \
  scripts/test-kawvo-g2-free-preview-return-contract-2026-11-14.mjs \
  scripts/test-free-contact-agenda-contract.mjs \
+ scripts/test-sponsored-profile-contract.mjs \
  scripts/audit-kawvo-g2-web-pages-alias-readonly-2026-11-14.mjs \
  scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh \
  scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-14.sh \
