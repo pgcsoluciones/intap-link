@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../lib/api'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, kawvoShellBackTarget } from './KawvoShellReturn'
 
 type CredentialsStatus = {
   email: string
@@ -15,6 +16,8 @@ type Props = { backTo?: string; onBack?: () => void; embedded?: boolean }
 
 export default function FreeCredentials({backTo='/admin/free/account',onBack,embedded=false}:Props) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
   const [status,setStatus]=useState<CredentialsStatus|null>(null)
   const [flow,setFlow]=useState<Flow>('idle')
   const [busy,setBusy]=useState(false)
@@ -60,7 +63,17 @@ export default function FreeCredentials({backTo='/admin/free/account',onBack,emb
     setBusy(false);if(!j?.ok)return setMessage(j.error||'No pudimos cambiar el correo.')
     setFlow('idle');setCode('');setNewEmail('');setMessage('Correo principal actualizado.');await load()
   }
-  const goBack=()=>{if(onBack){onBack();return}navigate(backTo)}
+  const goBack=()=>{
+    if(onBack){onBack();return}
+    // Directly from Más -> back to Más; through Mi cuenta -> back to Mi cuenta,
+    // preserving the original shell tab for the next click. Legacy default unchanged.
+    if(shellReturn){
+      const target=kawvoShellBackTarget(shellReturn)
+      navigate(target.path,{state:target.state})
+      return
+    }
+    navigate(backTo)
+  }
 
   return <main className={`${embedded?'bg-white':'min-h-screen bg-white pb-24'} font-['Inter'] text-slate-900`}><section className="mx-auto w-full max-w-[430px] px-5 pt-6 pb-8">
     <div className="flex items-center gap-3 pb-5"><button type="button" onClick={goBack} className="text-[34px] font-light text-slate-500">←</button><div><h1 className="text-[30px] font-black tracking-[-.04em]">Credenciales</h1><p className="text-sm text-slate-500">Elige cómo acceder a tu cuenta Kawvo.</p></div></div>
