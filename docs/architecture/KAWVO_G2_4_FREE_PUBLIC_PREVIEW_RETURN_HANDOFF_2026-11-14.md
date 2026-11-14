@@ -35,7 +35,7 @@ Entonces, y sólo entonces:
 Este lote **no** cambia `api/src/free-profile-preview.ts`, D1, R2, cookies, autenticación, Worker, permisos, roles, URLs de Producción, otros perfiles ni publicación.
 
 ## 3. Alcance y revisión
-6 archivos de frontend estrictos: 2 App (`KawvoFreeShellPreview.tsx`, `free-preview-link-fallback.ts`), 4 Web (`FreePreviewEditShortcut.tsx`, `freeShellPreviewReturn.ts`, `IntapLinkGratisProfile.tsx`, `AppointmentOwnerBar.tsx`). Solo navegación Free con opt-in explícito. Tests estáticos (incluida la actualización de un assert antiguo sobre la etiqueta dinámica del Owner Bar), auditoría Cloudflare de Web Pages, runner local, runner Preview dual y esta bitácora suman 12 archivos desde la base exacta G2.3. Evitar integrar refactors o dependencias.
+6 archivos de frontend estrictos: 2 App (`KawvoFreeShellPreview.tsx`, `free-preview-link-fallback.ts`), 4 Web (`FreePreviewEditShortcut.tsx`, `freeShellPreviewReturn.ts`, `IntapLinkGratisProfile.tsx`, `AppointmentOwnerBar.tsx`). Solo navegación Free con opt-in explícito. Tests estáticos (incluida la actualización de comprobaciones heredadas de Free y Patrocinado que no correspondían a la versión real), auditoría Cloudflare de Web Pages, runner local, runner Preview dual y esta bitácora suman 13 archivos desde la base exacta G2.3. Estas actualizaciones de pruebas no modifican lógica de negocio. Evitar integrar refactors o dependencias.
 
 ## 4. Método seguro (doble Pages)
 - Runner local `scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh`: checkout seguro, base SHA, allowlist, diff, contratos G1–G2.4 y regresiones Free/Agenda, Patrocinado, Kawmed, `npm ci`, build **App y Web** en modo Preview; **sin deploy**.
@@ -57,3 +57,13 @@ Este lote **no** cambia `api/src/free-profile-preview.ts`, D1, R2, cookies, aute
 **Estado de liberación:** G2.4 en Draft hasta QA local + publicación bilateral segura + pruebas autenticadas. No merge a main ni Producción sin aprobación explícita.
 
 Pendientes ya documentados fuera de lote: «Cambiar cuenta» solo autorización real Multicuenta y atajo operacional «Lunes a viernes» en Agenda (separado).
+
+## 6. Registro de bloqueos de QA local · 14/11/2026
+
+**Segundo intento del propietario:** PASS de contratos G1–G2.4 y Free Contact/Agenda, seguido por `BLOCKED: Regresión patrocinado` en `scripts/test-sponsored-profile-contract.mjs:330`, que esperaba «Teléfono *» y el modal real muestra «Teléfono / WhatsApp *». No se inició `npm ci`, build ni deploy de Pages. App G2.3 y Web Preview permanecen activos.
+
+**Auditoría preventiva:** se revisaron las lecturas del contrato patrocinado frente a los 78 archivos de origen correspondientes; se identificaron comprobaciones literales desfasadas por cambios previos verificables: campo RNC adicional y limpieza completa en cotizaciones, nombre de contacto Agenda, etiqueta parametrizada de barra de propietario, social card de cotización, límite bancario patrocinado configurable de 2 a 5 con predeterminado 3, título público «Datos para Transferencias», enmascaramiento por defecto, y mensajes/copia de enlace bancario. Se conservaron o reforzaron pruebas equivalentes; no se alteraron componentes, rutas, D1 ni API.
+
+**Precaución sobre bancos:** el editor patrocinado actual fija `display_mode:'masked'` y explica que la cuenta publica los últimos cuatro dígitos; el test antiguo refería un selector «Cómo mostrar el número de cuenta» ausente. Se asegura en tests el comportamiento más protector existente; cualquier decisión de volver a mostrar números completos requiere autorización y PR separado, no se infiere como parte de G2.4.
+
+La rama continúa en Draft. El PASS final del contrato patrocinado y la compilación solo se pueden afirmar tras ejecutar el runner local actualizado en el Mac. Ante otro `BLOCKED` mantener STOP y auditar evidencia, no forzar el deploy.
