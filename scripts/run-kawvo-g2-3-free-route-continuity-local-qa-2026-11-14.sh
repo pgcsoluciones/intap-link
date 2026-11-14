@@ -8,7 +8,7 @@ BASE_SHA="8f763f4ad44704f3c27e6d111bc06c3b6b930b5f"
 fail(){ echo "DETENIDO: $*" >&2; exit 1; }
 cd "$ROOT" || fail "Checkout local no disponible"
 [[ -z "$(git status --porcelain)" ]] || fail "Hay cambios locales. No se hizo checkout ni borrado."
-git fetch github "$BRANCH" "feature/kawvo-g2-free-direct-access-2026-11-13" || fail "GitHub no disponible"
+git fetch github "$BRANCH" "feature/kawvo-g2-free-return-list-2026-11-13" || fail "GitHub no disponible"
 git cat-file -e "$BASE_SHA^{commit}" || fail "Falta commit exacto G2.1"
 git switch "$BRANCH" || fail "Rama G2.3 no disponible"
 git pull --ff-only github "$BRANCH" || fail "Rama divergente, no se forzó"
