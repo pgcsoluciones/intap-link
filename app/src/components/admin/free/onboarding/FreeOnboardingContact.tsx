@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../../../lib/api'
 import { FreeBackButton, FreeUpgradeCard } from '../FreePanelUi'
 import { isFreeDemoDelegationActive } from '../../../../lib/freeDemoDelegation'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, kawvoShellBackTarget } from '../KawvoShellReturn'
 
 const RD_AREA_CODES = /^(809|829|849)/
 
@@ -20,6 +21,8 @@ function normalizePhone(input: string): string | null {
 export default function FreeOnboardingContact() {
   const delegatedDemo = isFreeDemoDelegationActive()
   const navigate = useNavigate()
+  const location = useLocation()
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -49,6 +52,12 @@ export default function FreeOnboardingContact() {
   }, [])
 
   const canEdit = (field: 'whatsapp' | 'email' | 'phone') => !teamMember || teamPermissions.includes(field)
+  const afterSave=()=>{
+    if(shellReturn){
+      const target=kawvoShellBackTarget(shellReturn)
+      navigate(target.path,{replace:true,state:target.state})
+    }else navigate('/admin/free',{replace:true})
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -74,11 +83,11 @@ export default function FreeOnboardingContact() {
       if (editableEmail) body.email = email.trim()
       if (editablePhone && normalizedPhone) body.phone = normalizedPhone
       if (Object.keys(body).length === 0) {
-        navigate('/admin/free', { replace: true })
+        afterSave()
         return
       }
       const result: any = await apiPut('/me/contact', body)
-      if (result.ok) navigate('/admin/free', { replace: true })
+      if (result.ok) afterSave()
       else setError(result.error || 'No pudimos guardar tus datos.')
     } catch {
       setError('No pudimos conectar. Intenta nuevamente.')
