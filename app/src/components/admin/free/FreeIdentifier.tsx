@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet, apiPut } from '../../../lib/api'
 import { FreeBackButton } from './FreePanelUi'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, kawvoShellBackTarget } from './KawvoShellReturn'
 
 function normalizeSlug(value: string) {
   return value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '').slice(0, 32)
@@ -10,6 +11,8 @@ function normalizeSlug(value: string) {
 
 export default function FreeIdentifier() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
   const delegatedDemo = isFreeDemoDelegationActive()
   const [slug, setSlug] = useState('')
   const [currentSlug, setCurrentSlug] = useState('')
@@ -40,7 +43,10 @@ export default function FreeIdentifier() {
       setError(result.error === 'Slug no disponible' ? 'Ese usuario ya está siendo usado por otro perfil. Prueba con otro.' : result.error || 'No pudimos guardar ese usuario.')
       return
     }
-    navigate('/admin/free', { replace: true })
+    if(shellReturn){
+      const target=kawvoShellBackTarget(shellReturn)
+      navigate(target.path,{replace:true,state:target.state})
+    }else navigate('/admin/free',{replace:true})
   }
 
   if (loading) return <main className="min-h-screen bg-[#f7f9fc] flex items-center justify-center"><div className="loading-spinner" /></main>
