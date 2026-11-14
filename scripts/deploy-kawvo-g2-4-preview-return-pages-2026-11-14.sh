@@ -22,7 +22,7 @@ git fetch github "$BRANCH" || fail "No se pudo consultar GitHub"
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse "github/$BRANCH")" ]] || fail "HEAD divergente respecto a GitHub"
 git merge-base --is-ancestor "$BASE" HEAD || fail "G2.4 no desciende del G2.3 publicado"
 git diff --check "$BASE" HEAD || fail "Diff inválido"
-git diff --quiet "$BASE" HEAD -- api/ shared/ app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/medical/ app/src/components/admin/sponsored/ web/src/components/medical-profile/ web/src/components/sponsored/ package.json package-lock.json || fail "Zona protegida cambiada"
+git diff --quiet "$BASE" HEAD -- api/ shared/ app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/medical/ app/src/components/admin/sponsored/ package.json package-lock.json || fail "Zona protegida cambiada"
 APP_FILES="$(printf '%s\n' app/src/components/admin/free/KawvoFreeShellPreview.tsx app/src/free-preview-link-fallback.ts | LC_ALL=C sort)"
 # G2.3 App source and the historical active Web source are intentionally different.
 # The Web integration restores the published files before adding four Free-only
@@ -110,6 +110,8 @@ if ! git cat-file -e "$WEB_DEPLOY_SHA^{commit}" 2>/dev/null; then
   git fetch --no-tags github "$WEB_DEPLOY_SHA" > "$LOG/web-source-fetch.log" 2>&1 || fail "El SHA Web previo no es recuperable desde GitHub. No publicar; consultar Web owner report y commit de origen"
 fi
 git cat-file -e "$WEB_DEPLOY_SHA^{commit}" 2>/dev/null || fail "SHA Web previo no corresponde a un commit Git real; no publicar"
+# Historical Web Kawmed/Sponsored paths intentionally differ from G2.3.
+# Their protection comes from exact LIVE-WEB SHA parity below, not G2.3 diff.
 # Compare against the actual Cloudflare Pages Web commit, NOT App's G2.3
 # ancestor. The integration must differ from the deployed Web ONLY at the
 # three Free-owner navigation components plus the new Free-only helper.
@@ -118,7 +120,7 @@ EXPECTED_WEB_PATCH="$(printf '%s\n' \
  web/src/components/free-profile/FreePreviewEditShortcut.tsx \
  web/src/components/free-profile/IntapLinkGratisProfile.tsx \
  web/src/components/free-profile/freeShellPreviewReturn.ts | LC_ALL=C sort)"
-ACTUAL_WEB_PATCH="$(git diff --name-only "$WEB_DEPLOY_SHA" HEAD -- web/ shared/ package.json package-lock.json | LC_ALL=C sort)"
+ACTUAL_WEB_PATCH="$(git diff --name-only "$WEB_DEPLOY_SHA" HEAD -- web/ shared/ functions/ package.json package-lock.json | LC_ALL=C sort)"
 [[ "$EXPECTED_WEB_PATCH" == "$ACTUAL_WEB_PATCH" ]] || {
   printf 'BLOQUEO: Web Preview real difiere en rutas no autorizadas.\nEsperado:\n%s\nActual:\n%s\n' "$EXPECTED_WEB_PATCH" "$ACTUAL_WEB_PATCH"
   fail "Integración Web no preserva exactamente el código activo fuera de Free; NO publicar"
