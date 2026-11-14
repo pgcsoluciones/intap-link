@@ -24,7 +24,19 @@ git merge-base --is-ancestor "$BASE" HEAD || fail "G2.4 no desciende del G2.3 pu
 git diff --check "$BASE" HEAD || fail "Diff inválido"
 git diff --quiet "$BASE" HEAD -- api/ shared/ app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/medical/ app/src/components/admin/sponsored/ web/src/components/medical-profile/ web/src/components/sponsored/ package.json package-lock.json || fail "Zona protegida cambiada"
 APP_FILES="$(printf '%s\n' app/src/components/admin/free/KawvoFreeShellPreview.tsx app/src/free-preview-link-fallback.ts | LC_ALL=C sort)"
-WEB_FILES="$(printf '%s\n' web/src/components/free-profile/freeShellPreviewReturn.ts web/src/components/free-profile/FreePreviewEditShortcut.tsx web/src/components/free-profile/IntapLinkGratisProfile.tsx web/src/components/appointments/AppointmentOwnerBar.tsx | LC_ALL=C sort)"
+# G2.3 App source and the historical active Web source are intentionally different.
+# The Web integration restores the published files before adding four Free-only
+# navigation edits; all nine changed Web paths are explicitly allowlisted.
+WEB_FILES="$(printf '%s\n' \
+ web/src/components/ArtifactLinkResolver.tsx \
+ web/src/components/appointments/AppointmentOwnerBar.mobile.css \
+ web/src/components/appointments/AppointmentOwnerBar.tsx \
+ web/src/components/free-profile/FreePreviewEditShortcut.tsx \
+ web/src/components/free-profile/IntapLinkGratisProfile.tsx \
+ web/src/components/free-profile/freeShellPreviewReturn.ts \
+ web/src/components/medical-profile/KawMedProfile.tsx \
+ web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx \
+ web/src/components/sponsored/SponsoredProfile.tsx | LC_ALL=C sort)"
 [[ "$APP_FILES" == "$(git diff --name-only "$BASE" HEAD -- app/ | LC_ALL=C sort)" ]] || fail "App contiene cambios inesperados"
 [[ "$WEB_FILES" == "$(git diff --name-only "$BASE" HEAD -- web/ | LC_ALL=C sort)" ]] || fail "Web contiene cambios inesperados"
 
@@ -98,8 +110,26 @@ if ! git cat-file -e "$WEB_DEPLOY_SHA^{commit}" 2>/dev/null; then
   git fetch --no-tags github "$WEB_DEPLOY_SHA" > "$LOG/web-source-fetch.log" 2>&1 || fail "El SHA Web previo no es recuperable desde GitHub. No publicar; consultar Web owner report y commit de origen"
 fi
 git cat-file -e "$WEB_DEPLOY_SHA^{commit}" 2>/dev/null || fail "SHA Web previo no corresponde a un commit Git real; no publicar"
-git diff --quiet "$WEB_DEPLOY_SHA" "$BASE" -- web/ shared/ package.json package-lock.json || fail "Web Preview fuente anterior difiere del baseline G2.3. BLOQUEADO para evitar regresiones Kawmed/patrocinados"
-echo "PASS: fuente Web del commit Pages cotejada con base G2.3, sin reemplazar cambios recientes"
+# Compare against the actual Cloudflare Pages Web commit, NOT App's G2.3
+# ancestor. The integration must differ from the deployed Web ONLY at the
+# three Free-owner navigation components plus the new Free-only helper.
+EXPECTED_WEB_PATCH="$(printf '%s\n' \
+ web/src/components/appointments/AppointmentOwnerBar.tsx \
+ web/src/components/free-profile/FreePreviewEditShortcut.tsx \
+ web/src/components/free-profile/IntapLinkGratisProfile.tsx \
+ web/src/components/free-profile/freeShellPreviewReturn.ts | LC_ALL=C sort)"
+ACTUAL_WEB_PATCH="$(git diff --name-only "$WEB_DEPLOY_SHA" HEAD -- web/ shared/ package.json package-lock.json | LC_ALL=C sort)"
+[[ "$EXPECTED_WEB_PATCH" == "$ACTUAL_WEB_PATCH" ]] || {
+  printf 'BLOQUEO: Web Preview real difiere en rutas no autorizadas.\nEsperado:\n%s\nActual:\n%s\n' "$EXPECTED_WEB_PATCH" "$ACTUAL_WEB_PATCH"
+  fail "Integración Web no preserva exactamente el código activo fuera de Free; NO publicar"
+}
+git diff --quiet "$WEB_DEPLOY_SHA" HEAD -- \
+ web/src/components/ArtifactLinkResolver.tsx \
+ web/src/components/appointments/AppointmentOwnerBar.mobile.css \
+ web/src/components/medical-profile/KawMedProfile.tsx \
+ web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx \
+ web/src/components/sponsored/SponsoredProfile.tsx || fail "Cambios detectados en Kawmed/Patrocinados/menú móvil, detener"
+echo "PASS: integración Web comparada con Pages activo; solo tres componentes de navegación Free y su helper difieren"
 
 npx --no-install wrangler deployments status --name "$WORKER" --json > "$LOG/worker-before.json" 2> "$LOG/worker-before.err" || fail "Worker Preview inaccesible"
 npx --no-install wrangler versions view "$WORKER_SHA" --name "$WORKER" --json > "$LOG/worker-bindings.json" 2> "$LOG/worker-bindings.err" || fail "Bindings no disponibles"
