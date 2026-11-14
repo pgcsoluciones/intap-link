@@ -48,6 +48,8 @@ export function FreeBackButton({
       event.preventDefault()
       if (returnContext.kawvoShellViaEditor) {
         navigate('/admin/free/editor', {state:{...returnContext,kawvoShellViaEditor:false}})
+      } else if (returnContext.kawvoShellViaAccount) {
+        navigate('/admin/free/account', {state:{...returnContext,kawvoShellViaAccount:false}})
       } else {
         navigate(KAWVO_SHELL_PREVIEW_ROUTE, {state:returnContext})
       }
