@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# G2.3 — Pages-only Preview cutover, guarded by prior immutable G2.3 deployment.
+# G2.3 — Pages-only Preview cutover, guarded by prior immutable G2.2 deployment.
 # One mutation ONLY: wrangler pages deploy for the audited existing alias branch.
 # NEVER wrangler deploy/rollback Worker, patch bindings, change OAuth/DB/R2, or touch production.
 set -euo pipefail
@@ -21,7 +21,7 @@ cd "$ROOT" || fail "Checkout local no disponible"
 [[ -z "$(git status --porcelain)" ]] || fail "Cambios sin guardar"
 git fetch github "$BRANCH" || fail "GitHub no disponible"
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse "github/$BRANCH")" ]] || fail "HEAD distinto del aprobado en GitHub"
-git merge-base --is-ancestor "$G2_2_BASE" HEAD || fail "G2.3 no desciende de G2.3"
+git merge-base --is-ancestor "$G2_2_BASE" HEAD || fail "G2.3 no desciende del G2.2 publicado"
 git diff --check "$G2_2_BASE" HEAD || fail "Diff inválido"
 git diff --quiet "$G2_2_BASE" HEAD -- api/ web/ shared/ app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/appointments/ app/src/components/admin/medical/ app/src/components/admin/sponsored/ package.json package-lock.json || fail "Superficie protegida modificada"
 EXPECTED_APP="$(printf '%s\n' \
@@ -35,16 +35,16 @@ EXPECTED_APP="$(printf '%s\n' \
  app/src/components/admin/free/onboarding/FreeOnboardingIdentity.tsx \
  app/src/components/admin/free/onboarding/FreeOnboardingContact.tsx | LC_ALL=C sort)"
 ACTUAL_APP="$(git diff --name-only "$G2_2_BASE" HEAD -- app/ | LC_ALL=C sort)"
-[[ "$ACTUAL_APP" == "$EXPECTED_APP" ]] || fail "App difiere de los ocho archivos auditados"
+[[ "$ACTUAL_APP" == "$EXPECTED_APP" ]] || fail "App difiere de los nueve archivos auditados"
 node scripts/test-kawvo-free-shell-preview-isolation-2026-11-12.mjs || fail "Contrato G1"
 node scripts/test-kawvo-free-shell-desktop-parity-2026-11-12.mjs || fail "Contrato desktop G1"
 node scripts/test-intapcard-active-account-contract.mjs || fail "Contrato multicuenta"
-node scripts/test-kawvo-g2-free-direct-access-contract-2026-11-13.mjs || fail "Contrato G2.3"
-node scripts/test-kawvo-g2-free-return-list-contract-2026-11-13.mjs || fail "Contrato G2.3"
+node scripts/test-kawvo-g2-free-direct-access-contract-2026-11-13.mjs || fail "Contrato G2.1"
+node scripts/test-kawvo-g2-free-return-list-contract-2026-11-13.mjs || fail "Contrato G2.2"
 node scripts/test-kawvo-g2-free-route-continuity-contract-2026-11-14.mjs || fail "Contrato G2.3"
 node scripts/test-kawmed-demo-invitations-contract.mjs || fail "Contrato invitaciones Kawmed"
 node scripts/test-kawmed-isolation-contract.mjs || fail "Contrato aislamiento médico"
-[[ -s "$PRIOR_LOG" ]] || fail "Falta evidencia inmutable G2.3 en el log del despliegue anterior"
+[[ -s "$PRIOR_LOG" ]] || fail "Falta evidencia inmutable G2.2 en el log del despliegue anterior"
 OLD_DEPLOY="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$PRIOR_LOG" | tail -1 || true)"
 [[ -n "$OLD_DEPLOY" ]] || fail "Log anterior no contiene URL Pages inmutable verificable. NO publicar"
 mkdir -p "$HOME/intap-release-logs"
@@ -83,14 +83,14 @@ console.log('PASS: Worker original al 100%, 35 bindings y orígenes intactos')
 NODE
 curl -fsSL --connect-timeout 10 --max-time 35 "$APP/admin/login" -o "$LOG/live-before.html" || fail "Dominio App Preview inaccesible"
 curl -fsSL --connect-timeout 10 --max-time 35 "$ALIAS/admin/login" -o "$LOG/alias-before.html" || fail "Alias de Pages inaccesible"
-curl -fsSL --connect-timeout 10 --max-time 35 "$OLD_DEPLOY/admin/login" -o "$LOG/previous-immutable.html" || fail "G2.3 inmutable inaccesible"
+curl -fsSL --connect-timeout 10 --max-time 35 "$OLD_DEPLOY/admin/login" -o "$LOG/previous-immutable.html" || fail "G2.2 inmutable inaccesible"
 OLD_JS="$(asset "$LOG/live-before.html")"
 [[ -n "$OLD_JS" && "$(asset "$LOG/alias-before.html")" == "$OLD_JS" && "$(asset "$LOG/previous-immutable.html")" == "$OLD_JS" ]] || fail "Preview activo ya no corresponde a G2.3"
 curl -fsSL --connect-timeout 10 --max-time 60 "$APP$OLD_JS" -o "$LOG/live-before.js" || fail "No se puede copiar JS activo"
 curl -fsSL --connect-timeout 10 --max-time 60 "$OLD_DEPLOY$OLD_JS" -o "$LOG/previous-immutable.js" || fail "No se puede recuperar JS G2.3"
-cmp -s "$LOG/live-before.js" "$LOG/previous-immutable.js" || fail "JS activo no coincide byte a byte con G2.3 inmutable"
+cmp -s "$LOG/live-before.js" "$LOG/previous-immutable.js" || fail "JS activo no coincide byte a byte con G2.2 inmutable"
 printf '%s\n' "$OLD_DEPLOY" "$OLD_JS" > "$LOG/recovery-g2-1.txt"
-echo "PASS: G2.3 activo y respaldado por origen inmutable comprobado"
+echo "PASS: G2.2 activo y respaldado por origen inmutable comprobado"
 
 # Stage G2.3 in a separate Pages branch; NO active alias switch yet.
 COMMIT="$(git rev-parse HEAD)"
@@ -103,7 +103,7 @@ curl -fsSL --connect-timeout 10 --max-time 60 "$STAGE$NEW_JS" -o "$LOG/stage.js"
 cmp -s "$LOG/stage.js" "app/dist$NEW_JS" || fail "Stage distinto del build local"
 curl -fsSL --connect-timeout 10 --max-time 35 "$APP/admin/login" -o "$LOG/live-mid.html" || fail "App Preview cambió durante Stage"
 [[ "$(asset "$LOG/live-mid.html")" == "$OLD_JS" ]] || fail "Preview cambió durante Stage; NO publicar"
-echo "PASS: G2.3 Stage idéntico al build, G2.3 activo intacto"
+echo "PASS: G2.3 Stage idéntico al build, G2.2 activo intacto"
 
 # Sole deliberate mutation: App Pages branch already owned by Worker origin.
 echo "Publicando SOLO App Pages Preview (sin Worker)..."
