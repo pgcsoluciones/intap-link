@@ -12,7 +12,9 @@ export function freeShellPreviewReturnUrl(): string | null {
   const marker = new URLSearchParams(window.location.hash.replace(/^#/, ''))
   if (marker.get('kawvo_shell') !== '1' || marker.get('tab') !== 'profile') return null
   const slug = marker.get('slug') || ''
-  const pageSlug = decodeURIComponent(window.location.pathname.replace(/^\/+|\/+$/g, ''))
+  let pageSlug = ''
+  try { pageSlug = decodeURIComponent(window.location.pathname.replace(/^\/+|\/+$/g, '')) }
+  catch { return null }
   if (!/^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug) || slug.toLowerCase() !== pageSlug.toLowerCase()) return null
   return 'https://app.preview.intaprd.com/admin/free/shell-preview?kawvo_shell=1&resume=profile&slug=' + encodeURIComponent(slug)
 }
