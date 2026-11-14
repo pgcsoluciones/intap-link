@@ -18,6 +18,11 @@ git merge-base --is-ancestor "$BASE_SHA" HEAD || fail "Rama no basada en G2.3 pu
 EXPECTED="$(printf '%s\n' \
  app/src/components/admin/free/KawvoFreeShellPreview.tsx \
  app/src/free-preview-link-fallback.ts \
+ web/src/components/ArtifactLinkResolver.tsx \
+ web/src/components/appointments/AppointmentOwnerBar.mobile.css \
+ web/src/components/medical-profile/KawMedProfile.tsx \
+ web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx \
+ web/src/components/sponsored/SponsoredProfile.tsx \
  web/src/components/free-profile/freeShellPreviewReturn.ts \
  web/src/components/free-profile/FreePreviewEditShortcut.tsx \
  web/src/components/free-profile/IntapLinkGratisProfile.tsx \
