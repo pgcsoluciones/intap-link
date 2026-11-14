@@ -16,7 +16,7 @@ git pull --ff-only github "$BRANCH" || fail "Rama divergente, no se forzó"
 git merge-base --is-ancestor "$BASE_SHA" HEAD || fail "G2.3 no desciende del G2.2 publicado"
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse "github/$BRANCH")" ]] || fail "GitHub/HEAD no coinciden"
 
-EXPECTED="$(printf '%s\\n' \\
+EXPECTED="$(printf '%s\n' \
   app/src/components/admin/free/KawvoShellReturn.ts \
   app/src/components/admin/free/FreePanelUi.tsx \
   app/src/components/admin/free/FreeCredentials.tsx \
