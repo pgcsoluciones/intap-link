@@ -63,7 +63,7 @@ has(profile,'<FreeContactActions profile={profile} colors={colors} />','perfil F
 has(profile,'AppointmentOwnerBar','perfil Free monta barra pública de propietario como Patrocinado')
 has(profile,"ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'}",'barra pública Free consulta contexto de agenda propio')
 has(profile,'settingsPath="/admin/free/account"','barra pública Free enlaza Configuración con Mi cuenta')
-has(ownerBar,"settingsLabel='Configuración'",'barra del propietario conserva Configuración como etiqueta por defecto')
+has(ownerBar,"settingsLabel='Mi perfil'",'barra del propietario conserva Mi perfil como etiqueta real de Web Preview')
 has(ownerBar,'>{settingsLabel}</button>','barra del propietario renderiza la etiqueta aprobada')
 absent(ownerBar,'>Mi presentación</strong>','barra ya no muestra Mi presentación como texto pasivo')
 absent(profile,'ilx-services-section','Servicios no debe renderizarse como sección pública Free')
