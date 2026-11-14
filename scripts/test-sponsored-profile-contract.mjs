@@ -495,7 +495,7 @@ if(sponsoredHeader.includes('>Agenda</button>')||sponsoredHeader.includes('Desca
 has(sponsor,"/admin/sponsored/agenda?scope=master",'tenant patrocinador puede gestionar agenda de su perfil Master')
 has(publicUi,'AppointmentOwnerBar','perfil público puede mostrar barra de agenda al propietario autenticado')
 has(publicUi,'settingsPath="/admin/sponsored"','barra patrocinada enlaza Configuración con panel beneficiario')
-has(appointmentOwnerBar,"settingsLabel='Configuración'",'barra compartida conserva Configuración como etiqueta predeterminada')
+has(appointmentOwnerBar,"settingsLabel='Mi perfil'",'barra compartida conserva el valor Mi perfil del Web Preview activo')
 has(appointmentOwnerBar,'>{settingsLabel}</button>','barra compartida renderiza etiqueta de configuración dinámica')
 has(appointmentOwnerBar,'Solicitudes de agenda','barra pública muestra solicitudes')
 has(appointmentOwnerBar,'Confirmar','barra pública permite confirmar rápidamente')
