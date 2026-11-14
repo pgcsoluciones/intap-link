@@ -34,12 +34,13 @@ type Props={
   manageOrigin:string
   settingsPath:string
   settingsLabel?:string
+  settingsPreviewReturnUrl?:string
   palette:Palette
   mobileMenu?:boolean
   onToast:(message:string)=>void
 }
 
-export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Configuración',palette,onToast,mobileMenu=false}:Props){
+export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Configuración',settingsPreviewReturnUrl,palette,onToast,mobileMenu=false}:Props){
   const[context,setContext]=useState<Context|null>(null)
   const[open,setOpen]=useState(false)
   const[menuOpen,setMenuOpen]=useState(false)
@@ -110,7 +111,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   if(!context)return null
   const origin=manageOrigin.replace(/\/$/,'')
   const manageUrl=origin+String(context.manage_url||'/admin/sponsored/agenda')
-  const settingsUrl=origin+String(context.settings_url||settingsPath)
+  const settingsUrl=settingsPreviewReturnUrl||origin+String(context.settings_url||settingsPath)
   const resourceUrl=String(context.resource_url||'').trim()
   const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
   const contactUrl=String(context.contact_url||'').trim()
