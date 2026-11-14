@@ -24,6 +24,7 @@ import './IntapLinkGratisRebuilt.css'
 import './IntapLinkGratisPublicEnhancements.css'
 import FreeContactActions from './FreeContactActions'
 import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
+import { freeShellPreviewReturnUrl } from './freeShellPreviewReturn'
 
 import {
   FREE_PROFILE_LIMITS,
@@ -373,7 +374,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   return (
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
-      {showOwnerBar && profile.experience && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
+      {showOwnerBar && profile.experience && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" settingsLabel={freeShellPreviewReturnUrl() ? 'Mi perfil' : undefined} settingsPreviewReturnUrl={freeShellPreviewReturnUrl() || undefined} palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
       {topContent}
       <div className="ilx-shell">
         <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
