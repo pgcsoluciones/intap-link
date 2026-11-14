@@ -80,6 +80,21 @@ NODE
 printf '%s\n' "$OLD_WEB" "$WEB_BRANCH" > "$LOG/rollback-web.txt"
 echo "PASS: rama Web Preview realmente propietaria: $WEB_BRANCH"
 
+# Critical: deploying Web from an older App-only feature branch must not regress
+# the Web Preview already serving Sponsored/Medical. Compare its real source SHA
+# with the G2.3 baseline before any stage, using read-only Git objects.
+WEB_DEPLOY_SHA="$(node - "$WEB_REPORT" <<'NODE'
+const fs=require('fs'),v=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+console.log(v.owner?.commit||'');
+NODE
+)"
+[[ "$WEB_DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "El deploy Web anterior no tiene SHA Git verificable"
+[[ "$WEB_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || fail "Rama Web no tiene nombre seguro"
+git fetch github "$WEB_BRANCH" || fail "No se pudo consultar la rama Web real"
+git cat-file -e "$WEB_DEPLOY_SHA^{commit}" || fail "Commit anterior de Web no está disponible; detener para auditoría"
+git diff --quiet "$WEB_DEPLOY_SHA" "$BASE" -- web/ shared/ package.json package-lock.json || fail "Web Preview fuente anterior difiere del baseline G2.3. BLOQUEADO para evitar regresiones Kawmed/patrocinados"
+echo "PASS: fuente Web baseline G2.3 coincide con Web Preview previo; ningún módulo Web anterior se reemplaza a ciegas"
+
 npx --no-install wrangler deployments status --name "$WORKER" --json > "$LOG/worker-before.json" 2> "$LOG/worker-before.err" || fail "Worker Preview inaccesible"
 npx --no-install wrangler versions view "$WORKER_SHA" --name "$WORKER" --json > "$LOG/worker-bindings.json" 2> "$LOG/worker-bindings.err" || fail "Bindings no disponibles"
 node - "$LOG/worker-before.json" "$LOG/worker-bindings.json" "$WORKER_SHA" "$APP_ALIAS" "$WEB_ALIAS" <<'NODE' || fail "Worker/bindings cambiaron, NO publicar"
