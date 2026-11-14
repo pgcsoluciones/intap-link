@@ -13,6 +13,7 @@ const owner=load('web/src/components/appointments/AppointmentOwnerBar.tsx')
 const api=load('api/src/free-profile-preview.ts')
 const router=load('app/src/App.tsx')
 const oldPanel=load('app/src/components/admin/free/FreeDashboard.tsx')
+const pagesRunner=load('scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-14.sh')
 
 assert.match(web,/freeShellPreviewReturnUrl\(\)/,'Web edit shortcut consumes guarded return')
 assert.match(web,/href=\{shellReturnUrl \|\| \x60\$\{appUrl\}\/admin\/free\x60\}/,'Legacy preview without opt-in retains old panel')
@@ -40,4 +41,10 @@ assert.match(api,/app\.get\('\/api\/v1\/me\/free\/profile-preview\/:slug', requi
 assert.match(api,/headers\.set\('Set-Cookie', previewSessionCookie\(/,'Existing preview session cookie preserved')
 assert.match(router,/path="\/admin\/free\/shell-preview" element=\{<AdminGuard planScope="free">/,'G2 shell still protected by Free guard')
 assert.match(oldPanel,/const togglePublished = async \(\) =>/,'Legacy publishing flow untouched')
+// A Cloudflare Pages branch label may outlive the corresponding GitHub branch.
+assert.ok(!pagesRunner.includes('git fetch github "$WEB_BRANCH"'),'Never require a historical Pages branch to exist on GitHub')
+assert.ok(pagesRunner.includes('git cat-file -e "$WEB_DEPLOY_SHA^{commit}"'),'Inspect actual Pages deployment commit before deploying')
+assert.ok(pagesRunner.includes('git fetch --no-tags github "$WEB_DEPLOY_SHA"'),'Recover only the audited source commit when absent locally')
+assert.ok(pagesRunner.includes('git diff --quiet "$WEB_DEPLOY_SHA" "$BASE" -- web/ shared/ package.json package-lock.json'),'Keep strict no-regression Web source diff gate')
+assert.ok(pagesRunner.includes('pages deploy web/dist --project-name intap-link --branch "$WEB_BRANCH"'),'Deploy must preserve verified Cloudflare Pages branch alias')
 console.log('PASS: G2.4 preview edit + Mi perfil return (Web+App), exact host/slug gates, API/roles intact')
