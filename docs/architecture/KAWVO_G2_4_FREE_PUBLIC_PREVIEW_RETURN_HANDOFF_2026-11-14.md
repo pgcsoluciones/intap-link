@@ -67,3 +67,22 @@ Pendientes ya documentados fuera de lote: «Cambiar cuenta» solo autorización 
 **Precaución sobre bancos:** el editor patrocinado actual fija `display_mode:'masked'` y explica que la cuenta publica los últimos cuatro dígitos; el test antiguo refería un selector «Cómo mostrar el número de cuenta» ausente. Se asegura en tests el comportamiento más protector existente; cualquier decisión de volver a mostrar números completos requiere autorización y PR separado, no se infiere como parte de G2.4.
 
 La rama continúa en Draft. El PASS final del contrato patrocinado y la compilación solo se pueden afirmar tras ejecutar el runner local actualizado en el Mac. Ante otro `BLOCKED` mantener STOP y auditar evidencia, no forzar el deploy.
+
+## 7. Bloqueo tras PASS G2.4 local — rama Pages Web histórica (14/11/2026)
+
+El propietario obtuvo `PASS G2.4 LOCAL` con contratos G1–G2.4, aislamiento Free/Kawmed/Patrocinado y builds **App+Web Preview**, log `~/intap-release-logs/kawvo-g2-4-local-5hh4ft6k`.
+
+En el runner de despliegue `~/intap-release-logs/kawvo-g2-4-pages-yjkFGizf`, la auditoría read-only de Cloudflare informó:
+- `PASS: rama Web Preview realmente propietaria: qa-sponsor-scan-1104`
+- `fatal: couldn't find remote ref qa-sponsor-scan-1104`
+- `BLOCKED: No se pudo consultar la rama Web real`
+
+El bloqueo ocurrió **antes de ambos stage y ambas publicaciones**. Los alias de App/Web Preview y Worker no se modificaron. La rama `qa-sponsor-scan-1104` existe como **etiqueta de rama en la metadata del despliegue Pages**, pero la búsqueda de ramas actuales del repositorio `pgcsoluciones/intap-link` no encuentra esa referencia: no hay motivo para exigir que la rama de GitHub exista al publicar mediante `wrangler pages deploy --branch`.
+
+**Corrección conservadora:** se elimina exclusivamente la exigencia `git fetch github "$WEB_BRANCH"`. Se mantiene `WEB_BRANCH` exactamente como la metadata verificada de Cloudflare para la futura publicación Pages. La fuente Web existente se valida con el campo de commit SHA de **ese mismo despliegue** (`WEB_DEPLOY_SHA`) y los siguientes controles:
+1. SHA de 40 caracteres hexadecimales; se intenta `git cat-file -e "$WEB_DEPLOY_SHA^{commit}"` en el repositorio local
+2. Si no está disponible localmente, se intenta recuperar **solo ese SHA** desde el remoto GitHub mediante `git fetch --no-tags github "$WEB_DEPLOY_SHA"`; si no es recuperable, `BLOCKED` sin stage ni publicación
+3. Validación obligatoria `git diff --quiet "$WEB_DEPLOY_SHA" "$BASE" -- web/ shared/ package.json package-lock.json`; si hay cambios ajenos en el código Web activo, `BLOCKED` para no pisar Kawmed/Patrocinado
+4. Se conservan sin modificaciones los controles de Worker versión original al 100%/35 bindings, dos alias Pages, ambos inmutables, doble stage, comparación byte por byte y prohibición de Producción/Worker.
+
+Se añadió una regresión estática que impide reintroducir el `git fetch` de la rama Pages ausente y mantiene el control estricto por SHA/árbol. La rama sigue **Draft** y la publicación G2.4 todavía **no ha ocurrido**. Si falla la recuperación del SHA o la paridad de Web, recuperar el reporte `web-alias.txt` / `report.json` sin claves ni tokens y detener el flujo para análisis. No modificar el Worker o sus bindings como atajo.
