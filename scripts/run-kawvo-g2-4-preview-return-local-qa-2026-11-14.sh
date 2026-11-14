@@ -55,7 +55,9 @@ ACTUAL_WEB_PATCHES="$(git diff --name-only "$LIVE_WEB_SHA" HEAD -- web/ shared/ 
 }
 echo "PASS: fuente Web publicada preservada; solo navegación Free G2.4 es distinta"
 git diff --check "$BASE_SHA" HEAD || fail "Diff inválido"
-git diff --quiet "$BASE_SHA" HEAD -- api/ shared/ package.json package-lock.json app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/medical/ app/src/components/admin/sponsored/ web/src/components/medical-profile/ web/src/components/sponsored/ || fail "Zona protegida alterada"
+# Web Kawmed/Patrocinados are protected by exact deployed Web source parity above,
+# not by App G2.3 baseline; App/Worker/API remain protected by this diff.
+git diff --quiet "$BASE_SHA" HEAD -- api/ shared/ package.json package-lock.json app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/medical/ app/src/components/admin/sponsored/ || fail "Zona protegida alterada"
 bash -n scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh || fail "Bash QA inválido"
 bash -n scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-14.sh || fail "Bash Pages inválido"
 node --check scripts/test-kawvo-g2-free-preview-return-contract-2026-11-14.mjs || fail "Test G2.4 JS inválido"
