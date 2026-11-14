@@ -35,7 +35,7 @@ Entonces, y sólo entonces:
 Este lote **no** cambia `api/src/free-profile-preview.ts`, D1, R2, cookies, autenticación, Worker, permisos, roles, URLs de Producción, otros perfiles ni publicación.
 
 ## 3. Alcance y revisión
-6 archivos de frontend estrictos: 2 App (`KawvoFreeShellPreview.tsx`, `free-preview-link-fallback.ts`), 4 Web (`FreePreviewEditShortcut.tsx`, `freeShellPreviewReturn.ts`, `IntapLinkGratisProfile.tsx`, `AppointmentOwnerBar.tsx`). Solo navegación Free con opt-in explícito. Tests estáticos, auditoría Cloudflare de Web Pages, runner local, runner Preview dual y esta bitácora suman 11 archivos desde la base exacta G2.3. Evitar integrar refactors o dependencias.
+6 archivos de frontend estrictos: 2 App (`KawvoFreeShellPreview.tsx`, `free-preview-link-fallback.ts`), 4 Web (`FreePreviewEditShortcut.tsx`, `freeShellPreviewReturn.ts`, `IntapLinkGratisProfile.tsx`, `AppointmentOwnerBar.tsx`). Solo navegación Free con opt-in explícito. Tests estáticos (incluida la actualización de un assert antiguo sobre la etiqueta dinámica del Owner Bar), auditoría Cloudflare de Web Pages, runner local, runner Preview dual y esta bitácora suman 12 archivos desde la base exacta G2.3. Evitar integrar refactors o dependencias.
 
 ## 4. Método seguro (doble Pages)
 - Runner local `scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh`: checkout seguro, base SHA, allowlist, diff, contratos G1–G2.4 y regresiones Free/Agenda, Patrocinado, Kawmed, `npm ci`, build **App y Web** en modo Preview; **sin deploy**.
