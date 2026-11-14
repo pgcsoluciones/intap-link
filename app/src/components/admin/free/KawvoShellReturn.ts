@@ -8,6 +8,7 @@ export type KawvoShellReturn = {
   kawvoShellList?: KawvoShellListState
   kawvoShellItem?: string
   kawvoShellViaEditor?: boolean
+  kawvoShellViaAccount?: boolean
 }
 export const KAWVO_SHELL_PREVIEW_ROUTE = '/admin/free/shell-preview?kawvo_shell=1'
 
@@ -43,5 +44,17 @@ export function getKawvoShellReturn(value: unknown): KawvoShellReturn | null {
     result.kawvoShellItem = state.kawvoShellItem
   }
   if (state.kawvoShellViaEditor === true) result.kawvoShellViaEditor = true
+  if (state.kawvoShellViaAccount === true) result.kawvoShellViaAccount = true
   return result
+}
+
+/** Preserve the full, per-account shell origin across short nested routes. */
+export function kawvoShellBackTarget(context: KawvoShellReturn): {path: string; state: KawvoShellReturn} {
+  if (context.kawvoShellViaEditor) {
+    return {path:'/admin/free/editor', state:{...context,kawvoShellViaEditor:false}}
+  }
+  if (context.kawvoShellViaAccount) {
+    return {path:'/admin/free/account', state:{...context,kawvoShellViaAccount:false}}
+  }
+  return {path:KAWVO_SHELL_PREVIEW_ROUTE, state:context}
 }
