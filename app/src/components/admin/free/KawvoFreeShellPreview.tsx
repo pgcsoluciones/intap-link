@@ -53,12 +53,19 @@ export default function KawvoFreeShellPreview(){
   },[enabled])
   // Return state is scoped to this navigation and this authenticated profile only.
   useEffect(()=>{
-    if(!enabled||!profile||!incomingReturn)return
+    if(!enabled||!profile)return
     const activeAccount=String(profile.profile_id||profile.slug||'')
-    if(incomingReturn.kawvoShellAccount!==activeAccount)return
-    const agendaAvailable=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')
-    setTab(incomingReturn.kawvoShellTab==='agenda'&&!agendaAvailable?'home':incomingReturn.kawvoShellTab)
-  },[enabled,profile,home,location.key])
+    if(incomingReturn){
+      if(incomingReturn.kawvoShellAccount!==activeAccount)return
+      const agendaAvailable=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')
+      setTab(incomingReturn.kawvoShellTab==='agenda'&&!agendaAvailable?'home':incomingReturn.kawvoShellTab)
+      return
+    }
+    // Public Web Preview returns through a validated profile-only URL hint.
+    // This does not select an account or bypass the existing Free AdminGuard.
+    const resume=new URLSearchParams(location.search)
+    if(resume.get('resume')==='profile'&&resume.get('slug')===String(profile.slug||''))setTab('profile')
+  },[enabled,profile,home,location.key,location.search])
   if(!enabled)return <Navigate to="/admin/free" replace/>
   if(busy)return <main role="status" className="min-h-screen bg-slate-50 p-8 text-center text-sm">Cargando espacio Kawvo…</main>
   if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate('/admin/free')} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
@@ -101,7 +108,7 @@ export default function KawvoFreeShellPreview(){
     if(readyToPublish){navigate('/admin/free');return}
     navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})
   }
-  const previewHref=accountSlug?(isFreeDemoDelegationActive()&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/${encodeURIComponent(accountSlug)}?full=1`):''
+  const previewHref=accountSlug?(isFreeDemoDelegationActive()&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/${encodeURIComponent(accountSlug)}?full=1#kawvo_shell=1&tab=profile&slug=${encodeURIComponent(accountSlug)}`):''
   const sharePublicUrl=async()=>{
     if(!published||!publicUrl)return
     setShareMessage('')

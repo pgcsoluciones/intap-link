@@ -1,0 +1,16 @@
+/* Shared private owner header navigation.
+   Mirrors the approved KawMed mobile behavior, without importing all KawMed
+   profile styles into sponsored pages. The header class exists only when
+   mobileMenu is enabled; Agenda and notifications remain outside the dropdown. */
+.kawmed-owner-header__mobile-menu{display:none}
+@media(max-width:700px){
+  .kawmed-owner-header .kawmed-owner-header__row{max-width:none!important;padding:10px 16px!important;gap:12px!important}
+  .kawmed-owner-header .kawmed-owner-header__desktop-links{display:none!important}
+  .kawmed-owner-header__mobile-menu{display:block;position:relative;min-width:0}
+  .kawmed-owner-header__menu-button{display:inline-flex;align-items:center;gap:10px;border:0;background:transparent;color:#132b4d;font:800 16px/1.3 Inter,system-ui,sans-serif;padding:10px 7px;cursor:pointer}
+  .kawmed-owner-header__menu-button svg{width:22px;height:22px}
+  .kawmed-owner-header__dropdown{position:absolute;top:calc(100% + 6px);left:0;z-index:100;min-width:205px;max-width:calc(100vw - 24px);display:grid;gap:3px;padding:9px;background:#fff;border:1px solid #d7e7ec;border-radius:18px;box-shadow:0 14px 35px rgba(15,42,69,.18)}
+  .kawmed-owner-header__dropdown a{display:flex;align-items:center;gap:12px;padding:13px 12px;color:#18375c;text-decoration:none;font-size:16px;font-weight:750;line-height:1.35;border-radius:10px}
+  .kawmed-owner-header__dropdown a svg{width:21px;height:21px;flex:none;color:#0891b2}
+  .kawmed-owner-header__dropdown a:hover,.kawmed-owner-header__dropdown a:focus-visible{background:#e7f5f4}
+}

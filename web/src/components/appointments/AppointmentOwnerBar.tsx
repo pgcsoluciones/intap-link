@@ -1,5 +1,18 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { FaBars, FaBell, FaCalendarAlt, FaTimes } from 'react-icons/fa'
+import { FaBars, FaBell, FaBook, FaBookMedical, FaCalendarAlt, FaFileAlt, FaLink, FaTimes, FaUserCircle, FaUserMd, FaUserTie, FaWhatsapp } from 'react-icons/fa'
+import './AppointmentOwnerBar.mobile.css'
+
+// The App saves the active Multicuenta cookie through api.intaprd.com in
+// Production; this owner-only fetch must use that SAME host. The cookie is
+// intentionally host-scoped. Preview uses app.preview.intaprd.com and remains
+// unchanged. Editing/Agenda destinations still point to the App.
+function ownerSessionApiBase(base:string):string{
+  try{
+    const url=new URL(base)
+    if(url.protocol==='https:'&&url.hostname==='app.intaprd.com')url.hostname='api.intaprd.com'
+    return url.toString().replace(/\/$/,'')
+  }catch{return base}
+}
 
 type Palette={accent:string;accentSoft:string;text:string}
 type Pending={
@@ -28,18 +41,34 @@ type Context={
   contact_url?:string
   contact_label?:string
 }
+function contactIcon(label:string,url:string){
+  const normalized=label.toLocaleLowerCase('es').trim()
+  if(/(?:wa\.me|whatsapp\.com)/i.test(url)||normalized.includes('whatsapp'))return <FaWhatsapp aria-hidden="true" />
+  if(normalized.includes('visitador'))return <FaUserMd aria-hidden="true" />
+  if(normalized.includes('vendedor'))return <FaUserTie aria-hidden="true" />
+  return <FaUserCircle aria-hidden="true" />
+}
+function resourceIcon(label:string){
+  const normalized=label.toLocaleLowerCase('es').trim()
+  if(normalized.includes('vadem'))return <FaBookMedical aria-hidden="true" />
+  if(normalized.includes('catálogo')||normalized.includes('catalogo'))return <FaBook aria-hidden="true" />
+  if(normalized.includes('documento')||normalized.includes('archivo'))return <FaFileAlt aria-hidden="true" />
+  return <FaLink aria-hidden="true" />
+}
+
 type Props={
   username:string
   ownerApiBase:string
   manageOrigin:string
   settingsPath:string
   settingsLabel?:string
+  settingsPreviewReturnUrl?:string
   palette:Palette
   mobileMenu?:boolean
   onToast:(message:string)=>void
 }
 
-export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Configuración',palette,onToast,mobileMenu=false}:Props){
+export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Mi perfil',settingsPreviewReturnUrl,palette,onToast,mobileMenu=false}:Props){
   const[context,setContext]=useState<Context|null>(null)
   const[open,setOpen]=useState(false)
   const[menuOpen,setMenuOpen]=useState(false)
@@ -49,7 +78,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
 
   async function load(){
     try{
-      const res=await fetch(ownerApiBase+'/public-context?username='+encodeURIComponent(username),{credentials:'include',cache:'no-store'})
+      const res=await fetch(ownerSessionApiBase(ownerApiBase)+'/public-context?username='+encodeURIComponent(username),{credentials:'include',cache:'no-store'})
       if(!res.ok){setContext(null);return}
       const json:any=await res.json().catch(()=>null)
       if(json?.ok&&json.data?.is_owner)setContext(json.data)
@@ -97,7 +126,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     if(actionId)return
     setActionId(id)
     try{
-      const target=ownerApiBase+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.action_scope?'?scope='+encodeURIComponent(context.action_scope):'')
+      const target=ownerSessionApiBase(ownerApiBase)+'/requests/'+encodeURIComponent(id)+'/'+action+(context?.action_scope?'?scope='+encodeURIComponent(context.action_scope):'')
       const res=await fetch(target,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:'{}'})
       const json:any=await res.json().catch(()=>null)
       if(!res.ok||!json?.ok)throw new Error(json?.error||'No pudimos actualizar la solicitud.')
@@ -107,10 +136,19 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     finally{setActionId('')}
   }
 
-  if(!context)return null
+  // Free editor preview needs the return-to-editor control inside a header even before
+  // the owner-context request finishes. Do not show admin actions without is_owner.
+  if(!context){
+    if(settingsPath!=='/admin/free/account'||new URLSearchParams(window.location.search).get('preview')!=='1')return null
+    return <div className="kawmed-owner-header" style={{position:'sticky',top:0,zIndex:58,background:'rgba(255,255,255,.96)',borderBottom:'1px solid #e2e8f0',fontFamily:'Inter,system-ui,sans-serif'}}>
+      <div className="kawmed-owner-header__row" style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',minHeight:52,boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'flex-start'}}>
+        <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}}/>
+      </div>
+    </div>
+  }
   const origin=manageOrigin.replace(/\/$/,'')
   const manageUrl=origin+String(context.manage_url||'/admin/sponsored/agenda')
-  const settingsUrl=origin+String(context.settings_url||settingsPath)
+  const settingsUrl=settingsPreviewReturnUrl||origin+String(context.settings_url||settingsPath)
   const resourceUrl=String(context.resource_url||'').trim()
   const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
   const contactUrl=String(context.contact_url||'').trim()
@@ -119,23 +157,24 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     {context.is_guest_editor&&<p style={{maxWidth:520,margin:'0 auto',padding:'7px 12px 0',fontSize:11,fontWeight:850,color:'#0e7490'}}>ADMINISTRADOR INVITADO · ACCESO TEMPORAL</p>}
     <div className="kawmed-owner-header__row" style={{width:'100%',maxWidth:520,margin:'0 auto',padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,boxSizing:'border-box'}}>
       <div className="kawmed-owner-header__desktop-links" style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
-        <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer'}}>{settingsLabel}</button>
-        {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>{contactLabel}</a>}
-        {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap'}}>{resourceLabel}</a>}
+        <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}}/>
+        <button type="button" onClick={()=>window.location.assign(settingsUrl)} style={{border:0,background:'transparent',padding:'6px 4px',fontSize:12.5,fontWeight:900,color:palette.text,whiteSpace:'nowrap',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}><FaUserCircle aria-hidden="true" style={{color:palette.accent,fontSize:19,flexShrink:0}}/>{settingsLabel}</button>
+        {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'inline-flex',fontSize:19,flexShrink:0}}>{contactIcon(contactLabel,contactUrl)}</span>{contactLabel}</a>}
+        {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,fontWeight:850,color:palette.accent,textDecoration:'underline',textUnderlineOffset:3,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:6}}><span style={{display:'inline-flex',fontSize:19,flexShrink:0}}>{resourceIcon(resourceLabel)}</span>{resourceLabel}</a>}
       </div>
       {mobileMenu&&<div className="kawmed-owner-header__mobile-menu" ref={menuRef}>
         <button type="button" className="kawmed-owner-header__menu-button" aria-label="Abrir menú del perfil" aria-expanded={menuOpen} aria-controls="kawmed-owner-links" onClick={()=>setMenuOpen(value=>!value)}><FaBars /><span>Menú</span></button>
         {menuOpen&&<nav className="kawmed-owner-header__dropdown" id="kawmed-owner-links" aria-label="Opciones de mi perfil">
-          <a href={settingsUrl} onClick={()=>setMenuOpen(false)}>{settingsLabel}</a>
-          {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{contactLabel}</a>}
-          {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{resourceLabel}</a>}
+          <div id="free-preview-edit-mobile-slot" style={{display:'flex',alignItems:'center'}}/>
+          <a href={settingsUrl} onClick={()=>setMenuOpen(false)}><FaUserCircle aria-hidden="true"/>{settingsLabel}</a>
+          {contactUrl&&<a href={contactUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{contactIcon(contactLabel,contactUrl)}{contactLabel}</a>}
+          {resourceUrl&&<a href={resourceUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setMenuOpen(false)}>{resourceIcon(resourceLabel)}{resourceLabel}</a>}
         </nav>}
       </div>}
       <div style={{display:'flex',alignItems:'center',gap:7}}>
-        <div id="free-preview-edit-slot" style={{display:'flex',alignItems:'center'}} />
-        <button type="button" onClick={()=>window.location.assign(manageUrl)} style={{...pill,borderColor:palette.accent+'44',background:palette.accentSoft,color:palette.text}}><FaCalendarAlt/>Agenda</button>
+        <button type="button" onClick={()=>window.location.assign(manageUrl)} style={{...pill,borderColor:palette.accent+'44',background:palette.accentSoft,color:palette.text}}><FaCalendarAlt aria-hidden="true"/>Agenda</button>
         <div ref={popoverRef} style={{position:'relative'}}>
-          <button type="button" aria-label="Solicitudes de agenda" onClick={()=>setOpen(value=>!value)} style={{...pill,position:'relative',background:context.pending_count?'#fee2e2':'#f8fafc',color:context.pending_count?'#b91c1c':'#475569',borderColor:context.pending_count?'#fecaca':'#e2e8f0'}}><FaBell/>{context.pending_count>0&&<b style={{minWidth:18,height:18,borderRadius:99,display:'grid',placeItems:'center',background:'#dc2626',color:'#fff',fontSize:10}}>{context.pending_count}</b>}</button>
+          <button type="button" aria-label="Solicitudes de agenda" onClick={()=>setOpen(value=>!value)} style={{...pill,position:'relative',background:context.pending_count?'#fee2e2':'#f8fafc',color:context.pending_count?'#b91c1c':'#475569',borderColor:context.pending_count?'#fecaca':'#e2e8f0'}}><FaBell aria-hidden="true"/>{context.pending_count>0&&<b style={{minWidth:18,height:18,borderRadius:99,display:'grid',placeItems:'center',background:'#dc2626',color:'#fff',fontSize:10}}>{context.pending_count}</b>}</button>
           {open&&<div style={popover}>
             <header style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,padding:'12px 13px',borderBottom:'1px solid #e2e8f0'}}><div><strong style={{fontSize:14,color:'#0f172a'}}>Solicitudes de agenda</strong><span style={{display:'block',marginTop:2,fontSize:11,color:'#64748b'}}>{context.enabled?'Agenda activa':'Agenda inactiva'}</span></div><button type="button" onClick={()=>setOpen(false)} aria-label="Cerrar" style={closeBtn}><FaTimes/></button></header>
             <div style={{maxHeight:'min(420px,65vh)',overflowY:'auto',padding:10}}>

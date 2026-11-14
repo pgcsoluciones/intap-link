@@ -18,7 +18,8 @@ for (const route of ['/trial/login','/admin/sponsored','/admin/sponsor','/supera
  assert.ok(app.includes('path="'+route+'"'), 'Existing App route missing: '+route)
 }
 assert.ok(owner.includes('mobileMenu?:boolean') && owner.includes('mobileMenu=false'), 'Mobile menu must remain opt-in')
-assert.ok(owner.includes("settingsLabel='Configuración'"), 'Owner settings label default must be preserved')
+assert.ok(owner.includes("settingsLabel='Mi perfil'"), 'Preserve the actual published Web owner label for medical, Free, sponsored')
+assert.ok(owner.includes("import './AppointmentOwnerBar.mobile.css'"), 'Preserve responsive owner menu stylesheet currently deployed')
 assert.ok(modal.includes('detailsPlaceholder?:string'), 'Medical details placeholder must be optional')
 assert.ok(modal.includes("detailsPlaceholder||'Ej.:"), 'Legacy appointment placeholder fallback must remain')
 for (const name of ['sponsoredMultiProfileAccess','requestedSponsoredProfileId','listOwnedSponsoredBeneficiaryProfiles','resolveSponsorMembership','setSponsorContext']) {
