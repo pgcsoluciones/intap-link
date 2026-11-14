@@ -35,7 +35,7 @@ Entonces, y sólo entonces:
 Este lote **no** cambia `api/src/free-profile-preview.ts`, D1, R2, cookies, autenticación, Worker, permisos, roles, URLs de Producción, otros perfiles ni publicación.
 
 ## 3. Alcance y revisión
-Cambios funcionales: 2 archivos App y 4 Web (tres componentes de navegación Free y un helper nuevo). Además se restauraron exactamente cinco rutas Web desde el commit Pages activo 529e58ec para preservar Kawmed, patrocinados y estilos móviles. Frente a G2.3 se modifican 18 rutas: App 2, Web 9, tests 3, auditoría 1, scripts de QA/deploy 2 y esta bitácora 1. Estas restauraciones no modifican la experiencia Web activa fuera de Free.
+Cambios funcionales: 2 archivos App y 4 Web (tres componentes de navegación Free y un helper nuevo). Además se restauraron exactamente cinco rutas Web desde el commit Pages activo 529e58ec para preservar Kawmed, patrocinados y estilos móviles. Frente a G2.3 se modifican 19 rutas: App 2, Web 9, tests 4 (incluido contrato Kawmed de barra publicada), auditoría 1, scripts de QA/deploy 2 y esta bitácora 1. Estas restauraciones no modifican la experiencia Web activa fuera de Free.
 
 ## 4. Método seguro (doble Pages)
 - Runner local `scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh`: checkout seguro, base SHA, allowlist, diff, contratos G1–G2.4 y regresiones Free/Agenda, Patrocinado, Kawmed, `npm ci`, build **App y Web** en modo Preview; **sin deploy**.
@@ -95,8 +95,10 @@ El propietario verificó que Web Preview usa el commit `529e58ec8ffae587ee02303e
 
 Se recuperaron de ese commit los cinco archivos que NO deben cambiar en Web: `ArtifactLinkResolver.tsx`, `AppointmentOwnerBar.mobile.css`, `KawMedProfile.tsx`, `SponsoredAwareArtifactResolver.tsx` y `SponsoredProfile.tsx`. GitHub confirmó **igualdad exacta de los cinco blob SHA** con el Web activo. Los tres componentes relevantes se recuperaron igualmente desde ese commit y solo recibieron la navegación opt-in de Free; `freeShellPreviewReturn.ts` es el cuarto archivo nuevo/diferente. Se conservó la barra activa, incluida su etiqueta «Mi perfil», su menú móvil y CSS asociado. El Web activo y la integración tienen idénticos los blobs de `functions/_middleware.ts`, configuración Vite, dependencias y lockfile.
 
-**QA local obligatoria:** diff exacto de 18 rutas frente a la base App G2.3 y comparación independiente `git diff --name-only 529e58ec8ffae587ee02303ecfce2d569726a75d HEAD -- web/ shared/ functions/ package.json package-lock.json`, que debe contener exactamente los cuatro parches Free autorizados, sin diferencias Kawmed, Patrocinados ni CSS.
+**QA local obligatoria:** diff exacto de 19 rutas frente a la base App G2.3 y comparación independiente `git diff --name-only 529e58ec8ffae587ee02303ecfce2d569726a75d HEAD -- web/ shared/ functions/ package.json package-lock.json`, que debe contener exactamente los cuatro parches Free autorizados, sin diferencias Kawmed, Patrocinados ni CSS.
 
 **QA prepublicación:** el runner obtiene el commit Web actualmente asociado al alias real Pages. Debe demostrar la misma paridad estricta de cuatro rutas respecto a ese commit dinámico, además del Worker original al 100%, 35 bindings, URL inmutable previa de cada proyecto, dos stages aislados y comparación byte a byte de los bundles. Si el Web activo cambió desde la auditoría o hay divergencias no previstas, **BLOCKED** sin publicar. El nombre histórico de rama Pages no necesita existir como ref de GitHub. No se cambia Worker/API/OAuth/D1/R2/Producción.
 
 **Estado final de esta anotación:** código y controles actualizados en PR #162 Draft; compilación después de integración **aún no ejecutada en el Mac**. App Preview G2.3 y Web Preview histórico siguen intactos.
+
+**Ajuste final de contratos:** `scripts/test-kawmed-isolation-contract.mjs` protegía la etiqueta antigua «Configuración», mientras la barra Web realmente publicada utiliza por defecto «Mi perfil» y su CSS móvil. Se actualizó la prueba para exigir ambas condiciones reales; no se modificó el funcionamiento médico. Este archivo forma parte de la allowlist y debe pasar en la nueva QA local.
