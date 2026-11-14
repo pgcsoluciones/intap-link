@@ -2,7 +2,7 @@
 **Fecha:** 14 noviembre 2026.
 **Base G2.3 publicada:** `f1f998fba3a64514ff3113b3e58a87e80475259a`, PR #161 Draft.
 **Rama:** `feature/kawvo-g2-free-preview-return-2026-11-14`.
-**Estado:** desarrollo + QA/runners preparados en GitHub; pendientes `npm ci`, builds App/Web Preview, preflights Cloudflare y QA real. Nada se ha desplegado.
+**Estado:** QA local G2.4 previa positiva; integración Web desde fuente publicada preparada. Pendiente nueva QA App+Web, preflight dual y QA funcional. Sin despliegue G2.4.
 
 ## 1. Nueva observación del propietario
 Después del PASS técnico de G2.3, el propietario informa que, dentro de **la vista previa pública**, «Regresar a edición» y «Mi perfil» continúan enviando al antiguo `/admin/free`. Las mejoras App-only de G2.1–G2.3 no podían corregir estos enlaces de Web.
@@ -35,14 +35,14 @@ Entonces, y sólo entonces:
 Este lote **no** cambia `api/src/free-profile-preview.ts`, D1, R2, cookies, autenticación, Worker, permisos, roles, URLs de Producción, otros perfiles ni publicación.
 
 ## 3. Alcance y revisión
-6 archivos de frontend estrictos: 2 App (`KawvoFreeShellPreview.tsx`, `free-preview-link-fallback.ts`), 4 Web (`FreePreviewEditShortcut.tsx`, `freeShellPreviewReturn.ts`, `IntapLinkGratisProfile.tsx`, `AppointmentOwnerBar.tsx`). Solo navegación Free con opt-in explícito. Tests estáticos (incluida la actualización de comprobaciones heredadas de Free y Patrocinado que no correspondían a la versión real), auditoría Cloudflare de Web Pages, runner local, runner Preview dual y esta bitácora suman 13 archivos desde la base exacta G2.3. Estas actualizaciones de pruebas no modifican lógica de negocio. Evitar integrar refactors o dependencias.
+Cambios funcionales: 2 archivos App y 4 Web (tres componentes de navegación Free y un helper nuevo). Además se restauraron exactamente cinco rutas Web desde el commit Pages activo 529e58ec para preservar Kawmed, patrocinados y estilos móviles. Frente a G2.3 se modifican 18 rutas: App 2, Web 9, tests 3, auditoría 1, scripts de QA/deploy 2 y esta bitácora 1. Estas restauraciones no modifican la experiencia Web activa fuera de Free.
 
 ## 4. Método seguro (doble Pages)
 - Runner local `scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh`: checkout seguro, base SHA, allowlist, diff, contratos G1–G2.4 y regresiones Free/Agenda, Patrocinado, Kawmed, `npm ci`, build **App y Web** en modo Preview; **sin deploy**.
 - `scripts/audit-kawvo-g2-web-pages-alias-readonly-2026-11-14.mjs`: identifica con REST Cloudflare GET la rama real que posee el alias Web Preview `qa-sponsor-scan-1104.intap-link.pages.dev` y su URL inmutable. No asumir que rama = alias.
 - Runner protegido `scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-14.sh`: compara APP activo con el Pages G2.3 inmutable del log `~/intap-release-logs/kawvo-g2-3-pages-Cc1pY2uX/publish.log`; Web activo con Pages Web inmutable identificado por GET; Worker Preview original al 100% con 35 bindings y ambos `*_PAGES_ORIGIN` sin cambios.
 - Primero dos **stage aislados** (Web + App) con comparación JS byte a byte con `dist`, sin alterar alias. Reconfirmar aliases originales.
-- Exigir además que el **SHA de fuente del deployment Web previo** sea un commit disponible y que su árbol `web/`, `shared/`, `package.json` y `package-lock.json` coincida exactamente con la base G2.3. Si Web Preview contiene correcciones más recientes o ajenas: **STOP antes de stage**, nunca sustituirlas con fuentes antiguas.
+- Gate actualizado: el SHA del deployment Web real debe ser recuperable. Su árbol `web/`, `shared/`, `functions/`, `package.json` y `package-lock.json` debe ser idéntico al nuevo HEAD **excepto** `AppointmentOwnerBar.tsx`, `FreePreviewEditShortcut.tsx`, `IntapLinkGratisProfile.tsx` y el helper nuevo `freeShellPreviewReturn.ts`. Si hay cualquier otra diferencia, **STOP antes de stage**.
 - Después publicar Web Pages en **su rama real verificada** (la función nueva está inactiva sin marca), seguido por App Pages en rama real `qa-kawmed-guest-current-2026-11-02`. No usar `wrangler deploy`, ni PATCH Worker, ni `keep_vars`, ni migración, ni Prod.
 - Verificar ambos bundles efectivamente servidos por `preview.intaprd.com` y `app.preview.intaprd.com`, y mismo Worker intacto al 100%. Guardar ambos snapshots inmutables para reversión Pages-only ante fallo. **Si algún preflight falla: detenerse y no repetir.**
 
@@ -86,3 +86,17 @@ El bloqueo ocurrió **antes de ambos stage y ambas publicaciones**. Los alias de
 4. Se conservan sin modificaciones los controles de Worker versión original al 100%/35 bindings, dos alias Pages, ambos inmutables, doble stage, comparación byte por byte y prohibición de Producción/Worker.
 
 Se añadió una regresión estática que impide reintroducir el `git fetch` de la rama Pages ausente y mantiene el control estricto por SHA/árbol. La rama sigue **Draft** y la publicación G2.4 todavía **no ha ocurrido**. Si falla la recuperación del SHA o la paridad de Web, recuperar el reporte `web-alias.txt` / `report.json` sin claves ni tokens y detener el flujo para análisis. No modificar el Worker o sus bindings como atajo.
+
+
+
+## 8. Integración segura con la fuente Web efectivamente publicada (14/11/2026)
+
+El propietario verificó que Web Preview usa el commit `529e58ec8ffae587ee02303ecfce2d569726a75d` («fix(release): validate Free public route and expect auth gate for draft ?preview=1»). Su diferencia frente a App G2.3 comprende ocho rutas: ArtifactLinkResolver, CSS móvil del Owner Bar, Owner Bar, FreePreviewEditShortcut, IntapLinkGratisProfile, KawMedProfile, SponsoredAwareArtifactResolver y SponsoredProfile. El preflight inicial bloqueó correctamente en `~/intap-release-logs/kawvo-g2-4-pages-3UeEVKKf`. No hubo stage ni publicación.
+
+Se recuperaron de ese commit los cinco archivos que NO deben cambiar en Web: `ArtifactLinkResolver.tsx`, `AppointmentOwnerBar.mobile.css`, `KawMedProfile.tsx`, `SponsoredAwareArtifactResolver.tsx` y `SponsoredProfile.tsx`. GitHub confirmó **igualdad exacta de los cinco blob SHA** con el Web activo. Los tres componentes relevantes se recuperaron igualmente desde ese commit y solo recibieron la navegación opt-in de Free; `freeShellPreviewReturn.ts` es el cuarto archivo nuevo/diferente. Se conservó la barra activa, incluida su etiqueta «Mi perfil», su menú móvil y CSS asociado. El Web activo y la integración tienen idénticos los blobs de `functions/_middleware.ts`, configuración Vite, dependencias y lockfile.
+
+**QA local obligatoria:** diff exacto de 18 rutas frente a la base App G2.3 y comparación independiente `git diff --name-only 529e58ec8ffae587ee02303ecfce2d569726a75d HEAD -- web/ shared/ functions/ package.json package-lock.json`, que debe contener exactamente los cuatro parches Free autorizados, sin diferencias Kawmed, Patrocinados ni CSS.
+
+**QA prepublicación:** el runner obtiene el commit Web actualmente asociado al alias real Pages. Debe demostrar la misma paridad estricta de cuatro rutas respecto a ese commit dinámico, además del Worker original al 100%, 35 bindings, URL inmutable previa de cada proyecto, dos stages aislados y comparación byte a byte de los bundles. Si el Web activo cambió desde la auditoría o hay divergencias no previstas, **BLOCKED** sin publicar. El nombre histórico de rama Pages no necesita existir como ref de GitHub. No se cambia Worker/API/OAuth/D1/R2/Producción.
+
+**Estado final de esta anotación:** código y controles actualizados en PR #162 Draft; compilación después de integración **aún no ejecutada en el Mac**. App Preview G2.3 y Web Preview histórico siguen intactos.
