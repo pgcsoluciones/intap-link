@@ -88,12 +88,18 @@ const fs=require('fs'),v=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 console.log(v.owner?.commit||'');
 NODE
 )"
-[[ "$WEB_DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "El deploy Web anterior no tiene SHA Git verificable"
-[[ "$WEB_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || fail "Rama Web no tiene nombre seguro"
-git fetch github "$WEB_BRANCH" || fail "No se pudo consultar la rama Web real"
-git cat-file -e "$WEB_DEPLOY_SHA^{commit}" || fail "Commit anterior de Web no está disponible; detener para auditoría"
+[[ "$WEB_DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]] || fail "El deploy Web anterior no tiene SHA Git completo y verificable"
+[[ "$WEB_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || fail "Rama Web Pages tiene nombre inválido"
+# Cloudflare Pages retains the historical deployment branch label even after
+# the branch is removed from GitHub. The Pages branch name is NOT a Git ref.
+# Audit the exact commit recorded by the immutable Pages deployment instead.
+if ! git cat-file -e "$WEB_DEPLOY_SHA^{commit}" 2>/dev/null; then
+  echo "INFO: rama Web Pages histórica sin Git ref; intentando recuperar SOLO el SHA auditado en lectura..."
+  git fetch --no-tags github "$WEB_DEPLOY_SHA" > "$LOG/web-source-fetch.log" 2>&1 || fail "El SHA Web previo no es recuperable desde GitHub. No publicar; consultar Web owner report y commit de origen"
+fi
+git cat-file -e "$WEB_DEPLOY_SHA^{commit}" 2>/dev/null || fail "SHA Web previo no corresponde a un commit Git real; no publicar"
 git diff --quiet "$WEB_DEPLOY_SHA" "$BASE" -- web/ shared/ package.json package-lock.json || fail "Web Preview fuente anterior difiere del baseline G2.3. BLOQUEADO para evitar regresiones Kawmed/patrocinados"
-echo "PASS: fuente Web baseline G2.3 coincide con Web Preview previo; ningún módulo Web anterior se reemplaza a ciegas"
+echo "PASS: fuente Web del commit Pages cotejada con base G2.3, sin reemplazar cambios recientes"
 
 npx --no-install wrangler deployments status --name "$WORKER" --json > "$LOG/worker-before.json" 2> "$LOG/worker-before.err" || fail "Worker Preview inaccesible"
 npx --no-install wrangler versions view "$WORKER_SHA" --name "$WORKER" --json > "$LOG/worker-bindings.json" 2> "$LOG/worker-bindings.err" || fail "Bindings no disponibles"
