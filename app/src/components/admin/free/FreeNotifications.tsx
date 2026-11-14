@@ -190,7 +190,7 @@ export default function FreeNotifications() {
                         {event.created_at && <p className="mt-1 text-[10px] font-semibold text-slate-400">{formatDate(event.created_at)}</p>}
                       </div>
                     ))}
-                    <button type="button" onClick={() => navigate(`/admin/free/account?ticket=${encodeURIComponent(ticketDetail.id)}`)} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700">Ir al Centro de ayuda y tickets</button>
+                    <button type="button" onClick={() => navigate(`/admin/free/account?ticket=${encodeURIComponent(ticketDetail.id)}`,shellReturn?{state:shellReturn}:undefined)} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700">Ir al Centro de ayuda y tickets</button>
                   </div>
                 </section>
               )}
