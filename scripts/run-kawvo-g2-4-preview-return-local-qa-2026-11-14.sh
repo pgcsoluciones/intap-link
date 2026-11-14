@@ -39,6 +39,21 @@ ACTUAL="$(git diff --name-only "$BASE_SHA" HEAD | LC_ALL=C sort)"
  printf 'ESPERADOS:\n%s\nACTUALES:\n%s\n' "$EXPECTED" "$ACTUAL"
  fail "Allowlist incorrecta"
 }
+# This branch must preserve the precise Web source currently active on Pages.
+# G2.3 App and the live Web commit do not share the same Web tree.
+LIVE_WEB_SHA="529e58ec8ffae587ee02303ecfce2d569726a75d"
+git cat-file -e "$LIVE_WEB_SHA^{commit}" || fail "SHA real Web Preview no disponible localmente"
+WEB_PATCHES="$(printf '%s\n' \
+ web/src/components/appointments/AppointmentOwnerBar.tsx \
+ web/src/components/free-profile/FreePreviewEditShortcut.tsx \
+ web/src/components/free-profile/IntapLinkGratisProfile.tsx \
+ web/src/components/free-profile/freeShellPreviewReturn.ts | LC_ALL=C sort)"
+ACTUAL_WEB_PATCHES="$(git diff --name-only "$LIVE_WEB_SHA" HEAD -- web/ shared/ functions/ package.json package-lock.json | LC_ALL=C sort)"
+[[ "$WEB_PATCHES" == "$ACTUAL_WEB_PATCHES" ]] || {
+ printf 'BLOQUEO: diferencias Web no autorizadas respecto a Pages activo.\nEsperado:\n%s\nActual:\n%s\n' "$WEB_PATCHES" "$ACTUAL_WEB_PATCHES"
+ fail "Web debe preservar íntegros Kawmed, Patrocinados, CSS móvil, Pages Functions y paquetes"
+}
+echo "PASS: fuente Web publicada preservada; solo navegación Free G2.4 es distinta"
 git diff --check "$BASE_SHA" HEAD || fail "Diff inválido"
 git diff --quiet "$BASE_SHA" HEAD -- api/ shared/ package.json package-lock.json app/src/App.tsx app/src/components/admin/AdminGuard.tsx app/src/components/admin/free/FreeDashboard.tsx app/src/components/admin/medical/ app/src/components/admin/sponsored/ web/src/components/medical-profile/ web/src/components/sponsored/ || fail "Zona protegida alterada"
 bash -n scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh || fail "Bash QA inválido"
