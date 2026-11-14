@@ -18,9 +18,10 @@ const pagesRunner=load('scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-1
 
 assert.match(web,/freeShellPreviewReturnUrl\(\)/,'Web edit shortcut consumes guarded return')
 assert.match(web,/href=\{shellReturnUrl \|\| \x60\$\{appUrl\}\/admin\/free\x60\}/,'Legacy preview without opt-in retains old panel')
-assert.match(web,/params\.get\('preview'\) !== '1'/,'Shortcut only exists for preview')
-assert.match(web,/params\.get\('embedded'\) === '1'/,'Embedded previews do not show shortcut')
-assert.match(web,/createPortal\(link,slot\)/,'Shortcut still mounts in existing owner bar')
+assert.match(web,/params\.get\('preview'\)==='1'/,'Published shortcut only activates for preview=1')
+assert.match(web,/params\.get\('embedded'\)!=='1'/,'Published shortcut excludes embedded previews')
+assert.match(web,/createPortal\(link,slots\.desktop,'free-preview-desktop'\)/,'Shortcut still mounts in published desktop owner slot')
+assert.match(web,/createPortal\(link,slots\.mobile,'free-preview-mobile'\)/,'Shortcut still mounts in published mobile owner slot')
 assert.match(helper,/window\.location\.hostname !== 'preview\.intaprd\.com'/,'Never opt in Production or staging Pages host')
 assert.match(helper,/query\.get\('preview'\) !== '1'/,'Only public Free preview route')
 assert.match(helper,/marker\.get\('kawvo_shell'\) !== '1'/,'Explicit G2 marker required')
