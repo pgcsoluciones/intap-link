@@ -219,8 +219,6 @@ has(previewRunner,'https://preview.intaprd.com','runner valida contra dominio/AP
 has(previewRunner,'https://api.intaprd.com','runner detecta y bloquea contaminación del bundle con API de Producción')
 has(previewRunner,'D1 Preview','runner valida un perfil real existente en la base Preview')
 
-console.log('Free Contact + Agenda contract checks: OK')
-
 has(ownerBar,'id="free-preview-edit-slot"','barra del propietario reserva espacio para volver a edición en escritorio')
 has(ownerBar,'id="free-preview-edit-mobile-slot"','barra del propietario reserva espacio para volver a edición en menú móvil')
 has(previewShortcut,"document.getElementById('free-preview-edit-slot')",'preview localiza el espacio de escritorio')
@@ -229,3 +227,5 @@ has(previewShortcut,"createPortal(link,slots.desktop,'free-preview-desktop')",'p
 has(previewShortcut,"createPortal(link,slots.mobile,'free-preview-mobile')",'preview coloca volver a edición dentro de barra móvil')
 has(previewShortcut,"params.get('preview')==='1'&&params.get('embedded')!=='1'",'atajo solo aparece en vista Preview no embebida')
 has(previewShortcut,'if(!isPreview)return null','atajo queda oculto fuera de vista Preview')
+
+console.log('Free Contact + Agenda contract checks: OK')
