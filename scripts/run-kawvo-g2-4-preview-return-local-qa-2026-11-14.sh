@@ -31,6 +31,7 @@ EXPECTED="$(printf '%s\n' \
  scripts/test-free-contact-agenda-contract.mjs \
  scripts/test-sponsored-profile-contract.mjs \
  scripts/test-kawmed-isolation-contract.mjs \
+ scripts/assert-kawvo-g2-4-web-live-preservation-2026-11-15.mjs \
  scripts/audit-kawvo-g2-web-pages-alias-readonly-2026-11-14.mjs \
  scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh \
  scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-14.sh \
@@ -63,6 +64,7 @@ bash -n scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh || fail "Ba
 bash -n scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-14.sh || fail "Bash Pages inválido"
 node --check scripts/test-kawvo-g2-free-preview-return-contract-2026-11-14.mjs || fail "Test G2.4 JS inválido"
 node --check scripts/audit-kawvo-g2-web-pages-alias-readonly-2026-11-14.mjs || fail "Auditoría JS inválida"
+node --check scripts/assert-kawvo-g2-4-web-live-preservation-2026-11-15.mjs || fail "Preservación Web JS inválida"
 node scripts/test-kawvo-free-shell-preview-isolation-2026-11-12.mjs || fail "G1 aislamiento"
 node scripts/test-kawvo-free-shell-desktop-parity-2026-11-12.mjs || fail "G1 desktop/móvil"
 node scripts/test-intapcard-active-account-contract.mjs || fail "Multicuenta/aislamiento"
