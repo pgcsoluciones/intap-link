@@ -221,6 +221,11 @@ has(previewRunner,'D1 Preview','runner valida un perfil real existente en la bas
 
 console.log('Free Contact + Agenda contract checks: OK')
 
-has(ownerBar,'id="free-preview-edit-slot"','barra del propietario reserva espacio para volver a edición')
-has(previewShortcut,"createPortal(link,slot)",'preview coloca volver a edición dentro de barra')
-has(previewShortcut,"params.get('preview') !== '1'",'atajo de edición solo aparece en vista Preview')
+has(ownerBar,'id="free-preview-edit-slot"','barra del propietario reserva espacio para volver a edición en escritorio')
+has(ownerBar,'id="free-preview-edit-mobile-slot"','barra del propietario reserva espacio para volver a edición en menú móvil')
+has(previewShortcut,"document.getElementById('free-preview-edit-slot')",'preview localiza el espacio de escritorio')
+has(previewShortcut,"document.getElementById('free-preview-edit-mobile-slot')",'preview localiza el espacio móvil')
+has(previewShortcut,"createPortal(link,slots.desktop,'free-preview-desktop')",'preview coloca volver a edición dentro de barra de escritorio')
+has(previewShortcut,"createPortal(link,slots.mobile,'free-preview-mobile')",'preview coloca volver a edición dentro de barra móvil')
+has(previewShortcut,"params.get('preview')==='1'&&params.get('embedded')!=='1'",'atajo solo aparece en vista Preview no embebida')
+has(previewShortcut,'if(!isPreview)return null','atajo queda oculto fuera de vista Preview')
