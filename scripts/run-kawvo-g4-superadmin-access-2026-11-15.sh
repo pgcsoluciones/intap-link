@@ -145,17 +145,89 @@ done
 [[ "$(asset "$LOG/stage.html")" == "$NEW_JS" ]] || fail "Stage contiene JS diferente"
 curl -fsSL --connect-timeout 10 --max-time 60 "$STAGE$NEW_JS" -o "$LOG/stage.js" || fail "JS Stage no disponible"
 cmp -s "$LOG/stage.js" "app/dist$NEW_JS" || fail "Stage distinto del build local"
-# Check its branch alias serves the same candidate, not a different deployment.
+# Resolve actual Cloudflare alias, never construct it from the branch name.
+# The existing immutable deployment, exact commit, Preview environment,
+# branch and successful status must all agree.
+STAGE_EXPECTED_COMMIT="${STAGED_COMMIT:-$COMMIT}"
+node --input-type=module - "$STAGE" "$STAGE_BRANCH" "$STAGE_EXPECTED_COMMIT" "$ALIAS" "$LOG/stage-owner.json" <<'NODE' || fail "No se pudo confirmar propietario y alias real de Stage; NO publicar"
+import {execFileSync} from 'node:child_process'
+import {readFileSync,existsSync,writeFileSync} from 'node:fs'
+import {homedir} from 'node:os'
+import {join} from 'node:path'
+const run=(cmd,args)=>execFileSync(cmd,args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:8*1024*1024})
+const normal=u=>String(u||'').replace(/\/$/,'').toLowerCase()
+function existingCredentials(){
+  if(process.env.CLOUDFLARE_API_TOKEN)return {Authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN}
+  if(process.env.CLOUDFLARE_API_KEY&&process.env.CLOUDFLARE_EMAIL)return {'X-Auth-Email':process.env.CLOUDFLARE_EMAIL,'X-Auth-Key':process.env.CLOUDFLARE_API_KEY}
+  const paths=[
+    join(homedir(),'Library','Preferences','.wrangler','config','default.toml'),
+    join(homedir(),'.wrangler','config','default.toml'),
+    join(homedir(),'.config','.wrangler','config','default.toml')
+  ].filter(existsSync)
+  if(paths.length!==1)throw Error('No se encontró una sola sesión Wrangler; ninguna operación Cloudflare fue modificada.')
+  const token=readFileSync(paths[0],'utf8').match(/^oauth_token\s*=\s*"([^"\r\n]+)"/m)
+  if(!token)throw Error('No hay token de acceso OAuth legible en sesión actual; no se requieren credenciales nuevas.')
+  return {Authorization:'Bearer '+token[1]}
+}
+function existingAccount(){
+  const output=run('npx',['--no-install','wrangler','whoami'])
+  const ids=[...new Set((output.match(/\b[a-f0-9]{32}\b/gi)||[]).map(x=>x.toLowerCase()))]
+  const id=process.env.CLOUDFLARE_ACCOUNT_ID || (ids.length===1?ids[0]:'')
+  if(!/^[a-f0-9]{32}$/i.test(id)|| (ids.length&&!ids.includes(id.toLowerCase())))throw Error('Cuenta no determinada con precisión desde Wrangler.')
+  return id
+}
+async function api(url,headers){
+  const response=await fetch(url,{headers,signal:AbortSignal.timeout(30000)})
+  // Expose only API error codes and short sanitized descriptions; never dump headers,
+  // credentials, Cloudflare account ID, body with env_vars, or request URLs.
+  const body=await response.json().catch(()=>null)
+  if(!response.ok||body?.success!==true){
+    const codes=(Array.isArray(body?.errors)?body.errors:[])
+      .slice(0,3).map(x=>String(x.code||'unknown')).join(',')
+    const details=(Array.isArray(body?.errors)?body.errors:[])
+      .slice(0,2).map(x=>String(x.message||'').slice(0,140)
+        .replace(/\b[a-f0-9]{32}\b/gi,'[cuenta]')
+        .replace(/Bearer\s+\S+/gi,'Bearer [oculto]')).join(' | ')
+    throw Error('Cloudflare Pages GET HTTP '+response.status+'; codes='+codes+'; '+details+'; sin modificaciones.')
+  }
+  if(!Array.isArray(body.result))throw Error('Cloudflare Pages GET no devolvió una lista.')
+  return {items:body.result,info:body.result_info||{}}
+}
+
+const [stage,branch,commit,protectedAlias,report]=process.argv.slice(2)
+try{
+  const headers=existingCredentials(),account=existingAccount()
+  const prefix='https://api.cloudflare.com/client/v4/accounts/'+account+'/pages/projects/intap-web2/deployments'
+  const shortId=new URL(stage).hostname.split('.')[0]
+  let matched=null
+  for(let p=1;p<=25;p++){
+    const {items,info}=await api(p===1?prefix:prefix+'?page='+p,headers)
+    matched=items.find(d=>normal(d.url)===normal(stage)||String(d.short_id||'').toLowerCase()===shortId)
+    if(matched)break
+    if(!items.length||(Number.isInteger(info.total_pages)&&p>=info.total_pages))break
+  }
+  if(!matched)throw Error('Stage inmutable no encontrado en intap-web2')
+  const meta=matched.deployment_trigger?.metadata||{}
+  if(normal(matched.url)!==normal(stage)||matched.environment!=='preview'||meta.branch!==branch||meta.commit_hash!==commit||matched.latest_stage?.status!=='success')throw Error('Stage no coincide con URL, rama, commit o estado esperado')
+  const aliases=[...new Set((Array.isArray(matched.aliases)?matched.aliases:[]).map(normal))]
+  const candidates=aliases.filter(u=>/^https:\/\/[a-z0-9-]+\.intap-web2\.pages\.dev$/.test(u)&&u!==normal(stage)&&u!==normal(protectedAlias)&&u.startsWith('https://qa-kawvo-g4-1-'))
+  if(candidates.length!==1)throw Error('No existe un alias Stage único y seguro; aliases informados: '+aliases.filter(u=>/^https:\/\/[a-z0-9-]+\.intap-web2\.pages\.dev$/.test(u)).join(', '))
+  writeFileSync(report,JSON.stringify({stage,branch,commit,environment:matched.environment,alias:candidates[0],status:matched.latest_stage.status},null,2)+'\n',{mode:0o600})
+  console.log('PASS: Cloudflare confirma Stage y alias real: '+candidates[0])
+}catch(e){console.error(String(e.message||e).replace(/\b[a-f0-9]{32}\b/gi,'[cuenta]'));process.exit(1)}
+NODE
+STAGE_ALIAS="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).alias)' "$LOG/stage-owner.json")"
+[[ "$STAGE_ALIAS" =~ ^https://qa-kawvo-g4-1-[a-z0-9-]+\.intap-web2\.pages\.dev$ && "$STAGE_ALIAS" != "$ALIAS" ]] || fail "Alias Stage inválido"
 STAGE_ALIAS_OK=0
 for attempt in 1 2 3 4 5 6 7 8; do
-  if curl -fsSL --connect-timeout 10 --max-time 35 "https://$STAGE_BRANCH.intap-web2.pages.dev/admin/login" -o "$LOG/stage-alias.html" \
+  if curl -fsSL --connect-timeout 10 --max-time 35 "$STAGE_ALIAS/admin/login" -o "$LOG/stage-alias.html" \
     && [[ "$(asset "$LOG/stage-alias.html")" == "$NEW_JS" ]] \
-    && curl -fsSL --connect-timeout 10 --max-time 60 "https://$STAGE_BRANCH.intap-web2.pages.dev$NEW_JS" -o "$LOG/stage-alias.js" \
+    && curl -fsSL --connect-timeout 10 --max-time 60 "$STAGE_ALIAS$NEW_JS" -o "$LOG/stage-alias.js" \
     && cmp -s "$LOG/stage-alias.js" "app/dist$NEW_JS"; then STAGE_ALIAS_OK=1; break; fi
-  echo "INFO: Alias Stage aún no confirma el candidato (intento $attempt/8)"
+  echo "INFO: Alias real Stage aún no confirma el candidato (intento $attempt/8)"
   [[ "$attempt" == 8 ]] || sleep 3
 done
-[[ "$STAGE_ALIAS_OK" == 1 ]] || fail "Alias Stage no confirma el candidato; NO publicar ni repetir upload"
+[[ "$STAGE_ALIAS_OK" == 1 ]] || fail "Alias real Stage no confirma el candidato; NO publicar ni repetir upload"
 curl -fsSL --connect-timeout 10 --max-time 35 "$APP/admin/login" -o "$LOG/live-mid.html" || fail "App Preview cambió durante Stage"
 [[ "$(asset "$LOG/live-mid.html")" == "$OLD_JS" ]] || fail "Preview cambió durante Stage; NO publicar"
 curl -fsSL --connect-timeout 10 --max-time 35 "$ALIAS/admin/login" -o "$LOG/alias-mid.html" || fail "Alias App activo inaccesible"
