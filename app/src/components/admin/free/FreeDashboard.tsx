@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { apiGet, apiPut, apiUpload } from '../../../lib/api'
+import { apiGet, apiUpload } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
