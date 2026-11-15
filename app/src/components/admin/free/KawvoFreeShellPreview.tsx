@@ -180,7 +180,7 @@ export default function KawvoFreeShellPreview(){
           :missing.length>0?<div className="mt-3 rounded-xl bg-amber-50 px-3 py-3"><p className="text-sm font-bold text-amber-950">Siguiente paso: completar tu presentación</p><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-amber-950">{missing.slice(0,3).map((item,i)=><li key={i}>{item}</li>)}</ul>{missing.length>3&&<p className="mt-2 text-xs text-amber-900">Y {missing.length-3} requisito(s) más en tu panel.</p>}</div>
           :<p className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-700">Revisa los requisitos en tu panel antes de publicar. El avance no se calcula con datos incompletos.</p>}
           {(!readyToPublish||delegatedDemo)&&<button type="button" onClick={nextAction} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{nextActionLabel}</button>}
-          {!delegatedDemo&&(published||readyToPublish)&&<FreePublicationActions
+          {!delegatedDemo&&<FreePublicationActions
             key={accountIdentity}
             published={published}
             canPublish={readyToPublish}
