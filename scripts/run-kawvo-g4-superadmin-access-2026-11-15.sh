@@ -117,7 +117,20 @@ fi
 [[ "${KAWVO_G4_1_PAGES_APPROVED:-}" == SI ]] || fail "Publicación sin autorización"
 # Only the new isolated stage branch is uploaded before the active alias.
 COMMIT="$(git rev-parse HEAD)"
-npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$STAGE_BRANCH" --commit-hash "$COMMIT" > "$LOG/stage.log" 2>&1 || { tail -35 "$LOG/stage.log"; fail "Stage Pages"; }
+# Recover the exact already uploaded candidate without another Stage upload.
+# Only operational files/docs may differ from the recorded candidate.
+if [[ "${KAWVO_G4_1_REUSE_STAGE:-NO}" == SI ]]; then
+  STAGED_COMMIT="517d8b2ab0ac9f6a85abe7aaaf141d48e9581bb0"
+  RECOVERY_LOG="$HOME/intap-release-logs/kawvo-g4-1-pages-GnZEcJlh/stage.log"
+  git merge-base --is-ancestor "$STAGED_COMMIT" HEAD || fail "HEAD no desciende del Stage G4.1"
+  git diff --quiet "$STAGED_COMMIT" HEAD -- . ':(exclude)scripts/run-kawvo-g4-superadmin-access-2026-11-15.sh' ':(exclude)docs/architecture/KAWVO_G4_FREE_CONSOLIDATION_HANDOFF_2026-11-15.md' || fail "Candidato cambió; no reutilizar Stage"
+  [[ -s "$RECOVERY_LOG" ]] || fail "Falta log original de Stage G4.1"
+  cp "$RECOVERY_LOG" "$LOG/stage.log"
+  echo "INFO: reutilizando Stage G4.1 del log GnZEcJlh, sin nuevo upload"
+else
+  [[ "${KAWVO_G4_1_REUSE_STAGE:-NO}" == NO ]] || fail "Modo de reutilización inválido"
+  npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$STAGE_BRANCH" --commit-hash "$COMMIT" > "$LOG/stage.log" 2>&1 || { tail -35 "$LOG/stage.log"; fail "Stage Pages"; }
+fi
 STAGE="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/stage.log" | tail -1 || true)"
 [[ "$STAGE" =~ ^https://[0-9a-f]{8,}\.intap-web2\.pages\.dev$ ]] || fail "No se obtuvo URL inmutable de Stage"
 # Pages can briefly return 404 immediately after a successful upload.
@@ -133,8 +146,16 @@ done
 curl -fsSL --connect-timeout 10 --max-time 60 "$STAGE$NEW_JS" -o "$LOG/stage.js" || fail "JS Stage no disponible"
 cmp -s "$LOG/stage.js" "app/dist$NEW_JS" || fail "Stage distinto del build local"
 # Check its branch alias serves the same candidate, not a different deployment.
-curl -fsSL --connect-timeout 10 --max-time 35 "https://$STAGE_BRANCH.intap-web2.pages.dev/admin/login" -o "$LOG/stage-alias.html" || fail "Alias Stage inaccesible"
-[[ "$(asset "$LOG/stage-alias.html")" == "$NEW_JS" ]] || fail "Alias Stage distinto al candidato"
+STAGE_ALIAS_OK=0
+for attempt in 1 2 3 4 5 6 7 8; do
+  if curl -fsSL --connect-timeout 10 --max-time 35 "https://$STAGE_BRANCH.intap-web2.pages.dev/admin/login" -o "$LOG/stage-alias.html" \
+    && [[ "$(asset "$LOG/stage-alias.html")" == "$NEW_JS" ]] \
+    && curl -fsSL --connect-timeout 10 --max-time 60 "https://$STAGE_BRANCH.intap-web2.pages.dev$NEW_JS" -o "$LOG/stage-alias.js" \
+    && cmp -s "$LOG/stage-alias.js" "app/dist$NEW_JS"; then STAGE_ALIAS_OK=1; break; fi
+  echo "INFO: Alias Stage aún no confirma el candidato (intento $attempt/8)"
+  [[ "$attempt" == 8 ]] || sleep 3
+done
+[[ "$STAGE_ALIAS_OK" == 1 ]] || fail "Alias Stage no confirma el candidato; NO publicar ni repetir upload"
 curl -fsSL --connect-timeout 10 --max-time 35 "$APP/admin/login" -o "$LOG/live-mid.html" || fail "App Preview cambió durante Stage"
 [[ "$(asset "$LOG/live-mid.html")" == "$OLD_JS" ]] || fail "Preview cambió durante Stage; NO publicar"
 curl -fsSL --connect-timeout 10 --max-time 35 "$ALIAS/admin/login" -o "$LOG/alias-mid.html" || fail "Alias App activo inaccesible"
