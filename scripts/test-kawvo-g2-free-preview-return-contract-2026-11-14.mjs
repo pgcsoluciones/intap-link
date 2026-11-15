@@ -58,4 +58,10 @@ const preserve=load('scripts/assert-kawvo-g2-4-web-live-preservation-2026-11-15.
 assert.ok(preserve.includes('assert.deepEqual(changed,files.slice().sort()'),'Web source checker must fail on any extra file difference')
 assert.ok(preserve.includes('assert.equal(newFile(path),expected'),'Web source checker must compare exact expected file contents')
 assert.ok(pagesRunner.includes('pages deploy web/dist --project-name intap-link --branch "$WEB_BRANCH"'),'Deploy must preserve verified Cloudflare Pages branch alias')
+// The diagnostic mode must leave before ANY stage or live Pages publication.
+const preflightStop=pagesRunner.indexOf('echo "PASS G2.4 PREFLIGHT READ-ONLY:')
+const stageStart=pagesRunner.indexOf('wrangler pages deploy web/dist')
+assert.ok(preflightStop>=0&&stageStart>preflightStop,'Read-only preflight must terminate before first Pages write')
+const stopBlock=pagesRunner.slice(preflightStop,stageStart)
+assert.ok(stopBlock.includes('exit 0')&&stopBlock.includes('KAWVO_G2_4_PAGES_APPROVED'),'Preflight must exit and real deploy must still require explicit approval')
 console.log('PASS: G2.4 preview edit + Mi perfil return (Web+App), exact host/slug gates, API/roles intact')
