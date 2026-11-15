@@ -131,6 +131,7 @@ git diff --quiet "$WEB_DEPLOY_SHA" HEAD -- \
  web/src/components/medical-profile/KawMedProfile.tsx \
  web/src/components/sponsored/SponsoredAwareArtifactResolver.tsx \
  web/src/components/sponsored/SponsoredProfile.tsx || fail "Cambios detectados en Kawmed/Patrocinados/menú móvil, detener"
+node scripts/assert-kawvo-g2-4-web-live-preservation-2026-11-15.mjs "$WEB_DEPLOY_SHA" || fail "Web Preview no coincide byte a byte con tres parches Free autorizados"
 echo "PASS: integración Web comparada con Pages activo; solo tres componentes de navegación Free y su helper difieren"
 
 npx --no-install wrangler deployments status --name "$WORKER" --json > "$LOG/worker-before.json" 2> "$LOG/worker-before.err" || fail "Worker Preview inaccesible"
