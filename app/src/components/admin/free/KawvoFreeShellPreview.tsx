@@ -14,14 +14,14 @@ type Home={kind?:string;route?:string;public_route?:string|null;agenda_route?:st
 type Team={role?:'none'|'master'|'member';member?:{permissions?:string[]}}
 const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boolean;excludeDemo?:boolean;requiresIdentity?:boolean})[]=[
   {id:'identity',title:'Identidad y presentación',detail:'Nombre, cargo, foto y portada',group:'Perfil',path:'/admin/free/onboarding/identity?from=panel'},
-  {id:'contact',title:'Contacto',detail:'WhatsApp, teléfono y correo',group:'Perfil',path:'/admin/free/onboarding/contact',permission:'contact'},
-  {id:'quick',title:'Botones de contacto',detail:'Tus acciones principales',group:'Perfil',path:'/admin/free/quick-actions',permission:'quick_actions'},
-  {id:'location',title:'Ubicación',detail:'Dirección y mapa',group:'Perfil',path:'/admin/free/location',permission:'location'},
-  {id:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links'},
-  {id:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio'},
-  {id:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true},
+  {id:'contact',title:'Contacto',detail:'WhatsApp, teléfono y correo',group:'Perfil',path:'/admin/free/onboarding/contact',permission:'contact',requiresIdentity:true},
+  {id:'quick',title:'Botones de contacto',detail:'Tus acciones principales',group:'Perfil',path:'/admin/free/quick-actions',permission:'quick_actions',requiresIdentity:true},
+  {id:'location',title:'Ubicación',detail:'Dirección y mapa',group:'Perfil',path:'/admin/free/location',permission:'location',requiresIdentity:true},
+  {id:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links',requiresIdentity:true},
+  {id:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio',requiresIdentity:true},
+  {id:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true,requiresIdentity:true},
   {id:'bank',title:'Cuentas bancarias',detail:'Gestiona tus cuentas o consulta la disponibilidad según tu plan',group:'Perfil',path:'/admin/free/bank-accounts',ownerOnly:true,requiresIdentity:true},
-  {id:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design'},
+  {id:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design',requiresIdentity:true},
   {id:'account',title:'Mi cuenta',detail:'Configuración de cuenta y acceso',group:'Cuenta',path:'/admin/free/account'},
   {id:'credentials',title:'Credenciales',detail:'Administrar mi acceso',group:'Cuenta',path:'/admin/free/credentials',ownerOnly:true,excludeDemo:true},
   {id:'notifications',title:'Notificaciones',detail:'Avisos relacionados con tu perfil',group:'Cuenta',path:'/admin/free/notifications'},
@@ -94,7 +94,7 @@ export default function KawvoFreeShellPreview(){
   const accountSlug=String(profile.slug||'').trim()
   const allowAccountSwitch=!teamMember&&!delegatedDemo&&home?.kind==='multiaccount'
   const permissions=new Set(team.member?.permissions||[])
-  // Keep the existing FreeDashboard prerequisite for owner bank/AI access; do not infer plan entitlement.
+  // Preserve the original owner identity prerequisite; Team permissions remain independent and plan entitlement stays in the modules.
   const identityConfirmed=profile.templateData?.free_identity_confirmed===true
   const name=String(profile.name||'').trim()
   const isRealAsset=(value:unknown)=>Boolean(value)&&!String(value).includes('/assets/free-starter/')
@@ -107,7 +107,7 @@ export default function KawvoFreeShellPreview(){
     if(item.id==='services'&&!permissions.has('design'))return false
     if(!item.permission)return true
     return item.permission==='contact' ? ['phone','email','whatsapp'].some(key=>permissions.has(key)) : permissions.has(item.permission)
-  }).map(item=>item.requiresIdentity&&!baseReady?{...item,disabled:true,detail:'Completa primero los datos esenciales de tu presentación.'}:item)
+  }).map(item=>item.requiresIdentity&&!baseReady&&!teamMember?{...item,disabled:true,detail:'Completa primero los datos esenciales de tu presentación.'}:item)
   const routeById=new Map(modules.filter(item=>!item.disabled).map(item=>[item.id,item.path]))
   const agendaRoute=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')?home.agenda_route:''
   const completion=profile.freeReadiness
