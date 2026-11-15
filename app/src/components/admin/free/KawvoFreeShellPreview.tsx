@@ -44,11 +44,25 @@ export default function KawvoFreeShellPreview(){
     if(!enabled)return
     let active=true
     Promise.all([apiGet('/me'),apiGet('/me/home-route').catch(()=>({ok:false})),apiGet('/me/team/context').catch(()=>({ok:false}))])
-      .then(([p,h,t]:any[])=>{
+      .then(async ([p,h,t]:any[])=>{
         if(!active)return
         if(!p?.ok){setError('No pudimos comprobar este perfil. Vuelve al panel actual.');return}
+        let resolvedHome:Home|null=h?.ok?h.data||null:null
+        // The operator's generic home is always the directory, even after
+        // selection. Use its verified active-account context, not another
+        // profile or a navigation hint, for the selected Free account's Agenda.
+        if(h?.ok&&h.data?.kind==='multiaccount'){
+          const selected:any=await apiGet('/me/intapcard/active-account').catch(()=>({ok:false}))
+          if(!active)return
+          const current=selected?.data?.active
+          if(!selected?.ok||selected.data?.tab_session_valid!==true||current?.kind!=='free'||current?.route!=='/admin/free'||!p.data?.profile_id||String(current.id)!==String(p.data.profile_id)){
+            setError('No pudimos verificar la cuenta Free seleccionada. Vuelve a Multicuenta.')
+            return
+          }
+          resolvedHome={route:'/admin/free',agenda_route:'/admin/free/agenda'}
+        }
         setProfile(p.data||null)
-        setHome(h?.ok?h.data||null:null)
+        setHome(resolvedHome)
         setTeam(t?.ok?t.data||{role:'none'}:null)
       }).catch(()=>{if(active)setError('No pudimos cargar los datos. El panel actual sigue disponible.')})
       .finally(()=>{if(active)setBusy(false)})
