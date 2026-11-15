@@ -40,6 +40,7 @@ export default function KawvoFreeShellPreview(){
   const [busy,setBusy]=useState(true)
   const [error,setError]=useState('')
   const [shareMessage,setShareMessage]=useState('')
+  const [superAdminProfileId,setSuperAdminProfileId]=useState('')
   // Explicit opt-in; never available on production hostname or production build.
   const enabled=import.meta.env.MODE==='preview'&&window.location.hostname==='app.preview.intaprd.com'&&new URLSearchParams(window.location.search).get('kawvo_shell')==='1'
   useEffect(()=>{
@@ -70,6 +71,18 @@ export default function KawvoFreeShellPreview(){
       .finally(()=>{if(active)setBusy(false)})
     return()=>{active=false}
   },[enabled])
+  // Reuse the original SuperAdmin authorization check. Failure hides the
+  // shortcut without delaying the ordinary Free panel. A demo is never probed.
+  const verifiedProfileId=String(profile?.profile_id||'')
+  useEffect(()=>{
+    setSuperAdminProfileId('')
+    if(!enabled||!verifiedProfileId||isFreeDemoDelegationActive())return
+    let active=true
+    apiGet<{ok?:boolean}>('/superadmin/metrics/overview')
+      .then(result=>{if(active&&result?.ok===true)setSuperAdminProfileId(verifiedProfileId)})
+      .catch(()=>undefined)
+    return()=>{active=false}
+  },[enabled,verifiedProfileId])
   // Return state is scoped to this navigation and this authenticated profile only.
   useEffect(()=>{
     if(!enabled||!profile)return
@@ -90,6 +103,7 @@ export default function KawvoFreeShellPreview(){
   if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
   const teamMember=team.role==='member'
   const delegatedDemo=isFreeDemoDelegationActive()
+  const hasSuperAdminAccess=!delegatedDemo&&Boolean(verifiedProfileId)&&superAdminProfileId===verifiedProfileId
   const accountName=String(profile.name||'').trim()||'Mi presentación Free'
   const accountSlug=String(profile.slug||'').trim()
   const allowAccountSwitch=!teamMember&&!delegatedDemo&&home?.kind==='multiaccount'
@@ -166,7 +180,7 @@ export default function KawvoFreeShellPreview(){
       </div>
     </aside>
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3">
-      <div className="mx-auto flex max-w-3xl items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div><FreeNotificationBell returnState={shellReturnState}/></div>
+      <div className="mx-auto flex max-w-3xl items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div>{hasSuperAdminAccess&&<button type="button" onClick={()=>navigate('/superadmin')} className="min-h-11 shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-3 text-xs font-bold text-white">Super Admin</button>}<FreeNotificationBell returnState={shellReturnState}/></div>
     </header>
     <section className="mx-auto w-full max-w-3xl space-y-4 px-4 pt-5">
       <div aria-label="Presentación que estás administrando" className="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Cuenta activa · Kawlink Free</p><p className="mt-1 truncate text-sm font-black text-slate-900">{accountName}</p>{accountSlug&&<p className="mt-1 truncate text-xs text-slate-500">{accountSlug}</p>}</div>{allowAccountSwitch&&<button type="button" onClick={()=>navigate('/admin/accounts')} className="min-h-11 rounded-xl border border-cyan-200 bg-cyan-50 px-3 text-sm font-bold text-cyan-900">Cambiar cuenta</button>}</div></div>
