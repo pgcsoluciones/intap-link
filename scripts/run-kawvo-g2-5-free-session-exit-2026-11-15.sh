@@ -114,17 +114,47 @@ if [[ "$PREFLIGHT_ONLY" == SI ]]; then
  exit 0
 fi
 [[ "${KAWVO_G2_5_PAGES_APPROVED:-}" == SI ]] || fail "Publicación sin autorización"
-# Stage G2.5 in a separate Pages branch; NO active alias switch yet.
+# Reuse only the specific isolated Stage already uploaded for this candidate.
+# Default remains a new isolated stage; never infer a reusable stage from HTTP 200.
 COMMIT="$(git rev-parse HEAD)"
-npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$STAGE_BRANCH" --commit-hash "$COMMIT" > "$LOG/stage.log" 2>&1 || { tail -35 "$LOG/stage.log"; fail "Stage Pages"; }
-STAGE="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/stage.log" | tail -1 || true)"
-[[ -n "$STAGE" ]] || fail "No se obtuvo URL inmutable de Stage"
-curl -fsSL --connect-timeout 10 --max-time 35 "$STAGE/admin/login" -o "$LOG/stage.html" || fail "Stage no responde"
+REUSE_STAGE="${KAWVO_G2_5_REUSE_STAGE:-NO}"
+[[ "$REUSE_STAGE" == SI || "$REUSE_STAGE" == NO ]] || fail "Modo reutilización Stage inválido"
+if [[ "$REUSE_STAGE" == SI ]]; then
+  STAGED_COMMIT="a8974afc3d913d33903f815c079f6dd2acc85283"
+  git cat-file -e "$STAGED_COMMIT^{commit}" || fail "Commit Stage previo no disponible"
+  git diff --quiet "$STAGED_COMMIT" HEAD -- . ':(exclude)scripts/**' ':(exclude)docs/**' || fail "El código candidato cambió después del Stage; no reutilizar"
+  EXISTING_STAGE_LOG="$HOME/intap-release-logs/kawvo-g2-5-pages-lYm3H6w1/stage.log"
+  [[ -s "$EXISTING_STAGE_LOG" ]] || fail "Falta evidencia del Stage previo"
+  grep -Fq "https://qa-kawvo-g2-5-session-1115.intap-web2.pages.dev" "$EXISTING_STAGE_LOG" || fail "Alias Stage previo no confirmado"
+  STAGE="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$EXISTING_STAGE_LOG" | tail -1 || true)"
+  [[ "$STAGE" == "https://fa6fde1d.intap-web2.pages.dev" ]] || fail "URL Stage previo no coincide con evidencia"
+  cp "$EXISTING_STAGE_LOG" "$LOG/stage.log"
+  echo "INFO: reutilizando Stage G2.5 ya publicado, sin nuevo upload"
+else
+  npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$STAGE_BRANCH" --commit-hash "$COMMIT" > "$LOG/stage.log" 2>&1 || { tail -35 "$LOG/stage.log"; fail "Stage Pages"; }
+  STAGE="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/stage.log" | tail -1 || true)"
+fi
+[[ "$STAGE" =~ ^https://[0-9a-f]{8,}\.intap-web2\.pages\.dev$ ]] || fail "No se obtuvo URL inmutable de Stage"
+# Pages can briefly return 404 immediately after a successful upload.
+# A bounded retry never bypasses the exact candidate bundle validation.
+STAGE_OK=0
+for attempt in 1 2 3 4 5 6 7 8; do
+  if curl -fsSL --connect-timeout 10 --max-time 35 "$STAGE/admin/login" -o "$LOG/stage.html"; then STAGE_OK=1; break; fi
+  echo "INFO: Stage aún no disponible (intento $attempt/8)"
+  [[ "$attempt" == 8 ]] || sleep 3
+done
+[[ "$STAGE_OK" == 1 ]] || fail "Stage no responde tras intentos acotados"
 [[ "$(asset "$LOG/stage.html")" == "$NEW_JS" ]] || fail "Stage contiene JS diferente"
 curl -fsSL --connect-timeout 10 --max-time 60 "$STAGE$NEW_JS" -o "$LOG/stage.js" || fail "JS Stage no disponible"
 cmp -s "$LOG/stage.js" "app/dist$NEW_JS" || fail "Stage distinto del build local"
+# Check its branch alias serves the same candidate, not a different deployment.
+curl -fsSL --connect-timeout 10 --max-time 35 "https://qa-kawvo-g2-5-session-1115.intap-web2.pages.dev/admin/login" -o "$LOG/stage-alias.html" || fail "Alias Stage inaccesible"
+[[ "$(asset "$LOG/stage-alias.html")" == "$NEW_JS" ]] || fail "Alias Stage distinto al candidato"
 curl -fsSL --connect-timeout 10 --max-time 35 "$APP/admin/login" -o "$LOG/live-mid.html" || fail "App Preview cambió durante Stage"
 [[ "$(asset "$LOG/live-mid.html")" == "$OLD_JS" ]] || fail "Preview cambió durante Stage; NO publicar"
+curl -fsSL --connect-timeout 10 --max-time 35 "$ALIAS/admin/login" -o "$LOG/alias-mid.html" || fail "Alias App activo inaccesible"
+[[ "$(asset "$LOG/alias-mid.html")" == "$OLD_JS" ]] || fail "Alias App cambió; NO publicar"
+check_web mid
 echo "PASS: G2.5 Stage idéntico al build, G2.4 activo intacto"
 
 # Sole deliberate mutation: App Pages branch already owned by Worker origin.
