@@ -35,6 +35,7 @@ export default function FreePublicationActions({published,canPublish,onSaved,onI
     }catch{setError('No pudimos confirmar el cambio. Inténtalo de nuevo.')}
     finally{pending.current=false;setBusy(false)}
   }
+  if(!published&&!canPublish&&!error&&!busy)return null
   return <div className="mt-3">
     <button type="button" disabled={busy||(!published&&!canPublish)} onClick={()=>void change()} className={'min-h-12 w-full rounded-xl px-4 text-sm font-bold disabled:opacity-50 '+(published?'border border-slate-200 bg-white text-slate-700':'bg-cyan-700 text-white')}>
       {busy?'Guardando…':published?'Ocultar presentación':'Publicar presentación'}
