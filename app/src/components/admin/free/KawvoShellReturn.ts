@@ -11,6 +11,7 @@ export type KawvoShellReturn = {
   kawvoShellViaAccount?: boolean
 }
 export const KAWVO_SHELL_PREVIEW_ROUTE = '/admin/free/shell-preview?kawvo_shell=1'
+export const KAWVO_FREE_LEGACY_ROUTE = '/admin/free?legacy=1'
 
 const tabs: KawvoShellTab[] = ['home', 'profile', 'agenda', 'more']
 export function isKawvoShellPreviewHost(): boolean {

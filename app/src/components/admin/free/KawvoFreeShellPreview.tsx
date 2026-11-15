@@ -4,29 +4,31 @@ import { apiGet } from '../../../lib/api'
 import KawvoPagedList, { type KawvoListItem } from '../shared/KawvoPagedList'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
 import FreeShellSessionExit from './FreeShellSessionExit'
-import { getKawvoShellReturn, type KawvoShellListState, type KawvoShellReturn, type KawvoShellTab } from './KawvoShellReturn'
+import FreePublicationActions from './FreePublicationActions'
+import FreeNotificationBell from './FreeNotificationBell'
+import { KAWVO_FREE_LEGACY_ROUTE, getKawvoShellReturn, type KawvoShellListState, type KawvoShellReturn, type KawvoShellTab } from './KawvoShellReturn'
 
 type Tab=KawvoShellTab
 type Profile={profile_id?:string|number|null;name?:string|null;slug?:string|null;is_published?:number;avatar_url?:string|null;hero_url?:string|null;templateData?:Record<string,unknown>;freeReadiness?:{ready?:boolean;missing?:string[];steps?:{identifier?:boolean}}}
-type Home={route?:string;public_route?:string|null;agenda_route?:string|null;multiple_profiles?:boolean}
+type Home={kind?:string;route?:string;public_route?:string|null;agenda_route?:string|null;multiple_profiles?:boolean}
 type Team={role?:'none'|'master'|'member';member?:{permissions?:string[]}}
 const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boolean;excludeDemo?:boolean;requiresIdentity?:boolean})[]=[
   {id:'identity',title:'Identidad y presentación',detail:'Nombre, cargo, foto y portada',group:'Perfil',path:'/admin/free/onboarding/identity?from=panel'},
-  {id:'contact',title:'Contacto',detail:'WhatsApp, teléfono y correo',group:'Perfil',path:'/admin/free/onboarding/contact',permission:'contact'},
-  {id:'quick',title:'Botones de contacto',detail:'Tus acciones principales',group:'Perfil',path:'/admin/free/quick-actions',permission:'quick_actions'},
-  {id:'location',title:'Ubicación',detail:'Dirección y mapa',group:'Perfil',path:'/admin/free/location',permission:'location'},
-  {id:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links'},
-  {id:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio'},
-  {id:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true},
+  {id:'contact',title:'Contacto',detail:'WhatsApp, teléfono y correo',group:'Perfil',path:'/admin/free/onboarding/contact',permission:'contact',requiresIdentity:true},
+  {id:'quick',title:'Botones de contacto',detail:'Tus acciones principales',group:'Perfil',path:'/admin/free/quick-actions',permission:'quick_actions',requiresIdentity:true},
+  {id:'location',title:'Ubicación',detail:'Dirección y mapa',group:'Perfil',path:'/admin/free/location',permission:'location',requiresIdentity:true},
+  {id:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links',requiresIdentity:true},
+  {id:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio',requiresIdentity:true},
+  {id:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true,requiresIdentity:true},
   {id:'bank',title:'Cuentas bancarias',detail:'Gestiona tus cuentas o consulta la disponibilidad según tu plan',group:'Perfil',path:'/admin/free/bank-accounts',ownerOnly:true,requiresIdentity:true},
-  {id:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design'},
+  {id:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design',requiresIdentity:true},
   {id:'account',title:'Mi cuenta',detail:'Configuración de cuenta y acceso',group:'Cuenta',path:'/admin/free/account'},
   {id:'credentials',title:'Credenciales',detail:'Administrar mi acceso',group:'Cuenta',path:'/admin/free/credentials',ownerOnly:true,excludeDemo:true},
   {id:'notifications',title:'Notificaciones',detail:'Avisos relacionados con tu perfil',group:'Cuenta',path:'/admin/free/notifications'},
   {id:'ai',title:'Optimizar con IA',detail:'Asistencia cuando esté habilitada',group:'Herramientas',path:'/admin/free/ai-profile',ownerOnly:true,permission:'ai',excludeDemo:true,requiresIdentity:true}
 ]
 
-/** Opt-in Preview-only route. Existing FreeDashboard, its readiness and publication actions stay authoritative. */
+/** Preview-only Free shell. Navigation grants no permissions; publication is shared with the original panel. */
 export default function KawvoFreeShellPreview(){
   const navigate=useNavigate()
   const location=useLocation()
@@ -38,6 +40,7 @@ export default function KawvoFreeShellPreview(){
   const [busy,setBusy]=useState(true)
   const [error,setError]=useState('')
   const [shareMessage,setShareMessage]=useState('')
+  const [superAdminProfileId,setSuperAdminProfileId]=useState('')
   // Explicit opt-in; never available on production hostname or production build.
   const enabled=import.meta.env.MODE==='preview'&&window.location.hostname==='app.preview.intaprd.com'&&new URLSearchParams(window.location.search).get('kawvo_shell')==='1'
   useEffect(()=>{
@@ -59,7 +62,7 @@ export default function KawvoFreeShellPreview(){
             setError('No pudimos verificar la cuenta Free seleccionada. Vuelve a Multicuenta.')
             return
           }
-          resolvedHome={route:'/admin/free',agenda_route:'/admin/free/agenda'}
+          resolvedHome={route:'/admin/free',agenda_route:'/admin/free/agenda',kind:'multiaccount'}
         }
         setProfile(p.data||null)
         setHome(resolvedHome)
@@ -68,6 +71,18 @@ export default function KawvoFreeShellPreview(){
       .finally(()=>{if(active)setBusy(false)})
     return()=>{active=false}
   },[enabled])
+  // Reuse the original SuperAdmin authorization check. Failure hides the
+  // shortcut without delaying the ordinary Free panel. A demo is never probed.
+  const verifiedProfileId=String(profile?.profile_id||'')
+  useEffect(()=>{
+    setSuperAdminProfileId('')
+    if(!enabled||!verifiedProfileId||isFreeDemoDelegationActive())return
+    let active=true
+    apiGet<{ok?:boolean}>('/superadmin/metrics/overview')
+      .then(result=>{if(active&&result?.ok===true)setSuperAdminProfileId(verifiedProfileId)})
+      .catch(()=>undefined)
+    return()=>{active=false}
+  },[enabled,verifiedProfileId])
   // Return state is scoped to this navigation and this authenticated profile only.
   useEffect(()=>{
     if(!enabled||!profile)return
@@ -85,14 +100,15 @@ export default function KawvoFreeShellPreview(){
   },[enabled,profile,home,location.key,location.search])
   if(!enabled)return <Navigate to="/admin/free" replace/>
   if(busy)return <main role="status" className="min-h-screen bg-slate-50 p-8 text-center text-sm">Cargando espacio Kawvo…</main>
-  if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate('/admin/free')} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
+  if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
   const teamMember=team.role==='member'
   const delegatedDemo=isFreeDemoDelegationActive()
+  const hasSuperAdminAccess=!delegatedDemo&&Boolean(verifiedProfileId)&&superAdminProfileId===verifiedProfileId
   const accountName=String(profile.name||'').trim()||'Mi presentación Free'
   const accountSlug=String(profile.slug||'').trim()
-  const allowAccountSwitch=!teamMember
+  const allowAccountSwitch=!teamMember&&!delegatedDemo&&home?.kind==='multiaccount'
   const permissions=new Set(team.member?.permissions||[])
-  // Keep the existing FreeDashboard prerequisite for owner bank/AI access; do not infer plan entitlement.
+  // Preserve the original owner identity prerequisite; Team permissions remain independent and plan entitlement stays in the modules.
   const identityConfirmed=profile.templateData?.free_identity_confirmed===true
   const name=String(profile.name||'').trim()
   const isRealAsset=(value:unknown)=>Boolean(value)&&!String(value).includes('/assets/free-starter/')
@@ -105,14 +121,16 @@ export default function KawvoFreeShellPreview(){
     if(item.id==='services'&&!permissions.has('design'))return false
     if(!item.permission)return true
     return item.permission==='contact' ? ['phone','email','whatsapp'].some(key=>permissions.has(key)) : permissions.has(item.permission)
-  }).map(item=>item.requiresIdentity&&!baseReady?{...item,disabled:true,detail:'Completa primero los datos esenciales de tu presentación.'}:item)
+  }).map(item=>item.requiresIdentity&&!baseReady&&!teamMember?{...item,disabled:true,detail:'Completa primero los datos esenciales de tu presentación.'}:item)
   const routeById=new Map(modules.filter(item=>!item.disabled).map(item=>[item.id,item.path]))
   const agendaRoute=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')?home.agenda_route:''
   const completion=profile.freeReadiness
   const missing=Array.isArray(completion?.missing)?completion.missing.filter(item=>typeof item==='string'&&item.trim().length>0):[]
   const published=Number(profile.is_published)===1
   // Only the server readiness result can say "ready"; never derive a percentage from incomplete fields.
-  const readyToPublish=!published&&completion?.ready===true
+  const teamPublicationReady=identityConfirmed&&Boolean(name&&name.toLowerCase()!=='tu nombre o negocio'&&String(profile.templateData?.role||'').trim())
+  const publicationBaseReady=delegatedDemo||(teamMember?teamPublicationReady:baseReady)
+  const readyToPublish=!published&&completion?.ready===true&&publicationBaseReady
   const publicationLabel=published?'Publicado':readyToPublish?'Listo para publicar':'Borrador'
   const publicationStyle=published?'bg-emerald-50 text-emerald-800':readyToPublish?'bg-cyan-50 text-cyan-900':'bg-amber-50 text-amber-900'
   const nextActionLabel=published?'Administrar mi presentación':readyToPublish?'Revisar y publicar':'Continuar configuración'
@@ -131,8 +149,8 @@ export default function KawvoFreeShellPreview(){
   const openAgenda=()=>{if(agendaRoute)navigate(agendaRoute,{state:shellReturnState})}
   const nextAction=()=>{
     if(published){setTab('profile');return}
-    // Publication is deliberately left in the existing FreeDashboard, with its readiness and server checks.
-    if(readyToPublish){navigate('/admin/free');return}
+    // Delegated demo management retains its original workflow.
+    if(readyToPublish&&delegatedDemo){navigate(KAWVO_FREE_LEGACY_ROUTE);return}
     if(routeById.has('identity'))navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})
     else setTab('profile')
   }
@@ -158,25 +176,31 @@ export default function KawvoFreeShellPreview(){
           {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><span aria-hidden="true" className="w-5 text-lg">{icon}</span>{label}</button>)}
         </nav>
         <div className="mt-auto pt-6"><FreeShellSessionExit/></div>
-        <p className="pt-3 text-xs leading-5 text-slate-500">Vista experimental de interfaz. Las acciones reales conservan sus permisos.</p>
+        <p className="pt-3 text-xs leading-5 text-slate-500">Tu presentación digital.</p>
       </div>
     </aside>
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3">
-      <div className="mx-auto flex max-w-3xl items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div><button type="button" onClick={()=>navigate('/admin/free')} className="min-h-11 rounded-xl border border-slate-200 px-3 text-xs font-bold">Panel actual</button></div>
+      <div className="mx-auto flex max-w-3xl items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div>{hasSuperAdminAccess&&<button type="button" onClick={()=>navigate('/superadmin')} className="min-h-11 shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-3 text-xs font-bold text-white">Super Admin</button>}<FreeNotificationBell returnState={shellReturnState}/></div>
     </header>
     <section className="mx-auto w-full max-w-3xl space-y-4 px-4 pt-5">
       <div aria-label="Presentación que estás administrando" className="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Cuenta activa · Kawlink Free</p><p className="mt-1 truncate text-sm font-black text-slate-900">{accountName}</p>{accountSlug&&<p className="mt-1 truncate text-xs text-slate-500">{accountSlug}</p>}</div>{allowAccountSwitch&&<button type="button" onClick={()=>navigate('/admin/accounts')} className="min-h-11 rounded-xl border border-cyan-200 bg-cyan-50 px-3 text-sm font-bold text-cyan-900">Cambiar cuenta</button>}</div></div>
-      <p className="rounded-xl bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-900">Prueba visual de navegación · datos reales de tu propia cuenta, sin modificar la publicación. Las acciones llevan a los módulos actuales.</p>
       {tab==='home'&&<>
         <div><h1 className="text-2xl font-black">Mi espacio Kawvo</h1><p className="mt-1 text-sm text-slate-600">Todo organizado para trabajar desde tu celular.</p></div>
         <div className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-3">{profile.avatar_url?<img src={profile.avatar_url} alt="" className="h-14 w-14 rounded-xl object-cover"/>:<div className="grid h-14 w-14 place-items-center rounded-xl bg-slate-100 text-2xl">◉</div>}<div className="min-w-0 flex-1"><h2 className="truncate text-lg font-bold">{accountName}</h2><p className="mt-1 text-xs text-slate-600">Mi presentación digital · Free</p></div></div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-bold">Estado de mi presentación</h3><span className={'rounded-full px-3 py-1 text-xs font-bold '+publicationStyle}>{publicationLabel}</span></div>
           {published?<p className="mt-3 text-sm text-slate-600">Tu presentación está publicada. Puedes seguir editándola desde los módulos habituales.</p>
-          :readyToPublish?<p className="mt-3 rounded-xl bg-cyan-50 px-3 py-3 text-sm text-cyan-950">Tu perfil cumple los requisitos indicados por el sistema. Revisa y confirma la publicación desde el panel actual.</p>
+          :readyToPublish?<p className="mt-3 rounded-xl bg-cyan-50 px-3 py-3 text-sm text-cyan-950">Tu perfil cumple los requisitos indicados por el sistema. Revisa tu presentación y confirma la publicación cuando esté lista.</p>
           :missing.length>0?<div className="mt-3 rounded-xl bg-amber-50 px-3 py-3"><p className="text-sm font-bold text-amber-950">Siguiente paso: completar tu presentación</p><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-amber-950">{missing.slice(0,3).map((item,i)=><li key={i}>{item}</li>)}</ul>{missing.length>3&&<p className="mt-2 text-xs text-amber-900">Y {missing.length-3} requisito(s) más en tu panel.</p>}</div>
           :<p className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-700">Revisa los requisitos en tu panel antes de publicar. El avance no se calcula con datos incompletos.</p>}
-          <button type="button" onClick={nextAction} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{nextActionLabel}</button>
+          {(!readyToPublish||delegatedDemo)&&<button type="button" onClick={nextAction} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{nextActionLabel}</button>}
+          {!delegatedDemo&&<FreePublicationActions
+            key={accountIdentity}
+            published={published}
+            canPublish={readyToPublish}
+            onSaved={next=>setProfile(current=>current&&String(current.profile_id||current.slug||'')===accountIdentity?{...current,is_published:next?1:0}:current)}
+            onIncomplete={readiness=>setProfile(current=>current&&String(current.profile_id||current.slug||'')===accountIdentity?{...current,freeReadiness:readiness}:current)}
+          />}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button onClick={()=>setTab('profile')} className={button}><span className="mb-2 block text-xl">✎</span>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y contenido</span></button>
@@ -189,7 +213,7 @@ export default function KawvoFreeShellPreview(){
       {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
       {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<div className="rounded-2xl border bg-white p-4"><p className="text-sm text-slate-600">Tu calendario y solicitudes conservan las reglas actuales.</p><button onClick={openAgenda} className="mt-3 min-h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Abrir Agenda</button></div>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
       {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/><div className="md:hidden"><FreeShellSessionExit/></div></>}
-      <p className="pt-3 text-center text-xs text-slate-500">Versión experimental · los flujos reales se mantienen en sus rutas originales.</p>
+      {tab==='more'&&<button type="button" onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Abrir panel anterior</button>}
     </section>
     <nav aria-label="Navegación Kawvo" className={"fixed inset-x-0 bottom-0 z-20 grid gap-1 border-t border-slate-200 bg-white px-2 pb-[calc(7px+env(safe-area-inset-bottom))] pt-2 md:hidden "+(agendaRoute?"grid-cols-4":"grid-cols-3")}>
       {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold '+(tab===key?'bg-cyan-50 text-cyan-900':'text-slate-600')}><span aria-hidden="true" className="text-lg">{icon}</span>{label}</button>)}

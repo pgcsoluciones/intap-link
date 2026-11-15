@@ -26,7 +26,7 @@ const checks=[
  [shell,"selected.data?.tab_session_valid!==true",'No stale token'],
  [shell,"current?.kind!=='free'||current?.route!=='/admin/free'",'No other account kinds'],
  [shell,"String(current.id)!==String(p.data.profile_id)",'No cross-profile Agenda'],
- [shell,"resolvedHome={route:'/admin/free',agenda_route:'/admin/free/agenda'}",'Existing guarded Agenda only'],
+ [shell,"resolvedHome={route:'/admin/free',agenda_route:'/admin/free/agenda',kind:'multiaccount'}",'Existing guarded Agenda only'],
  [shell,"incomingReturn.kawvoShellAccount!==activeAccount",'Return remains account-scoped'],
  [shell,"if(path)navigate(path,{state:{...shellReturnState,kawvoShellList:listState,kawvoShellItem:id}})",'Module returns retain shell origin'],
  [runner,"scripts/test-kawvo-g3-free-module-parity-2026-11-15.mjs",'G3.1 regression retained']

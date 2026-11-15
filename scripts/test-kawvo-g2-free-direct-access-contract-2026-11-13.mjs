@@ -16,7 +16,8 @@ assert.match(shell,/get\('kawvo_shell'\)==='1'/,'Opt-in remains mandatory')
 
 // Home CTAs must stop using a round-trip through the original panel when safe.
 assert.match(shell,/const nextAction=\(\)=>\{\s*if\(published\)\{setTab\('profile'\);return\}/,'Published profile opens the new Profile tab')
-assert.match(shell,/if\(readyToPublish\)\{navigate\('\/admin\/free'\);return\}/,'Publish workflow still uses the canonical dashboard')
+assert.match(shell,/if\(readyToPublish&&delegatedDemo\)\{navigate\(KAWVO_FREE_LEGACY_ROUTE\);return\}/,'Delegated demos retain canonical original workflow')
+assert.match(shell,/<FreePublicationActions\s/,'Unified Free uses explicit shared publication control')
 assert.match(shell,/navigate\('\/admin\/free\/onboarding\/identity\?from=panel',\{state:shellReturnState\}\)/,'Draft continues directly in existing identity editor')
 assert.match(shell,/\/api\/v1\/me\/free\/profile-preview\/\$\{encodeURIComponent\(accountSlug\)\}\?full=1/,'Preview opens the same private endpoint as FreeDashboard')
 assert.match(shell,/href=\{previewHref\} target="_blank" rel="noopener noreferrer"/,'Preview does not require the old panel and opens safely in a new tab')
@@ -42,8 +43,8 @@ assert.match(agenda,/location\.state as \{kawvoShellReturn\?:boolean\}\|null/,'A
 assert.match(agenda,/returnToShell\?'\/admin\/free\/shell-preview\?kawvo_shell=1':'\/admin\/free\/account'/,'Agenda retains original return path as fallback')
 assert.match(agenda,/apiBase="\/me\/free\/appointments"/,'Agenda continues using its existing endpoint')
 
-// G2.1 is strictly read-only in the shell, no publishing, no account changes or hidden privilege bypass.
+// G4 keeps network writes out of the shell: the explicit publication child shares the original API.
 assert.doesNotMatch(shell,/apiPost\(|apiPut\(|apiPatch\(|apiDelete\(|apiUpload\(/,'Shell cannot write profile changes')
 assert.doesNotMatch(shell,/window\.location\.assign|window\.location\.replace/,'Shell does not redirect across origins')
-assert.match(legacy,/const togglePublished = async \(\) =>/,'Publication remains implemented only by the original dashboard')
+assert.match(legacy,/const togglePublished = async \(\) =>/,'Original dashboard retains its guarded publication handler')
 console.log('PASS: G2.1 direct preview/share, guarded publication, Preview-only module return, no new writes')
