@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
 import KawvoPagedList, { type KawvoListItem } from '../shared/KawvoPagedList'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
+import FreeShellSessionExit from './FreeShellSessionExit'
 import { getKawvoShellReturn, type KawvoShellListState, type KawvoShellReturn, type KawvoShellTab } from './KawvoShellReturn'
 
 type Tab=KawvoShellTab
@@ -124,12 +125,13 @@ export default function KawvoFreeShellPreview(){
   return <main className="min-h-[100dvh] bg-[#f1f5f7] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter'] text-slate-950 md:pl-[244px] md:pb-0">
     {/* Desktop navigation follows the approved demo; mobile retains the bottom navigation. */}
     <aside aria-label="Menú lateral Kawvo" className="fixed inset-y-0 left-0 hidden w-[244px] flex-col bg-[#f1f5f7] px-4 py-4 md:flex">
-      <div className="flex h-full flex-col rounded-[24px] border border-slate-200 bg-white p-4">
+      <div className="flex h-full flex-col overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-4">
         <div className="mb-8 flex items-center gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#123241] text-lg font-black text-white">K</div><div className="min-w-0"><strong className="block text-base">Kawvo</strong><span className="text-xs text-slate-500">Una experiencia</span></div></div>
         <nav aria-label="Secciones de Kawvo" className="flex flex-col gap-2">
           {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><span aria-hidden="true" className="w-5 text-lg">{icon}</span>{label}</button>)}
         </nav>
-        <p className="mt-auto pt-6 text-xs leading-5 text-slate-500">Vista experimental de interfaz. Las acciones reales conservan sus permisos.</p>
+        <div className="mt-auto pt-6"><FreeShellSessionExit/></div>
+        <p className="pt-3 text-xs leading-5 text-slate-500">Vista experimental de interfaz. Las acciones reales conservan sus permisos.</p>
       </div>
     </aside>
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3">
@@ -159,7 +161,7 @@ export default function KawvoFreeShellPreview(){
       </>}
       {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
       {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<div className="rounded-2xl border bg-white p-4"><p className="text-sm text-slate-600">Tu calendario y solicitudes conservan las reglas actuales.</p><button onClick={openAgenda} className="mt-3 min-h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Abrir Agenda</button></div>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
-      {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/></>}
+      {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/><div className="md:hidden"><FreeShellSessionExit/></div></>}
       <p className="pt-3 text-center text-xs text-slate-500">Versión experimental · los flujos reales se mantienen en sus rutas originales.</p>
     </section>
     <nav aria-label="Navegación Kawvo" className={"fixed inset-x-0 bottom-0 z-20 grid gap-1 border-t border-slate-200 bg-white px-2 pb-[calc(7px+env(safe-area-inset-bottom))] pt-2 md:hidden "+(agendaRoute?"grid-cols-4":"grid-cols-3")}>
