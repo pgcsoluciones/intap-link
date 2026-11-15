@@ -33,6 +33,7 @@ EXPECTED="$(printf '%s\n' \
  scripts/test-kawmed-isolation-contract.mjs \
  scripts/assert-kawvo-g2-4-web-live-preservation-2026-11-15.mjs \
  scripts/audit-kawvo-g2-web-pages-alias-readonly-2026-11-14.mjs \
+ scripts/audit-kawvo-g2-4-all-contracts-2026-11-15.mjs \
  scripts/run-kawvo-g2-4-preview-return-local-qa-2026-11-14.sh \
  scripts/deploy-kawvo-g2-4-preview-return-pages-2026-11-14.sh \
  docs/architecture/KAWVO_G2_4_FREE_PUBLIC_PREVIEW_RETURN_HANDOFF_2026-11-14.md | LC_ALL=C sort)"
