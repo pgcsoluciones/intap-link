@@ -7,21 +7,23 @@ import FreeShellSessionExit from './FreeShellSessionExit'
 import { getKawvoShellReturn, type KawvoShellListState, type KawvoShellReturn, type KawvoShellTab } from './KawvoShellReturn'
 
 type Tab=KawvoShellTab
-type Profile={profile_id?:string|number|null;name?:string|null;slug?:string|null;is_published?:number;avatar_url?:string|null;freeReadiness?:{ready?:boolean;missing?:string[]}}
+type Profile={profile_id?:string|number|null;name?:string|null;slug?:string|null;is_published?:number;avatar_url?:string|null;hero_url?:string|null;templateData?:Record<string,unknown>;freeReadiness?:{ready?:boolean;missing?:string[];steps?:{identifier?:boolean}}}
 type Home={route?:string;public_route?:string|null;agenda_route?:string|null;multiple_profiles?:boolean}
 type Team={role?:'none'|'master'|'member';member?:{permissions?:string[]}}
-const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boolean})[]=[
+const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boolean;excludeDemo?:boolean;requiresIdentity?:boolean})[]=[
   {id:'identity',title:'Identidad y presentación',detail:'Nombre, cargo, foto y portada',group:'Perfil',path:'/admin/free/onboarding/identity?from=panel'},
   {id:'contact',title:'Contacto',detail:'WhatsApp, teléfono y correo',group:'Perfil',path:'/admin/free/onboarding/contact',permission:'contact'},
   {id:'quick',title:'Botones de contacto',detail:'Tus acciones principales',group:'Perfil',path:'/admin/free/quick-actions',permission:'quick_actions'},
   {id:'location',title:'Ubicación',detail:'Dirección y mapa',group:'Perfil',path:'/admin/free/location',permission:'location'},
   {id:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links'},
   {id:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio'},
+  {id:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true},
+  {id:'bank',title:'Cuentas bancarias',detail:'Gestiona tus cuentas o consulta la disponibilidad según tu plan',group:'Perfil',path:'/admin/free/bank-accounts',ownerOnly:true,requiresIdentity:true},
   {id:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design'},
   {id:'account',title:'Mi cuenta',detail:'Configuración de cuenta y acceso',group:'Cuenta',path:'/admin/free/account'},
-  {id:'credentials',title:'Credenciales',detail:'Administrar mi acceso',group:'Cuenta',path:'/admin/free/credentials',ownerOnly:true},
+  {id:'credentials',title:'Credenciales',detail:'Administrar mi acceso',group:'Cuenta',path:'/admin/free/credentials',ownerOnly:true,excludeDemo:true},
   {id:'notifications',title:'Notificaciones',detail:'Avisos relacionados con tu perfil',group:'Cuenta',path:'/admin/free/notifications'},
-  {id:'ai',title:'Optimizar con IA',detail:'Asistencia cuando esté habilitada',group:'Herramientas',path:'/admin/free/ai-profile',ownerOnly:true,permission:'ai'}
+  {id:'ai',title:'Optimizar con IA',detail:'Asistencia cuando esté habilitada',group:'Herramientas',path:'/admin/free/ai-profile',ownerOnly:true,permission:'ai',excludeDemo:true,requiresIdentity:true}
 ]
 
 /** Opt-in Preview-only route. Existing FreeDashboard, its readiness and publication actions stay authoritative. */
@@ -71,16 +73,26 @@ export default function KawvoFreeShellPreview(){
   if(busy)return <main role="status" className="min-h-screen bg-slate-50 p-8 text-center text-sm">Cargando espacio Kawvo…</main>
   if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate('/admin/free')} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
   const teamMember=team.role==='member'
+  const delegatedDemo=isFreeDemoDelegationActive()
   const accountName=String(profile.name||'').trim()||'Mi presentación Free'
   const accountSlug=String(profile.slug||'').trim()
   const allowAccountSwitch=!teamMember
   const permissions=new Set(team.member?.permissions||[])
+  // Keep the existing FreeDashboard prerequisite for owner bank/AI access; do not infer plan entitlement.
+  const identityConfirmed=profile.templateData?.free_identity_confirmed===true
+  const name=String(profile.name||'').trim()
+  const isRealAsset=(value:unknown)=>Boolean(value)&&!String(value).includes('/assets/free-starter/')
+  const baseReady=delegatedDemo||Boolean(identityConfirmed&&name&&name.toLowerCase()!=='tu nombre o negocio'&&String(profile.templateData?.role||'').trim()&&profile.freeReadiness?.steps?.identifier&&isRealAsset(profile.avatar_url)&&isRealAsset(profile.hero_url))
   // This shell is a navigation aid, never the source of authorization. Exact existing route guards still apply.
-  const modules=allModules.filter(item=>!item.ownerOnly||!teamMember).filter(item=>{
-    if(!teamMember||!item.permission)return true
+  const modules=allModules.filter(item=>!item.ownerOnly||!teamMember).filter(item=>!item.excludeDemo||!delegatedDemo).filter(item=>{
+    if(!teamMember)return true
+    if(item.id==='identity')return ['name','role','photo'].some(key=>permissions.has(key))
+    // Services previously lived inside the guarded visual editor; preserve both permissions for Team.
+    if(item.id==='services'&&!permissions.has('design'))return false
+    if(!item.permission)return true
     return item.permission==='contact' ? ['phone','email','whatsapp'].some(key=>permissions.has(key)) : permissions.has(item.permission)
-  })
-  const routeById=new Map(modules.map(item=>[item.id,item.path]))
+  }).map(item=>item.requiresIdentity&&!baseReady?{...item,disabled:true,detail:'Completa primero los datos esenciales de tu presentación.'}:item)
+  const routeById=new Map(modules.filter(item=>!item.disabled).map(item=>[item.id,item.path]))
   const agendaRoute=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')?home.agenda_route:''
   const completion=profile.freeReadiness
   const missing=Array.isArray(completion?.missing)?completion.missing.filter(item=>typeof item==='string'&&item.trim().length>0):[]
@@ -107,7 +119,8 @@ export default function KawvoFreeShellPreview(){
     if(published){setTab('profile');return}
     // Publication is deliberately left in the existing FreeDashboard, with its readiness and server checks.
     if(readyToPublish){navigate('/admin/free');return}
-    navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})
+    if(routeById.has('identity'))navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})
+    else setTab('profile')
   }
   const previewHref=accountSlug?(isFreeDemoDelegationActive()&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/${encodeURIComponent(accountSlug)}?full=1#kawvo_shell=1&tab=profile&slug=${encodeURIComponent(accountSlug)}`):''
   const sharePublicUrl=async()=>{
