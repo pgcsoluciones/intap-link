@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
 import KawvoPagedList, { type KawvoListItem } from '../shared/KawvoPagedList'
@@ -83,21 +83,29 @@ export default function KawvoFreeShellPreview(){
       .catch(()=>undefined)
     return()=>{active=false}
   },[enabled,verifiedProfileId])
-  // Return state is scoped to this navigation and this authenticated profile only.
+  // Apply a return hint once per navigation and verified account, not whenever
+  // profile data changes (publish/hide, readiness, etc.). Wait until the initial
+  // account/Agenda resolution has completed. A new module return still restores
+  // its own tab and validated account.
+  const navigationAccount=String(profile?.profile_id||profile?.slug||'')
+  const navigationSlug=String(profile?.slug||'')
+  const restoredNavigation=useRef<{key:string;account:string}|null>(null)
   useEffect(()=>{
-    if(!enabled||!profile)return
-    const activeAccount=String(profile.profile_id||profile.slug||'')
-    if(incomingReturn){
-      if(incomingReturn.kawvoShellAccount!==activeAccount)return
+    if(!enabled||busy||!navigationAccount)return
+    const previous=restoredNavigation.current
+    if(previous?.key===location.key&&previous.account===navigationAccount)return
+    restoredNavigation.current={key:location.key,account:navigationAccount}
+    const hint=getKawvoShellReturn(location.state)
+    if(hint){
+      if(hint.kawvoShellAccount!==navigationAccount)return
       const agendaAvailable=typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda')
-      setTab(incomingReturn.kawvoShellTab==='agenda'&&!agendaAvailable?'home':incomingReturn.kawvoShellTab)
+      setTab(hint.kawvoShellTab==='agenda'&&!agendaAvailable?'home':hint.kawvoShellTab)
       return
     }
-    // Public Web Preview returns through a validated profile-only URL hint.
-    // This does not select an account or bypass the existing Free AdminGuard.
+    // Public Web Preview hint stays account-bound and does not select an account.
     const resume=new URLSearchParams(location.search)
-    if(resume.get('resume')==='profile'&&resume.get('slug')===String(profile.slug||''))setTab('profile')
-  },[enabled,profile,home,location.key,location.search])
+    if(resume.get('resume')==='profile'&&resume.get('slug')===navigationSlug)setTab('profile')
+  },[enabled,busy,navigationAccount,navigationSlug,home?.agenda_route,location.key,location.search,location.state])
   if(!enabled)return <Navigate to="/admin/free" replace/>
   if(busy)return <main role="status" className="min-h-screen bg-slate-50 p-8 text-center text-sm">Cargando espacio Kawvo…</main>
   if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
