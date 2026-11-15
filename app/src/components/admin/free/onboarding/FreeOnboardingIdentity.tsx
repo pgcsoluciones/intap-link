@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet, apiPut, apiUpload } from '../../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../../lib/imageUploadOptimization'
 import ImageCropModal from '../../ImageCropModal'
 import { FreeBackButton } from '../FreePanelUi'
 import { activeFreeDemoDelegationId, isFreeDemoDelegationActive } from '../../../../lib/freeDemoDelegation'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, kawvoShellBackTarget } from '../KawvoShellReturn'
 
 function normalizeSlug(value: string) {
   return value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '').slice(0, 32)
@@ -12,6 +13,8 @@ function normalizeSlug(value: string) {
 
 export default function FreeOnboardingIdentity() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
   const delegatedDemo = isFreeDemoDelegationActive()
   const editingFromPanel = new URLSearchParams(window.location.search).get('from') === 'panel'
   const fileRef = useRef<HTMLInputElement>(null)
@@ -134,7 +137,14 @@ export default function FreeOnboardingIdentity() {
       if (!teamMember) body.bio = bio.trim()
       if (canEditPhoto && avatarUrl.trim()) body.avatar_url = avatarUrl.trim()
       const result: any = await apiPut('/me/profile', body)
-      if (result.ok) navigate(teamMember || editingFromPanel ? '/admin/free' : '/admin/free/onboarding/contact', { replace: true })
+      if (result.ok) {
+        if (shellReturn) {
+          const target=kawvoShellBackTarget(shellReturn)
+          navigate(target.path,{replace:true,state:target.state})
+        } else {
+          navigate(teamMember || editingFromPanel ? '/admin/free' : '/admin/free/onboarding/contact', { replace: true })
+        }
+      }
       else setError(result.error || 'No pudimos guardar tus datos.')
     } catch {
       setError('No pudimos conectar. Intenta nuevamente.')

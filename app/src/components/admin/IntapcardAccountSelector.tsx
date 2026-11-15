@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPost, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
+import { isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './free/KawvoShellReturn'
 
 type AccountItem={
   id:string;kind:'medical'|'medical_master'|'sponsor'|'sponsored'|'free'|'paid'|'trial'
@@ -103,7 +104,13 @@ export default function IntapcardAccountSelector(){
         window.location.assign(origin+'/trial/mi/'+encodeURIComponent(item.id))
       }else{
         const route=String(response.data?.route||'/admin/accounts')
-        window.location.assign(item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route)
+        // Keep the canonical server route and token contract; only the selected
+        // Free account opts into the already guarded shell on App Preview.
+        const selectedFree=response.data?.kind==='free'&&String(response.data?.id||'')===item.id
+        const target=item.kind==='free'&&selectedFree&&route==='/admin/free'&&isKawvoShellPreviewHost()
+          ? KAWVO_SHELL_PREVIEW_ROUTE
+          : item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route
+        window.location.assign(target)
       }
     }catch(e){setError(e instanceof Error?e.message:'No se pudo seleccionar la cuenta.');setBusy('')}
   }

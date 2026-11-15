@@ -1,4 +1,6 @@
 import type { MouseEventHandler } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './KawvoShellReturn'
 
 const PLUS_PLAN_URL = 'https://nfc.kawvoia.com/plan-basico'
 const PLUS_PLAN_PHONE = '18097059802'
@@ -34,8 +36,25 @@ export function FreeBackButton({
   onClick: MouseEventHandler<HTMLButtonElement>
 }) {
   const returnToEditor = cameFromVisualEditor()
+  const location = useLocation()
+  const navigate = useNavigate()
+  // Only explicit navigation from experimental Preview shell may change the return target.
+  // Legacy routes and production sessions retain their original back behavior.
+  const returnContext=isKawvoShellPreviewHost()?getKawvoShellReturn(location.state):null
+  const returnToShell=Boolean(returnContext)
 
   const handleClick: MouseEventHandler<HTMLButtonElement> = (event) => {
+    if (returnContext) {
+      event.preventDefault()
+      if (returnContext.kawvoShellViaEditor) {
+        navigate('/admin/free/editor', {state:{...returnContext,kawvoShellViaEditor:false}})
+      } else if (returnContext.kawvoShellViaAccount) {
+        navigate('/admin/free/account', {state:{...returnContext,kawvoShellViaAccount:false}})
+      } else {
+        navigate(KAWVO_SHELL_PREVIEW_ROUTE, {state:returnContext})
+      }
+      return
+    }
     if (returnToEditor && window.history.length > 1) {
       event.preventDefault()
       window.history.back()
@@ -51,7 +70,7 @@ export function FreeBackButton({
       className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-cyan-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50"
     >
       <span aria-hidden="true">←</span>
-      <span>{returnToEditor ? 'Regresar a edición' : 'Volver a mi panel'}</span>
+      <span>{returnContext?.kawvoShellViaEditor ? 'Regresar a edición' : returnToShell ? 'Volver a mi espacio Kawvo' : returnToEditor ? 'Regresar a edición' : 'Volver a mi panel'}</span>
     </button>
   )
 }
