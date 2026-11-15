@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { apiGet, apiPut, apiUpload } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
@@ -9,6 +9,8 @@ import FreeHelpTip from './FreeHelpTip'
 import FreeNotificationBell from './FreeNotificationBell'
 import FreeGuidedTour from './FreeGuidedTour'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
+import { isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './KawvoShellReturn'
+import { submitFreePublication } from './FreePublicationActions'
 
 interface MeData {
   email: string
@@ -55,7 +57,16 @@ const freeItems: FreeItem[] = [
 function isStarterAsset(value: unknown) { return String(value || '').includes('/assets/free-starter/') }
 function isStarterId(value: unknown) { return String(value || '').startsWith('starter:') }
 
+/** Default Free entry only in Preview; delegated demos and explicit legacy fallback stay on the original panel. */
 export default function FreeDashboard() {
+  const location=useLocation()
+  if(isKawvoShellPreviewHost()&&!isFreeDemoDelegationActive()&&new URLSearchParams(location.search).get('legacy')!=='1'){
+    return <Navigate to={KAWVO_SHELL_PREVIEW_ROUTE} replace state={location.state}/>
+  }
+  return <FreeDashboardLegacy/>
+}
+
+function FreeDashboardLegacy() {
   const navigate = useNavigate()
   const delegatedDemo = isFreeDemoDelegationActive()
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -157,10 +168,9 @@ export default function FreeDashboard() {
     if (next === 1 && !effectivePublishReady) { setPublishError(`Aún no puedes publicar. Completa ${publishMissing.join(', ')}.`); return }
     setPublishing(true); setPublishError('')
     try {
-      const result: any = await apiPut('/me/profile', { is_published: next === 1 })
+      const result: any = await submitFreePublication(next === 1)
       if (result.ok) {
         setMe({ ...me, is_published: next })
-        if (next === 1) void apiPost('/me/notifications/profile-published', {}).catch(() => undefined)
       } else if (result.error === 'profile_incomplete') {
         setPublishError(result.message || 'Completa los datos mínimos antes de publicar.')
         setMe({ ...me, freeReadiness: result.readiness || me.freeReadiness })
