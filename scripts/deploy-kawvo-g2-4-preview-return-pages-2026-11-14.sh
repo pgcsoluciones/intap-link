@@ -2,7 +2,14 @@
 # G2.4: dual Pages-only Preview rollout. Both App and Web must move together;
 # staging precedes either alias update. No Worker/vars/API/D1/R2/production writes.
 set -euo pipefail
-[[ "${KAWVO_G2_4_PAGES_APPROVED:-}" == "SI" ]] || { echo "BLOCKED: falta KAWVO_G2_4_PAGES_APPROVED=SI"; exit 1; }
+# Read-only Cloudflare preflight is a separate mode and never grants deploy permission.
+PREFLIGHT_ONLY="${KAWVO_G2_4_PREFLIGHT_ONLY:-NO}"
+[[ "$PREFLIGHT_ONLY" == "SI" || "$PREFLIGHT_ONLY" == "NO" ]] || { echo "BLOCKED: modo PREFLIGHT_ONLY inválido"; exit 1; }
+if [[ "$PREFLIGHT_ONLY" != "SI" ]]; then
+  [[ "${KAWVO_G2_4_PAGES_APPROVED:-}" == "SI" ]] || { echo "BLOCKED: falta KAWVO_G2_4_PAGES_APPROVED=SI"; exit 1; }
+else
+  echo "AUDITORÍA: PREFLIGHT sin autorización de publicar, ni siquiera stage"
+fi
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="feature/kawvo-g2-free-preview-return-2026-11-14"
 BASE="f1f998fba3a64514ff3113b3e58a87e80475259a"
@@ -174,6 +181,14 @@ curl -fsSL --connect-timeout 10 --max-time 60 "$OLD_WEB$OLD_WEB_JS" -o "$LOG/web
 cmp -s "$LOG/web-before.js" "$LOG/web-immutable.js" || fail "Web Preview diverge del inmutable"
 echo "PASS: Web Preview activo y respaldado por Pages inmutable"
 
+# Hard stop for diagnostic runs; all commands before here are local or read-only.
+if [[ "$PREFLIGHT_ONLY" == "SI" ]]; then
+  echo "PASS G2.4 PREFLIGHT READ-ONLY: fuentes, builds, Worker, bindings, aliases e inmutables verificados."
+  echo "SIN DEPLOY: no se creó ningún stage ni se modificó ningún alias."
+  echo "LOG: $LOG"
+  exit 0
+fi
+[[ "${KAWVO_G2_4_PAGES_APPROVED:-}" == "SI" ]] || fail "Sin autorización explícita para Pages"
 # Both stage deployments are isolated branch aliases and cannot move the active Worker origins.
 COMMIT="$(git rev-parse HEAD)"
 npx --no-install wrangler pages deploy web/dist --project-name intap-link --branch qa-kawvo-g2-4-web-1114 --commit-hash "$COMMIT" > "$LOG/web-stage.log" 2>&1 || { tail -40 "$LOG/web-stage.log"; fail "Stage Web"; }
