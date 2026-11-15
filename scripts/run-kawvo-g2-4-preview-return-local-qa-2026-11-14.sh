@@ -75,6 +75,11 @@ node scripts/test-kawvo-g2-free-preview-return-contract-2026-11-14.mjs || fail "
 node scripts/test-free-contact-agenda-contract.mjs || fail "Regresión Web/Free/Agenda"
 node scripts/test-sponsored-profile-contract.mjs || fail "Regresión patrocinado"
 node scripts/test-kawmed-isolation-contract.mjs || fail "Regresión Kawmed"
+# Local baseline from owner's read-only Pages report; the deploy runner will recheck
+# dynamically against the LIVE Cloudflare Web deployment before any stage.
+PUBLISHED_WEB_SOURCE="529e58ec8ffae587ee02303ecfce2d569726a75d"
+git cat-file -e "$PUBLISHED_WEB_SOURCE^{commit}" || fail "Fuente Web verificada no disponible en este checkout"
+node scripts/assert-kawvo-g2-4-web-live-preservation-2026-11-15.mjs "$PUBLISHED_WEB_SOURCE" || fail "Preservación exacta Web Preview"
 mkdir -p "$HOME/intap-release-logs"
 LOG="$(mktemp -d "$HOME/intap-release-logs/kawvo-g2-4-local-XXXXXXXX")" || fail "No se pudo crear log"
 echo "LOG: $LOG"
