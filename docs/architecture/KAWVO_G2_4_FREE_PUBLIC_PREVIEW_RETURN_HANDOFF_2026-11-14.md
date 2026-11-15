@@ -102,3 +102,11 @@ Se recuperaron de ese commit los cinco archivos que NO deben cambiar en Web: `Ar
 **Estado final de esta anotación:** código y controles actualizados en PR #162 Draft; compilación después de integración **aún no ejecutada en el Mac**. App Preview G2.3 y Web Preview histórico siguen intactos.
 
 **Ajuste final de contratos:** `scripts/test-kawmed-isolation-contract.mjs` protegía la etiqueta antigua «Configuración», mientras la barra Web realmente publicada utiliza por defecto «Mi perfil» y su CSS móvil. Se actualizó la prueba para exigir ambas condiciones reales; no se modificó el funcionamiento médico. Este archivo forma parte de la allowlist y debe pasar en la nueva QA local.
+
+## 9. Comprobación adicional por transformaciones exactas (15/11/2026)
+
+Después de integrar la base Web publicada se añadió `scripts/assert-kawvo-g2-4-web-live-preservation-2026-11-15.mjs`, **read-only**, y se invoca obligatoriamente en el runner Pages ANTES de ambos stages. Utiliza `owner.commit` del alias Web auditado por Cloudflare, no la base App G2.3. Primero exige que el diff completo de `web/`, `shared/` y paquetes presente **exactamente cuatro rutas**. Después recupera por `git show` los tres archivos Web activos (OwnerBar, FreePreviewEditShortcut, IntapLinkGratisProfile), aplica en memoria únicamente las inserciones de navegación Free aprobadas y exige igualdad de bytes con los tres archivos preparados. Confirma que el cuarto archivo auxiliar no existía en el Web activo y mantiene validación de hostname/slug.
+
+Los cinco archivos ajenos que diferían de G2.3 (Kawmed, patrocinados, ArtifactLinkResolver y CSS móvil) siguen con blobs idénticos a la versión publicada; no se tocan ni se reescriben. Un cambio inesperado en cualquiera de los tres componentes compartidos también obliga a **BLOCKED**, aunque el nombre de archivo esté autorizado. La lista local de archivos permitidos incluye ahora el nuevo script y valida su sintaxis. La prueba de contrato G2.4 verifica que el runner de despliegue lo invoque.
+
+**Estado:** revisado en GitHub, sin nueva publicación; es obligatorio volver a ejecutar QA local/compilación por el cambio de base Web. Si QA local o auditoría del commit Web Pages no pasan, no iniciar despliegue. PR Draft y Producción intocados.
