@@ -19,7 +19,7 @@ const checks=[
  [shell,"profile.templateData?.free_identity_confirmed===true",'Identity confirmed'],
  [shell,"profile.freeReadiness?.steps?.identifier",'Server identifier readiness'],
  [shell,"isRealAsset(profile.avatar_url)&&isRealAsset(profile.hero_url)",'Identity excludes starter media'],
- [shell,"item.requiresIdentity&&!baseReady?{...item,disabled:true",'Missing identity disables access'],
+ [shell,"item.requiresIdentity&&!baseReady&&!teamMember?{...item,disabled:true",'Missing identity disables access'],
  [shell,"modules.filter(item=>!item.disabled).map(item=>[item.id,item.path])",'Disabled routes cannot be opened by menu handler'],
  [shell,"if(routeById.has('identity'))navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})",'Draft CTA respects identity permission'],
  [app,'<Route path="/admin/free/services" element={<FreeOwnerOnly><AdminGuard planScope="free"><TeamPermissionGuard permission="services">','Existing service guards'],
