@@ -10,18 +10,18 @@ if [[ "$PREFLIGHT_ONLY" == NO ]]; then
 fi
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="fix/kawvo-free-g2-product-qa-2026-11-15"
-CANDIDATE="917a72ccc80fed90de6e579e8232c52d485f6c8f"
+CANDIDATE="ddfb941a0b33863f3a843edce12c265c1366a3be"
 BASE="67cd49e224888dc19acefad933bfa0c7ddd6e9da"
-APP_TREE="f7f06a016529cee0701558861d3243214ffbdf79"
+APP_TREE="2db0d1af98bc7dac026227622158090979c0c8a0"
 WORKER="intap-api-preview"
 WORKER_VERSION="23405a5b-e9ca-4247-843d-28cc4f236eaa"
 APP="https://app.preview.intaprd.com"
 ALIAS="https://qa-kawmed-guest-current-2026.intap-web2.pages.dev"
 WEB="https://qa-sponsor-scan-1104.intap-link.pages.dev"
 PAGES_BRANCH="qa-kawmed-guest-current-2026-11-02"
-STAGE_BRANCH="qa-kawvo-g5-4-free-1115"
-PRIOR_REPORT="$HOME/intap-release-logs/kawvo-g2-qa-preview-SR1j8r6f/published-owner.json"
-OLD_DEPLOY="$(node -e 'const d=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(d.commit!=="c7b614af8628e5541b615d16e831085d47b5198a"||d.branch!=="qa-kawmed-guest-current-2026-11-02"||d.environment!=="preview"||d.alias!=="https://qa-kawmed-guest-current-2026.intap-web2.pages.dev"||d.status!=="success"||!/^https:\/\/[0-9a-f]{8,}\.intap-web2\.pages\.dev$/.test(d.stage))throw Error("Evidencia anterior inválida");console.log(d.stage)' "$PRIOR_REPORT")"
+STAGE_BRANCH="qa-kawvo-g5-5-free-1115"
+PRIOR_REPORT="$HOME/intap-release-logs/kawvo-g2-qa-preview-CabO2nfe/published-owner.json"
+OLD_DEPLOY="$(node -e 'const d=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(d.commit!=="917a72ccc80fed90de6e579e8232c52d485f6c8f"||d.branch!=="qa-kawmed-guest-current-2026-11-02"||d.environment!=="preview"||d.alias!=="https://qa-kawmed-guest-current-2026.intap-web2.pages.dev"||d.status!=="success"||!/^https:\/\/[0-9a-f]{8,}\.intap-web2\.pages\.dev$/.test(d.stage))throw Error("Evidencia anterior inválida");console.log(d.stage)' "$PRIOR_REPORT")"
 fail(){ echo "BLOCKED: $*" >&2; exit 1; }
 cd "$ROOT" || fail "Checkout local no disponible"
 [[ "$(git branch --show-current)" == "$BRANCH" ]] || fail "Rama equivocada"
@@ -140,7 +140,7 @@ try{
 }catch(e){console.error(String(e.message||e).replace(/\b[a-f0-9]{32}\b/gi,'[cuenta]'));process.exit(1)}
 NODE
 }
-check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" c7b614af8628e5541b615d16e831085d47b5198a "$ALIAS" "$LOG/active-owner.json"
+check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" 917a72ccc80fed90de6e579e8232c52d485f6c8f "$ALIAS" "$LOG/active-owner.json"
 npx --no-install wrangler deployments status --name "$WORKER" --json > "$LOG/worker-before.json" 2> "$LOG/worker-before.err" || fail "Worker no disponible"
 npx --no-install wrangler versions view "$WORKER_VERSION" --name "$WORKER" --json > "$LOG/version-before.json" 2> "$LOG/version-before.err" || fail "Versión de Worker no disponible"
 node - "$LOG/worker-before.json" "$LOG/version-before.json" "$WORKER_VERSION" "$ALIAS" "$WEB" <<'NODE' || fail "Worker/bindings cambiaron; NO publicar"
@@ -219,7 +219,7 @@ fi
 COMMIT="$(git rev-parse HEAD)"
 [[ "$COMMIT" == "$CANDIDATE" && "$(git ls-remote github refs/heads/main | cut -f1)" == "$BASE" && "$(git ls-remote github "refs/heads/$BRANCH" | cut -f1)" == "$CANDIDATE" ]] || fail "main/candidato cambiaron"
 [[ "$(gh pr view 168 --repo pgcsoluciones/intap-link --json headRefOid --jq .headRefOid)" == "$CANDIDATE" ]] || fail "PR distinto"
-[[ "$(gh run view 43791019876 --repo pgcsoluciones/intap-link --json headSha,status,conclusion --jq '[.headSha,.status,.conclusion] | join(" ")')" == "$CANDIDATE completed success" ]] || fail "CI exacta no aprobada"
+[[ "$(gh run view 43792888879 --repo pgcsoluciones/intap-link --json headSha,status,conclusion --jq '[.headSha,.status,.conclusion] | join(" ")')" == "$CANDIDATE completed success" ]] || fail "CI exacta no aprobada"
 npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$STAGE_BRANCH" --commit-hash "$COMMIT" --commit-dirty=false > "$LOG/stage.log" 2>&1 || { tail -35 "$LOG/stage.log"; fail "Stage Pages"; }
 STAGE="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/stage.log" | tail -1 || true)"
 [[ "$STAGE" =~ ^https://[0-9a-f]{8,}\.intap-web2\.pages\.dev$ ]] || fail "No se obtuvo URL inmutable de Stage"
@@ -262,7 +262,7 @@ echo "PASS: G2 QA Stage idéntico al build, G2 QA anterior activo intacto"
 
 # Sole deliberate mutation: App Pages branch already owned by Worker origin.
 [[ "$(git ls-remote github refs/heads/main | cut -f1)" == "$BASE" && "$(git ls-remote github "refs/heads/$BRANCH" | cut -f1)" == "$CANDIDATE" && -z "$(git status --porcelain)" ]] || fail "Referencias cambiaron durante Stage"
-check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" c7b614af8628e5541b615d16e831085d47b5198a "$ALIAS" "$LOG/active-owner-before-publish.json"
+check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" 917a72ccc80fed90de6e579e8232c52d485f6c8f "$ALIAS" "$LOG/active-owner-before-publish.json"
 echo "Publicando SOLO App Pages Preview (sin Worker)..."
 npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$PAGES_BRANCH" --commit-hash "$COMMIT" --commit-dirty=false > "$LOG/publish.log" 2>&1 || { tail -45 "$LOG/publish.log"; fail "Publicación App Pages"; }
 PUBLISHED="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/publish.log" | tail -1 || true)"
@@ -286,6 +286,6 @@ check_web after
 check_production after
 echo "PASS G2 QA APP PREVIEW: bundle publicado idéntico al build, Worker original al 100%"
 echo "Sin cambios API/Worker/OAuth/D1/R2/Web/Producción"
-echo "PENDIENTE: QA Mi cuenta, Cerrar sesión, Nuevo panel, Configurar agenda, últimos 5 pendientes y Ver todas; publicar/ocultar, retorno, Team/Multicuenta, demo y demás roles"
+echo "PENDIENTE: QA Mi cuenta, Cerrar sesión, Nuevo panel, Inicio > Agenda > resumen, Configurar agenda, últimos 5 pendientes y Ver todas; publicar/ocultar, retorno, Team/Multicuenta, demo y demás roles"
 echo "QA: $APP/admin/free"
 echo "LOG: $LOG"
