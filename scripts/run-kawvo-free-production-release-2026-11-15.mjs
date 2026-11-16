@@ -72,7 +72,14 @@ async function release(){
   const ci=JSON.parse(run('gh',['run','view','43781010487','--repo','pgcsoluciones/intap-link','--json','headSha,status,conclusion']));
   equal(ci.headSha,SHA,'CI SHA incorrecto');equal(ci.status,'completed','CI incompleta');equal(ci.conclusion,'success','CI no aprobada');
   execFileSync('python3',['scripts/production_approval_guard.py'],{env:{...process.env,INTAP_ENFORCE_PRODUCTION_APPROVAL:'1',INTAP_PRODUCTION_APPROVAL:'SÍ',INTAP_APPROVED_COMMIT:SHA},stdio:'inherit'});
-  console.log('PASS: main exacto, allowlist y CI productiva');
+  equal(git('rev-parse','HEAD:functions'),'034acf3d90ea40fe7262b39942d6a6e58c8c4ea1','Árbol Functions distinto');
+  equal(git('rev-parse',prev.commit+':functions'),'034acf3d90ea40fe7262b39942d6a6e58c8c4ea1','Functions del App histórico distintas');
+  const tracked=git('ls-tree','-r','--name-only','HEAD','--','functions/').split('\n').filter(Boolean).sort();
+  function actualFiles(dir){return readdirSync(dir).sort().flatMap(n=>{const p=dir+'/'+n,stat=lstatSync(p);if(stat.isSymbolicLink())fail('Symlink inesperado '+p);if(stat.isDirectory())return actualFiles(p);if(!stat.isFile())fail('Archivo no regular '+p);return [p]})}
+  equal(JSON.stringify(actualFiles('functions').sort()),JSON.stringify(tracked),'Archivos Functions locales extra o faltantes');
+  for(const p of tracked)equal(git('hash-object','--no-filters',p),git('rev-parse','HEAD:'+p),'Functions local distinta '+p);
+  for(const p of ['wrangler.toml','wrangler.json','wrangler.jsonc'])if(existsSync(p))fail('Configuración Wrangler raíz inesperada: '+p);
+  console.log('PASS: main exacto, allowlist, Functions históricas idénticas y CI productiva');
  }
  try{
   if(!['stage','publish'].includes(mode))fail('Modo inválido: stage o publish');
@@ -82,7 +89,7 @@ async function release(){
   async function deployment(id){const res=await fetch('https://api.cloudflare.com/client/v4/accounts/'+account+'/pages/projects/intap-web2/deployments/'+id,{headers,signal:AbortSignal.timeout(30000)});const b=await res.json().catch(()=>null);if(!res.ok||b?.success!==true||b.result?.id!==id)fail('GET deployment App no verificable');return b.result}
   function validateMeta(d,branch,commit,env){
    if(!d)fail('Deployment ausente');const m=d.deployment_trigger?.metadata;
-   equal(d.environment,env,'Entorno incorrecto');equal(m?.branch,branch,'Rama Pages incorrecta');equal(m?.commit_hash,commit,'Commit Pages incorrecto');equal(m?.commit_dirty,false,'Metadata dirty no es false');equal(d.latest_stage?.status,'success','Deployment no exitoso');if(d.uses_functions===true)fail('Pages Functions inesperadas en App');
+   equal(d.environment,env,'Entorno incorrecto');equal(m?.branch,branch,'Rama Pages incorrecta');equal(m?.commit_hash,commit,'Commit Pages incorrecto');equal(m?.commit_dirty,false,'Metadata dirty no es false');equal(d.latest_stage?.status,'success','Deployment no exitoso');equal(d.uses_functions,true,'Pages Functions históricas ausentes o no verificables');
    if(!/^https:\/\/[a-f0-9]{8,40}\.intap-web2\.pages\.dev\/?$/.test(d.url))fail('Origen App inmutable no reconocido');
   }
   async function canonical(x){
@@ -107,36 +114,46 @@ async function release(){
    }
    return JSON.stringify(out)
   }
+  // Check effective security headers of the immutable App with and without the new frontend.
+  function securityHeaders(host,route){
+   const h=run('curl',['-fsS','--connect-timeout','10','--max-time','35','-D','-','-o','/dev/null',host+route]);
+   const result={};for(const k of ['x-content-type-options','x-frame-options','referrer-policy','permissions-policy','content-security-policy']){
+    const line=h.split(/\r?\n/).find(x=>x.toLowerCase().startsWith(k+':'));result[k]=line?line.slice(k.length+1).trim():null;
+   }
+   if(result['x-content-type-options']!=='nosniff'||result['x-frame-options']!=='DENY')fail('Cabeceras históricas App no verificables '+host);
+   return JSON.stringify(result)
+  }
   phase='baseline';
   validateMeta(await canonical(prev),'main',prev.commit,'production');await canonical(web);
   const rollback=await deployment(prev.id);validateMeta(rollback,'main',prev.commit,'production');equal(normal(rollback.url),prev.url,'Rollback distinto');
-  const protectedBefore=protectedSurfaces();save('baseline.json',{app:prev,web,protected:JSON.parse(protectedBefore)});
+  const historicalHeaders=securityHeaders(prev.url,prev.route);const domainHeaders=securityHeaders(prev.domain,prev.route);
+  const protectedBefore=protectedSurfaces();save('baseline.json',{app:prev,web,functionsTree:'034acf3d90ea40fe7262b39942d6a6e58c8c4ea1',historicalHeaders:JSON.parse(historicalHeaders),domainHeaders:JSON.parse(domainHeaders),protected:JSON.parse(protectedBefore)});
   console.log('PASS: rollback disponible, App/Web productivos y Preview/Workers preservados');
   phase='build';
   if(!existsSync('node_modules'))fail('Dependencias locales no disponibles');
   const build=execFileSync('npm',['run','app:build'],{stdio:['ignore','pipe','pipe'],maxBuffer:64*1024*1024});writeFileSync(join(log,'build.log'),build,{mode:0o600});
   equal(asset(readFileSync('app/dist/index.html')),approvedAsset,'Nombre de bundle diferente al aprobado');equal(sha256(readFileSync('app/dist'+approvedAsset)),approvedHash,'Hash de bundle diferente al aprobado');
-  // Only upload the static App directory; never discover root Web Pages Functions.
+  // Match the historical App Pages deployment: upload app/dist from repo root with the exact unchanged root functions/.
   for(const p of ['app/functions','app/dist/_worker.js','app/dist/functions'])if(existsSync(p))fail('Functions inesperadas '+p);
   function manifest(dir,prefix=''){return readdirSync(dir).sort().flatMap(n=>{const f=join(dir,n),p=prefix+n,stat=lstatSync(f);if(stat.isSymbolicLink())fail('Symlink inesperado en dist');return stat.isDirectory()?manifest(f,p+'/'):[p+':'+sha256(readFileSync(f))]})}
   const dist=JSON.stringify(manifest('app/dist'));save('artifact.json',{commit:SHA,bundle:approvedAsset,hash:approvedHash,manifest:JSON.parse(dist)});
   console.log('PASS: bundle de producción idéntico al G5.2 aprobado');
-  function upload(branch,label){const raw=execFileSync('npx',['--no-install','wrangler','pages','deploy','dist','--project-name','intap-web2','--branch',branch,'--commit-hash',SHA,'--commit-dirty=false'],{cwd:join(root,'app'),stdio:['ignore','pipe','pipe'],maxBuffer:64*1024*1024});const out=raw.toString('utf8');writeFileSync(join(log,label+'.log'),out,{mode:0o600});const url=out.match(/https:\/\/[a-f0-9]{8,40}\.intap-web2\.pages\.dev/g)?.pop();if(!url)fail('No se obtuvo URL inmutable; no repetir upload');return url}
+  function upload(branch,label){const raw=execFileSync('npx',['--no-install','wrangler','pages','deploy','app/dist','--project-name','intap-web2','--branch',branch,'--commit-hash',SHA,'--commit-dirty=false'],{cwd:root,stdio:['ignore','pipe','pipe'],maxBuffer:64*1024*1024});const out=raw.toString('utf8');writeFileSync(join(log,label+'.log'),out,{mode:0o600});const url=out.match(/https:\/\/[a-f0-9]{8,40}\.intap-web2\.pages\.dev/g)?.pop();if(!url)fail('No se obtuvo URL inmutable; no repetir upload');return url}
   if(mode==='stage'){
    phase='stage';localGuard();await canonical(prev);await canonical(web);equal(protectedSurfaces(),protectedBefore,'Superficie protegida cambió');
-   const url=upload(STAGE,'stage');const short=new URL(url).hostname.split('.')[0];const d=await retry(async()=>{const res=await fetch('https://api.cloudflare.com/client/v4/accounts/'+account+'/pages/projects/intap-web2/deployments',{headers,signal:AbortSignal.timeout(30000)});const b=await res.json().catch(()=>null);if(!res.ok||b?.success!==true||!Array.isArray(b.result))fail('GET stage fallido');const hit=b.result.find(x=>normal(x.url)===url&&String(x.id).startsWith(short));validateMeta(hit,STAGE,SHA,'preview');bundleAt(url,'/admin/login',approvedAsset,approvedHash);return hit});
+   const url=upload(STAGE,'stage');const short=new URL(url).hostname.split('.')[0];const d=await retry(async()=>{const res=await fetch('https://api.cloudflare.com/client/v4/accounts/'+account+'/pages/projects/intap-web2/deployments',{headers,signal:AbortSignal.timeout(30000)});const b=await res.json().catch(()=>null);if(!res.ok||b?.success!==true||!Array.isArray(b.result))fail('GET stage fallido');const hit=b.result.find(x=>normal(x.url)===url&&String(x.id).startsWith(short));validateMeta(hit,STAGE,SHA,'preview');bundleAt(url,'/admin/login',approvedAsset,approvedHash);equal(securityHeaders(url,'/admin/login'),historicalHeaders,'Cabeceras Stage distintas del App histórico');return hit});
    await canonical(prev);await canonical(web);equal(protectedSurfaces(),protectedBefore,'Superficie protegida cambió');equal(JSON.stringify(manifest('app/dist')),dist,'Artefacto cambió');
-   const result={stageId:d.id,stageUrl:url,commit:SHA,bundle:approvedAsset,hash:approvedHash,manifest:JSON.parse(dist)};save('stage-pass.json',result);console.log('PASS STAGE: '+JSON.stringify(result));console.log('SIN PUBLICACION PRODUCTIVA. LOG: '+log);return;
+   const result={stageId:d.id,stageUrl:url,commit:SHA,bundle:approvedAsset,hash:approvedHash,manifest:JSON.parse(dist)};save('stage-pass.json',result);console.log('PASS STAGE: '+url+' | '+d.id+' | '+SHA+' | '+approvedHash);console.log('SIN PUBLICACION PRODUCTIVA. LOG: '+log);return;
   }
   // Publish requires the exact already verified isolated Stage evidence, obtained from the preceding run.
   phase='stage-revalidation';
   const stageLog=process.argv[3];if(!stageLog||!stageLog.startsWith(join(homedir(),'intap-release-logs','kawvo-free-production-release-'))||!stageLog.endsWith('/stage-pass.json'))fail('Ruta de evidencia Stage requerida');
   const st=JSON.parse(readFileSync(stageLog,'utf8'));equal(st.commit,SHA,'Stage SHA distinto');equal(st.bundle,approvedAsset,'Stage bundle distinto');equal(st.hash,approvedHash,'Stage hash distinto');equal(JSON.stringify(st.manifest),dist,'Stage manifest distinto del build actual');
-  const stage=await deployment(st.stageId);validateMeta(stage,STAGE,SHA,'preview');equal(normal(stage.url),st.stageUrl,'Stage URL distinta');bundleAt(st.stageUrl,'/admin/login',approvedAsset,approvedHash);
+  const stage=await deployment(st.stageId);validateMeta(stage,STAGE,SHA,'preview');equal(normal(stage.url),st.stageUrl,'Stage URL distinta');bundleAt(st.stageUrl,'/admin/login',approvedAsset,approvedHash);equal(securityHeaders(st.stageUrl,'/admin/login'),historicalHeaders,'Cabeceras Stage cambiaron');
   localGuard();await canonical(prev);await canonical(web);equal(protectedSurfaces(),protectedBefore,'Superficie protegida cambió');
   phase='production-upload';uploadAttempted=true;
   const url=upload('main','production');phase='post-deploy';
-  const post=await retry(async()=>{const p=await getProject(account,headers,'intap-web2'),d=p.canonical_deployment;equal(p.production_branch,'main','Rama productiva distinta');equal(p.source?.config?.production_deployments_enabled,false,'Auto-deploy cambió');validateMeta(d,'main',SHA,'production');equal(normal(d.url),url,'Deployment canónico no corresponde al upload');if(d.id===prev.id)fail('Deployment anterior sigue activo');bundleAt(url,'/admin/login',approvedAsset,approvedHash);for(const route of ['/admin/login','/admin/free','/admin/free?legacy=1'])bundleAt(prev.domain,route,approvedAsset,approvedHash);return d});
+  const post=await retry(async()=>{const p=await getProject(account,headers,'intap-web2'),d=p.canonical_deployment;equal(p.production_branch,'main','Rama productiva distinta');equal(p.source?.config?.production_deployments_enabled,false,'Auto-deploy cambió');validateMeta(d,'main',SHA,'production');equal(normal(d.url),url,'Deployment canónico no corresponde al upload');if(d.id===prev.id)fail('Deployment anterior sigue activo');bundleAt(url,'/admin/login',approvedAsset,approvedHash);for(const route of ['/admin/login','/admin/free','/admin/free?legacy=1'])bundleAt(prev.domain,route,approvedAsset,approvedHash);equal(securityHeaders(url,'/admin/login'),historicalHeaders,'Cabeceras App inmutable cambiaron');equal(securityHeaders(prev.domain,'/admin/login'),domainHeaders,'Cabeceras dominio App cambiaron');return d});
   await canonical(web);equal(protectedSurfaces(),protectedBefore,'Superficie protegida cambió');equal(JSON.stringify(manifest('app/dist')),dist,'Artefacto cambió');
   save('release-pass.json',{commit:SHA,deploymentId:post.id,url,bundle:approvedAsset,hash:approvedHash,rollback:prev.id});console.log('PASS APP PRODUCTION: '+url+' | '+post.id+' | '+SHA);console.log('QA autenticada pendiente. LOG: '+log);
  }catch(e){save('blocked.json',{phase,uploadAttempted,rollbackId:prev.id});console.error('BLOCKED '+phase+': '+(String(e.message||e).split('\n')[0].slice(0,200)));if(uploadAttempted)console.error('NO REPETIR UPLOAD. Revisar estado real y rollback exclusivamente App: '+prev.id);process.exitCode=1}
