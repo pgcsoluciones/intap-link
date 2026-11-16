@@ -10,3 +10,5 @@ Gate G2 permanece OPEN. C01–C07 y contrato maestro #156. No iniciar G3.
 - Release posterior separado. Preflight de auto deploy Pages/Workers Builds, hashes, stage aislado, alias real App Preview, rollback dbf7a9e4-4b51-4de3-8980-b28e0320cb42; producción App rollback 812ddfc0, Web/Workers originales protegidos. Sin publicar hasta pruebas/verificación y autorización exacta productiva.
 
 - QA Preview posterior: propietario detecta acceso directo a configuración Agenda omitido. Restaurar «Configurar agenda» sobre el resumen, reutilizando openAgenda y agendaRoute existentes, mismo guard de elegibilidad; «Ver todas» permanece independiente y lleva a solicitudes. Prueba exige coexistencia y retorno tipado, sin modificar AppointmentManager ni API.
+
+- QA Preview posterior: acceso Agenda desde Inicio todavía saltaba al configurador. Unificar ambos accesos seleccionando la pestaña agenda (setTab); conservar botón Configurar agenda y Ver todas dentro del resumen, guard agendaRoute, contexto y retornos. No cambiar gestión, API ni datos. Prueba bloqueante distingue Inicio de configuración.
