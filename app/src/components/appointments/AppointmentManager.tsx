@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '../../lib/api'
 
-type Props={apiBase:string;query?:string;onBack?:()=>void;title?:string}
+type Props={apiBase:string;query?:string;onBack?:()=>void;title?:string;initialSection?:'requests'}
 type Availability={id?:string;weekday:number;start_time:string;end_time:string;enabled:boolean;sort_order?:number}
 type Reason={id?:string;label:string;enabled:boolean;sort_order?:number}
 type Block={id:string;block_date:string;start_time?:string|null;end_time?:string|null;note?:string|null}
@@ -83,7 +83,7 @@ function whatsappOccupied(item:RequestItem){
   ].join('\n'))
 }
 
-export default function AppointmentManager({apiBase,query='',onBack,title='Agenda'}:Props){
+export default function AppointmentManager({apiBase,query='',onBack,title='Agenda',initialSection}:Props){
   const[data,setData]=useState<any>(null)
   const[loading,setLoading]=useState(true)
   const[saving,setSaving]=useState(false)
@@ -99,6 +99,8 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   const[occupiedId,setOccupiedId]=useState<string|null>(null)
   const[targetRequestId]=useState(()=>String(new URLSearchParams(window.location.search).get('request')||'').trim())
   const[highlightRequestId,setHighlightRequestId]=useState<string|null>(null)
+  const requestsHeading=useRef<HTMLHeadingElement>(null)
+  const initialSectionVisited=useRef(false)
 
   async function load(options:{silent?:boolean;preserveScroll?:boolean}={}){
     const silent=options.silent===true&&Boolean(data)
@@ -119,6 +121,17 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
     }
   }
   useEffect(()=>{void load()},[apiBase,query])
+
+  // Optional entry: focus the existing requests section once after successful load.
+  // Existing request deep links take precedence; other callers keep their original entry point.
+  useEffect(()=>{
+    if(initialSection!=='requests'||targetRequestId||loading||error||!data||initialSectionVisited.current)return
+    const heading=requestsHeading.current
+    if(!heading)return
+    initialSectionVisited.current=true
+    heading.focus({preventScroll:true})
+    heading.scrollIntoView({block:'start',behavior:'auto'})
+  },[initialSection,targetRequestId,loading,error,data])
 
   const pending=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='pending'),[data])
   const confirmed=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='confirmed'),[data])
@@ -333,7 +346,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       </section>
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-black">Solicitudes pendientes <span className="text-slate-400">({pending.length})</span></h2>
+        <h2 ref={requestsHeading} tabIndex={initialSection==='requests'?-1:undefined} className="scroll-mt-6 text-xl font-black">Solicitudes pendientes <span className="text-slate-400">({pending.length})</span></h2>
         <div className="mt-4 space-y-3">{pageItems(pending,pendingPage).map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><button type="button" onClick={()=>void act(item,'confirm')} className={'rounded-xl bg-emerald-600 px-3 py-2 text-sm font-black text-white '+actionFx}>Confirmar</button><button type="button" onClick={()=>void act(item,'reject')} className={'rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-600 '+actionFx}>Rechazar</button>{occupiedId===item.id&&<a href={whatsappOccupied(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-amber-100 px-3 py-2 text-sm font-black text-amber-800 '+actionFx}>Avisar horario ocupado</a>}</RequestCard>)}{!pending.length&&<p className="text-base text-slate-500">No hay solicitudes pendientes.</p>}</div>
         <PaginationControls page={pendingPage} total={pending.length} pageSize={PAGE_SIZE} onPage={setPendingPage}/>
       </section>
