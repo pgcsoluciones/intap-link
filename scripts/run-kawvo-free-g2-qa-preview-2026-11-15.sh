@@ -10,17 +10,18 @@ if [[ "$PREFLIGHT_ONLY" == NO ]]; then
 fi
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="fix/kawvo-free-g2-product-qa-2026-11-15"
-CANDIDATE="c7b614af8628e5541b615d16e831085d47b5198a"
+CANDIDATE="917a72ccc80fed90de6e579e8232c52d485f6c8f"
 BASE="67cd49e224888dc19acefad933bfa0c7ddd6e9da"
-APP_TREE="63f0e81a851f2988035d70fe56bc8424e955fbd7"
+APP_TREE="f7f06a016529cee0701558861d3243214ffbdf79"
 WORKER="intap-api-preview"
 WORKER_VERSION="23405a5b-e9ca-4247-843d-28cc4f236eaa"
 APP="https://app.preview.intaprd.com"
 ALIAS="https://qa-kawmed-guest-current-2026.intap-web2.pages.dev"
 WEB="https://qa-sponsor-scan-1104.intap-link.pages.dev"
 PAGES_BRANCH="qa-kawmed-guest-current-2026-11-02"
-STAGE_BRANCH="qa-kawvo-g5-3-free-1115"
-OLD_DEPLOY="https://dbf7a9e4.intap-web2.pages.dev"
+STAGE_BRANCH="qa-kawvo-g5-4-free-1115"
+PRIOR_REPORT="$HOME/intap-release-logs/kawvo-g2-qa-preview-SR1j8r6f/published-owner.json"
+OLD_DEPLOY="$(node -e 'const d=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));if(d.commit!=="c7b614af8628e5541b615d16e831085d47b5198a"||d.branch!=="qa-kawmed-guest-current-2026-11-02"||d.environment!=="preview"||d.alias!=="https://qa-kawmed-guest-current-2026.intap-web2.pages.dev"||d.status!=="success"||!/^https:\/\/[0-9a-f]{8,}\.intap-web2\.pages\.dev$/.test(d.stage))throw Error("Evidencia anterior inválida");console.log(d.stage)' "$PRIOR_REPORT")"
 fail(){ echo "BLOCKED: $*" >&2; exit 1; }
 cd "$ROOT" || fail "Checkout local no disponible"
 [[ "$(git branch --show-current)" == "$BRANCH" ]] || fail "Rama equivocada"
@@ -139,7 +140,7 @@ try{
 }catch(e){console.error(String(e.message||e).replace(/\b[a-f0-9]{32}\b/gi,'[cuenta]'));process.exit(1)}
 NODE
 }
-check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" 37a9a01a667251883818c66a2801b2f2e243cbbf "$ALIAS" "$LOG/active-owner.json"
+check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" c7b614af8628e5541b615d16e831085d47b5198a "$ALIAS" "$LOG/active-owner.json"
 npx --no-install wrangler deployments status --name "$WORKER" --json > "$LOG/worker-before.json" 2> "$LOG/worker-before.err" || fail "Worker no disponible"
 npx --no-install wrangler versions view "$WORKER_VERSION" --name "$WORKER" --json > "$LOG/version-before.json" 2> "$LOG/version-before.err" || fail "Versión de Worker no disponible"
 node - "$LOG/worker-before.json" "$LOG/version-before.json" "$WORKER_VERSION" "$ALIAS" "$WEB" <<'NODE' || fail "Worker/bindings cambiaron; NO publicar"
@@ -156,14 +157,14 @@ console.log('PASS: Worker original al 100%, 35 bindings y orígenes intactos')
 NODE
 curl -fsSL --connect-timeout 10 --max-time 35 "$APP/admin/login" -o "$LOG/live-before.html" || fail "Dominio App Preview inaccesible"
 curl -fsSL --connect-timeout 10 --max-time 35 "$ALIAS/admin/login" -o "$LOG/alias-before.html" || fail "Alias de Pages inaccesible"
-curl -fsSL --connect-timeout 10 --max-time 35 "$OLD_DEPLOY/admin/login" -o "$LOG/previous-immutable.html" || fail "G5 anterior inmutable inaccesible"
+curl -fsSL --connect-timeout 10 --max-time 35 "$OLD_DEPLOY/admin/login" -o "$LOG/previous-immutable.html" || fail "G2 QA anterior inmutable inaccesible"
 OLD_JS="$(asset "$LOG/live-before.html")"
-[[ -n "$OLD_JS" && "$(asset "$LOG/alias-before.html")" == "$OLD_JS" && "$(asset "$LOG/previous-immutable.html")" == "$OLD_JS" ]] || fail "Preview activo ya no corresponde al G5 anterior publicado"
+[[ -n "$OLD_JS" && "$(asset "$LOG/alias-before.html")" == "$OLD_JS" && "$(asset "$LOG/previous-immutable.html")" == "$OLD_JS" ]] || fail "Preview activo ya no corresponde al G2 QA anterior publicado"
 curl -fsSL --connect-timeout 10 --max-time 60 "$APP$OLD_JS" -o "$LOG/live-before.js" || fail "No se puede copiar JS activo"
-curl -fsSL --connect-timeout 10 --max-time 60 "$OLD_DEPLOY$OLD_JS" -o "$LOG/previous-immutable.js" || fail "No se puede recuperar JS G5 anterior"
-cmp -s "$LOG/live-before.js" "$LOG/previous-immutable.js" || fail "JS activo no coincide byte a byte con G5 anterior inmutable"
+curl -fsSL --connect-timeout 10 --max-time 60 "$OLD_DEPLOY$OLD_JS" -o "$LOG/previous-immutable.js" || fail "No se puede recuperar JS G2 QA anterior"
+cmp -s "$LOG/live-before.js" "$LOG/previous-immutable.js" || fail "JS activo no coincide byte a byte con G2 QA anterior inmutable"
 printf '%s\n' "$OLD_DEPLOY" "$OLD_JS" > "$LOG/recovery-g5.txt"
-echo "PASS: G5 anterior activo y respaldado por origen inmutable comprobado"
+echo "PASS: G2 QA anterior activo y respaldado por origen inmutable comprobado"
 
 # Web must remain the already published G2.4 bundle. No Web upload in this lot.
 WEB_PRIOR="$HOME/intap-release-logs/kawvo-g2-4-pages-A6GfUYz0/web-publish.log"
@@ -209,7 +210,7 @@ NODE
 check_web before
 check_production before
 if [[ "$PREFLIGHT_ONLY" == SI ]]; then
- echo "PASS G2 QA PREVIEW PREFLIGHT: contratos, App build, respaldo App G5 anterior, Web G2.4 y Worker verificados"
+ echo "PASS G2 QA PREVIEW PREFLIGHT: contratos, App build, respaldo App G2 QA anterior, Web G2.4 y Worker verificados"
  echo "SIN DEPLOY NI STAGE. LOG: $LOG"
  exit 0
 fi
@@ -218,7 +219,7 @@ fi
 COMMIT="$(git rev-parse HEAD)"
 [[ "$COMMIT" == "$CANDIDATE" && "$(git ls-remote github refs/heads/main | cut -f1)" == "$BASE" && "$(git ls-remote github "refs/heads/$BRANCH" | cut -f1)" == "$CANDIDATE" ]] || fail "main/candidato cambiaron"
 [[ "$(gh pr view 168 --repo pgcsoluciones/intap-link --json headRefOid --jq .headRefOid)" == "$CANDIDATE" ]] || fail "PR distinto"
-[[ "$(gh run view 43788795663 --repo pgcsoluciones/intap-link --json headSha,status,conclusion --jq '[.headSha,.status,.conclusion] | join(" ")')" == "$CANDIDATE completed success" ]] || fail "CI exacta no aprobada"
+[[ "$(gh run view 43791019876 --repo pgcsoluciones/intap-link --json headSha,status,conclusion --jq '[.headSha,.status,.conclusion] | join(" ")')" == "$CANDIDATE completed success" ]] || fail "CI exacta no aprobada"
 npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$STAGE_BRANCH" --commit-hash "$COMMIT" --commit-dirty=false > "$LOG/stage.log" 2>&1 || { tail -35 "$LOG/stage.log"; fail "Stage Pages"; }
 STAGE="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/stage.log" | tail -1 || true)"
 [[ "$STAGE" =~ ^https://[0-9a-f]{8,}\.intap-web2\.pages\.dev$ ]] || fail "No se obtuvo URL inmutable de Stage"
@@ -257,11 +258,11 @@ curl -fsSL --connect-timeout 10 --max-time 35 "$ALIAS/admin/login" -o "$LOG/alia
 [[ "$(asset "$LOG/alias-mid.html")" == "$OLD_JS" ]] || fail "Alias App cambió; NO publicar"
 check_web mid
 check_production mid
-echo "PASS: G2 QA Stage idéntico al build, G5 anterior activo intacto"
+echo "PASS: G2 QA Stage idéntico al build, G2 QA anterior activo intacto"
 
 # Sole deliberate mutation: App Pages branch already owned by Worker origin.
 [[ "$(git ls-remote github refs/heads/main | cut -f1)" == "$BASE" && "$(git ls-remote github "refs/heads/$BRANCH" | cut -f1)" == "$CANDIDATE" && -z "$(git status --porcelain)" ]] || fail "Referencias cambiaron durante Stage"
-check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" 37a9a01a667251883818c66a2801b2f2e243cbbf "$ALIAS" "$LOG/active-owner-before-publish.json"
+check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" c7b614af8628e5541b615d16e831085d47b5198a "$ALIAS" "$LOG/active-owner-before-publish.json"
 echo "Publicando SOLO App Pages Preview (sin Worker)..."
 npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$PAGES_BRANCH" --commit-hash "$COMMIT" --commit-dirty=false > "$LOG/publish.log" 2>&1 || { tail -45 "$LOG/publish.log"; fail "Publicación App Pages"; }
 PUBLISHED="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/publish.log" | tail -1 || true)"
@@ -285,6 +286,6 @@ check_web after
 check_production after
 echo "PASS G2 QA APP PREVIEW: bundle publicado idéntico al build, Worker original al 100%"
 echo "Sin cambios API/Worker/OAuth/D1/R2/Web/Producción"
-echo "PENDIENTE: QA Mi cuenta, Cerrar sesión, Nuevo panel, últimos 5 pendientes y Ver todas; publicar/ocultar, retorno, Team/Multicuenta, demo y demás roles"
+echo "PENDIENTE: QA Mi cuenta, Cerrar sesión, Nuevo panel, Configurar agenda, últimos 5 pendientes y Ver todas; publicar/ocultar, retorno, Team/Multicuenta, demo y demás roles"
 echo "QA: $APP/admin/free"
 echo "LOG: $LOG"
