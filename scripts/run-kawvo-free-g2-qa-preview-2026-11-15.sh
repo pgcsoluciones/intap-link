@@ -6,7 +6,7 @@ set -euo pipefail
 PREFLIGHT_ONLY="${KAWVO_G2_QA_PREFLIGHT_ONLY:-SI}"
 [[ "$PREFLIGHT_ONLY" == SI || "$PREFLIGHT_ONLY" == NO ]] || { echo "BLOCKED: modo inválido"; exit 1; }
 if [[ "$PREFLIGHT_ONLY" == NO ]]; then
- [[ "${KAWVO_G2_QA_PAGES_APPROVED:-}" == SI ]] || { echo "BLOCKED: falta autorización G5 Preview"; exit 1; }
+ [[ "${KAWVO_G2_QA_PAGES_APPROVED:-}" == SI ]] || { echo "BLOCKED: falta autorización G2 Preview"; exit 1; }
 fi
 ROOT="$HOME/Desktop/intap-link-universal-bilingual-audit"
 BRANCH="fix/kawvo-free-g2-product-qa-2026-11-15"
@@ -56,7 +56,7 @@ node - "$PROD_JS" "$LOG/candidate-production.json" <<'NODE' || fail "Hash candid
 const fs=require('fs'),crypto=require('crypto'),[asset,report]=process.argv.slice(2)
 const sha256=crypto.createHash('sha256').update(fs.readFileSync('app/dist'+asset)).digest('hex')
 fs.writeFileSync(report,JSON.stringify({asset,sha256},null,2)+'\n')
-console.log('PASS: build G5.2 Producción (no publicado) '+asset+' sha256='+sha256)
+console.log('PASS: build G2 QA Producción (no publicado) '+asset+' sha256='+sha256)
 NODE
 npm run app:build:preview > "$LOG/build.txt" 2>&1 || { tail -60 "$LOG/build.txt"; fail "Build App Preview"; }
 [[ -f app/dist/index.html && -z "$(git status --porcelain)" ]] || fail "Build no generó artefacto limpio"
@@ -113,7 +113,12 @@ async function api(url,headers){
 
 const [stage,branch,commit,expectedAlias,report]=process.argv.slice(2)
 try{
-  const headers=existingCredentials(),account=existingAccount()
+  const account=existingAccount(),headers=existingCredentials()
+  if(account.toLowerCase()!=='adf4d5ebb625fed2c32e38cef57a6319')throw Error('Cuenta Cloudflare distinta')
+  for(const [name,id,commit] of [['intap-web2','812ddfc0-7719-489f-bb99-5fb0e3bb8e20','67cd49e224888dc19acefad933bfa0c7ddd6e9da'],['intap-link','1672b41a-8e3d-44a8-b576-026693c04e29','31d4a6614c8e33aad04efe89fc8d683b2c1c203c']]){
+    const p=await fetch('https://api.cloudflare.com/client/v4/accounts/'+account+'/pages/projects/'+name,{headers,signal:AbortSignal.timeout(30000)});const j=await p.json();const q=j.result,d=q?.canonical_deployment,m=d?.deployment_trigger?.metadata;
+    if(!p.ok||j.success!==true||q.production_branch!=='main'||q.source?.config?.production_deployments_enabled!==false||d?.id!==id||m?.commit_hash!==commit||m?.branch!=='main'||d?.environment!=='production')throw Error('Pages productivo/auto-deploy cambió: '+name);
+  }
   const prefix='https://api.cloudflare.com/client/v4/accounts/'+account+'/pages/projects/intap-web2/deployments'
   const shortId=new URL(stage).hostname.split('.')[0]
   let matched=null
@@ -125,7 +130,7 @@ try{
   }
   if(!matched)throw Error('Stage inmutable no encontrado en intap-web2')
   const meta=matched.deployment_trigger?.metadata||{}
-  if(normal(matched.url)!==normal(stage)||matched.environment!=='preview'||meta.branch!==branch||meta.commit_hash!==commit||matched.latest_stage?.status!=='success')throw Error('Stage no coincide con URL, rama, commit o estado esperado')
+  if(normal(matched.url)!==normal(stage)||matched.environment!=='preview'||meta.branch!==branch||meta.commit_hash!==commit||matched.latest_stage?.status!=='success'||matched.uses_functions!==true||meta.commit_dirty!==false)throw Error('Stage no coincide con URL, rama, commit o estado esperado')
   const aliases=[...new Set((Array.isArray(matched.aliases)?matched.aliases:[]).map(normal))]
   const candidates=aliases.filter(u=>/^https:\/\/[a-z0-9-]+\.intap-web2\.pages\.dev$/.test(u)&&u!==normal(stage)&&(expectedAlias==='stage'?u.startsWith('https://qa-kawvo-g5-'):u===normal(expectedAlias)))
   if(candidates.length!==1)throw Error('No existe un alias Stage único y seguro; aliases informados: '+aliases.filter(u=>/^https:\/\/[a-z0-9-]+\.intap-web2\.pages\.dev$/.test(u)).join(', '))
@@ -213,7 +218,7 @@ fi
 COMMIT="$(git rev-parse HEAD)"
 [[ "$COMMIT" == "$CANDIDATE" && "$(git ls-remote github refs/heads/main | cut -f1)" == "$BASE" && "$(git ls-remote github "refs/heads/$BRANCH" | cut -f1)" == "$CANDIDATE" ]] || fail "main/candidato cambiaron"
 [[ "$(gh pr view 168 --repo pgcsoluciones/intap-link --json headRefOid --jq .headRefOid)" == "$CANDIDATE" ]] || fail "PR distinto"
-gh pr checks 168 --repo pgcsoluciones/intap-link --required || fail "CI requerida no aprobada"
+[[ "$(gh run view 43788795663 --repo pgcsoluciones/intap-link --json headSha,status,conclusion --jq '[.headSha,.status,.conclusion] | join(" ")')" == "$CANDIDATE completed success" ]] || fail "CI exacta no aprobada"
 npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$STAGE_BRANCH" --commit-hash "$COMMIT" --commit-dirty=false > "$LOG/stage.log" 2>&1 || { tail -35 "$LOG/stage.log"; fail "Stage Pages"; }
 STAGE="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/stage.log" | tail -1 || true)"
 [[ "$STAGE" =~ ^https://[0-9a-f]{8,}\.intap-web2\.pages\.dev$ ]] || fail "No se obtuvo URL inmutable de Stage"
@@ -252,9 +257,11 @@ curl -fsSL --connect-timeout 10 --max-time 35 "$ALIAS/admin/login" -o "$LOG/alia
 [[ "$(asset "$LOG/alias-mid.html")" == "$OLD_JS" ]] || fail "Alias App cambió; NO publicar"
 check_web mid
 check_production mid
-echo "PASS: G5.2 Stage idéntico al build, G5 anterior activo intacto"
+echo "PASS: G2 QA Stage idéntico al build, G5 anterior activo intacto"
 
 # Sole deliberate mutation: App Pages branch already owned by Worker origin.
+[[ "$(git ls-remote github refs/heads/main | cut -f1)" == "$BASE" && "$(git ls-remote github "refs/heads/$BRANCH" | cut -f1)" == "$CANDIDATE" && -z "$(git status --porcelain)" ]] || fail "Referencias cambiaron durante Stage"
+check_owner "$OLD_DEPLOY" "$PAGES_BRANCH" 37a9a01a667251883818c66a2801b2f2e243cbbf "$ALIAS" "$LOG/active-owner-before-publish.json"
 echo "Publicando SOLO App Pages Preview (sin Worker)..."
 npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$PAGES_BRANCH" --commit-hash "$COMMIT" --commit-dirty=false > "$LOG/publish.log" 2>&1 || { tail -45 "$LOG/publish.log"; fail "Publicación App Pages"; }
 PUBLISHED="$(grep -Eo 'https://[0-9a-f]{8,}\.intap-web2\.pages\.dev' "$LOG/publish.log" | tail -1 || true)"
@@ -278,6 +285,6 @@ check_web after
 check_production after
 echo "PASS G2 QA APP PREVIEW: bundle publicado idéntico al build, Worker original al 100%"
 echo "Sin cambios API/Worker/OAuth/D1/R2/Web/Producción"
-echo "PENDIENTE: QA publicar/ocultar sin cambio de pestaña, retorno de módulos y vista previa desde Free"
+echo "PENDIENTE: QA Mi cuenta, Cerrar sesión, Nuevo panel, últimos 5 pendientes y Ver todas; publicar/ocultar, retorno, Team/Multicuenta, demo y demás roles"
 echo "QA: $APP/admin/free"
 echo "LOG: $LOG"
