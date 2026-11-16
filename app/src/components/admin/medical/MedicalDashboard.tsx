@@ -105,6 +105,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const[newSchedule,setNewSchedule]=useState({center_id:'',day_of_week:1,shift:'',start_time:'08:00',end_time:'12:00',notes:''})
   const[editingSchedule,setEditingSchedule]=useState<any>(null)
   const[selectedDays,setSelectedDays]=useState<number[]>([1,2,3,4,5])
+  const[scheduleDaysBaseline,setScheduleDaysBaseline]=useState<number[]>([1,2,3,4,5])
   const[acceptedText,setAcceptedText]=useState('')
   const[excludedText,setExcludedText]=useState('')
 
@@ -309,6 +310,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
         if(!j?.ok)throw new Error(j?.error||'No pudimos agregar el horario.')
         completed++
       }
+      setScheduleDaysBaseline([...selectedDays])
       setNewSchedule({center_id:'',day_of_week:1,shift:'',start_time:'08:00',end_time:'12:00',notes:''})
       showSaved('schedule',completed+' horario(s) agregado(s).');await load(true)
     }catch(e){setError((e instanceof Error?e.message:'Error guardando horarios.')+(completed?' Se guardaron '+completed+' de '+selectedDays.length+' días.':''));await load(true)}
@@ -362,14 +364,20 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const shellEnabled=!shellDismissed&&canUseKawMedShell({...shellContext,profileId:profile?.id,guestEditor:profile?.guest_editor})
   const selectShellTab=(next:KawMedShellTab)=>{setShellNotice('');setShellTab(next)}
   const openShellModule=(next:Tab)=>{if(next==='public')return;setTab(next);setShellModuleOpen(true);selectShellTab('profile')}
+  const shellHasPendingEdits=()=>hasPendingKawMedEdits({profile,form,acceptedText,excludedText,secondaryDraft,newCenter,editingCenter,newSchedule,editingSchedule,selectedDays,scheduleDaysBaseline})
   const canLeaveShell=()=>{
     if(busy||lifecycleBusy||publicationPending||pending){setShellNotice('Espera a que termine la operación actual antes de salir del panel.');return false}
-    if(hasPendingKawMedEdits({profile,form,acceptedText,excludedText,secondaryDraft,newCenter,editingCenter,newSchedule,editingSchedule})){
+    if(shellHasPendingEdits()){
       setShellNotice('Tienes cambios sin guardar. Guárdalos o cancela la edición antes de salir; tus datos siguen en el formulario.');return false
     }
     return true
   }
   const openShellAgenda=()=>{if(canLeaveShell())openAgenda()}
+  const requestLogout=()=>{
+    if(shellEnabled&&(busy||lifecycleBusy||publicationPending||pending||shellHasPendingEdits())
+      &&!window.confirm('Hay cambios sin guardar o una operación pendiente. ¿Cerrar sesión y descartar los cambios locales? Las operaciones ya enviadas podrían completarse.'))return
+    void logoutKawMed()
+  }
 
   if(loading&&shellRequested)return <main role="status" aria-live="polite" className="min-h-screen bg-slate-50 p-6 text-center text-sm text-slate-700">Verificando tu acceso y cargando el perfil médico…</main>
   if(loading)return embedded?<div className="min-h-[320px] rounded-[24px] border border-slate-200 bg-white"/>:<main className="min-h-screen bg-slate-50"/>
@@ -403,13 +411,13 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <a href="/admin/medical/notifications" onClick={event=>{if(!canLeaveShell())event.preventDefault()}} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-cyan-900">Solicitudes médicas{unread>0?' · '+unread:''}</a>
         <button type="button" onClick={()=>void installPwa()} disabled={pwaInstalled} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">{pwaInstalled?'App instalada':'Instalar app Kawvo'}</button>
-        <button type="button" onClick={()=>void logoutKawMed()} disabled={signingOut} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">{signingOut?'Saliendo…':'Cerrar sesión'}</button>
+        <button type="button" onClick={requestLogout} disabled={signingOut} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">{signingOut?'Saliendo…':'Cerrar sesión'}</button>
       </div>
     </section>}
     <div hidden={shellEnabled&&shellTab!=='home'}>
     <header className={card}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap items-start justify-end gap-2">
         <button type="button" onClick={()=>void installPwa()} disabled={pwaInstalled} className="rounded-full bg-cyan-700 px-6 py-3 text-sm font-black text-white shadow-md ring-2 ring-cyan-100 transition hover:bg-cyan-800 disabled:bg-emerald-100 disabled:text-emerald-800 disabled:shadow-none">{pwaInstalled?'App instalada':'Instalar app Kawvo'}</button>
-        <button type="button" onClick={()=>void logoutKawMed()} disabled={signingOut} className="rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">{signingOut?'Saliendo…':'Cerrar sesión'}</button>
+        <button type="button" onClick={requestLogout} disabled={signingOut} className="rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50">{signingOut?'Saliendo…':'Cerrar sesión'}</button>
       </div></div><div className="mt-4 flex flex-wrap gap-2">{scope==='doctor'&&String(profile.account_email||'').trim().toLowerCase()==='intapcard@gmail.com'&&<a href="/admin/accounts" onClick={event=>{if(shellEnabled&&!canLeaveShell())event.preventDefault()}} className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Cambiar cuenta</a>}{scope==='doctor'&&<button type="button" onClick={()=>setPreviewOpen(true)} className={'rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800 hover:bg-cyan-50 '+headerActionMotion}>Vista previa</button>}
       <button ref={publicationPublishTriggerRef} type="button" disabled={busy||profile.status==='active'||!publicationReadiness.canPublish} aria-describedby="kawmed-publication-guidance" aria-expanded={publicationConfirm==='publish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-emerald-800 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='publish'?'Publicando…':profile.status==='active'?'Publicado':'Publicar'}</button>
       <button ref={publicationUnpublishTriggerRef} type="button" disabled={busy||profile.status!=='active'} aria-expanded={publicationConfirm==='unpublish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('unpublish')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm sm:text-xs font-black text-amber-900 shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-amber-100 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='unpublish'?'Despublicando…':'Despublicar'}</button>

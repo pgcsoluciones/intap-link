@@ -44,9 +44,10 @@ export function kawMedLoadPresentation(error: string): { title: string; message:
 }
 
 /** Compare drafts without writing or discarding anything. Existing save handlers remain authoritative. */
-export function hasPendingKawMedEdits({ profile, form, acceptedText, excludedText, secondaryDraft, newCenter, editingCenter, newSchedule, editingSchedule }: {
+export function hasPendingKawMedEdits({ profile, form, acceptedText, excludedText, secondaryDraft, newCenter, editingCenter, newSchedule, editingSchedule, selectedDays, scheduleDaysBaseline }: {
   profile: Record<string, any>; form: Record<string, any>; acceptedText: string; excludedText: string; secondaryDraft: string
   newCenter: Record<string, any>; editingCenter: unknown; newSchedule: Record<string, any>; editingSchedule: unknown
+  selectedDays: readonly number[]; scheduleDaysBaseline: readonly number[]
 }): boolean {
   const fields = ['slug', 'name', 'professional_prefix', 'specialty', 'subspecialty', 'bio', 'phone', 'whatsapp', 'email', 'city', 'province', 'country', 'organization']
   if (fields.some(key => String(form[key] ?? '') !== String(profile[key] ?? ''))) return true
@@ -57,4 +58,6 @@ export function hasPendingKawMedEdits({ profile, form, acceptedText, excludedTex
     || Object.values(newCenter).some(value => Boolean(String(value || '').trim()))
     || Boolean(newSchedule.center_id || newSchedule.shift || newSchedule.notes)
     || newSchedule.start_time !== '08:00' || newSchedule.end_time !== '12:00'
+    || selectedDays.length !== scheduleDaysBaseline.length
+    || selectedDays.some(day => !scheduleDaysBaseline.includes(day))
 }

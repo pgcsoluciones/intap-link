@@ -32,7 +32,7 @@ assert.notEqual(kawMedLoadPresentation('Unauthorized').title, kawMedLoadPresenta
 assert.notEqual(kawMedLoadPresentation('').title, kawMedLoadPresentation('Error de conexión').title)
 
 const profile = { id: 'doctor-a', name: 'Nombre guardado', specialty: 'Medicina general', slug: 'doctor-a', insurance_policy: { accepted: [{ insurance_name: 'ARS Humano' }], excluded: [] } }
-const cleanDraft = { profile, form: { ...profile }, acceptedText: 'ARS Humano', excludedText: '', secondaryDraft: '', newCenter: { name: '', address: '', phone: '' }, editingCenter: null, newSchedule: { center_id: '', start_time: '08:00', end_time: '12:00', shift: '', notes: '' }, editingSchedule: null }
+const cleanDraft = { profile, form: { ...profile }, acceptedText: 'ARS Humano', excludedText: '', secondaryDraft: '', newCenter: { name: '', address: '', phone: '' }, editingCenter: null, newSchedule: { center_id: '', start_time: '08:00', end_time: '12:00', shift: '', notes: '' }, editingSchedule: null, selectedDays: [1, 2, 3, 4, 5], scheduleDaysBaseline: [1, 2, 3, 4, 5] }
 assert.equal(hasPendingKawMedEdits(cleanDraft), false)
 for (const change of [
   { form: { ...profile, name: 'Cambio pendiente' } }, { acceptedText: 'Otra ARS' }, { excludedText: 'Excepción' },
@@ -40,7 +40,10 @@ for (const change of [
   { editingCenter: { id: 'center-a' } }, { editingSchedule: { id: 'schedule-a' } },
   { newSchedule: { ...cleanDraft.newSchedule, center_id: 'center-a' } },
   { newSchedule: { ...cleanDraft.newSchedule, start_time: '09:00' } },
+  { selectedDays: [] }, { selectedDays: [1, 2, 3, 4] }, { selectedDays: [1, 2, 3, 4, 6] },
 ]) assert.equal(hasPendingKawMedEdits({ ...cleanDraft, ...change }), true, JSON.stringify(change))
+assert.equal(hasPendingKawMedEdits({ ...cleanDraft, selectedDays: [5, 4, 3, 2, 1] }), false, 'Day order is not a draft')
+assert.equal(hasPendingKawMedEdits({ ...cleanDraft, selectedDays: [6, 7], scheduleDaysBaseline: [6, 7] }), false, 'Acknowledged preferences after complete save are clean')
 
 // Compare the actual baseline operations/effects, not a second implementation of their behavior.
 function operations(source) {
@@ -56,7 +59,16 @@ function operations(source) {
   return { functions, effects }
 }
 const before = operations(previous), after = operations(dashboard)
-for (const [name, body] of before.functions) assert.equal(after.functions.get(name), body, 'Existing operation changed: ' + name)
+for (const [name, body] of before.functions) {
+  const current = after.functions.get(name)
+  if (name === 'addSchedule') {
+    // The authorized correction acknowledges days only after the entire original loop succeeds.
+    const acknowledgement = '      setScheduleDaysBaseline([...selectedDays])\n'
+    assert.equal(current.split(acknowledgement).length, 2, 'Exactly one presentation acknowledgement')
+    assert.match(current, /completed\+\+\n      }\n      setScheduleDaysBaseline\(\[\.\.\.selectedDays\]\)\n      setNewSchedule/)
+    assert.equal(current.replace(acknowledgement, ''), body, 'Original schedule writes, reset and partial-save handling unchanged')
+  } else assert.equal(current, body, 'Existing operation changed: ' + name)
+}
 assert.deepEqual(after.effects, before.effects, 'No new load/autosave effects or changes to existing effects')
 assert.doesNotMatch(helper + frame, /\bfetch\s*\(|\bapi(?:Get|Post|Put|Patch|Delete)\s*\(|(?:session|local)Storage/)
 assert.doesNotMatch(dashboard, /\/admin\/free\/credentials|FreePublicationActions|FreeAgendaSummary/)
@@ -65,7 +77,8 @@ const changed = execFileSync('git', ['diff', '--name-only', base], { encoding: '
 changed.push(...execFileSync('git', ['ls-files', '--others', '--exclude-standard'], { encoding: 'utf8' }).trim().split('\n').filter(Boolean))
 for (const path of changed) assert.ok(allowed.has(path), 'Path outside G3.1: ' + path)
 assert.deepEqual(new Set(changed), allowed, 'Exact G3.1 allowlist')
-console.log(`PASS G3.1 core: opt-in/fallback matrix, draft detection, ${before.functions.size} unchanged operations, unchanged effects, scoped diff`)
+assert.equal(dashboard.match(/onClick=\{requestLogout\}/g)?.length, 2, 'Both logout controls use the shell-aware request')
+console.log(`PASS G3.1 core: opt-in/fallback matrix, draft/day detection, ${before.functions.size - 1} unchanged operations, original schedule operation preserved with success-only presentation acknowledgement, unchanged effects, scoped diff`)
 
 if (process.argv.includes('--browser')) {
   let chromium
@@ -86,11 +99,13 @@ if (process.argv.includes('--browser')) {
   if (!browserPath) throw Error('BLOCKED browser: no installed Chromium executable; no browser was downloaded')
   const browser = await chromium.launch({ headless: true, executablePath: browserPath })
   const scenarios = []
-  async function open({ mode = 'preview', url = 'https://app.preview.intaprd.com/admin/medical?kawvo_med_shell=1', data = {}, failure, width = 390, delay = 0 } = {}) {
+  async function open({ mode = 'preview', url = 'https://app.preview.intaprd.com/admin/medical?kawvo_med_shell=1', data = {}, failure, width = 390, delay = 0, scheduleFailureDay, holdProfileSave = false } = {}) {
     const context = await browser.newContext({ viewport: { width, height: 900 } })
     const page = await context.newPage(), calls = [], errors = []
     page.setDefaultTimeout(10000)
     let saved = structuredClone({ ...fixture, ...data })
+    let releaseProfileSave
+    const profileSaveGate = new Promise(resolve => { releaseProfileSave = resolve })
     const js = await bundle(mode)
     page.on('pageerror', error => errors.push(error.message))
     await page.route('**/*', async route => {
@@ -101,8 +116,19 @@ if (process.argv.includes('--browser')) {
         if (delay) await new Promise(resolve => setTimeout(resolve, delay))
         if (target.pathname === '/api/v1/me/medical-profile') {
           if (failure) return json(failure)
-          if (request.method() === 'PATCH') saved = { ...saved, ...request.postDataJSON() }
+          if (request.method() === 'PATCH') {
+            if (holdProfileSave) await profileSaveGate
+            saved = { ...saved, ...request.postDataJSON() }
+          }
           return json({ ok: true, data: data === null ? null : saved })
+        }
+        if (target.pathname === '/api/v1/auth/logout') return json({ ok: true })
+        if (target.pathname === '/api/v1/me/medical-profile/schedules' && request.method() === 'POST') {
+          const body = request.postDataJSON()
+          if (body.day_of_week === scheduleFailureDay) return json({ ok: false, error: 'Fallo de horario simulado.' })
+          const row = { id: 'schedule-' + body.day_of_week, ...body }
+          saved.schedules = [...saved.schedules, row]
+          return json({ ok: true, data: row })
         }
         if (target.pathname.endsWith('/appointments')) return json({ ok: true, data: { requests: [], profile: { id: saved.id } } })
         if (target.pathname.endsWith('/sponsor-context')) return json({ ok: true, data: null })
@@ -114,13 +140,13 @@ if (process.argv.includes('--browser')) {
       }
       if (target.pathname === '/g3-fixture.js') return route.fulfill({ contentType: 'application/javascript', body: js })
       if (target.pathname === '/g3-fixture.css') return route.fulfill({ contentType: 'text/css', body: css })
-      if (target.pathname === '/admin/medical/agenda' || target.pathname === '/admin/medical/notifications') return route.fulfill({ contentType: 'text/html', body: '<h1>Módulo existente · destino verificado</h1>' })
+      if (target.pathname === '/admin/medical/agenda' || target.pathname === '/admin/medical/notifications' || target.pathname === '/admin/login') return route.fulfill({ contentType: 'text/html', body: '<h1>Módulo existente · destino verificado</h1>' })
       if (request.isNavigationRequest()) return route.fulfill({ contentType: 'text/html', body: '<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/g3-fixture.css"></head><body><div id="root"></div><script src="/g3-fixture.js"></script></body></html>' })
       return route.fulfill({ status: 404, body: '' })
     })
     await page.goto(url)
     const close = async () => { assert.deepEqual(errors, [], 'Browser runtime errors'); await context.close() }
-    return { page, calls, close }
+    return { page, calls, close, releaseProfileSave }
   }
   const nav = page => page.getByRole('navigation', { name: 'Navegación Kawmed', exact: true })
   const writes = calls => calls.filter(call => call.method !== 'GET')
@@ -255,6 +281,143 @@ if (process.argv.includes('--browser')) {
     assert.deepEqual(writes(publication.calls).map(({ path, method, body }) => ({ path, method, body })), [{ path: '/api/v1/me/medical-profile/publication', method: 'POST', body: { action: 'publish', confirm: true } }])
     assert.ok(await nav(publication.page).getByRole('button', { name: 'Inicio', exact: true }).getAttribute('aria-current') === 'page')
     await publication.close(); scenarios.push('existing publication confirmation and navigation retained')
+
+    const editIdentity = async page => {
+      await nav(page).getByRole('button', { name: 'Perfil', exact: true }).click()
+      await page.getByRole('button', { name: /Identidad y especialidades/ }).click()
+      return page.locator('section').filter({ has: page.getByRole('heading', { name: 'Perfil profesional', exact: true }) })
+    }
+    const editSchedule = async page => {
+      await nav(page).getByRole('button', { name: 'Perfil', exact: true }).click()
+      await page.getByRole('button', { name: /Horarios por centro/ }).click()
+      return page.locator('section').filter({ has: page.getByRole('heading', { name: 'Horarios de atención', exact: true }) })
+    }
+    const openAgenda = async page => {
+      await nav(page).getByRole('button', { name: 'Agenda', exact: true }).click()
+      await page.getByRole('button', { name: 'Abrir Agenda médica', exact: true }).click()
+    }
+    // Exercise both real logout buttons: cancellation retains drafts, explicit discard exits,
+    // and a clean form needs neither a confirmation nor a synthetic save.
+    for (const location of ['Inicio', 'Más']) for (const dirty of [false, true]) {
+      const result = await open()
+      const identity = await editIdentity(result.page)
+      if (dirty) await identity.getByLabel('Nombre', { exact: true }).fill('Borrador al cerrar sesión')
+      await nav(result.page).getByRole('button', { name: location, exact: true }).click()
+      let discard = false
+      const dialogs = []
+      result.page.on('dialog', dialog => { dialogs.push(dialog.message()); void (discard ? dialog.accept() : dialog.dismiss()) })
+      if (dirty) {
+        await result.page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
+        assert.equal(dialogs.length, 1, 'Dirty logout requires explicit confirmation: ' + location)
+        assert.match(dialogs[0], /descartar los cambios locales/)
+        assert.equal(writes(result.calls).length, 0, 'Cancelling logout must not write or log out')
+        await nav(result.page).getByRole('button', { name: 'Perfil', exact: true }).click()
+        assert.equal(await identity.getByLabel('Nombre', { exact: true }).inputValue(), 'Borrador al cerrar sesión')
+        await nav(result.page).getByRole('button', { name: location, exact: true }).click()
+      }
+      discard = true
+      await result.page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
+      await result.page.waitForURL('https://app.preview.intaprd.com/admin/login')
+      assert.equal(dialogs.length, dirty ? 2 : 0, 'Clean logout never prompts')
+      assert.deepEqual(writes(result.calls).map(({ path, body }) => ({ path, body })), [{ path: '/api/v1/auth/logout', body: {} }])
+      await result.close()
+    }
+    scenarios.push('both logout buttons: cancel preserves drafts, explicit discard, clean exit')
+
+    for (const useFallback of [false, true]) {
+      const result = await open(useFallback ? {} : { url: 'https://app.preview.intaprd.com/admin/medical' })
+      if (useFallback) {
+        const identity = await editIdentity(result.page)
+        await identity.getByLabel('Nombre', { exact: true }).fill('Borrador antes de fallback')
+        await result.page.getByRole('button', { name: 'Panel anterior', exact: true }).click()
+      } else await result.page.getByLabel('Nombre', { exact: true }).fill('Borrador legacy')
+      const dialogs = []
+      result.page.on('dialog', dialog => { dialogs.push(dialog.message()); void dialog.accept() })
+      await result.page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
+      await result.page.waitForURL('https://app.preview.intaprd.com/admin/login')
+      assert.equal(dialogs.length, 0, 'Legacy logout remains unchanged, including Panel anterior')
+      assert.equal(writes(result.calls).length, 1)
+      await result.close()
+    }
+    scenarios.push('unchanged legacy and Panel anterior logout')
+
+    for (const discard of [false, true]) {
+      const result = await open({ holdProfileSave: true })
+      const identity = await editIdentity(result.page)
+      // No dirty fields: only the deliberately unresolved save makes this operation pending.
+      const saving = result.page.waitForRequest(request => request.method() === 'PATCH')
+      await identity.getByRole('button', { name: 'Guardar perfil médico', exact: true }).click()
+      await saving
+      await nav(result.page).getByRole('button', { name: 'Inicio', exact: true }).click()
+      const dialogs = []
+      result.page.on('dialog', dialog => { dialogs.push(dialog.message()); void (discard ? dialog.accept() : dialog.dismiss()) })
+      await result.page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
+      assert.equal(dialogs.length, 1, 'An in-flight operation alone requires confirmation')
+      if (discard) {
+        await result.page.waitForURL('https://app.preview.intaprd.com/admin/login')
+        result.releaseProfileSave()
+      } else {
+        assert.equal(result.calls.filter(call => call.path === '/api/v1/auth/logout').length, 0)
+        result.releaseProfileSave()
+        await nav(result.page).getByRole('button', { name: 'Perfil', exact: true }).click()
+        await identity.getByRole('status').filter({ hasText: 'Perfil médico guardado.' }).waitFor()
+        await nav(result.page).getByRole('button', { name: 'Inicio', exact: true }).click()
+        await result.page.getByRole('button', { name: 'Cerrar sesión', exact: true }).click()
+        await result.page.waitForURL('https://app.preview.intaprd.com/admin/login')
+        assert.equal(dialogs.length, 1, 'Completed clean save does not leave a false logout blocker')
+      }
+      assert.equal(result.calls.filter(call => call.path === '/api/v1/auth/logout').length, 1)
+      await result.close()
+    }
+    scenarios.push('pending operation: cancel or explicit exit without waiting indefinitely, clean completed save')
+
+    for (const change of ['Limpiar', 'Toda la semana', 'Lunes']) {
+      const result = await open()
+      const schedule = await editSchedule(result.page)
+      if (change === 'Lunes') await schedule.getByLabel('Lunes', { exact: true }).uncheck()
+      else await schedule.getByRole('button', { name: change, exact: true }).click()
+      await openAgenda(result.page)
+      assert.ok(await result.page.getByRole('alert').filter({ hasText: 'cambios sin guardar' }).isVisible(), 'Days alone block exit: ' + change)
+      assert.equal(writes(result.calls).length, 0)
+      await nav(result.page).getByRole('button', { name: 'Perfil', exact: true }).click()
+      await schedule.getByRole('button', { name: 'Lunes a viernes', exact: true }).click()
+      await openAgenda(result.page)
+      await result.page.waitForURL('https://app.preview.intaprd.com/admin/medical/agenda')
+      assert.equal(writes(result.calls).length, 0, 'Restoring day preferences cancels the draft without saving')
+      await result.close()
+    }
+    scenarios.push('unsaved day selections and cancellation without a center or other edited fields')
+
+    for (const partial of [false, true]) {
+      const result = await open({ data: { centers: [{ id: 'center-a', name: 'Centro de prueba' }] }, scheduleFailureDay: partial ? 7 : undefined })
+      const schedule = await editSchedule(result.page)
+      await schedule.getByRole('button', { name: 'Limpiar', exact: true }).click()
+      await schedule.getByLabel('Sábado', { exact: true }).check()
+      await schedule.getByLabel('Domingo', { exact: true }).check()
+      // The existing editor retains these preferences after a successful complete batch.
+      await schedule.getByRole('combobox', { name: /^Centro/ }).selectOption('center-a')
+      const readback = result.page.waitForResponse(response => response.url().endsWith('/me/medical-profile') && response.request().method() === 'GET')
+      await schedule.getByRole('button', { name: 'Agregar horario', exact: true }).click()
+      await readback
+      if (!partial) await schedule.getByRole('status').filter({ hasText: '2 horario(s) agregado(s).' }).waitFor()
+      else await schedule.getByRole('button', { name: 'Agregar horario', exact: true }).click({ trial: true })
+      assert.deepEqual(writes(result.calls).map(call => call.body.day_of_week), [6, 7], 'Existing sorted batch requests, without retrying completed days')
+      assert.equal(await schedule.getByLabel('Sábado', { exact: true }).isChecked(), true)
+      assert.equal(await schedule.getByLabel('Domingo', { exact: true }).isChecked(), true)
+      assert.equal(await schedule.getByRole('combobox', { name: /^Centro/ }).inputValue(), partial ? 'center-a' : '', 'Only complete success resets the original schedule form')
+      if (partial) {
+        await schedule.getByRole('combobox', { name: /^Centro/ }).selectOption('')
+        await openAgenda(result.page)
+        assert.ok(await result.page.getByRole('alert').filter({ hasText: 'cambios sin guardar' }).isVisible(), 'Partial save must not acknowledge changed days')
+        await nav(result.page).getByRole('button', { name: 'Perfil', exact: true }).click()
+        await schedule.getByRole('button', { name: 'Lunes a viernes', exact: true }).click()
+      }
+      await openAgenda(result.page)
+      await result.page.waitForURL('https://app.preview.intaprd.com/admin/medical/agenda')
+      assert.equal(writes(result.calls).length, 2, 'Navigation never adds schedule writes')
+      await result.close()
+    }
+    scenarios.push('complete schedule save retains preferences without false blocking; partial save preserves pending days')
 
     const agenda = await open()
     await nav(agenda.page).getByRole('button', { name: 'Agenda', exact: true }).click()
