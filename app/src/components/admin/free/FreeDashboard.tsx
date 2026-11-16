@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { apiGet, apiPost, apiPut, apiUpload } from '../../../lib/api'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { apiGet, apiUpload } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
 import ImageCropModal from '../ImageCropModal'
 import { FreeUpgradeCard, basicPlanWhatsAppUrl } from './FreePanelUi'
@@ -9,6 +9,8 @@ import FreeHelpTip from './FreeHelpTip'
 import FreeNotificationBell from './FreeNotificationBell'
 import FreeGuidedTour from './FreeGuidedTour'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
+import { isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './KawvoShellReturn'
+import { submitFreePublication } from './FreePublicationActions'
 
 interface MeData {
   email: string
@@ -55,7 +57,16 @@ const freeItems: FreeItem[] = [
 function isStarterAsset(value: unknown) { return String(value || '').includes('/assets/free-starter/') }
 function isStarterId(value: unknown) { return String(value || '').startsWith('starter:') }
 
+/** Default Free entry on supported App hosts; delegated demos and explicit legacy fallback retain the original panel. */
 export default function FreeDashboard() {
+  const location=useLocation()
+  if(isKawvoShellPreviewHost()&&!isFreeDemoDelegationActive()&&new URLSearchParams(location.search).get('legacy')!=='1'){
+    return <Navigate to={KAWVO_SHELL_PREVIEW_ROUTE} replace state={location.state}/>
+  }
+  return <FreeDashboardLegacy/>
+}
+
+function FreeDashboardLegacy() {
   const navigate = useNavigate()
   const delegatedDemo = isFreeDemoDelegationActive()
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -65,6 +76,7 @@ export default function FreeDashboard() {
   const [me, setMe] = useState<MeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [publishing, setPublishing] = useState(false)
+  const [readyPromptDismissed, setReadyPromptDismissed] = useState(false)
   const [hasSuperAdminAccess, setHasSuperAdminAccess] = useState(false)
   const [watermarkUpsellOpen, setWatermarkUpsellOpen] = useState(false)
   const [publishError, setPublishError] = useState('')
@@ -157,10 +169,9 @@ export default function FreeDashboard() {
     if (next === 1 && !effectivePublishReady) { setPublishError(`Aún no puedes publicar. Completa ${publishMissing.join(', ')}.`); return }
     setPublishing(true); setPublishError('')
     try {
-      const result: any = await apiPut('/me/profile', { is_published: next === 1 })
+      const result: any = await submitFreePublication(next === 1)
       if (result.ok) {
         setMe({ ...me, is_published: next })
-        if (next === 1) void apiPost('/me/notifications/profile-published', {}).catch(() => undefined)
       } else if (result.error === 'profile_incomplete') {
         setPublishError(result.message || 'Completa los datos mínimos antes de publicar.')
         setMe({ ...me, freeReadiness: result.readiness || me.freeReadiness })
@@ -233,6 +244,7 @@ export default function FreeDashboard() {
   const designEditable = delegatedDemo || (!isTeamMember ? baseReady : teamPermissions.has('design'))
 
   return <>
+    {!delegatedDemo && Boolean(me) && !me?.is_published && effectivePublishReady && !readyPromptDismissed && <div role="dialog" aria-modal="true" aria-label="Perfil Free listo para publicar" className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/60 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-xl font-black">Tu presentación está lista para publicar</h2><p className="mt-2 text-sm text-slate-600">Los requisitos obligatorios están guardados.</p><div className="mt-4 flex gap-2"><button type="button" disabled={publishing} onClick={()=>{setReadyPromptDismissed(true);void togglePublished()}} className="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Publicar ahora</button><button type="button" onClick={()=>setReadyPromptDismissed(true)} className="rounded-xl border px-4 py-2 text-sm font-bold">Más tarde</button></div></div></div>}
     {avatarFile && <ImageCropModal file={avatarFile} aspectRatio={1} outputWidth={400} onSave={uploadAvatar} onCancel={() => setAvatarFile(null)} />}
     <main className="min-h-screen bg-[#f7f9fc] pb-24 font-['Inter'] text-slate-950">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 px-5 py-4 backdrop-blur"><div className="mx-auto flex w-full max-w-[430px] items-center justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-600">KAWVO LINK</p><h1 className="mt-0.5 text-xl font-black tracking-[-0.03em]">Mi panel</h1></div><div data-tour="header-actions" className="flex items-center gap-2"><FreeNotificationBell /><button type="button" onClick={() => window.dispatchEvent(new Event('kawvo:free-tour:start'))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 shadow-sm" aria-label="Abrir recorrido guiado">Recorrido</button>{hasSuperAdminAccess&&<button type="button" onClick={() => navigate('/superadmin')} className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white">Super Admin</button>}<button type="button" onClick={() => navigate('/admin/free/account')} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Mi cuenta</button></div></div></header>

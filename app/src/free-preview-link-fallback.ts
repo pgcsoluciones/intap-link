@@ -21,6 +21,10 @@ export function installFreePreviewLinkFallback() {
     const marker = '/api/v1/me/free/profile-preview/'
     const index = parsed.pathname.indexOf(marker)
     if (index < 0) return
+    // The G2 opt-in Preview link must follow its authenticated 302 to set
+    // the owner-only preview session and inherit its fragment. Do not bypass it.
+    if (window.location.hostname === 'app.preview.intaprd.com'
+      && new URLSearchParams(parsed.hash.replace(/^#/, '')).get('kawvo_shell') === '1') return
     const slug = decodeURIComponent(parsed.pathname.slice(index + marker.length)).trim()
     if (!slug) return
 

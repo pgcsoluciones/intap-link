@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiGet, apiPost } from '../../../lib/api'
 import { FreeBackButton, basicPlanWhatsAppUrl } from './FreePanelUi'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { getKawvoShellReturn, isKawvoShellPreviewHost, kawvoShellBackTarget } from './KawvoShellReturn'
 
 type Service = { id?: string; title: string; description: string; has_image?: boolean }
 type PortfolioItem = { id: string; title: string; description: string }
@@ -138,6 +139,14 @@ function StableInstructionQuestion({
 
 export default function FreeAiProfileAssistant() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const shellReturn = isKawvoShellPreviewHost() ? getKawvoShellReturn(location.state) : null
+  const goBackToOrigin=()=>{
+    if(shellReturn){
+      const target=kawvoShellBackTarget(shellReturn)
+      navigate(target.path,{state:target.state})
+    }else navigate('/admin/free')
+  }
   const [loading,setLoading] = useState(true)
   const [context,setContext] = useState<AssistantContext|null>(null)
   const [answers,setAnswers] = useState<Answers>(EMPTY_ANSWERS)
@@ -433,7 +442,7 @@ export default function FreeAiProfileAssistant() {
         <h1 className="mt-2 text-2xl font-black tracking-[-0.03em]">Cambios confirmados y aplicados</h1>
         <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">Tu perfil ya fue actualizado.</p>
         <a href={`/api/v1/me/free/profile-preview/${encodeURIComponent(context.profile.slug)}?full=1`} target="_blank" rel="noopener noreferrer" className="mt-6 flex w-full items-center justify-center rounded-2xl bg-slate-950 px-4 py-4 text-sm font-black text-white">Ver mi perfil</a>
-        <button type="button" onClick={()=>navigate('/admin/free')} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-black text-slate-700">Volver al panel</button>
+        <button type="button" onClick={goBackToOrigin} className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-black text-slate-700">Volver al panel</button>
       </div>
     </section>
   </main>
@@ -651,7 +660,7 @@ export default function FreeAiProfileAssistant() {
 
           <button
             type="button"
-            onClick={()=>navigate('/admin/free')}
+            onClick={goBackToOrigin}
             className="mt-2 w-full rounded-2xl bg-slate-100 px-5 py-3.5 text-sm font-black text-slate-700"
           >
             Ahora no
