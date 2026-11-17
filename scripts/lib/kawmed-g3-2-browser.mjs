@@ -12,16 +12,18 @@ const pure=await build({entryPoints:[dir+'KawMedShellReturn.ts'],bundle:true,wri
 const {kawMedContextUrl:url}=await import('data:text/javascript;base64,'+Buffer.from(pure.outputFiles[0].text).toString('base64'))
 const {chromium}=require('playwright'),executablePath=[process.env.KAWMED_TEST_BROWSER,chromium.executablePath(),'/usr/bin/chromium'].find(path=>path&&existsSync(path))
 assert.ok(executablePath,'BLOCKED installed Chromium unavailable')
+const webCss=readdirSync('web/dist/assets').filter(n=>n.endsWith('.css')).map(n=>read('web/dist/assets/'+n)).join('\n')
 const css=readdirSync('app/dist/assets').filter(n=>n.endsWith('.css')).map(n=>read('app/dist/assets/'+n)).join('\n')
 assert.ok(css,'Build App Preview first')
 const browser=await chromium.launch({headless:true,executablePath}),bundles=new Map()
 const artifacts=process.env.KAWMED_G32_ARTIFACTS||'/tmp/kawmed-g3-2-evidence';mkdirSync(artifacts,{recursive:true})
-async function bundle({baseline=false,mode='preview'}={}){
- const key=baseline+':'+mode;if(bundles.has(key))return bundles.get(key)
+async function bundle({baseline=false,mode='preview',publicBaseline=false,guarded=false}={}){
+ const key=[baseline,mode,publicBaseline,guarded].join(':');if(bundles.has(key))return bundles.get(key)
  const result=await build({stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import{BrowserRouter,Routes,Route,useNavigate}from'react-router-dom';
-import Medical from './${medicalPath}';import Agenda from './${dir}MedicalAppointments.tsx';import Requests from './${dir}MedicalNotifications.tsx';import Accounts from './app/src/components/admin/IntapcardAccountSelector.tsx';import FreeAgenda from './app/src/components/admin/free/FreeAppointments.tsx';
+import PublicMedical from './web/src/components/medical-profile/KawMedProfile.tsx';import AdminGuard from './app/src/components/admin/AdminGuard.tsx';import Medical from './${medicalPath}';import Agenda from './${dir}MedicalAppointments.tsx';import Requests from './${dir}MedicalNotifications.tsx';import Accounts from './app/src/components/admin/IntapcardAccountSelector.tsx';import FreeAgenda from './app/src/components/admin/free/FreeAppointments.tsx';
 function Bridge(){const navigate=useNavigate();window.fixtureNavigate=(path,state)=>navigate(path,{state});return null}
-function App(){return <BrowserRouter><Bridge/><Routes><Route path="/admin/medical" element={<Medical scope={new URLSearchParams(location.search).get('fixture_scope')==='sponsor_master'?'sponsor_master':'doctor'}/>}/><Route path="/admin/medical/agenda" element={<Agenda/>}/><Route path="/admin/medical/notifications" element={<Requests/>}/><Route path="/admin/accounts" element={<Accounts/>}/><Route path="/admin/medical/demo/:token/agenda" element={<Agenda/>}/><Route path="/admin/medical/demo/:token" element={<Medical/>}/><Route path="/admin/free/agenda" element={<FreeAgenda/>}/><Route path="/admin/free/shell-preview" element={<h1>Shell Free existente</h1>}/><Route path="/admin/free/account" element={<h1>Cuenta Free existente</h1>}/><Route path="/admin/sponsor/kawmed" element={<h1>Master médico existente</h1>}/></Routes></BrowserRouter>};createRoot(document.getElementById('root')).render(<App/>);`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,jsx:'automatic',format:'iife',define:{'import.meta.env':JSON.stringify({MODE:mode})},plugins:baseline?[{name:'exact-173-baseline',setup(build){build.onLoad({filter:/(?:MedicalDashboard|MedicalAppointments|MedicalNotifications)\.tsx$/},args=>({contents:prior(dir+args.path.split('/').pop()),loader:'tsx'}))}}]:[]})
+function Guard({children}){return ${guarded}?<AdminGuard requireProfile={false}>{children}</AdminGuard>:children}
+function App(){return <BrowserRouter><Bridge/><Routes><Route path="/m/:slug" element={<PublicMedical/>}/><Route path="/admin/medical" element={<Guard><Medical scope={new URLSearchParams(location.search).get('fixture_scope')==='sponsor_master'?'sponsor_master':'doctor'}/></Guard>}/><Route path="/admin/medical/agenda" element={<Guard><Agenda/></Guard>}/><Route path="/admin/medical/notifications" element={<Guard><Requests/></Guard>}/><Route path="/admin/accounts" element={<Guard><Accounts/></Guard>}/><Route path="/admin/medical/demo/:token/agenda" element={<Agenda/>}/><Route path="/admin/medical/demo/:token" element={<Medical/>}/><Route path="/admin/free/agenda" element={<FreeAgenda/>}/><Route path="/admin/free/shell-preview" element={<h1>Shell Free existente</h1>}/><Route path="/admin/free/account" element={<h1>Cuenta Free existente</h1>}/><Route path="/admin/sponsor/kawmed" element={<h1>Master médico existente</h1>}/></Routes></BrowserRouter>};createRoot(document.getElementById('root')).render(<App/>);`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,loader:{'.css':'empty'},jsx:'automatic',format:'iife',define:{'import.meta.env':JSON.stringify({MODE:mode})},plugins:baseline?[{name:'exact-173-baseline',setup(build){build.onLoad({filter:/(?:MedicalDashboard|MedicalAppointments|MedicalNotifications)\.tsx$/},args=>({contents:prior(dir+args.path.split('/').pop()),loader:'tsx'}))}}]:publicBaseline?[{name:'exact-174-public-baseline',setup(build){build.onLoad({filter:/(?:KawMedProfile|AppointmentOwnerBar)\.tsx$/},args=>({contents:execFileSync('git',['show','8ef347ce7a09d43953a725bcb2d8fec5102390d8:'+args.path.slice(process.cwd().length+1)],{encoding:'utf8'}),loader:'tsx'}))}}]:[]})
  bundles.set(key,result.outputFiles[0].text);return result.outputFiles[0].text
 }
 const medical={id:'doctor-a',professional_prefix:'Dra.',name:'Médica de prueba',account_email:'intapcard@gmail.com',slug:'medica-prueba',specialty:'Medicina general | Pediatría',status:'active',centers:[],schedules:[],insurance_policy:{accepted:[],excluded:[]}}
@@ -30,12 +32,16 @@ const settings={enabled:true,slot_minutes:30,min_notice_minutes:120,horizon_days
 async function open(options={}){
  const ctx=await browser.newContext({viewport:{width:options.width||390,height:900}}),page=await ctx.newPage(),calls=[],errors=[]
  page.setDefaultTimeout(10000);page.on('pageerror',error=>errors.push(error.message))
- const server={medical:{...medical,...options.data},agendaProfile:null,agendaFailure:'',profileFailure:options.profileFailure||'',requests:structuredClone(requests),settings:structuredClone(settings),apiDelay:0}
+ const server={medical:{...medical,...options.data},agendaProfile:null,agendaFailure:'',profileFailure:options.profileFailure||'',owner:options.owner!==false,activeKind:options.activeKind||'medical',activeId:options.activeId||'doctor-a',activeToken:'a'.repeat(32),requests:structuredClone(requests),settings:structuredClone(settings),apiDelay:0}
  const js=await bundle(options)
  await page.route('**/*',async route=>{
   const request=route.request(),target=new URL(request.url()),path=target.pathname,json=data=>route.fulfill({contentType:'application/json',body:JSON.stringify(data)})
   if(path.startsWith('/api/')){
-   calls.push({path,method:request.method(),headers:request.headers(),body:request.postDataJSON(),search:target.search})
+   calls.push({host:target.hostname,path,method:request.method(),headers:request.headers(),body:request.postDataJSON(),search:target.search})
+   if(path.startsWith('/api/v1/public/medical-profiles/'))return json({ok:true,data:{...server.medical,display_name:'Dra. Médica de prueba',services:[],insurance_policy:{accepts_all:false,accepted:[],excluded:[]}}})
+   if(path.endsWith('/appointments/public-context'))return json(server.owner?{ok:true,data:{is_owner:true,is_master:false,is_guest_editor:false,allow_direct_actions:false,enabled:true,pending_count:server.requests.filter(r=>r.status==='pending').length,pending:server.requests.filter(r=>r.status==='pending'),manage_url:'/admin/medical/agenda',settings_url:'/admin/medical'}}:{ok:false,error:'Not owner'})
+   if(path==='/api/v1/me')return json({ok:true,data:{email:'intapcard@gmail.com'}})
+   if(path==='/api/v1/me/home-route')return json({ok:true,data:{kind:'multiaccount',route:'/admin/accounts'}})
    if(path==='/api/v1/me/medical-profile')return json(server.profileFailure?{ok:false,error:server.profileFailure}:{ok:true,data:server.medical})
    if(path.endsWith('/appointments')){
     if(server.apiDelay)await new Promise(resolve=>setTimeout(resolve,server.apiDelay))
@@ -44,6 +50,7 @@ async function open(options={}){
    if(path.endsWith('/sponsor-context'))return json({ok:true,data:null})
    if(path==='/api/v1/me/intapcard/accounts')return json({ok:true,data:{items:[{kind:'medical',id:'doctor-a',title:'Médica de prueba'},{kind:'medical',id:'doctor-b',title:'Segunda médica'},{kind:'free',id:'free-a',title:'Free de prueba'}]}})
    if(path==='/api/v1/me/intapcard/active-account'){
+    if(request.method()==='GET'){const presented=request.headers()['x-intap-account-tab']||'';return json({ok:true,data:{active:{kind:server.activeKind,id:server.activeId,route:'/admin/medical'},tab_session_valid:presented===server.activeToken,new_tab_token:presented?null:server.activeToken}})}
     const selection=request.postDataJSON();if(selection.kind==='medical')server.medical={...server.medical,id:selection.id}
     return json({ok:true,data:{...selection,tab_token:'a'.repeat(32),route:selection.kind==='medical'?'/admin/medical':'/admin/free'}})
    }
@@ -51,8 +58,9 @@ async function open(options={}){
    throw Error('Unexpected API '+request.method()+' '+path)
   }
   if(path==='/fixture.js')return route.fulfill({contentType:'application/javascript',body:js})
-  if(path==='/fixture.css')return route.fulfill({contentType:'text/css',body:css})
-  if(request.isNavigationRequest())return route.fulfill({contentType:'text/html',body:'<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/fixture.css"></head><body><div id="root"></div><script src="/fixture.js"></script></body></html>'})
+  if(path==='/fixture.css'||path==='/web-fixture.css')return route.fulfill({contentType:'text/css',body:path==='/web-fixture.css'?webCss:css})
+  if(request.resourceType()==='image')return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#e2e8f0"/></svg>'})
+  if(request.isNavigationRequest())return route.fulfill({contentType:'text/html',body:'<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="'+(target.pathname.startsWith('/m/')?'/web-fixture.css':'/fixture.css')+'"></head><body><div id="root"></div><script src="/fixture.js"></script></body></html>'})
   return route.fulfill({status:404,body:''})
  })
  await page.goto(options.url||'https://app.preview.intaprd.com/admin/medical?kawvo_med_shell=1')
@@ -162,6 +170,31 @@ try{
  })
  await scenario('U07 shared AppointmentManager retains Free requests entry and context return',async()=>{
   const r=await open(),{page}=r;await page.evaluate(()=>window.fixtureNavigate('/admin/free/agenda?section=requests',{kawvoShellReturn:true,kawvoShellTab:'agenda',kawvoShellAccount:'free-a'}));await page.getByRole('heading',{name:'Horario y agenda',exact:true}).waitFor();await page.waitForFunction(()=>document.activeElement?.textContent.startsWith('Solicitudes pendientes'));await backButton(page).click();await page.getByRole('heading',{name:'Shell Free existente',exact:true}).waitFor();assert.equal(writes(r.calls).length,0);await r.close()
+ })
+ await scenario('U01/U03 public return: reproduce first context loss on #174 and recover full owner path',async()=>{
+  const prior=await open({publicBaseline:true,guarded:true,url:'https://preview.intaprd.com/m/medica-prueba'}),page=prior.page
+  await page.getByRole('button',{name:'Abrir menú del perfil',exact:true}).click();const oldLink=page.getByRole('link',{name:'Editar mi perfil',exact:true});assert.equal(await oldLink.getAttribute('href'),'https://app.preview.intaprd.com/admin/medical')
+  await oldLink.click();await page.getByRole('heading',{name:'Dra. Médica de prueba',exact:true}).waitFor();assert.equal(await page.locator('[data-kawmed-shell=doctor]').count(),0);await page.getByRole('button',{name:'Agenda',exact:true}).click();await page.getByRole('heading',{name:'Agenda médica',exact:true}).waitFor();await backButton(page).click();await page.getByRole('heading',{name:'Dra. Médica de prueba',exact:true}).waitFor();assert.equal(await page.locator('[data-kawmed-shell=doctor]').count(),0);assert.equal(writes(prior.calls).length,0);await prior.close()
+  for(const width of [390,1280]){
+   const r=await open({guarded:true,width,url:'https://preview.intaprd.com/m/medica-prueba'}),{page}=r
+   await page.getByRole('button',{name:'Agenda',exact:true}).waitFor()
+   if(await page.getByRole('button',{name:'Abrir menú del perfil',exact:true}).isVisible()){await page.getByRole('button',{name:'Abrir menú del perfil',exact:true}).click();await page.getByRole('link',{name:'Editar mi perfil',exact:true}).click()}else await page.getByRole('button',{name:'Editar mi perfil',exact:true}).click()
+   await page.getByRole('heading',{name:'Mi perfil',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('med_account'),'doctor-a');await page.reload();await page.getByRole('heading',{name:'Mi perfil',exact:true}).waitFor()
+   await tab(page,'Agenda');await page.getByRole('button',{name:/^Solicitudes de citas médicas/}).click();await page.getByRole('heading',{name:'Agenda médica',exact:true}).waitFor();await backButton(page).click();await page.getByRole('heading',{name:'Agenda',exact:true}).waitFor()
+   await tab(page,'Más');await page.getByRole('link',{name:/Solicitudes de citas médicas/}).click();await page.getByText('Paciente sintético 0',{exact:true}).waitFor();await page.getByRole('link',{name:'Gestionar en Agenda →',exact:true}).first().click();await page.locator('#appointment-request-request-0').waitFor();await page.reload();await backButton(page).click();await page.getByRole('heading',{name:'Solicitudes de citas médicas',exact:true}).waitFor();await page.getByRole('link',{name:'← Volver a Más opciones',exact:true}).click();await page.getByRole('heading',{name:'Más opciones',exact:true}).waitFor()
+   assert.equal(await page.locator('[data-kawmed-shell=doctor]').count(),1);assert.equal(await page.evaluate(()=>sessionStorage.getItem('kawvo_intap_active_tab_v1')),'a'.repeat(32));assert.equal(writes(r.calls).length,0);await r.close()
+  }
+ })
+ await scenario('U03 public Agenda entry and copied owner links survive direct entry and reload with real guard',async()=>{
+  const r=await open({guarded:true,url:'https://preview.intaprd.com/m/medica-prueba'}),{page}=r;await page.getByRole('button',{name:'Agenda',exact:true}).click();await page.getByRole('heading',{name:'Agenda',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('med_tab'),'agenda');const copy=page.url();await page.goto('https://preview.intaprd.com/m/medica-prueba');await page.goto(copy);await page.reload();await page.getByRole('heading',{name:'Agenda',exact:true}).waitFor();await page.goto('https://preview.intaprd.com/m/medica-prueba');await page.getByRole('button',{name:'Solicitudes de agenda',exact:true}).click();await page.getByRole('button',{name:'Gestionar agenda',exact:true}).click();await page.getByRole('heading',{name:'Agenda',exact:true}).waitFor();assert.equal(writes(r.calls).length,0);await r.close()
+ })
+ await scenario('U03 public owner hints never switch active account or renew a stale tab',async()=>{
+  const wrong=await open({guarded:true,activeKind:'free',url:'https://preview.intaprd.com/m/medica-prueba'});await wrong.page.getByRole('button',{name:'Agenda',exact:true}).click();await wrong.page.getByRole('heading',{name:'¿Qué deseas hacer?',exact:true}).waitFor();assert.equal(await wrong.page.locator('[data-kawmed-shell=doctor]').count(),0);assert.equal(writes(wrong.calls).length,0);await wrong.close()
+  const stale=await open({guarded:true,url:'https://preview.intaprd.com/m/medica-prueba'});await stale.page.goto('https://app.preview.intaprd.com/admin/accounts');await stale.page.evaluate(()=>sessionStorage.setItem('kawvo_intap_active_tab_v1','b'.repeat(32)));await stale.page.goto('https://preview.intaprd.com/m/medica-prueba');await stale.page.getByRole('button',{name:'Agenda',exact:true}).click();await stale.page.getByRole('heading',{name:'¿Qué deseas hacer?',exact:true}).waitFor();assert.equal(await stale.page.evaluate(()=>sessionStorage.getItem('kawvo_intap_active_tab_v1')),'b'.repeat(32));assert.equal(writes(stale.calls).length,0);await stale.close()
+ })
+ await scenario('U08 public patients and production owner navigation remain unchanged',async()=>{
+  const visitor=await open({guarded:true,owner:false,url:'https://preview.intaprd.com/m/medica-prueba'});await visitor.page.getByRole('heading',{name:'Dra. Médica de prueba',exact:true}).waitFor();const patientMarkup=await visitor.page.locator('.kawmed-profile').innerHTML();const baselineVisitor=await open({publicBaseline:true,owner:false,url:'https://preview.intaprd.com/m/medica-prueba'});await baselineVisitor.page.getByRole('heading',{name:'Dra. Médica de prueba',exact:true}).waitFor();assert.equal(patientMarkup,await baselineVisitor.page.locator('.kawmed-profile').innerHTML(),'Patient UI byte-identical');await baselineVisitor.close();assert.equal(await visitor.page.getByRole('button',{name:'Agenda',exact:true}).count(),0);assert.equal(await visitor.page.getByRole('button',{name:'Abrir menú del perfil',exact:true}).count(),0);assert.equal(writes(visitor.calls).length,0);await visitor.close()
+  const prod=await open({mode:'production',url:'https://intaprd.com/m/medica-prueba'});await prod.page.getByRole('button',{name:'Abrir menú del perfil',exact:true}).click();assert.equal(await prod.page.getByRole('link',{name:'Editar mi perfil',exact:true}).getAttribute('href'),'https://app.intaprd.com/admin/medical');assert.equal(writes(prod.calls).length,0);await prod.close()
  })
  console.log(`PASS G3.2 browser: ${count} scenarios, actual components/router/CSS, synthetic intercepted API only; not authenticated QA`)
 }finally{await browser.close()}
