@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { BASE, CANDIDATE, CANDIDATE_BRANCH, PROJECT, STAGE_BRANCH, APP_PREVIEW, ALLOWLIST, Runner, manifest, options, owner } from './kawmed-g3-1-pages.mjs'
+import { BASE, CANDIDATE, CANDIDATE_BRANCH, PROJECT, STAGE_BRANCH, APP_PREVIEW, ALLOWLIST, Runner, manifest, options, owner, normalizeWebSeo } from './kawmed-g3-1-pages.mjs'
 
 // No Cloudflare, git mutation, build, credential lookup or real upload in this suite.
 const temporary = mkdtempSync(join(tmpdir(), 'kawmed-pages-contract-'))
@@ -168,6 +168,21 @@ try {
       })
     }
     assert.equal(f.writes.length, 0)
+  })
+  await test('Web SEO comparison normalizes only observed host-specific tags, not page content or assets', () => {
+    const a = 'https://intaprd.com', b = 'https://1672b41a.intap-link.pages.dev'
+    const html = host => `<link rel="canonical" href="${host}/" />
+<meta property="og:url" content="${host}/" />
+<meta property="og:image" content="${host}/assets/og/kawvo-link-og.png" />
+<meta property="og:image:secure_url" content="${host}/assets/og/kawvo-link-og.png" />
+<meta name="twitter:image" content="${host}/assets/og/kawvo-link-og.png" />
+<script type="module" src="/assets/main.js"></script><main>Original</main>`
+    const expected = normalizeWebSeo(html(a), a)
+    assert.equal(expected, normalizeWebSeo(html(b), b))
+    for (const changed of [html(b).replace('Original', 'Modified'), html(b).replace('main.js', 'other.js'), html(b).replace('kawvo-link-og.png', 'other.png'), html(b).replace(b + '/', 'https://other.invalid/'), html(b) + '<script>changed()</script>', html(b) + '<a href="' + b + '/">link</a>']) {
+      assert.notEqual(expected, normalizeWebSeo(changed, b))
+    }
+    assert.notEqual(normalizeWebSeo(html(a), b), expected)
   })
   await test('default is read-only; invalid or combined approvals rejected before execution', () => {
     assert.equal(options([]).action, 'preflight')
