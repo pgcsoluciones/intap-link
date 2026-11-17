@@ -182,19 +182,36 @@ export class Runner {
   async deployment(project, id) { return (await this.api('/pages/projects/' + project + '/deployments/' + encodeURIComponent(id))).result }
   async resolveOrigin(origin, project) {
     check(pagesOrigin(origin, project), 'Origen fuera del proyecto propietario')
-    const found = []
-    let exhausted = false
-    for (let page = 1; page <= 25; page++) {
-      // per_page is optional. Use the endpoint default, as Wrangler does, rather
-      // than assuming that the generic Cloudflare page size is accepted by Pages.
-      const body = await this.api('/pages/projects/' + project + '/deployments?page=' + page)
+    // Pages aliases are current pointers, not a search over historical releases.
+    // Restrict the listing to Preview; confirm the exact pointer again via detail.
+    // snapshot/publish independently compare the live bytes with the immutable URL.
+    const matches = item => item.url === origin || (item.aliases || []).map(normal).includes(origin)
+    const seen = new Set()
+    let limit = 500
+    for (let page = 1; page <= limit; page++) {
+      const body = await this.api('/pages/projects/' + project + '/deployments?env=preview&page=' + page)
       check(Array.isArray(body.result), 'Lista Pages inválida')
-      found.push(...body.result.filter(item => item.url === origin || (item.aliases || []).map(normal).includes(origin)))
-      if (!body.result.length || body.result_info?.total_pages && page >= body.result_info.total_pages) { exhausted = true; break }
+      const info = body.result_info
+      if (info?.page !== undefined) check(info.page === page, 'Paginación Pages no coincide con página solicitada')
+      if (info?.total_pages !== undefined) {
+        check(Number.isInteger(info.total_pages) && info.total_pages >= 0, 'Paginación Pages inválida')
+        limit = Math.min(500, info.total_pages)
+      }
+      for (const item of body.result) {
+        check(item.id && !seen.has(item.id), 'Paginación Pages repetida; no inferir ownership')
+        seen.add(item.id)
+      }
+      const found = body.result.filter(matches)
+      check(found.length <= 1, 'Origen no resuelto a un único deployment actual')
+      if (found.length === 1) {
+        const detail = await this.deployment(project, found[0].id)
+        check(detail?.id === found[0].id && detail.url === found[0].url && detail.environment === 'preview' && matches(detail), 'Origen cambió entre lista y detalle; detener')
+        owner(detail, project, { environment: 'preview' })
+        return detail
+      }
+      if (!body.result.length || (info?.total_pages !== undefined && page >= info.total_pages)) throw Error('Origen no resuelto a un único deployment actual')
     }
-    check(exhausted, 'Paginación Pages incompleta; no inferir ownership')
-    check(found.length === 1, 'Origen no resuelto a un único deployment actual')
-    return this.deployment(project, found[0].id)
+    throw Error('Paginación Pages incompleta; no inferir ownership')
   }
   workers() {
     const result = {}
