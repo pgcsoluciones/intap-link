@@ -100,22 +100,28 @@ try {
     assert.equal(listing[1].searchParams.has('per_page'), false)
     assert.equal(f.writes.length, 0)
   })
-  await test('pagination traverses multiple pages, detects duplicates and blocks an incomplete bounded scan', async () => {
-    for (const scenario of ['metadata', 'empty-page', 'duplicate', 'bounded']) {
+  await test('Preview pointer resolution stops at exact match, checks detail and handles real historical volume', async () => {
+    for (const scenario of ['early', 'late', 'duplicate', 'stale', 'repeated', 'missing', 'bounded']) {
       const f = fixture(), pages = [], target = f.deployments[0], other = f.deployments[1]
       f.runner.fetch = async (url, init) => {
         assert.equal(init.method, 'GET')
         const request = new URL(url)
-        if (request.pathname.endsWith('/app-old')) return { ok: true, json: async () => ({ success: true, result: target }) }
+        if (request.pathname.endsWith('/app-old')) return { ok: true, json: async () => ({ success: true, result: scenario === 'stale' ? { ...target, aliases: [] } : target }) }
+        assert.equal(request.searchParams.get('env'), 'preview')
         assert.equal(request.searchParams.has('per_page'), false)
         const page = Number(request.searchParams.get('page')); pages.push(page)
-        const result = page === 2 || scenario === 'duplicate' && page === 3 ? [target] : page === 1 || scenario === 'bounded' ? [other] : []
-        return { ok: true, json: async () => ({ success: true, result, ...(scenario === 'metadata' || scenario === 'duplicate' ? { result_info: { total_pages: 3 } } : {}) }) }
+        const historical = { ...other, id: scenario === 'repeated' ? 'same' : 'history-' + page }
+        const match = page === (scenario === 'late' ? 26 : 2)
+        const result = scenario === 'duplicate' && match ? [target, { ...target, id: 'duplicate' }] : match && ['early', 'late', 'stale'].includes(scenario) ? [target] : [historical]
+        return { ok: true, json: async () => ({ success: true, result, result_info: { page, total_pages: scenario === 'missing' ? 3 : scenario === 'bounded' ? 501 : 212 } }) }
       }
-      if (scenario === 'duplicate') await assert.rejects(() => f.runner.resolveOrigin(f.activeAlias, PROJECT), /único deployment/)
+      if (scenario === 'duplicate' || scenario === 'missing') await assert.rejects(() => f.runner.resolveOrigin(f.activeAlias, PROJECT), /único deployment/)
+      else if (scenario === 'stale') await assert.rejects(() => f.runner.resolveOrigin(f.activeAlias, PROJECT), /Origen cambió/)
+      else if (scenario === 'repeated') await assert.rejects(() => f.runner.resolveOrigin(f.activeAlias, PROJECT), /Paginación Pages repetida/)
       else if (scenario === 'bounded') await assert.rejects(() => f.runner.resolveOrigin(f.activeAlias, PROJECT), /Paginación Pages incompleta/)
       else assert.equal((await f.runner.resolveOrigin(f.activeAlias, PROJECT)).id, target.id)
-      assert.deepEqual(pages, Array.from({ length: scenario === 'bounded' ? 25 : 3 }, (_, index) => index + 1))
+      const expected = { early: 2, late: 26, duplicate: 2, stale: 2, repeated: 2, missing: 3, bounded: 500 }[scenario]
+      assert.deepEqual(pages, Array.from({ length: expected }, (_, index) => index + 1))
       assert.equal(f.writes.length, 0)
     }
   })
