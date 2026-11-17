@@ -115,3 +115,7 @@ Siguiente punto de control: revisión técnica del Draft PR operativo. Sin merge
 ### Diagnóstico real 16/11/2026 y segunda corrección
 
 Cloudflare devolvió 5,138 deployments App y 5,276 Web, 25 por página. El runner anterior agotaba su límite de 25 páginas. Fuente API: https://developers.cloudflare.com/api/resources/pages/subresources/projects/subresources/deployments/methods/list/ (filtros documentados `env`, `page`, `per_page`; no filtro de rama). Nueva prueba cubre coincidencia temprana, página 26, duplicidad local, cambio de alias entre lista y detalle, páginas repetidas, ausencia y límite defensivo. La ejecución de las pruebas de esta revisión y el preflight real quedan pendientes hasta obtener evidencia del SHA corregido. No se efectuaron despliegues por esta revisión.
+
+### Tercera corrección: HTML Web dependiente del dominio
+
+Preflight real: 17 pruebas PASS, CI 43991400949 SUCCESS. El diagnóstico local confirmó JS y CSS idénticos en Web productiva y deployment canónico 1672b41a; las diferencias HTML observadas se limitan a canonical, og:url, og:image, og:image:secure_url y twitter:image con el dominio de consulta. Se normaliza únicamente el prefijo de origen exacto de esas etiquetas en las comparaciones Web, conservando ruta, resto del HTML y hashes de assets. App y artefactos de publicación/rollback conservan igualdad estricta. Se conserva HTML original en evidencia. Prueba adicional de equivalencia y rechazo de cambios sustantivos; validación pendiente del nuevo SHA. Sin despliegues.
