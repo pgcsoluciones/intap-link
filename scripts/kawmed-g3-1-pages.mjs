@@ -28,6 +28,33 @@ const normal = url => new URL(url).origin
 const immutable = (url, project) => new RegExp('^https://[a-f0-9]{8,}\\.' + project + '\\.pages\\.dev$').test(url)
 const pagesOrigin = (url, project) => new RegExp('^https://[a-z0-9-]+\\.' + project + '\\.pages\\.dev$').test(url)
 
+// Only API messages are inspected; never stringify the response, headers or env_vars.
+function apiDiagnostic(path, status, body, secrets, networkError) {
+  const clean = value => {
+    let text = typeof value === 'string' ? value : ''
+    for (const secret of secrets.filter(value => typeof value === 'string' && value.length).sort((a, b) => b.length - a.length)) text = text.split(secret).join('[oculto]')
+    return text.replace(/https?:\/\/[^\s"'<>]+/gi, '[URL omitida]')
+      .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [oculto]')
+      .replace(/\b(authorization|x-auth-key|x-auth-email|oauth_token|refresh_token|access_token|api[_-]?(?:key|token)|token|secret)\b\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi, '$1=[oculto]')
+      .replace(/\b[a-f0-9]{32}\b/gi, '[identificador oculto]')
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[correo oculto]')
+      .replace(/\b[A-Za-z0-9_-]{20,}(?:\.[A-Za-z0-9_-]+)*\b/g, '[valor oculto]')
+      .replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)
+  }
+  const request = new URL(path, 'https://diagnostic.invalid')
+  const route = request.pathname.match(/^\/pages\/projects\/(intap-web2|intap-link)(\/deployments)?(\/[^/]+)?$/)
+  const endpoint = route ? '/pages/projects/' + route[1] + (route[2] || '') + (route[3] ? '/:deployment_id' : '') : '[endpoint omitido]'
+  const pagination = ['page', 'per_page'].map(key => {
+    const value = request.searchParams.get(key)
+    return key + '=' + (value === null ? 'predeterminado' : /^\d{1,6}$/.test(value) ? value : '[omitido]')
+  }).join('; ')
+  const errors = Array.isArray(body?.errors) ? body.errors.slice(0, 3) : []
+  const details = errors.flatMap(error => [error, ...(Array.isArray(error?.error_chain) ? error.error_chain.slice(0, 2) : [])]).slice(0, 4)
+  const codes = details.map(error => /^\d{1,12}$/.test(String(error?.code ?? '')) ? String(error.code) : 'sin código').join(',') || 'sin código'
+  const messages = details.map(error => clean(error?.message)).filter(Boolean).join(' | ')
+  return 'Cloudflare GET ' + endpoint + '; ' + pagination + '; ' + (networkError ? 'fallo de red/timeout; detalle=' + clean(networkError.message) : 'HTTP ' + status + '; códigos=' + codes + '; detalle=' + (messages || (body === null ? 'respuesta JSON no válida' : 'sin mensaje de error API'))) + '; petición de solo lectura'
+}
+
 export function options(args) {
   const result = { action: 'preflight' }
   const names = new Set(['action', 'evidence', 'rollback-artifact', 'approve-stage', 'approve-promote', 'stage-reviewed'])
@@ -138,9 +165,13 @@ export class Runner {
     check(/^[a-f0-9]{32}$/i.test(this.account) && ids.includes(this.account), 'No se pudo determinar una cuenta autorizada única')
   }
   async api(path) {
-    const response = await this.fetch('https://api.cloudflare.com/client/v4/accounts/' + this.account + path, { method: 'GET', headers: this.headers, signal: AbortSignal.timeout(30000) })
+    const secrets = [this.account, ...Object.values(this.headers || {}), String(this.headers?.Authorization || '').replace(/^Bearer\s+/i, '')]
+    let response
+    try {
+      response = await this.fetch('https://api.cloudflare.com/client/v4/accounts/' + this.account + path, { method: 'GET', headers: this.headers, signal: AbortSignal.timeout(30000) })
+    } catch (error) { throw Error(apiDiagnostic(path, null, null, secrets, error)) }
     const body = await response.json().catch(() => null)
-    check(response.ok && body?.success === true, 'Cloudflare GET no disponible; HTTP ' + response.status + '; códigos=' + (body?.errors || []).map(error => error.code).join(','))
+    check(response.ok && body?.success === true, apiDiagnostic(path, response.status, body, secrets))
     return body
   }
   async project(name) {
@@ -154,7 +185,9 @@ export class Runner {
     const found = []
     let exhausted = false
     for (let page = 1; page <= 25; page++) {
-      const body = await this.api('/pages/projects/' + project + '/deployments?page=' + page + '&per_page=100')
+      // per_page is optional. Use the endpoint default, as Wrangler does, rather
+      // than assuming that the generic Cloudflare page size is accepted by Pages.
+      const body = await this.api('/pages/projects/' + project + '/deployments?page=' + page)
       check(Array.isArray(body.result), 'Lista Pages inválida')
       found.push(...body.result.filter(item => item.url === origin || (item.aliases || []).map(normal).includes(origin)))
       if (!body.result.length || body.result_info?.total_pages && page >= body.result_info.total_pages) { exhausted = true; break }

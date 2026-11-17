@@ -56,6 +56,7 @@ function fixture() {
     assert.equal(init.method, 'GET', 'Every HTTP request is read-only; uploads are limited to the explicit CLI boundary')
     const target = new URL(url)
     if (target.hostname === 'api.cloudflare.com') {
+      if (target.searchParams.get('per_page') === '100') return { ok: false, status: 400, json: async () => ({ success: false, errors: [{ code: 8000024, message: 'Invalid query parameter per_page=100.' }] }) }
       const project = target.pathname.match(/\/pages\/projects\/([^/]+)/)?.[1]
       const id = target.pathname.match(/\/deployments\/([^/]+)$/)?.[1]
       let result
@@ -83,6 +84,85 @@ function fixture() {
 }
 const action = (name, evidence) => options(['--action', name, '--evidence', evidence, name === 'stage' ? '--approve-stage' : '--approve-promote', CANDIDATE, ...(name === 'promote' ? ['--stage-reviewed', CANDIDATE] : [])])
 try {
+  await test('reported HTTP 400/8000024 is diagnosed; origin lookup uses server-default page size without uploads', async () => {
+    const f = fixture()
+    await assert.rejects(() => f.runner.api('/pages/projects/intap-web2/deployments?page=1&per_page=100'), error => {
+      assert.match(error.message, /HTTP 400; códigos=8000024/)
+      assert.match(error.message, /per_page=100/)
+      assert.match(error.message, /Invalid query parameter/)
+      return true
+    })
+    const deployment = await f.runner.resolveOrigin(f.activeAlias, PROJECT)
+    assert.equal(deployment.id, 'app-old')
+    const listing = f.requests.map(item => new URL(item.url)).filter(url => url.pathname.endsWith('/deployments'))
+    assert.equal(listing.length, 2)
+    assert.equal(listing[1].searchParams.get('page'), '1')
+    assert.equal(listing[1].searchParams.has('per_page'), false)
+    assert.equal(f.writes.length, 0)
+  })
+  await test('pagination traverses multiple pages, detects duplicates and blocks an incomplete bounded scan', async () => {
+    for (const scenario of ['metadata', 'empty-page', 'duplicate', 'bounded']) {
+      const f = fixture(), pages = [], target = f.deployments[0], other = f.deployments[1]
+      f.runner.fetch = async (url, init) => {
+        assert.equal(init.method, 'GET')
+        const request = new URL(url)
+        if (request.pathname.endsWith('/app-old')) return { ok: true, json: async () => ({ success: true, result: target }) }
+        assert.equal(request.searchParams.has('per_page'), false)
+        const page = Number(request.searchParams.get('page')); pages.push(page)
+        const result = page === 2 || scenario === 'duplicate' && page === 3 ? [target] : page === 1 || scenario === 'bounded' ? [other] : []
+        return { ok: true, json: async () => ({ success: true, result, ...(scenario === 'metadata' || scenario === 'duplicate' ? { result_info: { total_pages: 3 } } : {}) }) }
+      }
+      if (scenario === 'duplicate') await assert.rejects(() => f.runner.resolveOrigin(f.activeAlias, PROJECT), /único deployment/)
+      else if (scenario === 'bounded') await assert.rejects(() => f.runner.resolveOrigin(f.activeAlias, PROJECT), /Paginación Pages incompleta/)
+      else assert.equal((await f.runner.resolveOrigin(f.activeAlias, PROJECT)).id, target.id)
+      assert.deepEqual(pages, Array.from({ length: scenario === 'bounded' ? 25 : 3 }, (_, index) => index + 1))
+      assert.equal(f.writes.length, 0)
+    }
+  })
+  await test('API diagnostics retain bounded code/message/context while redacting account, credentials and response payloads', async () => {
+    const f = fixture(), account = 'abcdef1234567890abcdef1234567890', token = 'private-bearer-fixture-value', extraSecret = 'unknownPrivateToken12345678901234567890'
+    f.runner.account = account; f.runner.headers = { Authorization: 'Bearer ' + token }
+    f.runner.fetch = async () => ({ ok: false, status: 400, json: async () => ({
+      success: false,
+      errors: [{ code: 8000024, message: `Invalid per_page=100. account=${account}; Bearer ${token}; token=${extraSecret}; https://api.cloudflare.com/client/v4/accounts/${account}?token=${token}; owner@example.invalid\n\u001b[31m`, error_chain: [{ code: 1234, message: 'Use the default page size.' }] }],
+      result: { env_vars: { DO_NOT_LOG: 'private-response-value' } },
+    }) })
+    await assert.rejects(() => f.runner.api('/pages/projects/intap-web2/deployments?page=2&per_page=100'), error => {
+      const message = error.message
+      assert.match(message, /GET \/pages\/projects\/intap-web2\/deployments; page=2; per_page=100; HTTP 400/)
+      assert.match(message, /códigos=8000024,1234/)
+      assert.match(message, /Invalid per_page=100/)
+      assert.match(message, /Use the default page size/)
+      for (const secret of [account, token, extraSecret, 'owner@example.invalid', 'private-response-value', 'env_vars', 'Authorization', 'https://api.cloudflare.com']) assert.ok(!message.includes(secret), 'Sensitive data leaked in diagnostic')
+      assert.doesNotMatch(message, /[\n\u001b]/)
+      assert.ok(message.length < 1200)
+      return true
+    })
+    assert.equal(f.writes.length, 0)
+  })
+  await test('non-JSON, malformed API errors and network failures remain sanitized and actionable', async () => {
+    const f = fixture(), account = 'abcdef1234567890abcdef1234567890', token = 'private-transport-token'
+    f.runner.account = account; f.runner.headers = { Authorization: 'Bearer ' + token }
+    for (const scenario of ['non-json', 'malformed', 'network', 'long-message']) {
+      f.runner.fetch = async () => {
+        if (scenario === 'network') throw Error(`Timeout https://api.cloudflare.com/accounts/${account}?token=${token} Bearer ${token}`)
+        return { ok: false, status: 503, json: async () => {
+          if (scenario === 'non-json') throw Error('raw HTML should never be logged')
+          return { success: false, errors: scenario === 'malformed' ? { message: 'do not dump malformed payload' } : [{ code: 8000024, message: 'invalid parameter '.repeat(200) }] }
+        } }
+      }
+      await assert.rejects(() => f.runner.api('/pages/projects/intap-web2/deployments?page=3'), error => {
+        assert.match(error.message, /GET \/pages\/projects\/intap-web2\/deployments; page=3; per_page=predeterminado/)
+        assert.match(error.message, scenario === 'network' ? /fallo de red\/timeout/ : /HTTP 503/)
+        if (scenario === 'non-json') assert.match(error.message, /JSON no válida/)
+        if (scenario === 'malformed') assert.match(error.message, /sin código/)
+        for (const secret of [account, token, 'raw HTML', 'malformed payload', 'https://api.cloudflare.com']) assert.ok(!error.message.includes(secret))
+        assert.ok(error.message.length < 1200)
+        return true
+      })
+    }
+    assert.equal(f.writes.length, 0)
+  })
   await test('default is read-only; invalid or combined approvals rejected before execution', () => {
     assert.equal(options([]).action, 'preflight')
     for (const args of [ ['--action', 'production'], ['--action', 'stage'], ['--action', 'stage', '--evidence', '/tmp/x', '--approve-stage', BASE],

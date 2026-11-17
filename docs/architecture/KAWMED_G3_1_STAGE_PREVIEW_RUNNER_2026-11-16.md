@@ -88,7 +88,7 @@ Solo tras promoción autorizada podrá Work hacer QA autenticada en `https://app
 
 - PASS `bash -n scripts/run-kawmed-g3-1-stage-preview-2026-11-16.sh`.
 - PASS `node --check scripts/kawmed-g3-1-pages.mjs` y contrato del runner.
-- PASS `node scripts/test-kawmed-g3-1-pages-runner.mjs`: 13 grupos de contratos con HTTP/CLI Cloudflare simulados. Cubren lectura por defecto, gates, metadata equivocada, Git/allowlist, manifiesto/chunks/symlinks, Worker dinámico sin secretos en evidencia, Stage único sin promoción, promoción a alias real, deriva de Worker/App/Web Producción/Web Preview, receipts de otro SHA/runner, bytes de chunks, fallo ambiguo y bloqueo de repetición.
+- PASS `node scripts/test-kawmed-g3-1-pages-runner.mjs`: 17 grupos de contratos con HTTP/CLI Cloudflare simulados. Incluyen los 13 originales de lectura/gates/aislamiento y cuatro nuevos de paginación y diagnóstico API descritos a continuación.
 - PASS integración real de la validación Git contra main/candidato remoto y árbol limpio.
 - PASS build Preview local del candidato exacto mediante `Runner.build`/git archive fuera del checkout: 14 archivos. No cambia HEAD, rama ni archivos funcionales. No se instaló nada. Permanecen warnings de Vite CJS, Browserslist y tamaño de chunk.
 - PASS ayuda/argumentos sin conectar a Cloudflare; diff check e inventario operativo antes de publicar.
@@ -97,5 +97,17 @@ Solo tras promoción autorizada podrá Work hacer QA autenticada en `https://app
 Preflight Cloudflare real, origen App Preview actual, rollback anterior efectivo, Stage, promoción y QA autenticada: **BLOCKED/pendientes de la Mac**, sin afirmar PASS remoto. En este entorno no hay token/account Cloudflare en las variables usadas ni configuración de sesión Wrangler en las ubicaciones estándar; tampoco hay conector Cloudflare disponible. No se solicitaron credenciales ni permisos nuevos. CI del PR operativo, cuando se ejecute, valida sus workflows existentes y no incorpora automáticamente el contrato nuevo, al mantenerse los workflows intactos.
 
 No existe una transacción atómica que bloquee cambios externos mientras se publica: el runner detecta deriva antes/después y detiene el procedimiento, pero no deshace automáticamente una escritura si otro operador modifica el entorno al mismo tiempo. Conservar los intentos y coordinar el ciclo revisado; no declarar integraciones externas o QA real verificadas mediante fixtures.
+
+## Corrección del HTTP 400 / código 8000024 reportado desde la Mac
+
+El propietario reportó que el preflight de la versión operativa `6e10c4bf30e2360c093fcc78fbecf4bceca11437` falla con HTTP 400 y código Cloudflare 8000024. La consulta de deployments enviaba `per_page=100`. Se retira ese parámetro y se conserva `page`, usando el tamaño predeterminado del endpoint en lugar de asumir un límite numérico. [La API oficial documenta `per_page` como opcional](https://developers.cloudflare.com/api/resources/pages/subresources/projects/subresources/deployments/methods/list/); el comando de listado de Pages del Wrangler local también omite ese parámetro. No se afirma un máximo no verificado ni se prueban automáticamente otros tamaños contra Cloudflare.
+
+El recorrido sigue acotado a 25 páginas y exige agotarlo para aceptar un propietario único: múltiples coincidencias o una exploración incompleta permanecen BLOCKED. No se relajan checks de metadata, bytes, rollback, autorización ni aislamiento.
+
+El diagnóstico ahora conserva endpoint sin ID de cuenta, página/tamaño predeterminado, HTTP, códigos y mensajes API breves, incluidos errores anidados de primer nivel. Solo inspecciona campos de error permitidos; elimina credenciales conocidas, Bearer/tokens, identificadores, correos, URLs y controles de terminal; limita cantidad y longitud. No vuelca headers, cuerpos completos, env_vars, secretos ni respuesta HTML. Los fallos de red/timeout y las respuestas JSON inválidas o errores malformados producen mensajes sanitizados identificables.
+
+PASS de los 17 grupos: reproducen el 400/8000024 para el parámetro anterior, resuelven el origen con paginación predeterminada, recorren varias páginas con/sin metadata, rechazan duplicados y límites incompletos, y comprueban diagnóstico útil sin fugas para errores API/red/JSON. Los 13 grupos originales pasan sin reducir sus aserciones. PASS syntax Bash/Node, ayuda y diff check. No se repite el build funcional porque no se cambia App ni el procedimiento de build; la CI del nuevo SHA se revisa en el mismo PR operativo.
+
+La reproducción es simulada: esta corrección no repite el preflight Cloudflare real de la Mac ni ejecuta despliegues. La descripción del PR actualiza el SHA operativo del bloque Mac. Como cambia la huella del runner, debe crearse un preflight nuevo; los receipts de la versión anterior no autorizan Stage/promoción con la nueva. El candidato funcional `34d57a4bfebc9e59b0347d0497a159ca3f46ce7e` y PR #170 permanecen intactos.
 
 Siguiente punto de control: revisión técnica del Draft PR operativo. Sin merge ni publicaciones Cloudflare durante esta preparación. **APROBACIÓN EXPLÍCITA DE PRODUCCIÓN: NO.**
