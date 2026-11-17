@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '../../lib/api'
 
-type Props={apiBase:string;query?:string;onBack?:()=>void;title?:string;initialSection?:'requests'}
+type Props={apiBase:string;query?:string;onBack?:()=>void;title?:string;initialSection?:'requests'|'confirmed'|'availability'|'blocks'|'settings';backLabel?:string;expectedProfileId?:string;protectDrafts?:boolean}
 type Availability={id?:string;weekday:number;start_time:string;end_time:string;enabled:boolean;sort_order?:number}
 type Reason={id?:string;label:string;enabled:boolean;sort_order?:number}
 type Block={id:string;block_date:string;start_time?:string|null;end_time?:string|null;note?:string|null}
@@ -10,6 +10,12 @@ type RequestItem={
   appointment_date:string;start_time:string;end_time:string;timezone:string
   reason_label:string;details?:string|null;status:string;created_at?:string|null
 }
+
+// Register before BrowserRouter subscribes: Window popstate listeners can run in
+// registration order even for capture. Only the mounted contextual medical editor
+// installs a handler; Free, guests and Master keep their existing navigation.
+let medicalPopGuard:((event:PopStateEvent)=>void)|null=null
+if(typeof window!=='undefined')window.addEventListener('popstate',event=>medicalPopGuard?.(event),true)
 
 const DAY_NAMES=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
 
@@ -83,7 +89,7 @@ function whatsappOccupied(item:RequestItem){
   ].join('\n'))
 }
 
-export default function AppointmentManager({apiBase,query='',onBack,title='Agenda',initialSection}:Props){
+export default function AppointmentManager({apiBase,query='',onBack,title='Agenda',initialSection,backLabel='Volver',expectedProfileId,protectDrafts=false}:Props){
   const[data,setData]=useState<any>(null)
   const[loading,setLoading]=useState(true)
   const[saving,setSaving]=useState(false)
@@ -99,6 +105,8 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
   const[occupiedId,setOccupiedId]=useState<string|null>(null)
   const[targetRequestId]=useState(()=>String(new URLSearchParams(window.location.search).get('request')||'').trim())
   const[highlightRequestId,setHighlightRequestId]=useState<string|null>(null)
+  const draftBaseline=useRef('')
+  const extraSectionVisited=useRef(false)
   const requestsHeading=useRef<HTMLHeadingElement>(null)
   const initialSectionVisited=useRef(false)
 
@@ -110,17 +118,20 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
     try{
       const json:any=await apiGet(path(apiBase,'',query))
       if(!json?.ok)throw new Error(json?.error||'No pudimos cargar la agenda.')
+      if(expectedProfileId&&String(json.data?.profile?.id||'')!==expectedProfileId){setData(null);throw new Error('La Agenda no corresponde a la cuenta médica de origen. Vuelve al perfil y verifica la cuenta activa.')}
       setData(json.data)
       setSettings(json.data.settings)
       setAvailability((json.data.availability||[]).map((item:any)=>({...item,enabled:Number(item.enabled??1)===1||item.enabled===true})))
-      setReasons((json.data.reasons||[]).map((item:any)=>({...item,enabled:item.enabled!==false&&Number(item.enabled??1)!==0})))
+      const loadedReasons=(json.data.reasons||[]).map((item:any)=>({...item,enabled:item.enabled!==false&&Number(item.enabled??1)!==0}))
+      setReasons(loadedReasons)
+      draftBaseline.current=JSON.stringify([json.data.settings,(json.data.availability||[]).map((item:any)=>({...item,enabled:Number(item.enabled??1)===1||item.enabled===true})),loadedReasons])
     }catch(e){setError(e instanceof Error?e.message:'No pudimos cargar la agenda.')}
     finally{
       if(!silent)setLoading(false)
       if(scrollY!==null)window.requestAnimationFrame(()=>window.scrollTo({top:scrollY,left:0,behavior:'auto'}))
     }
   }
-  useEffect(()=>{void load()},[apiBase,query])
+  useEffect(()=>{void load()},[apiBase,query,expectedProfileId])
 
   // Optional entry: focus the existing requests section once after successful load.
   // Existing request deep links take precedence; other callers keep their original entry point.
@@ -132,6 +143,42 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
     heading.focus({preventScroll:true})
     heading.scrollIntoView({block:'start',behavior:'auto'})
   },[initialSection,targetRequestId,loading,error,data])
+
+  // Additive medical entries; Free's original requests-entry effect stays unchanged.
+  useEffect(()=>{
+    if(!initialSection||initialSection==='requests'||targetRequestId||loading||error||!data||extraSectionVisited.current)return
+    const heading=document.getElementById('appointment-section-'+initialSection)
+    if(!heading)return
+    extraSectionVisited.current=true
+    if(initialSection==='availability')setAvailabilityOpen(true)
+    heading.focus({preventScroll:true});heading.scrollIntoView({block:'start',behavior:'auto'})
+  },[initialSection,targetRequestId,loading,error,data])
+  const hasDraft=()=>Boolean(draftBaseline.current&&draftBaseline.current!==JSON.stringify([settings,availability,reasons]))||Object.values(block).some(Boolean)
+  const requestBack=()=>{
+    if(protectDrafts&&saving){setError('Espera a que termine el guardado antes de volver.');return}
+    if(protectDrafts&&hasDraft()&&!window.confirm('Hay cambios de Agenda sin guardar. ¿Volver y descartar los cambios locales?'))return
+    onBack?.()
+  }
+  useEffect(()=>{
+    if(!protectDrafts)return
+    const beforeUnload=(event:BeforeUnloadEvent)=>{if(saving||hasDraft()){event.preventDefault();event.returnValue=''}}
+    // Browser back/forward must not bypass the same explicit discard choice.
+    // The router's index restores a cancelled traversal; return destinations remain fixed URLs.
+    const originIndex=window.history.state?.idx
+    let restoring=false
+    const onPop=(event:PopStateEvent)=>{
+      if(restoring){restoring=false;event.stopImmediatePropagation();return}
+      if(!saving&&!hasDraft())return
+      if(!saving&&window.confirm('Hay cambios de Agenda sin guardar. ¿Volver y descartar los cambios locales?'))return
+      const targetIndex=event.state?.idx
+      if(Number.isInteger(originIndex)&&Number.isInteger(targetIndex)&&originIndex!==targetIndex){
+        event.stopImmediatePropagation();restoring=true;window.history.go(originIndex-targetIndex)
+      }
+    }
+    window.addEventListener('beforeunload',beforeUnload)
+    medicalPopGuard=onPop
+    return()=>{window.removeEventListener('beforeunload',beforeUnload);if(medicalPopGuard===onPop)medicalPopGuard=null}
+  },[protectDrafts,saving,settings,availability,reasons,block])
 
   const pending=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='pending'),[data])
   const confirmed=useMemo(()=>((data?.requests||[]) as RequestItem[]).filter(item=>item.status==='confirmed'),[data])
@@ -273,19 +320,23 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
     }
   }
 
-  if(loading)return <main className="min-h-screen bg-slate-50 px-5 py-10 font-['Inter']"><div className="mx-auto max-w-3xl text-sm font-bold text-slate-500">Cargando agenda…</div></main>
+  if(loading)return <main className="min-h-screen bg-slate-50 px-5 py-10 font-['Inter']"><div className="mx-auto max-w-3xl text-sm font-bold text-slate-500">{onBack&&<button type="button" onClick={requestBack} className="mb-3 block min-h-11 min-w-11 rounded-xl border px-4">← {backLabel}</button>}<p role="status">Cargando agenda…</p></div></main>
 
-  return <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-5 font-['Inter'] text-slate-950">
+  if(expectedProfileId&&!data)return <main className="min-h-screen bg-slate-50 p-5 font-sans"><section className="mx-auto max-w-3xl space-y-4"><button type="button" onClick={requestBack} className="min-h-11 min-w-11 rounded-xl border bg-white px-4 font-bold">← {backLabel}</button><p role="alert" className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800">{error||'No se pudo verificar la Agenda de esta cuenta médica.'}</p><button type="button" onClick={()=>void load()} className="min-h-11 min-w-11 rounded-xl border bg-white px-4 font-bold">Reintentar</button></section></main>
+
+  return <main data-kawmed-agenda={protectDrafts?'contextual':undefined} className={(protectDrafts?"min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] [&_button]:min-h-11 [&_button]:min-w-11 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:min-w-11 [&_a]:items-center [&_input]:min-w-0 [&_input]:max-w-full [&_select]:min-w-0 [&_h1]:break-words [&_p]:break-words [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-cyan-700 ":'')+"min-h-screen bg-slate-50 px-4 pb-16 pt-5 font-['Inter'] text-slate-950"} style={protectDrafts?{fontFamily:'Inter, sans-serif'}:undefined}>
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <header className="flex items-center justify-between gap-3">
-        <div className="min-w-0">{onBack&&<button type="button" onClick={onBack} className="mb-2 text-sm font-black text-slate-500">← Volver</button>}<h1 className="text-3xl font-black tracking-[-.04em]">{title}</h1><p className="mt-1 text-sm text-slate-500">{data?.profile?.business_name||'Configura cuándo pueden solicitarte una cita.'}</p></div>
+        <div className="min-w-0">{onBack&&<button type="button" onClick={requestBack} className="mb-2 min-h-11 min-w-11 rounded-xl px-2 text-left text-sm font-black text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700">← {backLabel}</button>}<h1 className="text-3xl font-black tracking-[-.04em]">{title}</h1><p className="mt-1 text-sm text-slate-500">{data?.profile?.business_name||'Configura cuándo pueden solicitarte una cita.'}</p></div>
         <span className={'shrink-0 rounded-full px-3 py-2 text-xs font-black '+(settings.enabled?'bg-emerald-100 text-emerald-700':'bg-slate-200 text-slate-600')}>{settings.enabled?'Activa':'Inactiva'}</span>
       </header>
 
-      {(message||error)&&<div className={'rounded-2xl px-4 py-3 text-sm font-bold '+(error?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-700')}>{error||message}</div>}
+      {(message||error)&&<div role={error?'alert':'status'} className={'rounded-2xl px-4 py-3 text-sm font-bold '+(error?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-700')}>{error||message}</div>}
+
+      {expectedProfileId&&targetRequestId&&data&&!((data.requests||[]) as RequestItem[]).some(item=>item.id===targetRequestId)&&<p role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">La solicitud no existe o no pertenece a esta cuenta médica. Puedes volver a Agenda para revisar las solicitudes disponibles.</p>}
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-4"><div><h2 className="text-xl font-black">Configuración</h2><p className="mt-1 text-sm text-slate-500">La cita se confirma manualmente. Una solicitud pendiente no bloquea el horario.</p></div><label className="flex items-center gap-2 text-sm font-black"><input type="checkbox" checked={Boolean(settings.enabled)} onChange={e=>setSettings({...settings,enabled:e.target.checked})} className="h-5 w-5"/>Agenda activa</label></div>
+        <div className="flex items-center justify-between gap-4"><div><h2 id="appointment-section-settings" tabIndex={-1} className="scroll-mt-6 text-xl font-black">Configuración</h2><p className="mt-1 text-sm text-slate-500">La cita se confirma manualmente. Una solicitud pendiente no bloquea el horario.</p></div><label className="flex items-center gap-2 text-sm font-black"><input type="checkbox" checked={Boolean(settings.enabled)} onChange={e=>setSettings({...settings,enabled:e.target.checked})} className="h-5 w-5"/>Agenda activa</label></div>
         <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <label className="text-xs font-black text-slate-600">Duración<select value={settings.slot_minutes} onChange={e=>setSettings({...settings,slot_minutes:Number(e.target.value)})} className={field}><option value={15}>15 min</option><option value={30}>30 min</option><option value={45}>45 min</option><option value={60}>60 min</option></select></label>
           <label className="text-xs font-black text-slate-600">Anticipación<select value={settings.min_notice_minutes} onChange={e=>setSettings({...settings,min_notice_minutes:Number(e.target.value)})} className={field}><option value={0}>Sin mínimo</option><option value={60}>1 hora</option><option value={120}>2 horas</option><option value={240}>4 horas</option><option value={1440}>1 día</option></select></label>
@@ -296,7 +347,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <button type="button" aria-expanded={availabilityOpen} onClick={()=>setAvailabilityOpen(open=>!open)} className="min-w-0 flex-1 rounded-2xl px-1 py-1 text-left transition-all duration-200 hover:bg-slate-50 active:scale-[.995]">
-            <div className="flex items-center justify-between gap-3"><div className="min-w-0"><h2 className="text-xl font-black">Horarios disponibles</h2><p className="mt-1 text-sm text-slate-500">{availability.length} {availability.length===1?'franja':'franjas'} en {availabilityGroups.length} {availabilityGroups.length===1?'día':'días'} · toca para {availabilityOpen?'recoger':'ver'}</p></div><span className={'shrink-0 text-lg text-slate-400 transition-transform duration-200 '+(availabilityOpen?'rotate-180':'')}>⌄</span></div>
+            <div className="flex items-center justify-between gap-3"><div className="min-w-0"><h2 id="appointment-section-availability" tabIndex={-1} className="scroll-mt-6 text-xl font-black">Horarios disponibles</h2><p className="mt-1 text-sm text-slate-500">{availability.length} {availability.length===1?'franja':'franjas'} en {availabilityGroups.length} {availabilityGroups.length===1?'día':'días'} · toca para {availabilityOpen?'recoger':'ver'}</p></div><span className={'shrink-0 text-lg text-slate-400 transition-transform duration-200 '+(availabilityOpen?'rotate-180':'')}>⌄</span></div>
           </button>
           <button type="button" onClick={addAvailability} className={smallBtn}>+ Horario</button>
         </div>
@@ -334,14 +385,14 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       </section>
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-black">Bloquear días u horas</h2><p className="mt-1 text-sm text-slate-500">Deja Desde y Hasta vacíos para bloquear el día completo.</p>
+        <h2 id="appointment-section-blocks" tabIndex={-1} className="scroll-mt-6 text-xl font-black">Bloquear días u horas</h2><p className="mt-1 text-sm text-slate-500">Deja Desde y Hasta vacíos para bloquear el día completo.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-4">
-          <input className={field} type="date" value={block.block_date} onChange={e=>setBlock({...block,block_date:e.target.value})}/>
-          <input className={field} type="time" value={block.start_time} onChange={e=>setBlock({...block,start_time:e.target.value})}/>
-          <input className={field} type="time" value={block.end_time} onChange={e=>setBlock({...block,end_time:e.target.value})}/>
+          <input className={field} aria-label="Fecha del bloqueo" type="date" value={block.block_date} onChange={e=>setBlock({...block,block_date:e.target.value})}/>
+          <input className={field} aria-label="Inicio del bloqueo" type="time" value={block.start_time} onChange={e=>setBlock({...block,start_time:e.target.value})}/>
+          <input className={field} aria-label="Fin del bloqueo" type="time" value={block.end_time} onChange={e=>setBlock({...block,end_time:e.target.value})}/>
           <button type="button" onClick={()=>void createBlock()} disabled={!block.block_date} className={'rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-35 '+actionFx}>Bloquear</button>
         </div>
-        <input className={field} value={block.note} onChange={e=>setBlock({...block,note:e.target.value})} placeholder="Nota opcional: feriado, almuerzo, fuera de oficina…"/>
+        <input className={field} aria-label="Nota del bloqueo" value={block.note} onChange={e=>setBlock({...block,note:e.target.value})} placeholder="Nota opcional: feriado, almuerzo, fuera de oficina…"/>
         <div className="mt-4 space-y-2">{((data?.blocks||[]) as Block[]).map(item=><div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50 px-3 py-3"><div><strong className="text-sm">{item.block_date}</strong><p className="mt-0.5 text-xs text-slate-600">{item.start_time&&item.end_time?humanTime(item.start_time)+' – '+humanTime(item.end_time):'Día completo'}{item.note?' · '+item.note:''}</p></div><button type="button" onClick={()=>void removeBlock(item.id)} className={'rounded-xl bg-white px-3 py-2 text-xs font-black text-amber-800 '+actionFx}>Habilitar</button></div>)}</div>
       </section>
 
@@ -352,7 +403,7 @@ export default function AppointmentManager({apiBase,query='',onBack,title='Agend
       </section>
 
       <section className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-black">Citas confirmadas <span className="text-slate-400">({confirmed.length})</span></h2>
+        <h2 id="appointment-section-confirmed" tabIndex={-1} className="scroll-mt-6 text-xl font-black">Citas confirmadas <span className="text-slate-400">({confirmed.length})</span></h2>
         <div className="mt-4 space-y-3">{pageItems(confirmed,confirmedPage).map(item=><RequestCard key={item.id} item={item} targeted={highlightRequestId===item.id}><a href={whatsappConfirmation(item)} target="_blank" rel="noreferrer" className={'rounded-xl bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700 '+actionFx}>Responder por WhatsApp</a><button type="button" onClick={()=>void act(item,'release')} className={'rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-black text-amber-700 '+actionFx}>Liberar horario</button></RequestCard>)}{!confirmed.length&&<p className="text-base text-slate-500">Aún no tienes citas confirmadas.</p>}</div>
         <PaginationControls page={confirmedPage} total={confirmed.length} pageSize={PAGE_SIZE} onPage={setConfirmedPage}/>
       </section>
