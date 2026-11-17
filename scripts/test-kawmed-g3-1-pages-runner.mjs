@@ -179,6 +179,10 @@ try {
 <script type="module" src="/assets/main.js"></script><main>Original</main>`
     const expected = normalizeWebSeo(html(a), a)
     assert.equal(expected, normalizeWebSeo(html(b), b))
+    const preview = 'https://preview.intaprd.com', alias = 'https://qa-sponsor-scan-1104.intap-link.pages.dev', immutable = 'https://093c2c9a.intap-link.pages.dev'
+    assert.equal(normalizeWebSeo(html(alias), preview, alias), normalizeWebSeo(html(immutable), immutable))
+    assert.notEqual(normalizeWebSeo(html(alias), preview), normalizeWebSeo(html(immutable), immutable))
+    assert.notEqual(normalizeWebSeo(html('https://unverified.intap-link.pages.dev'), preview, alias), normalizeWebSeo(html(immutable), immutable))
     for (const changed of [html(b).replace('Original', 'Modified'), html(b).replace('main.js', 'other.js'), html(b).replace('kawvo-link-og.png', 'other.png'), html(b).replace(b + '/', 'https://other.invalid/'), html(b) + '<script>changed()</script>', html(b) + '<a href="' + b + '/">link</a>']) {
       assert.notEqual(expected, normalizeWebSeo(changed, b))
     }
