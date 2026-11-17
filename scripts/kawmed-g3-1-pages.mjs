@@ -56,12 +56,13 @@ function apiDiagnostic(path, status, body, secrets, networkError) {
 }
 
 // Web Worker rewrites only host-specific SEO metadata. Preserve all other bytes.
-export function normalizeWebSeo(html, origin) {
+export function normalizeWebSeo(html, origin, effectiveOrigin = origin) {
   const source = Buffer.isBuffer(html) ? html.toString('utf8') : html
   return source.replace(/<link rel="canonical" href="([^"]+)"\s*\/>|<meta (?:property="(?:og:url|og:image|og:image:secure_url)"|name="twitter:image") content="([^"]+)"\s*\/>/g, (tag, href, content) => {
     const value = href || content
-    if (!value.startsWith(origin + '/')) return tag
-    return tag.replace(value, 'https://kawvo-seo-origin.invalid' + value.slice(origin.length))
+    const matchedOrigin = [origin, effectiveOrigin].find(candidate => value.startsWith(candidate + '/'))
+    if (!matchedOrigin) return tag
+    return tag.replace(value, 'https://kawvo-seo-origin.invalid' + value.slice(matchedOrigin.length))
   })
 }
 
@@ -250,13 +251,13 @@ export class Runner {
     check(response.ok, 'HTTP ' + response.status + ' al verificar bytes de ' + new URL(url).hostname)
     return Buffer.from(await response.arrayBuffer())
   }
-  async surface(origin, route, directory, webSeo = false) {
+  async surface(origin, route, directory, webSeo = false, effectiveOrigin = origin) {
     mkdirSync(directory, { recursive: true, mode: 0o700 })
     const html = await this.bytes(origin + route)
     writeFileSync(join(directory, 'index.html'), html, { mode: 0o600 })
     const assets = [...new Set(html.toString('utf8').match(/\/assets\/[a-zA-Z0-9_.\/-]+\.(?:js|css)/g) || [])].sort()
     check(assets.some(name => name.endsWith('.js')), 'HTML sin bundle JS verificable')
-    const result = { html: sha(webSeo ? normalizeWebSeo(html, origin) : html), assets: {} }
+    const result = { html: sha(webSeo ? normalizeWebSeo(html, origin, effectiveOrigin) : html), assets: {} }
     for (const asset of assets) {
       check(!asset.includes('..'), 'Asset inválido')
       const bytes = await this.bytes(origin + asset)
@@ -292,7 +293,7 @@ export class Runner {
       check(canonical(live) === canonical(fixed), 'Dominio productivo no coincide con metadata canónica actual: ' + key)
       protectedSurfaces[key] = { deployment, fingerprints: live }
     }
-    const webLive = await this.surface('https://preview.intaprd.com', '/', join(directory, 'web-preview-live'), true)
+    const webLive = await this.surface('https://preview.intaprd.com', '/', join(directory, 'web-preview-live'), true, preview.WEB_PAGES_ORIGIN)
     const webFixed = await this.surface(web.url, '/', join(directory, 'web-preview-immutable'), true)
     check(canonical(webLive) === canonical(webFixed), 'Web Preview no coincide con origen efectivo')
     protectedSurfaces.webPreview = { deployment: web, fingerprints: webLive }
