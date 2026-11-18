@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import KawvoPagedList from '../shared/KawvoPagedList'
 import KawMedAgendaOverview from './KawMedAgendaOverview'
+import {canUseKawMedDelegateShell,isKawMedGuestShellRequest,kawMedGuestRoute,kawMedGuestContextUrl,getKawMedGuestReturn,kawMedGuestTab} from './kawmed-guest-shell-navigation'
+import {KAWMED_SHELL_TABS} from './kawmed-shell-navigation'
 import { getKawMedShellReturn, kawMedContextUrl, type KawMedAgendaSection, type KawMedShellReturn } from './KawMedShellReturn'
 import { activeIntapTabHeaders, kawmedGuestHeaders, API_BASE, apiDelete, apiGet, apiPatch, apiPost, apiPut } from '../../../lib/api'
 import { optimizeImageBlobForUpload } from '../../../lib/imageUploadOptimization'
@@ -13,7 +15,7 @@ import KawvoReadyToPublish from '../shared/KawvoReadyToPublish'
 import { canUseKawMedShell, hasPendingKawMedEdits, isKawMedShellRequest, kawMedLoadPresentation, KAWMED_PROFILE_SECTIONS, type KawMedShellTab } from './kawmed-shell-navigation'
 
 type Tab='profile'|'centers'|'schedule'|'insurance'|'appearance'|'public'
-type MedicalDashboardProps={scope?:'doctor'|'sponsor_master';embedded?:boolean;onOpenAgenda?:()=>void}
+type MedicalDashboardProps={scope?:'doctor'|'sponsor_master';embedded?:boolean;onOpenAgenda?:()=>void;delegatedProfileId?:string;routeActive?:boolean;agendaView?:ReactNode}
 type PendingImage={file:File;kind:'avatar'|'cover'}|null
 const MEDICAL_SPECIALTIES=["Medicina general","Medicina familiar","Medicina interna","Pediatría","Neonatología","Medicina del adolescente","Ginecología","Obstetricia","Ginecología y obstetricia","Medicina materno-fetal","Endocrinología reproductiva e infertilidad","Oncología ginecológica","Oftalmología","Oftalmología pediátrica","Retinología","Glaucomatología","Ortopedia y traumatología","Ortopedia pediátrica","Cirugía de columna","Cirugía de mano","Medicina deportiva","Cirugía general","Cirugía pediátrica","Cirugía plástica y reconstructiva","Cirugía cardiovascular","Cirugía torácica","Cirugía vascular","Neurocirugía","Cirugía maxilofacial","Coloproctología","Cardiología","Cardiología pediátrica","Cardiología intervencionista","Electrofisiología cardíaca","Dermatología","Dermatología pediátrica","Endocrinología","Endocrinología pediátrica","Diabetología","Gastroenterología","Gastroenterología pediátrica","Hepatología","Neumología","Neumología pediátrica","Neurología","Neurología pediátrica","Neurofisiología clínica","Nefrología","Nefrología pediátrica","Urología","Urología pediátrica","Otorrinolaringología","Otorrinolaringología pediátrica","Psiquiatría","Psiquiatría infantil y adolescente","Oncología médica","Oncología pediátrica","Radioterapia oncológica","Hematología","Hematología pediátrica","Infectología","Infectología pediátrica","Reumatología","Reumatología pediátrica","Geriatría","Anestesiología","Anestesiología pediátrica","Medicina del dolor","Radiología diagnóstica","Radiología intervencionista","Neurorradiología","Medicina nuclear","Medicina de emergencias","Medicina crítica y cuidados intensivos","Medicina física y rehabilitación","Fisiatría","Alergología e inmunología clínica","Genética médica","Anatomía patológica","Patología clínica","Medicina forense","Medicina ocupacional","Medicina preventiva y salud pública","Epidemiología","Medicina paliativa","Medicina del sueño","Toxicología médica","Medicina hiperbárica","Nutriología clínica","Odontología","Ortodoncia","Endodoncia","Periodoncia","Odontopediatría","Cirugía bucal y maxilofacial"]
 const MEDICAL_INSURERS=['ARS Humano','ARS Universal','MAPFRE Salud','ARS Primera','ARS Palic','ARS Monumental','ARS Futuro','ARS CMD','ARS SEMMA','SENASA','ARS Reservas','ARS Yunen']
@@ -33,7 +35,7 @@ function publicOrigin(){
   return host==='app.preview.intaprd.com'||host.endsWith('.pages.dev')?'https://preview.intaprd.com':'https://intaprd.com'
 }
 
-export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAgenda}:MedicalDashboardProps={}){
+export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAgenda,delegatedProfileId='',routeActive=true,agendaView}:MedicalDashboardProps={}){
   const location=useLocation(),navigate=useNavigate()
   const scopeQuery=scope==='sponsor_master'?'scope=sponsor_master':''
   const isLiveGuest=/^\/admin\/medical\/demo\//.test(window.location.pathname)
@@ -68,6 +70,8 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   const[shellFocus,setShellFocus]=useState<KawMedShellReturn['focus']>()
   const restoredShellLocation=useRef('')
   const[shellDismissed,setShellDismissed]=useState(false)
+  const[verifiedDelegateId,setVerifiedDelegateId]=useState('')
+  const[guestAgendaAllowed,setGuestAgendaAllowed]=useState(false)
   const[shellNotice,setShellNotice]=useState('')
   const[publicationConfirm,setPublicationConfirm]=useState<'publish'|'unpublish'|null>(null)
   const[publicationPending,setPublicationPending]=useState<'publish'|'unpublish'|null>(null)
@@ -130,6 +134,10 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       ])
       if(!p?.ok)throw new Error(p?.error||'No pudimos abrir tu perfil médico.')
       setProfile(p.data);setForm(p.data)
+      if(isLiveGuest){
+        setVerifiedDelegateId(p.data?.guest_editor===true&&p.data.id===delegatedProfileId?p.data.id:'')
+        setGuestAgendaAllowed(notifications?.ok===true&&String(notifications.data?.profile?.id||'')===String(p.data?.id||''))
+      }
       setAcceptedText((p.data?.insurance_policy?.accepted||[]).map((x:any)=>x.insurance_name||x).join('\n'))
       setExcludedText((p.data?.insurance_policy?.excluded||[]).map((x:any)=>x.insurance_name||x).join('\n'))
       if(notifications?.ok)setUnread(Array.isArray(notifications.data?.requests)?notifications.data.requests.filter((r:any)=>r.status==='pending').length:0)
@@ -370,34 +378,42 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
   }
 
   const shellContext={mode:import.meta.env.MODE,hostname:window.location.hostname,pathname:window.location.pathname,search:window.location.search,scope,delegated:isLiveGuest||Boolean(profile?.guest_editor)}
-  const shellRequested=!shellDismissed&&isKawMedShellRequest(shellContext)
-  const shellEnabled=!shellDismissed&&canUseKawMedShell({...shellContext,profileId:profile?.id,guestEditor:profile?.guest_editor})
+  const guestRoute=kawMedGuestRoute(location.pathname)
+  const guestRequested=Boolean(delegatedProfileId)&&isKawMedGuestShellRequest(shellContext)
+  const isDelegate=canUseKawMedDelegateShell({...shellContext,assignedId:delegatedProfileId,verifiedId:verifiedDelegateId,profileId:profile?.id})
+  const shellRequested=!shellDismissed&&(isKawMedShellRequest(shellContext)||guestRequested)
+  const shellEnabled=!shellDismissed&&(canUseKawMedShell({...shellContext,profileId:profile?.id,guestEditor:profile?.guest_editor})||isDelegate)
+  const allowPublication=scope==='sponsor_master'||(!isLiveGuest&&!profile?.guest_editor)||(Boolean(delegatedProfileId)&&verifiedDelegateId===delegatedProfileId&&profile?.id===delegatedProfileId)
+  const contextUrl=(context:KawMedShellReturn,entry?:{section?:KawMedAgendaSection;request?:string})=>isDelegate&&guestRoute
+    ?kawMedGuestContextUrl(guestRoute.base,{...context,role:'delegate'},entry)
+    :kawMedContextUrl(entry?'/admin/medical/agenda':'/admin/medical',context,entry)
   // Restore once per navigation + authorized identity, never on a save/publication refresh.
   useEffect(()=>{
-    if(!shellEnabled)return
+    if(!shellEnabled||!routeActive)return
     const key=location.key+':'+profile.id
     if(restoredShellLocation.current===key)return
     restoredShellLocation.current=key
-    const context=getKawMedShellReturn(location.search)
+    const context=isDelegate?getKawMedGuestReturn(location.search,location.pathname,'delegate'):getKawMedShellReturn(location.search)
     const trusted=context?.account===profile.id?context:null
-    setShellTab(trusted?.tab||'home')
+    setShellTab(trusted?.tab||(isDelegate?kawMedGuestTab(location.search,guestAgendaAllowed):'home'))
     if(!trusted||trusted.tab==='profile')setShellModuleOpen(Boolean(trusted?.module))
     if(trusted?.module)setTab(trusted.module)
     setShellList({query:trusted?.query||'',group:trusted?.group||'all'});setShellFocus(trusted?.focus)
-  },[location.key,location.search,shellEnabled,profile?.id])
+  },[location.key,location.search,shellEnabled,profile?.id,routeActive,isDelegate,guestAgendaAllowed])
   const shellReturn=():KawMedShellReturn=>({account:profile.id,tab:shellTab,...(shellTab==='profile'&&shellModuleOpen&&tab!=='public'?{module:tab}:{}),...shellList,focus:shellFocus})
   const selectShellTab=(next:KawMedShellTab)=>{
+    if(next==='agenda'&&isDelegate&&!guestAgendaAllowed)return
     setShellNotice('');setShellTab(next)
-    if(shellEnabled)navigate(kawMedContextUrl('/admin/medical',{...shellReturn(),tab:next,module:next==='profile'&&shellModuleOpen&&tab!=='public'?tab:undefined}))
+    if(shellEnabled)navigate(contextUrl({...shellReturn(),tab:next,module:next==='profile'&&shellModuleOpen&&tab!=='public'?tab:undefined}))
   }
   const openShellModule=(next:Tab,listState=shellList)=>{
     if(next==='public')return
     setTab(next);setShellModuleOpen(true);setShellTab('profile');setShellNotice('');setShellList(listState);setShellFocus(next)
-    navigate(kawMedContextUrl('/admin/medical',{account:profile.id,tab:'profile',module:next,...listState,focus:next}))
+    navigate(contextUrl({account:profile.id,tab:'profile',module:next,...listState,focus:next}))
   }
   const backToProfileSections=()=>{
     setShellModuleOpen(false)
-    navigate(kawMedContextUrl('/admin/medical',{...shellReturn(),module:undefined}))
+    navigate(contextUrl({...shellReturn(),module:undefined}))
   }
   const shellHasPendingEdits=()=>hasPendingKawMedEdits({profile,form,acceptedText,excludedText,secondaryDraft,newCenter,editingCenter,newSchedule,editingSchedule,selectedDays,scheduleDaysBaseline})
   const canLeaveShell=()=>{
@@ -416,11 +432,19 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     return()=>window.removeEventListener('beforeunload',beforeUnload)
   },[shellEnabled,signingOut,busy,lifecycleBusy,publicationPending,pending,profile,form,acceptedText,excludedText,secondaryDraft,newCenter,editingCenter,newSchedule,editingSchedule,selectedDays,scheduleDaysBaseline])
   const openShellAgenda=(section:KawMedAgendaSection='availability',request?:string)=>{
-    if(canLeaveShell())navigate(kawMedContextUrl('/admin/medical/agenda',shellReturn(),{section,request}))
+    if(isDelegate&&!guestAgendaAllowed)return
+    if(canLeaveShell())navigate(contextUrl(shellReturn(),{section,request}))
   }
   const openShellRequests=()=>{
+    if(isDelegate){openShellAgenda('requests');return}
     if(canLeaveShell())navigate(kawMedContextUrl('/admin/medical/notifications',shellReturn()))
   }
+  useEffect(()=>{
+    if(!routeActive||!shellEnabled||!isDelegate||!guestAgendaAllowed)return
+    const params=new URLSearchParams(location.search),entry=params.get('med_enter') as KawMedAgendaSection
+    if(!['requests','confirmed','availability','blocks','settings'].includes(entry))return
+    navigate(contextUrl({account:profile.id,tab:'agenda'},{section:entry,request:params.get('request')||undefined}),{replace:true})
+  },[routeActive,shellEnabled,isDelegate,guestAgendaAllowed,location.key,profile?.id])
   const requestLogout=()=>{
     if(shellEnabled&&(busy||lifecycleBusy||publicationPending||pending||shellHasPendingEdits())
       &&!window.confirm('Hay cambios sin guardar o una operación pendiente. ¿Cerrar sesión y descartar los cambios locales? Las operaciones ya enviadas podrían completarse.'))return
@@ -429,6 +453,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
 
   if(loading&&shellRequested)return <main role="status" aria-live="polite" className="min-h-screen bg-slate-50 p-6 text-center text-sm text-slate-700">Verificando tu acceso y cargando el perfil médico…</main>
   if(loading)return embedded?<div className="min-h-[320px] rounded-[24px] border border-slate-200 bg-white"/>:<main className="min-h-screen bg-slate-50"/>
+  if(profile&&isLiveGuest&&delegatedProfileId&&!loading&&(!verifiedDelegateId||profile.id!==delegatedProfileId))return <main role="alert" className="min-h-screen bg-slate-50 p-5 text-sm">No se pudo verificar el perfil asignado a esta invitación. Vuelve a abrir el acceso autorizado.</main>
   if(!profile&&shellRequested){
     const failure=kawMedLoadPresentation(error)
     return <main className="min-h-screen bg-slate-50 p-5"><section role="alert" className="mx-auto max-w-md space-y-4 rounded-3xl border border-slate-200 bg-white p-5"><h1 className="text-xl font-black">{failure.title}</h1><p className="break-words text-sm text-slate-600">{failure.message}</p><button type="button" onClick={()=>void load()} className="min-h-11 min-w-11 rounded-xl bg-cyan-800 px-4 text-sm font-bold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700">Reintentar</button></section></main>
@@ -440,28 +465,30 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
         <button type="button" onClick={requestLogout} disabled={signingOut} className={shellEnabled?"min-h-11 min-w-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-60":"rounded-full border border-slate-200 bg-white px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"}>{signingOut?'Saliendo…':'Cerrar sesión'}</button>
   </>
   const profilePrimaryActions=<>
-{scope==='doctor'&&String(profile.account_email||'').trim().toLowerCase()==='intapcard@gmail.com'&&<a href={shellEnabled?kawMedContextUrl('/admin/accounts',shellReturn()):'/admin/accounts'} onClick={event=>{if(shellEnabled&&!canLeaveShell())event.preventDefault()}} className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Cambiar cuenta</a>}{scope==='doctor'&&<button type="button" onClick={()=>setPreviewOpen(true)} className={'rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800 hover:bg-cyan-50 '+headerActionMotion}>Vista previa</button>}
+{scope==='doctor'&&!isLiveGuest&&!profile.guest_editor&&String(profile.account_email||'').trim().toLowerCase()==='intapcard@gmail.com'&&<a href={shellEnabled?kawMedContextUrl('/admin/accounts',shellReturn()):'/admin/accounts'} onClick={event=>{if(shellEnabled&&!canLeaveShell())event.preventDefault()}} className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Cambiar cuenta</a>}{scope==='doctor'&&<button type="button" onClick={()=>setPreviewOpen(true)} className={'rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm sm:text-xs font-black text-cyan-800 hover:bg-cyan-50 '+headerActionMotion}>Vista previa</button>}
   </>
-  const publicationButtons=<>
+  const publicationButtons=<>{allowPublication&&<>
 <button ref={publicationPublishTriggerRef} type="button" hidden={shellEnabled&&profile.status==='active'} disabled={busy||profile.status==='active'||!publicationReadiness.canPublish} aria-describedby="kawmed-publication-guidance" aria-expanded={publicationConfirm==='publish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('publish')} className="rounded-xl bg-emerald-700 px-4 py-3 text-sm sm:text-xs font-black text-white shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-emerald-800 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='publish'?'Publicando…':profile.status==='active'?'Publicado':'Publicar'}</button>
       <button ref={publicationUnpublishTriggerRef} type="button" hidden={shellEnabled&&profile.status!=='active'} disabled={busy||profile.status!=='active'} aria-expanded={publicationConfirm==='unpublish'} aria-controls="kawmed-publication-confirmation" onClick={()=>openPublicationConfirm('unpublish')} className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm sm:text-xs font-black text-amber-900 shadow-sm transition-[background-color,transform,box-shadow] duration-200 ease-out hover:bg-amber-100 hover:shadow-md active:scale-[.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-amber-50 disabled:hover:shadow-sm disabled:active:scale-100">{publicationPending==='unpublish'?'Despublicando…':'Despublicar'}</button>
-  </>
+  </>}</>
   const profileSecondaryActions=<>
-{scope==='doctor'&&<button onClick={()=>{if(shellEnabled)openShellRequests();else window.location.assign('/admin/medical/notifications')}} className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Solicitudes de citas médicas{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className={'rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 '+headerActionMotion}>{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}
+{scope==='doctor'&&<button onClick={()=>{if(shellEnabled)openShellRequests();else if(isLiveGuest)openAgenda();else window.location.assign('/admin/medical/notifications')}} hidden={isLiveGuest&&!guestAgendaAllowed} className={'rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm sm:text-xs font-black hover:bg-slate-50 '+headerActionMotion}>Solicitudes de citas médicas{unread>0?' · '+unread:''}</button>}{slug&&<button type="button" disabled={profile.status!=='active'} title={profile.status==='active'?'Abrir perfil médico público':'El perfil está en borrador. Publícalo antes de abrir su enlace público.'} onClick={()=>window.open(publicOrigin()+'/m/'+encodeURIComponent(slug),'_blank','noopener,noreferrer')} className={'rounded-xl bg-slate-950 px-4 py-3 text-sm sm:text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 '+headerActionMotion}>{profile.status==='active'?'Ver perfil público':'Perfil público disponible al publicar'}</button>}
   </>
-  return <KawMedUnifiedShellFrame enabled={shellEnabled} embedded={embedded} name={[profile.professional_prefix,profile.name].filter(Boolean).join(' ')} tab={shellTab} onNavigate={selectShellTab} onLegacy={()=>{setShellDismissed(true);setShellNotice('')}}>
-    {shellEnabled&&shellTab==='home'&&<div><h1 id="kawmed-home-title" className="text-2xl font-black">Inicio</h1><p className="mt-1 text-sm text-slate-600">Tu perfil médico y el siguiente paso para administrarlo.</p></div>}
-    {shellEnabled&&scope==='doctor'&&!isLiveGuest&&!profile.guest_editor&&<KawvoReadyToPublish identity={'medical:doctor:'+profile.id} ready={profile.status==='draft'&&publicationReadiness.canPublish} canPrompt={!busy&&!lifecycleBusy&&!publicationPending&&!pending&&!shellHasPendingEdits()} title="Tu perfil médico está listo para publicar" onReview={()=>{selectShellTab('home');openPublicationConfirm('publish')}}/>}
+  return <><div hidden={!routeActive}><KawMedUnifiedShellFrame enabled={shellEnabled} embedded={embedded} name={[profile.professional_prefix,profile.name].filter(Boolean).join(' ')} tab={shellTab} variant={isDelegate?'delegate':'doctor'} roleLabel={isDelegate?'Acceso delegado':'Médico profesional'} tabs={isDelegate&&!guestAgendaAllowed?KAWMED_SHELL_TABS.filter(item=>item.id!=='agenda'):KAWMED_SHELL_TABS} onNavigate={selectShellTab} onLegacy={()=>{setShellDismissed(true);setShellNotice('');if(isDelegate&&guestRoute)navigate(guestRoute.base+'?legacy=1',{replace:true})}}>
+    {shellEnabled&&shellTab==='home'&&<div>{isDelegate&&<p className="mb-2 text-xs font-bold uppercase tracking-wide text-cyan-800">Acceso delegado · Perfil asignado</p>}<h1 id="kawmed-home-title" className="text-2xl font-black">Inicio</h1><p className="mt-1 text-sm text-slate-600">Tu perfil médico y el siguiente paso para administrarlo.</p></div>}
+    {shellEnabled&&allowPublication&&scope==='doctor'&&<KawvoReadyToPublish identity={'medical:'+(isDelegate?'delegate':'doctor')+':'+profile.id} ready={profile.status==='draft'&&publicationReadiness.canPublish} canPrompt={routeActive&&!busy&&!lifecycleBusy&&!publicationPending&&!pending&&!shellHasPendingEdits()} title="Tu perfil médico está listo para publicar" onReview={()=>{selectShellTab('home');openPublicationConfirm('publish')}}/>}
     {shellEnabled&&shellNotice&&<p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{shellNotice}</p>}
     {shellEnabled&&shellTab==='profile'&&<section className="space-y-3" aria-labelledby="kawmed-profile-title">
       <h1 id="kawmed-profile-title" className="text-2xl font-black">Mi perfil</h1>
       {shellModuleOpen?<button type="button" onClick={backToProfileSections} className="min-h-11 min-w-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-cyan-900">← Volver al perfil médico</button>:<KawvoPagedList items={KAWMED_PROFILE_SECTIONS.map(section=>({...section,group:'Perfil médico'}))} paginated={false} title="Secciones del perfil médico" initialState={shellList} focusItemId={shellFocus} onOpen={(id,listState)=>openShellModule(id as Exclude<Tab,'public'>,listState)}/>}
     </section>}
-    {shellEnabled&&shellTab==='agenda'&&<KawMedAgendaOverview profileId={profile.id} onOpen={openShellAgenda}/>}
+    {shellEnabled&&shellTab==='agenda'&&(!isDelegate||guestAgendaAllowed)&&<KawMedAgendaOverview profileId={profile.id} onOpen={openShellAgenda}/>}
     {shellEnabled&&shellTab==='more'&&<section className={card} aria-labelledby="kawmed-more-title">
       <h1 id="kawmed-more-title" className="text-2xl font-black">Más opciones</h1><p className="mt-2 text-sm text-slate-600">Herramientas de tu cuenta médica.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <a href={kawMedContextUrl('/admin/medical/notifications',shellReturn())} onClick={event=>{event.preventDefault();openShellRequests()}} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-cyan-900">Solicitudes de citas médicas{unread>0?' · '+unread:''}</a>
+        {(!isDelegate||guestAgendaAllowed)&&<a href={isDelegate?contextUrl(shellReturn(),{section:'requests'}):kawMedContextUrl('/admin/medical/notifications',shellReturn())} onClick={event=>{event.preventDefault();openShellRequests()}} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-cyan-900">Solicitudes de citas médicas{unread>0?' · '+unread:''}</a>}
+        {isDelegate&&<button type="button" onClick={()=>setTab('public')} className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Vista publicada del perfil asignado</button>}
+        {isDelegate&&<button type="button" onClick={()=>setPreviewOpen(true)} className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Vista previa del perfil asignado</button>}
         <button type="button" onClick={()=>void installPwa()} disabled={pwaInstalled} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">{pwaInstalled?'App instalada':'Instalar app Kawvo'}</button>
         <button type="button" onClick={requestLogout} disabled={signingOut} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">{signingOut?'Saliendo…':'Cerrar sesión'}</button>
       </div>
@@ -540,7 +567,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       <div className="grid grid-cols-2 gap-3">
         <button type="button" onClick={()=>openShellModule('profile')} className={card+' text-left text-sm font-bold'}>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y especialidades</span></button>
         <button type="button" onClick={()=>setPreviewOpen(true)} className={card+' text-left text-sm font-bold'}>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Datos guardados, sin publicar</span></button>
-        <button type="button" onClick={()=>selectShellTab('agenda')} className={card+' text-left text-sm font-bold'}>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>
+        {(!isDelegate||guestAgendaAllowed)&&<button type="button" onClick={()=>selectShellTab('agenda')} className={card+' text-left text-sm font-bold'}>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>}
         <button type="button" onClick={()=>selectShellTab('more')} className={card+' text-left text-sm font-bold'}>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Avisos, app y administración</span></button>
       </div>
     </section>}
@@ -554,8 +581,8 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
 
     <nav hidden={shellEnabled} className="grid grid-cols-2 gap-2 rounded-[22px] border border-slate-200 bg-white p-2 sm:grid-cols-6">{(([...([['profile','Perfil'],['centers','Centros de atención'],['schedule','Horarios de atención'],['insurance','Seguros'],['appearance','Apariencia'],['agenda','Agenda']] as [Tab|'agenda',string][]),...(isLiveGuest?[['public','Vista publicada'] as [Tab,string]]:[])])).map(([key,title])=><button key={key} onClick={()=>key==='agenda'?openAgenda():setTab(key)} className={'rounded-2xl px-3 py-3 text-base sm:text-sm font-black '+(tab===key?'bg-slate-950 text-white':'text-slate-500 hover:bg-slate-50')}>{title}</button>)}</nav>
 
-    {tab==='public'&&isLiveGuest&&<section className={card}>
-      <h2 className="text-xl font-black">Vista publicada · modo administrador</h2>
+    {tab==='public'&&isLiveGuest&&<section hidden={shellEnabled&&shellTab!=='more'} className={card}>
+      {shellEnabled&&<button type="button" onClick={()=>setTab('profile')} className="mb-3 min-h-11 rounded-xl border px-4 text-sm font-bold">← Volver a Más opciones</button>}<h2 className="text-xl font-black">Vista publicada · modo administrador</h2>
       <p className="mt-2 text-sm text-slate-600">Esta es la presentación que ven los pacientes. La sección de patrocinio mostrada arriba pertenece únicamente a tu administración privada. Cambia cualquier dato desde las pestañas del mismo panel.</p>
       {slug&&profile.status==='active'?<>
         <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -591,7 +618,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
 
     {(shellEnabled||tab==='insurance')&&<section hidden={shellEnabled&&(shellTab!=='profile'||!shellModuleOpen||tab!=='insurance')} className={card}><h2 className="text-xl font-black">Seguros médicos</h2><p className="mt-1 text-base sm:text-sm text-slate-500">Publica los seguros que aceptas y, por separado, los planes o coberturas que son excepción.</p><div className="mt-4 grid gap-4 md:grid-cols-2"><div><details className="mb-3 rounded-2xl border border-cyan-100 bg-cyan-50/50 p-3"><summary className="cursor-pointer text-base sm:text-sm font-bold text-cyan-900">Seleccionar seguros de la lista</summary><div className="mt-3 grid gap-2 sm:grid-cols-2"><label className="col-span-full flex items-center gap-2 rounded-lg bg-white p-2 text-sm sm:text-xs font-black"><input type="checkbox" checked={selectedInsurer(acceptedText,'Todos los seguros')} onChange={e=>setAcceptedText(current=>e.target.checked?'Todos los seguros':current.split('\n').filter(name=>name.trim()!=='Todos los seguros').join('\n'))}/>Todos los seguros</label>{MEDICAL_INSURERS.map(name=><label key={name} className="flex items-center gap-2 text-sm sm:text-xs font-semibold text-slate-700"><input type="checkbox" checked={selectedInsurer(acceptedText,name)} disabled={selectedInsurer(acceptedText,'Todos los seguros')} onChange={e=>setAcceptedText(current=>toggleInsurer(current,name,e.target.checked))}/>{name}</label>)}</div><p className="mt-3 text-sm sm:text-xs text-slate-500">«Todos los seguros» publica una sola opción; indica las excepciones a la derecha. También puedes elegir ARS específicas o escribir otras debajo.</p></details><label className={label}>Seguros aceptados<textarea className={input} rows={8} value={acceptedText} onChange={e=>setAcceptedText(e.target.value)} placeholder={'ARS Humano\nARS Universal\nMAPFRE Salud'}/><span className="mt-1 block text-sm sm:text-xs normal-case tracking-normal text-slate-400">También puedes escribir otros seguros aquí, uno por línea.</span></label></div><label className={label}>Excepciones / no aceptados<textarea className={input} rows={8} value={excludedText} onChange={e=>setExcludedText(e.target.value)} placeholder={'Plan específico X\nSeguro Y'}/><span className="mt-1 block text-sm sm:text-xs normal-case tracking-normal text-slate-400">Uno por línea. Solo agrega excepciones reales.</span></label></div><button onClick={()=>void saveInsurance()} disabled={busy} className="mt-4 rounded-xl bg-slate-950 px-5 py-3 text-base sm:text-sm font-black text-white disabled:opacity-40">Guardar seguros</button>{feedback?.area==='insurance'&&<p role="status" className="mt-2 text-base sm:text-sm font-semibold text-emerald-700">{feedback.text}</p>}</section>}
 
-    {scope==='doctor'&&!isLiveGuest&&<section hidden={shellEnabled&&shellTab!=='more'} className={card}>
+    {scope==='doctor'&&!isLiveGuest&&!profile.guest_editor&&<section hidden={shellEnabled&&shellTab!=='more'} className={card}>
       <h2 className="text-xl font-black">Estado y administración de la cuenta</h2>
       <p className="mt-2 text-sm text-slate-600">Suspender oculta el perfil médico público, pero conserva la información, las citas y el correo asociado. La eliminación definitiva será una operación distinta: requerirá una confirmación reforzada y la comprobación de que el correo no pertenece a otra cuenta Link.</p>
       <div className="mt-4 flex flex-wrap gap-3">
@@ -611,7 +638,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
       {lifecycleConfirm&&<div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"><p className="font-bold">{lifecycleConfirm==='suspend'?'¿Confirmas que deseas suspender tu perfil médico?':'¿Confirmas que deseas reactivar tu perfil como borrador?'}</p><div className="mt-3 flex gap-3"><button type="button" disabled={lifecycleBusy} onClick={()=>void changeLifecycle(lifecycleConfirm)} className="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">Sí, confirmar</button><button type="button" disabled={lifecycleBusy} onClick={()=>setLifecycleConfirm(null)} className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold">Cancelar</button></div></div>}
     </section>}
 
-    {!shellEnabled&&scope==='doctor'&&profile.status!=='active'&&publicationReadiness.canPublish&&!readyPromptDismissed&&<div role="dialog" aria-modal="true" aria-label="Perfil médico listo para publicar" className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/60 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-lg font-black">Tu perfil médico está listo para publicar</h2><p className="mt-2 text-sm text-slate-600">Los datos obligatorios están guardados. Puedes publicarlo ahora o continuar editándolo.</p><div className="mt-4 flex gap-2"><button type="button" onClick={()=>{setReadyPromptDismissed(true);if(shellEnabled)selectShellTab('home');openPublicationConfirm('publish')}} className="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Revisar publicación</button><button type="button" onClick={()=>setReadyPromptDismissed(true)} className="rounded-xl border px-4 py-2 text-sm font-bold">Más tarde</button></div></div></div>}
+    {!shellEnabled&&allowPublication&&scope==='doctor'&&profile.status!=='active'&&publicationReadiness.canPublish&&!readyPromptDismissed&&<div role="dialog" aria-modal="true" aria-label="Perfil médico listo para publicar" className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/60 p-4"><div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"><h2 className="text-lg font-black">Tu perfil médico está listo para publicar</h2><p className="mt-2 text-sm text-slate-600">Los datos obligatorios están guardados. Puedes publicarlo ahora o continuar editándolo.</p><div className="mt-4 flex gap-2"><button type="button" onClick={()=>{setReadyPromptDismissed(true);if(shellEnabled)selectShellTab('home');openPublicationConfirm('publish')}} className="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Revisar publicación</button><button type="button" onClick={()=>setReadyPromptDismissed(true)} className="rounded-xl border px-4 py-2 text-sm font-bold">Más tarde</button></div></div></div>}
     {previewOpen&&<div role="dialog" aria-modal="true" aria-label="Vista previa de perfil médico" className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 pt-12"><div className="w-full max-w-xl rounded-[24px] border border-cyan-200 bg-white p-5 shadow-2xl">
       <div className="flex items-center justify-between gap-3"><div><h2 className="text-xl font-black">Vista previa del perfil</h2><p className="mt-1 text-sm text-slate-500">Vista privada de los datos guardados. No publica el perfil.</p></div><button type="button" onClick={()=>setPreviewOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold">Cerrar</button></div>
       <div className="mx-auto mt-4 max-w-md overflow-hidden rounded-2xl border border-slate-200">
@@ -625,12 +652,12 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
         <article className="w-full max-w-[390px] rounded-[26px] bg-white p-5 shadow-2xl">
           <div className="flex items-center justify-between"><h2 className="text-lg font-black">Instalar app Kawvo</h2><button type="button" onClick={()=>setShowPwaHelp(false)} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">Cerrar</button></div>
           <p className="mt-4 text-sm leading-6 text-slate-600">Abre esta dirección en el dispositivo donde quieres instalar Kawvo:</p>
-          <a href={window.location.origin+(shellEnabled?kawMedContextUrl('/admin/medical',shellReturn()):isLiveGuest?window.location.pathname:'/admin/medical')} className="mt-2 block break-all rounded-xl bg-slate-50 px-3 py-3 text-sm font-bold text-cyan-700 underline">{window.location.origin+(shellEnabled?kawMedContextUrl('/admin/medical',shellReturn()):isLiveGuest?window.location.pathname:'/admin/medical')}</a>
+          <a href={window.location.origin+(shellEnabled?contextUrl(shellReturn()):isLiveGuest?window.location.pathname:'/admin/medical')} className="mt-2 block break-all rounded-xl bg-slate-50 px-3 py-3 text-sm font-bold text-cyan-700 underline">{window.location.origin+(shellEnabled?contextUrl(shellReturn()):isLiveGuest?window.location.pathname:'/admin/medical')}</a>
           <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>iPhone o iPad · Safari</strong></p><p>1. Abre el enlace en Safari.</p><p>2. Pulsa Compartir y selecciona <strong>Agregar a pantalla de inicio</strong>.</p><p>3. Confirma con Agregar.</p></div>
           <div className="mt-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><p><strong>Android · Chrome</strong></p><p>1. Abre el enlace en Chrome.</p><p>2. En el menú de tres puntos selecciona <strong>Instalar aplicación</strong> o <strong>Agregar a pantalla principal</strong>.</p><p>3. Confirma la instalación.</p></div>
         </article>
       </div>}
 
     {pending&&<ImageCropModal file={pending.file} aspectRatio={pending.kind==='avatar'?1:4/4.25} outputWidth={pending.kind==='avatar'?1024:1200} onSave={async(blob)=>{const kind=pending.kind;setPending(null);await saveImage(blob,kind)}} onCancel={()=>setPending(null)}/>}
-  </KawMedUnifiedShellFrame>
+  </KawMedUnifiedShellFrame></div>{agendaView}</>
 }
