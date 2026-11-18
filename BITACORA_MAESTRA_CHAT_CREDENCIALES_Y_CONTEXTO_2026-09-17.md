@@ -1118,6 +1118,14 @@ Pendiente para artistas/marcas personales/influencers.
 - planificar upgrade de Wrangler en rama específica;
 - revisar lifecycle de auth identities si se agregan más providers.
 
+
+### F. Reseñas de Google — Kawlink (pendiente archivado, 2026-11-18)
+
+- Free: sección pública opcional con botón «Deja tu reseña en Google», mediante enlace configurado por el propietario; sin API obligatoria.
+- Plus: adicionalmente, valoración promedio, cantidad de reseñas y comentarios anteriores, sujeto a disponibilidad, autorización y condiciones de las API de Google.
+- Complemento comercial: acceso directo a la sección mediante QR/NFC.
+- Estado: pendiente de desarrollo, fuera del alcance de la unificación G3.2; sin alterar las prioridades vigentes ni iniciar implementación.
+
 ---
 
 # 34. ESTADO FINAL DE ESTE CHAT
