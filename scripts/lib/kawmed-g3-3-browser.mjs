@@ -20,7 +20,7 @@ async function bundle(mode='preview'){
 }
 async function open(options={}){
  const context=await browser.newContext({viewport:{width:options.width||390,height:900}}),page=await context.newPage(),calls=[],errors=[]
- const server={role:options.role||'demo',medical:{...structuredClone(profile),...options.profile},demo:structuredClone(demo),settings:structuredClone(settings),denied:options.denied||'',agendaDenied:options.agendaDenied||false,agendaId:options.agendaId||'assigned-a',canEdit:options.canEdit!==false,saveError:'',publishError:'',activationId:options.activationId||'assigned-a',delay:options.delay||0}
+ const server={role:options.role||'demo',medical:{...structuredClone(profile),...options.profile},demo:structuredClone(options.demo===undefined?demo:options.demo),liveFailure:options.liveFailure||'',activationFailure:options.activationFailure||'',sponsor:options.sponsor||null,settings:structuredClone(settings),denied:options.denied||'',agendaDenied:options.agendaDenied||false,agendaId:options.agendaId||'assigned-a',canEdit:options.canEdit!==false,saveError:'',publishError:'',activationId:options.activationId||'assigned-a',delay:options.delay||0}
  page.setDefaultTimeout(10000);page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>void(d.type()==='alert'?d.accept():d.dismiss()))
  await page.addInitScript(()=>sessionStorage.setItem('kawvo_intap_active_tab_v1','a'.repeat(32)))
  const js=await bundle(options.mode)
@@ -30,9 +30,9 @@ async function open(options={}){
    calls.push({path:p,method:req.method(),headers:req.headers(),body:req.postDataJSON(),search:u.search})
    if(server.delay)await new Promise(r=>setTimeout(r,server.delay))
    if(p.endsWith('/appointments/public-context'))return json({ok:true,data:{is_owner:true,is_master:false,is_guest_editor:true,allow_direct_actions:false,enabled:true,pending_count:1,pending:requests,manage_url:base+'/agenda',settings_url:base}})
-   if(p.startsWith('/api/v1/public/medical-profiles/'))return json({ok:true,data:{...server.medical,display_name:'Dra. Médica invitada',services:[]}})
+   if(p.startsWith('/api/v1/public/medical-profiles/'))return json({ok:true,data:{...server.medical,display_name:[server.medical.professional_prefix,server.medical.name].filter(Boolean).join(' '),services:[]}})
    if(p.startsWith('/api/v1/me/kawmed/live-access/')){
-    if(server.denied||server.role!=='delegate')return json({ok:false,error:server.denied||'No live grant'})
+    if(server.liveFailure)return json({ok:false,error:server.liveFailure});if(p.endsWith('/activate')&&server.activationFailure)return json({ok:false,error:server.activationFailure});if(server.denied||server.role!=='delegate')return json({ok:false,error:server.denied||'No live grant'})
     return json({ok:true,data:{medical_profile_id:p.endsWith('/activate')?server.activationId:'assigned-a',guest_editor:true,expires_at:'2026-12-01T12:00:00Z'}})
    }
    if(p.startsWith('/api/v1/me/kawmed/demo/')){
@@ -48,7 +48,7 @@ async function open(options={}){
    if(p.endsWith('/publication')){if(server.publishError)return json({ok:false,error:server.publishError});server.medical.status=req.postDataJSON().action==='publish'?'active':'draft';return json({ok:true,data:{status:server.medical.status}})}
    if(p.endsWith('/appointments/settings')){server.settings=req.postDataJSON();return json({ok:true})}
    if(p.endsWith('/appointments'))return json(server.agendaDenied?{ok:false,error:'Forbidden'}:{ok:true,data:{profile:{id:server.agendaId,business_name:'Dra. Médica invitada'},settings:server.settings,availability:[],blocks:[],reasons:[],custom_reasons:[],default_reasons:[],requests}})
-   if(p.endsWith('/sponsor-context'))return json({ok:true,data:null})
+   if(p.endsWith('/sponsor-context'))return json({ok:true,data:server.sponsor})
    if(p==='/api/v1/me')return json({ok:true,data:{email:'invitado@example.com'}})
    throw Error('Unexpected API '+req.method()+' '+p)
   }
@@ -70,6 +70,24 @@ async function screen(page,name){await page.screenshot({path:artifacts+'/'+name+
 let count=0
 async function scenario(name,fn){if(process.env.KAWMED_G33_CASE&&!name.includes(process.env.KAWMED_G33_CASE))return;await fn();console.log('PASS '+name);count++}
 try{
+ await scenario('G3.3 LIVE continuity #125/#134 rejected grant never renders empty sandbox or retries activation',async()=>{
+  for(const options of [{liveFailure:'Invitación no disponible para esta cuenta.',demo:{}},{activationFailure:'Permiso revocado'},{profile:{id:'another-profile'}},{profile:{guest_editor:false}},{denied:'Invitación no disponible o vencida.'}]){
+   const r=await open({role:'delegate',...options});await r.page.getByRole('alert').waitFor();assert.equal(await r.page.locator('[data-kawmed-shell=demo]').count(),0);assert.equal(await r.page.getByRole('heading',{name:'Explora el panel médico',exact:true}).count(),0);assert.equal(await r.page.getByRole('button',{name:'Guardar mis cambios de demostración',exact:true}).count(),0);assert.equal(mutations(r.calls).length,0);assert.ok(writes(r.calls).length<=1);if(options.activationFailure)assert.equal(r.calls.filter(c=>c.path.includes('/me/kawmed/demo/')).length,0,'Activation failure cannot choose sandbox');await r.close()
+  }
+  const historical=await open();await loaded(historical.page,'demo');assert.equal(historical.calls.filter(c=>c.path.endsWith('/activate')).length,0);await historical.close()
+ })
+ await scenario('G3.3 LIVE continuity legacy Agenda outside gate stays original module with no handshake',async()=>{
+  for(const options of [{mode:'production',url:'https://app.intaprd.com'+base+'/agenda'},{url:'https://stage.pages.dev'+base+'/agenda'},{url:origin+base+'/agenda?legacy=1'}]){
+   const r=await open({role:'delegate',...options});await r.page.getByRole('heading',{name:'Agenda médica',exact:true}).waitFor();assert.equal(r.calls.filter(c=>c.path.includes('/kawmed/live-access/')||c.path.includes('/kawmed/demo/')).length,0,'Original direct Agenda route must not accept/reactivate an invitation or fall back to sandbox');assert.equal(mutations(r.calls).length,0);assert.equal(await r.page.locator('[data-kawmed-shell]').count(),0);assert.ok(r.calls.filter(c=>c.path.includes('/me/medical-profile/appointments')).every(c=>c.headers['x-kawmed-delegate']===token));await back(r.page).click();await r.page.getByRole('heading',{name:'Dra. Médica invitada',exact:true}).waitFor();assert.equal(new URL(r.page.url()).pathname,base);if(options.url.includes('legacy=1'))assert.equal(new URL(r.page.url()).searchParams.get('legacy'),'1');await noOwners(r.page);await r.close()
+  }
+ })
+ await scenario('G3.3 LIVE continuity original editor persists assigned public presentation and authorized resources',async()=>{
+  const sponsor={name:'Programa de demostración autorizado',vademecum_url:'https://example.com/live-vademecum',vademecum_label:'Vademécum LIVE',representative:{name:'Visitador de prueba',zone:'Zona de prueba',url:'https://wa.me/18095550100'}}
+  const r=await open({role:'delegate',sponsor}),{page}=r;await loaded(page,'delegate');await tab(page,'Inicio');await page.getByRole('heading',{name:'Inicio',exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:'Contactar mi visitador',exact:true}).getAttribute('href'),sponsor.representative.url);assert.equal(await page.getByRole('link',{name:'Vademécum LIVE',exact:true}).getAttribute('href'),sponsor.vademecum_url)
+  await tab(page,'Perfil');await page.getByRole('button',{name:/Identidad y especialidades/}).click();await page.getByRole('textbox',{name:'Nombre',exact:true}).fill('Continuidad LIVE de prueba');await page.getByRole('button',{name:'Guardar perfil médico',exact:true}).click();await page.getByText('Perfil médico guardado.',{exact:true}).waitFor();assert.equal(r.server.medical.id,'assigned-a');assert.equal(r.server.medical.name,'Continuidad LIVE de prueba');assert.equal(r.server.medical.specialty,'Medicina general | Pediatría');assert.ok(mutations(r.calls).every(c=>c.path==='/api/v1/me/medical-profile'&&c.headers['x-kawmed-delegate']===token));assert.equal(r.calls.filter(c=>c.path.includes('/me/kawmed/demo/')).length,0)
+  await page.reload();await loaded(page,'delegate');assert.equal(await page.getByRole('textbox',{name:'Nombre',exact:true}).inputValue(),'Continuidad LIVE de prueba');await page.goto('https://preview.intaprd.com/m/medica-invitada');await page.getByRole('heading',{name:'Dra. Continuidad LIVE de prueba',exact:true}).waitFor();assert.equal(r.server.medical.name,'Continuidad LIVE de prueba');const publicRead=r.calls.find(c=>c.path.startsWith('/api/v1/public/medical-profiles/'));assert.ok(publicRead,'Same saved fixture is read through the existing public API')
+  r.server.denied='Invitación no disponible o vencida.';await page.goto(origin+base);await page.getByRole('alert').waitFor();assert.equal(await page.locator('[data-kawmed-shell]').count(),0);assert.equal(r.server.medical.name,'Continuidad LIVE de prueba','Ending access does not restore the saved profile');assert.equal(mutations(r.calls).length,1);await r.close()
+ })
  await scenario('G3.3 U01/U02/U05 mobile and desktop role surfaces, targets, focus, no writes',async()=>{
   for(const role of ['demo','delegate'])for(const width of [320,360,390,430,768,1280]){
    const r=await open({role,width}),{page}=r;await loaded(page,role);await profileHeading(page,role);await noOwners(page);await viewport(page)

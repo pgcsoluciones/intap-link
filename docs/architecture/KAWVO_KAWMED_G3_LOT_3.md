@@ -110,3 +110,50 @@ La ejecución funcional cubre ambos roles en 320/360/390/430/768/1280 px, superf
 **BLOCKED para QA autenticada:** el entorno no dispone de credenciales/sesiones reales de invitados ni acceso autorizado a D1/R2 remoto. El D1 sintético no acredita esas reglas en runtime. No se modifican datos, esquema, permisos o servicios para suplirlo. Las comprobaciones locales son PASS sólo en su alcance; aceptación funcional autenticada y G3 completo siguen OPEN. CI se informa en el Draft PR para su SHA; no sustituye QA ni prueba un despliegue.
 
 Publicación GitHub mediante conector, sin force, con árbol idéntico al validado localmente y padre exacto; no se modifica #174 ni main. Sin merge, migración, runner nuevo o despliegue. La siguiente acción es revisión técnica del candidato y autorización independiente para QA Preview.
+
+
+## Verificación de continuidad LIVE — criterio del 18/11/2026
+
+Fuentes nuevas: [criterio en #156](https://github.com/pgcsoluciones/intap-link/pull/156#issuecomment-6978928646), [criterio en #175](https://github.com/pgcsoluciones/intap-link/pull/175#issuecomment-6978929391), PR #125 y el **issue #134** (no es un PR), incluidos su diagnóstico, corrección y confirmaciones históricas de QA del propietario. LIVE es la experiencia prioritaria: acceso temporal al perfil real asignado, MedicalDashboard y AppointmentManager originales, guardado real y publicación explícita. El sandbox #116 sigue siendo histórico; este correctivo no le añade funcionalidades.
+
+Base del correctivo: `7538af92a8caaaca13399631f83d75dbf074cc4f`, rama existente de #175. Matriz y allowlist fijadas antes de editar:
+
+| Camino | Criterio | Correctivo permitido |
+| --- | --- | --- |
+| LIVE con concesión válida | Editor/Agenda originales y misma identidad, persistencia, medios, publicación y recursos existentes | Sin cambiar operaciones ni permisos; pruebas de continuidad |
+| LIVE rechazado, activación fallida, caducado/revocado | Error explícito; nunca editor sandbox vacío ni otro perfil | Rechazar respuesta sandbox vacía antes de montarla; no volver a intentar aceptación ni conceder acceso |
+| Agenda fuera del gate Preview, incluido legacy explícito | Ruta directa al MedicalAppointments original de #125/#174 | No hacer depender esta ruta de una nueva comprobación/aceptación de invitación en el wrapper |
+| Sandbox histórico válido | Editor y PATCH de copia existentes | Preservar payload, capacidades y pruebas |
+
+Allowlist puntual de **tres archivos**: `app/src/components/admin/medical/KawMedDemoGuest.tsx`, `scripts/lib/kawmed-g3-3-browser.mjs` y este handoff. No App routes adicionales, API, configuración, Workers, D1/R2, OAuth, infraestructura, runners ni permisos.
+
+### Reproducción previa y corrección
+
+Sobre el SHA base, un navegador sintético reprodujo dos fallos antes de editar: (1) Agenda legacy efectuaba dos llamadas nuevas de live-access (GET y POST activate), cuando su ruta original montaba MedicalAppointments directamente; (2) rechazo LIVE seguido de GET demo con `profile: {}` no producía error y podía montar la superficie sandbox vacía. Esta última forma corresponde al `sandbox_json='{}'` que la API guarda al crear una concesión LIVE; no es una copia sandbox funcional.
+
+El correctivo devuelve el componente Agenda original directamente fuera del gate y sólo monta una copia histórica si la API devuelve `demo:true` y un objeto de perfil no vacío. No convierte ese indicador en autorización LIVE. La activación válida sigue abriendo el editor real; fallos de activación o de identidad no prueban ni seleccionan otra modalidad. El guardado médico, media, publicación, Agenda, resolver de cuenta y API se conservan sin cambios.
+
+### Discrepancia histórica #134 — BLOCKED independiente
+
+El historial #134 documenta la corrección de `liveGuestInvitation`: admitir `pending` y `active` **para consultar/aceptar**, manteniendo `liveGuestProfile` estrictamente `active` **para editar**. El propietario registró su despliegue y QA en noviembre. Sin embargo, el archivo versionado `api/src/kawmed-live-guest.ts` del padre #174 y del candidato #175 conserva `i.status='active'` en ambas funciones; la creación LIVE inserta una invitación con estado inicial `pending`. El test estático heredado sólo busca `IN ('pending','active')` en cualquier parte del archivo y puede aprobar por `liveGuestBySlug`, sin cubrir la función de aceptación.
+
+Esto es previo a G3.3 y no se altera aquí: el backend queda byte a byte igual. El historial de despliegue no demuestra qué Worker sirve actualmente App Preview. **No certificar la primera aceptación de una invitación nueva ni la continuidad runtime de #134 hasta verificar el Worker efectivo y QA autenticada o reconciliar esa corrección en un lote API expresamente autorizado.** La protección de UI evita la caída silenciosa, pero no resuelve el bloqueo de aceptación `pending` en ese código. No se cambia de estado manualmente ni se amplían permisos para superar el bloqueo.
+
+### Evidencia y límites del correctivo
+
+Se añaden tres grupos obligatorios a la librería acumulativa: fracaso LIVE sin sandbox; Agenda legacy en build Producción, host aislado y `legacy=1`; editor/guardado/recarga sobre perfil asignado, recursos comerciales autorizados y terminación de acceso sin revertir datos. Los grupos previos se conservan. La validación HTTP de estos recorridos está interceptada: persistencia compartida con la presentación pública y revocación son fixtures, no D1/R2 ni sesiones reales.
+
+La QA autenticada y el reflejo real en Web permanecen BLOCKED por ausencia de sesiones y de un perfil de demostración autorizado accesible desde Codex. No se usan pacientes reales, datos clínicos ni perfiles ajenos. No hay Stage, promoción ni despliegue. El SHA nuevo debe revisarse y recibir la autorización que corresponda antes de cualquier Stage; la autorización condicionada al SHA anterior no se traslada al correctivo.
+
+
+Prueba histórica recuperada sin cambios desde `d42691d8897c5e6fb376522ff9f54ecae74346e7:scripts/test-kawmed-pending-live-invitation-2026-11-02.mjs`, ejecutada fuera del árbol mediante `node /tmp/test-kawmed-pending-live-invitation-134.mjs`: **FAIL preexistente**, primera aserción `una invitación pending puede consultarse para activación` (línea 23). No se relajó ni se incorporó una versión alterada del test para volverlo verde. El blob API `be323ed0e62db80f158ab153278588001133dbfc` es idéntico en main `6e6bfbb1`, #174 `27a4a003`, #175 `7538af92` y el árbol del correctivo. Referencias: `api/src/kawmed-live-guest.ts:33` y `:44`; creación LIVE con sandbox vacío `api/src/kawmed-demo-invitations.ts:37` y estado por defecto `api/migrations/0151_kawmed_demo_invitations.sql`.
+
+También se revisaron los caminos persistentes originales: `resolveOwnedMedicalContext` no usa otro perfil si hay header delegado; `liveGuestProfile` exige sesión/correo, grant, propietario, perfil, vigencia, estado active e invitación más reciente. La revocación sólo cambia la invitación y su eliminación sólo borra invitación/grant; no revierten medical_profiles, centros, horarios, medios ni Agenda. Estas comprobaciones son de código, no una ejecución contra D1 real.
+
+
+Validaciones del correctivo: TypeScript App y builds App Preview/Producción locales **PASS**; once contratos existentes **11/11 PASS**. Tres grupos nuevos LIVE **PASS**, además de los doce G3.3 previos. El test histórico específico de #134 conserva el resultado **FAIL/BLOCKED** anterior; no se confunde con el contrato estático general live-guest que sí pasa. Las capturas existentes permanecen sin cambios y la evidencia temporal de esta comprobación se genera fuera del árbol versionado. El diff puntual no contiene API, Web, AppointmentManager, permisos, dependencias ni infraestructura.
+
+
+Cierre de la ejecución acumulativa del correctivo: **15 grupos G3.3 + 50 escenarios heredados PASS** mediante `KAWMED_G33_ARTIFACTS=/tmp/kawmed-live-g33-evidence KAWMED_G32_ARTIFACTS=/tmp/kawmed-live-g32-evidence node scripts/test-kawmed-g3-3-guest-shell-contract.mjs --scope --browser`. La primera ejecución acumulativa terminó en timeout del test heredado «Perfil filters» al esperar el searchbox tras browser back; ese código no forma parte del diff. La repetición aislada del caso y la repetición completa pasaron, sin cambiar las aserciones ni la librería histórica. Se conserva el fallo inicial como limitación de reproducibilidad, separado del FAIL firme de #134. No se presenta ninguna de estas pruebas como QA autenticada.
+
+Resultado de aceptación: **correctivo App PASS en su alcance local; continuidad LIVE completa BLOCKED** hasta resolver/verificar la discrepancia de aceptación pending de #134 y hacer QA autenticada sobre el bundle nuevo. Stage y cualquier despliegue quedan pendientes de revisión y autorización del SHA nuevo. Rollback del correctivo: revertir exclusivamente su commit vuelve al candidato `7538af92` sin tocar datos; no restaura un Worker ni resuelve por sí solo el pendiente backend.
