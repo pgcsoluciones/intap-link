@@ -11,19 +11,19 @@ const entries: { section: KawMedAgendaSection; title: string; detail: string }[]
   { section: 'settings', title: 'Configuración y motivos', detail: 'Duración, anticipación y motivos de las citas' },
 ]
 /** Reuse Free's validated summary reducer; all actions enter the existing AppointmentManager. */
-export default function KawMedAgendaOverview({ profileId, onOpen }: { profileId: string; onOpen: (section: KawMedAgendaSection, request?: string) => void }) {
+export default function KawMedAgendaOverview({ profileId, onOpen, query='' }: { profileId: string; query?: string; onOpen: (section: KawMedAgendaSection, request?: string) => void }) {
   const [state, setState] = useState<{ status: 'loading' | 'ready' | 'error'; items: AgendaSummaryItem[]; error?: string }>({ status: 'loading', items: [] })
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let active = true
     setState({ status: 'loading', items: [] })
-    apiGet('/me/medical-profile/appointments').then(response => {
+    apiGet('/me/medical-profile/appointments'+(query?'?'+query:'')).then(response => {
       if (!(response as any)?.ok) throw Error((response as any)?.error || 'No pudimos cargar la Agenda.')
       const items = newestPendingAgenda(response, profileId)
       if (active) setState({ status: 'ready', items })
     }).catch(error => { if (active) setState({ status: 'error', items: [], error: /Unauthorized|permiso|cuenta activa|corresponde|autorizad/i.test(String(error?.message)) ? 'No se pudo verificar el acceso a la Agenda de esta cuenta. Comprueba la cuenta activa y tus permisos.' : 'No pudimos cargar la Agenda. Reintenta la consulta.' }) })
     return () => { active = false }
-  }, [profileId, attempt])
+  }, [profileId, attempt, query])
   return <section aria-labelledby="kawmed-agenda-title" className="space-y-4">
     <div><h1 id="kawmed-agenda-title" className="text-2xl font-black">Agenda</h1><p className="mt-2 text-sm text-slate-600">Solicitudes, citas y disponibilidad de tu cuenta médica.</p><p className="mt-2 text-sm text-slate-600">Los horarios públicos por centro se editan en Perfil; son distintos de la disponibilidad de citas.</p></div>
     <div className="divide-y divide-slate-100 rounded-3xl border border-slate-200 bg-white">{entries.map(entry => <button key={entry.section} type="button" onClick={() => onOpen(entry.section)} className="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700"><span className="min-w-0"><strong className="block text-sm">{entry.title}</strong><span className="mt-1 block text-xs text-slate-600">{entry.detail}</span></span><span aria-hidden="true">›</span></button>)}</div>
