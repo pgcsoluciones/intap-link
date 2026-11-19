@@ -7,6 +7,8 @@ import FreeShellSessionExit from './FreeShellSessionExit'
 import FreePublicationActions from './FreePublicationActions'
 import FreeNotificationBell from './FreeNotificationBell'
 import FreeAgendaSummary from './FreeAgendaSummary'
+import KawvoProfileIdentity from '../shared/KawvoProfileIdentity'
+import KawvoReadyToPublish from '../shared/KawvoReadyToPublish'
 import { KAWVO_FREE_LEGACY_ROUTE, isKawvoShellPreviewHost, getKawvoShellReturn, type KawvoShellListState, type KawvoShellReturn, type KawvoShellTab } from './KawvoShellReturn'
 
 type Tab=KawvoShellTab
@@ -42,6 +44,7 @@ export default function KawvoFreeShellPreview(){
   const [error,setError]=useState('')
   const [shareMessage,setShareMessage]=useState('')
   const [superAdminProfileId,setSuperAdminProfileId]=useState('')
+  const publicationControlsRef=useRef<HTMLDivElement>(null)
   // The guarded canonical Free entry supplies the marker; other hosts stay legacy.
   const enabled=isKawvoShellPreviewHost()&&new URLSearchParams(window.location.search).get('kawvo_shell')==='1'
   useEffect(()=>{
@@ -176,7 +179,7 @@ export default function KawvoFreeShellPreview(){
     }
   }
   const menu:[Tab,string,string][]=[['home','⌂','Inicio'],['profile','◉','Perfil'],['agenda','▦','Agenda'],['more','☷','Más']].filter(([key])=>key!=='agenda'||Boolean(agendaRoute)) as [Tab,string,string][]
-  return <main className="min-h-[100dvh] bg-[#f1f5f7] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter'] text-slate-950 md:pl-[244px] md:pb-0">
+  return <main className="min-h-[100dvh] bg-[#f1f5f7] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter',sans-serif] text-slate-950 md:pl-[244px] md:pb-0 [&_button]:min-h-11 [&_button]:min-w-11">
     {/* Desktop navigation follows the approved demo; mobile retains the bottom navigation. */}
     <aside aria-label="Menú lateral Kawvo" className="fixed inset-y-0 left-0 hidden w-[244px] flex-col bg-[#f1f5f7] px-4 py-4 md:flex">
       <div className="flex h-full flex-col overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-4">
@@ -184,7 +187,7 @@ export default function KawvoFreeShellPreview(){
         <nav aria-label="Secciones de Kawvo" className="flex flex-col gap-2">
           {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><span aria-hidden="true" className="w-5 text-lg">{icon}</span>{label}</button>)}
         </nav>
-        <div className="mt-auto pt-6"><FreeShellSessionExit/></div>
+        <div className="mt-auto pt-6">{tab!=='home'&&<FreeShellSessionExit/>}</div>
         <p className="pt-3 text-xs leading-5 text-slate-500">Tu presentación digital.</p>
       </div>
     </aside>
@@ -193,23 +196,24 @@ export default function KawvoFreeShellPreview(){
     </header>
     <section className="mx-auto w-full max-w-3xl space-y-4 px-4 pt-5">
       <div aria-label="Presentación que estás administrando" className="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Cuenta activa · Kawlink Free</p><p className="mt-1 truncate text-sm font-black text-slate-900">{accountName}</p>{accountSlug&&<p className="mt-1 truncate text-xs text-slate-500">{accountSlug}</p>}</div>{allowAccountSwitch&&<button type="button" onClick={()=>navigate('/admin/accounts')} className="min-h-11 rounded-xl border border-cyan-200 bg-cyan-50 px-3 text-sm font-bold text-cyan-900">Cambiar cuenta</button>}</div></div>
+      {!delegatedDemo&&<KawvoReadyToPublish identity={accountIdentity?'free:'+(team.role||'none')+':'+accountIdentity:''} ready={readyToPublish} title="Tu presentación está lista para publicar" onReview={()=>{setTab('home');window.requestAnimationFrame(()=>publicationControlsRef.current?.querySelector('button')?.focus())}}/>}
       {tab==='home'&&<>
         <div><h1 className="text-2xl font-black">Mi espacio Kawvo</h1><p className="mt-1 text-sm text-slate-600">Todo organizado para trabajar desde tu celular.</p></div>
         <div className="rounded-3xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center gap-3">{profile.avatar_url?<img src={profile.avatar_url} alt="" className="h-14 w-14 rounded-xl object-cover"/>:<div className="grid h-14 w-14 place-items-center rounded-xl bg-slate-100 text-2xl">◉</div>}<div className="min-w-0 flex-1"><h2 className="truncate text-lg font-bold">{accountName}</h2><p className="mt-1 text-xs text-slate-600">Mi presentación digital · Free</p></div></div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-bold">Estado de mi presentación</h3><span className={'rounded-full px-3 py-1 text-xs font-bold '+publicationStyle}>{publicationLabel}</span></div>
+          <KawvoProfileIdentity name={accountName} detail="Mi presentación digital · Free" avatar={profile.avatar_url?<img src={profile.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover"/>:<div aria-hidden="true" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-slate-100 text-2xl">◉</div>} utilities={<><button type="button" onClick={()=>go('account')} className="min-h-11 min-w-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700">Instalar app Kawvo</button><FreeShellSessionExit/></>}/>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4"><h3 className="text-sm font-bold">Estado de mi presentación</h3><span className={'rounded-full px-3 py-1 text-xs font-bold '+publicationStyle}>{publicationLabel}</span></div>
           {published?<p className="mt-3 text-sm text-slate-600">Tu presentación está publicada. Puedes seguir editándola desde los módulos habituales.</p>
           :readyToPublish?<p className="mt-3 rounded-xl bg-cyan-50 px-3 py-3 text-sm text-cyan-950">Tu perfil cumple los requisitos indicados por el sistema. Revisa tu presentación y confirma la publicación cuando esté lista.</p>
           :missing.length>0?<div className="mt-3 rounded-xl bg-amber-50 px-3 py-3"><p className="text-sm font-bold text-amber-950">Siguiente paso: completar tu presentación</p><ul className="mt-2 list-inside list-disc space-y-1 text-sm text-amber-950">{missing.slice(0,3).map((item,i)=><li key={i}>{item}</li>)}</ul>{missing.length>3&&<p className="mt-2 text-xs text-amber-900">Y {missing.length-3} requisito(s) más en tu panel.</p>}</div>
           :<p className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-700">Revisa los requisitos en tu panel antes de publicar. El avance no se calcula con datos incompletos.</p>}
           {(!readyToPublish||delegatedDemo)&&<button type="button" onClick={nextAction} className="mt-4 min-h-12 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white">{nextActionLabel}</button>}
-          {!delegatedDemo&&<FreePublicationActions
+          <div ref={publicationControlsRef} aria-label="Publicación de mi presentación">{!delegatedDemo&&<FreePublicationActions
             key={accountIdentity}
             published={published}
             canPublish={readyToPublish}
             onSaved={next=>setProfile(current=>current&&String(current.profile_id||current.slug||'')===accountIdentity?{...current,is_published:next?1:0}:current)}
             onIncomplete={readiness=>setProfile(current=>current&&String(current.profile_id||current.slug||'')===accountIdentity?{...current,freeReadiness:readiness}:current)}
-          />}
+          />}</div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <button onClick={()=>setTab('profile')} className={button}><span className="mb-2 block text-xl">✎</span>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y contenido</span></button>
@@ -218,7 +222,6 @@ export default function KawvoFreeShellPreview(){
           {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><span className="mb-2 block text-xl">⚙</span>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Configuración</span></button>}
           <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><span className="mb-2 block text-xl">↗</span>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">{published&&publicUrl?'Compartir enlace público':'Disponible al publicar tu perfil'}</span></button>
         </div>
-        <div className="md:hidden"><FreeShellSessionExit/></div>
         {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
       {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
