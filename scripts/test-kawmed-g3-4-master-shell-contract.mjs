@@ -13,7 +13,14 @@ for(const p of ['app/src/App.tsx','app/src/lib/api.ts','app/src/components/admin
 function functions(source){const f=ts.createSourceFile('source.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),m=new Map();function visit(n){if(ts.isFunctionDeclaration(n)&&n.name)m.set(n.name.text,n.getText(f));if(ts.isVariableDeclaration(n)&&ts.isIdentifier(n.name)&&n.initializer&&ts.isArrowFunction(n.initializer))m.set(n.name.text,n.initializer.getText(f));ts.forEachChild(n,visit)}visit(f);return m}
 for(const p of [dir+'MedicalDashboard.tsx','app/src/components/admin/sponsored/SponsorKawMed.tsx']){
  const before=functions(prior(p)),after=functions(read(p)),ui=new Set(['MedicalDashboard','SponsorKawMed','load','selectShellTab','openShellAgenda','openShellRequests','contextUrl','requestLogout','shellHasPendingEdits'])
- for(const [name,body]of before)if(!ui.has(name))assert.equal(after.get(name),body,'Existing validation/mutation preserved: '+p+' '+name)
+ for(const [name,body]of before)if(!ui.has(name)){
+  // Only the post-save UI refresh changes. Keep the original endpoint, payload,
+  // validation and error handling byte-for-byte protected.
+  const refresh="await load({savedIdentity:{sponsorId:data?.sponsor.id||'',programId,form:programForm}})"
+  const expected=name==='saveProgramIdentity'?body.replace('await load()',refresh):body
+  if(name==='saveProgramIdentity')assert.equal(body.split('await load()').length,2,'Exactly one original identity refresh')
+  assert.equal(after.get(name),expected,'Existing validation/mutation preserved: '+p+' '+name)
+ }
 }
 for(const name of ['beginActivation','signOut'])assert.equal(functions(read('app/src/components/admin/IntapcardAccountSelector.tsx')).get(name),functions(prior('app/src/components/admin/IntapcardAccountSelector.tsx')).get(name))
 const compiled=await build({entryPoints:[dir+'kawmed-master-shell-navigation.ts'],bundle:true,write:false,platform:'node',format:'esm',define:{'import.meta.env':JSON.stringify({MODE:'preview'})}})

@@ -16,6 +16,9 @@ type Batch={id:string;name:string;program_name?:string;codes_total?:number;codes
 type Code={id:string;code:string;status:string;display_code?:string|null;station_number?:number|null;batch_id?:string;batch_name?:string;program_name?:string;medical_name?:string;professional_prefix?:string;medical_specialty?:string;medical_phone?:string;medical_email?:string;medical_slug?:string;representative_id?:string;representative_first_name?:string;representative_last_name?:string;representative_whatsapp?:string;representative_zone?:string;assignment_group?:string;representative_assigned_at?:string;claimed_at?:string}
 type Program={id:string;name:string;private_banner_image_url?:string;private_cta_label?:string;private_cta_url?:string;vademecum_url?:string;vademecum_label?:string;representative_cta_label?:string;representative_message_template?:string;enabled?:number}
 type Overview={sponsor:{id:string;name:string;role:string;logo_url?:string;banner_image_url?:string;contact_email?:string;contact_whatsapp?:string;website_url?:string};master?:{master_code?:string;status?:string;claimed_at?:string}|null;programs:Program[];batches:Batch[];representatives:Rep[];codes:Code[]}
+type SavedIdentity={sponsorId:string;programId:string;form:Partial<Program>}
+const identityFields=['private_banner_image_url','private_cta_label','private_cta_url','vademecum_url','vademecum_label','representative_cta_label','representative_message_template'] as const
+function sameProgramIdentity(a:Partial<Program>,b:Partial<Program>){return identityFields.every(k=>String(a[k]||'')===String(b[k]||''))}
 type PendingImage={file:File;kind:'logo'|'program-banner'}|null
 
 const input='mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'
@@ -61,7 +64,11 @@ export default function SponsorKawMed(){
   const[importRows,setImportRows]=useState<any[]>([])
   const[copied,setCopied]=useState('')
 
-  async function load(){
+  // Refreshes read the latest selection without becoming a second owner of the draft.
+  const identityContext=useRef({sponsorId:'',programId:'',saved:undefined as Program|undefined})
+  identityContext.current={sponsorId:data?.sponsor.id||'',programId,saved:data?.programs.find(p=>p.id===programId)}
+
+  async function load(options:{savedIdentity?:SavedIdentity}={}){
     setLoading(true);setError('')
     try{
       const[j,accounts,active]:any[]=await Promise.all([apiGet('/sponsor/kawmed/overview'),apiGet('/sponsor/accounts'),apiGet('/me/intapcard/active-account').catch(()=>({ok:false}))])
@@ -69,11 +76,21 @@ export default function SponsorKawMed(){
       if(!j?.ok)throw new Error(j?.error||'No pudimos abrir KawMed.')
       if(masterMode&&data&&j.data?.sponsor?.id!==data.sponsor.id)throw new Error('La cuenta de patrocinio cambió. Reabre la cuenta autorizada.')
       setMasterAccess(isKawMedMasterIdentity({sponsorId:j.data?.sponsor?.id,currentSponsorId:accounts?.ok?accounts.data?.current_sponsor_id:'',role:j.data?.sponsor?.role,active:active?.ok?active.data?.active:null}))
+      const context=identityContext.current
       setData(j.data)
       const programs=Array.isArray(j.data?.programs)?j.data.programs:[]
-      const nextId=programId&&programs.some((p:any)=>p.id===programId)?programId:String(programs[0]?.id||'')
+      const nextId=context.programId&&programs.some((p:any)=>p.id===context.programId)?context.programId:String(programs[0]?.id||'')
       setProgramId(nextId)
-      setProgramForm(programs.find((p:any)=>p.id===nextId)||{})
+      const refreshed=programs.find((p:any)=>p.id===nextId)||{}
+      setProgramForm(current=>{
+        const sameContext=context.sponsorId===j.data?.sponsor?.id&&context.programId===nextId
+        const acknowledged=options.savedIdentity
+        const savedCurrentDraft=acknowledged?.sponsorId===context.sponsorId&&acknowledged.programId===nextId&&sameProgramIdentity(current,acknowledged.form)
+        // Commercial reloads keep pending identity edits; an explicit save adopts the
+        // persisted response only while the submitted draft is still current.
+        if(masterMode&&sameContext&&context.saved&&!sameProgramIdentity(current,context.saved)&&!savedCurrentDraft)return current
+        return refreshed
+      })
       if(accounts?.ok){setSponsorAccounts(Array.isArray(accounts.data?.accounts)?accounts.data.accounts:[]);setCurrentSponsorId(String(accounts.data?.current_sponsor_id||j.data?.sponsor?.id||''))}
     }catch(e){if(masterMode)setMasterAccess(false);setError(e instanceof Error?e.message:'No pudimos abrir KawMed.')}finally{setLoading(false)}
   }
@@ -87,7 +104,7 @@ export default function SponsorKawMed(){
   const masterBlocked=masterRequested&&(!masterAccess||invalidMasterContext)
   const masterEnabled=masterRequested&&!masterBlocked&&Boolean(masterProfile.id)
   const programSaved=data?.programs.find(p=>p.id===programId)
-  const identityDirty=Boolean(programSaved&&['private_banner_image_url','private_cta_label','private_cta_url','vademecum_url','vademecum_label','representative_cta_label','representative_message_template'].some(k=>String((programForm as any)[k]||'')!==String((programSaved as any)[k]||'')))
+  const identityDirty=Boolean(programSaved&&!sameProgramIdentity(programForm,programSaved))
   const commercialDirty=identityDirty||Object.values(newRep).some(Boolean)||importRows.length>0||selected.length>0||Boolean(groupLabel)
   const canLeaveCommercial=()=>{
     if(masterRequested&&(busy||pending||commercialDirty)){setError('Conservamos tus cambios. Termina o cancela las operaciones pendientes antes de salir de Kawmed Master.');return false}
@@ -172,7 +189,7 @@ export default function SponsorKawMed(){
         representative_message_template:programForm.representative_message_template||'',
       })
       if(!j?.ok)throw new Error(j?.error||'No pudimos guardar la identidad KawMed.')
-      setMessage('Identidad privada del programa actualizada.');await load()
+      setMessage('Identidad privada del programa actualizada.');await load({savedIdentity:{sponsorId:data?.sponsor.id||'',programId,form:programForm}})
     }catch(e){setError(e instanceof Error?e.message:'No pudimos guardar.')}finally{setBusy(false)}
   }
 

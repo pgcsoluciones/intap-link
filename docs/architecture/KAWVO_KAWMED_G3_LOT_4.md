@@ -80,3 +80,37 @@ Los cambios de credenciales se conservan manteniendo FreeCredentials montado. El
 - [ ] Móvil físico/teclado/safe-area y desktop; comparación con #151 y revisión independiente. Doctor, invitado, Free y fallback legacy sin regresión.
 
 No se auditó ni cambió Cloudflare en este lote. CI se informará por SHA en el Draft PR y no acredita despliegue o aceptación. #134 permanece pendiente antes de un futuro release API, conforme a la instrucción del propietario; no se vuelve a modificar ni a desplegar API para resolverlo durante G3.4. Siguiente acción única: revisión técnica del candidato y decisión de QA/Stage en una autorización posterior.
+
+## Correctivo puntual de revisión · PR #176
+
+Base del correctivo: `3f4a8f9c950c19bf0f2a88052295819186c4a1a3`; misma rama y mismo Draft PR. El alcance funcional previo permanece sin ampliar. Sólo se modifican:
+
+- `app/src/components/admin/sponsored/SponsorKawMed.tsx`: conservar el borrador de identidad del mismo programa/patrocinador durante recargas comerciales; reconocer el guardado explícito para adoptar los datos persistidos.
+- `scripts/lib/kawmed-g3-4-browser.mjs`: regresiones con fixtures de asignación y registro de visitadores, errores, guardado y cambios de contexto concurrentes.
+- `scripts/test-kawmed-g3-4-master-shell-contract.mjs`: permitir exclusivamente el nuevo argumento de la recarga posterior al guardado de identidad. El endpoint, payload, validaciones y manejo de errores de esa función siguen comparados con la base, al igual que las demás operaciones originales; no se añade una exención general.
+- Este handoff: causa, evidencia, validaciones y pendientes del correctivo.
+
+### Causa y comportamiento
+
+`load()` reemplazaba incondicionalmente `programForm` con la identidad guardada del overview. Reproducción roja sobre la base: Identidad → editar CTA → Patrocinios → asignar estación → Identidad devolvía «Conocer más» en vez del borrador; la aserción `Commercial completion must not replace an unsaved identity` falló en `/tmp/g34-fix-before.log`.
+
+La recarga comercial sigue actualizando overview, visitadores y estaciones. Su actualización funcional del formulario conserva los campos pendientes únicamente en el mismo contexto. Una referencia a la selección/baseline más reciente evita recuperar un programa anterior si el usuario cambia de programa mientras llega la respuesta; `programForm` continúa siendo el único propietario del borrador. Cambiar de programa mantiene la confirmación de descarte y cambiar de patrocinador mantiene el guard existente. No hay caché nueva entre programas o cuentas.
+
+El guardado explícito identifica programa, patrocinador y borrador enviado para refrescar desde los datos guardados. Si el usuario ya escribió otro cambio durante la petición, ese cambio posterior se conserva. Los fixtures normalizan el CTA en su respuesta para comprobar que el formulario adopta efectivamente el overview actualizado; no se modifica la normalización, contrato ni payload de la API real. Un error de guardado conserva el borrador. No se cambia ninguna operación comercial, endpoint, permiso ni guard de servidor.
+
+### Validación del correctivo
+
+- **PASS**: regresión nueva primero roja en la base y luego verde; recorridos de éxito/error comercial, guardado explícito/error, ediciones posteriores al envío y cambio de programa durante recarga.
+- **PASS**: `KAWMED_G34_ARTIFACTS=/tmp/g34-fix-master KAWMED_G33_ARTIFACTS=/tmp/g34-fix-g33 KAWMED_G32_ARTIFACTS=/tmp/g34-fix-g32 node scripts/test-kawmed-g3-4-master-shell-contract.mjs --scope --browser`: **15 grupos Master + 15 G3.3 + 29 G3.2 + 21 G3.1.1**. Las suites heredadas permanecen byte a byte; incluye seis tamaños (320/360/390/430/768/1280), permisos, cuenta activa, publicación, cambios pendientes y fallback.
+- **PASS 11/11**: `test-kawmed-{isolation,web-preview-route,code-accordion,demo-invitations,live-guest,claim-resume-ux}-contract.mjs`, `test-intapcard-{active-account,multiaccount,kawmed-integrated}-contract.mjs`, `test-kawvo-free-g2-qa-corrections-2026-11-15.mjs` y `test-kawvo-g5-publication-navigation-2026-11-15.mjs`, ejecutados con `node scripts/<archivo>`.
+- **PASS**: `npm exec -w app tsc -- --noEmit`, `npm run build -w app` y `npm run build:preview -w app`, todos locales. Se mantiene el aviso de Vite de chunks mayores de 500 kB, sin modificar dependencias ni configuración.
+- **PASS**: `git diff --check`, alcance exacto de cuatro archivos respecto a la base correctiva y allowlist acumulativa G3.4 sin ampliar. Ningún archivo funcional ajeno, captura versionada o suite histórica cambia.
+- CI del nuevo SHA: consultar el Draft PR #176; una ejecución de la base no valida el correctivo. Ninguna comprobación local acredita QA autenticada ni autoriza publicación.
+
+Las capturas de las pruebas se guardan fuera del árbol en `/tmp/g34-fix-master`, `/tmp/g34-fix-g33` y `/tmp/g34-fix-g32`; no se reemplazan las seis evidencias versionadas del candidato previo. Logs locales: `/tmp/g34-fix-target.log`, `/tmp/g34-fix-race.log`, `/tmp/g34-fix-all-browser.log`, `/tmp/g34-fix-contracts.log`, `/tmp/g34-fix-ts.log` y `/tmp/g34-fix-build-{production,preview}.log`.
+
+### Revisión pendiente y reversión
+
+QA autenticada real continúa OPEN: con programas/perfiles de demostración autorizados, repetir CTA sin guardar → asignación/registro con éxito y error → retorno, guardar identidad y comprobar persistencia; cancelar/confirmar cambio de programa y verificar que un cambio de patrocinador no transporte el borrador. Los fixtures no acreditan D1, R2 ni sesión real. Se conserva el FAIL histórico del contrato general de patrocinio documentado arriba y la reconciliación #134 fuera del lote.
+
+Para revertir únicamente este correctivo, revertir su commit y volver al comportamiento del SHA `3f4a8f9c950c19bf0f2a88052295819186c4a1a3`; no requiere rollback de datos ni infraestructura. El fallback explícito `legacy=1` permanece. No se ejecutó Stage, deploy, merge ni migración. G3.4 sigue pendiente de revisión independiente y aceptación.
