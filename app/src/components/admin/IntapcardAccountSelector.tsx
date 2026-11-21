@@ -1,5 +1,10 @@
+import {isSponsoredShellRequest,sponsoredShellUrl,sponsoredSurface} from './sponsored/sponsored-shell-gate'
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPost, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
+import { Link } from 'react-router-dom'
+import useKawMedShellReturn from './medical/useKawMedShellReturn'
+import {kawMedMasterContextUrl,isKawMedMasterReturnContext} from './medical/kawmed-master-shell-navigation'
+import { kawMedContextUrl } from './medical/KawMedShellReturn'
 import { isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './free/KawvoShellReturn'
 
 type AccountItem={
@@ -22,6 +27,15 @@ const labels:Record<AccountItem['kind'],string>={
 }
 
 export default function IntapcardAccountSelector(){
+  const {context:medicalReturn,checking:medicalChecking}=useKawMedShellReturn()
+  const[sponsoredReturn,setSponsoredReturn]=useState('')
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search),profileId=p.get('profile_id')||''
+    if(p.get('from')!=='sponsored'||!profileId||!isSponsoredShellRequest(import.meta.env.MODE,window.location.hostname,window.location.search))return
+    let alive=true
+    apiGet('/me/sponsored-profile?profile_id='+encodeURIComponent(profileId)).then((r:any)=>{if(alive&&r?.ok&&String(r.data?.id||'')===profileId)setSponsoredReturn(sponsoredShellUrl(profileId,sponsoredSurface(window.location.search)))}).catch(()=>undefined)
+    return()=>{alive=false}
+  },[])
   const[stage,setStage]=useState<'choice'|'new'|'existing'>('choice')
   const[activationKind,setActivationKind]=useState<ActivationKind>('product')
   const[activationCode,setActivationCode]=useState('')
@@ -105,10 +119,17 @@ export default function IntapcardAccountSelector(){
       }else{
         const route=String(response.data?.route||'/admin/accounts')
         // Keep the canonical server route and token contract; only the selected
-        // Free account opts into the already guarded shell on App Preview.
+        // Free account opts into its guarded shell. Medical returns require a verified
+        // doctor context AND a matching canonical server selection; other kinds stay unchanged.
         const selectedFree=response.data?.kind==='free'&&String(response.data?.id||'')===item.id
         const target=item.kind==='free'&&selectedFree&&route==='/admin/free'&&isKawvoShellPreviewHost()
           ? KAWVO_SHELL_PREVIEW_ROUTE
+          : medicalReturn&&isKawMedMasterReturnContext(medicalReturn)&&item.kind==='medical_master'&&response.data?.kind==='medical_master'&&String(response.data?.id||'')===item.id&&route==='/admin/sponsor/kawmed'
+          ? item.id===medicalReturn.sponsor?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):route
+          : medicalReturn&&!(isKawMedMasterReturnContext(medicalReturn))&&item.kind==='medical'&&response.data?.kind==='medical'&&String(response.data?.id||'')===item.id&&route==='/admin/medical'
+          ? kawMedContextUrl('/admin/medical',{account:item.id,tab:item.id===medicalReturn.account?medicalReturn.tab:'home',...(item.id===medicalReturn.account?medicalReturn:{})})
+          : sponsoredReturn&&item.kind==='sponsored'&&response.data?.kind==='sponsored'&&String(response.data?.id||'')===item.id&&new URL(route,window.location.origin).pathname==='/admin/sponsored'
+          ? sponsoredShellUrl(item.id,item.id===new URLSearchParams(sponsoredReturn.split('?')[1]).get('profile_id')?sponsoredSurface(sponsoredReturn.split('?')[1]):{tab:'home'})
           : item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route
         window.location.assign(target)
       }
@@ -129,6 +150,9 @@ export default function IntapcardAccountSelector(){
   const activeKind=activationKinds.find(kind=>kind.value===activationKind)!
   return <main className="min-h-screen bg-slate-50 px-4 py-8 font-['Inter'] text-slate-950">
     <div className="mx-auto max-w-[1020px] space-y-5">
+      {medicalChecking&&<p role="status" className="text-sm text-slate-600">Verificando la cuenta médica de origen…</p>}
+      {sponsoredReturn&&<Link to={sponsoredReturn} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al perfil patrocinado?'))event.preventDefault()}} className="inline-flex min-h-11 min-w-11 items-center rounded-xl border bg-white px-4 text-sm font-bold text-cyan-800">← Volver a mi presentación</Link>}
+      {medicalReturn&&<Link to={isKawMedMasterReturnContext(medicalReturn)?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):kawMedContextUrl('/admin/medical',medicalReturn)} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al perfil médico?'))event.preventDefault()}} className="inline-flex min-h-11 min-w-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700">← Volver al perfil médico</Link>}
       <header className="rounded-[28px] border border-slate-200 bg-white p-6">
         <div className="flex justify-end"><button type="button" disabled={signingOut} onClick={()=>void signOut()} className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-black text-rose-700 disabled:opacity-50">{signingOut?"Cerrando sesión…":"Cerrar sesión"}</button></div>
         <p className="text-xs font-black uppercase tracking-[.14em] text-cyan-700">Intapcard · Multicuenta</p>
@@ -178,7 +202,7 @@ export default function IntapcardAccountSelector(){
             {item.sponsor&&<p className="mt-1 text-sm font-semibold text-slate-600">{item.sponsor}</p>}
             {item.detail&&<p className="mt-2 break-all text-xs text-slate-500">{item.detail}</p>}
             {item.status&&<p className="mt-1 text-xs text-slate-500">Estado: {item.status}</p>}
-            <button type="button" disabled={Boolean(busy)} onClick={()=>void choose(item)} className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+            <button type="button" disabled={Boolean(busy)||medicalChecking} onClick={()=>void choose(item)} className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
               {busy===item.kind+':'+item.id?'Abriendo…':'Administrar esta cuenta'}
             </button>
           </article>)}

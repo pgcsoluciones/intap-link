@@ -1,3 +1,4 @@
+import {sponsoredEntryUrl,isSponsoredShellRequest} from './sponsored-shell-gate'
 import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
@@ -16,7 +17,7 @@ export default function SponsoredResumeGate(){
     const panelResume=(sessionStorage.getItem(PANEL_KEY)||localStorage.getItem(PANEL_KEY))==='1'
     if(!valid(profileCode)&&!valid(masterCode)&&!panelResume)return
     if(valid(profileCode)&&location.pathname==='/admin/sponsored/activate')return
-    if(panelResume&&(location.pathname==='/admin/sponsored'||location.pathname==='/admin/sponsored/select'))return
+    if(panelResume&&(location.pathname==='/admin/sponsored'||location.pathname==='/admin/sponsored/select'||(isSponsoredShellRequest(import.meta.env.MODE,window.location.hostname,location.search)&&location.pathname.startsWith('/admin/sponsored/'))))return
 
     // A Master must always pass again through SponsoredAccessEntry after login.
     // That route calls scan/status, validates the registered sponsor email,
@@ -43,7 +44,7 @@ export default function SponsoredResumeGate(){
         navigate(`/admin/sponsored/activate?public_code=${encodeURIComponent(profileCode)}`,{replace:true})
         return
       }
-      if(panelResume)navigate('/admin/sponsored',{replace:true})
+      if(panelResume)navigate(sponsoredEntryUrl('/admin/sponsored',location.search,import.meta.env.MODE,window.location.hostname),{replace:true})
     }).catch(()=>undefined)
     return()=>{alive=false}
   },[location.pathname,location.search,navigate])
