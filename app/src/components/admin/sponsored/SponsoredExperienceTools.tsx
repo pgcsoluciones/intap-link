@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiGet, apiPost } from '../../../lib/api'
 import FreeCredentials from '../free/FreeCredentials'
 import { SPONSORED_TOUR_EVENT } from './SponsoredGuidedTour'
+import { requestSponsoredExit } from './sponsored-shell-gate'
 
 type InstallPromptEvent=Event&{prompt:()=>Promise<void>;userChoice:Promise<{outcome:'accepted'|'dismissed'}>}
 type AccountTab='credentials'|'device'
@@ -28,6 +29,7 @@ export default function SponsoredExperienceTools(){
   }
   async function logout(){
     if(loggingOut)return
+    if(!requestSponsoredExit(window))return
     setLoggingOut(true)
     try{await apiPost('/auth/logout',{})}catch{/* El cierre local continúa aunque falle la llamada remota. */}
     sessionStorage.removeItem('kawvo_sponsored_public_code')
@@ -45,6 +47,7 @@ export default function SponsoredExperienceTools(){
   }
   async function unlink(){
     if(unlinking||!ack||phrase.trim().toUpperCase()!=='DESVINCULAR'||!emailConfirm.trim())return
+    if(!requestSponsoredExit(window))return
     setUnlinking(true);setUnlinkError('')
     try{
       const json:any=await apiPost(`/me/sponsored-profile/unlink${profileQuery}`,{confirm_phrase:phrase,confirm_email:emailConfirm.trim()})

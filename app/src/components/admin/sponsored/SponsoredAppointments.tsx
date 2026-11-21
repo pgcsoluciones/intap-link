@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import AppointmentManager from '../../appointments/AppointmentManager'
+import { sponsoredAgendaReturn } from './sponsored-shell-gate'
 
 export default function SponsoredAppointments(){
   const navigate=useNavigate()
@@ -13,6 +14,6 @@ export default function SponsoredAppointments(){
     apiBase="/me/sponsored-profile/appointments"
     query={query.toString()}
     title="Agenda"
-    onBack={()=>navigate(profileId?'/admin/sponsored?profile_id='+encodeURIComponent(profileId):scope?'/admin/sponsor':'/admin/sponsored')}
+    onBack={()=>navigate(sponsoredAgendaReturn(window.location.search,import.meta.env.MODE,window.location.hostname))}
   />
 }
