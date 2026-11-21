@@ -16,6 +16,14 @@ export default function SponsoredExperienceTools(){
   const shellRequest=isSponsoredShellRequest(import.meta.env.MODE,window.location.hostname,location.search)
   const[credentialsTouched,setCredentialsTouched]=useState(false)
   function canLeaveCredentials(){return !shellRequest||!credentialsTouched||window.confirm('El formulario de credenciales puede tener cambios pendientes. ¿Salir y descartar sus cambios locales? Las operaciones enviadas podrían completarse.')}
+  function selectAccountTab(next:AccountTab){
+    if(next===accountTab)return
+    if(accountTab==='credentials'){
+      if(!canLeaveCredentials())return
+      setCredentialsTouched(false)
+    }
+    setAccountTab(next)
+  }
   function closeAccount(){if(canLeaveCredentials()){setAccountOpen(false);setCredentialsTouched(false)}}
   function openRoute(target:string){if(!canLeaveCredentials()||!requestSponsoredExit(window))return;window.location.assign(sponsoredEntryUrl(target,window.location.search,import.meta.env.MODE,window.location.hostname))}
   const selectedProfileId=String(new URLSearchParams(location.search).get('profile_id')||'').trim()
@@ -84,7 +92,7 @@ export default function SponsoredExperienceTools(){
       </div>
     </header>
     {accountOpen&&<div className={"fixed inset-0 z-[115] overflow-y-auto bg-white "+(shellRequest?"[&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11 [&_input]:min-w-0":"")} role="dialog" aria-modal="true" aria-label="Mi cuenta patrocinada">
-      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur"><div className="mx-auto flex max-w-[430px] gap-2"><button type="button" onClick={()=>setAccountTab('credentials')} className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black ${accountTab==='credentials'?'bg-slate-950 text-white':'bg-slate-100 text-slate-600'}`}>Credenciales</button><button type="button" onClick={()=>setAccountTab('device')} className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black ${accountTab==='device'?'bg-slate-950 text-white':'bg-slate-100 text-slate-600'}`}>Dispositivo</button></div></div>
+      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur"><div className="mx-auto flex max-w-[430px] gap-2"><button type="button" onClick={()=>selectAccountTab('credentials')} className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black ${accountTab==='credentials'?'bg-slate-950 text-white':'bg-slate-100 text-slate-600'}`}>Credenciales</button><button type="button" onClick={()=>selectAccountTab('device')} className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black ${accountTab==='device'?'bg-slate-950 text-white':'bg-slate-100 text-slate-600'}`}>Dispositivo</button></div></div>
       {accountTab==='credentials'?<div className="mx-auto w-full max-w-[430px] pb-10">
         <section className="px-5 pt-5">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">

@@ -157,3 +157,26 @@ Builds locales: `npm run build -w app` y `npm run build:preview -w app`; ambos e
 El fallback explícito «Panel anterior» conserva el editor en memoria. Para abrir deliberadamente legacy tras recargar: `/admin/sponsored?profile_id=<id>&kawvo_sponsored_shell=0`; el opt-out explícito no reactiva la preferencia UI. Para retirar completamente el código G4, revertir primero el commit final y después el avance recuperado `c8aeb4d0bbcd578923a97b918afd3f6cf7d82990`, regresando a la base `594113eeff8d6bd9cd39e572e953f7af7d2fba95`. No basta revertir sólo la continuación, pues quedaría el WIP. No hay rollback de datos ni migraciones. Cualquier recuperación de deployment requiere su autorización y evidencia aparte; no se prepara ni ejecuta un runner en G4.
 
 Resultado: candidato para revisión independiente; aceptación G4 permanece **OPEN**. Sin merge, deploy, migración, modificación de main, infraestructura, API, Web pública ni datos reales. Siguiente acción única: revisión técnica del Draft PR y decisión de QA autenticada posterior.
+
+## Correctivo de revisión #177 · Credenciales → Dispositivo
+
+Base exacta: `0fe9e2b3620e68019fd1b9b9f62b536b50741526`, misma rama `feat/kawvo-g4-beneficiary-unified` y mismo Draft PR. Allowlist del correctivo: `SponsoredExperienceTools.tsx`, `scripts/lib/sponsored-g4-browser.mjs` y este handoff. Se mantienen los veinte archivos del lote acumulado, sin ampliar su ámbito.
+
+Reproducción roja con el componente real y fixtures: abrir Mi cuenta, iniciar cambio de contraseña, escribir un código ficticio y pulsar Dispositivo no mostraba confirmación. La aserción `Device transition must ask before unmounting credentials` falló con `0 !== 1` antes de modificar el componente (`/tmp/g4-account-tab-before.log`).
+
+Los dos botones de pestaña usan ahora un único selector. Si la pestaña actual es Credenciales, consulta `canLeaveCredentials()` **antes** de cambiar estado o desmontar FreeCredentials. Cancelar no cambia pestaña, formulario ni indicador de pendientes. Confirmar permite la transición original y limpia únicamente el indicador del formulario de credenciales descartado, evitando otra advertencia al entrar y salir de un formulario nuevo sin editar. Pulsar la pestaña ya seleccionada no descarta ni avisa. Legacy conserva su transición sin una nueva confirmación, porque se reutiliza el gate original de `canLeaveCredentials()`.
+
+No se modifica FreeCredentials ni sus operaciones/validaciones. Tampoco las protecciones de perfil/bancos, logout/desvincular, endpoints, payloads, scopes o permisos. La transición interna no invoca una salida del editor ni guarda sus borradores.
+
+Validación del correctivo:
+- **PASS**: regresión específica roja antes y verde después; cancelar/confirmar en 320 y 1280 px, retorno a credenciales nuevas sin aviso residual, borradores de perfil y bancos intactos, sin mutaciones por cambiar pestaña. Legacy Preview con opt-out y build/host Producción simulado mantienen la transición sin aviso nuevo.
+- **PASS: 12 grupos G4**, incluidos los once anteriores y el recorrido nuevo, con alcance acumulado exacto y componentes/guards reales bajo HTTP interceptado; log `/tmp/g4-account-tab-suite.log`.
+- **PASS 6/6 contratos afectados**: gate G4, cuenta activa, multicuenta, integración Intapcard/Kawmed y regresiones G2/G5. Contrato estático/puro G4 PASS; FreeCredentials, perfiles/bancos y fuentes protegidas no se modifican.
+- **PASS**: builds App Preview y Producción exclusivamente locales, ambos con TypeScript, Node 20.20.2 y dependencias existentes. Permanecen los avisos de Vite/chunks/Browserslist, sin cambios de herramientas/configuración.
+- **PASS**: `git diff --check` y allowlist puntual de tres archivos. CI del nuevo SHA se registra en #177 separadamente; no se atribuye al correctivo el resultado de CI del padre.
+
+Comandos: `SPONSORED_G4_CASE='account credentials to device' SPONSORED_G4_ARTIFACTS=/tmp/g4-account-tab-corrective node scripts/test-sponsored-g4-unified-contract.mjs --browser` (rojo antes, verde después); `SPONSORED_G4_ARTIFACTS=/tmp/g4-account-tab-suite node scripts/test-sponsored-g4-unified-contract.mjs --scope --browser`; `npm run build -w app`; `npm run build:preview -w app`; `git diff --check`. Logs: `/tmp/g4-account-tab-{before,after,suite,contracts,build-production,build-preview}.log`.
+
+Las bibliotecas y fuentes Free/médicas protegidas no cambian; sus ochenta resultados anteriores corresponden al candidato base y no se presentan como una nueva ejecución. Se verifica todo G4 y las regresiones de cuenta activa/multicuenta/G2/G5 afectadas, conforme a #172. Los dos FAIL históricos ya comparados con la base permanecen documentados y fuera del correctivo, sin relajar pruebas. Las capturas versionadas anteriores se conservan; esta transición no cambia estilos.
+
+QA autenticada continúa pendiente. Los códigos y perfiles del navegador son ficticios y todo HTTP está interceptado; no se enviaron credenciales reales. Work debe repetir cancelar/confirmar sobre un formulario autorizado antes de aceptar el correctivo. Rollback puntual: revertir únicamente su commit vuelve a `0fe9e2b3`, sin datos ni migraciones; retirar todo G4 requiere también los commits anteriores indicados arriba. No Stage, deploy, merge, migración ni cambio de infraestructura. Detenerse para revisión independiente.
