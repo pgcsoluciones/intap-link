@@ -11,7 +11,7 @@ const blank={bank_code:'popular',bank_name:'Banco Popular Dominicano',account_nu
 
 function bankInitials(name:string){return name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()).join('')||'B'}
 
-export function SponsoredBankAccountsSection({mode='beneficiary',profileId}:{mode?:'beneficiary'|'master';profileId?:string}={}){
+export function SponsoredBankAccountsSection({mode='beneficiary',profileId,onPendingChange,onAccessChange}:{mode?:'beneficiary'|'master';profileId?:string;onPendingChange?:(pending:boolean)=>void;onAccessChange?:(allowed:boolean)=>void}={}){
   const params=new URLSearchParams();if(mode==='master')params.set('scope','master');else if(profileId)params.set('profile_id',profileId);const scopeQuery=params.toString()?`?${params.toString()}`:''
   const[allowed,setAllowed]=useState(false)
   const[enabled,setEnabled]=useState(true)
@@ -26,6 +26,8 @@ export function SponsoredBankAccountsSection({mode='beneficiary',profileId}:{mod
   const remaining=useMemo(()=>Math.max(0,maxActive-items.length),[maxActive,items.length])
   async function load(){setLoading(true);setError('');try{const j:any=await apiGet(`/me/sponsored-profile/bank-accounts${scopeQuery}`);if(!j?.ok)throw new Error(j?.error||'No pudimos cargar las cuentas.');setAllowed(Boolean(j.data?.access?.allowed));setEnabled(j.data?.enabled!==false);setMaxActive(Math.min(5,Math.max(2,Number(j.data?.max_accounts||DEFAULT_MAX_ACTIVE))));setItems(Array.isArray(j.data?.items)?j.data.items:[])}catch(e){setError(e instanceof Error?e.message:'No pudimos cargar las cuentas.')}finally{setLoading(false)}}
   useEffect(()=>{void load()},[scopeQuery])
+  useEffect(()=>{onAccessChange?.(allowed&&!loading)},[onAccessChange,allowed,loading])
+  useEffect(()=>{onPendingChange?.(Boolean(saving||editingId||JSON.stringify(form)!==JSON.stringify(blank)))},[onPendingChange,saving,editingId,form])
   function selectBank(code:string){const bank=BANKS.find(item=>item.code===code)||BANKS[0];setForm((current:any)=>({...current,bank_code:bank.code,bank_name:bank.name}))}
   function reset(){setEditingId(null);setForm(blank)}
   function startEdit(item:Bank){setEditingId(item.id);setForm({...item,bank_code:item.bank_code||'otro',holder_id_type:item.holder_id_type||'cedula',holder_id_number:item.holder_id_number||'',display_mode:'masked'});document.getElementById('sponsored-bank-accounts')?.scrollIntoView({behavior:'smooth',block:'start'})}

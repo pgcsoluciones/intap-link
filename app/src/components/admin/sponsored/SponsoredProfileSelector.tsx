@@ -1,3 +1,4 @@
+import {sponsoredEntryUrl} from './sponsored-shell-gate'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
@@ -27,7 +28,7 @@ export default function SponsoredProfileSelector(){
       if(!json?.ok)throw new Error(json?.error||'No pudimos cargar tus perfiles.')
       const profiles=Array.isArray(json.data?.profiles)?json.data.profiles:[]
       if(profiles.length===1){
-        navigate(`/admin/sponsored?profile_id=${encodeURIComponent(String(profiles[0].id))}`,{replace:true})
+        navigate(sponsoredEntryUrl(`/admin/sponsored?profile_id=${encodeURIComponent(String(profiles[0].id))}`,window.location.search,import.meta.env.MODE,window.location.hostname),{replace:true})
         return
       }
       setItems(profiles)
@@ -67,7 +68,7 @@ export default function SponsoredProfileSelector(){
               {username&&<p><span className="font-bold text-slate-400">Usuario:</span> <strong>/p/{username}</strong></p>}
               {item.public_code&&<p><span className="font-bold text-slate-400">Código:</span> <strong>{item.public_code}</strong></p>}
             </div>
-            <button type="button" onClick={()=>navigate(`/admin/sponsored?profile_id=${encodeURIComponent(item.id)}`)} className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Administrar perfil</button>
+            <button type="button" onClick={()=>navigate(sponsoredEntryUrl(`/admin/sponsored?profile_id=${encodeURIComponent(item.id)}`,window.location.search,import.meta.env.MODE,window.location.hostname))} className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3.5 text-sm font-black text-white">Administrar perfil</button>
           </article>
         })}
       </div>

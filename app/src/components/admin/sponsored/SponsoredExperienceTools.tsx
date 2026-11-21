@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import {useLocation} from 'react-router-dom'
 import { apiGet, apiPost } from '../../../lib/api'
 import FreeCredentials from '../free/FreeCredentials'
 import { SPONSORED_TOUR_EVENT } from './SponsoredGuidedTour'
-import { requestSponsoredExit } from './sponsored-shell-gate'
+import { requestSponsoredExit,isSponsoredShellRequest,sponsoredEntryUrl } from './sponsored-shell-gate'
 
 type InstallPromptEvent=Event&{prompt:()=>Promise<void>;userChoice:Promise<{outcome:'accepted'|'dismissed'}>}
 type AccountTab='credentials'|'device'
@@ -11,7 +12,13 @@ function isStandalone(){return window.matchMedia?.('(display-mode: standalone)')
 function isIos(){return /iphone|ipad|ipod/i.test(navigator.userAgent)}
 
 export default function SponsoredExperienceTools(){
-  const selectedProfileId=String(new URLSearchParams(window.location.search).get('profile_id')||'').trim()
+  const location=useLocation()
+  const shellRequest=isSponsoredShellRequest(import.meta.env.MODE,window.location.hostname,location.search)
+  const[credentialsTouched,setCredentialsTouched]=useState(false)
+  function canLeaveCredentials(){return !shellRequest||!credentialsTouched||window.confirm('El formulario de credenciales puede tener cambios pendientes. ¿Salir y descartar sus cambios locales? Las operaciones enviadas podrían completarse.')}
+  function closeAccount(){if(canLeaveCredentials()){setAccountOpen(false);setCredentialsTouched(false)}}
+  function openRoute(target:string){if(!canLeaveCredentials()||!requestSponsoredExit(window))return;window.location.assign(sponsoredEntryUrl(target,window.location.search,import.meta.env.MODE,window.location.hostname))}
+  const selectedProfileId=String(new URLSearchParams(location.search).get('profile_id')||'').trim()
   const profileQuery=selectedProfileId?`?profile_id=${encodeURIComponent(selectedProfileId)}`:''
   const[promptEvent,setPromptEvent]=useState<InstallPromptEvent|null>(null);const[installed,setInstalled]=useState(false);const[help,setHelp]=useState(false)
   const[accountOpen,setAccountOpen]=useState(false);const[accountTab,setAccountTab]=useState<AccountTab>('credentials');const[accountEmail,setAccountEmail]=useState('');const[profiles,setProfiles]=useState<any[]>([]);const[phrase,setPhrase]=useState('');const[emailConfirm,setEmailConfirm]=useState('');const[ack,setAck]=useState(false);const[unlinking,setUnlinking]=useState(false);const[loggingOut,setLoggingOut]=useState(false);const[unlinkError,setUnlinkError]=useState('')
@@ -22,6 +29,10 @@ export default function SponsoredExperienceTools(){
     window.addEventListener('beforeinstallprompt',before);window.addEventListener('appinstalled',done)
     return()=>{window.removeEventListener('beforeinstallprompt',before);window.removeEventListener('appinstalled',done)}
   },[])
+  function startTour(){
+    if(shellRequest)window.dispatchEvent(new Event('kawvo-sponsored-tour-open'))
+    else window.dispatchEvent(new Event(SPONSORED_TOUR_EVENT))
+  }
   async function install(){
     if(installed)return
     if(promptEvent){await promptEvent.prompt();const choice=await promptEvent.userChoice;if(choice.outcome==='accepted')setInstalled(true);setPromptEvent(null);return}
@@ -29,6 +40,7 @@ export default function SponsoredExperienceTools(){
   }
   async function logout(){
     if(loggingOut)return
+    if(!canLeaveCredentials())return
     if(!requestSponsoredExit(window))return
     setLoggingOut(true)
     try{await apiPost('/auth/logout',{})}catch{/* El cierre local continúa aunque falle la llamada remota. */}
@@ -47,6 +59,7 @@ export default function SponsoredExperienceTools(){
   }
   async function unlink(){
     if(unlinking||!ack||phrase.trim().toUpperCase()!=='DESVINCULAR'||!emailConfirm.trim())return
+    if(!canLeaveCredentials())return
     if(!requestSponsoredExit(window))return
     setUnlinking(true);setUnlinkError('')
     try{
@@ -57,31 +70,32 @@ export default function SponsoredExperienceTools(){
       window.location.replace('/admin/login')
     }catch{setUnlinkError('No pudimos completar la desvinculación. Intenta nuevamente.')}finally{setUnlinking(false)}
   }
+  useEffect(()=>{const account=()=>{void openAccount()},installApp=()=>{void install()};window.addEventListener('kawvo-sponsored-account-open',account);window.addEventListener('kawvo-sponsored-install',installApp);return()=>{window.removeEventListener('kawvo-sponsored-account-open',account);window.removeEventListener('kawvo-sponsored-install',installApp)}},[profileQuery,promptEvent,installed])
   const readyToUnlink=ack&&phrase.trim().toUpperCase()==='DESVINCULAR'&&Boolean(emailConfirm.trim())
   return <>
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-[820px] items-center justify-between gap-3">
+    <header className={"sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur "+(shellRequest?"md:ml-[244px] [&_button]:min-h-11 [&_button]:min-w-11 [&_button:focus-visible]:outline [&_button:focus-visible]:outline-cyan-700":"")}>
+      <div className={"mx-auto flex w-full max-w-[900px] items-center justify-between gap-3 "+(shellRequest?"flex-wrap":"")}>
         <div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">Mi panel patrocinado</p></div>
         <div className="flex min-w-0 shrink items-center justify-end gap-2">
-          <button type="button" onClick={()=>window.dispatchEvent(new Event(SPONSORED_TOUR_EVENT))} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 shadow-sm">Recorrido</button>
+          <button type="button" onClick={startTour} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 shadow-sm">Recorrido</button>
           <button type="button" onClick={()=>void openAccount()} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm">Mi cuenta</button>
           <button type="button" disabled={loggingOut} onClick={()=>void logout()} className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm disabled:opacity-40">{loggingOut?'Cerrando…':'Cerrar sesión'}</button>
         </div>
       </div>
     </header>
-    {accountOpen&&<div className="fixed inset-0 z-[115] overflow-y-auto bg-white" role="dialog" aria-modal="true" aria-label="Mi cuenta patrocinada">
+    {accountOpen&&<div className={"fixed inset-0 z-[115] overflow-y-auto bg-white "+(shellRequest?"[&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11 [&_input]:min-w-0":"")} role="dialog" aria-modal="true" aria-label="Mi cuenta patrocinada">
       <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur"><div className="mx-auto flex max-w-[430px] gap-2"><button type="button" onClick={()=>setAccountTab('credentials')} className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black ${accountTab==='credentials'?'bg-slate-950 text-white':'bg-slate-100 text-slate-600'}`}>Credenciales</button><button type="button" onClick={()=>setAccountTab('device')} className={`flex-1 rounded-xl px-3 py-2.5 text-xs font-black ${accountTab==='device'?'bg-slate-950 text-white':'bg-slate-100 text-slate-600'}`}>Dispositivo</button></div></div>
       {accountTab==='credentials'?<div className="mx-auto w-full max-w-[430px] pb-10">
         <section className="px-5 pt-5">
           <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4">
             <p className="text-[11px] font-black uppercase tracking-[.12em] text-slate-500">Accesos de mi cuenta</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <button type="button" onClick={()=>window.location.assign('/admin/sponsored/agenda'+profileQuery)} className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm font-black text-emerald-700 transition hover:-translate-y-0.5 hover:shadow-sm">Agenda</button>
+              <button type="button" onClick={()=>openRoute('/admin/sponsored/agenda'+profileQuery)} className="w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm font-black text-emerald-700 transition hover:-translate-y-0.5 hover:shadow-sm">Agenda</button>
               <button type="button" disabled={installed} onClick={()=>void install()} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-left text-sm font-black text-white transition hover:-translate-y-0.5 hover:shadow-sm disabled:bg-emerald-600">{installed?'Aplicación instalada':'Descargar aplicación'}</button>
             </div>
           </div>
         </section>
-        {profiles.length>1&&<section className="px-5 pt-4"><div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase tracking-[.12em] text-cyan-700">Mis perfiles patrocinados</p><p className="mt-1 text-sm leading-5 text-slate-500">Selecciona cuál deseas administrar con estas mismas credenciales.</p><div className="mt-3 space-y-2">{profiles.map((item:any)=><button key={item.id} type="button" onClick={()=>window.location.assign(`/admin/sponsored?profile_id=${encodeURIComponent(String(item.id))}`)} className={`w-full rounded-2xl border p-3 text-left ${String(item.id)===selectedProfileId?'border-cyan-300 bg-cyan-50':'border-slate-200 bg-white'}`}><div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{item.business_name||item.username||'Perfil patrocinado'}</p><p className="mt-1 truncate text-xs font-semibold text-slate-500">{item.sponsor_name||'Patrocinador'}{item.public_code?` · ${item.public_code}`:''}</p></div>{String(item.id)===selectedProfileId&&<span className="rounded-full bg-cyan-100 px-2 py-1 text-[10px] font-black text-cyan-800">Actual</span>}</div></button>)}</div></div></section>}<FreeCredentials embedded onBack={()=>setAccountOpen(false)}/></div>:<main className="min-h-screen bg-white px-5 pb-16 pt-6 font-['Inter'] text-slate-900"><section className="mx-auto w-full max-w-[430px]"><div className="flex items-center gap-3 pb-5"><button type="button" onClick={()=>setAccountOpen(false)} className="text-[34px] font-light text-slate-500">←</button><div><h1 className="text-[30px] font-black tracking-[-.04em]">Dispositivo</h1><p className="text-sm text-slate-500">Administra el vínculo de este perfil patrocinado.</p></div></div><div className="rounded-[24px] border border-rose-200 bg-rose-50/60 p-5"><p className="text-[11px] font-black uppercase tracking-[.14em] text-rose-600">Zona de seguridad</p><h2 className="mt-2 text-xl font-black">Desvincular dispositivo</h2><p className="mt-2 text-sm leading-6 text-slate-600">Esto elimina este perfil patrocinado y libera el dispositivo para que pueda activarse de nuevo. Tu cuenta Kawvo y sus credenciales no se eliminan.</p><p className="mt-3 rounded-2xl bg-white px-4 py-3 text-xs leading-5 text-slate-600">Correo actual: <strong>{accountEmail||'Cargando…'}</strong></p><label className="mt-4 block text-xs font-black text-slate-700">Confirma tu correo<input type="email" value={emailConfirm} onChange={e=>setEmailConfirm(e.target.value)} placeholder={accountEmail||'tu-correo@ejemplo.com'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-rose-300"/></label><label className="mt-4 block text-xs font-black text-slate-700">Escribe <span className="font-mono text-rose-700">DESVINCULAR</span><input value={phrase} onChange={e=>setPhrase(e.target.value)} autoComplete="off" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-rose-300"/></label><label className="mt-4 flex items-start gap-3 rounded-2xl bg-white p-3 text-xs leading-5 text-slate-600"><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0"/><span>Entiendo que se eliminará el perfil patrocinado actual y que el dispositivo quedará disponible para una nueva activación.</span></label>{unlinkError&&<p className="mt-4 rounded-xl bg-rose-100 px-3 py-3 text-sm font-semibold text-rose-700">{unlinkError}</p>}<button type="button" onClick={()=>void unlink()} disabled={!readyToUnlink||unlinking} className="mt-5 w-full rounded-2xl bg-rose-600 px-4 py-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{unlinking?'Desvinculando…':'Desvincular dispositivo'}</button></div></section></main>}
+        {profiles.length>1&&<section className="px-5 pt-4"><div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4"><p className="text-[11px] font-black uppercase tracking-[.12em] text-cyan-700">Mis perfiles patrocinados</p><p className="mt-1 text-sm leading-5 text-slate-500">Selecciona cuál deseas administrar con estas mismas credenciales.</p><div className="mt-3 space-y-2">{profiles.map((item:any)=><button key={item.id} type="button" onClick={()=>openRoute(`/admin/sponsored?profile_id=${encodeURIComponent(String(item.id))}`)} className={`w-full rounded-2xl border p-3 text-left ${String(item.id)===selectedProfileId?'border-cyan-300 bg-cyan-50':'border-slate-200 bg-white'}`}><div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{item.business_name||item.username||'Perfil patrocinado'}</p><p className="mt-1 truncate text-xs font-semibold text-slate-500">{item.sponsor_name||'Patrocinador'}{item.public_code?` · ${item.public_code}`:''}</p></div>{String(item.id)===selectedProfileId&&<span className="rounded-full bg-cyan-100 px-2 py-1 text-[10px] font-black text-cyan-800">Actual</span>}</div></button>)}</div></div></section>}<div onChangeCapture={()=>{if(shellRequest)setCredentialsTouched(true)}}><FreeCredentials embedded onBack={closeAccount}/></div></div>:<main className="min-h-screen bg-white px-5 pb-16 pt-6 font-['Inter'] text-slate-900"><section className="mx-auto w-full max-w-[430px]"><div className="flex items-center gap-3 pb-5"><button type="button" aria-label="Volver a Mi presentación" onClick={closeAccount} className="text-[34px] font-light text-slate-500">←</button><div><h1 className="text-[30px] font-black tracking-[-.04em]">Dispositivo</h1><p className="text-sm text-slate-500">Administra el vínculo de este perfil patrocinado.</p></div></div><div className="rounded-[24px] border border-rose-200 bg-rose-50/60 p-5"><p className="text-[11px] font-black uppercase tracking-[.14em] text-rose-600">Zona de seguridad</p><h2 className="mt-2 text-xl font-black">Desvincular dispositivo</h2><p className="mt-2 text-sm leading-6 text-slate-600">Esto elimina este perfil patrocinado y libera el dispositivo para que pueda activarse de nuevo. Tu cuenta Kawvo y sus credenciales no se eliminan.</p><p className="mt-3 rounded-2xl bg-white px-4 py-3 text-xs leading-5 text-slate-600">Correo actual: <strong>{accountEmail||'Cargando…'}</strong></p><label className="mt-4 block text-xs font-black text-slate-700">Confirma tu correo<input type="email" value={emailConfirm} onChange={e=>setEmailConfirm(e.target.value)} placeholder={accountEmail||'tu-correo@ejemplo.com'} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-rose-300"/></label><label className="mt-4 block text-xs font-black text-slate-700">Escribe <span className="font-mono text-rose-700">DESVINCULAR</span><input value={phrase} onChange={e=>setPhrase(e.target.value)} autoComplete="off" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-rose-300"/></label><label className="mt-4 flex items-start gap-3 rounded-2xl bg-white p-3 text-xs leading-5 text-slate-600"><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0"/><span>Entiendo que se eliminará el perfil patrocinado actual y que el dispositivo quedará disponible para una nueva activación.</span></label>{unlinkError&&<p className="mt-4 rounded-xl bg-rose-100 px-3 py-3 text-sm font-semibold text-rose-700">{unlinkError}</p>}<button type="button" onClick={()=>void unlink()} disabled={!readyToUnlink||unlinking} className="mt-5 w-full rounded-2xl bg-rose-600 px-4 py-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-35">{unlinking?'Desvinculando…':'Desvincular dispositivo'}</button></div></section></main>}
     </div>}
     {help&&<div className="fixed inset-0 z-[95] grid place-items-center bg-slate-950/55 p-4" onClick={()=>setHelp(false)}><div className="w-full max-w-[430px] rounded-[26px] bg-white p-5" onClick={e=>e.stopPropagation()}><h2 className="text-xl font-black text-slate-950">Instalar KawLink</h2><p className="mt-2 text-sm leading-6 text-slate-600">{isIos()?'En iPhone o iPad, toca Compartir en Safari y luego “Agregar a pantalla de inicio”.':'Abre el menú de tu navegador y selecciona “Instalar aplicación” o “Agregar a pantalla principal”.'}</p><p className="mt-2 text-xs leading-5 text-slate-400">Quedará como acceso directo a tu panel KawLink, sin necesidad de buscarlo cada vez en el navegador.</p><button type="button" onClick={()=>setHelp(false)} className="mt-5 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Entendido</button></div></div>}
   </>

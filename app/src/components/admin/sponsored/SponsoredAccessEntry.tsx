@@ -1,3 +1,4 @@
+import {sponsoredEntryUrl} from './sponsored-shell-gate'
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../lib/api'
@@ -34,7 +35,7 @@ export default function SponsoredAccessEntry(){
         if(!me?.ok){navigate('/admin/login',{replace:true});return}
 
         if(!isMaster){
-          navigate(valid(code)?`/admin/sponsored/activate?public_code=${encodeURIComponent(code)}`:'/admin/sponsored',{replace:true})
+          navigate(sponsoredEntryUrl(valid(code)?`/admin/sponsored/activate?public_code=${encodeURIComponent(code)}`:'/admin/sponsored',location.search,import.meta.env.MODE,window.location.hostname),{replace:true})
           return
         }
 
