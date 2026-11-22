@@ -1,3 +1,4 @@
+import {getSponsorReturn,sponsorShellUrl,sponsorSelectionUrl,isSponsorShellHost} from './sponsored/sponsor-shell-navigation'
 import {isSponsoredShellRequest,sponsoredShellUrl,sponsoredSurface,sponsoredAccountSelectionUrl} from './sponsored/sponsored-shell-gate'
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPost, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
@@ -28,6 +29,8 @@ const labels:Record<AccountItem['kind'],string>={
 
 export default function IntapcardAccountSelector(){
   const {context:medicalReturn,checking:medicalChecking}=useKawMedShellReturn()
+  const[sponsorReturn,setSponsorReturn]=useState('')
+  useEffect(()=>{const candidate=getSponsorReturn(window.location.search,import.meta.env.MODE,window.location.hostname);if(!candidate)return;let alive=true;apiGet('/sponsor/me').then((r:any)=>{if(alive&&r?.ok&&r.data?.id===candidate.sponsor&&['owner','admin'].includes(r.data?.role))setSponsorReturn(sponsorShellUrl(candidate.sponsor,candidate.surface))}).catch(()=>undefined);return()=>{alive=false}},[])
   const[sponsoredReturn,setSponsoredReturn]=useState('')
   useEffect(()=>{
     const p=new URLSearchParams(window.location.search),profileId=p.get('profile_id')||''
@@ -148,7 +151,7 @@ export default function IntapcardAccountSelector(){
           ? medicalTarget
           : item.kind==='sponsored'&&sponsoredTarget
           ? sponsoredTarget
-          : item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route
+          : item.kind==='sponsor'?(isSponsorShellHost(import.meta.env.MODE,window.location.hostname)?sponsorSelectionUrl(item.id,response.data,import.meta.env.MODE,window.location.hostname,window.location.search,sponsorReturn.split('?')[1]):route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id)):route
         window.location.assign(target)
       }
     }catch(e){setError(e instanceof Error?e.message:'No se pudo seleccionar la cuenta.');setBusy('')}
@@ -169,6 +172,7 @@ export default function IntapcardAccountSelector(){
   return <main className="min-h-screen bg-slate-50 px-4 py-8 font-['Inter'] text-slate-950">
     <div className="mx-auto max-w-[1020px] space-y-5">
       {medicalChecking&&<p role="status" className="text-sm text-slate-600">Verificando la cuenta médica de origen…</p>}
+      {sponsorReturn&&<Link to={sponsorReturn} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al patrocinador?'))event.preventDefault()}} className="inline-flex min-h-11 items-center rounded-xl border bg-white px-4 text-sm font-bold text-cyan-800">← Volver al patrocinador</Link>}
       {sponsoredReturn&&<Link to={sponsoredReturn} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al perfil patrocinado?'))event.preventDefault()}} className="inline-flex min-h-11 min-w-11 items-center rounded-xl border bg-white px-4 text-sm font-bold text-cyan-800">← Volver a mi presentación</Link>}
       {medicalReturn&&<Link to={isKawMedMasterReturnContext(medicalReturn)?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):kawMedContextUrl('/admin/medical',medicalReturn)} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al perfil médico?'))event.preventDefault()}} className="inline-flex min-h-11 min-w-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700">← Volver al perfil médico</Link>}
       <header className="rounded-[28px] border border-slate-200 bg-white p-6">

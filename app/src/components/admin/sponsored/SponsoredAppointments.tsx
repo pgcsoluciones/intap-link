@@ -1,3 +1,4 @@
+import {sponsorAgendaEntry} from './sponsor-shell-navigation'
 import { useNavigate,Navigate } from 'react-router-dom'
 import AppointmentManager from '../../appointments/AppointmentManager'
 import { sponsoredAgendaReturn,isSponsoredShellRequest,sponsoredShellUrl,sponsoredSurface } from './sponsored-shell-gate'
@@ -7,6 +8,8 @@ export default function SponsoredAppointments(){
   const params=new URLSearchParams(window.location.search)
   const profileId=String(params.get('profile_id')||'').trim()
   const scope=String(params.get('scope')||'').trim()==='master'?'master':''
+  const masterEntry=sponsorAgendaEntry(window.location.search,import.meta.env.MODE,window.location.hostname)
+  if(masterEntry)return <Navigate replace to={masterEntry}/>
   const query=new URLSearchParams()
   if(profileId)query.set('profile_id',profileId)
   if(scope)query.set('scope',scope)
@@ -20,6 +23,6 @@ export default function SponsoredAppointments(){
     apiBase="/me/sponsored-profile/appointments"
     query={query.toString()}
     title="Agenda"
-    onBack={()=>navigate(sponsoredAgendaReturn(window.location.search,import.meta.env.MODE,window.location.hostname))}
+    onBack={()=>navigate(sponsoredAgendaReturn(window.location.search,import.meta.env.MODE,window.location.hostname)+(scope&&params.get('legacy')==='1'?'?legacy=1':''))}
   />
 }

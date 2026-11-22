@@ -1,3 +1,4 @@
+import type {SponsorPresentationHost} from './sponsor-shell-navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation,useNavigate } from 'react-router-dom'
 import AppointmentManager from '../../appointments/AppointmentManager'
@@ -31,11 +32,12 @@ function mapsSearchUrl(query:string){return`https://www.google.com/maps/search/?
 function mapsEmbedUrl(query:string){return`https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`}
 function publicOrigin(){const host=window.location.hostname.toLowerCase();if(host==='app.preview.intaprd.com')return'https://preview.intaprd.com';if(host==='app.intaprd.com')return'https://intaprd.com';const configured=String(import.meta.env.VITE_WEB_URL||'').replace(/\/$/,'');return configured||'https://intaprd.com'}
 
-export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'beneficiary'|'master'}){
+export default function SponsoredDashboard({mode='beneficiary',masterShell}:{mode?:'beneficiary'|'master';masterShell?:SponsorPresentationHost}){
   const isMaster=mode==='master'
   const location=useLocation(),navigate=useNavigate()
-  const shellRequested=!isMaster&&isSponsoredShellRequest(import.meta.env.MODE,window.location.hostname,location.search)
-  const surface=sponsoredSurface(location.search),shellTab=surface.tab
+  const masterRequested=isMaster&&Boolean(masterShell)
+  const shellRequested=masterRequested||!isMaster&&isSponsoredShellRequest(import.meta.env.MODE,window.location.hostname,location.search)
+  const surface=masterRequested?masterShell!.surface:sponsoredSurface(location.search),shellTab=surface.tab
   const lastSurface=useRef(surface)
   const legacyPanel=new URLSearchParams(location.search).get('sp_legacy')==='1'
   const[bankPending,setBankPending]=useState(false)
@@ -79,7 +81,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
   const[form,setForm]=useState<any>({username:'',business_name:'',specialization:'',what_we_do:'',avatar_url:'',hero_url:'',map_url:'',show_avatar:true,phone:'',whatsapp:'',email:'',instagram:'',address:'',schedule:emptySchedule,gallery:[],gallery_title:'Catálogo',palette_id:'blue',quote_button_visible:true,appointment_button_visible:false})
 
   useEffect(()=>{if(data?.id&&(!selectedProfileId||String(data.id)===selectedProfileId))lastSurface.current=surface},[location.search,data?.id])
-  const shellEnabled=shouldShowSponsoredShell({mode:import.meta.env.MODE,hostname:window.location.hostname,search:location.search,isMaster,legacyPanel,profileId:data?.id})
+  const shellEnabled=(masterRequested&&data?.sponsor?.id===masterShell?.sponsorId&&Boolean(data?.id))||shouldShowSponsoredShell({mode:import.meta.env.MODE,hostname:window.location.hostname,search:location.search,isMaster,legacyPanel,profileId:data?.id})
   const agendaModuleOpen=shellEnabled&&shellTab==='agenda'&&Boolean(surface.section)&&agendaAllowed
   const inFlight=Boolean(saving||uploading||pending||locating)
   useEffect(()=>{if(bankPending||inFlight)approvedExit.current=false},[bankPending,inFlight])
@@ -99,6 +101,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
       if(!link||link.target==='_blank'||link.hasAttribute('download'))return
       const destination=new URL(link.href,window.location.href)
       if(destination.href===window.location.href)return
+      if(masterRequested&&destination.origin===window.location.origin&&destination.pathname==='/admin/sponsor'&&new URLSearchParams(destination.search).get('sm_sponsor')===masterShell?.sponsorId)return
       if(!canExit()){event.preventDefault();event.stopPropagation()}
     }
     const originIndex=window.history.state?.idx
@@ -106,15 +109,16 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     const pop=(event:PopStateEvent)=>{
       if(restoring){restoring=false;event.stopImmediatePropagation();return}
       const destination=new URL(window.location.href),next=destination.searchParams.get('profile_id')||''
+      if(masterRequested&&destination.pathname==='/admin/sponsor'&&destination.searchParams.get('sm_sponsor')===masterShell?.sponsorId)return
       if(destination.pathname==='/admin/sponsored'&&next===selectedProfileId)return
       if(canExit())return
       const targetIndex=event.state?.idx
       if(Number.isInteger(originIndex)&&Number.isInteger(targetIndex)&&originIndex!==targetIndex){event.stopImmediatePropagation();restoring=true;window.history.go(originIndex-targetIndex)}
     }
-    window.addEventListener('beforeunload',warn);window.addEventListener('kawvo-sponsored-before-exit',beforeExit);const removePopGuard=installSponsoredPopGuard(pop);document.addEventListener('click',intercept,true)
+    window.addEventListener('beforeunload',warn);window.addEventListener('kawvo-sponsored-before-exit',beforeExit);const removePopGuard=masterRequested?()=>{}:installSponsoredPopGuard(pop);if(!masterRequested)document.addEventListener('click',intercept,true)
     return()=>{window.removeEventListener('beforeunload',warn);window.removeEventListener('kawvo-sponsored-before-exit',beforeExit);removePopGuard();document.removeEventListener('click',intercept,true)}
   },[shellRequested,draftChanged,bankPending,inFlight,agendaModuleOpen,location.key])
-  const shellNavigate=(tab:SponsoredTab,module?:SponsoredModule)=>{setPublicationConfirm(false);navigate(sponsoredShellUrl(String(data?.id||selectedProfileId),{tab,module,query:surface.query}))}
+  const shellNavigate=(tab:SponsoredTab,module?:SponsoredModule)=>{setPublicationConfirm(false);if(masterRequested){masterShell!.onNavigate({tab,module,query:surface.query});return}navigate(sponsoredShellUrl(String(data?.id||selectedProfileId),{tab,module,query:surface.query}))}
   useEffect(()=>{
     if(!shellEnabled)return
     const reveal=(event:Event)=>{
@@ -130,6 +134,8 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     return()=>{window.removeEventListener('kawvo-sponsored-tour-target',reveal);window.removeEventListener('kawvo-sponsored-tour-open',openTour)}
   },[shellEnabled,surface.query])
   useEffect(()=>{if(shellEnabled&&shellTab==='home'&&tourRequested.current){tourRequested.current=false;window.dispatchEvent(new Event('kawvo:sponsored-tour:start'))}},[shellEnabled,shellTab,location.key])
+  useEffect(()=>{masterShell?.onReady(shellEnabled?String(data?.id||''):'',shellEnabled&&agendaAllowed)},[masterShell?.sponsorId,data?.id,shellEnabled,agendaAllowed])
+  useEffect(()=>{if(masterRequested)setViewMode('edit')},[masterRequested,surface.tab,surface.module,surface.section])
   const moduleHidden=(module:SponsoredModule)=>shellEnabled&&(shellTab!=='profile'||surface.module!==module)
   useEffect(()=>{
     if(isMaster||import.meta.env.MODE!=='preview'||window.location.hostname!=='app.preview.intaprd.com'||!data?.id)return
@@ -150,7 +156,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
       const json:any=await apiGet(`/me/sponsored-profile${profileScopeQuery}`)
       if(serial!==requestSerial.current)return null
       if(!json?.ok)throw new Error(json?.error||'No pudimos cargar tu perfil.')
-      if(shellRequested&&(!json.data?.id||json.data?.profile_role==='sponsor_owner'||(selectedProfileId&&String(json.data.id)!==selectedProfileId)||(background&&loadedContext.current.id&&String(json.data.id)!==loadedContext.current.id)))throw new Error('El perfil recibido no corresponde al perfil seleccionado. Comprueba la cuenta activa.')
+      if(shellRequested&&(!json.data?.id||(masterRequested?json.data?.sponsor?.id!==masterShell?.sponsorId:json.data?.profile_role==='sponsor_owner')||(selectedProfileId&&String(json.data.id)!==selectedProfileId)||(background&&loadedContext.current.id&&String(json.data.id)!==loadedContext.current.id)))throw new Error('El perfil recibido no corresponde al perfil seleccionado. Comprueba la cuenta activa.')
       setData(json.data)
       if(json.data){
         loadedContext.current={query:profileScopeQuery,id:String(json.data.id||'')}
@@ -162,7 +168,7 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
     }catch(e){setFeedbackTarget('actions');setError(e instanceof Error?e.message:'No pudimos cargar tu perfil.');if(background)throw e;return null}finally{if(!background&&serial===requestSerial.current)setLoading(false)}
   }
   useEffect(()=>{
-    if(shellRequested&&data&&loadedContext.current.id&&selectedProfileId===loadedContext.current.id){loadedContext.current.query=profileScopeQuery;return}
+    if(shellRequested&&data&&loadedContext.current.id&&(masterRequested?data?.sponsor?.id===masterShell?.sponsorId:selectedProfileId===loadedContext.current.id)){loadedContext.current.query=profileScopeQuery;return}
     if(shellRequested&&loadedContext.current.id&&loadedContext.current.query!==profileScopeQuery&&(draftChanged||bankPending||inFlight)){
       navigate(sponsoredShellUrl(loadedContext.current.id,lastSurface.current),{replace:true});setFeedbackTarget('actions');setError('Conservamos los cambios del perfil actual. Guárdalos antes de cambiar de perfil.');return
     }
@@ -308,19 +314,19 @@ export default function SponsoredDashboard({mode='beneficiary'}:{mode?:'benefici
 
   if(viewMode==='preview'&&!shellEnabled)return previewContent
 
-  return <SponsoredUnifiedShell enabled={shellEnabled} tab={shellTab} agenda={agendaAllowed} moduleOpen={agendaModuleOpen} onNavigate={tab=>{setViewMode('edit');shellNavigate(tab)}}>
+  return <SponsoredUnifiedShell variant={masterRequested?'master':'beneficiary'} embedded={masterRequested} enabled={shellEnabled} tab={shellTab} agenda={agendaAllowed} moduleOpen={agendaModuleOpen} onNavigate={tab=>{setViewMode('edit');shellNavigate(tab)}}>
     {shellEnabled&&viewMode==='preview'&&previewContent}
     <div hidden={shellEnabled&&viewMode==='preview'}>
-    {shellEnabled&&!agendaModuleOpen&&<header className="mx-auto w-full max-w-[900px] px-4 pt-5"><KawvoProfileIdentity name={String(data.business_name||'Mi presentación patrocinada')} detail={data.sponsor?.name?`Impulsado por ${data.sponsor.name}`:'Beneficiario patrocinado'} avatar={form.avatar_url?<img src={form.avatar_url} alt="" className="h-14 w-14 rounded-2xl object-cover"/>:undefined} utilities={<button type="button" onClick={()=>navigate(sponsoredShellUrl(String(data.id),surface)+'&sp_legacy=1')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold">Panel anterior</button>} mobileUtilitiesRow/></header>}
+    {shellEnabled&&!isMaster&&!agendaModuleOpen&&<header className="mx-auto w-full max-w-[900px] px-4 pt-5"><KawvoProfileIdentity name={String(data.business_name||'Mi presentación patrocinada')} detail={data.sponsor?.name?`Impulsado por ${data.sponsor.name}`:'Beneficiario patrocinado'} avatar={form.avatar_url?<img src={form.avatar_url} alt="" className="h-14 w-14 rounded-2xl object-cover"/>:undefined} utilities={<button type="button" onClick={()=>navigate(sponsoredShellUrl(String(data.id),surface)+'&sp_legacy=1')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold">Panel anterior</button>} mobileUtilitiesRow/></header>}
     {shellEnabled&&<div className="mx-auto w-full min-w-0 max-w-[900px] space-y-4 px-4 pt-5">
-      {!agendaModuleOpen&&<KawvoReadyToPublish identity={'sponsored:beneficiary:'+data.id} ready={canPublishNow&&data.status!=='published'} title="Tu presentación está lista para publicar" onReview={()=>{shellNavigate('home');setPublicationConfirm(true)}}/>}
+      {!agendaModuleOpen&&(!masterRequested||shellTab==='profile')&&<KawvoReadyToPublish identity={'sponsored:'+(isMaster?'master:':'beneficiary:')+data.id} ready={canPublishNow&&data.status!=='published'} title="Tu presentación está lista para publicar" onReview={()=>{shellNavigate('home');setPublicationConfirm(true)}}/>}
       {(error||message)&&<p role={error?'alert':'status'} className={'rounded-2xl p-4 text-sm '+(error?'bg-rose-50 text-rose-800':'bg-emerald-50 text-emerald-800')}>{error||message}</p>}
       {publicationConfirm&&<div role="group" aria-label="Confirmar publicación de presentación" className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5"><p className="text-sm">{data.status==='published'?'¿Despublicar esta presentación?':'Se guardará el formulario antes de publicar este mismo perfil. ¿Confirmar publicación?'}</p><div className="flex flex-wrap gap-2"><button type="button" disabled={saving} onClick={()=>void togglePublish()} className="rounded-xl bg-cyan-800 px-4 py-3 font-bold text-white">{data.status==='published'?'Sí, despublicar':'Sí, publicar'}</button><button type="button" onClick={()=>setPublicationConfirm(false)} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">Cancelar</button></div></div>}
       {shellTab==='home'&&<section className="space-y-4"><h1 className="text-2xl font-black">Inicio</h1><div className="rounded-3xl border border-slate-200 bg-white p-5"><h2 className="text-lg font-black">Mi presentación</h2><p className="mt-2 text-sm text-slate-600">{data.status==='published'?'Publicada':'En borrador'} · {data.username?'@'+data.username:'Usuario pendiente'}</p><p className="mt-2 text-sm text-slate-600">{draftChanged||bankPending?'Tienes cambios locales sin guardar.':'Administra los datos y herramientas de tu perfil seleccionado.'}</p><div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={()=>shellNavigate('profile')} className="rounded-xl bg-cyan-800 px-4 py-3 font-bold text-white">Administrar presentación</button>{agendaAllowed&&<button type="button" onClick={()=>shellNavigate('agenda')} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">Abrir Agenda</button>}{publicUrl&&<button type="button" onClick={()=>setViewMode('preview')} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">Vista previa</button>}</div></div></section>}
-      {shellTab==='profile'&&!surface.module&&<SponsoredProfileIndex bankAllowed={bankAllowed} query={surface.query} onQuery={query=>navigate(sponsoredShellUrl(String(data.id),{tab:'profile',query}),{replace:true})} onOpen={module=>shellNavigate('profile',module)}/>}
+      {shellTab==='profile'&&!surface.module&&<SponsoredProfileIndex title={isMaster?'Mi presentación':undefined} summary={masterRequested?<section aria-label="Estado de Mi presentación" className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5"><h2 className="text-lg font-bold">{data.business_name||'Mi presentación Master'}</h2><p className="text-sm text-slate-600">{data.status==='published'?'Publicada':data.status==='draft'?'Borrador':String(data.status||'Sin estado')} · {data.username?'@'+data.username:'Usuario pendiente'}</p>{draftChanged&&<p className="text-sm text-amber-800">Hay cambios locales sin guardar.</p>}<div className="flex flex-wrap gap-2">{publicUrl&&<button type="button" onClick={()=>setViewMode('preview')} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">Vista previa</button>}<button type="button" disabled={saving} onClick={()=>setPublicationConfirm(true)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">{data.status==='published'?'Despublicar':'Publicar presentación'}</button>{publicUrl&&<a href={publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">Ver presentación pública</a>}</div></section>:undefined} bankAllowed={bankAllowed} query={surface.query} onQuery={query=>masterRequested?masterShell!.onNavigate({tab:'profile',query}):navigate(sponsoredShellUrl(String(data.id),{tab:'profile',query}),{replace:true})} onOpen={module=>shellNavigate('profile',module)}/>}
       {shellTab==='profile'&&surface.module==='banks'&&!bankAllowed&&<p role="alert">No se pudo verificar el acceso a cuentas bancarias para este perfil.</p>}
-      {shellTab==='profile'&&surface.module&&<button type="button" onClick={()=>shellNavigate('profile')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold">← Volver a Perfil</button>}
-      {shellTab==='agenda'&&(agendaAllowed?(surface.section?<AppointmentManager key={String(data.id)+':'+surface.section} apiBase="/me/sponsored-profile/appointments" query={profileParams.toString()} title="Agenda de mi presentación" expectedProfileId={String(data.id)} initialSection={surface.section} protectDrafts backLabel="Volver a Agenda" onBack={()=>shellNavigate('agenda')}/>:<SponsoredAgendaIndex profileId={String(data.id)} query={profileScopeQuery} onOpen={section=>navigate(sponsoredShellUrl(String(data.id),{tab:'agenda',section,query:surface.query}))}/>):<p role="alert" className="rounded-2xl bg-amber-50 p-4 text-sm">La Agenda no está habilitada o no se pudo verificar su acceso para este perfil.</p>)}
+      {shellTab==='profile'&&surface.module&&<button type="button" onClick={()=>shellNavigate('profile')} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold">{isMaster?'← Volver a Mi presentación':'← Volver a Perfil'}</button>}
+      {shellTab==='agenda'&&(agendaAllowed?(surface.section?<AppointmentManager key={String(data.id)+':'+surface.section} apiBase="/me/sponsored-profile/appointments" query={profileParams.toString()} title="Agenda de mi presentación" expectedProfileId={String(data.id)} initialSection={surface.section} protectDrafts backLabel="Volver a Agenda" onBack={()=>shellNavigate('agenda')}/>:<SponsoredAgendaIndex profileId={String(data.id)} query={profileScopeQuery} onOpen={section=>masterRequested?masterShell!.onNavigate({tab:'agenda',section}):navigate(sponsoredShellUrl(String(data.id),{tab:'agenda',section,query:surface.query}))}/>):<p role="alert" className="rounded-2xl bg-amber-50 p-4 text-sm">La Agenda no está habilitada o no se pudo verificar su acceso para este perfil.</p>)}
       {shellTab==='more'&&<section className="space-y-4"><h1 className="text-2xl font-black">Más opciones</h1><p className="text-sm text-slate-600">Recursos autorizados para tu presentación.</p><div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5">{commercialLinks.contact_url&&<a href={commercialLinks.contact_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">{commercialLinks.contact_label||'Contacto comercial'}</a>}{commercialLinks.resource_url&&<a href={commercialLinks.resource_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">{commercialLinks.resource_label||'Recurso de mi patrocinador'}</a>}<button type="button" onClick={()=>window.dispatchEvent(new Event('kawvo-sponsored-account-open'))} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Mi cuenta y credenciales</button><button type="button" onClick={()=>window.dispatchEvent(new Event('kawvo-sponsored-install'))} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Instalar aplicación</button><button type="button" onClick={()=>leaveEditor('/admin/sponsored/select?kawvo_sponsored_shell=1')} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Seleccionar perfil</button>{isIntapMulticuenta&&<button type="button" onClick={()=>leaveEditor('/admin/accounts?from=sponsored&'+sponsoredShellUrl(String(data.id),surface).split('?')[1])} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Cambiar cuenta</button>}</div><FreeSupportPanel hideBrand largeText/><a href={SPONSOR_URL} target="_blank" rel="noreferrer" className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold">Quiero ser patrocinador</a></section>}
     </div>}
     <div className="px-4 py-7" onChangeCapture={event=>{if(!(event.target as Element).closest('#sponsored-bank-accounts'))markDraft()}}><div data-sponsored-tour-ready={hasUsername?'1':'0'} className="mx-auto max-w-[820px] space-y-5">
