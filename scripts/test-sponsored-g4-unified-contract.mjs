@@ -39,7 +39,9 @@ for(const name of ['SponsoredDashboard.tsx','SponsoredExperienceTools.tsx','Spon
 assert.equal(scan(read(dir+'SponsoredDashboard.tsx')).functions.get('profilePayload'),scan(prior(dir+'SponsoredDashboard.tsx')).functions.get('profilePayload'),'Profile payload/normalization unchanged')
 const selector=scan(read('app/src/components/admin/IntapcardAccountSelector.tsx')),oldSelector=scan(prior('app/src/components/admin/IntapcardAccountSelector.tsx'))
 for(const p of ['beginActivation','signOut'])assert.equal(selector.functions.get(p),oldSelector.functions.get(p),'Existing activation/logout operations unchanged')
-assert.deepEqual(selector.calls.filter(c=>!c.startsWith("apiGet('/me/sponsored-profile?profile_id='")),oldSelector.calls,'Account selection adds only a read of the original profile endpoint; kind+id/token mutation unchanged')
+assert.equal(selector.calls.filter(c=>c.startsWith("apiGet('/me/sponsored-profile?profile_id='")).length,1,'Keep the single existing G4 return-profile read')
+assert.equal(selector.calls.filter(c=>c==="apiGet('/me/medical-profile')").length,1,'Exactly one authorized medical profile read after explicit selection')
+assert.deepEqual(selector.calls.filter(c=>!c.startsWith("apiGet('/me/sponsored-profile?profile_id='")&&c!=="apiGet('/me/medical-profile')"),oldSelector.calls,'Account selection adds only the two original read endpoints; kind+id/token mutation unchanged')
 const compiled=await build({entryPoints:[dir+'sponsored-shell-gate.ts'],bundle:true,write:false,format:'esm',platform:'node'})
 const nav=await import('data:text/javascript;base64,'+Buffer.from(compiled.outputFiles[0].text).toString('base64'))
 const search='?profile_id=profile-a&kawvo_sponsored_shell=1',surface={tab:'profile',module:'location',query:'Dirección'}

@@ -4,7 +4,7 @@ import { apiGet, apiPost, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
 import { Link } from 'react-router-dom'
 import useKawMedShellReturn from './medical/useKawMedShellReturn'
 import {kawMedMasterContextUrl,isKawMedMasterReturnContext} from './medical/kawmed-master-shell-navigation'
-import { kawMedContextUrl } from './medical/KawMedShellReturn'
+import { isKawMedContextHost, kawMedContextUrl } from './medical/KawMedShellReturn'
 import { isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './free/KawvoShellReturn'
 
 type AccountItem={
@@ -120,16 +120,32 @@ export default function IntapcardAccountSelector(){
         const route=String(response.data?.route||'/admin/accounts')
         const sponsoredTarget=item.kind==='sponsored'?sponsoredAccountSelectionUrl({profileId:item.id,selection:response.data,mode:import.meta.env.MODE,hostname:window.location.hostname,search:window.location.search,returnSearch:sponsoredReturn.split('?')[1]}):null
         if(item.kind==='sponsored'&&sponsoredTarget===null)throw new Error('La cuenta o la ruta recibida no corresponde al perfil patrocinado seleccionado. Vuelve a seleccionar la cuenta.')
-        // Preserve the server selection/token contract. Free and sponsored shells
-        // require matching canonical selections; medical returns also require their
-        // verified origin context. Other account kinds keep their existing route.
+        let medicalTarget=route
+        if((item.kind==='medical'||item.kind==='medical_master')&&isKawMedContextHost()){
+          const canonical=item.kind==='medical'?'/admin/medical':'/admin/sponsor/kawmed'
+          if(response.data?.kind!==item.kind||String(response.data?.id||'')!==item.id||route!==canonical)throw new Error('La cuenta o la ruta recibida no corresponde a la cuenta médica seleccionada. Vuelve a seleccionar la cuenta.')
+          const params=new URLSearchParams(window.location.search)
+          const legacy=params.get('kawvo_med_shell')==='0'||params.get('legacy')==='1'
+          if(item.kind==='medical'){
+            // Recheck after selection, with its new tab token. A return hint is
+            // optional UI context, never proof of the newly selected identity.
+            const selected:any=await apiGet('/me/medical-profile')
+            if(!selected?.ok)throw new Error(selected?.error||'No se pudo verificar el perfil médico seleccionado.')
+            if(selected.data?.id!==item.id||selected.data?.guest_editor)throw new Error('El perfil médico autorizado no corresponde a la cuenta seleccionada.')
+            const sameReturn=medicalReturn&&!isKawMedMasterReturnContext(medicalReturn)&&medicalReturn.account===item.id?medicalReturn:null
+            medicalTarget=legacy?canonical+'?kawvo_med_shell=0':kawMedContextUrl('/admin/medical',sameReturn||{account:item.id,tab:'home'})
+          }else{
+            // Master already verifies sponsor, role, active account and its
+            // authorized medical profile in the existing canonical entry.
+            medicalTarget=legacy?canonical+'?legacy=1':medicalReturn&&isKawMedMasterReturnContext(medicalReturn)&&medicalReturn.sponsor===item.id?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):canonical
+          }
+        }
+        // Other categories keep their canonical route and existing shell gates.
         const selectedFree=response.data?.kind==='free'&&String(response.data?.id||'')===item.id
         const target=item.kind==='free'&&selectedFree&&route==='/admin/free'&&isKawvoShellPreviewHost()
           ? KAWVO_SHELL_PREVIEW_ROUTE
-          : medicalReturn&&isKawMedMasterReturnContext(medicalReturn)&&item.kind==='medical_master'&&response.data?.kind==='medical_master'&&String(response.data?.id||'')===item.id&&route==='/admin/sponsor/kawmed'
-          ? item.id===medicalReturn.sponsor?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):route
-          : medicalReturn&&!(isKawMedMasterReturnContext(medicalReturn))&&item.kind==='medical'&&response.data?.kind==='medical'&&String(response.data?.id||'')===item.id&&route==='/admin/medical'
-          ? kawMedContextUrl('/admin/medical',{account:item.id,tab:item.id===medicalReturn.account?medicalReturn.tab:'home',...(item.id===medicalReturn.account?medicalReturn:{})})
+          : item.kind==='medical'||item.kind==='medical_master'
+          ? medicalTarget
           : item.kind==='sponsored'&&sponsoredTarget
           ? sponsoredTarget
           : item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route
