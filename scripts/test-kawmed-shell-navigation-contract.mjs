@@ -272,7 +272,7 @@ if (process.argv.includes('--browser')) {
     await incomplete.close(); scenarios.push('missing requirements navigate to existing editor without saving')
 
     const publication = await open({ data: { status: 'draft' } })
-    await publication.page.getByRole('button', { name: 'Revisar publicación', exact: true }).click()
+    await publication.page.getByRole('button', { name: 'Publicar', exact: true }).click()
     assert.equal(writes(publication.calls).length, 0, 'Opening confirmation must not publish')
     await nav(publication.page).getByRole('button', { name: 'Más', exact: true }).click()
     await nav(publication.page).getByRole('button', { name: 'Inicio', exact: true }).click()

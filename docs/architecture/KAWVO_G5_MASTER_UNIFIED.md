@@ -211,3 +211,80 @@ Antes de **cada** upload: SHA/árbol limpio, manifiesto dist/Functions sin cambi
 Rollback futuro, si se autoriza: desde la copia raíz del respaldo del frontend afectado, subir **su dist original con su SHA anterior y Functions/contexto conservados** al mismo proyecto y rama Preview acreditados, y repetir metadata/bytes/custom host y snapshot protegido. No usar rollback de Producción Pages ni reconstruir sobre el directorio candidato. No se ha ensayado ni autorizado una recuperación en esta continuación. El acceso concreto pendiente para convertir los comandos reservados en una publicación verificada es la sesión Wrangler de la Mac con lectura de versiones/bindings y metadata Pages y los artefactos completos de los Preview vigentes; no se solicitan secretos en el chat.
 
 CI inicial del correctivo `da294bde` falló en `test-kawmed-isolation-contract.mjs:21`: exigía conservar el default «Configuración», que esta solicitud reemplaza expresamente. Se actualiza únicamente esa expectativa a «Editar perfil» y se añade una aserción sobre el override médico real «Editar mi perfil». No se relajan guards, permisos, rutas ni otras aserciones del contrato; workflow intacto. La fixture médica de la prueba nueva adopta también ese texto real. El cambio es de pruebas/documentación, sin nuevos cambios funcionales ni necesidad de recompilar los mismos componentes; la CI sucesora ejecuta sus builds habituales.
+
+## Correctivo G5: aviso listo con CTA «Publicar»
+
+Inicio confirmado antes de modificar: `092d6438f8fa7572c46579bc6bf567f6e910e8ca`, rama `feat/kawvo-g5-master-unified` limpia, #178 abierto/Draft, sin merge ni auto-merge. Main remoto sigue en `6e6bfbb1bd60c91a94e92d36f6cfdd9f91e3d9e2`. Consultados #150, mapa/contrato #156, #172, gobernanza #169, CLAUDE, reglas locales y bitácoras G3.1.1/G3.4/G4/G5. Las confirmaciones G3/G4 se conservan. **Gate G5 OPEN**, pendiente de QA del nuevo candidato por Juan; no se reabre otra fase.
+
+Cambio funcional único: en `app/src/components/admin/shared/KawvoReadyToPublish.tsx`, los dos nodos de texto «Revisar publicación» pasan a **«Publicar»**: aviso superior y diálogo inicial. No se cambian props, readiness, identidad, preferencias «Más tarde», foco/teclado, callbacks, estilos ni condiciones de render. Pulsar mantiene el paso existente de revisión/confirmación; no llama directamente a una API de publicación. La autorización expresa del propietario cambia esta nomenclatura manteniendo el flujo exigido por #150/#156.
+
+| Consumidor unificado | Estado autorizado y efecto conservado del CTA |
+| --- | --- |
+| Master patrocinador G5 | Mi presentación `scope=master`, requisitos guardados y mismo sponsor/perfil; abrir confirmación, guardar formulario al confirmar, publicar y verificar ese id |
+| Beneficiario G4 | Identidad seleccionada `profile_id`, reanudación y requisitos vigentes; mismo flujo explícito de guardado/publicación/verificación |
+| Free | Requisitos persistidos y rol/identidad actuales; volver a Inicio y enfocar los controles existentes; no publicar por abrir el aviso |
+| Kawmed Doctor/delegado LIVE/Master | `allowPublication`, scope y perfil autorizado, readiness guardada; abrir la confirmación médica original |
+
+Los consumidores no se modifican. Kawmed legacy conserva su aviso anterior; pago y otras vistas sin este componente quedan fuera. Entradas normal/Multicuenta, selección kind+id, «Patrocinios», «Gestión de patrocinio», «Editar perfil», fallback, scopes y operaciones siguen byte a byte respecto a `092d6438`.
+
+Allowlist puntual: componente compartido; `scripts/lib/{sponsor-g5,sponsored-g4,kawmed-g3-3,kawmed-g3-4,kawvo-g3-1-1}-browser.mjs`; `scripts/test-kawmed-shell-navigation-contract.mjs`; `scripts/test-sponsor-g5-shell-contract.mjs`; esta bitácora; `docs/qa/KAWVO_G5/ready-{320,1280}.png`. **11 archivos puntuales; 26 acumulativos G5**. En los cinco tests históricos sólo se sustituye el nombre accesible esperado, manteniendo todas las aserciones. El contrato G5 compara esas fuentes con la base admitiendo únicamente esa sustitución literal y mantiene congelado el resto de capas. El componente compartido debe coincidir exactamente con su versión previa salvo los dos textos: no se exime el directorio shared. No se modifican wrappers de alcance de fases antiguas para hacerlos pasar sobre una rama acumulativa; se ejecutan sus bibliotecas de navegador.
+
+### Evidencia y validación del correctivo
+
+Node **20.20.2**, dependencias y Chromium existentes, sin instalación. Todo HTTP de los navegadores está interceptado: **fixtures, no QA autenticada**.
+
+- **RED reproducido antes del cambio funcional**: la nueva regresión despublicó mediante el flujo original y falló al buscar «Publicar» en el aviso superior; log `/tmp/g5-ready-red.log`.
+- **PASS 4 grupos G5**: `SPONSOR_G5_CASE='unpublish restores|saved-only notice|concurrent profile|normal authorized account' SPONSOR_G5_ARTIFACTS=/tmp/g5-ready-green node scripts/test-sponsor-g5-shell-contract.mjs --browser`; log `/tmp/g5-ready-green.log`. Incluye cuenta normal/Multicuenta, 320/1280, despublicación confirmada, aviso renombrado, cero escrituras al abrir/cancelar, borrador conservado, PATCH antes de POST y GET del mismo perfil/scope antes de declarar éxito; errores/reintentos, guardado concurrente y verificación discordante sin falso éxito. Entrada, recarga y fallback G5 anteriores siguen pasando.
+- **PASS 21 grupos compartidos Free/Doctor**: `node --input-type=module -e "import{runG311Browser}from'./scripts/lib/kawvo-g3-1-1-browser.mjs';await runG311Browser({contextual:true})"`; log `/tmp/g5-ready-g311.log`. Incluye 320/360/390/430/768/1280, foco/teclado, identidad/rol, «Más tarde», recarga, requisitos guardados/incompletos, errores, no publicación al pulsar el nuevo CTA y recuperación del aviso después de ocultar/despublicar. No se cuenta esto como QA real de fases previas.
+- **PASS 4 grupos de roles afectados**: G4 `SPONSORED_G4_CASE='saved-only notice'`, G3.3 `KAWMED_G33_CASE=U06` (2), G3.4 `KAWMED_G34_CASE='publication saved-only'` (1), invocando `runSponsoredG4Browser`, `runG33Browser` y `runG34Browser` de las bibliotecas existentes; log `/tmp/g5-ready-roles.log`. Conservan requisitos persistidos, permisos delegados, confirmación y errores/reintentos.
+- **PASS 8 contratos existentes**: `test-kawmed-isolation-contract`, `test-intapcard-active-account-contract`, `test-intapcard-multiaccount-contract`, `test-intapcard-kawmed-integrated-contract`, `test-kawmed-web-preview-route-contract`, `test-kawvo-free-g2-qa-corrections-2026-11-15`, `test-kawvo-g5-publication-navigation-2026-11-15`, `test-sponsored-g4-shell-gate` (todos `.mjs` en scripts); log `/tmp/g5-ready-contracts.log`.
+- **PASS TypeScript y builds App Producción/Preview locales**: `npm run build -w app` y `npm run build:preview -w app`; logs `/tmp/g5-ready-build-{production,preview}.log`. Warnings Vite/Browserslist/chunks conocidos. No se repiten builds Web locales por este cambio exclusivamente App; CI mantiene sus checks habituales del SHA final.
+- **PASS allowlist exacta y aislamiento**: `node scripts/test-sponsor-g5-shell-contract.mjs --scope`; `git diff --check`. Capturas de fixtures 320/1280 versionadas, autorrevisión: «Publicar», misma jerarquía, sin overflow y targets >=44 px. CI y SHA final quedan acreditados en #178.
+
+**29 grupos de navegador PASS**, más ocho contratos y el contrato G5. No hay nuevos fallos; los dos fallos históricos documentados en la continuación anterior no se vuelven a ejecutar sin causa, al conservarse su código funcional y sus contratos. No se certifican permisos o persistencia remotos mediante fixtures.
+
+Pendiente para Juan: QA del nuevo candidato en host exacto Preview con cuenta autorizada, despublicar → comprobar «Publicar» → abrir/cancelar sin perder borrador → confirmar → comprobar guardado/publicación del perfil seleccionado. Verificar aviso inicial y aviso persistente donde corresponda. No repetir recorridos G3/G4 ya aceptados sin regresión concreta. Mantener **G5 OPEN** hasta su confirmación.
+
+Rollback puntual de código: revertir únicamente el commit de este correctivo para recuperar `092d6438` y las etiquetas anteriores. No hay datos ni migraciones que revertir. Rollback de Preview, si se autorizase posteriormente, requiere el artefacto **efectivamente activo** respaldado con dist/Functions y sus metadatos; el SHA Git anterior por sí solo no prueba ese deployment. **Sin Stage, deploy, merge, migraciones, cambios de infraestructura, permisos, API, Web ni datos reales en este correctivo.**
+
+### TERMINAL — Stage de este correctivo (App)
+
+Usar el SHA exacto entregado en #178 como `G5_SHA`, la preparación aislada y los controles descritos en «Comandos reservados para la Mac» arriba. No reutilizar un dist de otro SHA ni modificar el build anterior. El nuevo cambio es App; los bloques Web superiores sólo corresponden al cambio público acumulado anterior si aún requiere publicación autorizada. No volver a publicarlo por este ajuste de texto.
+
+Antes de Stage: preflight actual PASS, snapshot fresco, proyecto `intap-web2`, rama Stage distinta de la productiva efectiva, manifiesto App/Functions conservado y sin deriva. El siguiente bloque es la **operación Stage separada**, no sustituye esos controles; no ejecuta promoción:
+
+```bash
+set -euo pipefail
+: "${G5_SHA:?Falta SHA exacto revisado del PR 178}"
+LOG="$HOME/intap-release-logs/kawvo-g5-$G5_SHA"
+cd "$LOG/source"
+test "$(node --version)" = v20.20.2
+test "$(git rev-parse HEAD)" = "$G5_SHA"
+test -z "$(git status --porcelain)"
+test -s app/dist/index.html && test -s "$LOG/app-functions.bundle"
+test ! -e "$LOG/app-stage.log"
+npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "qa-kawvo-g5-app-${G5_SHA:0:12}" --commit-hash "$G5_SHA" > "$LOG/app-stage.log" 2>&1
+```
+
+Después: verificar metadata completa, alias real y bytes de todos los archivos públicos contra el artefacto, Functions/contexto y snapshots sin cambios. Guardar la URL inmutable obtenida. Stage pages.dev acredita artefacto y aislamiento, **no** activación del shell G5.
+
+### TERMINAL — Preview posterior (App)
+
+Otra acción, sólo tras revisión del Stage y autorización correspondiente. `APP_PREVIEW_BRANCH` debe estar resuelta por la metadata efectiva del deployment propietario de `APP_PAGES_ORIGIN`; no usar el alias truncado como rama. Exigir respaldo completo anterior verificado, mismas huellas del artefacto/Functions y snapshot protegido aún coincidente. Sin esas condiciones, **BLOCKED**, no subir ni cambiar el Worker.
+
+```bash
+set -euo pipefail
+: "${G5_SHA:?Falta SHA exacto revisado del PR 178}"
+: "${APP_PREVIEW_BRANCH:?Falta rama App Preview propietaria verificada en el preflight}"
+case "$APP_PREVIEW_BRANCH" in *main*|*production*|*master*) echo 'BLOCKED: rama no Preview'; exit 1;; esac
+LOG="$HOME/intap-release-logs/kawvo-g5-$G5_SHA"
+cd "$LOG/source"
+test "$(node --version)" = v20.20.2
+test "$(git rev-parse HEAD)" = "$G5_SHA"
+test -z "$(git status --porcelain)"
+test -s "$LOG/app-stage.log" && test -s "$LOG/app-functions.bundle"
+test ! -e "$LOG/app-preview.log"
+npx --no-install wrangler pages deploy app/dist --project-name intap-web2 --branch "$APP_PREVIEW_BRANCH" --commit-hash "$G5_SHA" > "$LOG/app-preview.log" 2>&1
+```
+
+No recompilar entre ambas operaciones. Verificar metadata/bytes del deployment, alias y `app.preview.intaprd.com`, además de ambos Workers, App/Web Producción y Web Preview intactos. Los bloques están preparados para revisión y se comprueba su sintaxis; no se han ejecutado. La sesión Wrangler/metadata y respaldo vigentes pertenecen a la Mac y no están acreditados desde Codex. No se crea otro runner ni se reutilizan baselines históricos.

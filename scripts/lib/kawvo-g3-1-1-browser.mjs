@@ -119,8 +119,8 @@ try {
     await scenario(product + ': saved draft notice, later, navigation, remount/resume, other profile and role isolation', async () => {
       const result = await open({ product }), { page, server, calls } = result
       await page.getByRole('dialog').waitFor()
-      const review = page.getByRole('dialog').getByRole('button', { name: 'Revisar publicación', exact: true })
-      await page.waitForFunction(() => document.activeElement?.textContent === 'Revisar publicación')
+      const review = page.getByRole('dialog').getByRole('button', { name: 'Publicar', exact: true })
+      await page.waitForFunction(() => document.activeElement?.textContent === 'Publicar')
       await page.keyboard.press('Shift+Tab')
       assert.equal(await page.getByRole('dialog').getByRole('button', { name: 'Más tarde', exact: true }).evaluate(node => node === document.activeElement), true)
       await page.keyboard.press('Tab')
@@ -202,7 +202,7 @@ try {
     })
     await scenario(product + ': publication error, explicit action, success and no auto-publication on review/navigation', async () => {
       const result = await open({ product }), { page, server, calls } = result
-      await page.getByRole('dialog').getByRole('button', { name: 'Revisar publicación', exact: true }).click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Publicar', exact: true }).click()
       assert.equal(writes(calls).length, 0)
       server.publicationError = 'Error de publicación simulado'
       const publish = () => page.getByRole('button', { name: product === 'medical' ? 'Sí, publicar' : 'Publicar presentación', exact: true }).click()
