@@ -1,3 +1,4 @@
+import { registerSponsorInventoryPage } from './sponsor-inventory-page'
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { requireSuperAdmin } from './lib/admin-auth'
@@ -111,3 +112,4 @@ app.post('/api/v1/superadmin/sponsors/:id/master-artifact',requireSuperAdmin('su
 app.patch('/api/v1/superadmin/sponsors/:id/modules',requireSuperAdmin('super_admin'),async(c:any)=>{const sponsorId=c.req.param('id');const body=await c.req.json().catch(()=>({}));const modules=Array.isArray(body.modules)?body.modules:[];for(const item of modules){const code=cleanText(item?.code,80);if(!code)continue;await c.env.DB.prepare(`INSERT INTO sponsor_module_grants (sponsor_id,module_code,enabled,updated_at) VALUES (?,?,?,datetime('now')) ON CONFLICT(sponsor_id,module_code) DO UPDATE SET enabled=excluded.enabled,updated_at=datetime('now')`).bind(sponsorId,code,item?.enabled===false?0:1).run()}return c.json({ok:true})})
 
 export default app
+registerSponsorInventoryPage(app,requireUser)
