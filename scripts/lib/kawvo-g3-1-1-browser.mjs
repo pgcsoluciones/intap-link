@@ -165,7 +165,21 @@ try {
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       const title = await identity.getByRole('heading').boundingBox(), buttons = await utility.boundingBox()
-      assert.ok(buttons.x > title.x && buttons.y <= title.y + 5, 'Utilities above/right of identity')
+      if (product === 'medical' && width < 640) {
+        const install = await utility.getByRole('button', { name: 'Instalar app Kawvo', exact: true }).boundingBox()
+        const logout = await utility.getByRole('button', { name: 'Cerrar sesión', exact: true }).boundingBox()
+        const layout = await utility.evaluate(node => ({ direction: getComputedStyle(node).flexDirection, wrap: getComputedStyle(node).flexWrap, gap: parseFloat(getComputedStyle(node).columnGap) }))
+        assert.ok(buttons.y >= title.y + title.height, 'Medical mobile utilities follow identity')
+        assert.equal(layout.direction, 'row', 'Medical mobile utilities use the existing horizontal layout')
+        assert.equal(layout.wrap, 'wrap', 'Medical utilities preserve safe wrapping at narrow widths')
+        if (install.width + logout.width + layout.gap <= buttons.width + 0.01) {
+          assert.ok(Math.abs(install.y - logout.y) <= 1 && logout.x >= install.x + install.width, 'Medical utilities share one row when both fit')
+        } else {
+          assert.ok(logout.y >= install.y + install.height && Math.abs(logout.x - install.x) <= 1, 'Medical utilities wrap safely when the row is too narrow')
+        }
+      } else {
+        assert.ok(buttons.x > title.x && buttons.y <= title.y + 5, 'Utilities above/right of identity')
+      }
       if (process.env.KAWVO_G3_1_1_ARTIFACTS) {
         mkdirSync(process.env.KAWVO_G3_1_1_ARTIFACTS, { recursive: true })
         await page.screenshot({ path: process.env.KAWVO_G3_1_1_ARTIFACTS + '/' + product + '-' + width + '.png', fullPage: true })

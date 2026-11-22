@@ -518,7 +518,7 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     </section>}
     <div hidden={shellEnabled&&shellTab!=='home'}>
     <header className={card}>
-      {shellEnabled&&<KawvoProfileIdentity name={[profile.professional_prefix,profile.name].filter(Boolean).join(' ')} detail={profile.specialty||'Perfil médico profesional'} utilities={accountUtilities} mobileUtilitiesRow={isMaster}/>}
+      {shellEnabled&&<KawvoProfileIdentity name={[profile.professional_prefix,profile.name].filter(Boolean).join(' ')} detail={profile.specialty||'Perfil médico profesional'} utilities={accountUtilities} mobileUtilitiesRow/>}
       <div hidden={shellEnabled}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm sm:text-[11px] font-black uppercase tracking-[.18em] text-cyan-700">{scope==='sponsor_master'?'KAWMED · PRESENTACIÓN MASTER':'KAWMED · PERFIL MÉDICO'}</p><h1 className="mt-2 text-3xl font-black tracking-[-.04em]">{[profile.professional_prefix,profile.name].filter(Boolean).join(' ')}</h1><p className="mt-1 text-base sm:text-sm font-bold text-cyan-800">{profile.specialty}</p><p className="mt-2 text-base sm:text-sm text-slate-500">{scope==='sponsor_master'?'Configura tu presentación pública de ejemplo con la misma experiencia KawMed que reciben los médicos asociados.':'Configura exactamente la información que verán tus pacientes: perfil profesional, centros, horarios, agenda y seguros.'}</p></div><div className="flex flex-wrap items-start justify-end gap-2">
         {!shellEnabled&&accountUtilities}
       </div></div></div>

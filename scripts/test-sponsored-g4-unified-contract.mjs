@@ -5,13 +5,35 @@ import {createRequire} from 'node:module'
 import {build} from 'esbuild'
 const require=createRequire(import.meta.url),ts=require('typescript'),base='594113eeff8d6bd9cd39e572e953f7af7d2fba95',dir='app/src/components/admin/sponsored/'
 const read=p=>readFileSync(p,'utf8'),prior=p=>execFileSync('git',['show',base+':'+p],{encoding:'utf8'})
-const allowed=[...['SponsoredDashboard.tsx','SponsoredAppointments.tsx','SponsoredExperienceTools.tsx','sponsored-shell-gate.ts','SponsoredUnifiedShell.tsx','SponsoredProfileSelector.tsx','SponsoredResumeGate.tsx','SponsoredActivation.tsx','SponsoredAccessEntry.tsx','SponsoredBankAccounts.tsx','SponsoredGuidedTour.tsx'].map(p=>dir+p),'app/src/components/admin/IntapcardAccountSelector.tsx','scripts/test-sponsored-g4-shell-gate.mjs','scripts/test-sponsored-g4-unified-contract.mjs','scripts/lib/sponsored-g4-browser.mjs','docs/architecture/KAWVO_G4_BENEFICIARY_START.md',...['home-320','profile-390','agenda-390','home-1280'].map(p=>'docs/qa/KAWVO_G4/'+p+'.png')].sort()
+const medicalPath='app/src/components/admin/medical/MedicalDashboard.tsx',utilityTest='scripts/lib/kawvo-g3-1-1-browser.mjs'
+const allowed=[...['SponsoredDashboard.tsx','SponsoredAppointments.tsx','SponsoredExperienceTools.tsx','sponsored-shell-gate.ts','SponsoredUnifiedShell.tsx','SponsoredProfileSelector.tsx','SponsoredResumeGate.tsx','SponsoredActivation.tsx','SponsoredAccessEntry.tsx','SponsoredBankAccounts.tsx','SponsoredGuidedTour.tsx'].map(p=>dir+p),'app/src/components/admin/IntapcardAccountSelector.tsx',medicalPath,utilityTest,'scripts/test-sponsored-g4-shell-gate.mjs','scripts/test-sponsored-g4-unified-contract.mjs','scripts/lib/sponsored-g4-browser.mjs','docs/architecture/KAWVO_G4_BENEFICIARY_START.md',...['home-320','profile-390','agenda-390','home-1280'].map(p=>'docs/qa/KAWVO_G4/'+p+'.png')].sort()
 const delta=[...new Set([...execFileSync('git',['diff','--name-only',base],{encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{encoding:'utf8'}).trim().split('\n')].filter(Boolean))].sort()
 assert.ok(delta.every(p=>allowed.includes(p)),'Exact App UI/tests/docs allowlist; no runners, infrastructure or unrelated changes')
 if(process.argv.includes('--scope'))assert.deepEqual(delta,allowed)
 execFileSync('git',['diff','--exit-code',base,'--','api','web','shared','functions','package.json','package-lock.json','.github','app/package.json','app/tsconfig.json','app/vite.config.ts'])
-for(const p of ['app/src/App.tsx','app/src/components/admin/AdminGuard.tsx','app/src/lib/api.ts','app/src/components/appointments/AppointmentManager.tsx',...['KawvoProfileIdentity.tsx','KawvoReadyToPublish.tsx'].map(p=>'app/src/components/admin/shared/'+p),'scripts/test-sponsored-profile-contract.mjs','scripts/test-free-contact-agenda-contract.mjs','scripts/lib/kawmed-g3-4-browser.mjs','scripts/lib/kawmed-g3-3-browser.mjs','scripts/lib/kawmed-g3-2-browser.mjs','scripts/lib/kawvo-g3-1-1-browser.mjs'])assert.equal(read(p),prior(p),'Protected original remains byte-for-byte: '+p)
-execFileSync('git',['diff','--exit-code',base,'--','app/src/components/admin/medical','app/src/components/admin/free'])
+for(const p of ['app/src/App.tsx','app/src/components/admin/AdminGuard.tsx','app/src/lib/api.ts','app/src/components/appointments/AppointmentManager.tsx',...['KawvoProfileIdentity.tsx','KawvoReadyToPublish.tsx'].map(p=>'app/src/components/admin/shared/'+p),'scripts/test-sponsored-profile-contract.mjs','scripts/test-free-contact-agenda-contract.mjs','scripts/lib/kawmed-g3-4-browser.mjs','scripts/lib/kawmed-g3-3-browser.mjs','scripts/lib/kawmed-g3-2-browser.mjs'])assert.equal(read(p),prior(p),'Protected original remains byte-for-byte: '+p)
+execFileSync('git',['diff','--exit-code',base,'--','app/src/components/admin/medical','app/src/components/admin/free',':(exclude)'+medicalPath])
+// Explicit #177 visual correction: every other medical handler and cumulative assertion stays frozen.
+assert.equal(prior(medicalPath).split('mobileUtilitiesRow={isMaster}').length,2,'Exactly one original medical utility prop')
+assert.equal(read(medicalPath),prior(medicalPath).replace('mobileUtilitiesRow={isMaster}','mobileUtilitiesRow'),'Only the approved medical layout prop changes; every handler/guard remains identical')
+const previousUtilityAssertion="      assert.ok(buttons.x > title.x && buttons.y <= title.y + 5, 'Utilities above/right of identity')"
+const mobileUtilityAssertions=`      if (product === 'medical' && width < 640) {
+        const install = await utility.getByRole('button', { name: 'Instalar app Kawvo', exact: true }).boundingBox()
+        const logout = await utility.getByRole('button', { name: 'Cerrar sesión', exact: true }).boundingBox()
+        const layout = await utility.evaluate(node => ({ direction: getComputedStyle(node).flexDirection, wrap: getComputedStyle(node).flexWrap, gap: parseFloat(getComputedStyle(node).columnGap) }))
+        assert.ok(buttons.y >= title.y + title.height, 'Medical mobile utilities follow identity')
+        assert.equal(layout.direction, 'row', 'Medical mobile utilities use the existing horizontal layout')
+        assert.equal(layout.wrap, 'wrap', 'Medical utilities preserve safe wrapping at narrow widths')
+        if (install.width + logout.width + layout.gap <= buttons.width + 0.01) {
+          assert.ok(Math.abs(install.y - logout.y) <= 1 && logout.x >= install.x + install.width, 'Medical utilities share one row when both fit')
+        } else {
+          assert.ok(logout.y >= install.y + install.height && Math.abs(logout.x - install.x) <= 1, 'Medical utilities wrap safely when the row is too narrow')
+        }
+      } else {
+        assert.ok(buttons.x > title.x && buttons.y <= title.y + 5, 'Utilities above/right of identity')
+      }`
+assert.equal(prior(utilityTest).split(previousUtilityAssertion).length,2,'Exactly one original utility geometry assertion')
+assert.equal(read(utilityTest),prior(utilityTest).replace(previousUtilityAssertion,mobileUtilityAssertions),'Only the approved mobile medical geometry expectations change; other cumulative assertions remain identical')
 function scan(source){const f=ts.createSourceFile('source.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),calls=[],functions=new Map();function visit(n){if(ts.isCallExpression(n)&&ts.isIdentifier(n.expression)&&/^(apiGet|apiPost|apiPatch|apiPut|apiDelete|fetch)$/.test(n.expression.text))calls.push(n.getText(f));if(ts.isFunctionDeclaration(n)&&n.name)functions.set(n.name.text,n.getText(f));ts.forEachChild(n,visit)}visit(f);return{calls:calls.sort(),functions}}
 for(const name of ['SponsoredDashboard.tsx','SponsoredExperienceTools.tsx','SponsoredActivation.tsx','SponsoredBankAccounts.tsx','SponsoredAccessEntry.tsx','SponsoredProfileSelector.tsx'])assert.deepEqual(scan(read(dir+name)).calls,scan(prior(dir+name)).calls,'Original API endpoints, payloads and invocation count protected: '+name)
 assert.equal(scan(read(dir+'SponsoredDashboard.tsx')).functions.get('profilePayload'),scan(prior(dir+'SponsoredDashboard.tsx')).functions.get('profilePayload'),'Profile payload/normalization unchanged')
