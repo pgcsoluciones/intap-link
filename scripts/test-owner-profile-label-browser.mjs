@@ -12,7 +12,7 @@ const browser=await chromium.launch({headless:true,executablePath}),results=[]
 try{
  for(const mode of ['preview','production'])for(const width of [320,360,390,430,768,1280]){
   for(const variant of ['master','beneficiary','free','explicit-medical','explicit-configuration','visitor']){
-   const owner=variant!=='visitor',mobileMenu=variant.startsWith('explicit-'),label=variant==='explicit-medical'?'Perfil':variant==='explicit-configuration'?'Configuración de Agenda':undefined
+   const owner=variant!=='visitor',mobileMenu=variant.startsWith('explicit-'),label=variant==='explicit-medical'?'Editar mi perfil':variant==='explicit-configuration'?'Configuración de Agenda':undefined
    const settingsPath=variant==='free'?'/admin/free/account':'/admin/sponsored',destination=variant==='master'?'/admin/sponsor':settingsPath
    const host=mode==='preview'?'https://preview.intaprd.com':'https://intaprd.com',origin=mode==='preview'?'https://app.preview.intaprd.com':'https://app.intaprd.com',calls=[],errors=[]
    const compiled=await build({stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import OwnerBar from './web/src/components/appointments/AppointmentOwnerBar';createRoot(document.getElementById('root')).render(<OwnerBar username="fixture" ownerApiBase="${origin}/api/v1/me/sponsored-profile/appointments" manageOrigin="${origin}" settingsPath="${settingsPath}" ${label?`settingsLabel=${JSON.stringify(label)}`:''} mobileMenu={${mobileMenu}} palette={{accent:'#0891b2',accentSoft:'#ecfeff',text:'#0f172a'}} onToast={()=>{}}/>);`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,jsx:'automatic',format:'iife',define:{'import.meta.env':JSON.stringify({MODE:mode})}})

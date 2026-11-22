@@ -18,7 +18,7 @@ for (const route of ['/trial/login','/admin/sponsored','/admin/sponsor','/supera
  assert.ok(app.includes('path="'+route+'"'), 'Existing App route missing: '+route)
 }
 assert.ok(owner.includes('mobileMenu?:boolean') && owner.includes('mobileMenu=false'), 'Mobile menu must remain opt-in')
-assert.ok(owner.includes("settingsLabel='Configuración'"), 'Owner settings label default must be preserved')
+assert.ok(owner.includes("settingsLabel='Editar perfil'"), 'Public owner default must say Editar perfil as requested in G5')
 assert.ok(modal.includes('detailsPlaceholder?:string'), 'Medical details placeholder must be optional')
 assert.ok(modal.includes("detailsPlaceholder||'Ej.:"), 'Legacy appointment placeholder fallback must remain')
 for (const name of ['sponsoredMultiProfileAccess','requestedSponsoredProfileId','listOwnedSponsoredBeneficiaryProfiles','resolveSponsorMembership','setSponsorContext']) {
@@ -36,6 +36,7 @@ for (const id of migrationFiles){
  assert.doesNotMatch(sql,/kawmed_demo_laura_mendez|kawmed_ins_ex_1|kawmed_ins_accept_1/,'Demo seed in production migration: '+names[0])
 }
 const medicalProfile = read('web/src/components/medical-profile/KawMedProfile.tsx')
+assert.ok(medicalProfile.includes('settingsLabel="Editar mi perfil"'), 'Medical explicit owner label remains unchanged')
 for (const key of ["modal === 'schedule'", "modal === 'centers'"]) {
  assert.ok(medicalProfile.includes(key), 'Medical modal missing: '+key)
 }
