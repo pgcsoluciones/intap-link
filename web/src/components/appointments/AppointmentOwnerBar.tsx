@@ -41,7 +41,7 @@ type Props={
   onToast:(message:string)=>void
 }
 
-export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Configuración',palette,onToast,mobileMenu=false,medicalProfileId}:Props){
+export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,settingsPath,settingsLabel='Editar perfil',palette,onToast,mobileMenu=false,medicalProfileId}:Props){
   const[context,setContext]=useState<Context|null>(null)
   const[open,setOpen]=useState(false)
   const[menuOpen,setMenuOpen]=useState(false)
