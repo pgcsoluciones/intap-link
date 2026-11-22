@@ -70,6 +70,32 @@ export function sponsoredShellUrl(profileId: string, surface: Partial<SponsoredS
   if(surface.query) p.set('sp_q',surface.query.slice(0,160))
   return '/admin/sponsored?' + p.toString()
 }
+/** A successful server selection is required before opting a Multicuenta beneficiary into G4. */
+export function sponsoredAccountSelectionUrl(context: {
+  profileId: string
+  selection: {kind?: unknown; id?: unknown; route?: unknown}
+  mode: string
+  hostname: string
+  search: string
+  returnSearch?: string
+}): string | null {
+  const {profileId,selection,mode,hostname,search,returnSearch=''} = context
+  const route = String(selection.route || '/admin/accounts')
+  if(mode !== 'preview' || hostname !== 'app.preview.intaprd.com') return route
+  if(!profileId || selection.kind !== 'sponsored' || String(selection.id || '') !== profileId) return null
+  // Accept only the canonical beneficiary destination, never an external URL,
+  // Master scope, another profile or a route reconstructed from UI hints.
+  if(route !== '/admin/sponsored' && !route.startsWith('/admin/sponsored?')) return null
+  const url = new URL(route,'https://app.preview.intaprd.com')
+  if(url.pathname !== '/admin/sponsored' || url.hash || url.searchParams.has('scope')
+    || url.searchParams.getAll('profile_id').some(id=>id !== profileId)) return null
+  const source = new URLSearchParams(search), previous = new URLSearchParams(returnSearch)
+  if(source.get('kawvo_sponsored_shell') === '0' || source.get('sp_legacy') === '1'
+    || url.searchParams.get('kawvo_sponsored_shell') === '0' || url.searchParams.get('sp_legacy') === '1') {
+    return '/admin/sponsored?' + new URLSearchParams({profile_id:profileId,kawvo_sponsored_shell:'0'})
+  }
+  return sponsoredShellUrl(profileId,previous.get('profile_id') === profileId ? sponsoredSurface(returnSearch) : {tab:'home'})
+}
 export function sponsoredEntryUrl(target: string, search: string, mode: string, hostname: string): string {
   if(!isSponsoredShellRequest(mode,hostname,search)) return target
   try {

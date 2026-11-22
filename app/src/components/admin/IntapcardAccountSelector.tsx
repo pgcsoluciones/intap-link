@@ -1,4 +1,4 @@
-import {isSponsoredShellRequest,sponsoredShellUrl,sponsoredSurface} from './sponsored/sponsored-shell-gate'
+import {isSponsoredShellRequest,sponsoredShellUrl,sponsoredSurface,sponsoredAccountSelectionUrl} from './sponsored/sponsored-shell-gate'
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPost, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
 import { Link } from 'react-router-dom'
@@ -118,9 +118,11 @@ export default function IntapcardAccountSelector(){
         window.location.assign(origin+'/trial/mi/'+encodeURIComponent(item.id))
       }else{
         const route=String(response.data?.route||'/admin/accounts')
-        // Keep the canonical server route and token contract; only the selected
-        // Free account opts into its guarded shell. Medical returns require a verified
-        // doctor context AND a matching canonical server selection; other kinds stay unchanged.
+        const sponsoredTarget=item.kind==='sponsored'?sponsoredAccountSelectionUrl({profileId:item.id,selection:response.data,mode:import.meta.env.MODE,hostname:window.location.hostname,search:window.location.search,returnSearch:sponsoredReturn.split('?')[1]}):null
+        if(item.kind==='sponsored'&&sponsoredTarget===null)throw new Error('La cuenta o la ruta recibida no corresponde al perfil patrocinado seleccionado. Vuelve a seleccionar la cuenta.')
+        // Preserve the server selection/token contract. Free and sponsored shells
+        // require matching canonical selections; medical returns also require their
+        // verified origin context. Other account kinds keep their existing route.
         const selectedFree=response.data?.kind==='free'&&String(response.data?.id||'')===item.id
         const target=item.kind==='free'&&selectedFree&&route==='/admin/free'&&isKawvoShellPreviewHost()
           ? KAWVO_SHELL_PREVIEW_ROUTE
@@ -128,8 +130,8 @@ export default function IntapcardAccountSelector(){
           ? item.id===medicalReturn.sponsor?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):route
           : medicalReturn&&!(isKawMedMasterReturnContext(medicalReturn))&&item.kind==='medical'&&response.data?.kind==='medical'&&String(response.data?.id||'')===item.id&&route==='/admin/medical'
           ? kawMedContextUrl('/admin/medical',{account:item.id,tab:item.id===medicalReturn.account?medicalReturn.tab:'home',...(item.id===medicalReturn.account?medicalReturn:{})})
-          : sponsoredReturn&&item.kind==='sponsored'&&response.data?.kind==='sponsored'&&String(response.data?.id||'')===item.id&&new URL(route,window.location.origin).pathname==='/admin/sponsored'
-          ? sponsoredShellUrl(item.id,item.id===new URLSearchParams(sponsoredReturn.split('?')[1]).get('profile_id')?sponsoredSurface(sponsoredReturn.split('?')[1]):{tab:'home'})
+          : item.kind==='sponsored'&&sponsoredTarget
+          ? sponsoredTarget
           : item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route
         window.location.assign(target)
       }
