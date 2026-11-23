@@ -1,0 +1,30 @@
+name: Kawvo G8 — Wrangler native dry-run (never upload)
+on:
+  pull_request:
+    paths:
+      - .github/workflows/kawvo-g8-native-dryrun.yml
+      - scripts/qa-kawvo-g8-native-dryrun.sh
+      - docs/operations/kawvo-g8-native-release-diagnosis-2026-11-23.md
+permissions:
+  contents: read
+jobs:
+  dry-run:
+    if: github.head_ref == 'ops/kawvo-g8-native-wrangler-release-review-2026-11-23'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      WRANGLER_SEND_METRICS: "false"
+      CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+      - run: npm ci
+      - name: Native Wrangler dry-run without remote credentials
+        shell: bash
+        run: bash scripts/qa-kawvo-g8-native-dryrun.sh
