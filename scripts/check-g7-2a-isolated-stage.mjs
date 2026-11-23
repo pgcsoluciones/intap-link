@@ -17,7 +17,10 @@ assert.doesNotMatch(config,/^\s*\[\s*triggers\s*\]\s*$/m)
 assert.doesNotMatch(config,/intap_db"\s*$|intap-r2"|intap-api-preview"|intap-api"/m)
 assert.match(official,/^name\s*=\s*"intap-api-preview"\s*$/m)
 assert.match(entry,/app\.all\('\*'/)
-assert.doesNotMatch(entry,/preview-frontdoor-entry|preview-free-entry|sponsor-commercial-sales|\.run\(|\.batch\(/)
+// Inspect executable import statements, not explanatory comments.
+const executable=entry.split('\n').filter(line=>!/^\s*\/\//.test(line)).join('\n')
+assert.doesNotMatch(executable,/^\s*(?:import|export)\b[^\n]*\b(?:preview-frontdoor-entry|preview-free-entry|sponsor-commercial-sales)\b/m)
+assert.doesNotMatch(executable,/\.run\s*\(|\.batch\s*\(/)
 const endpoints=[...entry.matchAll(/app\.get\(/g)]
 assert.equal(endpoints.length,1,'Only the two endpoints in an explicit resource allowlist loop')
 assert.match(entry,/for\(const resource of \['sellers','assignments'\] as const\)/)
