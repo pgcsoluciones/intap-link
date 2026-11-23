@@ -1,3 +1,4 @@
+import { registerSponsorCommercialPages } from './sponsor-commercial-pages'
 import app from './index'
 import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership } from './sponsored-multiprofile-access'
@@ -20,6 +21,7 @@ async function authorized(c:any){
  return {userId,sponsorId}
 }
 const trim=(x:unknown,n=120)=>String(x??'').trim().slice(0,n)
+registerSponsorCommercialPages(app,authorized)
 app.get('/api/v1/sponsor/commercial/sellers',async(c:any)=>{
  const ctx=await authorized(c);if(!ctx)return c.json({ok:false,error:'Acceso comercial no habilitado para esta empresa.'},403)
  const [reps,assignments]=await Promise.all([
