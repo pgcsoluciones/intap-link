@@ -172,8 +172,7 @@ export default function KawvoFreeShellPreview(){
     setShareMessage('')
     try{
       const whatsappUrl='https://wa.me/?text='+encodeURIComponent('Conoce mi presentación digital: '+publicUrl)
-      const opened=window.open(whatsappUrl,'_blank','noopener,noreferrer')
-      if(!opened)window.location.assign(whatsappUrl)
+      window.location.assign(whatsappUrl)
       setShareMessage('Abriendo WhatsApp para compartir tu presentación.')
     }catch(error:unknown){
       if((error as {name?:string}|null)?.name!=='AbortError')setShareMessage('No pudimos abrir el menú para compartir.')
