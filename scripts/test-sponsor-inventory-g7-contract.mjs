@@ -7,6 +7,7 @@ import {pathToFileURL} from 'node:url'
 import {createHash} from 'node:crypto'
 import {build} from 'esbuild'
 import ts from 'typescript'
+export const WORKER_SOURCE='2286c937d9ce13422f22b289f5029343c2f5ae4c'
 export const TENANT_A='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',TENANT_B='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 const bridge=resolve('scripts/lib/sponsor-inventory-g7-sqlite.py')
 let bundled
@@ -29,13 +30,17 @@ export async function inventoryFixture(count=1001){
 }
 export function checkG7Scope(){
  const base='b97a2f01672eaa14df04f74aa6ad882f9b4cd256',prior=p=>execFileSync('git',['show',base+':'+p],{encoding:'utf8'}),read=p=>readFileSync(p,'utf8')
- const allowed=['api/src/sponsored-profiles.ts','api/src/sponsor-inventory-page.ts','app/src/components/admin/sponsored/SponsorDashboard.tsx','app/src/components/admin/sponsored/SponsorInventory.tsx','app/src/components/admin/sponsored/sponsor-shell-navigation.ts','scripts/test-sponsor-inventory-g7-contract.mjs','scripts/lib/sponsor-inventory-g7-browser.mjs','scripts/lib/sponsor-inventory-g7-sqlite.py','docs/architecture/KAWVO_G7_1_SPONSOR_INVENTORY.md',...['inventory-320','inventory-1280'].map(n=>'docs/qa/KAWVO_G7/'+n+'.png')].sort()
+ const recovered=['free-appointments','index','kawmed-live-guest','medical-access-codes','preview-free-entry','scan-status','sponsor-commercial-sales','sponsored-appointments','sponsored-code-generation','sponsored-commercial-links-core','sponsored-owner-flow','sponsored-profiles','sponsored-scan'].map(n=>'api/src/'+n+'.ts')
+ const allowed=[...recovered,'scripts/test-intapcard-active-account-contract.mjs','scripts/test-sponsor-inventory-worker-compat.mjs','api/src/sponsored-profiles.ts','api/src/sponsor-inventory-page.ts','app/src/components/admin/sponsored/SponsorDashboard.tsx','app/src/components/admin/sponsored/SponsorInventory.tsx','app/src/components/admin/sponsored/sponsor-shell-navigation.ts','scripts/test-sponsor-inventory-g7-contract.mjs','scripts/lib/sponsor-inventory-g7-browser.mjs','scripts/lib/sponsor-inventory-g7-sqlite.py','docs/architecture/KAWVO_G7_1_SPONSOR_INVENTORY.md',...['inventory-320','inventory-1280'].map(n=>'docs/qa/KAWVO_G7/'+n+'.png')]
+ const uniqueAllowed=[...new Set(allowed)].sort()
  const delta=[...new Set([...execFileSync('git',['diff','--name-only',base],{encoding:'utf8'}).trim().split('\n'),...execFileSync('git',['ls-files','--others','--exclude-standard'],{encoding:'utf8'}).trim().split('\n')].filter(Boolean))].sort()
- assert.ok(delta.every(p=>allowed.includes(p)),'G7.1 isolated allowlist, no G6/infra/migrations/dependencies')
- if(process.argv.includes('--scope'))assert.deepEqual(delta,allowed)
+ assert.ok(delta.every(p=>uniqueAllowed.includes(p)),'G7.1 isolated allowlist, no G6/infra/migrations/dependencies')
+ if(process.argv.includes('--scope'))assert.deepEqual(delta,uniqueAllowed)
  const path='api/src/sponsored-profiles.ts'
- assert.equal(read(path),"import { registerSponsorInventoryPage } from './sponsor-inventory-page'\n"+prior(path)+'\nregisterSponsorInventoryPage(app,requireUser)\n','Every pre-existing API route/auth/operation remains byte-for-byte')
- execFileSync('git',['diff','--exit-code',base,'--','api','app/src/components/admin/medical','app/src/components/admin/free','app/src/components/admin/shared','app/src/components/admin/IntapcardAccountSelector.tsx','app/src/components/admin/AdminGuard.tsx','app/src/App.tsx','app/src/lib','web','functions','shared','.github','package.json','package-lock.json',':(exclude)api/src/sponsored-profiles.ts',':(exclude)api/src/sponsor-inventory-page.ts'])
+ assert.equal(read(path),"import { registerSponsorInventoryPage } from './sponsor-inventory-page'\n"+execFileSync('git',['show',WORKER_SOURCE+':'+path],{encoding:'utf8'})+'\nregisterSponsorInventoryPage(app,requireUser)\n','Documented Worker API source plus additive G7 registration')
+ for(const file of execFileSync('git',['ls-tree','-r','--name-only',WORKER_SOURCE,'--','api/src'],{encoding:'utf8'}).trim().split('\n')){if(file===path)continue;assert.deepEqual(readFileSync(file),execFileSync('git',['show',WORKER_SOURCE+':'+file]),'Documented Worker source preserved byte-for-byte: '+file)}
+ assert.deepEqual(readFileSync('api/src/sponsor-inventory-page.ts'),execFileSync('git',['show','c84680705b3e9075e4b10d2c5074bbb5f9e5d7fa:api/src/sponsor-inventory-page.ts']),'Approved G7 SELECT-only module unchanged')
+ execFileSync('git',['diff','--exit-code',base,'--','api','app/src/components/admin/medical','app/src/components/admin/free','app/src/components/admin/shared','app/src/components/admin/IntapcardAccountSelector.tsx','app/src/components/admin/AdminGuard.tsx','app/src/App.tsx','app/src/lib','web','functions','shared','.github','package.json','package-lock.json',...recovered.map(p=>':(exclude)'+p),':(exclude)api/src/sponsor-inventory-page.ts'])
  for(const p of ['SponsorCommercialSellers.tsx','SponsoredDashboard.tsx','SponsoredAppointments.tsx','SponsoredUnifiedShell.tsx'])assert.equal(read('app/src/components/admin/sponsored/'+p),prior('app/src/components/admin/sponsored/'+p),'Prior G5 owner/forms/mutations/roles intact')
  const owner='app/src/components/admin/sponsored/SponsorDashboard.tsx'
  const writes=source=>{const file=ts.createSourceFile('owner.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX),calls=[];function visit(n){if(ts.isCallExpression(n)&&ts.isIdentifier(n.expression)&&['apiPost','apiPatch','apiPut','apiDelete','fetch'].includes(n.expression.text))calls.push(n.getText(file));ts.forEachChild(n,visit)}visit(file);return calls.sort()}

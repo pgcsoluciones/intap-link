@@ -63,7 +63,12 @@ assert.match(sponsorMed,/Cambiar cuenta/,'Medical Master can choose a different 
 assert.match(sponsorMed,/sponsorAccounts.length>1&&!isIntapMulticuenta/,'Special account must not switch sponsors from local dropdown')
 assert.match(sponsoredAppointments,/settings_url:isMaster\?'\/admin\/sponsor'/,'Kawvo Sponsor Master edit link must remain in Master panel')
 assert.match(sponsoredAppointments,/action_scope:isMaster\?'master':null/,'Kawvo Sponsor appointments must use master scope')
-assert.match(sponsoredAppointments,/active.kind!=='sponsored'/,'Beneficiary public owner bar must match selected account')
+// Recovered Worker #147 expresses the same guard through required kind + ID.
+// Keep both checks explicit; executable wrong-kind/wrong-ID coverage is in the G7 Worker compatibility suite.
+assert.ok(sponsoredAppointments.includes("const requiredKind=isMaster?'sponsor':'sponsored'"),'Master and beneficiary require distinct selected account kinds')
+assert.ok(sponsoredAppointments.includes("if(active.kind!==requiredKind)return c.json({ok:false,error:ownerSelectionError,code:'owner_account_category_mismatch'},403)"),'Wrong selected kind must be rejected before owner data')
+assert.ok(sponsoredAppointments.includes("const requiredId=isMaster?String((profile as any).sponsor_id||''):subjectId"),'Master matches sponsor ID; beneficiary matches exact profile ID')
+assert.ok(sponsoredAppointments.includes("if(active.id!==requiredId)return c.json({ok:false,error:ownerSelectionError,code:'owner_account_identity_mismatch'},403)"),'Wrong selected ID must be rejected before owner data')
 assert.match(worker,/endsWith\('\/appointments\/public-context'\)\)return next\(\)/,'Owner context must bypass query-scope guard and verify slug in D1')
 assert.match(guard,/path==='\/admin\/sponsored\/agenda'&&new URLSearchParams\(location.search\)\.get\('scope'\)==='master'/,'Kawvo sponsor agenda must remain scoped to active sponsor')
 assert.match(active,/crypto.randomUUID\(\)\.replace\(\/-\/g,''\)/,'A new tab token must be rotated on every selection')

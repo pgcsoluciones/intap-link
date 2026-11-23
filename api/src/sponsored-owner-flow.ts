@@ -58,21 +58,5 @@ app.patch('/api/v1/superadmin/sponsors/:id',requireSuperAdmin('super_admin'),asy
   return c.json({ok:true,data:{owner_transferred:ownerChanged,owner_email:nextEmail}})
 })
 
-app.post('/api/v1/me/sponsored-profile/publish',requireUser,async(c:any)=>{
-  const userId=String(c.get('userId')||'')
-  const row=await c.env.DB.prepare(`SELECT * FROM sponsored_profiles WHERE user_id=? ORDER BY CASE WHEN profile_role='sponsor_owner' THEN 0 ELSE 1 END,created_at DESC LIMIT 1`).bind(userId).first()
-  if(!row)return c.json({ok:false,error:'No tienes un perfil patrocinado.'},404)
-  const missing:string[]=[];const username=slug((row as any).username);const role=String((row as any).profile_role||'beneficiary')
-  if(!username)missing.push('usuario')
-  if(!clean((row as any).business_name,100))missing.push('nombre')
-  if(!clean((row as any).whatsapp,40)&&!clean((row as any).phone,40))missing.push('número de contacto')
-  if(role!=='sponsor_owner'){
-    if(!clean((row as any).specialization,100))missing.push('especialización')
-    if(!clean((row as any).what_we_do,240))missing.push('qué hacemos')
-  }
-  if(missing.length)return c.json({ok:false,error:'Completa los datos requeridos antes de publicar.',missing},422)
-  await c.env.DB.prepare(`UPDATE sponsored_profiles SET status='published',published_at=COALESCE(published_at,datetime('now')),updated_at=datetime('now') WHERE id=?`).bind(String((row as any).id)).run()
-  return c.json({ok:true,data:{public_path:`/p/${encodeURIComponent(username)}`}})
-})
 
 export default app
