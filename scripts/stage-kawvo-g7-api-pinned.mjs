@@ -27,19 +27,19 @@ export function validateSnapshot(v){
  checked(v.bindings.some(b=>b.name==='ENVIRONMENT'&&b.type==='plain_text'&&b.text==='preview'),'snapshot fuera de Preview')
  checked(v.bindings.some(b=>b.name==='DB'&&b.type==='d1')&&v.bindings.some(b=>b.name==='BUCKET'&&b.type==='r2_bucket'),'faltan bindings D1/R2 existentes')
  checked(typeof v.compatibility_date==='string'&&v.compatibility_date.length>0,'falta compatibilidad efectiva')
- checked(!v.assets&&!v.containers?.length&&!Object.keys(v.migrations||{}).length,'assets/containers/migraciones requieren revisión; no se alteran')
+ checked(!Object.keys(v.assets||{}).length&&!v.containers?.length&&!Object.keys(v.migrations||{}).length,'assets/containers/migraciones requieren revisión; no se alteran')
  checked(Object.entries(v.exports||{}).every(([name,x])=>name==='default'&&x.type==='worker'&&(!x.state||x.state==='created')),'exports adicionales/lifecycle fuera de alcance')
 }
 export function payload(v,modules){
  validateSnapshot(v)
  checked(Array.isArray(modules)&&modules.length>0&&new Set(modules.map(m=>m.name)).size===modules.length,'módulos preparados vacíos/duplicados')
  const body={main_module:modules[0].name,modules,bindings:v.bindings.map(({name})=>({name,type:'inherit',version_id:ACTIVE})),annotations:{'workers/tag':CANDIDATE,'workers/message':'G7.1 Stage API; bindings pinned to verified active version; no traffic change'}}
- for(const key of runtime)if(v[key]!==undefined)body[key]=structuredClone(v[key])
+ for(const key of runtime)if(v[key]!==undefined&&v[key]!==null)body[key]=structuredClone(v[key])
  return body
 }
 export function traffic(result){
  const d=result?.deployments?.[0]
- checked(d?.versions?.length===1&&d.versions[0].version_id===ACTIVE&&Number(d.versions[0].percentage)===100,'la activa/tráfico cambió; no subir ni activar')
+ checked(typeof d?.id==='string'&&d.id.length>0&&d.versions?.length===1&&d.versions[0].version_id===ACTIVE&&Number(d.versions[0].percentage)===100,'la activa/tráfico cambió; no subir ni activar')
  return {id:d.id,versions:d.versions}
 }
 export function verifyVersion(v,newVersion,modules){
@@ -90,7 +90,7 @@ export async function main(args=process.argv.slice(2),{root=process.cwd(),snapsh
   execFileSync('tar',['-x','-C',source],{input:execFileSync('git',['archive',CANDIDATE,'api/src','api/tsconfig.json','api/package.json','shared'],{maxBuffer:64*1024*1024}),stdio:['pipe','pipe','pipe']})
   for(const rel of ['node_modules','api/node_modules'])symlinkSync(join(root,rel),join(source,rel),'dir')
   const config=join(directory,'build-only.json'),form=join(directory,'compiled-form.private.bin')
-  save(config,{name:WORKER,main:join(source,'api/src/preview-frontdoor-entry.ts'),compatibility_date:version.compatibility_date,compatibility_flags:version.compatibility_flags||[]})
+  save(config,{name:WORKER,main:join(source,'api/src/preview-frontdoor-entry.ts'),compatibility_date:version.compatibility_date.slice(0,10),compatibility_flags:version.compatibility_flags||[]})
   try{const output=execFileSync(join(root,'node_modules/.bin/wrangler'),['versions','upload','--dry-run','--config',config,'--outdir',join(directory,'bundle'),'--outfile',form],{cwd:source,encoding:'utf8',stdio:['ignore','pipe','pipe'],env:{...process.env,WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:join(directory,'wrangler.private.log')}});writeFileSync(join(directory,'build.private.log'),output,{mode:0o600})}catch(error){writeFileSync(join(directory,'build.private.log'),String(error.stdout||'')+String(error.stderr||''),{mode:0o600});throw Error('BLOCKED: compilación local; revisar build.private.log, no se subió código')}
   const bytes=readFileSync(form),boundary=bytes.subarray(0,bytes.indexOf('\r\n')).toString().slice(2)
   const parts=await new Response(bytes,{headers:{'content-type':'multipart/form-data; boundary='+boundary}}).formData(),metadata=JSON.parse(String(parts.get('metadata'))),modules=[]
