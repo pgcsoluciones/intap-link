@@ -11,7 +11,7 @@ const escapeLike=(s:string)=>s.replace(/[\\%_]/g,'\\const escapeLike=(s:string)=
 ')
 function sqlFold(input:string){
  let expr='lower('+input+')'
- for(const [accent,plain] of Object.entries({'á':'a','é':'e','í':'i','ó':'o','ú':'u','ü':'u','ñ':'n'}))expr="replace("+expr+",'"+accent+"','"+plain+"')"
+ for(const [accent,plain] of Object.entries({'Á':'a','É':'e','Í':'i','Ó':'o','Ú':'u','Ü':'u','Ñ':'n','á':'a','é':'e','í':'i','ó':'o','ú':'u','ü':'u','ñ':'n'}))expr="replace("+expr+",'"+accent+"','"+plain+"')"
  for(const mark of [768,769,771,776])expr="replace("+expr+",char("+mark+"),'')"
  return expr
 }
