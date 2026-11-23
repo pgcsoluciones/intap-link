@@ -6,6 +6,14 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {build} from 'esbuild'
 import {BASE,EXPECTED,SCHEMA_QUERIES,allowedRequest,Reader,versionSummary,compareSchema,collectCloudflare,localAudit,discoverArtifacts,comparePublicArtifact,main} from './inspect-kawvo-g8-readonly.mjs'
+import {assertAuthorizedDelta,assertG8Runtime,G8_HANDLER,G8_CORRECTION} from './lib/kawvo-g8-freeze.mjs'
+assert.equal(G8_CORRECTION,'8bc33c1b62d2c11147ffc192119fac98009cd5b5')
+assertG8Runtime(process.cwd(),BASE)
+const correctedHandler=execFileSync('git',['show',G8_CORRECTION+':'+G8_HANDLER])
+assert.throws(()=>assertAuthorizedDelta([G8_HANDLER,'app/src/App.tsx'],correctedHandler,correctedHandler),/Only the authorized/)
+assert.throws(()=>assertAuthorizedDelta([G8_HANDLER],Buffer.concat([correctedHandler,Buffer.from('\n// unauthorized')]),correctedHandler),/immutable/)
+assert.throws(()=>assertAuthorizedDelta([],correctedHandler,correctedHandler),/Only the authorized/)
+console.log('PASS exact freeze: only immutable #183 handler accepted; missing delta, additional runtime edit and handler tampering rejected')
 const dir=mkdtempSync(join(tmpdir(),'g8-readonly-test-')),db=join(dir,'metadata.sqlite'),account='a'.repeat(32),dbPreview='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',dbProd='bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 const idPreview='cccccccc-cccc-cccc-cccc-cccccccccccc',idProd='dddddddd-dddd-dddd-dddd-dddddddddddd'
 execFileSync('python3',['-c',`import sqlite3,sys
@@ -93,7 +101,7 @@ assert.throws(()=>discoverArtifacts({home:artifactHome}),/private file in Functi
 console.log('PASS artifact recovery inventory: known folders only, no rebuild/copy; preserve control files, encode spaces/accents, verify all public bytes, never claim compiled Functions rollback')
 const shared=new Reader({account,authorization:'fixture',fetch:async url=>{const preview=url.includes('intap-api-preview');return Response.json({success:true,result:url.endsWith('/deployments')?{deployments:[{versions:[{version_id:preview?idPreview:idProd,percentage:100}]}]}:{...version(preview),bindings:version(preview).bindings.map(b=>b.name==='DB'?{...b,id:dbPreview}:b)}})}})
 await assert.rejects(()=>collectCloudflare(shared,{inventory:false}),/share DB ID/)
-const audit=localAudit(process.cwd());assert.equal(audit.guards.length,6);assert.ok(audit.guards.every(g=>g.evidence.length));assert.ok(audit.issue134.sourceReconciled&&audit.issue134.editingRequiresActive)
+const audit=localAudit(process.cwd());assert.equal(audit.guards.length,6);assert.ok(audit.guards.every(g=>g.evidence.length));assert.ok(audit.issue134.sourceReconciled&&audit.issue134.editingRequiresActive&&audit.issue134.correctiveSourcePinned)
 for(const args of [['--deploy'],['--activate'],['--local','--cloudflare']])await assert.rejects(()=>main(args),/no mutation mode/)
 console.log('PASS inventory: active IDs, 35 Preview/32 fixture Prod bindings, secret and code values omitted; DB separation before SELECT; NO-GO retained')
 
@@ -112,6 +120,7 @@ for(const [file,fn,context] of [
 }
 console.log('PASS pure source activation matrix: Preview allowed only with existing guards; Production false; zero interfaces activated')
 const matrix=JSON.parse(readFileSync('docs/releases/KAWVO_G8_BLOCKER_MATRIX.json','utf8'));assert.equal(matrix.contractClassification.length,12)
+assert.deepEqual(matrix.contractClassification,JSON.parse(execFileSync('git',['show','474b52d3b173c40ecda346030acd8e7438e79003:docs/releases/KAWVO_G8_BLOCKER_MATRIX.json'],{encoding:'utf8'})).contractClassification,'Historical FAIL results and classification evidence preserved exactly')
 for(const row of matrix.contractClassification)assert.deepEqual(readFileSync(row.file),execFileSync('git',['show',BASE+':'+row.file]),'Never alter any of the twelve failing assertions')
 assert.equal(matrix.contractClassification.filter(r=>r.classification==='incompatibilidad de alcance').length,9);assert.equal(matrix.contractClassification.filter(r=>r.classification==='legado confirmado').length,3)
-console.log('PASS classification provenance: all 12 historical failing scripts unchanged; 9 phase-scope incompatibilities and 3 confirmed legacy expectations; #134 race is a separately reproduced existing defect')
+console.log('PASS classification provenance: all 12 historical failing scripts unchanged; 9 phase-scope incompatibilities and 3 confirmed legacy expectations; historical #134 FAIL preserved, exact correction tested separately')

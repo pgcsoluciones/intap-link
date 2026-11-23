@@ -1,5 +1,5 @@
 {
-  "task": "KAW-G8-001",
+  "task": "KAW-G8-004",
   "candidateBranch": "release/kawvo-g8-unified-candidate",
   "auditedSourceCommit": "fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99",
   "approvedPreviewCodeSource": "f42bccf2b8248b61603090a97ab56c9258400b58",
@@ -41,19 +41,19 @@
     }
   ],
   "runtimeTrees": {
-    "api/src": "b9d4fa77db291a2af2b47645d398643e6651ea28",
+    "api/src": "6662721e02dfe8e45939f5b89856ed0618c6a5ef",
     "app/src": "d60a0c4d3e79fc1b31672c8091a38bae164cc7e3",
     "web/src": "2638b04164c5f195515c0d6e86e6a9311f72ba10",
     "functions": "034acf3d90ea40fe7262b39942d6a6e58c8c4ea1",
     "shared": "e8fe3454f0a7031a3decce4756d50225cb35880a"
   },
   "categories": {
-    "API": 14,
+    "API": 15,
     "App": 33,
-    "QA": 31,
-    "Web": 3,
     "docs": 10,
-    "tests/ops": 26
+    "QA": 31,
+    "tests/ops": 26,
+    "Web": 3
   },
   "changes": [
     {
@@ -73,6 +73,17 @@
       "deleted": "3",
       "gitBlob": "1049dc40719f59b096340d6922a3574495a0a6e7",
       "sha256": "6803a235d3ffb215642548496e9fb790c131f6b455b8691e356923f4b3f58eec"
+    },
+    {
+      "path": "api/src/kawmed-demo-invitations.ts",
+      "category": "API",
+      "status": "M",
+      "added": "9",
+      "deleted": "1",
+      "gitBlob": "32469452c7528b5d7275f4e1073ee8c6c7076231",
+      "sha256": "bde93d5935f0f80307491d28c70a8455f026de817f9d9c9c1d7ffd3026ccb2cf",
+      "referenceCommit": "8bc33c1b62d2c11147ffc192119fac98009cd5b5",
+      "authorizedBy": "KAW-G8-004 / #183"
     },
     {
       "path": "api/src/kawmed-live-guest.ts",
@@ -1146,7 +1157,8 @@
   "issue134": {
     "githubState": "closed",
     "releaseCertification": "PENDING: first acceptance on exact release API",
-    "sourceFileMatchesHistoricalFix": true
+    "sourceFileMatchesHistoricalFix": true,
+    "concurrentRevocation": "PASS local --race on integrated exact #183 source; authenticated first acceptance remains PENDING"
   },
   "rollbackRehearsed": false,
   "remoteBinaryEquality": false,
@@ -2222,11 +2234,12 @@
   },
   "artifactLocations": {
     "codex": "/tmp/kawvo-g8-validation/artifacts/",
-    "mac": "not verified or assumed"
+    "mac": "not verified or assumed",
+    "integratedApiCodex": "/tmp/kawvo-g8-004/"
   },
   "localApiReviewBundles": {
-    "api-production-review.mjs": "21383ceb5efb3bc405c5e6f570e245f2c990b229b99b31d7b602a1a2675edf6d",
-    "api-preview-review.mjs": "b7d5a8f7c510320e1a896d7e4eea9ea19b64154ba397342708337d4a6f640466"
+    "api-preview-review.mjs": "a5a92de48b2035af609b39398c29473dee2fee9fa9226b0b193ec22f8c6c296d",
+    "api-production-review.mjs": "87a63991fcefd96ea78434afdbd20eb7a11b9624efe9da5646a39eea88543677"
   },
   "apiBundleLimitation": "esbuild local review bundles; not a remotely verified deployment package or active Worker backup",
   "blockerInspection": {
@@ -2236,6 +2249,72 @@
     "report": "docs/releases/KAWVO_G8_BLOCKERS_2026-11-23.md",
     "runtimeChanged": false,
     "decision": "NO-GO",
-    "issue134ConcurrentRevocation": "FAIL reproduced locally, handler identical to main; product code untouched"
+    "issue134ConcurrentRevocation": "FAIL reproduced locally, handler identical to main; product code untouched",
+    "scope": "Historical G8-002 only; current matrix follows exact #183 integration and retains original evidence"
+  },
+  "historicalSnapshots": [
+    {
+      "commit": "474b52d3b173c40ecda346030acd8e7438e79003",
+      "preservation": "Immutable Git snapshot; hashes checked by G8 verifier, previous results not relabelled",
+      "files": [
+        {
+          "path": "docs/releases/KAWVO_G8_RELEASE_MANIFEST.json",
+          "gitBlob": "fac6a69f2ec3c14c143f7397365a75e037fd53a6",
+          "sha256": "beec3ca8895594cd11fdb2edaf16cedcdb02c1a115884a48034937f1e715e329"
+        },
+        {
+          "path": "docs/releases/KAWVO_G8_VALIDATION.json",
+          "gitBlob": "32149f9ae7d29ef3654ac375e91ae4874eff702e",
+          "sha256": "77c06562051e9ef281de172f581aa80eb7c5a02c68bbf1f4361bf872f7a01690"
+        },
+        {
+          "path": "docs/releases/KAWVO_G8_BLOCKER_MATRIX.json",
+          "gitBlob": "2f9a741c28efbf5fa6fd9f70bd176469b1effd77",
+          "sha256": "a9d39cd9bb7fd7b8733ef85e19368e78cf4231453ca8bde7119d689d3a31c035"
+        },
+        {
+          "path": "docs/releases/KAWVO_G8_BLOCKERS_2026-11-23.md",
+          "gitBlob": "7929c4435b4e3c2e7ab5b5ef0cc33a7f7f8b5877",
+          "sha256": "4189521ca8f207f6f6905bbff3a0d74a2ed80f87ba71db32775146f39199db7b"
+        },
+        {
+          "path": "docs/releases/KAWVO_G8_AUDIT_2026-11-23.md",
+          "gitBlob": "e5e5d61cb41a029f542c6e52490e9aed91722ae4",
+          "sha256": "4fe49ea8f561273bcf97a07c36d7d9bf63382a23a524ec44617c3efc955d7d4e"
+        },
+        {
+          "path": "docs/releases/KAWVO_G8_RELEASE_RUNBOOK_2026-11-23.md",
+          "gitBlob": "4a7cb7ae46d46f6b9aa447d92cf44a66b00fcf5d",
+          "sha256": "ed3051888b615ad5d0a2331c7732ae331503164a83cb7de1e752464455b44cb0"
+        },
+        {
+          "path": "docs/releases/KAWVO_G8_DIFF_MAIN.tsv",
+          "gitBlob": "1b202cd28e1400f8657f62fd20f08aa4a54539bd",
+          "sha256": "a5b833350e6aca282ec697572394dafd73aa5a9dc77bcc168e333f9992f65653"
+        }
+      ]
+    }
+  ],
+  "integration": {
+    "task": "KAW-G8-004",
+    "snapshot": "474b52d3b173c40ecda346030acd8e7438e79003",
+    "correctiveCommit": "8bc33c1b62d2c11147ffc192119fac98009cd5b5",
+    "method": "git merge --ff-only 8bc33c1b; original corrective commit retained once, no cherry-pick or squash",
+    "authorizedRuntimeDelta": [
+      {
+        "path": "api/src/kawmed-demo-invitations.ts",
+        "beforeBlob": "7ee75d493f21b7402f9abf0e019ed14f99b33353",
+        "afterBlob": "32469452c7528b5d7275f4e1073ee8c6c7076231",
+        "sha256": "bde93d5935f0f80307491d28c70a8455f026de817f9d9c9c1d7ffd3026ccb2cf"
+      }
+    ],
+    "runtimeSource": "fae4ced6 plus exact #183 handler; all other runtime frozen",
+    "report": "docs/releases/KAWVO_G8_004_INTEGRATION_2026-11-23.md",
+    "productionApproval": false,
+    "localApiBundleSource": "8bc33c1b62d2c11147ffc192119fac98009cd5b5"
+  },
+  "localArtifactEvidenceScope": {
+    "appWebFunctions": "Preserved hashes from historical G8-001; their sources are unchanged",
+    "api": "Rebuilt locally for integrated exact #183 source; not active Worker backup"
   }
 }

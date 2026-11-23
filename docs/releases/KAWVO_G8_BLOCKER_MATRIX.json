@@ -1,5 +1,5 @@
 {
-  "task": "KAW-G8-002",
+  "task": "KAW-G8-004",
   "auditedBase": "836d422cc76ba5c96ef9cdfd5f7efe11b8d5d438",
   "decision": "NO-GO",
   "independence": "Critical source review by the same assistant; not a separate human approval",
@@ -151,7 +151,7 @@
     {
       "gate": "G3/G4/G5 unified activation policy",
       "status": "BLOCKED",
-      "evidence": "Five original pure gate functions pass Preview fixtures and return false for Production; runtime unchanged",
+      "evidence": "Existing Preview/Production gates unchanged; only API activate handler differs as exact #183 correction",
       "next": "Technical decision for production activation; no guards removed"
     },
     {
@@ -198,9 +198,9 @@
     },
     {
       "gate": "#134 concurrent revocation acknowledgement",
-      "status": "FAIL",
-      "evidence": "Local actual handler reproducibly returns 200 after zero-row activation; editing remains denied; handler blob same as main",
-      "next": "Separate minimal product correction after technical review; preserve all auth/grant/profile/expiry checks; rerun focal tests and real controlled first acceptance"
+      "status": "PASS",
+      "evidence": "Exact #183 integrated; local handlers/SQLite --race PASS, original failure preserved at 474b52d3",
+      "next": "Independent review and controlled authenticated first acceptance; not a remote certification"
     },
     {
       "gate": "#134 authenticated new LIVE invitation",
@@ -240,6 +240,92 @@
     }
   ],
   "issue134ConcurrentRevocation": {
+    "status": "PASS",
+    "correction": "8bc33c1b62d2c11147ffc192119fac98009cd5b5",
+    "scope": "Exact #183 handler integrated, no further product edits",
+    "authenticatedQA": "BLOCKED: first acceptance not executed remotely",
+    "previousStatus": "FAIL preserved at 474b52d3b173c40ecda346030acd8e7438e79003",
+    "evidence": "Integrated --race: zero updated rows -> 403; revoked/expired/changed identity revalidated; normal and concurrent authorized acceptance preserved",
+    "remoteReproduction": false
+  },
+  "validation": {
+    "toolchain": "Node 20.20.2; existing tools only",
+    "tests": [
+      {
+        "command": "node scripts/test-kawmed-live-pending-g8.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/live-normal.log",
+        "sha256": "3ca4492427e60c4edc9ebb6495b0b86dc69ddf10227213f8953026b98cc09ba7",
+        "bytes": 612
+      },
+      {
+        "command": "node scripts/test-kawmed-live-pending-g8.mjs --race",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/live-race.log",
+        "sha256": "38f5c9725dae9dcb8cc56e3ff7f0d5128c09cbf6e18473ea32bda64175c98c66",
+        "bytes": 1647
+      },
+      {
+        "command": "seven original Kawmed/identity contracts (exact list in integration report)",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-contracts.log",
+        "sha256": "4db77319df4c9d5ec4f8391ce82932b8f3d9b4e62c31a97db0f98c123a10aa8d",
+        "bytes": 545
+      },
+      {
+        "command": "node_modules/.bin/tsc --noEmit -p api/tsconfig.json",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-typescript.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "command": "esbuild api/src/preview-frontdoor-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:*",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-preview-build.log",
+        "sha256": "d4a2ad415e4f1dadf492c87d547a9bd949c2494ca8cbf136f5b1d0aa3165e354",
+        "bytes": 82
+      },
+      {
+        "command": "esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:*",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-production-build.log",
+        "sha256": "7c44ad909d3e764a3fd325b8d611996bfd5f6a3992bbf74a36e062872cddd51a",
+        "bytes": 85
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-release-contract.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/g8-release-contract.log",
+        "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+        "bytes": 608
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-readonly.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/g8-readonly.log",
+        "sha256": "920c786410319f10b8779360b1b4e9ad5d9ef8248ae2a00276af930c09f87096",
+        "bytes": 1221
+      }
+    ],
+    "remoteD1QueriesExecutedByCodex": 0,
+    "remoteProductWritesExecutedByCodex": 0,
+    "ci": "Exact integrated SHA outcome recorded in PR #182; no previous SHA CI reused",
+    "gitDiffCheck": "PASS",
+    "originalTwelveFailures": "Retained at original SHA; no historical failure relabelled",
+    "productRuntimeDelta": "Only exact LIVE activate handler from #183"
+  },
+  "integrationReference": "8bc33c1b62d2c11147ffc192119fac98009cd5b5",
+  "historicalSnapshot": "474b52d3b173c40ecda346030acd8e7438e79003",
+  "historicalIssue134ConcurrentRevocation": {
     "status": "FAIL",
     "reproduction": "Original activate handler with SQLite fixture: grant revoked between SELECT and UPDATE; meta.changes=0, HTTP 200; subsequent editing rejected",
     "source": "api/src/kawmed-demo-invitations.ts:105-112",
@@ -248,7 +334,7 @@
     "proposedChangeOnly": "Check conditional UPDATE meta.changes and revalidate the same authorized active grant before success; no implementation in this audit",
     "remoteReproduction": false
   },
-  "validation": {
+  "historicalValidation": {
     "toolchain": "Node 20.20.2; existing esbuild/SQLite/Python; no tools installed",
     "productRuntimeChanges": false,
     "tests": [
@@ -312,5 +398,81 @@
       "gitDiffCheck": "PASS",
       "productRuntimeFreezeVsAuditedBase": "PASS"
     }
-  }
+  },
+  "phaseIntegration": [
+    {
+      "phase": "G0",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G1",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G2",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G3.1",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G3.2",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G3.3",
+      "status": "PASS",
+      "scope": "Only #183 correction added; first-acceptance authenticated release QA remains BLOCKED"
+    },
+    {
+      "phase": "G3.4",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G3.5",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G4",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G5",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G6",
+      "status": "BLOCKED",
+      "scope": "Postponed; paid legacy retained, no new shell",
+      "postponed": true,
+      "exclusionVerified": "PASS; no functional approval implied"
+    },
+    {
+      "phase": "G7.1",
+      "status": "PASS",
+      "scope": "Exact approved runtime retained; no new functional approval"
+    },
+    {
+      "phase": "G7.2",
+      "status": "BLOCKED",
+      "scope": "Postponed; no generic commercial pagination/Stage routes",
+      "postponed": true,
+      "exclusionVerified": "PASS; no functional approval implied"
+    },
+    {
+      "phase": "G8",
+      "status": "BLOCKED",
+      "scope": "NO-GO pending remote gates and exact SHA/plan authorization"
+    }
+  ]
 }

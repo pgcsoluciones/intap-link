@@ -1,4 +1,10 @@
-# KAW-G8-001 — Candidato integral y auditoría de preparación
+# KAW-G8 — Auditoría acumulativa y candidato integrado
+
+**Estado vigente KAW-G8-004: NO-GO.** Se integra por fast-forward el commit exacto #183 `8bc33c1b62d2c11147ffc192119fac98009cd5b5` sobre `474b52d3…`; se conserva una sola instancia del commit. El único delta funcional es el handler LIVE autorizado. Resto de API, App, Web, Functions, permisos, configuración y fases aprobadas intactos. [Informe/matriz de integración vigente](KAWVO_G8_004_INTEGRATION_2026-11-23.md), [manifiesto reconciliado](KAWVO_G8_RELEASE_MANIFEST.json) y [matriz de gates](KAWVO_G8_BLOCKER_MATRIX.json). La carrera se revalida localmente; primera aceptación LIVE autenticada y demás gates remotos siguen pendientes.
+
+## Snapshot histórico G8-001 (evidencia y aprobaciones conservadas)
+
+El contenido G8-001/G8-002 siguiente describe sus SHA originales, no pretende que la API integrada siga idéntica a #179. Los documentos originales completos permanecen en Git en `474b52d3…`, con blobs y SHA256 en `historicalSnapshots` del manifiesto. Los resultados históricos FAIL no se reclasifican como PASS por la integración.
 
 **Decisión: NO-GO para Producción.** El candidato integral está preparado para revisión, preserva el runtime aprobado y excluye G6/G7.2. No se ejecutaron deploys, activaciones, migraciones remotas ni merges. Las aceptaciones G3–G5 y la búsqueda G7.1 del propietario se conservan; G8 no concede otras aprobaciones.
 

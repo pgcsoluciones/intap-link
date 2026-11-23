@@ -1,5 +1,7 @@
 # KAW-G8-002 — Evidencia y cierre parcial de bloqueantes
 
+**Nota de continuidad G8-004:** este informe conserva la auditoría y el FAIL de su SHA original. El correctivo #183 se integra posteriormente; el [informe vigente de integración](KAWVO_G8_004_INTEGRATION_2026-11-23.md) y la matriz registran la nueva validación local. No se altera retroactivamente la evidencia de HTTP 200/cero filas ni se declara cerrada la QA LIVE remota. Copia original verificable en Git `474b52d3…` según el manifiesto.
+
 **NO-GO mantenido.** Base obligatoria `836d422cc76ba5c96ef9cdfd5f7efe11b8d5d438`, Draft [#182](https://github.com/pgcsoluciones/intap-link/pull/182), rama `release/kawvo-g8-unified-candidate`. HEAD local/remoto de partida y árbol limpio verificados; main observado `6e6bfbb1bd60c91a94e92d36f6cfdd9f91e3d9e2`. No se modifica lógica del producto, fases aprobadas, guards, permisos, dependencias, configuración ni workflows.
 
 Revisión crítica de fuentes sobre SHA congelado por el mismo agente que preparó G8-001; no es una segunda aprobación humana independiente. Las aprobaciones G3–G5/G7.1 se conservan. G6/G7.2 siguen postergados. Este informe complementa la [auditoría G8-001](KAWVO_G8_AUDIT_2026-11-23.md), el [runbook](KAWVO_G8_RELEASE_RUNBOOK_2026-11-23.md) y el contrato G8; no los sustituye.

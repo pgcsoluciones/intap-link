@@ -4,7 +4,7 @@ Estado: **NO-GO para Producción**. Preparación, no autorización. No se ejecut
 
 ## 1. Identidades y paquete
 
-- Rama: `release/kawvo-g8-unified-candidate`; SHA final en el Draft PR, no el HEAD futuro de otra rama. Fuente auditada `fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99`; runtime App igual a `f42bccf2b8248b61603090a97ab56c9258400b58`, API igual a #179 `e9b1aa11189fe43e928ba26802e2f5f34fd5baa4`.
+- Rama: `release/kawvo-g8-unified-candidate`; SHA final en el Draft PR, no el HEAD futuro de otra rama. Fuente auditada `fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99`; runtime App igual a `f42bccf2b8248b61603090a97ab56c9258400b58`. API igual a #179 **salvo el handler LIVE exacto de #183** `8bc33c1b62d2c11147ffc192119fac98009cd5b5`, integrado por fast-forward bajo KAW-G8-004. Manifiesto/API bundles reconciliados; el snapshot `474b52d3…` y artefactos previos permanecen referenciados, no son paquetes del nuevo Worker.
 - El manifiesto versionado identifica árboles Git, blobs y SHA256 del delta. `KAWVO_G8_VALIDATION.json` recoge resultados y hashes locales de artefactos. El SHA del commit que contiene el manifiesto se registra externamente en el PR para evitar una autorreferencia imposible.
 - Cada build se prepara en un checkout/directorio aislado del SHA exacto, Node 20.20.2 y lockfile congelado. No instalar/actualizar dependencias por rutina. Guardar `app/dist`, `web/dist`, `_headers`, `_redirects`, `_routes.json` si existe, Functions fuente y compiladas, rutas Functions, shared, contexto, lockfile y manifiestos. App y Web se conservan en carpetas separadas. No recompilar después de validar Stage.
 - Los artefactos locales Codex están en `/tmp/kawvo-g8-validation/artifacts/` y son evidencia técnica; no son respaldos remotos de Producción ni están acreditados como disponibles en la Mac. El runbook no exige transportar esos archivos: preparar el paquete desde Git mediante el método habitual cuando se autorice.
@@ -21,6 +21,12 @@ Estado: **NO-GO para Producción**. Preparación, no autorización. No se ejecut
 | Aprobación final | Propietario aprueba SHA exacto, alcance por capa, plan y secuencia | NO concedida |
 
 No reabrir las aceptaciones funcionales G3–G5 ni la búsqueda G7.1 de Juan. La QA adicional se limita a diferencias del release, primera aceptación LIVE pendiente, activación productiva futura y comprobaciones cruzadas no acreditadas.
+
+### Integración controlada G8-004
+
+El correctivo #183 no se despliega por integrarse en Git. Ejecutar sobre el SHA integrado `node scripts/test-kawmed-live-pending-g8.mjs --race`, la suite normal y los verificadores G8; comprobar CI de ese mismo SHA. El inspector sólo admite el blob exacto autorizado como excepción a la congelación: modificar cualquier otro runtime o el handler nuevamente lo bloquea. La carrera histórica HTTP 200/cero filas queda conservada como evidencia anterior; sólo su prueba local puede cerrarse aquí, no la certificación LIVE remota.
+
+Rollback de **preparación Git**, si se decide: retirar el correctivo como commit independiente y reconciliar el manifiesto de vuelta al snapshot; no usar reset/force push, no restaurar D1 ni credenciales. Reintroduciría el defecto. Ningún revert preventivo o rollback remoto está autorizado ni ensayado. Para un futuro Worker autorizado se requiere el respaldo/versiones activos reales: no usar el bundle local ni TOML histórico como copia del Worker anterior.
 
 ### Esquema y propuesta concreta
 
@@ -69,9 +75,9 @@ No se entregan comandos de despliegue productivo listos para ejecutar mientras p
 
 El rollback del Preview de búsqueda tiene asociación documental `9c63a559…` → `ebf507f7…`; el snapshot original adicional conserva `23405a5b…`. Esos IDs no son un rollback productivo acreditado ni se debe sustituir uno por otro sin leer su contexto efectivo. **Rollback remoto NO ensayado; igualdad binaria histórica NO acreditada.** Retención de versiones y disponibilidad de Functions/backups deben verificarse antes de cada release.
 
-Rollback del cambio G8 de preparación: cerrar el Draft o revertir únicamente sus commits documentales/de pruebas/gobernanza. El runtime aprobado queda igual a la referencia G8; no hay datos ni migraciones remotas que revertir en esta tarea.
+Rollback de la preparación documental G8-001/002: revertir únicamente esos cambios de documentos/pruebas/gobernanza no altera el runtime. La incorporación funcional G8-004 necesita la decisión de revertir específicamente #183 y reconciliar manifiestos, como se indica arriba; reintroduciría el defecto de acuse. No hay datos ni migraciones remotas que revertir por esta integración Git.
 
 
 ## Inspección posterior KAW-G8-002
 
-Antes de cualquier gate de escritura, usar únicamente el [inspector de lectura y matriz](KAWVO_G8_BLOCKERS_2026-11-23.md). La prueba local estable #134 no cierra el defecto de acuse bajo revocación concurrente ni acredita aceptación autenticada; ese FAIL requiere revisión puntual antes de un futuro release API. Los scripts de inspección no implementan deploy, activación, restore ni migración. No usar los modos de scripts históricos para solucionar un BLOCKED de lectura.
+Antes de cualquier gate de escritura, usar únicamente el [inspector de lectura y matriz](KAWVO_G8_BLOCKERS_2026-11-23.md). En G8-002 la prueba estable #134 no cerraba el defecto de acuse; ese FAIL histórico se conserva. G8-004 integra #183 y vuelve a ejecutar la carrera, sin acreditar por ello aceptación autenticada. Los scripts de inspección no implementan deploy, activación, restore ni migración. No usar los modos de scripts históricos para solucionar un BLOCKED de lectura.

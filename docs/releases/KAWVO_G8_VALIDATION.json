@@ -931,5 +931,107 @@
     "initialIntegral": "FAIL: four trailing whitespace hard breaks inherited in G8 contract header",
     "correction": "Only Markdown hard breaks become blank lines; normative text assertion added",
     "finalIntegral": "PASS"
+  },
+  "evidenceScope": "Original G8-001 fields above are historical results for their testedSourceReference; not full API equivalence after #183. Current integration results are exclusively in integrationValidation; original data preserved.",
+  "currentTask": "KAW-G8-004",
+  "integrationValidation": {
+    "task": "KAW-G8-004",
+    "sourceSnapshot": "474b52d3b173c40ecda346030acd8e7438e79003",
+    "correctiveCommit": "8bc33c1b62d2c11147ffc192119fac98009cd5b5",
+    "finalCandidateSHA": "Exact commit containing this manifest is recorded in Draft PR #182 (no self-reference)",
+    "historicalValidation": {
+      "commit": "474b52d3b173c40ecda346030acd8e7438e79003",
+      "path": "docs/releases/KAWVO_G8_VALIDATION.json",
+      "sha256": "77c06562051e9ef281de172f581aa80eb7c5a02c68bbf1f4361bf872f7a01690"
+    },
+    "preservedEvidence": {
+      "browserGroups": 138,
+      "source": "G8-001 snapshot; App/Web/Functions and tested guards unchanged; fixtures only",
+      "contracts": "Original 16 PASS / 12 FAIL retained; 12 classifications unchanged, not relabelled"
+    },
+    "currentTests": [
+      {
+        "command": "node scripts/test-kawmed-live-pending-g8.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/live-normal.log",
+        "sha256": "3ca4492427e60c4edc9ebb6495b0b86dc69ddf10227213f8953026b98cc09ba7",
+        "bytes": 612
+      },
+      {
+        "command": "node scripts/test-kawmed-live-pending-g8.mjs --race",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/live-race.log",
+        "sha256": "38f5c9725dae9dcb8cc56e3ff7f0d5128c09cbf6e18473ea32bda64175c98c66",
+        "bytes": 1647
+      },
+      {
+        "command": "seven original Kawmed/identity contracts (exact list in integration report)",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-contracts.log",
+        "sha256": "4db77319df4c9d5ec4f8391ce82932b8f3d9b4e62c31a97db0f98c123a10aa8d",
+        "bytes": 545
+      },
+      {
+        "command": "node_modules/.bin/tsc --noEmit -p api/tsconfig.json",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-typescript.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "command": "esbuild api/src/preview-frontdoor-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:*",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-preview-build.log",
+        "sha256": "d4a2ad415e4f1dadf492c87d547a9bd949c2494ca8cbf136f5b1d0aa3165e354",
+        "bytes": 82
+      },
+      {
+        "command": "esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:*",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/api-production-build.log",
+        "sha256": "7c44ad909d3e764a3fd325b8d611996bfd5f6a3992bbf74a36e062872cddd51a",
+        "bytes": 85
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-release-contract.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/g8-release-contract.log",
+        "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+        "bytes": 608
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-readonly.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-004/g8-readonly.log",
+        "sha256": "920c786410319f10b8779360b1b4e9ad5d9ef8248ae2a00276af930c09f87096",
+        "bytes": 1221
+      }
+    ],
+    "ci": {
+      "policy": "Exact integrated SHA workflow result recorded in #182; if not triggered BLOCKED"
+    },
+    "decision": "NO-GO for Production",
+    "productionApproval": false,
+    "noDeploy": true,
+    "noMergeToMain": true,
+    "noRemoteMigration": true,
+    "authenticatedQAExecuted": 0,
+    "remoteMutationsExecuted": 0,
+    "runtimeApiTree": "6662721e02dfe8e45939f5b89856ed0618c6a5ef",
+    "toolchain": {
+      "node": "20.20.2",
+      "toolsInstalled": false
+    },
+    "scope": "Local handlers/SQLite fixtures; API runtime byte-exact #183; no remote QA or Cloudflare requests",
+    "gitDiffCheck": "PASS",
+    "phasePreservation": "All approved runtime unchanged except exact authorized LIVE activate handler"
   }
 }
