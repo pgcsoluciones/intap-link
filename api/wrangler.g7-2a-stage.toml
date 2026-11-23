@@ -1,0 +1,14 @@
+# G7.2-A isolated QA Stage. NO routes, NO cron, NO frontdoor, NO R2, NO production.
+# Never use this config to deploy intap-api-preview or intap-api.
+name = "kawvo-g7-2a-readonly-stage"
+main = "src/g7-2a-stage-entry.ts"
+compatibility_date = "2024-02-08"
+workers_dev = true
+
+[vars]
+ENVIRONMENT = "preview"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "intap_db_preview"
+database_id = "e9f46214-623f-48da-af13-74198e12b222"
