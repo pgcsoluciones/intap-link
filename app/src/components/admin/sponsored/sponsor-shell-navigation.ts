@@ -1,10 +1,11 @@
+import {isKawvoReleaseAppHost} from '../kawvo-release-host'
 import {sponsoredSurface,type SponsoredSurface,type SponsoredModule,type SponsoredAgendaSection} from './sponsored-shell-gate'
 export type SponsorTab='home'|'profile'|'sponsorship'|'more'
 export type SponsorSurface={inventory?:boolean;cursor?:string;tab:SponsorTab;view:'devices'|'assignments';tool?:'brand'|'credentials'|'agenda';module?:SponsoredModule;section?:SponsoredAgendaSection;request?:string;profileQuery:string;query:string;status:string;assignment:string;page:number}
 export type SponsorPresentationHost={sponsorId:string;surface:SponsoredSurface;onNavigate:(surface:Partial<SponsoredSurface>)=>void;onReady:(id:string,agenda:boolean)=>void}
 export const SPONSOR_TABS=[{id:'home',label:'Inicio',icon:'⌂'},{id:'profile',label:'Mi presentación',icon:'◉'},{id:'sponsorship',label:'Patrocinios',icon:'▤'},{id:'more',label:'Más',icon:'☷'}] as const
 const id=(v:string)=>/^[a-zA-Z0-9_-]{1,160}$/.test(v)
-export function isSponsorShellHost(mode:string,hostname:string){return mode==='preview'&&hostname==='app.preview.intaprd.com'}
+export function isSponsorShellHost(mode:string,hostname:string){return isKawvoReleaseAppHost(mode,hostname)}
 export function isSponsorShellRequest(mode:string,hostname:string,search:string){const p=new URLSearchParams(search);return isSponsorShellHost(mode,hostname)&&p.get('legacy')!=='1'&&p.get('kawvo_sponsor_shell')!=='0'&&!p.has('scope')}
 export function canUseSponsorShell({mode,hostname,search,tenant,active}:{mode:string;hostname:string;search:string;tenant:any;active:any}){
  const expected=new URLSearchParams(search).get('sm_sponsor')||new URLSearchParams(search).get('sponsor_id')||''
