@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 import { commercialPage } from './sponsor-commercial-pages'
+import { renderCommercialQaPage } from './g7-2a-qa-view'
 
 const app=new Hono<{Bindings:{ENVIRONMENT:string}}>()
 async function digest(input:string){
@@ -34,5 +35,11 @@ for(const resource of ['sellers','assignments'] as const){
   return commercialPage(c,resource,authorized)
  })
 }
+// New, narrowly routed first-party QA path. No mutation or session material in HTML.
+app.get('/admin/sponsor/g7-2-qa',c=>{
+ const url=new URL(c.req.url)
+ if(c.env.ENVIRONMENT!=='preview'||url.hostname!=='app.preview.intaprd.com')return c.json({ok:false,error:'Not found'},404)
+ return renderCommercialQaPage()
+})
 app.all('*',c=>c.json({ok:false,error:'Not found'},404))
 export default app
