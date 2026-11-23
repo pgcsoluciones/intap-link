@@ -1,0 +1,27 @@
+name: Kawvo G8 — 10021 offline Worker startup (never deploy)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/qa-kawvo-g8-10021-startup-offline.sh
+      - .github/workflows/kawvo-g8-10021-offline-startup.yml
+permissions:
+  contents: read
+jobs:
+  offline-startup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+      - run: npm ci
+      - name: Validate the G8 Worker's initial execution in local workerd
+        run: bash scripts/qa-kawvo-g8-10021-startup-offline.sh
