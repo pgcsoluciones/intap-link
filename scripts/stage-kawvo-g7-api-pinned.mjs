@@ -1,7 +1,7 @@
-// Default prepares locally; --check-auth reads only; --stage uploads a version, never traffic.
+// Default prepares API locally; explicit --stage / --stage-app are separate uploads, never traffic.
 import {execFileSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
-import {existsSync,mkdirSync,readFileSync,writeFileSync,symlinkSync} from 'node:fs'
+import {existsSync,mkdirSync,readFileSync,writeFileSync,symlinkSync,readdirSync,lstatSync} from 'node:fs'
 import {homedir} from 'node:os'
 import {dirname,join,resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
@@ -11,6 +11,8 @@ export const ACTIVE='23405a5b-e9ca-4247-843d-28cc4f236eaa'
 export const WORKER='intap-api-preview'
 export const SNAPSHOT=join(homedir(),'intap-release-logs/g7-pinned-read-ofwQf8Wa/active-version.private.json')
 export const CREATE='/workers/workers/'+WORKER+'/versions?deploy=false'
+export const API_STAGE='ebf507f7-325f-44c1-9849-2f93ae8ded0d'
+export const APP_STAGE_BRANCH='qa-kawvo-g7-1-'+CANDIDATE.slice(0,12)
 const runtime=['compatibility_date','compatibility_flags','limits','placement','cache_options','usage_model','exports']
 const sha=x=>createHash('sha256').update(x).digest('hex')
 const canonical=x=>JSON.stringify(sort(x))
@@ -88,9 +90,84 @@ export async function uploadStage({directory,version,modules,client,fetch:reques
  const receipt={result:'PASS',operation:'Stage API only; not activated',candidate:CANDIDATE,version:id,inheritFrom:ACTIVE,bindings:35,modules:modules.map(m=>({name:m.name,sha256:sha(Buffer.from(m.content_base64,'base64'))})),trafficUnchanged:true,binaryEqualityWithDocumentedSource:false,remoteRollbackRehearsed:false}
  save(join(directory,'stage-pass.json'),receipt);return receipt
 }
+async function reader(folder){
+ const utility=join(folder,'kawmed-g3-1-pages.mjs'),bytes=readFileSync(utility)
+ checked(createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex')==='bc33561fbcd906172502bc558df427d952ea6fab','lector #171 difiere del helper verificado')
+ return import(pathToFileURL(utility).href)
+}
+export function appContext(source){
+ const files={}
+ function walk(name){const path=join(source,name),stat=lstatSync(path);checked(!stat.isSymbolicLink(),'symlink en contexto Functions');if(stat.isDirectory())for(const child of readdirSync(path).sort())walk(name+'/'+child);else{checked(stat.isFile(),'archivo especial en contexto Functions');files[name]=sha(readFileSync(path))}}
+ for(const name of ['functions','shared','package.json','package-lock.json','app/package.json'])walk(name)
+ for(const name of ['wrangler.toml','wrangler.json','wrangler.jsonc'])checked(!existsSync(join(source,name)),'configuración raíz inesperada; no publicar Pages')
+ return files
+}
+export async function publishAppStage({directory,source,client,manifest,owner}){
+ checked(!existsSync(join(directory,'stage-attempt.json')),'existe intento Stage App; conservar evidencia y no repetir')
+ const prepared=read(join(directory,'prepared.json')),dist=join(source,'app/dist')
+ checked(prepared.candidate===CANDIDATE&&canonical(manifest(dist))===canonical(prepared.files),'artefacto App cambió')
+ checked(canonical(appContext(source))===canonical(prepared.context),'contexto Functions/lockfile cambió')
+ checked(sha(readFileSync(join(directory,'app-functions.bundle')))===prepared.functionsSha256&&sha(readFileSync(join(directory,'app-functions-routes.json')))===prepared.routesSha256,'bundle/contexto local de Functions cambió')
+ checked(!existsSync(join(directory,'before'))&&!existsSync(join(directory,'after')),'existe preflight App anterior; conservar evidencia y revisar antes de continuar')
+ const before=await client.snapshot(join(directory,'before'))
+ checked(before.workers['intap-api-preview'].version===ACTIVE,'Worker activo cambió; detener Stage App')
+ checked(before.productionBranches.app!==APP_STAGE_BRANCH&&before.appPreview.deployment.branch!==APP_STAGE_BRANCH,'Stage colisiona con Producción/Preview activo')
+ checked(!before.appPreview.deployment.aliases.includes('https://'+APP_STAGE_BRANCH+'.intap-web2.pages.dev'),'alias Stage colisiona con Preview activo')
+ save(join(directory,'stage-attempt.json'),{candidate:CANDIDATE,branch:APP_STAGE_BRANCH,operation:'Stage App only',startedAt:new Date().toISOString()})
+ let deployment,failure
+ try{
+  const log=join(directory,'deploy.private.log')
+  // The source root retains functions/, lockfile and the exact candidate context.
+  const output=client.command(client.wrangler,['pages','deploy','app/dist','--project-name','intap-web2','--branch',APP_STAGE_BRANCH,'--commit-hash',CANDIDATE,'--commit-dirty=false'],source,log)
+  checked(output.includes('Uploading Functions bundle'),'Wrangler no acredita envío de Functions; NO repetir upload')
+  const urls=[...new Set(output.match(/https:\/\/[a-f0-9]{8,}\.intap-web2\.pages\.dev/g)||[])]
+  checked(urls.length===1,'URL Stage App ambigua; NO repetir upload')
+  deployment=await client.retry(async()=>{
+   const d=owner(await client.resolveOrigin(urls[0],'intap-web2'),'intap-web2',{environment:'preview',branch:APP_STAGE_BRANCH,commit:CANDIDATE})
+   const aliases=d.aliases.filter(url=>url!==d.url&&/^https:\/\/[a-z0-9-]+\.intap-web2\.pages\.dev$/.test(url))
+   checked(aliases.length===1&&aliases[0]!==before.appPreview.alias,'alias Stage ambiguo o activo; detener')
+   await client.compareArtifact(dist,d.url);await client.compareArtifact(dist,aliases[0])
+   return {...d,alias:aliases[0]}
+  })
+ }catch(error){failure=error}
+ // Verify protected surfaces even after a failed/ambiguous upload; never retry POST.
+ try{client.assertSame(before,await client.snapshot(join(directory,'after')))}catch(error){failure=failure||error}
+ if(failure)throw failure
+ checked(canonical(manifest(dist))===canonical(prepared.files),'artefacto App cambió durante Stage')
+ const receipt={result:'PASS',operation:'Stage App only; shared Preview unchanged',candidate:CANDIDATE,apiStage:API_STAGE,branch:APP_STAGE_BRANCH,deployment,files:prepared.files,functionsSha256:prepared.functionsSha256,functionsSourceTree:prepared.functionsSourceTree,functionsRemoteBinaryEquality:false,protectedSurfacesUnchanged:true,authenticatedQA:'PENDING on exact App Preview host',binaryEqualityWithDocumentedSource:false,remoteRollbackRehearsed:false}
+ save(join(directory,'stage-pass.json'),receipt);return receipt
+}
+export async function stageApp({root=process.cwd(),snapshot=SNAPSHOT}={}){
+ root=resolve(root);const folder=dirname(resolve(snapshot)),directory=join(folder,'stage-app-'+CANDIDATE.slice(0,12)),source=join(directory,'source')
+ const api=read(join(folder,'stage-api-'+CANDIDATE.slice(0,12),'stage-pass.json'))
+ checked(api.result==='PASS'&&api.candidate===CANDIDATE&&api.version===API_STAGE&&api.inheritFrom===ACTIVE&&api.bindings===35&&api.trafficUnchanged===true,'recibo Stage API no coincide; no repetir API')
+ const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim()
+ const clean=()=>checked(git('status','--porcelain')==='','checkout con cambios ajenos; no se modifica')
+ clean();checked(git('rev-parse',CANDIDATE+'^{commit}')===CANDIDATE,'falta candidato exacto')
+ git('merge-base','--is-ancestor','b97a2f01672eaa14df04f74aa6ad882f9b4cd256',CANDIDATE)
+ git('diff','--exit-code','HEAD',CANDIDATE,'--','package.json','package-lock.json','app/package.json')
+ const originalHead=git('rev-parse','HEAD'),{Runner,manifest,owner}=await reader(folder),client=new Runner({root})
+ const prepared=join(directory,'prepared.json')
+ checked(!existsSync(join(directory,'stage-attempt.json')),'existe intento Stage App; no repetir')
+ if(existsSync(directory))checked(existsSync(prepared),'preparación App incompleta; conservar evidencia y detener')
+ else{
+  mkdirSync(directory,{mode:0o700});mkdirSync(source,{mode:0o700})
+  execFileSync('tar',['-x','-C',source],{input:execFileSync('git',['archive',CANDIDATE],{cwd:root,maxBuffer:128*1024*1024}),stdio:['pipe','pipe','pipe']})
+  for(const rel of ['node_modules','app/node_modules'])if(existsSync(join(root,rel)))symlinkSync(join(root,rel),join(source,rel),'dir')
+  client.command('npm',['run','app:build:preview'],source,join(directory,'app-build.private.log'))
+  client.command(client.wrangler,['pages','functions','build','functions','--outfile',join(directory,'app-functions.bundle'),'--output-routes-path',join(directory,'app-functions-routes.json'),'--build-output-directory','app/dist'],source,join(directory,'functions-build.private.log'))
+  save(prepared,{candidate:CANDIDATE,files:manifest(join(source,'app/dist')),context:appContext(source),functionsSourceTree:git('rev-parse',CANDIDATE+':functions'),functionsSha256:sha(readFileSync(join(directory,'app-functions.bundle'))),routesSha256:sha(readFileSync(join(directory,'app-functions-routes.json')))})
+ }
+ authenticate(client)
+ const receipt=await publishAppStage({directory,source,client,manifest,owner})
+ clean();checked(git('rev-parse','HEAD')===originalHead,'checkout original cambió')
+ console.log(JSON.stringify({result:receipt.result,candidate:CANDIDATE,url:receipt.deployment.url,alias:receipt.deployment.alias,sharedPreviewUnchanged:true,evidence:directory},null,2))
+ return receipt
+}
 export async function main(args=process.argv.slice(2),{root=process.cwd(),snapshot=SNAPSHOT}={}){
  process.umask(0o077)
  checked(process.version==='v20.20.2','se requiere Node 20.20.2 existente')
+ if(args.length===1&&args[0]==='--stage-app')return stageApp({root,snapshot})
  checked(args.length<=1&&args.every(x=>['--stage','--check-auth'].includes(x)),'usar --check-auth o --stage por separado; por defecto prepara localmente')
  root=resolve(root);snapshot=resolve(snapshot)
  const folder=dirname(snapshot),version=read(snapshot),directory=join(folder,'stage-api-'+CANDIDATE.slice(0,12))
@@ -120,9 +197,7 @@ export async function main(args=process.argv.slice(2),{root=process.cwd(),snapsh
  }
  const modules=read(bundle);saveIfMissing(join(directory,'payload.private.json'),payload(version,modules))
  if(!args.length){console.log('PASS preparación local; sin HTTP. Evidencia privada: '+directory);return}
- const utility=join(folder,'kawmed-g3-1-pages.mjs'),utilityBytes=readFileSync(utility)
- checked(createHash('sha1').update('blob '+utilityBytes.length+'\0').update(utilityBytes).digest('hex')==='bc33561fbcd906172502bc558df427d952ea6fab','lector #171 difiere del helper verificado')
- const {Runner}=await import(pathToFileURL(utility).href),client=new Runner({root}),auth=authenticate(client)
+ const {Runner}=await reader(folder),client=new Runner({root}),auth=authenticate(client)
  if(args.includes('--check-auth')){
   await authenticationPreflight(client)
   const receipt={result:'PASS',operation:'authentication read only; no upload',candidate:CANDIDATE,active:ACTIVE,...auth,packageReused:true,preparedSha256:sha(readFileSync(prepared)),bundleSha256:sha(readFileSync(bundle)),checkedAt:new Date().toISOString()}
@@ -131,4 +206,4 @@ export async function main(args=process.argv.slice(2),{root=process.cwd(),snapsh
  const receipt=await uploadStage({directory,version,modules,client});console.log(JSON.stringify({...receipt,evidence:directory},null,2))
 }
 function saveIfMissing(file,value){if(existsSync(file))checked(canonical(read(file))===canonical(value),'payload preparado distinto');else save(file,value)}
-if(process.argv[1]==='-'||(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url))main().catch(error=>{try{const file=join(dirname(SNAPSHOT),'stage-api-'+CANDIDATE.slice(0,12),'error.private.txt');if(existsSync(dirname(file)))writeFileSync(file,String(error.stack||error),{mode:0o600,flag:'wx'})}catch{}console.error(String(error.message||'').startsWith('BLOCKED:')?error.message:'BLOCKED: fallo local/API; conservar evidencia privada y NO repetir Stage.');process.exitCode=1})
+if(process.argv[1]==='-'||(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url))main().catch(error=>{try{const file=join(dirname(SNAPSHOT),(process.argv.includes('--stage-app')?'stage-app-':'stage-api-')+CANDIDATE.slice(0,12),'error.private.txt');if(existsSync(dirname(file)))writeFileSync(file,String(error.stack||error),{mode:0o600,flag:'wx'})}catch{}console.error(String(error.message||'').startsWith('BLOCKED:')?error.message:'BLOCKED: fallo local/API; conservar evidencia privada y NO repetir Stage.');process.exitCode=1})
