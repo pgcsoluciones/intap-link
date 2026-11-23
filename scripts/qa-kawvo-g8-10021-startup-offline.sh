@@ -31,6 +31,8 @@ EOF
 export WRANGLER_SEND_METRICS=false
 unset CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID CF_API_TOKEN CF_API_KEY || true
 echo "2/3 Wrangler 4 pinned local-only startup analysis"
+# Wrangler detects monorepo root as an unsupported app; run against isolated temp project.
+cd "$TMP_WORKER"
 npx --yes --package=wrangler@4.166.0 -- wrangler --version
 npx --yes --package=wrangler@4.166.0 -- wrangler check startup \
   --config "$TMP_WORKER/wrangler.toml" --args="--no-bundle"
