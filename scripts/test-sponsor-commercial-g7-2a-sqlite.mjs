@@ -6,7 +6,24 @@ import {readFileSync} from 'node:fs'
 import {inventoryFixture,TENANT_A,TENANT_B} from './test-sponsor-inventory-g7-contract.mjs'
 
 const f=await inventoryFixture(1001)
-const migration=execFileSync('git',['show','2286c937d9ce13422f22b289f5029343c2f5ae4c:api/migrations/0153_sponsor_sales_representatives.sql'],{encoding:'utf8'})
+// Local fixture copy of historical 0153 schema. The archived test checkout has no .git.
+const migration=String.raw`
+CREATE TABLE sponsor_sales_representatives (
+ id TEXT PRIMARY KEY, sponsor_id TEXT NOT NULL REFERENCES sponsor_tenants(id),
+ employee_code TEXT, first_name TEXT NOT NULL, last_name TEXT NOT NULL DEFAULT '',
+ whatsapp TEXT NOT NULL, email TEXT, zone TEXT, territory TEXT,
+ active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+ updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE sponsor_sales_assignments (
+ id TEXT PRIMARY KEY, sponsor_id TEXT NOT NULL REFERENCES sponsor_tenants(id),
+ artifact_id TEXT NOT NULL REFERENCES intap_artifacts(id),
+ representative_id TEXT NOT NULL REFERENCES sponsor_sales_representatives(id),
+ group_label TEXT, assigned_by_user_id TEXT,
+ assigned_at TEXT NOT NULL DEFAULT (datetime('now')),
+ ended_at TEXT, active INTEGER NOT NULL DEFAULT 1
+);
+`
 execFileSync('python3',['-c','import sqlite3,sys; con=sqlite3.connect(sys.argv[1]);con.executescript(sys.stdin.read());con.commit()',f.path],{input:migration})
 execFileSync('python3',['-c',String.raw`
 import sqlite3,sys
