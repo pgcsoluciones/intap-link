@@ -126,6 +126,7 @@ async function main(){
    evidenceDirectory:DIR};
   console.log(JSON.stringify(output,null,2));return;
  }
+ if(mode==='--check'){
   const bundle=await appBundle('https://app.preview.intaprd.com');
   console.log(JSON.stringify({operation:'read-only',workerVersion:before.id,origin:before.origin,bundle,expected:OLD,ready:bundle===OLD},null,2));return;
  }
