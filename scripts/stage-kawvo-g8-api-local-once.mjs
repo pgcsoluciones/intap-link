@@ -105,6 +105,13 @@ for(const key of ['cache_options','limits','usage_model','migration_tag'])if(old
 if(old.placement?.mode)metadata.placement={mode:old.placement.mode}
 if(old.exports?.default)metadata.exports={default:old.exports.default}
 need(metadata.bindings.length===old.bindings.length,'binding inheritance count differs')
+// Last read before the irreversible version-upload request. Never inherit unknown latest.
+const finalLatest=await cfGet(endpoint+'/versions?per_page=1')
+const finalRows=Array.isArray(finalLatest)?finalLatest:
+ Array.isArray(finalLatest?.versions)?finalLatest.versions:
+ Array.isArray(finalLatest?.items)?finalLatest.items:null
+need(finalRows?.[0]?.id===BASELINE,'latest version moved before stage; no upload')
+await active()
 
 const form=new FormData()
 form.append('metadata',JSON.stringify(metadata))
@@ -130,11 +137,15 @@ result.status='UPLOADED_INACTIVE_PENDING_READBACK'
 result.version=newId
 writeFileSync(receipt,JSON.stringify(result,null,2)+'\n',{mode:0o600})
 const fresh=await reader.get('/accounts/'+reader.account+'/workers/workers/intap-api/versions/'+newId+'?include=modules')
-need(same(backupTool.redactSecretBindings(fresh.bindings),backupTool.redactSecretBindings(old.bindings)),
+const safeBindings=arr=>backupTool.redactSecretBindings(arr).slice().sort((a,b)=>a.name.localeCompare(b.name))
+need(same(safeBindings(fresh.bindings||[]),safeBindings(old.bindings)),
  'inactive API version binding/config mismatch; do NOT activate')
 need(fresh.compatibility_date===old.compatibility_date&&
- same(fresh.compatibility_flags||[],old.compatibility_flags||[]),
- 'inactive API runtime compatibility mismatch; do NOT activate')
+ same(fresh.compatibility_flags||[],old.compatibility_flags||[])&&
+ same(fresh.limits||{},old.limits||{})&&
+ same(fresh.cache_options||{},old.cache_options||{})&&
+ (fresh.usage_model||null)===(old.usage_model||null),
+ 'inactive API runtime configuration mismatch; do NOT activate')
 need(fresh.modules?.length===1&&fresh.modules[0]?.name==='worker.mjs'&&
  sha(Buffer.from(fresh.modules[0]?.content_base64||'','base64'))===sha(bundle),
  'inactive API module bytes mismatch; do NOT activate')
