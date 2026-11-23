@@ -5,10 +5,11 @@ import {existsSync,lstatSync,readFileSync,readdirSync,mkdirSync,mkdtempSync,writ
 import {homedir} from 'node:os'
 import {join,resolve,sep} from 'node:path'
 import {pathToFileURL} from 'node:url'
-import {credentials,versionSummary} from './inspect-kawvo-g8-readonly.mjs'
+import {credentials,versionSummary,githubAudit} from './inspect-kawvo-g8-readonly.mjs'
 import {assertG8Runtime} from './lib/kawvo-g8-freeze.mjs'
 
 export const BASE='f14cb0180f964d65daaa9b3c69dceccc6011ab24'
+export const G86_MANIFEST='ed2a628ccc59a737c447dd3bf835d0d2df7cdfed5539eceef5fa859f1d10e21c'
 const sha=b=>createHash('sha256').update(b).digest('hex'),uuid=x=>/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(x||'')
 const blocked=code=>{throw Error('BLOCKED: '+code)}
 const need=(test,code)=>{if(!test)blocked(code)}
@@ -76,6 +77,26 @@ export function verifyBackup(folder){
  for(const [layer,project] of [['App','intap-web2'],['Web','intap-link']]){if(!m.layers[layer].deployment){need(m.layers[layer].status==='BLOCKED','missing layer must remain blocked');continue}const d=pagesIdentity(parse(join(folder,layer.toLowerCase()+'/deployment.private.json')),project);need(d.deployment===m.layers[layer].deployment,'Pages identity mismatch')}
  return {integrity:'PASS',layers:m.layers,recovery:'BLOCKED',remoteRestoreRehearsed:false,decision:'NO-GO',manifestSha256:sha(bytes)}
 }
+// Native target eligibility is distinct from a cold export and from an executed restoration.
+export async function verifyNativeRecovery({reader,folder,expectedManifest=G86_MANIFEST}){
+ const verified=verifyBackup(folder);need(verified.manifestSha256===expectedManifest,'G8.6 receipt fingerprint differs; do not recapture or replace baseline')
+ const m=parse(join(folder,'manifest.private.json'));need(m.accountFingerprint===sha(reader.account),'backup account differs from existing authorized account')
+ const prefix='/accounts/'+reader.account,get=path=>{need(captureAllowed(path,reader.account),'native retention GET outside allowlist');return reader.get(path)},layers={}
+ const attempt=async(name,fn)=>{try{layers[name]=await fn()}catch(e){layers[name]={status:'BLOCKED',reason:e.message?.startsWith('BLOCKED:')?e.message:'BLOCKED: retained target read unavailable; raw error omitted'}}}
+ await attempt('API',async()=>{
+  const id=m.layers.API.version;need(uuid(id),'missing pinned API version')
+  const v=await get(prefix+'/workers/workers/intap-api/versions/'+id+'?include=modules');versionSummary(v,'intap-api');need(v.id===id&&same(redactSecretBindings(v),parse(join(folder,'api/version.private.json'))),'retained API bytes/config differ from captured version')
+  const d=(await get(prefix+'/workers/scripts/intap-api/deployments'))?.deployments?.[0];need(d?.versions?.length===1&&d.versions[0].version_id===id&&Number(d.versions[0].percentage)===100,'active Production baseline changed; review before promotion')
+  return {status:'PASS',scope:'Native retained version/code/config target verified; not a restore rehearsal',target:id,requiresUnchangedResourcesAndSecrets:true}
+ })
+ for(const [name,project] of [['App','intap-web2'],['Web','intap-link']])await attempt(name,async()=>{
+  const old=parse(join(folder,name.toLowerCase()+'/deployment.private.json')),before=pagesIdentity(old,project)
+  const current=await get(prefix+'/pages/projects/'+project+'/deployments/'+before.deployment),target=pagesIdentity(current,project)
+  need(same(target,before),'retained Pages identity/commit/Functions metadata changed');need(typeof target.usesFunctions==='boolean','Functions ownership not exposed; native eligibility incomplete')
+  return {status:'PASS',scope:'Retained successful Production deployment is eligible for native rollback as one unit; no restore executed',target:target.deployment,project,functions:target.usesFunctions?'Included in native deployment unit; no separate rebuild/export required':'No Functions reported in this retained deployment',independentFunctionsBinaryCompared:false}
+ })
+ return {task:'KAW-G8-FINAL',sourceManifestSha256:verified.manifestSha256,layers,scope:'Read-verified native rollback eligibility; no cold-backup requirement for Pages',remoteRestoreRehearsed:false,remoteWrites:0,remoteD1Queries:0,recaptureExecuted:false,decision:'NO-GO'}
+}
 export async function captureBackup({reader,audit,folder,head,publicFetch=globalThis.fetch}){
  directory(folder,true);const files=[]
  const save=(path,data)=>{safePath(path);const dest=join(folder,path),parent=resolve(dest,'..');if(!existsSync(parent))mkdirSync(parent,{recursive:true,mode:0o700});directory(parent,true);const b=Buffer.isBuffer(data)?data:Buffer.from(JSON.stringify(redactSecretBindings(data),null,2)+'\n');writeFileSync(dest,b,{mode:0o600,flag:'wx'});files.push({path,bytes:b.length,sha256:sha(b)})}
@@ -125,12 +146,21 @@ export async function captureBackup({reader,audit,folder,head,publicFetch=global
 export async function main(args=process.argv.slice(2),{root=process.cwd(),platform=process.platform}={}){
  process.umask(0o077)
  if(args[0]==='--sha')args=['--preflight',...args]
- const mode=args[0]||'--preflight';need(['--preflight','--capture','--verify','--plan'].includes(mode),'unsupported mode; restore/deploy/upload not implemented')
- const offline=['--verify','--plan'].includes(mode),offset=offline?2:1
- need(args[offset]==='--sha'&&/^[a-f0-9]{40}$/.test(args[offset+1]||'')&&args.length===offset+2,'use mode [private-directory for verify/plan] --sha EXACT_HEAD')
+ const mode=args[0]||'--preflight';need(['--preflight','--capture','--verify','--plan','--verify-native'].includes(mode),'unsupported mode; restore/deploy/upload not implemented')
+ const offline=['--verify','--plan'].includes(mode),offset=offline||mode==='--verify-native'?2:1
+ need(args[offset]==='--sha'&&/^[a-f0-9]{40}$/.test(args[offset+1]||'')&&args.length===offset+2,'use mode [private-directory for verify/plan/verify-native] --sha EXACT_HEAD')
  need(process.version==='v20.20.2','existing Node 20.20.2 required; nothing installed');need(platform==='darwin','private evidence capture/inspection is Mac-only')
  root=resolve(root);const head=git(root,'rev-parse','HEAD');need(head===args[offset+1]&&git(root,'status','--porcelain')==='','SHA mismatch or dirty tool checkout');git(root,'merge-base','--is-ancestor',BASE,'HEAD');assertG8Runtime(root)
  if(offline){const result=verifyBackup(resolve(args[1]));if(mode==='--plan')need(parse(join(resolve(args[1]),'rollback-plan.private.json')).executable===false,'restore plan must be non-executable');console.log(JSON.stringify({mode,integrity:result.integrity,recovery:'BLOCKED',decision:'NO-GO'}));return result}
+ if(mode==='--verify-native'){
+  const source=resolve(args[1]);verifyBackup(source);need(sha(readFileSync(join(source,'manifest.private.json')))===G86_MANIFEST,'G8.6 receipt fingerprint differs')
+  const toolsRoot=resolve(process.env.KAWVO_READONLY_TOOL_ROOT||root);need(sha(readFileSync(join(toolsRoot,'package-lock.json')))===sha(readFileSync(join(root,'package-lock.json'))),'existing tool checkout lockfile differs')
+  const result=await verifyNativeRecovery({reader:credentials(toolsRoot),folder:source}),gh=githubAudit(toolsRoot),hooks=gh.hooks
+  result.remainingAutomation={githubHooks:Array.isArray(hooks)?(hooks.some(h=>h.active)?'BLOCKED: active hooks require destination/trigger review':'PASS: no active repository webhooks reported'):'BLOCKED: existing gh administrative read unavailable',githubApps:'BLOCKED: this API/session does not inventory every installed GitHub App; known Cloudflare automations already confirmed disabled, not re-audited',githubRead:gh}
+  const logs=join(homedir(),'intap-release-logs');directory(logs);need(!logs.startsWith(root+sep)&&!logs.startsWith(toolsRoot+sep),'private output must stay outside checkouts')
+  const out=mkdtempSync(join(logs,'kawvo-g8-native-'));writeFileSync(join(out,'receipt.private.json'),JSON.stringify(result,null,2),{mode:0o600,flag:'wx'})
+  console.log(JSON.stringify({mode,head,sourceManifestSha256:G86_MANIFEST,API:result.layers.API.status,App:result.layers.App.status,Web:result.layers.Web.status,remainingAutomation:{githubHooks:result.remainingAutomation.githubHooks,githubApps:result.remainingAutomation.githubApps},evidence:out,remoteWrites:0,recaptureExecuted:false,remoteRestoreRehearsed:false,decision:'NO-GO'}));return result
+ }
  const logs=join(homedir(),'intap-release-logs'),audit=readG85(logs)
  if(mode==='--preflight'){const result={status:'PASS',scope:'Local SHA/runtime/permissions and existing G8.5 receipt; no network requests',head,auditReceiptSha256:audit.sha256,API:'BLOCKED: capture required',App:'BLOCKED',Web:'BLOCKED',decision:'NO-GO'};console.log(JSON.stringify(result));return result}
  const toolsRoot=resolve(process.env.KAWVO_READONLY_TOOL_ROOT||root);need(sha(readFileSync(join(toolsRoot,'package-lock.json')))===sha(readFileSync(join(root,'package-lock.json'))),'existing Wrangler tool checkout lockfile differs')

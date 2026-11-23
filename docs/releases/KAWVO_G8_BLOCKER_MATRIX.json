@@ -1,5 +1,5 @@
 {
-  "task": "KAW-G8-006",
+  "task": "KAW-G8-FINAL",
   "auditedBase": "836d422cc76ba5c96ef9cdfd5f7efe11b8d5d438",
   "decision": "NO-GO",
   "independence": "Critical source review by the same assistant; not a separate human approval",
@@ -187,8 +187,8 @@
     {
       "gate": "Actual rollback availability",
       "status": "BLOCKED",
-      "evidence": "Capture/verify/plan tool prepared and tested with fixtures; real private modules/config/artifacts available only after Mac capture. Pages full dist/compiled Functions still unaccredited",
-      "next": "Run Mac preflight then capture; verify private manifest; review native retained targets and complete artifact/Functions evidence before claiming recovery"
+      "evidence": "G8.6 actual owner capture and integrity PASS; pinned native retained IDs must be checked on Mac. Native full-deployment Pages rollback accepted without mandatory cold export",
+      "next": "Single --verify-native instruction consumes exact existing receipt, four GET only; no recapture/restore"
     },
     {
       "gate": "#134 source and local first acceptance",
@@ -205,8 +205,8 @@
     {
       "gate": "#134 authenticated new LIVE invitation",
       "status": "BLOCKED",
-      "evidence": "No remote activation executed; it would write invitation state",
-      "next": "Proposed normal-flow test only on authorized fixture invitation after separate write/QA authorization; never credentials or another doctor"
+      "evidence": "Current browser task fails before Preview load: Browser Use could not read requirements; zero authenticated acceptance flows executed",
+      "next": "QA already authorized for explicit test resources; requires working controlled browser and usable authorized operator/guest test sessions + pending invitation. No sessions via D1 or secrets in chat"
     },
     {
       "gate": "GitHub Actions triggers",
@@ -535,5 +535,56 @@
       }
     ],
     "toolIntegrity": "PASS synthetic tests; not real recovery"
+  },
+  "ownerG86Receipt": {
+    "comment": "https://github.com/pgcsoluciones/intap-link/pull/182#issuecomment-7106078811",
+    "sourceSHA": "06e28d7fa88552a05edeef8879c6ea7a44c50020",
+    "directory": "~/intap-release-logs/kawvo-g8-backup-udfewy",
+    "manifestSha256": "ed2a628ccc59a737c447dd3bf835d0d2df7cdfed5539eceef5fa859f1d10e21c",
+    "integrity": "PASS owner Mac",
+    "apiCapture": "PASS owner Mac",
+    "remoteWrites": 0,
+    "copiedToCodex": false,
+    "recaptureRequired": false
+  },
+  "finalPreparation": {
+    "base": "06e28d7fa88552a05edeef8879c6ea7a44c50020",
+    "report": "docs/releases/KAWVO_G8_FINAL_EXECUTIVE_2026-11-23.md",
+    "decision": "NO-GO",
+    "nativeRecoveryVerification": "BLOCKED: private Mac receipt and credentials unavailable to Codex; no cold Pages rebuild/export required",
+    "liveQA": {
+      "status": "BLOCKED",
+      "authorized": true,
+      "flowsExecuted": 0,
+      "error": "Browser Use could not read requirements",
+      "beforeSiteLoaded": true
+    },
+    "productionActivation": {
+      "status": "BLOCKED",
+      "doctorGuestMasterBeneficiarySponsor": "Preview-only mode and exact host retained",
+      "G71API": "ENVIRONMENT preview only; Production 404 retained",
+      "policy": "No source guard or security assertion relaxed; release activation delta remains needed"
+    },
+    "remainingAutomation": "Known Actions/manual triggers documented; user-confirmed CF disables reused. Admin hooks/App inventory not certified by current connection",
+    "productionSequence": "Conditional stages/checkpoints in executive report; no falsely certified API upload command or Production cutover with current guards",
+    "realRemoteWritesByCodex": 0,
+    "localValidation": [
+      {
+        "command": "node scripts/test-kawvo-g8-backup.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-final/native-fixtures.log",
+        "sha256": "237e56564754dd95cb7105b0caf261e9ef835ece781d0fbec4d99bb39b124d96",
+        "bytes": 768
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-release-contract.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-final/release-contract.log",
+        "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+        "bytes": 608
+      }
+    ]
   }
 }

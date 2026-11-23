@@ -1,5 +1,5 @@
 {
-  "task": "KAW-G8-006",
+  "task": "KAW-G8-FINAL",
   "candidateBranch": "release/kawvo-g8-unified-candidate",
   "auditedSourceCommit": "fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99",
   "approvedPreviewCodeSource": "f42bccf2b8248b61603090a97ab56c9258400b58",
@@ -2325,5 +2325,25 @@
     "inventory": "API native modules/config/bindings/settings/cron/routes/custom domains; Pages retained Production IDs/settings/uses_functions/entry bytes",
     "completeRecovery": "BLOCKED until real private capture and full Pages/Functions recovery evidence; no remote rehearsal",
     "schemaAutomationEvidence": "G8.5 owner summary reused; no D1 or automatic-deployment re-audit"
+  },
+  "finalPreparation": {
+    "base": "06e28d7fa88552a05edeef8879c6ea7a44c50020",
+    "ownerG86Receipt": {
+      "comment": "https://github.com/pgcsoluciones/intap-link/pull/182#issuecomment-7106078811",
+      "sourceSHA": "06e28d7fa88552a05edeef8879c6ea7a44c50020",
+      "directory": "~/intap-release-logs/kawvo-g8-backup-udfewy",
+      "manifestSha256": "ed2a628ccc59a737c447dd3bf835d0d2df7cdfed5539eceef5fa859f1d10e21c",
+      "integrity": "PASS owner Mac",
+      "apiCapture": "PASS owner Mac",
+      "remoteWrites": 0,
+      "copiedToCodex": false,
+      "recaptureRequired": false
+    },
+    "runtimeChanged": false,
+    "decision": "NO-GO",
+    "nativePagesRecovery": "Retained successful Production deployment + Functions ownership, no mandatory local cold archive; read verification pending Mac",
+    "liveAcceptance": "BLOCKED before page load; not simulated as authenticated",
+    "activationGates": "Preview-only shells and G7.1 Production 404 unchanged; explicit cutover source delta not implemented",
+    "executiveReport": "docs/releases/KAWVO_G8_FINAL_EXECUTIVE_2026-11-23.md"
   }
 }

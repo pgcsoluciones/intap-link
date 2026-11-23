@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,readdirSync,chmodSync,symlinkSync,unlinkSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {captureAllowed,captureBackup,verifyBackup,readG85,redactSecretBindings,main,BASE} from './prepare-kawvo-g8-backup.mjs'
+import {captureAllowed,captureBackup,verifyBackup,verifyNativeRecovery,readG85,redactSecretBindings,main,BASE} from './prepare-kawvo-g8-backup.mjs'
 import {allowedRequest,Reader} from './inspect-kawvo-g8-readonly.mjs'
 
 process.umask(0o077)
@@ -39,7 +39,7 @@ function fixture({drift=false,denyWeb=false,denySettings=false,wrongEnvironment=
   throw Error('Unexpected fixture URL')
  }}
  const publicFetch=async(url,options)=>{calls.push({method:options.method,url});assert.equal(options.method,'GET');assert.equal(options.headers,undefined);const u=new URL(url);assert.ok(['/','/admin/login','/assets/index-fixture.js','/assets/index-fixture.css'].includes(u.pathname));return new Response(u.pathname.startsWith('/assets/')?'fixture-public-asset':'<script src="/assets/index-fixture.js"></script><link href="/assets/index-fixture.css">')}
- return {folder,calls,run:()=>captureBackup({reader,audit,folder,head:BASE,publicFetch})}
+ return {folder,calls,reader,run:()=>captureBackup({reader,audit,folder,head:BASE,publicFetch})}
 }
 const f=fixture(),result=await f.run();assert.equal(result.integrity,'PASS');assert.equal(result.API,'PASS');assert.equal(result.App,'BLOCKED');assert.equal(result.Web,'BLOCKED');assert.equal(result.recovery,'BLOCKED');assert.equal(result.remoteWrites,0)
 assert.deepEqual(result.recoveryByLayer,{API:'BLOCKED',App:'BLOCKED',Web:'BLOCKED'},'Capture integrity must not be presented as recovery approval for any layer')
@@ -70,3 +70,21 @@ for(const mode of ['--restore','--deploy','--upload','--activate'])await assert.
 await assert.rejects(()=>main(['--capture','--sha',BASE],{platform:'linux'}),/Mac-only/)
 await assert.rejects(()=>main(['--capture','--sha','0'.repeat(40)],{platform:'darwin'}),/SHA mismatch or dirty/)
 console.log('PASS drift, denied reads, wrong environment and Preview rollback target fail closed; mutation modes unavailable; real captures Mac-only')
+
+const expectedManifest=verifyBackup(f.folder).manifestSha256,nativeReads=f.calls.length
+const eligibility=await verifyNativeRecovery({reader:f.reader,folder:f.folder,expectedManifest})
+for(const layer of ['API','App','Web'])assert.equal(eligibility.layers[layer].status,'PASS')
+assert.equal(eligibility.layers.App.independentFunctionsBinaryCompared,false)
+assert.equal(eligibility.remoteRestoreRehearsed,false);assert.equal(eligibility.recaptureExecuted,false);assert.equal(eligibility.remoteWrites,0)
+assert.equal(f.calls.length-nativeReads,4,'Only pinned native API/version+traffic and two retained Pages targets; no capture/schema/Builds/asset audit')
+assert.equal(verifyBackup(f.folder).manifestSha256,expectedManifest,'Original capture remains unmodified')
+await assert.rejects(()=>verifyNativeRecovery({reader:f.reader,folder:f.folder,expectedManifest:'0'.repeat(64)}),/fingerprint/)
+const changed={account,async get(path){const v=await f.reader.get(path);if(path.includes('/versions/'))v.modules[0].content_base64=Buffer.from('different').toString('base64');return v}}
+assert.equal((await verifyNativeRecovery({reader:changed,folder:f.folder,expectedManifest})).layers.API.status,'BLOCKED')
+const deleted={account,async get(path){if(path.includes('/pages/projects/intap-link/'))throw Error('private-provider-error');return f.reader.get(path)}}
+const missing=await verifyNativeRecovery({reader:deleted,folder:f.folder,expectedManifest});assert.equal(missing.layers.Web.status,'BLOCKED');assert.ok(!JSON.stringify(missing).includes('private-provider-error'))
+const preview={account,async get(path){const v=await f.reader.get(path);if(path.includes('/pages/projects/intap-web2/'))v.environment='preview';return v}}
+assert.equal((await verifyNativeRecovery({reader:preview,folder:f.folder,expectedManifest})).layers.App.status,'BLOCKED')
+const noFunctionsMetadata={account,async get(path){const v=await f.reader.get(path);if(path.includes('/pages/projects/intap-web2/'))delete v.uses_functions;return v}}
+assert.equal((await verifyNativeRecovery({reader:noFunctionsMetadata,folder:f.folder,expectedManifest})).layers.App.status,'BLOCKED')
+console.log('PASS native eligibility: immutable receipt, exact retained Production API/Pages with Functions, four GET only; wrong hash/bytes, missing target, Preview and unknown Functions rejected; no restore or cold export claimed')

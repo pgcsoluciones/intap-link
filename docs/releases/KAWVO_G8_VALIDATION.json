@@ -1083,5 +1083,48 @@
     },
     "ci": "Exact final SHA result recorded in PR #182, never reused from baseline",
     "decision": "NO-GO"
+  },
+  "finalPreparation": {
+    "task": "KAW-G8-FINAL",
+    "sourceBase": "06e28d7fa88552a05edeef8879c6ea7a44c50020",
+    "approvedAuditsRepeated": false,
+    "realBackupRecaptured": false,
+    "nativeRecoveryTests": [
+      {
+        "command": "node scripts/test-kawvo-g8-backup.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-final/native-fixtures.log",
+        "sha256": "237e56564754dd95cb7105b0caf261e9ef835ece781d0fbec4d99bb39b124d96",
+        "bytes": 768
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-release-contract.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "log": "/tmp/kawvo-g8-final/release-contract.log",
+        "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+        "bytes": 608
+      }
+    ],
+    "syntaxJSBash": "PASS",
+    "productRuntimeUnchanged": "PASS",
+    "baselineCI": {
+      "sha": "06e28d7fa88552a05edeef8879c6ea7a44c50020",
+      "run": 45207418485,
+      "status": "PASS reused as baseline; new operations-tool SHA CI recorded separately in PR"
+    },
+    "liveQA": {
+      "status": "BLOCKED",
+      "flowsExecuted": 0,
+      "browserError": "Browser Use could not read requirements",
+      "beforeSiteLoaded": true,
+      "notASiteOutageClaim": true
+    },
+    "realCloudflareWrites": 0,
+    "remoteRestoreExecuted": false,
+    "productionCodeActivationChanged": false,
+    "decision": "NO-GO",
+    "finalSHAAndCI": "Recorded in PR #182 after publication; no self-referential SHA"
   }
 }

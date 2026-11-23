@@ -2,6 +2,8 @@
 
 Estado: **NO-GO para Producción**. Preparación, no autorización. No se ejecutaron publicaciones Cloudflare, activaciones, migraciones remotas ni merges a main. La integración Git de #183 en la rama G8 sí fue autorizada y se realizó por fast-forward; no publica el producto. G6 y G7.2 permanecen fuera. Contrato: [G8](../architecture/KAWVO_G8_MASTER_RELEASE_UNIFICATION_2026-11-23.md), #150/#151/#156/#169/#172, KAW-U-NAV-001 y [Producción](../../CONTRACT_PRODUCTION_PROFILES.md).
 
+**Cierre vigente KAW-G8-FINAL:** [único informe ejecutivo](KAWVO_G8_FINAL_EXECUTIVE_2026-11-23.md). Recibo real G8.6 recibido: integridad/captura API PASS, sin nueva captura. Se acepta recuperación nativa de Pages como deployment completo con Functions, sin exigir reconstruir un respaldo. Verificar sólo retención mediante `--verify-native` y el hash del recibo existente. La QA LIVE está autorizada pero bloqueada por herramienta/sesión; el runtime sigue Preview-only para G3/G4/G5/G7.1. No se publicará Producción unificada con esos guards sin el delta de activación y sus pruebas. La secuencia y comandos del informe tienen paradas expresas; no se declara un uploader API productivo ni un GO que no existen.
+
 ## 1. Identidades y paquete
 
 - Rama: `release/kawvo-g8-unified-candidate`; SHA final en el Draft PR, no el HEAD futuro de otra rama. Fuente auditada `fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99`; runtime App igual a `f42bccf2b8248b61603090a97ab56c9258400b58`. API igual a #179 **salvo el handler LIVE exacto de #183** `8bc33c1b62d2c11147ffc192119fac98009cd5b5`, integrado por fast-forward bajo KAW-G8-004. Manifiesto/API bundles reconciliados; el snapshot `474b52d3…` y artefactos previos permanecen referenciados, no son paquetes del nuevo Worker.
