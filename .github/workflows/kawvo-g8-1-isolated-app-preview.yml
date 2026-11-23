@@ -29,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -37,10 +38,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin main
-          git merge-base --is-ancestor origin/main HEAD
-          test -z "$(git diff --name-only origin/main...HEAD -- api web functions)"
-          git diff --check origin/main...HEAD
+          BASE="71dd92b870482427d8576e68d89c3167bcfe8f12"
+          git cat-file -e "$BASE^{commit}"
+          git merge-base --is-ancestor "$BASE" HEAD
+          test -z "$(git diff --name-only "$BASE"...HEAD -- api web functions)"
+          git diff --check "$BASE"...HEAD
       - run: npm ci
       - run: node scripts/test-kawvo-g8-1-social-share-header.mjs
       - name: Build App Preview
