@@ -171,9 +171,10 @@ export default function KawvoFreeShellPreview(){
     if(!published||!publicUrl)return
     setShareMessage('')
     try{
-      if(navigator.share){await navigator.share({title:accountName,url:publicUrl});setShareMessage('Perfil listo para compartir.');return}
-      await navigator.clipboard.writeText(publicUrl)
-      setShareMessage('Enlace copiado para compartir.')
+      const whatsappUrl='https://wa.me/?text='+encodeURIComponent('Conoce mi presentación digital: '+publicUrl)
+      const opened=window.open(whatsappUrl,'_blank','noopener,noreferrer')
+      if(!opened)window.location.assign(whatsappUrl)
+      setShareMessage('Abriendo WhatsApp para compartir tu presentación.')
     }catch(error:unknown){
       if((error as {name?:string}|null)?.name!=='AbortError')setShareMessage('No pudimos abrir el menú para compartir.')
     }
@@ -192,7 +193,7 @@ export default function KawvoFreeShellPreview(){
       </div>
     </aside>
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3">
-      <div className="mx-auto flex max-w-3xl items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div>{hasSuperAdminAccess&&<button type="button" onClick={()=>navigate('/superadmin')} className="min-h-11 shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-3 text-xs font-bold text-white">Super Admin</button>}<FreeNotificationBell returnState={shellReturnState}/></div>
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div><button type="button" onClick={()=>setTab("profile")} className="min-h-11 rounded-xl border border-slate-200 px-3 text-xs font-bold">Perfil</button>{agendaRoute&&<button type="button" onClick={()=>setTab("agenda")} className="min-h-11 rounded-xl border border-slate-200 px-3 text-xs font-bold">Agenda</button>}{hasSuperAdminAccess&&<button type="button" onClick={()=>navigate('/superadmin')} className="min-h-11 shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-3 text-xs font-bold text-white">Super Admin</button>}<FreeNotificationBell returnState={shellReturnState}/></div>
     </header>
     <section className="mx-auto w-full max-w-3xl space-y-4 px-4 pt-5">
       <div aria-label="Presentación que estás administrando" className="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Cuenta activa · Kawlink Free</p><p className="mt-1 truncate text-sm font-black text-slate-900">{accountName}</p>{accountSlug&&<p className="mt-1 truncate text-xs text-slate-500">{accountSlug}</p>}</div>{allowAccountSwitch&&<button type="button" onClick={()=>navigate('/admin/accounts')} className="min-h-11 rounded-xl border border-cyan-200 bg-cyan-50 px-3 text-sm font-bold text-cyan-900">Cambiar cuenta</button>}</div></div>
@@ -200,7 +201,7 @@ export default function KawvoFreeShellPreview(){
       {tab==='home'&&<>
         <div><h1 className="text-2xl font-black">Mi espacio Kawvo</h1><p className="mt-1 text-sm text-slate-600">Todo organizado para trabajar desde tu celular.</p></div>
         <div className="rounded-3xl border border-slate-200 bg-white p-5">
-          <KawvoProfileIdentity name={accountName} detail="Mi presentación digital · Free" avatar={profile.avatar_url?<img src={profile.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover"/>:<div aria-hidden="true" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-slate-100 text-2xl">◉</div>} utilities={<><button type="button" onClick={()=>go('account')} className="min-h-11 min-w-11 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700">Instalar app Kawvo</button><FreeShellSessionExit/></>}/>
+          <KawvoProfileIdentity name={accountName} detail="Mi presentación digital · Free" mobileUtilitiesRow avatar={profile.avatar_url?<img src={profile.avatar_url} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover"/>:<div aria-hidden="true" className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-slate-100 text-2xl">◉</div>} utilities={<><button type="button" onClick={()=>go('account')} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700">Instalar app Kawvo</button><FreeShellSessionExit/></>}/>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4"><h3 className="text-sm font-bold">Estado de mi presentación</h3><span className={'rounded-full px-3 py-1 text-xs font-bold '+publicationStyle}>{publicationLabel}</span></div>
           {published?<p className="mt-3 text-sm text-slate-600">Tu presentación está publicada. Puedes seguir editándola desde los módulos habituales.</p>
           :readyToPublish?<p className="mt-3 rounded-xl bg-cyan-50 px-3 py-3 text-sm text-cyan-950">Tu perfil cumple los requisitos indicados por el sistema. Revisa tu presentación y confirma la publicación cuando esté lista.</p>
@@ -220,7 +221,7 @@ export default function KawvoFreeShellPreview(){
           {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><span className="mb-2 block text-xl">◉</span>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Abrir la vista previa de tu presentación</span></a>:<button type="button" disabled className={button+" opacity-50"}><span className="mb-2 block text-xl">◉</span>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Completa tu usuario primero</span></button>}
           {agendaRoute&&<button type="button" onClick={()=>setTab('agenda')} className={button}><span className="mb-2 block text-xl">▦</span>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>}
           {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><span className="mb-2 block text-xl">⚙</span>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Configuración</span></button>}
-          <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><span className="mb-2 block text-xl">↗</span>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">{published&&publicUrl?'Compartir enlace público':'Disponible al publicar tu perfil'}</span></button>
+          <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><span className="mb-2 block text-xl">↗</span>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">{published&&publicUrl?'Compartir por WhatsApp':'Disponible al publicar tu perfil'}</span></button>
         </div>
         {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
