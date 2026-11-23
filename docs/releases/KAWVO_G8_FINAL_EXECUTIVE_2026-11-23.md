@@ -49,7 +49,7 @@ Son un **bloqueante real**, no falta de una auditoría. Cambiar nombre de alias 
 
 PASS de fuente conservada: quality en PR/main y push/main ejecuta tests/builds/guard, sin deploy; los otros dos workflows son workflow_dispatch Preview (uno puede migrar si se invoca manualmente), no triggers de merge. Pages y Workers Builds productivos desactivados se aceptan de G8.5; no se reauditan.
 
-El conector GitHub declara excluida administración. El modo Mac de lectura intenta **sólo** los metadatos GitHub aún no acreditados con gh ya instalado/autenticado: hooks/variables/main/check-runs. No instala ni inicia login; si no hay sesión, BLOCKED. Un hook activo requiere revisar su destino/eventos; cero hooks no inventaría un inventario global de Apps. **No se puede certificar desde esta sesión toda integración GitHub instalada:** ubicación exacta de la lectura faltante, repositorio → Settings → Integrations/Installed GitHub Apps y Webhooks. No se afirma que exista otro deployer; tampoco que su ausencia esté probada. El guard quality posterior al merge no controla integraciones externas.
+No se detecta un nuevo trigger de publicación en las fuentes versionadas, congeladas contra la revisión anterior. Se reutiliza la revisión externa aportada por el propietario; no se abre otra auditoría administrativa ni se exige gh o un inventario global de Apps sin evidencia de otro deployer. El conector no administra esas integraciones: esto delimita el alcance, no convierte una revisión aprobada en un nuevo BLOCKED. Antes de un merge futuro, cualquier cambio real de workflows/integraciones respecto al baseline detiene la publicación. El guard quality posterior al merge no controla por sí solo integraciones externas.
 
 ## Secuencia de Producción, con paradas obligatorias
 
@@ -103,6 +103,6 @@ El conector GitHub declara excluida administración. El modo Mac de lectura inte
 
 ## Única instrucción pendiente para la Mac y límites de la entrega
 
-El bloque listo para copiar se publica con SHA literal en #182: fetch/worktree aislado y `node scripts/prepare-kawvo-g8-backup.mjs --verify-native "$HOME/intap-release-logs/kawvo-g8-backup-udfewy" --sha SHA_FINAL`. Reutiliza Wrangler y, si existe, gh autenticado. No recaptura, no instala, no compila ni cambia permisos/configuración; escribe sólo el nuevo recibo privado de lectura. No puede reparar el navegador cloud ni crear una sesión/invitación de prueba autorizadas.
+El bloque listo para copiar se publica con SHA literal en #182: fetch/worktree aislado y `node scripts/prepare-kawvo-g8-backup.mjs --verify-native "$HOME/intap-release-logs/kawvo-g8-backup-udfewy" --sha SHA_FINAL`. Reutiliza Wrangler autenticado. No requiere gh, recaptura, instalación, compilación ni cambio de permisos/configuración; escribe sólo el nuevo recibo privado de lectura. No puede reparar el navegador cloud ni crear una sesión/invitación de prueba autorizadas.
 
 Validación nueva limitada a ese modo con fixtures: targets nativos/Functions, hash anclado, retención, drift/bytes, Preview/no metadata/404 y cero escrituras; se mantienen sin reducir todas las pruebas anteriores. **Sin merge, deploy, activación productiva, migraciones, cambios D1/R2, secretos o permisos.** Se entregan bloqueantes reales y comandos condicionados, no un GO artificial ni una falsa aceptación LIVE.

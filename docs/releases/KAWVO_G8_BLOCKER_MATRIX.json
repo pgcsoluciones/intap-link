@@ -565,7 +565,7 @@
       "G71API": "ENVIRONMENT preview only; Production 404 retained",
       "policy": "No source guard or security assertion relaxed; release activation delta remains needed"
     },
-    "remainingAutomation": "Known Actions/manual triggers documented; user-confirmed CF disables reused. Admin hooks/App inventory not certified by current connection",
+    "remainingAutomation": "PASS within reviewed scope: owner G8.5 external review retained; workflows unchanged, no new automatic deployment trigger found; no new administrative audit demanded",
     "productionSequence": "Conditional stages/checkpoints in executive report; no falsely certified API upload command or Production cutover with current guards",
     "realRemoteWritesByCodex": 0,
     "localValidation": [

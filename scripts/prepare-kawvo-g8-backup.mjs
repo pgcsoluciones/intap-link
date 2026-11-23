@@ -5,7 +5,7 @@ import {existsSync,lstatSync,readFileSync,readdirSync,mkdirSync,mkdtempSync,writ
 import {homedir} from 'node:os'
 import {join,resolve,sep} from 'node:path'
 import {pathToFileURL} from 'node:url'
-import {credentials,versionSummary,githubAudit} from './inspect-kawvo-g8-readonly.mjs'
+import {credentials,versionSummary} from './inspect-kawvo-g8-readonly.mjs'
 import {assertG8Runtime} from './lib/kawvo-g8-freeze.mjs'
 
 export const BASE='f14cb0180f964d65daaa9b3c69dceccc6011ab24'
@@ -155,11 +155,11 @@ export async function main(args=process.argv.slice(2),{root=process.cwd(),platfo
  if(mode==='--verify-native'){
   const source=resolve(args[1]);verifyBackup(source);need(sha(readFileSync(join(source,'manifest.private.json')))===G86_MANIFEST,'G8.6 receipt fingerprint differs')
   const toolsRoot=resolve(process.env.KAWVO_READONLY_TOOL_ROOT||root);need(sha(readFileSync(join(toolsRoot,'package-lock.json')))===sha(readFileSync(join(root,'package-lock.json'))),'existing tool checkout lockfile differs')
-  const result=await verifyNativeRecovery({reader:credentials(toolsRoot),folder:source}),gh=githubAudit(toolsRoot),hooks=gh.hooks
-  result.remainingAutomation={githubHooks:Array.isArray(hooks)?(hooks.some(h=>h.active)?'BLOCKED: active hooks require destination/trigger review':'PASS: no active repository webhooks reported'):'BLOCKED: existing gh administrative read unavailable',githubApps:'BLOCKED: this API/session does not inventory every installed GitHub App; known Cloudflare automations already confirmed disabled, not re-audited',githubRead:gh}
+  const result=await verifyNativeRecovery({reader:credentials(toolsRoot),folder:source})
+  result.automationReview={status:'REUSED',scope:'Owner G8.5 review retained; repository workflows frozen by local preflight; no new administrative audit or global absence claim'}
   const logs=join(homedir(),'intap-release-logs');directory(logs);need(!logs.startsWith(root+sep)&&!logs.startsWith(toolsRoot+sep),'private output must stay outside checkouts')
   const out=mkdtempSync(join(logs,'kawvo-g8-native-'));writeFileSync(join(out,'receipt.private.json'),JSON.stringify(result,null,2),{mode:0o600,flag:'wx'})
-  console.log(JSON.stringify({mode,head,sourceManifestSha256:G86_MANIFEST,API:result.layers.API.status,App:result.layers.App.status,Web:result.layers.Web.status,remainingAutomation:{githubHooks:result.remainingAutomation.githubHooks,githubApps:result.remainingAutomation.githubApps},evidence:out,remoteWrites:0,recaptureExecuted:false,remoteRestoreRehearsed:false,decision:'NO-GO'}));return result
+  console.log(JSON.stringify({mode,head,sourceManifestSha256:G86_MANIFEST,API:result.layers.API.status,App:result.layers.App.status,Web:result.layers.Web.status,automationReview:result.automationReview.status,evidence:out,remoteWrites:0,recaptureExecuted:false,remoteRestoreRehearsed:false,decision:'NO-GO'}));return result
  }
  const logs=join(homedir(),'intap-release-logs'),audit=readG85(logs)
  if(mode==='--preflight'){const result={status:'PASS',scope:'Local SHA/runtime/permissions and existing G8.5 receipt; no network requests',head,auditReceiptSha256:audit.sha256,API:'BLOCKED: capture required',App:'BLOCKED',Web:'BLOCKED',decision:'NO-GO'};console.log(JSON.stringify(result));return result}
