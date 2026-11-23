@@ -11,7 +11,7 @@ export default function SponsorCommercialPages({tenantId,role,onOpenLegacy}:{ten
  const [resource,setResource]=useState<Resource>('sellers')
  const [search,setSearch]=useState(''),[term,setTerm]=useState('')
  const [state,setState]=useState('all'),[page,setPage]=useState(1)
- const [data,setData]=useState<Page|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState('')
+ const [data,setData]=useState<Page|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0)
  const serial=useRef(0)
  const label=role==='visitor'?'visitadores':'vendedores'
  useEffect(()=>{const timer=window.setTimeout(()=>setTerm(search.trim()),300);return()=>window.clearTimeout(timer)},[search])
@@ -34,7 +34,7 @@ export default function SponsorCommercialPages({tenantId,role,onOpenLegacy}:{ten
    .catch(e=>{if(alive&&id===serial.current)setError(e instanceof Error?e.message:'No se pudo cargar el listado.')})
    .finally(()=>{if(alive&&id===serial.current)setLoading(false)})
   return()=>{alive=false}
- },[tenantId,resource,page,state,term])
+ },[tenantId,resource,page,state,term,revision])
  const changeResource=(next:Resource)=>{setResource(next);setPage(1)}
  return <section className="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 sm:p-6" data-testid="g7-2-commercial-paged">
   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -58,7 +58,7 @@ export default function SponsorCommercialPages({tenantId,role,onOpenLegacy}:{ten
   </div>
   {loading&&<p role="status" className="mt-4 text-sm text-slate-600">Cargando página {page}…</p>}
   {error&&<div role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-   {error}<div className="mt-3"><button type="button" className={button} onClick={()=>setPage(1)}>Volver a primera página</button></div>
+   {error}<div className="mt-3"><button type="button" className={button} onClick={()=>{setPage(1);setRevision(v=>v+1)}}>Reintentar desde el inicio</button></div>
   </div>}
   {!loading&&!error&&data&&<>
    <p className="mt-4 text-sm font-semibold text-slate-700" role="status">{data.total===0?'No hay resultados.':data.total+' registros · página '+data.page+' · mostrando '+data.items.length}</p>
