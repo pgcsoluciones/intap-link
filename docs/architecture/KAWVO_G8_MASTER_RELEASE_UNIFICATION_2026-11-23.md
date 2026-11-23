@@ -1,9 +1,13 @@
 # KAWVO — G8 Contrato maestro de unificación para lanzamiento
 
-**Fecha:** 2026-11-23  
-**Estado:** preparación y auditoría; NO autorizado para merge a `main` ni despliegue a Producción.  
-**Contrato normativo:** PR #150, #151, #156, #169, #172 y documentación de fases en `docs/architecture/`.  
-**Repositorio:** `pgcsoluciones/intap-link`.  
+**Fecha:** 2026-11-23
+
+**Estado:** preparación y auditoría; NO autorizado para merge a `main` ni despliegue a Producción.
+
+**Contrato normativo:** PR #150, #151, #156, #169, #172 y documentación de fases en `docs/architecture/`.
+
+**Repositorio:** `pgcsoluciones/intap-link`.
+
 **Base de código aprobada en Preview:** `cf663d99323affb3b6b7a32374924b808289bb05` (PR #181), descendiente acumulativa de PR #179, #178, #177, #176 y #175.
 
 ## Objetivo

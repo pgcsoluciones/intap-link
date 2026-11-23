@@ -1,0 +1,935 @@
+{
+  "task": "KAW-G8-001",
+  "testedSourceReference": "fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99",
+  "runtimeUnchangedFromReference": true,
+  "finalCandidateSHA": "See Draft PR exact HEAD; runtime tree identities frozen in release manifest",
+  "date": "2026-11-23",
+  "toolchain": {
+    "node": "20.20.2",
+    "chromium": "existing /usr/bin/chromium",
+    "toolsInstalled": false
+  },
+  "localOnly": true,
+  "authenticatedQAExecuted": 0,
+  "remoteMutationsExecuted": 0,
+  "builds": [
+    {
+      "command": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "app/tsconfig.json"
+      ],
+      "exit": 0,
+      "status": "PASS",
+      "seconds": 31.23,
+      "log": "build-0.log"
+    },
+    {
+      "command": [
+        "node_modules/.bin/tsc",
+        "--noEmit",
+        "-p",
+        "api/tsconfig.json"
+      ],
+      "exit": 0,
+      "status": "PASS",
+      "seconds": 7.67,
+      "log": "build-1.log"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "app:build"
+      ],
+      "exit": 0,
+      "status": "PASS",
+      "seconds": 27.8,
+      "log": "build-2.log"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "app:build:preview"
+      ],
+      "exit": 0,
+      "status": "PASS",
+      "seconds": 32.22,
+      "log": "build-3.log"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "web:build"
+      ],
+      "exit": 0,
+      "status": "PASS",
+      "seconds": 39.49,
+      "log": "build-4.log"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "web:build:preview"
+      ],
+      "exit": 0,
+      "status": "PASS",
+      "seconds": 31.29,
+      "log": "build-5.log"
+    },
+    {
+      "command": [
+        "node_modules/.bin/wrangler",
+        "pages",
+        "functions",
+        "build",
+        "functions",
+        "--outfile",
+        "/tmp/kawvo-g8-validation/functions.bundle",
+        "--output-routes-path",
+        "/tmp/kawvo-g8-validation/functions-routes.json",
+        "--build-output-directory",
+        "app/dist"
+      ],
+      "exit": 0,
+      "status": "PASS",
+      "seconds": 0.82,
+      "log": "build-6.log"
+    }
+  ],
+  "packaging": [
+    {
+      "command": [
+        "/workspace/intap-link-kaw-g8/node_modules/.bin/vite",
+        "build",
+        "--mode",
+        "production",
+        "--outDir",
+        "/tmp/kawvo-g8-validation/artifacts/app-production"
+      ],
+      "exit": 0,
+      "project": "app"
+    },
+    {
+      "command": [
+        "/workspace/intap-link-kaw-g8/node_modules/.bin/vite",
+        "build",
+        "--mode",
+        "production",
+        "--outDir",
+        "/tmp/kawvo-g8-validation/artifacts/web-production"
+      ],
+      "exit": 0,
+      "project": "web"
+    }
+  ],
+  "contracts": {
+    "total": 28,
+    "passCount": 16,
+    "failCount": 12,
+    "initialReference": "fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99",
+    "results": [
+      {
+        "name": "test-kawmed-isolation-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-isolation-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.16,
+        "classification": "current contract PASS",
+        "log": "test-kawmed-isolation-contract.log"
+      },
+      {
+        "name": "test-kawmed-web-preview-route-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-web-preview-route-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.17,
+        "classification": "current contract PASS",
+        "log": "test-kawmed-web-preview-route-contract.log"
+      },
+      {
+        "name": "test-kawmed-code-accordion-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-code-accordion-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.3,
+        "classification": "current contract PASS",
+        "log": "test-kawmed-code-accordion-contract.log"
+      },
+      {
+        "name": "test-intapcard-active-account-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-intapcard-active-account-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.11,
+        "classification": "current contract PASS",
+        "log": "test-intapcard-active-account-contract.log"
+      },
+      {
+        "name": "test-intapcard-multiaccount-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-intapcard-multiaccount-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.11,
+        "classification": "current contract PASS",
+        "log": "test-intapcard-multiaccount-contract.log"
+      },
+      {
+        "name": "test-intapcard-kawmed-integrated-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-intapcard-kawmed-integrated-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.17,
+        "classification": "current contract PASS",
+        "log": "test-intapcard-kawmed-integrated-contract.log"
+      },
+      {
+        "name": "test-kawmed-demo-invitations-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-demo-invitations-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.12,
+        "classification": "current contract PASS",
+        "log": "test-kawmed-demo-invitations-contract.log"
+      },
+      {
+        "name": "test-kawmed-live-guest-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-live-guest-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.12,
+        "classification": "current contract PASS",
+        "log": "test-kawmed-live-guest-contract.log"
+      },
+      {
+        "name": "test-kawmed-claim-resume-ux-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-claim-resume-ux-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.11,
+        "classification": "current contract PASS",
+        "log": "test-kawmed-claim-resume-ux-contract.log"
+      },
+      {
+        "name": "test-kawvo-free-g2-qa-corrections-2026-11-15",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawvo-free-g2-qa-corrections-2026-11-15.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.22,
+        "classification": "current contract PASS",
+        "log": "test-kawvo-free-g2-qa-corrections-2026-11-15.log"
+      },
+      {
+        "name": "test-kawvo-g5-publication-navigation-2026-11-15",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawvo-g5-publication-navigation-2026-11-15.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.24,
+        "classification": "current contract PASS",
+        "log": "test-kawvo-g5-publication-navigation-2026-11-15.log"
+      },
+      {
+        "name": "test-free-contact-agenda-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-free-contact-agenda-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.19,
+        "classification": "historical expectations; main comparison recorded",
+        "log": "test-free-contact-agenda-contract.log"
+      },
+      {
+        "name": "test-free-demo-master-v2-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-free-demo-master-v2-contract.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.35,
+        "classification": "current contract PASS",
+        "log": "test-free-demo-master-v2-contract.log"
+      },
+      {
+        "name": "test-free-tour-persistence",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-free-tour-persistence.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.2,
+        "classification": "current contract PASS",
+        "log": "test-free-tour-persistence.log"
+      },
+      {
+        "name": "test-sponsored-profile-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-sponsored-profile-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.25,
+        "classification": "historical expectations; main comparison recorded",
+        "log": "test-sponsored-profile-contract.log"
+      },
+      {
+        "name": "test-sponsored-g4-shell-gate",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-sponsored-g4-shell-gate.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.55,
+        "classification": "current contract PASS",
+        "log": "test-sponsored-g4-shell-gate.log"
+      },
+      {
+        "name": "test-kawmed-g7-1-launch-search",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-g7-1-launch-search.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 1.46,
+        "classification": "current contract PASS",
+        "log": "test-kawmed-g7-1-launch-search.log"
+      },
+      {
+        "name": "test-kawmed-shell-navigation-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-shell-navigation-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 1.35,
+        "classification": "original operation freeze superseded by approved G3 successors; retained FAIL",
+        "log": "test-kawmed-shell-navigation-contract.log"
+      },
+      {
+        "name": "test-kawvo-g3-1-1-ui-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawvo-g3-1-1-ui-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.65,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-kawvo-g3-1-1-ui-contract.log"
+      },
+      {
+        "name": "test-kawmed-g3-2-navigation-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-g3-2-navigation-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 1.01,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-kawmed-g3-2-navigation-contract.log"
+      },
+      {
+        "name": "test-kawmed-g3-2-public-return-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-g3-2-public-return-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.33,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-kawmed-g3-2-public-return-contract.log"
+      },
+      {
+        "name": "test-kawmed-g3-3-guest-shell-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-g3-3-guest-shell-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.8,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-kawmed-g3-3-guest-shell-contract.log"
+      },
+      {
+        "name": "test-kawmed-g3-4-master-shell-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-kawmed-g3-4-master-shell-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.8,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-kawmed-g3-4-master-shell-contract.log"
+      },
+      {
+        "name": "test-sponsored-g4-unified-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-sponsored-g4-unified-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.7,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-sponsored-g4-unified-contract.log"
+      },
+      {
+        "name": "test-sponsor-g5-shell-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-sponsor-g5-shell-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.76,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-sponsor-g5-shell-contract.log"
+      },
+      {
+        "name": "test-sponsor-inventory-g7-contract",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/test-sponsor-inventory-g7-contract.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 1.65,
+        "classification": "phase-specific scope incompatible with cumulative reference; retained FAIL",
+        "log": "test-sponsor-inventory-g7-contract.log"
+      },
+      {
+        "name": "audit-team-flow-invariants",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/audit-team-flow-invariants.mjs"
+        ],
+        "exit": 0,
+        "status": "PASS",
+        "seconds": 0.19,
+        "classification": "current contract PASS",
+        "log": "audit-team-flow-invariants.log"
+      },
+      {
+        "name": "audit-team-browser-authority",
+        "command": [
+          "/tmp/kawvo-002/previous-node20/bin/node",
+          "scripts/audit-team-browser-authority.mjs"
+        ],
+        "exit": 1,
+        "status": "FAIL",
+        "seconds": 0.19,
+        "classification": "historical expectations; main comparison recorded",
+        "log": "audit-team-browser-authority.log"
+      }
+    ],
+    "failureDetails": {
+      "test-free-contact-agenda-contract": [
+        "Error: Falta contrato: barra del propietario muestra acceso a Configuración"
+      ],
+      "test-sponsored-profile-contract": [
+        "Error: Falta contrato: publicación mínima especial para patrocinador"
+      ],
+      "test-kawmed-shell-navigation-contract": [],
+      "test-kawvo-g3-1-1-ui-contract": [],
+      "test-kawmed-g3-2-navigation-contract": [],
+      "test-kawmed-g3-2-public-return-contract": [],
+      "test-kawmed-g3-3-guest-shell-contract": [],
+      "test-kawmed-g3-4-master-shell-contract": [],
+      "test-sponsored-g4-unified-contract": [],
+      "test-sponsor-g5-shell-contract": [],
+      "test-sponsor-inventory-g7-contract": [],
+      "audit-team-browser-authority": [
+        "✗ Team login displays identified Team",
+        "✗ Team login displays required Master identity",
+        "✗ Team login explains browser-session requirement"
+      ]
+    },
+    "mainComparisons": [
+      {
+        "name": "test-free-contact-agenda-contract",
+        "base": "6e6bfbb1bd60c91a94e92d36f6cfdd9f91e3d9e2",
+        "exit": 1
+      },
+      {
+        "name": "test-sponsored-profile-contract",
+        "base": "6e6bfbb1bd60c91a94e92d36f6cfdd9f91e3d9e2",
+        "exit": 1
+      },
+      {
+        "name": "audit-team-browser-authority",
+        "base": "6e6bfbb1bd60c91a94e92d36f6cfdd9f91e3d9e2",
+        "exit": 1
+      }
+    ],
+    "assertionsWeakened": false
+  },
+  "browser": {
+    "initialExecutions": [
+      {
+        "name": "kawmed-g3-2-browser",
+        "command": [
+          "node",
+          "--input-type=module",
+          "-e",
+          "import { runG32Browser } from './scripts/lib/kawmed-g3-2-browser.mjs'; await runG32Browser()"
+        ],
+        "status": "PASS",
+        "exit": 0,
+        "seconds": 155.95
+      },
+      {
+        "name": "kawmed-g3-3-browser",
+        "command": [
+          "node",
+          "--input-type=module",
+          "-e",
+          "import { runG33Browser } from './scripts/lib/kawmed-g3-3-browser.mjs'; await runG33Browser()"
+        ],
+        "status": "PASS",
+        "exit": 0,
+        "seconds": 119.2
+      },
+      {
+        "name": "kawmed-g3-4-browser",
+        "command": [
+          "node",
+          "--input-type=module",
+          "-e",
+          "import { runG34Browser } from './scripts/lib/kawmed-g3-4-browser.mjs'; await runG34Browser()"
+        ],
+        "status": "PASS",
+        "exit": 0,
+        "seconds": 168.95
+      },
+      {
+        "name": "sponsored-g4-browser",
+        "command": [
+          "node",
+          "--input-type=module",
+          "-e",
+          "import { runSponsoredG4Browser } from './scripts/lib/sponsored-g4-browser.mjs'; await runSponsoredG4Browser()"
+        ],
+        "status": "PASS",
+        "exit": 0,
+        "seconds": 222.71
+      },
+      {
+        "name": "sponsor-g5-browser",
+        "command": [
+          "node",
+          "--input-type=module",
+          "-e",
+          "import { runSponsorG5Browser } from './scripts/lib/sponsor-g5-browser.mjs'; await runSponsorG5Browser()"
+        ],
+        "status": "FAIL",
+        "exit": 1,
+        "seconds": 66.07
+      },
+      {
+        "name": "sponsor-inventory-g7-browser",
+        "command": [
+          "node",
+          "--input-type=module",
+          "-e",
+          "import { runG7Browser } from './scripts/lib/sponsor-inventory-g7-browser.mjs'; await runG7Browser()"
+        ],
+        "status": "PASS",
+        "exit": 0,
+        "seconds": 107.72
+      }
+    ],
+    "totalDistinctCompletedGroups": 138,
+    "groups": {
+      "G3.2": 29,
+      "Doctor_Free_G3.1.1": 21,
+      "G3.3": 15,
+      "G3.4": 15,
+      "G4": 19,
+      "G5": 16,
+      "G7.1": 11,
+      "G8_search_paid_Team": 12
+    },
+    "g5InitialFailure": "page.goto /other timeout 12000ms after nine passing groups; original log retained",
+    "g5Resolution": {
+      "unchangedTargetRetry": "g5-native-back-retry.log",
+      "remainingSix": "g5-remaining.log",
+      "assertionsAndTimeoutUnchanged": true,
+      "finalDistinctGroupsPassed": 16,
+      "cause": "not reproduced; no functional defect established"
+    },
+    "g8Command": [
+      "node",
+      "scripts/test-kawvo-g8-release-contract.mjs",
+      "--browser"
+    ],
+    "g8Result": "PASS 12 additional groups",
+    "realAuthentication": false,
+    "artifacts": "/tmp/kawvo-g8-validation/"
+  },
+  "apiEquivalentTreeExecutions": [
+    {
+      "command": [
+        "node",
+        "scripts/test-sponsor-inventory-g7-contract.mjs"
+      ],
+      "cwd": "/workspace/intap-link-kaw-g7-worker",
+      "source": "e9b1aa11189fe43e928ba26802e2f5f34fd5baa4",
+      "targetApiTreeEquivalent": true,
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 68.72
+    },
+    {
+      "command": [
+        "node",
+        "scripts/test-sponsor-inventory-worker-compat.mjs"
+      ],
+      "cwd": "/workspace/intap-link-kaw-g7-worker",
+      "source": "e9b1aa11189fe43e928ba26802e2f5f34fd5baa4",
+      "targetApiTreeEquivalent": true,
+      "status": "PASS",
+      "exit": 0,
+      "seconds": 13.54
+    }
+  ],
+  "g8Verifier": {
+    "command": [
+      "node",
+      "scripts/test-kawvo-g8-release-contract.mjs"
+    ],
+    "result": "PASS",
+    "log": "g8-release-contract-final.log"
+  },
+  "apiReviewBundleCommands": [
+    [
+      "node_modules/.bin/esbuild",
+      "api/src/preview-free-entry.ts",
+      "--bundle",
+      "--platform=node",
+      "--format=esm",
+      "--target=node20",
+      "--external:cloudflare:*",
+      "--outfile=/tmp/kawvo-g8-validation/api-production-review.mjs"
+    ],
+    [
+      "node_modules/.bin/esbuild",
+      "api/src/preview-frontdoor-entry.ts",
+      "--bundle",
+      "--platform=node",
+      "--format=esm",
+      "--target=node20",
+      "--external:cloudflare:*",
+      "--outfile=/tmp/kawvo-g8-validation/api-preview-review.mjs"
+    ]
+  ],
+  "remoteRead": [
+    {
+      "surface": "app-preview",
+      "status": "000",
+      "exit": 56,
+      "asset": [],
+      "error": "curl: (56) CONNECT tunnel failed, response 403\n"
+    },
+    {
+      "surface": "app-production",
+      "status": "000",
+      "exit": 56,
+      "asset": [],
+      "error": "curl: (56) CONNECT tunnel failed, response 403\n"
+    }
+  ],
+  "githubPreviewAcceptance": {
+    "pr": 181,
+    "comment": 7094624920,
+    "state": "owner-approved search; no implied Production approval"
+  },
+  "ci": {
+    "policy": "Final SHA workflow result recorded in Draft PR; previous CI is not claimed for this new commit"
+  },
+  "logHashes": {
+    "api-preview-review.log": {
+      "sha256": "2a94eae32a8891c78e693fb64b406ba7cc26b6b64b0e6f372b456778ee2e6760",
+      "bytes": 89
+    },
+    "api-production-review.log": {
+      "sha256": "7641ff2266d075f58b9da1b0c157d7d92971f91ea2e88362595f1453d612e387",
+      "bytes": 92
+    },
+    "app-production-package.log": {
+      "sha256": "cc5dc8ab9258e05dcb699b5cc76c32faa8ad4da9eea2c8cf83dc96e652708ef8",
+      "bytes": 1635
+    },
+    "audit-team-browser-authority-main.log": {
+      "sha256": "06bb724b6f2c72cbd4b50d6a3e9f8f78cc65b40ec648e01616954c44fa55a5eb",
+      "bytes": 662
+    },
+    "audit-team-browser-authority.log": {
+      "sha256": "06bb724b6f2c72cbd4b50d6a3e9f8f78cc65b40ec648e01616954c44fa55a5eb",
+      "bytes": 662
+    },
+    "audit-team-flow-invariants.log": {
+      "sha256": "cbf4b098b290b7f44048930d9b2722b083d525223d535b62cf08f2b0b9a96cc1",
+      "bytes": 1386
+    },
+    "build-0.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "build-1.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "build-2.log": {
+      "sha256": "b6cf2e4f175d0f5652d4bc9091d650cb2432898e23fa23f8374f0f63a8b26f93",
+      "bytes": 1716
+    },
+    "build-3.log": {
+      "sha256": "0ab5d2cde0c39cb049bd17e0308d962f266860599249fef39641c2e451193bc7",
+      "bytes": 1753
+    },
+    "build-4.log": {
+      "sha256": "ea0ff328bb9c96de23bdf87e3822ada5ca08f250a95cc05543c5d6dcb52b8cb4",
+      "bytes": 5245
+    },
+    "build-5.log": {
+      "sha256": "b94bdbf9420fc8fbbb33f7adb93a34a507f093b0553e43485ce0442ac7e6e72c",
+      "bytes": 5281
+    },
+    "build-6.log": {
+      "sha256": "ad7b0283218f3b05822e4e5be1ed3220e7ded8d293d35d3a2483819d50ab8ed4",
+      "bytes": 1172
+    },
+    "g5-native-back-retry.log": {
+      "sha256": "5a9076fff69f7cbdd153b85b82b682c5f8600a567166a8641a202c766f19f092",
+      "bytes": 184
+    },
+    "g5-remaining.log": {
+      "sha256": "42609f3be441cdd7fd7cc12e486fcbcc893855931405c3dcdc3c70d9e0f0cf3b",
+      "bytes": 640
+    },
+    "g8-browser.log": {
+      "sha256": "8c6357823c4bb0e923a8cd95a7703ea353fde59e1c0fa277e787256233db8ce9",
+      "bytes": 1480
+    },
+    "g8-release-contract-final.log": {
+      "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+      "bytes": 608
+    },
+    "g8-release-contract.log": {
+      "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+      "bytes": 608
+    },
+    "kawmed-g3-2-browser.log": {
+      "sha256": "ac94960c3e5c067b9dfeb8256583c3e2f5bb2c1189401001175a893d54b5e492",
+      "bytes": 3811
+    },
+    "kawmed-g3-3-browser.log": {
+      "sha256": "a8b0f3328b8ac5a594236df387b3c76c0e492c97b5708fa367e05d85142a011a",
+      "bytes": 1542
+    },
+    "kawmed-g3-4-browser.log": {
+      "sha256": "6016337d727506fa8a177b0857d3c1492e2120e33a158e285ceb904e3101c129",
+      "bytes": 1467
+    },
+    "sponsor-g5-browser.log": {
+      "sha256": "0fc4c26549ad8afb1e8a205c9bf332e6c8a99fea534136d89cbd0e76c39bdd03",
+      "bytes": 1651
+    },
+    "sponsor-inventory-g7-browser.log": {
+      "sha256": "5e170142b7120d4cfd5500ee64b9da70844245f6202b4ba5caea2183633e30ff",
+      "bytes": 1307
+    },
+    "sponsored-g4-browser.log": {
+      "sha256": "754a1bff0287e97ae370c3671beb68fe019c2e2bdfbf70c218961e5bfc6df4f0",
+      "bytes": 2093
+    },
+    "test-free-contact-agenda-contract-main.log": {
+      "sha256": "2cbef544f273cda743e3fdd886abc06c570c14df05812f1396e6dcbeeaf98308",
+      "bytes": 764
+    },
+    "test-free-contact-agenda-contract.log": {
+      "sha256": "cf7391cca70f4256c938c51400e1e2601398ee9430a9638de47068799ca74d12",
+      "bytes": 767
+    },
+    "test-free-demo-master-v2-contract.log": {
+      "sha256": "ed32f4821fae1bc45d4ce197a119d82f768c9bf03c3e7552cb861a1c45f2dfda",
+      "bytes": 42
+    },
+    "test-free-tour-persistence.log": {
+      "sha256": "8adf24b6944cf6e8849379b211491f06a2a8d8e5a376bd9635c3138fb563472d",
+      "bytes": 40
+    },
+    "test-intapcard-active-account-contract.log": {
+      "sha256": "3657bead2324801ba934bbc4d9df927c3a179bc3a65d1d3e56e8302665cbdf2e",
+      "bytes": 84
+    },
+    "test-intapcard-kawmed-integrated-contract.log": {
+      "sha256": "e87b89fa669222c2c64a46a4a1bb5116b13b8dfb1184f2153567096e207fb285",
+      "bytes": 52
+    },
+    "test-intapcard-multiaccount-contract.log": {
+      "sha256": "6eff1eea677218b5c83e5dabeced2786bc20dbabcdfad542842e3b682fd093c6",
+      "bytes": 63
+    },
+    "test-kawmed-claim-resume-ux-contract.log": {
+      "sha256": "0e702cae2e113a394e548fad913510329fc867564f4203571546bff40dfe387a",
+      "bytes": 59
+    },
+    "test-kawmed-code-accordion-contract.log": {
+      "sha256": "a88290c1c4bdc1789deae63def7616b81f3d212a32166804c763d2cd5c77ee79",
+      "bytes": 187
+    },
+    "test-kawmed-demo-invitations-contract.log": {
+      "sha256": "8096676baa726703a0debc14a3a2f02b266096cfc3757412fb4cd5b21fa69a4d",
+      "bytes": 46
+    },
+    "test-kawmed-g3-2-navigation-contract.log": {
+      "sha256": "25b1aa1f58db47c93a0d095338b98531d44401fa167015da1847bce46ccf2e4f",
+      "bytes": 628
+    },
+    "test-kawmed-g3-2-public-return-contract.log": {
+      "sha256": "ff67d8f775e20371e288df337b5b92c0b61072986997266634c35cc9c450f786",
+      "bytes": 9068
+    },
+    "test-kawmed-g3-3-guest-shell-contract.log": {
+      "sha256": "2c5e0bf7d33ab6c9bfba31cedeb35d6a32e473d1ad448cd5983333ef04a2cfd7",
+      "bytes": 629
+    },
+    "test-kawmed-g3-4-master-shell-contract.log": {
+      "sha256": "965c552104d93e0c8d9664bc47bd44335c191a487b7654c58e6d66ebd8756117",
+      "bytes": 644
+    },
+    "test-kawmed-g7-1-launch-search.log": {
+      "sha256": "dc59b6963e78b23d8c3e425e10e86a15eaead826d3c3c7f1e29182531554905b",
+      "bytes": 120
+    },
+    "test-kawmed-isolation-contract.log": {
+      "sha256": "9de194c966304b23c1569b5dade3b90cff5ed56a3aa073665afcbfabb6e264d8",
+      "bytes": 52
+    },
+    "test-kawmed-live-guest-contract.log": {
+      "sha256": "94647c9235a2c86acef37988406567388a5c52718ff4c73138088bc7901090ea",
+      "bytes": 61
+    },
+    "test-kawmed-shell-navigation-contract.log": {
+      "sha256": "58dcdde744d90b0d3b0b4b82f364a6f794e8a1120ab7dd53be94a414badea0cb",
+      "bytes": 6266
+    },
+    "test-kawmed-web-preview-route-contract.log": {
+      "sha256": "2f6d5491c47989cf0511e48589a97f5dbb24fbdf0f1c9b1b2423e0ba5499e8db",
+      "bytes": 66
+    },
+    "test-kawvo-free-g2-qa-corrections-2026-11-15.log": {
+      "sha256": "af79af327bf3c19de8d21dee6d78e9e3cf1e963d6b6967f008a923c630dd26eb",
+      "bytes": 136
+    },
+    "test-kawvo-g3-1-1-ui-contract.log": {
+      "sha256": "fc6aa7ce131cb560010e726af1ca6654fa2ab6c14b6beb0764430ee8df3815ad",
+      "bytes": 9036
+    },
+    "test-kawvo-g5-publication-navigation-2026-11-15.log": {
+      "sha256": "a20b60b35175828f1f3ba3cb4f2d2e60dad19782096e4ed1fda4c89e70204d3a",
+      "bytes": 127
+    },
+    "test-sponsor-g5-shell-contract.log": {
+      "sha256": "5b0eebc5130857fedc2f65b8622e58511f11ce8f611f486de0404df0a7a35681",
+      "bytes": 633
+    },
+    "test-sponsor-inventory-g7-contract-equivalent-api.log": {
+      "sha256": "b04726a391fd4046215591ed5b943f2d37fc026fb3ce444e94c6739e8dba4272",
+      "bytes": 971
+    },
+    "test-sponsor-inventory-g7-contract.log": {
+      "sha256": "dd83bd595da75a96afb0bbd3b3eb54d37b275b21954c3cd8b54aabf97ae0160d",
+      "bytes": 825
+    },
+    "test-sponsor-inventory-worker-compat-equivalent-api.log": {
+      "sha256": "abb2e4baf2091251fe895e5a6f4841a99371f8b7b96321c19b6327b96b934436",
+      "bytes": 991
+    },
+    "test-sponsored-g4-shell-gate.log": {
+      "sha256": "0908dccfd58b38be3ba4975faa6812d7db726254036878b2a9abec878d13e5bc",
+      "bytes": 65
+    },
+    "test-sponsored-g4-unified-contract.log": {
+      "sha256": "ba1a4f2a5a7c5d31e2b32f8a5e2aac0df958bb6a4db8f9c58ca7e628e2e93fc3",
+      "bytes": 634
+    },
+    "test-sponsored-profile-contract-main.log": {
+      "sha256": "10d7dd3e5c671f70502e3e40e06428a49272f6e37905580992ffb60608f58a36",
+      "bytes": 733
+    },
+    "test-sponsored-profile-contract.log": {
+      "sha256": "9a0fd50ee7c43f9750424a06848b3370ac57958ca8b7bc4d726455cc95aff445",
+      "bytes": 758
+    },
+    "web-production-package.log": {
+      "sha256": "3712663238e28ff9ec5a5b0d9ca0af9b81a2483ddb77c910b349a0383c65b856",
+      "bytes": 7443
+    }
+  },
+  "decision": "NO-GO for Production",
+  "blockers": [
+    "Preview-only shell/API gates",
+    "Remote schema and missing historical 0153/0154 migration reconciliation",
+    "Current production baseline and complete rollback not accredited",
+    "Exact candidate/plan approval and integration automation review",
+    "Issue #134 first acceptance release certification pending"
+  ],
+  "noDeploy": true,
+  "noMerge": true,
+  "noRemoteMigration": true,
+  "diffCheck": {
+    "initialIntegral": "FAIL: four trailing whitespace hard breaks inherited in G8 contract header",
+    "correction": "Only Markdown hard breaks become blank lines; normative text assertion added",
+    "finalIntegral": "PASS"
+  }
+}
