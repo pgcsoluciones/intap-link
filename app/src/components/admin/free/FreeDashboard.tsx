@@ -205,8 +205,10 @@ function FreeDashboardLegacy() {
   const sharePublicUrl = async (url: string) => {
     setShareMessage('')
     try {
-      if (navigator.share) { await navigator.share({ title: me?.name || 'Mi perfil', url }); setShareMessage('Perfil listo para compartir.'); return }
-      await navigator.clipboard.writeText(url); setShareMessage('Enlace copiado para compartir.')
+      const whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent('Conoce mi presentación digital: ' + url)
+      const opened = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+      if (!opened) window.location.assign(whatsappUrl)
+      setShareMessage('Abriendo WhatsApp para compartir tu presentación.')
     } catch (error: any) { if (error?.name !== 'AbortError') setShareMessage('No pudimos abrir el menú para compartir.') }
   }
 
