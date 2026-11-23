@@ -7,8 +7,7 @@ type Auth=(c:any)=>Promise<Scope|null>
 type Resource='sellers'|'assignments'
 function bad(message='Parámetros de consulta inválidos.'){return Object.assign(new Error(message),{status:400})}
 const normalize=(x:string)=>x.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' ')
-const escapeLike=(s:string)=>s.replace(/[\\%_]/g,'\\const escapeLike=(s:string)=>s.replace(/[\\%_]/g,'\\$&')
-')
+const escapeLike=(s:string)=>s.replace(/[\\%_]/g,'\\$&')
 function sqlFold(input:string){
  let expr='lower('+input+')'
  for(const [accent,plain] of Object.entries({'Á':'a','É':'e','Í':'i','Ó':'o','Ú':'u','Ü':'u','Ñ':'n','á':'a','é':'e','í':'i','ó':'o','ú':'u','ü':'u','ñ':'n'}))expr="replace("+expr+",'"+accent+"','"+plain+"')"
