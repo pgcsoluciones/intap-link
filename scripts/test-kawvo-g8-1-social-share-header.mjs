@@ -22,7 +22,7 @@ assert.match(shell, /<FreeShellSessionExit\/>/)
 assert.match(master, /presentation\.agenda&&<button/)
 assert.match(master, /presentation\.id&&<button/)
 assert.doesNotMatch(master, /\/admin\/free\/notifications/)
-assert.match(origin, /mode === 'production' && host === 'app\.intaprd\.com'/)
+assert.match(origin, /import\.meta\.env\.MODE === 'production' && host === 'app\.intaprd\.com'/)
 assert.match(origin, /\/admin\/free\/shell-preview\?kawvo_shell=1/)
 
 // Preserve existing Web Functions social-card construction, including
