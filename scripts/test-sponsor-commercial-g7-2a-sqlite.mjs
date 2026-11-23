@@ -8,15 +8,23 @@ import {inventoryFixture,TENANT_A,TENANT_B} from './test-sponsor-inventory-g7-co
 const f=await inventoryFixture(1001)
 const migration=execFileSync('git',['show','2286c937d9ce13422f22b289f5029343c2f5ae4c:api/migrations/0153_sponsor_sales_representatives.sql'],{encoding:'utf8'})
 execFileSync('python3',['-c','import sqlite3,sys; con=sqlite3.connect(sys.argv[1]);con.executescript(sys.stdin.read());con.commit()',f.path],{input:migration})
-for(const tenant of [TENANT_A,TENANT_B]){
- f.alter("INSERT INTO sponsor_module_grants(sponsor_id,module_code,enabled) VALUES(?,'commercial_seller',1)",[tenant])
- for(let n=0;n<(tenant===TENANT_A?1001:11);n++){
-  const rep='rep-'+tenant[0]+'-'+String(n).padStart(5,'0')
-  f.alter('INSERT INTO sponsor_sales_representatives(id,sponsor_id,first_name,last_name,whatsapp,zone) VALUES(?,?,?,?,?,?)',[rep,tenant,n===0?'Árbol':('Nombre '+n),'Apellido','18095550100','Zona'])
-  f.alter('INSERT INTO sponsor_sales_assignments(id,sponsor_id,artifact_id,representative_id,group_label) VALUES(?,?,?,?,?)',[
-   'assignment-'+tenant[0]+'-'+n,tenant,tenant[0]+'-artifact-'+String(n).padStart(6,'0'),rep,'Grupo '+n])
- }
-}
+execFileSync('python3',['-c',String.raw`
+import sqlite3,sys
+p,a,b=sys.argv[1:4]
+con=sqlite3.connect(p)
+for tenant in [a,b]:
+ con.execute("INSERT INTO sponsor_module_grants(sponsor_id,module_code,enabled) VALUES(?,'commercial_seller',1)",(tenant,))
+ tag=tenant[0]
+ count=1001 if tag=='a' else 11
+ reps=[];assignments=[]
+ for n in range(count):
+  rep=f"rep-{tag}-{n:05d}"
+  reps.append((rep,tenant,'Árbol' if n==0 else f'Nombre {n}','Apellido','18095550100','Zona'))
+  assignments.append((f'assignment-{tag}-{n}',tenant,f'{tag}-artifact-{n:06d}',rep,f'Grupo {n}'))
+ con.executemany('INSERT INTO sponsor_sales_representatives(id,sponsor_id,first_name,last_name,whatsapp,zone) VALUES(?,?,?,?,?,?)',reps)
+ con.executemany('INSERT INTO sponsor_sales_assignments(id,sponsor_id,artifact_id,representative_id,group_label) VALUES(?,?,?,?,?)',assignments)
+con.commit()
+`,f.path,TENANT_A,TENANT_B])
 const {default:app}=await import(new URL('file://'+f.dir+'/api.mjs'))
 const dbSql=[]
 const DB={
@@ -25,7 +33,7 @@ const DB={
   let args=[]
   return{
    bind(...a){args=a;return this},
-   async first(){dbSql.push({sql,args});return f.alter('SELECT 1') && JSON.parse(execFileSync('python3',['scripts/lib/sponsor-inventory-g7-sqlite.py',f.path,'read',JSON.stringify([sql,args])],{encoding:'utf8'}))[0]||null},
+   async first(){dbSql.push({sql,args});return JSON.parse(execFileSync('python3',['scripts/lib/sponsor-inventory-g7-sqlite.py',f.path,'read',JSON.stringify([sql,args])],{encoding:'utf8'}))[0]||null},
    async all(){dbSql.push({sql,args});return{success:true,results:JSON.parse(execFileSync('python3',['scripts/lib/sponsor-inventory-g7-sqlite.py',f.path,'read',JSON.stringify([sql,args])],{encoding:'utf8'}))}}
   }
  },
