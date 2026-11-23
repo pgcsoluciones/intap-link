@@ -1,0 +1,112 @@
+name: Kawvo G8 — stage API version (manual, no traffic)
+on:
+  workflow_dispatch:
+    inputs:
+      approved_release_sha:
+        description: "Exact G8 product SHA"
+        required: true
+        type: string
+      baseline_api_version:
+        description: "Exact API version retained in G8.6 backup (UUID)"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: kawvo-g8-stage-api-production
+  cancel-in-progress: false
+jobs:
+  stage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      REPO_APPROVAL: ${{ vars.INTAP_PRODUCTION_APPROVAL }}
+      REPO_APPROVED_SHA: ${{ vars.INTAP_APPROVED_COMMIT }}
+      RELEASE_SHA: ${{ inputs.approved_release_sha }}
+      BASELINE_API: ${{ inputs.baseline_api_version }}
+      WRANGLER_SEND_METRICS: "false"
+    steps:
+      - name: Approval / SHA / Cloudflare account gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$REPO_APPROVAL" = "SÍ" || { echo 'BLOCKED: production approval'; exit 1; }
+          test "$REPO_APPROVED_SHA" = "$GITHUB_SHA" || { echo 'BLOCKED: main moved / approval stale'; exit 1; }
+          test "$RELEASE_SHA" = "71dd92b870482427d8576e68d89c3167bcfe8f12" || { echo 'BLOCKED: wrong unified source'; exit 1; }
+          [[ "$BASELINE_API" =~ ^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$ ]] || { echo 'BLOCKED: baseline API ID'; exit 1; }
+          [[ "$CLOUDFLARE_ACCOUNT_ID" =~ ^[a-f0-9]{32}$ ]] || { echo 'BLOCKED: account not configured'; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'BLOCKED: Cloudflare token unavailable'; exit 1; }
+          echo 'PASS: exact manual authorization; no traffic modifications'
+      - uses: actions/checkout@v4
+        with:
+          ref: 71dd92b870482427d8576e68d89c3167bcfe8f12
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+      - name: Source, dependencies and Wrangler 4 pinned
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          test "$(node --version)" = "v22.12.0"
+          npm ci
+          npx --yes --package=wrangler@4.166.0 -- wrangler --version | grep -Fq '4.166.0' || { echo 'BLOCKED: wrong Wrangler'; exit 1; }
+      - name: Verify active API target and existing production bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,urllib.request,tomllib
+          c=tomllib.load(open('api/wrangler.toml','rb'))
+          assert c['name']=='intap-api'
+          assert c['vars']['ENVIRONMENT']=='production'
+          assert c['vars']['APP_URL']=='https://app.intaprd.com'
+          assert c['vars']['WEB_URL']=='https://intaprd.com'
+          assert {x['binding'] for x in c['d1_databases']}=={'DB','AGENTS_DB'}
+          assert {x['binding'] for x in c['r2_buckets']}=={'BUCKET'}
+          account=os.environ['CLOUDFLARE_ACCOUNT_ID'];token=os.environ['CLOUDFLARE_API_TOKEN'];expected=os.environ['BASELINE_API']
+          try:
+            req=urllib.request.Request(f'https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/intap-api/deployments',headers={'Authorization':'Bearer '+token})
+            with urllib.request.urlopen(req,timeout=30) as response: p=json.load(response)
+            d=((p.get('result') or {}).get('deployments') or [None])[0]
+            v=(d or {}).get('versions') or []
+            if not p.get('success') or len(v)!=1 or v[0].get('version_id')!=expected or float(v[0].get('percentage',0))!=100: raise ValueError()
+          except Exception:
+            raise SystemExit('BLOCKED: exact production baseline not confirmed; no upload')
+          print('PASS: API deployment still matches G8.6 baseline at 100%')
+          PY
+      - name: Dry run only (strict, keep vars)
+        shell: bash
+        run: |
+          set -euo pipefail
+          HELP="$(npx --yes --package=wrangler@4.166.0 -- wrangler versions upload --help)"
+          for flag in --strict --keep-vars --dry-run --tag; do
+            printf '%s' "$HELP" | grep -Fq -- "$flag" || { echo "BLOCKED: missing $flag"; exit 1; }
+          done
+          npx --yes --package=wrangler@4.166.0 -- wrangler versions upload \
+            --config api/wrangler.toml --name intap-api --strict --keep-vars --dry-run
+      - name: One API version upload — NO traffic activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes --package=wrangler@4.166.0 -- wrangler versions upload \
+            --config api/wrangler.toml --name intap-api --strict --keep-vars \
+            --tag kawvo-g8-71dd92b8 --message 'G8 unified 71dd92b8 inactive version'
+          echo 'PASS: version upload command returned; do not rerun if result is ambiguous'
+          {
+            echo '## G8 API — version uploaded, NO traffic activated'
+            echo ''
+            echo "- Source SHA: $RELEASE_SHA"
+            echo "- Old Production version: $BASELINE_API"
+            echo '- App/Web: unchanged'
+            echo '- D1/R2 migrations: none'
+            echo '- Record the new version UUID from the upload log before any activation'
+          } >> "$GITHUB_STEP_SUMMARY"
