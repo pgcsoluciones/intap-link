@@ -1,4 +1,4 @@
-// Narrow Stage API operation. Default is local preparation; --stage uploads a version, never traffic.
+// Default prepares locally; --check-auth reads only; --stage uploads a version, never traffic.
 import {execFileSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {existsSync,mkdirSync,readFileSync,writeFileSync,symlinkSync} from 'node:fs'
@@ -42,6 +42,24 @@ export function traffic(result){
  checked(typeof d?.id==='string'&&d.id.length>0&&d.versions?.length===1&&d.versions[0].version_id===ACTIVE&&Number(d.versions[0].percentage)===100,'la activa/tráfico cambió; no subir ni activar')
  return {id:d.id,versions:d.versions}
 }
+export function authenticate(client){
+ // The pinned #171 reader snapshots OAuth before whoami. Wrangler may refresh
+ // that session during whoami: read the same session again afterwards.
+ const paths=()=>['Library/Preferences/.wrangler/config/default.toml','.wrangler/config/default.toml','.config/.wrangler/config/default.toml'].map(p=>join(client.home,p)).filter(existsSync)
+ const before=process.env.CLOUDFLARE_API_TOKEN?null:paths()
+ if(before)checked(before.length===1,'se requiere una única sesión Wrangler existente')
+ client.credentials()
+ if(!before)return {sessionReloaded:false}
+ const after=paths();checked(after.length===1&&after[0]===before[0],'cambió el contexto de sesión Wrangler; detener')
+ const token=readFileSync(after[0],'utf8').match(/^oauth_token\s*=\s*"([^"\r\n]+)"/m)?.[1]
+ checked(token,'sesión Wrangler existente sin token legible después de whoami')
+ const sessionReloaded=client.headers?.Authorization!=='Bearer '+token
+ client.headers={Authorization:'Bearer '+token}
+ return {sessionReloaded}
+}
+export async function authenticationPreflight(client){
+ return traffic((await client.api('/workers/scripts/'+WORKER+'/deployments')).result)
+}
 export function verifyVersion(v,newVersion,modules){
  checked(newVersion.id!==ACTIVE&&/^[a-f0-9-]{36}$/i.test(newVersion.id||''),'ID Stage inválido')
  checked(newVersion.annotations?.['workers/tag']===CANDIDATE,'anotación SHA Stage incorrecta')
@@ -53,7 +71,7 @@ export function verifyVersion(v,newVersion,modules){
 export async function uploadStage({directory,version,modules,client,fetch:request=globalThis.fetch}){
  const body=payload(version,modules),attempt=join(directory,'stage-attempt.json')
  checked(!existsSync(attempt),'existe intento anterior; revisar evidencia, no repetir upload')
- const before=traffic((await client.api('/workers/scripts/'+WORKER+'/deployments')).result)
+ const before=await authenticationPreflight(client)
  save(join(directory,'traffic-before.json'),before)
  save(attempt,{candidate:CANDIDATE,inheritFrom:ACTIVE,operation:'stage-version-only',payloadSha256:sha(canonical(body)),startedAt:new Date().toISOString()})
  const response=await request('https://api.cloudflare.com/client/v4/accounts/'+client.account+CREATE,{method:'POST',headers:{...client.headers,'Content-Type':'application/json'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(120000)})
@@ -73,7 +91,7 @@ export async function uploadStage({directory,version,modules,client,fetch:reques
 export async function main(args=process.argv.slice(2),{root=process.cwd(),snapshot=SNAPSHOT}={}){
  process.umask(0o077)
  checked(process.version==='v20.20.2','se requiere Node 20.20.2 existente')
- checked(args.every(x=>x==='--stage'),'única opción admitida: --stage; por defecto prepara localmente')
+ checked(args.length<=1&&args.every(x=>['--stage','--check-auth'].includes(x)),'usar --check-auth o --stage por separado; por defecto prepara localmente')
  root=resolve(root);snapshot=resolve(snapshot)
  const folder=dirname(snapshot),version=read(snapshot),directory=join(folder,'stage-api-'+CANDIDATE.slice(0,12))
  validateSnapshot(version)
@@ -82,6 +100,7 @@ export async function main(args=process.argv.slice(2),{root=process.cwd(),snapsh
  checked(git('rev-parse',CANDIDATE+'^{commit}')===CANDIDATE,'falta objeto del candidato exacto')
  git('diff','--exit-code','HEAD',CANDIDATE,'--','package.json','package-lock.json','api/package.json')
  const source=join(directory,'source'),bundle=join(directory,'prepared-modules.private.json'),prepared=join(directory,'prepared.json')
+ if(args.includes('--check-auth'))checked(existsSync(prepared),'--check-auth requiere el paquete existente; no recompila')
  if(existsSync(directory)){
   checked(existsSync(prepared)&&!existsSync(join(directory,'stage-attempt.json')),'preparación incompleta o intento previo; no repetir')
   const record=read(prepared);checked(record.candidate===CANDIDATE&&record.snapshotSha256===sha(readFileSync(snapshot))&&record.bundleSha256===sha(readFileSync(bundle)),'artefacto/snapshot cambió')
@@ -100,10 +119,15 @@ export async function main(args=process.argv.slice(2),{root=process.cwd(),snapsh
   save(prepared,{candidate:CANDIDATE,snapshotSha256:sha(readFileSync(snapshot)),bundleSha256:sha(readFileSync(bundle)),compiler:'existing Wrangler versions upload --dry-run; no historical TOML'})
  }
  const modules=read(bundle);saveIfMissing(join(directory,'payload.private.json'),payload(version,modules))
- if(!args.includes('--stage')){console.log('PASS preparación local; sin HTTP. Evidencia privada: '+directory);return}
+ if(!args.length){console.log('PASS preparación local; sin HTTP. Evidencia privada: '+directory);return}
  const utility=join(folder,'kawmed-g3-1-pages.mjs'),utilityBytes=readFileSync(utility)
  checked(createHash('sha1').update('blob '+utilityBytes.length+'\0').update(utilityBytes).digest('hex')==='bc33561fbcd906172502bc558df427d952ea6fab','lector #171 difiere del helper verificado')
- const {Runner}=await import(pathToFileURL(utility).href),client=new Runner({root});client.credentials()
+ const {Runner}=await import(pathToFileURL(utility).href),client=new Runner({root}),auth=authenticate(client)
+ if(args.includes('--check-auth')){
+  await authenticationPreflight(client)
+  const receipt={result:'PASS',operation:'authentication read only; no upload',candidate:CANDIDATE,active:ACTIVE,...auth,packageReused:true,preparedSha256:sha(readFileSync(prepared)),bundleSha256:sha(readFileSync(bundle)),checkedAt:new Date().toISOString()}
+  save(join(directory,'auth-check-'+Date.now()+'.json'),receipt);console.log(JSON.stringify(receipt,null,2));return
+ }
  const receipt=await uploadStage({directory,version,modules,client});console.log(JSON.stringify({...receipt,evidence:directory},null,2))
 }
 function saveIfMissing(file,value){if(existsSync(file))checked(canonical(read(file))===canonical(value),'payload preparado distinto');else save(file,value)}
