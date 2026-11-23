@@ -6,7 +6,7 @@
 
 Se verificaron #182 OPEN/Draft en `474b52d3b173c40ecda346030acd8e7438e79003` y #183 OPEN/Draft en `8bc33c1b62d2c11147ffc192119fac98009cd5b5`. El segundo tiene como padre exacto el primero. Diff #183: únicamente handler LIVE, prueba focal y handoff (tres archivos, +128/−5). Se contrastó el handler completo y su UPDATE/parametrización antes de integrar.
 
-Operación local autorizada: `git merge --ff-only 8bc33c1b62d2c11147ffc192119fac98009cd5b5` sobre la rama G8 limpia. Se retiene el commit original una sola vez; no cherry-pick, squash ni merge de PR acumulativos. Después se añade un commit de reconciliación documental/de verificadores. El SHA consolidado exacto es el HEAD publicado y registrado en #182: no se intenta incrustar un hash autorreferente dentro de su propio manifiesto.
+Operación local autorizada: `git merge --ff-only 8bc33c1b62d2c11147ffc192119fac98009cd5b5` sobre la rama G8 limpia. Se retiene el commit original una sola vez; no cherry-pick, squash ni merge de PR acumulativos. Después se añaden commits de reconciliación documental/de verificadores y precisión del runbook. GitHub reconoce #183 como integrado en G8; main no cambia. El SHA consolidado exacto es el HEAD publicado y registrado en #182: no se intenta incrustar un hash autorreferente dentro de su propio manifiesto.
 
 **Único delta funcional:** `api/src/kawmed-demo-invitations.ts`, blob completo exacto de #183. No se reescribe el fix al integrarlo. El UPDATE exige una fila modificada y revalida sesión, mismo grant/médico y active/vigencia. Las aserciones de normalidad y rechazo no se reducen; la prueba y el handoff #183 también se conservan byte a byte.
 

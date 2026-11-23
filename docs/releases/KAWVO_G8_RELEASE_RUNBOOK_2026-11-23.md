@@ -1,6 +1,6 @@
 # KAW-G8-001 — Release y reversión para revisión
 
-Estado: **NO-GO para Producción**. Preparación, no autorización. No se ejecutaron publicaciones, activaciones, migraciones remotas ni merges. G6 y G7.2 permanecen fuera. Contrato: [G8](../architecture/KAWVO_G8_MASTER_RELEASE_UNIFICATION_2026-11-23.md), #150/#151/#156/#169/#172, KAW-U-NAV-001 y [Producción](../../CONTRACT_PRODUCTION_PROFILES.md).
+Estado: **NO-GO para Producción**. Preparación, no autorización. No se ejecutaron publicaciones Cloudflare, activaciones, migraciones remotas ni merges a main. La integración Git de #183 en la rama G8 sí fue autorizada y se realizó por fast-forward; no publica el producto. G6 y G7.2 permanecen fuera. Contrato: [G8](../architecture/KAWVO_G8_MASTER_RELEASE_UNIFICATION_2026-11-23.md), #150/#151/#156/#169/#172, KAW-U-NAV-001 y [Producción](../../CONTRACT_PRODUCTION_PROFILES.md).
 
 ## 1. Identidades y paquete
 
