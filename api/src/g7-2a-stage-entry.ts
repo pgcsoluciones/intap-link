@@ -5,7 +5,7 @@ import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 import { commercialPage } from './sponsor-commercial-pages'
 
-const app=new Hono()
+const app=new Hono<{Bindings:{ENVIRONMENT:string}}>()
 async function digest(input:string){
  const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input))
  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')
