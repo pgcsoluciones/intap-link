@@ -1,0 +1,316 @@
+{
+  "task": "KAW-G8-002",
+  "auditedBase": "836d422cc76ba5c96ef9cdfd5f7efe11b8d5d438",
+  "decision": "NO-GO",
+  "independence": "Critical source review by the same assistant; not a separate human approval",
+  "contractClassification": [
+    {
+      "test": "test-free-contact-agenda-contract",
+      "file": "scripts/test-free-contact-agenda-contract.mjs",
+      "line": 66,
+      "unchangedBlob": "2780a26fea3e7cb933db147ca4f4e9dc01275dc7",
+      "rawResult": "FAIL (retained)",
+      "classification": "legado confirmado",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Same failing literal on main; owner bar renders settingsLabel and approved default Editar perfil, preserving explicit labels and destinations",
+      "effectiveCode": "web/src/components/appointments/AppointmentOwnerBar.tsx"
+    },
+    {
+      "test": "test-sponsored-profile-contract",
+      "file": "scripts/test-sponsored-profile-contract.mjs",
+      "line": 127,
+      "unchangedBlob": "f8a089cfe11dcdc2b69f557eeae83ea9b87d9732",
+      "rawResult": "FAIL (retained)",
+      "classification": "legado confirmado",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Required special publish condition exists in effective sponsored-profiles.ts:44. The documented historical owner-flow also omits the old duplicate handler. Main fails the same test later at another assertion, not the same symptom.",
+      "effectiveCode": "api/src/sponsored-profiles.ts:44",
+      "historicalOwnerFlowBlob": "7d081db0cf5ee9c22f04bea29da180bcb3702813"
+    },
+    {
+      "test": "test-kawmed-shell-navigation-contract",
+      "file": "scripts/test-kawmed-shell-navigation-contract.mjs",
+      "line": 70,
+      "unchangedBlob": "8579be49d346df687ad18600b2acdc2111898d8c",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Original main load identity predates approved sponsor_master/delegate verification in MedicalDashboard load; behavior covered by G8-001 cumulative suites"
+    },
+    {
+      "test": "test-kawvo-g3-1-1-ui-contract",
+      "file": "scripts/test-kawvo-g3-1-1-ui-contract.mjs",
+      "line": 16,
+      "unchangedBlob": "0999f321c79af922a2a318d76baa01734358cf9b",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "test-kawmed-g3-2-navigation-contract",
+      "file": "scripts/test-kawmed-g3-2-navigation-contract.mjs",
+      "line": 12,
+      "unchangedBlob": "c79cc584760cb5386e63cbe67849784917ab0182",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "test-kawmed-g3-2-public-return-contract",
+      "file": "scripts/test-kawmed-g3-2-public-return-contract.mjs",
+      "line": 10,
+      "unchangedBlob": "d528f066d43e3da521e94ad7ad2732bb8735dfab",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "test-kawmed-g3-3-guest-shell-contract",
+      "file": "scripts/test-kawmed-g3-3-guest-shell-contract.mjs",
+      "line": 11,
+      "unchangedBlob": "254e03c326ff2a9c6d3a36696e8ff639d65f124c",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "test-kawmed-g3-4-master-shell-contract",
+      "file": "scripts/test-kawmed-g3-4-master-shell-contract.mjs",
+      "line": 10,
+      "unchangedBlob": "69ec2a047bbd8d3e6cc18052aa3251b31b64df1c",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "test-sponsored-g4-unified-contract",
+      "file": "scripts/test-sponsored-g4-unified-contract.mjs",
+      "line": 11,
+      "unchangedBlob": "3197460d2caae1c7035c6a737f8ad2e2528aaaab",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "test-sponsor-g5-shell-contract",
+      "file": "scripts/test-sponsor-g5-shell-contract.mjs",
+      "line": 10,
+      "unchangedBlob": "2d16f532f19957d1b548f1b051ade106b0072dee",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "test-sponsor-inventory-g7-contract",
+      "file": "scripts/test-sponsor-inventory-g7-contract.mjs",
+      "line": 37,
+      "unchangedBlob": "8500dc9d0135325dcb33390f91c80ba5bfabb131",
+      "rawResult": "FAIL (retained)",
+      "classification": "incompatibilidad de alcance",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Phase-specific allowlist rejects approved cumulative successor"
+    },
+    {
+      "test": "audit-team-browser-authority",
+      "file": "scripts/audit-team-browser-authority.mjs",
+      "line": 32,
+      "unchangedBlob": "1311ba9582ffb44c0009ed171c08c8aecc6611cb",
+      "rawResult": "FAIL (retained)",
+      "classification": "legado confirmado",
+      "classificationStatus": "PASS",
+      "realRegressionEstablished": false,
+      "proof": "Three login-copy expectations also fail on main; AdminLogin unchanged from main; Team behavior not inferred from those text assertions",
+      "effectiveCode": "app/src/components/admin/AdminLogin.tsx"
+    }
+  ],
+  "classificationCounts": {
+    "incompatibilidad de alcance": 9,
+    "legado confirmado": 3,
+    "regresión real establecida": 0
+  },
+  "originalAssertionsChanged": false,
+  "gates": [
+    {
+      "gate": "G3/G4/G5 unified activation policy",
+      "status": "BLOCKED",
+      "evidence": "Five original pure gate functions pass Preview fixtures and return false for Production; runtime unchanged",
+      "next": "Technical decision for production activation; no guards removed"
+    },
+    {
+      "gate": "G7.1-A API paginated inventory",
+      "status": "BLOCKED",
+      "evidence": "api/src/sponsor-inventory-page.ts:80 ENVIRONMENT preview guard; production 404 retained",
+      "next": "Separate activation policy/review; preserve requireUser/tenant/active account"
+    },
+    {
+      "gate": "G7.1-B launch search source",
+      "status": "PASS",
+      "evidence": "Approved search helper/counter/reset compose legacy and unified SponsorKawMed; no separate Preview-only search gate",
+      "next": "Current production deployment and remote byte match remain unverified"
+    },
+    {
+      "gate": "D1 schema inspector",
+      "status": "PASS",
+      "evidence": "Fixed metadata SELECTs; five tables/four named indexes, types/defaults/PK/FK/unique/CHECK; negative fixtures; no business SELECT",
+      "next": "Run with existing authorized Wrangler session"
+    },
+    {
+      "gate": "D1 Preview/Production actual schema",
+      "status": "BLOCKED",
+      "evidence": "No authorized Cloudflare session available to this agent; remote schema not read",
+      "next": "Mac --cloudflare against active version DB bindings; never apply migrations automatically"
+    },
+    {
+      "gate": "Rollback inventory inspector",
+      "status": "PASS",
+      "evidence": "GET active versions/settings/cron/routes/Pages; project ownership and public entry hashes; secret binding values and raw responses omitted",
+      "next": "Mac read-only collection; source hashes do not substitute complete rollback"
+    },
+    {
+      "gate": "Actual rollback availability",
+      "status": "BLOCKED",
+      "evidence": "Complete dist/config/Functions and native version retention/restore not accredited",
+      "next": "Verify complete previous artifacts, compiled Functions/context and retained versions; no preventive rollback"
+    },
+    {
+      "gate": "#134 source and local first acceptance",
+      "status": "PASS",
+      "evidence": "Original GET/activate handlers plus real SQLite: pending GET cannot edit; POST activates only the assigned grant; wrong email/expiry/revocation/owner/latest denied",
+      "next": "Keep exact-release authenticated first-acceptance gate below"
+    },
+    {
+      "gate": "#134 concurrent revocation acknowledgement",
+      "status": "FAIL",
+      "evidence": "Local actual handler reproducibly returns 200 after zero-row activation; editing remains denied; handler blob same as main",
+      "next": "Separate minimal product correction after technical review; preserve all auth/grant/profile/expiry checks; rerun focal tests and real controlled first acceptance"
+    },
+    {
+      "gate": "#134 authenticated new LIVE invitation",
+      "status": "BLOCKED",
+      "evidence": "No remote activation executed; it would write invitation state",
+      "next": "Proposed normal-flow test only on authorized fixture invitation after separate write/QA authorization; never credentials or another doctor"
+    },
+    {
+      "gate": "GitHub Actions triggers",
+      "status": "PASS",
+      "evidence": "quality: PR main/push main, builds/audits only; two workflow_dispatch deploy workflows can run migrations/Pages/Worker if explicitly invoked",
+      "next": "Do not dispatch; guard is not an external deployment firewall"
+    },
+    {
+      "gate": "Current hooks/approval variables",
+      "status": "BLOCKED",
+      "evidence": "Connector 400 endpoint allowlist; gh GET denied/Forbidden from this environment, not proof of absent hooks or approval",
+      "next": "Mac --github with existing authenticated gh session; no settings changes"
+    },
+    {
+      "gate": "Current Pages/Workers Builds integrations",
+      "status": "BLOCKED",
+      "evidence": "Historical #167 incident 6904506879 proves Workers Builds ran on merge independently; historical disabled Pages/versions-upload setting not current certification",
+      "next": "Read Pages project source config with inspector; Workers > intap-api and intap-api-preview > Settings > Builds, inspect triggers/branch/command via authorized read access"
+    },
+    {
+      "gate": "12 failing contracts classification",
+      "status": "PASS",
+      "evidence": "9 scope incompatibilities, 3 confirmed legacy expectations; 12 original tests unchanged and still reported FAIL",
+      "next": "No product regression established by those assertions; authenticated/remote gates still open"
+    },
+    {
+      "gate": "Production authorization",
+      "status": "BLOCKED",
+      "evidence": "Not granted; NO-GO retained",
+      "next": "All gates accredited and exact SHA/plan approval before any write operation"
+    }
+  ],
+  "issue134ConcurrentRevocation": {
+    "status": "FAIL",
+    "reproduction": "Original activate handler with SQLite fixture: grant revoked between SELECT and UPDATE; meta.changes=0, HTTP 200; subsequent editing rejected",
+    "source": "api/src/kawmed-demo-invitations.ts:105-112",
+    "sourceIdenticalToMain": true,
+    "newG8Regression": false,
+    "proposedChangeOnly": "Check conditional UPDATE meta.changes and revalidate the same authorized active grant before success; no implementation in this audit",
+    "remoteReproduction": false
+  },
+  "validation": {
+    "toolchain": "Node 20.20.2; existing esbuild/SQLite/Python; no tools installed",
+    "productRuntimeChanges": false,
+    "tests": [
+      {
+        "command": "node scripts/test-kawvo-g8-readonly.mjs",
+        "status": "PASS",
+        "scope": "transport, schema, projections, inventory, artifacts, no-secret persistence, guard matrix and 12 unchanged tests"
+      },
+      {
+        "command": "node scripts/test-kawmed-live-pending-g8.mjs",
+        "status": "PASS",
+        "scope": "original handlers and local SQLite stable transition/denials"
+      },
+      {
+        "command": "node scripts/test-kawmed-live-pending-g8.mjs --race",
+        "status": "FAIL",
+        "exit": 1,
+        "expected": 403,
+        "actual": 200,
+        "scope": "controlled concurrent revocation; zero changed rows; editing denied; no product fix"
+      },
+      {
+        "command": "node scripts/test-kawmed-live-guest-contract.mjs",
+        "status": "PASS"
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-release-contract.mjs",
+        "status": "PASS"
+      }
+    ],
+    "prior138BrowserGroups": "preserved G8-001 evidence; no product change requiring repetition",
+    "remoteD1QueriesExecutedByCodex": 0,
+    "remoteProductWritesExecutedByCodex": 0,
+    "cloudflareAccess": "BLOCKED: no existing authorized Wrangler session on this environment",
+    "githubAdminAccess": "BLOCKED: connector endpoint allowlist and gh GET Forbidden from this environment; not proof of absent integration",
+    "ci": "final SHA workflow result recorded in PR #182",
+    "logs": {
+      "kawvo-g8-002-readonly-final.log": {
+        "sha256": "c05fc79cdfcc9b933845ebfe160630a24cadd8fd60ae073558febc42041c4d0a",
+        "bytes": 1080
+      },
+      "kawvo-g8-002-live-final.log": {
+        "sha256": "3ca4492427e60c4edc9ebb6495b0b86dc69ddf10227213f8953026b98cc09ba7",
+        "bytes": 612
+      },
+      "kawvo-g8-002-live-race.log": {
+        "sha256": "e8e3b870fd0095d645d40236ea8e337279c9de04b47ff5f66f0aefc06c499e62",
+        "bytes": 1180
+      },
+      "kawvo-g8-002-live-contract.log": {
+        "sha256": "94647c9235a2c86acef37988406567388a5c52718ff4c73138088bc7901090ea",
+        "bytes": 61
+      },
+      "kawvo-g8-002-release-contract.log": {
+        "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+        "bytes": 608
+      }
+    },
+    "checks": {
+      "nodeSyntaxThreeScripts": "PASS",
+      "gitDiffCheck": "PASS",
+      "productRuntimeFreezeVsAuditedBase": "PASS"
+    }
+  }
+}

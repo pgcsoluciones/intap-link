@@ -70,3 +70,8 @@ No se entregan comandos de despliegue productivo listos para ejecutar mientras p
 El rollback del Preview de búsqueda tiene asociación documental `9c63a559…` → `ebf507f7…`; el snapshot original adicional conserva `23405a5b…`. Esos IDs no son un rollback productivo acreditado ni se debe sustituir uno por otro sin leer su contexto efectivo. **Rollback remoto NO ensayado; igualdad binaria histórica NO acreditada.** Retención de versiones y disponibilidad de Functions/backups deben verificarse antes de cada release.
 
 Rollback del cambio G8 de preparación: cerrar el Draft o revertir únicamente sus commits documentales/de pruebas/gobernanza. El runtime aprobado queda igual a la referencia G8; no hay datos ni migraciones remotas que revertir en esta tarea.
+
+
+## Inspección posterior KAW-G8-002
+
+Antes de cualquier gate de escritura, usar únicamente el [inspector de lectura y matriz](KAWVO_G8_BLOCKERS_2026-11-23.md). La prueba local estable #134 no cierra el defecto de acuse bajo revocación concurrente ni acredita aceptación autenticada; ese FAIL requiere revisión puntual antes de un futuro release API. Los scripts de inspección no implementan deploy, activación, restore ni migración. No usar los modos de scripts históricos para solucionar un BLOCKED de lectura.

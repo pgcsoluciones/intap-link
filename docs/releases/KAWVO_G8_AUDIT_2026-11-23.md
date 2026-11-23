@@ -98,3 +98,10 @@ Las advertencias Vite de chunks grandes y del API CJS son limitaciones de build 
 Integración Git/documental **preparada para revisión**; runtime G0–G5/G7.1 conservado; G6 y G7.2 fuera; pruebas y fallos explícitos. **NO-GO de Producción**, incluso si CI resulta verde, por los gates anteriores. [Plan de publicación/rollback](KAWVO_G8_RELEASE_RUNBOOK_2026-11-23.md) preparado y no ejecutado.
 
 Se necesita revisión técnica del Draft, resolver activación/esquema/recuperación y pendientes concretos, y después autorización expresa del propietario para el **SHA exacto y plan de release**. Ninguna aceptación histórica ni el push/Draft de esta preparación autoriza merge, despliegue o migración.
+
+
+## Continuación KAW-G8-002 — bloqueantes
+
+Auditoría posterior desde 836d422cc76ba5c96ef9cdfd5f7efe11b8d5d438: [informe técnico de inspección](KAWVO_G8_BLOCKERS_2026-11-23.md) y [matriz actualizada](KAWVO_G8_BLOCKER_MATRIX.json). Runtime y doce suites fallidas intactos. Clasificación: nueve incompatibilidades de alcance y tres expectativas legacy; no se establece una regresión G8 por esos doce FAIL. El filtro G7.1-B también existe en legacy, sin un gate propio Preview; los gates del shell y API paginada sí bloquean la unificación productiva.
+
+Herramienta de lectura de metadata D1/Workers/Pages/GitHub preparada y probada con fixtures, sin copiar valores secretos. Remoto BLOCKED por falta de sesión CF y acceso a consultas administrativas GitHub desde este entorno. Prueba local #134 estable PASS; **carrera de revocación FAIL reproducido**: UPDATE de cero filas seguido de HTTP 200, edición posterior correctamente denegada. Handler idéntico a main, sin corrección funcional aplicada en esta orden. Conserva NO-GO y la necesidad de certificación remota/rollback/autorización exacta. No se modifican las aprobaciones G3–G5/G7.1.

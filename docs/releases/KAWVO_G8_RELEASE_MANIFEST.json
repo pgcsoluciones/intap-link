@@ -2228,5 +2228,14 @@
     "api-production-review.mjs": "21383ceb5efb3bc405c5e6f570e245f2c990b229b99b31d7b602a1a2675edf6d",
     "api-preview-review.mjs": "b7d5a8f7c510320e1a896d7e4eea9ea19b64154ba397342708337d4a6f640466"
   },
-  "apiBundleLimitation": "esbuild local review bundles; not a remotely verified deployment package or active Worker backup"
+  "apiBundleLimitation": "esbuild local review bundles; not a remotely verified deployment package or active Worker backup",
+  "blockerInspection": {
+    "task": "KAW-G8-002",
+    "auditedBase": "836d422cc76ba5c96ef9cdfd5f7efe11b8d5d438",
+    "matrix": "docs/releases/KAWVO_G8_BLOCKER_MATRIX.json",
+    "report": "docs/releases/KAWVO_G8_BLOCKERS_2026-11-23.md",
+    "runtimeChanged": false,
+    "decision": "NO-GO",
+    "issue134ConcurrentRevocation": "FAIL reproduced locally, handler identical to main; product code untouched"
+  }
 }
