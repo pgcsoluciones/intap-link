@@ -2,6 +2,8 @@
 
 **Estado vigente KAW-G8-004: NO-GO.** Se integra por fast-forward el commit exacto #183 `8bc33c1b62d2c11147ffc192119fac98009cd5b5` sobre `474b52d3…`; se conserva una sola instancia del commit. El único delta funcional es el handler LIVE autorizado. Resto de API, App, Web, Functions, permisos, configuración y fases aprobadas intactos. [Informe/matriz de integración vigente](KAWVO_G8_004_INTEGRATION_2026-11-23.md), [manifiesto reconciliado](KAWVO_G8_RELEASE_MANIFEST.json) y [matriz de gates](KAWVO_G8_BLOCKER_MATRIX.json). La carrera se revalida localmente; primera aceptación LIVE autenticada y demás gates remotos siguen pendientes.
 
+**Continuidad G8-006 desde f14cb018…: NO-GO.** Se prepara captura privada y rollback por capas, sin cambiar runtime ni repetir G8.5. El propietario aporta PASS D1 Preview/Producción 0153/0154 y confirma auto-deploy Pages y Builds intap-api desactivados. La [preparación de respaldos](KAWVO_G8_006_BACKUP_ROLLBACK_2026-11-23.md) registra procedencia y límites; API/App/Web siguen BLOCKED de recuperación hasta captura real y evidencia suficiente. Los bloqueos históricos de informes anteriores conservan su SHA y no se presentan como nueva lectura de Codex.
+
 ## Snapshot histórico G8-001 (evidencia y aprobaciones conservadas)
 
 El contenido G8-001/G8-002 siguiente describe sus SHA originales, no pretende que la API integrada siga idéntica a #179. Los documentos originales completos permanecen en Git en `474b52d3…`, con blobs y SHA256 en `historicalSnapshots` del manifiesto. Los resultados históricos FAIL no se reclasifican como PASS por la integración.

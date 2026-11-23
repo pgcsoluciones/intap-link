@@ -38,6 +38,7 @@ const workerPattern='intap-api(?:-preview)?',projectPattern='intap-(?:web2|link)
 export function allowedRequest(method,path,sql){
  if(method==='POST')return /^\/accounts\/[a-f0-9]{32}\/d1\/database\/[a-f0-9-]{36}\/query$/.test(path)&&SCHEMA_QUERIES.includes(sql)
  if(method!=='GET'||sql!==undefined)return false
+ if(/^\/accounts\/[a-f0-9]{32}\/workers\/domains$/.test(path))return true // G8-006 private domain snapshot; GET only.
  return [new RegExp('^/accounts/[a-f0-9]{32}/workers/scripts/'+workerPattern+'/(deployments|settings|schedules)$'),new RegExp('^/accounts/[a-f0-9]{32}/workers/workers/'+workerPattern+'/versions/[a-f0-9-]{36}\\?include=modules$'),new RegExp('^/accounts/[a-f0-9]{32}/pages/projects/'+projectPattern+'$'),new RegExp('^/accounts/[a-f0-9]{32}/pages/projects/'+projectPattern+'/deployments/[a-f0-9-]{36}$'),new RegExp('^/accounts/[a-f0-9]{32}/pages/projects/'+projectPattern+'/deployments\\?env=preview&page=[1-9][0-9]?$'),/^\/zones\?name=intaprd\.com$/,/^\/zones\/[a-f0-9]{32}\/workers\/routes$/].some(r=>r.test(path))
 }
 export class Reader{

@@ -1,5 +1,5 @@
 {
-  "task": "KAW-G8-004",
+  "task": "KAW-G8-006",
   "candidateBranch": "release/kawvo-g8-unified-candidate",
   "auditedSourceCommit": "fae4ced6966a5bfda5bb8f7b298dc8a22bfc5d99",
   "approvedPreviewCodeSource": "f42bccf2b8248b61603090a97ab56c9258400b58",
@@ -2316,5 +2316,14 @@
   "localArtifactEvidenceScope": {
     "appWebFunctions": "Preserved hashes from historical G8-001; their sources are unchanged",
     "api": "Rebuilt locally for integrated exact #183 source; not active Worker backup"
+  },
+  "backupPreparation": {
+    "baseline": "f14cb0180f964d65daaa9b3c69dceccc6011ab24",
+    "script": "scripts/prepare-kawvo-g8-backup.mjs",
+    "privateOutput": "Mac only: ~/intap-release-logs/kawvo-g8-backup-*/manifest.private.json and manifest.sha256",
+    "scope": "GET-only capture, offline SHA256 verification, non-executable per-layer plan; no restore implementation",
+    "inventory": "API native modules/config/bindings/settings/cron/routes/custom domains; Pages retained Production IDs/settings/uses_functions/entry bytes",
+    "completeRecovery": "BLOCKED until real private capture and full Pages/Functions recovery evidence; no remote rehearsal",
+    "schemaAutomationEvidence": "G8.5 owner summary reused; no D1 or automatic-deployment re-audit"
   }
 }

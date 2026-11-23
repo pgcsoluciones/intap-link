@@ -14,11 +14,15 @@ Estado: **NO-GO para Producción**. Preparación, no autorización. No se ejecut
 | Gate | Resultado requerido | Estado en esta preparación |
 | --- | --- | --- |
 | Activación de interfaces | Decisión técnica explícita y lote acotado para permitir shells G3/G4/G5 y API G7.1 en Producción, manteniendo scopes, opt-out y permisos | BLOCKED: las implementaciones actuales exigen modo/host Preview; G7.1 API devuelve 404 en Producción. No quitar guards para lograr verde |
-| Esquema | Comparar metadata real de D1 Preview/Producción con tablas/columnas/índices requeridos | BLOCKED: falta acceso desde Codex; 0153/0154 no están en el árbol activo de migraciones |
+| Esquema | Comparar metadata real de D1 Preview/Producción con tablas/columnas/índices requeridos | PASS aportado por el propietario en G8.5 para 0153/0154 en ambas bases; informes privados en Mac. Codex no repite consultas; reconciliación del historial versionado sigue pendiente, sin aplicar migraciones |
 | #134 | Certificar primera aceptación pending→active en el release exacto con invitación LIVE de prueba, mismo médico y edición active-only | OPEN: fuente histórica reconciliada; no acreditada esa QA en este candidato |
-| Seguridad de integración | Revisión independiente del delta y de automatismos de `main`/Workers Builds/Pages antes de merge | PENDING: el CI GitHub no controla todos los automatismos externos |
+| Seguridad de integración | Revisión independiente del delta y de automatismos de `main`/Workers Builds/Pages antes de merge | G8.5: propietario confirma Pages App/Web auto-deploy y Workers Builds intap-api desactivados. No implica estado de otros hooks/variables ni autorización de merge; CI no es un firewall externo |
 | Recuperación | Captura actual de versiones, módulos, bindings/runtime y ajustes no versionados; respaldos App/Web/Functions verificados y versiones retenidas | BLOCKED: no verificados remotamente ni ensayados en esta preparación |
 | Aprobación final | Propietario aprueba SHA exacto, alcance por capa, plan y secuencia | NO concedida |
+
+### Preparación de respaldos G8-006
+
+Usar el [procedimiento de captura/verificación/rollback por capas](KAWVO_G8_006_BACKUP_ROLLBACK_2026-11-23.md), sin ejecutar restauraciones. La herramienta nueva reutiliza los informes G8.5 de la Mac y sólo GET para capturar módulos nativos/configuración/targets retenidos. `--preflight` es local; `--capture` guarda datos reales sólo en la Mac, fuera del repo, con manifiesto SHA256; `--verify` y `--plan` son offline. No implementa operaciones de restore/upload/deploy/activación. PASS de integridad no acredita recuperación completa: App/Web necesitan artefactos/Functions originales o evidencia suficiente de restauración nativa; la API necesita retención/configuración/secretos disponibles. Estado real por capa sigue BLOCKED hasta disponer de esas evidencias. No recompilar un supuesto respaldo ni usar TOML histórico.
 
 No reabrir las aceptaciones funcionales G3–G5 ni la búsqueda G7.1 de Juan. La QA adicional se limita a diferencias del release, primera aceptación LIVE pendiente, activación productiva futura y comprobaciones cruzadas no acreditadas.
 

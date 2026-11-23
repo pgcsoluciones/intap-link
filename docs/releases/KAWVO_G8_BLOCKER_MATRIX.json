@@ -1,5 +1,5 @@
 {
-  "task": "KAW-G8-004",
+  "task": "KAW-G8-006",
   "auditedBase": "836d422cc76ba5c96ef9cdfd5f7efe11b8d5d438",
   "decision": "NO-GO",
   "independence": "Critical source review by the same assistant; not a separate human approval",
@@ -174,9 +174,9 @@
     },
     {
       "gate": "D1 Preview/Production actual schema",
-      "status": "BLOCKED",
-      "evidence": "No authorized Cloudflare session available to this agent; remote schema not read",
-      "next": "Mac --cloudflare against active version DB bindings; never apply migrations automatically"
+      "status": "PASS",
+      "evidence": "G8.5 owner Mac audit: both schemas 0153/0154 PASS; no queries repeated by Codex",
+      "next": "Preserve private reports; reconcile versioned migration history separately, no migration authorized"
     },
     {
       "gate": "Rollback inventory inspector",
@@ -187,8 +187,8 @@
     {
       "gate": "Actual rollback availability",
       "status": "BLOCKED",
-      "evidence": "Complete dist/config/Functions and native version retention/restore not accredited",
-      "next": "Verify complete previous artifacts, compiled Functions/context and retained versions; no preventive rollback"
+      "evidence": "Capture/verify/plan tool prepared and tested with fixtures; real private modules/config/artifacts available only after Mac capture. Pages full dist/compiled Functions still unaccredited",
+      "next": "Run Mac preflight then capture; verify private manifest; review native retained targets and complete artifact/Functions evidence before claiming recovery"
     },
     {
       "gate": "#134 source and local first acceptance",
@@ -221,10 +221,10 @@
       "next": "Mac --github with existing authenticated gh session; no settings changes"
     },
     {
-      "gate": "Current Pages/Workers Builds integrations",
-      "status": "BLOCKED",
-      "evidence": "Historical #167 incident 6904506879 proves Workers Builds ran on merge independently; historical disabled Pages/versions-upload setting not current certification",
-      "next": "Read Pages project source config with inspector; Workers > intap-api and intap-api-preview > Settings > Builds, inspect triggers/branch/command via authorized read access"
+      "gate": "Production Pages/Workers Builds integrations (G8.5)",
+      "status": "PASS",
+      "evidence": "Owner confirms Pages App/Web auto-deploy disabled and intap-api Workers Builds disabled visually",
+      "next": "Preserve G8.5 evidence; this does not certify other GitHub hooks/variables or intap-api-preview Builds"
     },
     {
       "gate": "12 failing contracts classification",
@@ -474,5 +474,66 @@
       "status": "BLOCKED",
       "scope": "NO-GO pending remote gates and exact SHA/plan authorization"
     }
-  ]
+  ],
+  "ownerG85Evidence": {
+    "source": "Owner-provided G8.5 Mac audit in KAW-G8-006 order, 2026-11-23",
+    "privateReports": "~/intap-release-logs/kawvo-g8-readonly-*/report.json",
+    "remoteWrites": 0,
+    "D1PreviewProduction0153_0154": "PASS reported by owner; no repeat query by Codex",
+    "workers": "Preview/Production inspected on Mac; current IDs stay in private reports",
+    "pagesAutoDeploy": "App/Web disabled, reported by owner",
+    "productionWorkersBuilds": "intap-api disabled, visually confirmed by owner",
+    "main": "unchanged",
+    "limitation": "Original Mac reports unavailable in Codex; tool will consume them locally without transport"
+  },
+  "backupPreparation": {
+    "base": "f14cb0180f964d65daaa9b3c69dceccc6011ab24",
+    "script": "scripts/prepare-kawvo-g8-backup.mjs",
+    "fixtureTest": "scripts/test-kawvo-g8-backup.mjs",
+    "report": "docs/releases/KAWVO_G8_006_BACKUP_ROLLBACK_2026-11-23.md",
+    "actualCaptureExecutedByCodex": false,
+    "layers": {
+      "API": {
+        "status": "BLOCKED",
+        "reason": "Private Mac capture/verification pending; no real backup in Codex"
+      },
+      "App": {
+        "status": "BLOCKED",
+        "reason": "Private Mac capture/verification pending; no real backup in Codex"
+      },
+      "Web": {
+        "status": "BLOCKED",
+        "reason": "Private Mac capture/verification pending; no real backup in Codex"
+      }
+    },
+    "remoteRestoreRehearsed": false,
+    "productionApproval": false,
+    "validation": [
+      {
+        "command": "node scripts/test-kawvo-g8-backup.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "evidence": "/tmp/kawvo-g8-006/backup-fixtures.log",
+        "sha256": "affe3a7d79f2266d6f6d64bf02d165790afed7613d0c51a56c762f7c9757ecbd",
+        "bytes": 549
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-readonly.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "evidence": "/tmp/kawvo-g8-006/readonly-regression.log",
+        "sha256": "920c786410319f10b8779360b1b4e9ad5d9ef8248ae2a00276af930c09f87096",
+        "bytes": 1221
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-release-contract.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "evidence": "/tmp/kawvo-g8-006/release-contract.log",
+        "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+        "bytes": 608
+      }
+    ],
+    "toolIntegrity": "PASS synthetic tests; not real recovery"
+  }
 }

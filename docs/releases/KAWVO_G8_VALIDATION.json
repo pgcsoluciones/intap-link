@@ -1033,5 +1033,55 @@
     "scope": "Local handlers/SQLite fixtures; API runtime byte-exact #183; no remote QA or Cloudflare requests",
     "gitDiffCheck": "PASS",
     "phasePreservation": "All approved runtime unchanged except exact authorized LIVE activate handler"
+  },
+  "backupPreparation": {
+    "task": "KAW-G8-006",
+    "base": "f14cb0180f964d65daaa9b3c69dceccc6011ab24",
+    "node": "20.20.2",
+    "toolsInstalled": false,
+    "realMacCaptureExecutedByCodex": false,
+    "realCloudflareRequests": 0,
+    "remoteProductWrites": 0,
+    "D1ChecksRepeated": false,
+    "ownerG85Evidence": "Summary reused; original private reports remain on Mac",
+    "tests": [
+      {
+        "command": "node scripts/test-kawvo-g8-backup.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "evidence": "/tmp/kawvo-g8-006/backup-fixtures.log",
+        "sha256": "affe3a7d79f2266d6f6d64bf02d165790afed7613d0c51a56c762f7c9757ecbd",
+        "bytes": 549
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-readonly.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "evidence": "/tmp/kawvo-g8-006/readonly-regression.log",
+        "sha256": "920c786410319f10b8779360b1b4e9ad5d9ef8248ae2a00276af930c09f87096",
+        "bytes": 1221
+      },
+      {
+        "command": "node scripts/test-kawvo-g8-release-contract.mjs",
+        "status": "PASS",
+        "exit": 0,
+        "evidence": "/tmp/kawvo-g8-006/release-contract.log",
+        "sha256": "264cef96aabc8d0adc6c732ee5316d6318f9ab5339c02ec57a68debdb1daff8d",
+        "bytes": 608
+      }
+    ],
+    "otherChecks": {
+      "JSsyntax": "PASS",
+      "BashMacCommandSyntax": "PASS",
+      "gitDiffCheck": "PASS",
+      "productRuntimeIdenticalToBase": "PASS"
+    },
+    "layers": {
+      "API": "BLOCKED pending real private capture and recovery evidence",
+      "App": "BLOCKED complete artifact/Functions and native restore evidence",
+      "Web": "BLOCKED complete artifact/Functions and native restore evidence"
+    },
+    "ci": "Exact final SHA result recorded in PR #182, never reused from baseline",
+    "decision": "NO-GO"
   }
 }
