@@ -1,0 +1,27 @@
+# G7.2-A first-party VISUAL QA, narrowly scoped to 3 unused Preview paths.
+# Existing intap-api-preview route app.preview.intaprd.com/* remains untouched.
+# No migration, R2, cron, Pages or production routes.
+name = "kawvo-g7-2a-readonly-stage"
+main = "src/g7-2a-stage-entry.ts"
+compatibility_date = "2024-02-08"
+workers_dev = true
+
+[[routes]]
+pattern = "app.preview.intaprd.com/admin/sponsor/g7-2-qa*"
+zone_name = "intaprd.com"
+
+[[routes]]
+pattern = "app.preview.intaprd.com/api/v1/sponsor/commercial/sellers/page*"
+zone_name = "intaprd.com"
+
+[[routes]]
+pattern = "app.preview.intaprd.com/api/v1/sponsor/commercial/assignments/page*"
+zone_name = "intaprd.com"
+
+[vars]
+ENVIRONMENT = "preview"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "intap_db_preview"
+database_id = "e9f46214-623f-48da-af13-74198e12b222"
