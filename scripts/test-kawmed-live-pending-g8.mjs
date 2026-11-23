@@ -25,11 +25,11 @@ await build({stdin:{contents:"export {default as app} from './api/src/preview-fr
 const {app,liveGuestProfile}=await import(pathToFileURL(bundle).href),base='/api/v1/me/kawmed/live-access/:token'
 const get=app.routes.find(r=>r.method==='GET'&&r.path===base)?.handler,activate=app.routes.find(r=>r.method==='POST'&&r.path===base+'/activate')?.handler
 assert.ok(get&&activate,'Original registered handlers required')
-let updates=0,beforeActivationWrite=null,lastChanges=0
+let updates=0,beforeActivationWrite=null,afterActivationWrite=null,lastChanges=0,metaOverride=null
 const DB={prepare(sql){let args=[];return{bind(...values){args=values;return this},async first(){return query(sql,args)[0]||null},async run(){assert.match(sql,/^UPDATE kawmed_demo_invitations SET status='active'/);if(beforeActivationWrite){beforeActivationWrite();beforeActivationWrite=null}updates++;lastChanges=Number(execFileSync('python3',['-c',`import sqlite3,json,sys
-c=sqlite3.connect(sys.argv[1]);r=c.execute(sys.argv[2],json.loads(sys.argv[3]));c.commit();print(r.rowcount)`,database,sql,JSON.stringify(args)],{encoding:'utf8'}));return{success:true,meta:{changes:lastChanges}}}}}}
+c=sqlite3.connect(sys.argv[1]);r=c.execute(sys.argv[2],json.loads(sys.argv[3]));c.commit();print(r.rowcount)`,database,sql,JSON.stringify(args)],{encoding:'utf8'}));if(afterActivationWrite){afterActivationWrite();afterActivationWrite=null}return{success:true,meta:metaOverride??{changes:lastChanges}}}}}}
 const ctx=({session=true,requested='i-'+id,delegate='i-'+id}={})=>({env:{ENVIRONMENT:'preview',DB},req:{header:name=>name==='Cookie'&&session?'intap_preview_session_id='+cookie:name==='X-KawMed-Delegate'?delegate:'',param:()=>requested},json:(data,status=200)=>Response.json(data,{status})})
-const reset=()=>{query("UPDATE kawmed_demo_invitations SET status='pending',expires_at=datetime('now','+1 day') WHERE id=?",[id]);query("UPDATE users SET email='guest@example.test' WHERE id='guest'");query("UPDATE kawmed_demo_live_access SET medical_profile_id='doctor-a',owner_user_id='owner' WHERE invitation_id=?",[id]);updates=0}
+const reset=()=>{query("UPDATE kawmed_demo_invitations SET status='pending',expires_at=datetime('now','+1 day'),accepted_user_id=NULL,accepted_at=NULL WHERE id=?",[id]);query("UPDATE users SET email='guest@example.test' WHERE id='guest'");query("UPDATE users SET email='intapcard@gmail.com' WHERE id='owner'");query("UPDATE auth_sessions SET user_id='guest',revoked_at=NULL,expires_at=datetime('now','+1 day')");query("UPDATE kawmed_demo_live_access SET medical_profile_id='doctor-a',owner_user_id='owner' WHERE invitation_id=?",[id]);updates=0;lastChanges=0;beforeActivationWrite=null;afterActivationWrite=null;metaOverride=null}
 const denied=async label=>{assert.equal((await get(ctx())).status,403,label+' GET');assert.equal((await activate(ctx())).status,403,label+' POST');assert.equal(await liveGuestProfile(ctx(),'guest'),null,label+' edit');assert.equal(updates,0,label+' cannot activate');console.log('PASS local #134 '+label)}
 assert.equal((await get(ctx({session:false}))).status,401);assert.equal((await activate(ctx({session:false}))).status,401);assert.equal(updates,0)
 assert.equal(await liveGuestProfile(ctx(),'guest'),null,'pending may not edit')
@@ -37,8 +37,11 @@ let response=await get(ctx());assert.equal(response.status,200);assert.equal((aw
 response=await get(ctx({requested:token}));assert.equal((await response.json()).data.medical_profile_id,'doctor-a','Hashed token path resolves same authorized grant')
 response=await activate(ctx());assert.equal(response.status,200);assert.equal((await response.json()).data.medical_profile_id,'doctor-a');assert.equal(updates,1)
 assert.equal(query('SELECT status FROM kawmed_demo_invitations WHERE id=?',[id])[0].status,'active')
+const accepted=query('SELECT accepted_user_id,accepted_at FROM kawmed_demo_invitations WHERE id=?',[id])[0];assert.equal(accepted.accepted_user_id,'guest');assert.ok(accepted.accepted_at)
 assert.equal((await liveGuestProfile(ctx(),'guest')).id,'doctor-a');assert.equal(await liveGuestProfile(ctx({delegate:'doctor-b'}),'guest'),null)
 response=await activate(ctx());assert.equal(response.status,200,'normal active re-entry stays authorized');assert.equal((await liveGuestProfile(ctx(),'guest')).id,'doctor-a')
+assert.deepEqual(query('SELECT accepted_user_id,accepted_at FROM kawmed_demo_invitations WHERE id=?',[id])[0],accepted,'Re-entry preserves acceptance metadata')
+reset();response=await activate(ctx({requested:token}));assert.equal(response.status,200);assert.equal((await response.json()).data.medical_profile_id,'doctor-a','Hashed token activation preserves the assigned profile')
 console.log('PASS local #134 anonymous denied; pending GET no edit; original activate pending→active; correct profile; active re-entry')
 reset();query("UPDATE users SET email='wrong@example.test' WHERE id='guest'");await denied('wrong invited email')
 reset();query("UPDATE kawmed_demo_invitations SET expires_at=datetime('now','-1 minute') WHERE id=?",[id]);await denied('expired grant')
@@ -54,5 +57,37 @@ if(process.argv.includes('--race')){
  reset();beforeActivationWrite=()=>query("UPDATE kawmed_demo_invitations SET status='revoked' WHERE id=?",[id])
  const raced=await activate(ctx());assert.equal(lastChanges,0);assert.equal(await liveGuestProfile(ctx(),'guest'),null,'Revocation still prevents delegated editing')
  console.log('REPRO #134 local race: grant revoked between read and UPDATE; UPDATE changes=0; handler status='+raced.status+'; editing denied')
- assert.equal(raced.status,403,'FAIL: activation must not report success when conditional UPDATE changed zero rows; no product patch in this audit')
+ assert.equal(raced.status,403,'Activation must not report success when conditional UPDATE changed zero rows')
+ assert.equal((await raced.json()).ok,false)
+ assert.equal(query('SELECT accepted_user_id FROM kawmed_demo_invitations WHERE id=?',[id])[0].accepted_user_id,null,'Lost activation cannot record acceptance')
+ reset();beforeActivationWrite=()=>query("UPDATE kawmed_demo_invitations SET expires_at=datetime('now','-1 minute') WHERE id=?",[id])
+ assert.equal((await activate(ctx())).status,403);assert.equal(lastChanges,0);assert.equal(await liveGuestProfile(ctx(),'guest'),null)
+ console.log('PASS local #134 zero-row revocation and expiry races return 403')
+ for(const [label,mutation,editingDenied] of [
+  ['revoked after UPDATE',()=>query("UPDATE kawmed_demo_invitations SET status='revoked' WHERE id=?",[id]),true],
+  ['expired after UPDATE',()=>query("UPDATE kawmed_demo_invitations SET expires_at=datetime('now','-1 minute') WHERE id=?",[id]),true],
+  ['owner no longer authorized',()=>query("UPDATE users SET email='other@example.test' WHERE id='owner'"),true],
+  ['guest account email changed',()=>query("UPDATE users SET email='changed@example.test' WHERE id='guest'"),true],
+  ['session revoked',()=>query("UPDATE auth_sessions SET revoked_at=datetime('now')"),false],
+  ['session actor changed',()=>query("UPDATE auth_sessions SET user_id='outsider'"),false],
+  ['owner/profile mismatch',()=>query("UPDATE kawmed_demo_live_access SET owner_user_id='other-owner' WHERE invitation_id=?",[id]),true],
+  ['assigned profile changed',()=>query("UPDATE kawmed_demo_live_access SET medical_profile_id='doctor-b' WHERE invitation_id=?",[id]),false],
+  ['returned to pending',()=>query("UPDATE kawmed_demo_invitations SET status='pending' WHERE id=?",[id]),true]
+ ]){
+  reset();afterActivationWrite=mutation
+  const result=await activate(ctx());assert.equal(lastChanges,1,label);assert.equal(result.status,403,label);const body=await result.json();assert.equal(body.ok,false);assert.equal(body.data,undefined,'Denied activation cannot announce a different doctor')
+  if(editingDenied)assert.equal(await liveGuestProfile(ctx(),'guest'),null,label+' still cannot edit')
+  console.log('PASS local #134 post-write revalidation: '+label)
+ }
+ reset();afterActivationWrite=()=>{query("INSERT INTO kawmed_demo_invitations(id,token_hash,invited_email,owner_user_id,source_medical_profile_id,status,expires_at,sandbox_json) VALUES (?,?,?,'owner','doctor-b','pending',datetime('now','+1 day'),'{}')",[other,hash('d'.repeat(64)),'guest@example.test']);query('INSERT INTO kawmed_demo_live_access(invitation_id,medical_profile_id,owner_user_id) VALUES (?,?,?)',[other,'doctor-b','owner'])}
+ assert.equal((await activate(ctx())).status,403);assert.equal(lastChanges,1);assert.equal(await liveGuestProfile(ctx(),'guest'),null,'A new invitation supersedes the original during acceptance')
+ query('DELETE FROM kawmed_demo_live_access WHERE invitation_id=?',[other]);query('DELETE FROM kawmed_demo_invitations WHERE id=?',[other])
+ console.log('PASS local #134 post-write revalidation: newer invitation supersedes original')
+ for(const meta of [{},{changes:0},{changes:2}]){reset();metaOverride=meta;assert.equal((await activate(ctx())).status,403,'Exactly one reported updated row is required')}
+ reset();assert.equal((await activate(ctx())).status,200);assert.equal((await liveGuestProfile(ctx(),'guest')).id,'doctor-a','No regression after concurrency denials')
+ console.log('PASS local #134 missing/zero/multiple-row metadata fails closed; normal activation still succeeds')
+ reset();const simultaneous=await Promise.all([activate(ctx()),activate(ctx())]);assert.equal(updates,2)
+ for(const result of simultaneous){assert.equal(result.status,200);assert.equal((await result.json()).data.medical_profile_id,'doctor-a')}
+ assert.equal(query('SELECT accepted_user_id FROM kawmed_demo_invitations WHERE id=?',[id])[0].accepted_user_id,'guest')
+ console.log('PASS local #134 two authorized concurrent acceptances preserve active re-entry and the same assigned doctor')
 }
