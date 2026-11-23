@@ -93,12 +93,39 @@ async function stageApp(){
 }
 async function main(){
  const mode=process.argv[2]||'--check';
- check(['--check','--apply','--rollback'].includes(mode)&&process.argv.length<=3,'invalid mode');
+ check(['--check','--inspect','--apply','--rollback'].includes(mode)&&process.argv.length<=3,'invalid mode');
  check(existsSync(join(ROOT,'.git'))&&existsSync(WRANGLER),'run from repo root with existing dependencies');
  check(git('cat-file','-t',SHA)==='commit','pinned candidate SHA not locally available');
  const authorization=auth();
  const before=await state(authorization);
- if(mode==='--check'){
+ if(mode==='--inspect'){
+  // Forensic read-only path after an ambiguous upload. Do not submit POST.
+  const attempted=existsSync(join(DIR,'attempt.json'))?read(join(DIR,'attempt.json')):null;
+  const stage=existsSync(join(DIR,'pages-stage.json'))?read(join(DIR,'pages-stage.json')):null;
+  const upload=existsSync(join(DIR,'upload-attempt.json'))?read(join(DIR,'upload-attempt.json')):null;
+  const versionFile=existsSync(join(DIR,'new-version.json'))?read(join(DIR,'new-version.json')):null;
+  const activation=existsSync(join(DIR,'activation-attempt.json'))?read(join(DIR,'activation-attempt.json')):null;
+  const receipt=existsSync(join(DIR,'receipt.json'))?read(join(DIR,'receipt.json')):null;
+  let recentVersions=null,versionListError=null;
+  try{
+   const list=await api('GET','/workers/workers/'+WORKER+'/versions',authorization);
+   const rows=Array.isArray(list)?list:Array.isArray(list?.items)?list.items:Array.isArray(list?.versions)?list.versions:[];
+   recentVersions=rows.slice(0,25).map(v=>({id:v.id,created_on:v.created_on,tag:v.annotations?.['workers/tag']||null,message:v.annotations?.['workers/message']||null}));
+  }catch(e){versionListError=String(e.message).slice(0,250)}
+  const live=await appBundle('https://app.preview.intaprd.com');
+  const stageBundle=stage?.origin&&isOrigin(stage.origin)?await appBundle(stage.origin).catch(()=>null):null;
+  const output={operation:'READ-ONLY FORENSICS; DO NOT RETRY POST',
+   expectedOldWorker:attempted?.oldVersion||null,activeWorker:before.id,
+   activeMatchesBefore:attempted?.oldVersion===before.id,
+   oldOrigin:attempted?.oldOrigin||null,currentOrigin:before.origin,
+   sharedBundle:live,sharedUnchanged:live===OLD,
+   pagesOrigin:stage?.origin||null,pagesBundle:stageBundle,
+   uploadAttemptExists:Boolean(upload),newVersionReceipt:versionFile?.newVersion||null,
+   activationAttemptExists:Boolean(activation),finalReceiptExists:Boolean(receipt),
+   recentVersions,versionListError,
+   evidenceDirectory:DIR};
+  console.log(JSON.stringify(output,null,2));return;
+ }
   const bundle=await appBundle('https://app.preview.intaprd.com');
   console.log(JSON.stringify({operation:'read-only',workerVersion:before.id,origin:before.origin,bundle,expected:OLD,ready:bundle===OLD},null,2));return;
  }
