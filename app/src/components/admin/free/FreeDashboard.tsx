@@ -206,8 +206,7 @@ function FreeDashboardLegacy() {
     setShareMessage('')
     try {
       const whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent('Conoce mi presentación digital: ' + url)
-      const opened = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
-      if (!opened) window.location.assign(whatsappUrl)
+      window.location.assign(whatsappUrl)
       setShareMessage('Abriendo WhatsApp para compartir tu presentación.')
     } catch (error: any) { if (error?.name !== 'AbortError') setShareMessage('No pudimos abrir el menú para compartir.') }
   }
