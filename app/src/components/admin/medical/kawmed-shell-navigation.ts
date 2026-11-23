@@ -1,3 +1,5 @@
+import { isKawvoReleaseAppHost } from '../kawvo-release-host'
+
 /** Presentation hints only. Authentication, selected account and ownership stay in the existing guards/API. */
 export type KawMedShellTab = 'home' | 'profile' | 'agenda' | 'more'
 export type KawMedProfileSection = 'profile' | 'centers' | 'schedule' | 'insurance' | 'appearance'
@@ -19,8 +21,7 @@ export const KAWMED_PROFILE_SECTIONS: readonly { id: KawMedProfileSection; title
 
 type Request = { mode: string; hostname: string; pathname: string; search: string; scope: string; delegated: boolean }
 export function isKawMedShellRequest(context: Request): boolean {
-  return context.mode === 'preview'
-    && context.hostname === 'app.preview.intaprd.com'
+  return isKawvoReleaseAppHost(context.mode, context.hostname)
     && context.pathname === '/admin/medical'
     && new URLSearchParams(context.search).get('kawvo_med_shell') === '1'
     && context.scope === 'doctor'
