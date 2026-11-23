@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import os,json,urllib.request,tomllib
+          import os,json,urllib.request,urllib.error,tomllib
           c=tomllib.load(open('api/wrangler.toml','rb'))
           assert c['name']=='intap-api'
           assert c['vars']['ENVIRONMENT']=='production'
@@ -73,14 +73,35 @@ jobs:
           assert {x['binding'] for x in c['d1_databases']}=={'DB','AGENTS_DB'}
           assert {x['binding'] for x in c['r2_buckets']}=={'BUCKET'}
           account=os.environ['CLOUDFLARE_ACCOUNT_ID'];token=os.environ['CLOUDFLARE_API_TOKEN'];expected=os.environ['BASELINE_API']
+          req=urllib.request.Request(f'https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/intap-api/deployments',headers={'Authorization':'Bearer '+token})
           try:
-            req=urllib.request.Request(f'https://api.cloudflare.com/client/v4/accounts/{account}/workers/scripts/intap-api/deployments',headers={'Authorization':'Bearer '+token})
-            with urllib.request.urlopen(req,timeout=30) as response: p=json.load(response)
-            d=((p.get('result') or {}).get('deployments') or [None])[0]
-            v=(d or {}).get('versions') or []
-            if not p.get('success') or len(v)!=1 or v[0].get('version_id')!=expected or float(v[0].get('percentage',0))!=100: raise ValueError()
-          except Exception:
-            raise SystemExit('BLOCKED: exact production baseline not confirmed; no upload')
+            with urllib.request.urlopen(req,timeout=30) as response:
+              p=json.load(response)
+          except urllib.error.HTTPError as e:
+            try:
+              payload=json.loads(e.read().decode('utf-8'))
+              codes=[str(row.get('code')) for row in payload.get('errors',[]) if str(row.get('code','')).isdigit()][:3]
+            except (ValueError,UnicodeError,AttributeError,TypeError): codes=[]
+            raise SystemExit(f"BLOCKED: Cloudflare GET deployments HTTP {e.code}; numeric error codes={','.join(codes) or 'none'}; no upload")
+          except (urllib.error.URLError,TimeoutError):
+            raise SystemExit('BLOCKED: Cloudflare GET deployments network/timeout; no upload')
+          except (ValueError,UnicodeError):
+            raise SystemExit('BLOCKED: Cloudflare GET deployments non-JSON response; no upload')
+          if not isinstance(p,dict) or p.get('success') is not True:
+            codes=[str(row.get('code')) for row in p.get('errors',[]) if isinstance(row,dict) and str(row.get('code','')).isdigit()][:3] if isinstance(p,dict) else []
+            raise SystemExit(f"BLOCKED: Cloudflare GET deployments unsuccessful envelope; numeric error codes={','.join(codes) or 'none'}; no upload")
+          result=p.get('result')
+          if not isinstance(result,dict) or not isinstance(result.get('deployments'),list):
+            raise SystemExit('BLOCKED: Cloudflare GET deployments unexpected result structure; no upload')
+          ds=result['deployments']
+          if len(ds)<1 or not isinstance(ds[0],dict):
+            raise SystemExit('BLOCKED: Cloudflare GET deployments returned no active deployment; no upload')
+          versions=ds[0].get('versions')
+          if not isinstance(versions,list) or len(versions)!=1 or not isinstance(versions[0],dict):
+            raise SystemExit('BLOCKED: active API deployment must have exactly one version; no upload')
+          v=versions[0]
+          if v.get('version_id')!=expected or float(v.get('percentage',0))!=100:
+            raise SystemExit('BLOCKED: active API UUID or traffic differs from pinned G8.6 baseline; no upload')
           print('PASS: API deployment still matches G8.6 baseline at 100%')
           PY
       - name: Dry run only (strict, keep vars)
