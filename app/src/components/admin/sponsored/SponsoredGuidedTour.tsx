@@ -16,10 +16,10 @@ const STEPS:Step[]=[
   {title:'Ayuda y crecimiento',description:'Desde aquí puedes solicitar soporte técnico o conocer cómo convertirte también en patrocinador.',labels:['Soporte técnico','Quiero ser patrocinador']},
 ]
 
-function findElement(labels:string[]){
+function findElement(labels:string[],visibleOnly=false){
   const all=Array.from(document.querySelectorAll<HTMLElement>('h1,h2,h3,button,a'))
   for(const label of labels){
-    const hit=all.find(el=>String(el.textContent||'').trim().includes(label))
+    const hit=all.find(el=>(!visibleOnly||el.getBoundingClientRect().height>0)&&String(el.textContent||'').trim().includes(label))
     if(hit)return hit.closest<HTMLElement>('section,header')||hit.parentElement||hit
   }
   return null
@@ -32,6 +32,11 @@ export default function SponsoredGuidedTour(){
   const cardRef=useRef<HTMLElement|null>(null)
   const available=useMemo(()=>STEPS.filter(step=>Boolean(findElement(step.labels))),[open])
   const position=useCallback((stepIndex:number)=>{
+    if(document.querySelector('[data-sponsored-shell=beneficiary]')&&available[stepIndex]){
+      window.dispatchEvent(new CustomEvent('kawvo-sponsored-tour-target',{detail:available[stepIndex].labels}))
+      window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>{const target=findElement(available[stepIndex].labels,true);if(target){target.scrollIntoView({block:'center'});window.setTimeout(()=>setRect(target.getBoundingClientRect()),260)}}))
+      return
+    }
     const target=available[stepIndex]?findElement(available[stepIndex].labels):null
     if(!target)return
     target.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center',inline:'nearest'})
@@ -40,7 +45,7 @@ export default function SponsoredGuidedTour(){
   useEffect(()=>{
     const start=()=>{if(!ready())return;setIndex(0);setRect(null);setOpen(true)}
     window.addEventListener(EVENT,start as EventListener)
-    const timer=window.setTimeout(()=>{if(localStorage.getItem(SEEN_KEY)!=='1'&&ready())start()},700)
+    const timer=window.setTimeout(()=>{if(localStorage.getItem(SEEN_KEY)!=='1'&&ready()&&!document.querySelector('[data-sponsored-shell=beneficiary] [role=dialog]'))start()},700)
     return()=>{window.clearTimeout(timer);window.removeEventListener(EVENT,start as EventListener)}
   },[])
   useEffect(()=>{if(!open||!available[index])return;position(index)},[open,index,available,position])

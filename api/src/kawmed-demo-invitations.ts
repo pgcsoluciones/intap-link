@@ -107,7 +107,15 @@ app.post('/api/v1/me/kawmed/live-access/:token/activate',async(c:any)=>{
  if(!actor)return c.json({ok:false,error:'Unauthorized'},401)
  const grant:any=await liveGuestInvitation(c,String(actor.email),String(c.req.param('token')||''))
  if(!grant)return deny(c)
- await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET status='active',accepted_user_id=COALESCE(accepted_user_id,?),accepted_at=COALESCE(accepted_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status IN ('pending','active') AND datetime(expires_at)>datetime('now')").bind(String(actor.id),String(grant.id)).run()
+ const updated=await c.env.DB.prepare("UPDATE kawmed_demo_invitations SET status='active',accepted_user_id=COALESCE(accepted_user_id,?),accepted_at=COALESCE(accepted_at,datetime('now')),updated_at=datetime('now') WHERE id=? AND status IN ('pending','active') AND datetime(expires_at)>datetime('now')").bind(String(actor.id),String(grant.id)).run()
+ if(Number(updated.meta?.changes||0)!==1)return deny(c)
+ // Recheck the existing authorization and identity after the conditional write.
+ const currentActor:any=await sessionActor(c)
+ if(!currentActor||String(currentActor.id)!==String(actor.id))return deny(c)
+ const current:any=await liveGuestInvitation(c,String(currentActor.email),String(c.req.param('token')||''))
+ if(!current||String(current.id)!==String(grant.id)||String(current.medical_profile_id)!==String(grant.medical_profile_id))return deny(c)
+ const active=await c.env.DB.prepare("SELECT id FROM kawmed_demo_invitations WHERE id=? AND status='active' AND datetime(expires_at)>datetime('now') LIMIT 1").bind(String(grant.id)).first()
+ if(!active)return deny(c)
  return c.json({ok:true,data:{medical_profile_id:grant.medical_profile_id}})
 })
 app.get('/api/v1/me/kawmed/demo/:token',async(c:any)=>{

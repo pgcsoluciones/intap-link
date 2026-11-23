@@ -1,5 +1,11 @@
+import {getSponsorReturn,sponsorShellUrl,sponsorSelectionUrl,isSponsorShellHost} from './sponsored/sponsor-shell-navigation'
+import {isSponsoredShellRequest,sponsoredShellUrl,sponsoredSurface,sponsoredAccountSelectionUrl} from './sponsored/sponsored-shell-gate'
 import { useEffect, useState, type FormEvent } from 'react'
 import { apiGet, apiPost, INTAP_ACTIVE_TAB_STORAGE } from '../../lib/api'
+import { Link } from 'react-router-dom'
+import useKawMedShellReturn from './medical/useKawMedShellReturn'
+import {kawMedMasterContextUrl,isKawMedMasterReturnContext} from './medical/kawmed-master-shell-navigation'
+import { isKawMedContextHost, kawMedContextUrl } from './medical/KawMedShellReturn'
 import { isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './free/KawvoShellReturn'
 
 type AccountItem={
@@ -22,6 +28,17 @@ const labels:Record<AccountItem['kind'],string>={
 }
 
 export default function IntapcardAccountSelector(){
+  const {context:medicalReturn,checking:medicalChecking}=useKawMedShellReturn()
+  const[sponsorReturn,setSponsorReturn]=useState('')
+  useEffect(()=>{const candidate=getSponsorReturn(window.location.search,import.meta.env.MODE,window.location.hostname);if(!candidate)return;let alive=true;apiGet('/sponsor/me').then((r:any)=>{if(alive&&r?.ok&&r.data?.id===candidate.sponsor&&['owner','admin'].includes(r.data?.role))setSponsorReturn(sponsorShellUrl(candidate.sponsor,candidate.surface))}).catch(()=>undefined);return()=>{alive=false}},[])
+  const[sponsoredReturn,setSponsoredReturn]=useState('')
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search),profileId=p.get('profile_id')||''
+    if(p.get('from')!=='sponsored'||!profileId||!isSponsoredShellRequest(import.meta.env.MODE,window.location.hostname,window.location.search))return
+    let alive=true
+    apiGet('/me/sponsored-profile?profile_id='+encodeURIComponent(profileId)).then((r:any)=>{if(alive&&r?.ok&&String(r.data?.id||'')===profileId)setSponsoredReturn(sponsoredShellUrl(profileId,sponsoredSurface(window.location.search)))}).catch(()=>undefined)
+    return()=>{alive=false}
+  },[])
   const[stage,setStage]=useState<'choice'|'new'|'existing'>('choice')
   const[activationKind,setActivationKind]=useState<ActivationKind>('product')
   const[activationCode,setActivationCode]=useState('')
@@ -104,12 +121,37 @@ export default function IntapcardAccountSelector(){
         window.location.assign(origin+'/trial/mi/'+encodeURIComponent(item.id))
       }else{
         const route=String(response.data?.route||'/admin/accounts')
-        // Keep the canonical server route and token contract; only the selected
-        // Free account opts into the already guarded shell on App Preview.
+        const sponsoredTarget=item.kind==='sponsored'?sponsoredAccountSelectionUrl({profileId:item.id,selection:response.data,mode:import.meta.env.MODE,hostname:window.location.hostname,search:window.location.search,returnSearch:sponsoredReturn.split('?')[1]}):null
+        if(item.kind==='sponsored'&&sponsoredTarget===null)throw new Error('La cuenta o la ruta recibida no corresponde al perfil patrocinado seleccionado. Vuelve a seleccionar la cuenta.')
+        let medicalTarget=route
+        if((item.kind==='medical'||item.kind==='medical_master')&&isKawMedContextHost()){
+          const canonical=item.kind==='medical'?'/admin/medical':'/admin/sponsor/kawmed'
+          if(response.data?.kind!==item.kind||String(response.data?.id||'')!==item.id||route!==canonical)throw new Error('La cuenta o la ruta recibida no corresponde a la cuenta médica seleccionada. Vuelve a seleccionar la cuenta.')
+          const params=new URLSearchParams(window.location.search)
+          const legacy=params.get('kawvo_med_shell')==='0'||params.get('legacy')==='1'
+          if(item.kind==='medical'){
+            // Recheck after selection, with its new tab token. A return hint is
+            // optional UI context, never proof of the newly selected identity.
+            const selected:any=await apiGet('/me/medical-profile')
+            if(!selected?.ok)throw new Error(selected?.error||'No se pudo verificar el perfil médico seleccionado.')
+            if(selected.data?.id!==item.id||selected.data?.guest_editor)throw new Error('El perfil médico autorizado no corresponde a la cuenta seleccionada.')
+            const sameReturn=medicalReturn&&!isKawMedMasterReturnContext(medicalReturn)&&medicalReturn.account===item.id?medicalReturn:null
+            medicalTarget=legacy?canonical+'?kawvo_med_shell=0':kawMedContextUrl('/admin/medical',sameReturn||{account:item.id,tab:'home'})
+          }else{
+            // Master already verifies sponsor, role, active account and its
+            // authorized medical profile in the existing canonical entry.
+            medicalTarget=legacy?canonical+'?legacy=1':medicalReturn&&isKawMedMasterReturnContext(medicalReturn)&&medicalReturn.sponsor===item.id?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):canonical
+          }
+        }
+        // Other categories keep their canonical route and existing shell gates.
         const selectedFree=response.data?.kind==='free'&&String(response.data?.id||'')===item.id
         const target=item.kind==='free'&&selectedFree&&route==='/admin/free'&&isKawvoShellPreviewHost()
           ? KAWVO_SHELL_PREVIEW_ROUTE
-          : item.kind==='sponsor'?route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id):route
+          : item.kind==='medical'||item.kind==='medical_master'
+          ? medicalTarget
+          : item.kind==='sponsored'&&sponsoredTarget
+          ? sponsoredTarget
+          : item.kind==='sponsor'?(isSponsorShellHost(import.meta.env.MODE,window.location.hostname)?sponsorSelectionUrl(item.id,response.data,import.meta.env.MODE,window.location.hostname,window.location.search,sponsorReturn.split('?')[1]):route+(route.includes('?')?'&':'?')+'sponsor_id='+encodeURIComponent(item.id)):route
         window.location.assign(target)
       }
     }catch(e){setError(e instanceof Error?e.message:'No se pudo seleccionar la cuenta.');setBusy('')}
@@ -129,6 +171,10 @@ export default function IntapcardAccountSelector(){
   const activeKind=activationKinds.find(kind=>kind.value===activationKind)!
   return <main className="min-h-screen bg-slate-50 px-4 py-8 font-['Inter'] text-slate-950">
     <div className="mx-auto max-w-[1020px] space-y-5">
+      {medicalChecking&&<p role="status" className="text-sm text-slate-600">Verificando la cuenta médica de origen…</p>}
+      {sponsorReturn&&<Link to={sponsorReturn} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al patrocinador?'))event.preventDefault()}} className="inline-flex min-h-11 items-center rounded-xl border bg-white px-4 text-sm font-bold text-cyan-800">← Volver al patrocinador</Link>}
+      {sponsoredReturn&&<Link to={sponsoredReturn} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al perfil patrocinado?'))event.preventDefault()}} className="inline-flex min-h-11 min-w-11 items-center rounded-xl border bg-white px-4 text-sm font-bold text-cyan-800">← Volver a mi presentación</Link>}
+      {medicalReturn&&<Link to={isKawMedMasterReturnContext(medicalReturn)?kawMedMasterContextUrl('/admin/sponsor/kawmed',medicalReturn):kawMedContextUrl('/admin/medical',medicalReturn)} onClick={event=>{if(activationCode.trim()&&!window.confirm('Hay un código sin enviar. ¿Volver al perfil médico?'))event.preventDefault()}} className="inline-flex min-h-11 min-w-11 items-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-cyan-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700">← Volver al perfil médico</Link>}
       <header className="rounded-[28px] border border-slate-200 bg-white p-6">
         <div className="flex justify-end"><button type="button" disabled={signingOut} onClick={()=>void signOut()} className="rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-black text-rose-700 disabled:opacity-50">{signingOut?"Cerrando sesión…":"Cerrar sesión"}</button></div>
         <p className="text-xs font-black uppercase tracking-[.14em] text-cyan-700">Intapcard · Multicuenta</p>
@@ -178,7 +224,7 @@ export default function IntapcardAccountSelector(){
             {item.sponsor&&<p className="mt-1 text-sm font-semibold text-slate-600">{item.sponsor}</p>}
             {item.detail&&<p className="mt-2 break-all text-xs text-slate-500">{item.detail}</p>}
             {item.status&&<p className="mt-1 text-xs text-slate-500">Estado: {item.status}</p>}
-            <button type="button" disabled={Boolean(busy)} onClick={()=>void choose(item)} className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+            <button type="button" disabled={Boolean(busy)||medicalChecking} onClick={()=>void choose(item)} className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
               {busy===item.kind+':'+item.id?'Abriendo…':'Administrar esta cuenta'}
             </button>
           </article>)}

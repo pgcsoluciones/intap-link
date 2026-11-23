@@ -185,6 +185,25 @@ app.use('/api/v1/me/*',async(c:any,next:any)=>{
     '/api/v1/me/faqs','/api/v1/me/products','/api/v1/me/videos',
     '/api/v1/me/gallery','/api/v1/me/free']
   if(!classicPrefixes.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return next()
+  // In Production, App fetches account selection from api.intaprd.com and
+  // that selection cookie is intentionally host-only. Browser document/iframe
+  // previews still link to app.intaprd.com/api/... and carry no tab header.
+  // Redirect ONLY the GET HTML navigation to the existing canonical API host;
+  // the destination still checks login, selected profile ID, slug and owner.
+  // Avoid widening the cookie scope or bypassing multicuenta authorization.
+  if(c.req.method==='GET'&&path.startsWith('/api/v1/me/free/profile-preview/')
+    &&String(c.env.ENVIRONMENT||'').toLowerCase()==='production'
+    &&String(c.req.header('Accept')||'').includes('text/html')){
+    const requested=new URL(c.req.url)
+    if(requested.hostname==='app.intaprd.com'){
+      return c.redirect('https://api.intaprd.com'+requested.pathname+requested.search,302)
+    }
+  }
+  // Like sponsored and KawMed, public owner-context is a read-only GET from
+  // the public Web origin, which has no App tab token. Its endpoint authenticates
+  // the session and checks the exact selected Free profile in D1.
+  // Never exempt edits, appointment mutations, or other Free API routes.
+  if(c.req.method==='GET'&&path==='/api/v1/me/free/appointments/public-context')return next()
   const raw=parseCookie(String(c.req.header('Cookie')||''),cookieNames(c.env).session)
   if(!raw)return next()
   const row=await c.env.DB.prepare(`SELECT u.email FROM auth_sessions a JOIN users u ON u.id=a.user_id
@@ -850,6 +869,13 @@ app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
   const activationId = crypto.randomUUID()
   const activationHash = await hashActivationCode(activationCode)
 
+  const lastPhysical=await c.env.DB.prepare("SELECT COALESCE(MAX(sequence_number),0) AS last FROM artifact_display_identifiers WHERE product_line='L'").first()
+  const physicalSeq=Number((lastPhysical as any)?.last||0)+1
+  if(physicalSeq>32767)return c.json({ok:false,error:'Serie física Link agotada.'},409)
+  const physicalAlphabet='0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+  let v=physicalSeq+340,part=''
+  for(let j=0;j<3;j++){part=physicalAlphabet[v%physicalAlphabet.length]+part;v=Math.floor(v/physicalAlphabet.length)}
+  const displayCode='L'+part
   try {
     await c.env.DB.batch([
       c.env.DB.prepare(
@@ -857,6 +883,7 @@ app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
           (id, public_code, product_type, status, created_at, updated_at)
          VALUES (?, ?, ?, 'available', datetime('now'), datetime('now'))`
       ).bind(artifactId, publicCode, productType),
+      c.env.DB.prepare('INSERT INTO artifact_display_identifiers(artifact_id,display_code,product_line,sequence_number) VALUES (?,?,?,?)').bind(artifactId,displayCode,'L',physicalSeq),
       c.env.DB.prepare(
         `INSERT INTO artifact_activation_codes
           (id, artifact_id, activation_code_hash, status, expires_at, created_at)
@@ -873,6 +900,7 @@ app.post('/api/v1/admin/artifacts', requireAdmin, async (c) => {
     data: {
       id: artifactId,
       public_code: publicCode,
+      display_code: displayCode,
       activation_code: activationCode,
       product_type: productType,
       status: 'available',
@@ -934,6 +962,7 @@ function normalizeSuperAdminArtifact(c: any, row: any) {
   return {
     id: row.id,
     public_code: row.public_code,
+    display_code: row.display_code ?? null,
     product_type: row.product_type,
     status: row.status,
     owner_user_id: row.owner_user_id ?? null,
@@ -957,7 +986,7 @@ function normalizeSuperAdminArtifact(c: any, row: any) {
 
 const SUPERADMIN_ARTIFACT_SELECT = `
   SELECT
-    a.id, a.public_code, a.product_type, a.status,
+    a.id, a.public_code, di.display_code, a.product_type, a.status,
     a.owner_user_id, a.profile_id, a.activated_at, a.created_at, a.updated_at,
     u.email AS owner_email,
     p.slug AS profile_slug, p.name AS profile_name,
@@ -972,6 +1001,7 @@ const SUPERADMIN_ARTIFACT_SELECT = `
     ac.created_at AS activation_code_created_at,
     cl.claim_at AS claim_at
   FROM intap_artifacts a
+  LEFT JOIN artifact_display_identifiers di ON di.artifact_id = a.id
   LEFT JOIN users u ON u.id = a.owner_user_id
   LEFT JOIN profiles p ON p.id = a.profile_id
   LEFT JOIN artifact_activation_codes ac
@@ -999,8 +1029,8 @@ app.get('/api/v1/superadmin/artifacts', requireSuperAdmin('viewer'), async (c) =
   if (status) { conditions.push('a.status = ?'); bindings.push(status) }
   if (q) {
     const like = `%${q}%`
-    conditions.push('(a.public_code LIKE ? OR u.email LIKE ? OR p.slug LIKE ? OR p.name LIKE ?)')
-    bindings.push(like, like, like, like)
+    conditions.push('(a.public_code LIKE ? OR di.display_code LIKE ? OR u.email LIKE ? OR p.slug LIKE ? OR p.name LIKE ?)')
+    bindings.push(like, like, like, like, like)
   }
   const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : ''
 

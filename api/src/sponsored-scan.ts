@@ -14,7 +14,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   try{body=await c.req.json()}catch{return next()}
   const publicCode=String(body?.public_code||'').trim().toUpperCase()
   if(!publicCode)return next()
-  const row=await c.env.DB.prepare(`SELECT a.id,a.public_code,a.product_type,a.status AS artifact_status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,sa.beneficiary_user_id,sa.sponsored_profile_id,sp.id AS sponsored_profile_id_resolved,sp.username,sp.status AS sponsored_profile_status,sp.user_id AS sponsored_user_id,st.name AS sponsor_name,st.logo_url AS sponsor_logo_url,st.banner_image_url AS sponsor_banner_image_url,st.banner_title,st.sponsor_type,st.is_active AS sponsor_is_active,st.contact_email AS sponsor_contact_email,st.contact_whatsapp AS sponsor_contact_whatsapp,st.profile_slug FROM intap_artifacts a JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id LEFT JOIN sponsored_profiles sp ON sp.id=COALESCE(sa.sponsored_profile_id,(SELECT sp2.id FROM sponsored_profiles sp2 WHERE sp2.artifact_id=a.id ORDER BY sp2.created_at DESC LIMIT 1)) WHERE a.public_code=? LIMIT 1`).bind(publicCode).first().catch(()=>null)
+  const row=await c.env.DB.prepare(`SELECT a.id,a.public_code,di.display_code,a.product_type,a.status AS artifact_status,a.owner_user_id,sa.sponsor_id,sa.status AS sponsor_artifact_status,sa.artifact_role,sa.beneficiary_user_id,sa.sponsored_profile_id,sp.id AS sponsored_profile_id_resolved,sp.username,sp.status AS sponsored_profile_status,sp.user_id AS sponsored_user_id,st.name AS sponsor_name,st.logo_url AS sponsor_logo_url,st.banner_image_url AS sponsor_banner_image_url,st.banner_title,st.sponsor_type,st.is_active AS sponsor_is_active,st.contact_email AS sponsor_contact_email,st.contact_whatsapp AS sponsor_contact_whatsapp,st.profile_slug FROM intap_artifacts a LEFT JOIN artifact_display_identifiers di ON di.artifact_id=a.id JOIN sponsor_artifacts sa ON sa.artifact_id=a.id JOIN sponsor_tenants st ON st.id=sa.sponsor_id LEFT JOIN sponsored_profiles sp ON sp.id=COALESCE(sa.sponsored_profile_id,(SELECT sp2.id FROM sponsored_profiles sp2 WHERE sp2.artifact_id=a.id ORDER BY sp2.created_at DESC LIMIT 1)) WHERE a.public_code=? LIMIT 1`).bind(publicCode).first().catch(()=>null)
   if(!row)return next()
 
   const artifactId=String((row as any).id||'')
@@ -24,7 +24,7 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   const sponsorId=String((row as any).sponsor_id||'')
   let sponsorMembership=currentUserId?await c.env.DB.prepare(`SELECT role FROM sponsor_members WHERE sponsor_id=? AND user_id=? AND status='active' LIMIT 1`).bind(sponsorId,currentUserId).first():null
   const sponsor={id:sponsorId,name:String((row as any).sponsor_name||'Patrocinador'),logo_url:String((row as any).sponsor_logo_url||''),banner_title:String((row as any).banner_title||'Impulsado por'),type:String((row as any).sponsor_type||'merchant')}
-  const artifact={public_code:publicCode,product_type:productType,label:productLabel(productType)}
+  const artifact={public_code:publicCode,display_code:String((row as any).display_code||''),product_type:productType,label:productLabel(productType)}
 
   if(String((row as any).artifact_role||'beneficiary')==='master'){
     // Master inspection is read-only and never consumes or claims the physical artifact.
@@ -64,6 +64,16 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
   const beneficiary=String((row as any).sponsored_user_id||(row as any).beneficiary_user_id||(row as any).owner_user_id||'')
   const resolvedProfileId=String((row as any).sponsored_profile_id_resolved||(row as any).sponsored_profile_id||'')
 
+  // Authorized sponsor managers inspect their own physical stations before any beneficiary
+  // redirect. This is read-only and must never consume an activation, even if already claimed.
+  const sponsorRole=String((sponsorMembership as any)?.role||'')
+  if(sponsorRole==='owner'||sponsorRole==='admin'){
+    const inspectedStatus=resolvedProfileId||sponsoredStatus==='activated'||artifactStatus==='activated'?'activated':
+      sponsoredStatus==='inactive'||['revoked','suspended'].includes(artifactStatus)?'inactive':'available'
+    return c.json({ok:true,state:'sponsored_sponsor_inspection',artifact,sponsor,inspection_status:inspectedStatus,
+      manage_url:`${configuredAppUrl(c)}/admin/sponsor?code=${encodeURIComponent(publicCode)}`})
+  }
+
   // Treat a resolved profile association as activated even when legacy rows have
   // a stale sponsor_artifacts status. This avoids sending the owner back through
   // consent after the first successful claim. Once activated, commercial inactivity cannot remove or block the beneficiary public profile.
@@ -73,10 +83,6 @@ app.post('/api/v1/public/artifacts/scan/status',async(c:any,next:any)=>{
     const multiProfileOwner=Boolean(isOwner&&resolvedProfileId&&await sponsoredMultiProfileAccess(c,String(currentUserId||'')))
     const ownerPanelUrl=multiProfileOwner?`${configuredAppUrl(c)}/admin/sponsored?profile_id=${encodeURIComponent(resolvedProfileId)}`:`${configuredAppUrl(c)}/admin/sponsored`
     return c.json({ok:true,state:isOwner?'sponsored_draft_owner':'sponsored_draft',artifact,sponsor,message:isOwner?'Tu presentación patrocinada todavía está en construcción.':'Esta presentación todavía está en construcción.',next_url:isOwner?ownerPanelUrl:null,login_url:isOwner?null:`${configuredAppUrl(c)}/admin/sponsored/entry?public_code=${encodeURIComponent(publicCode)}`})
-  }
-
-  if(sponsorMembership){
-    return c.json({ok:true,state:'sponsored_sponsor_inspection',artifact,sponsor,message:`Este producto pertenece a tu patrocinio. Código ${publicCode}. Estado: pendiente de activación.`,manage_url:`${configuredAppUrl(c)}/admin/sponsor?code=${encodeURIComponent(publicCode)}`})
   }
 
   if(sponsoredStatus==='inactive')return c.json({ok:true,state:'blocked',artifact,sponsor,message:'Este producto patrocinado está inactivo.'})

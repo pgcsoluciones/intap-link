@@ -1,3 +1,4 @@
+import {sponsoredEntryUrl} from './sponsored-shell-gate'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { apiGet, apiPost } from '../../../lib/api'
@@ -21,7 +22,7 @@ export default function SponsoredActivation(){
   function enterSponsoredPanel(nextUrl='/admin/sponsored'){
     sessionStorage.removeItem(KEY);localStorage.removeItem(KEY)
     sessionStorage.setItem(PANEL_KEY,'1');localStorage.setItem(PANEL_KEY,'1')
-    navigate(nextUrl,{replace:true})
+    navigate(sponsoredEntryUrl(nextUrl,window.location.search,import.meta.env.MODE,window.location.hostname),{replace:true})
   }
 
   useEffect(()=>{if(!code){setError('No encontramos el código de este producto.');setLoading(false);return}sessionStorage.setItem(KEY,code);localStorage.setItem(KEY,code);let alive=true;(async()=>{try{const me:any=await apiGet('/me').catch(()=>({ok:false}));setRequiresLogin(!me?.ok);const status:any=await apiPost('/public/artifacts/scan/status',{public_code:code});if(!alive)return;if(!status?.ok){setError(status?.error||'No pudimos validar este producto.');return}setSponsor(status.sponsor||null);setLabel(status.artifact?.label||'Producto Kawvo');if(status.state==='activated'&&status.next_url){sessionStorage.removeItem(KEY);localStorage.removeItem(KEY);window.location.replace(status.next_url);return}if(status.state==='sponsored_draft_owner'&&status.next_url){setResumePanelUrl(String(status.next_url));return}if(status.state!=='sponsored_pending_activation'&&status.state!=='sponsored_draft_owner'){setError(status.message||'Este producto no está disponible para activación.')}}catch{if(alive)setError('No pudimos validar este producto.')}finally{if(alive)setLoading(false)}})();return()=>{alive=false}},[code,navigate])
