@@ -1,3 +1,4 @@
+import { isKawvoReleaseAppHost } from '../kawvo-release-host'
 import { getKawMedShellReturn, kawMedContextUrl, KAWMED_AGENDA_SECTIONS, type KawMedShellReturn, type KawMedAgendaSection } from './KawMedShellReturn'
 import type { KawMedShellTab } from './kawmed-shell-navigation'
 
@@ -10,7 +11,7 @@ export function kawMedGuestRoute(pathname: string) {
 }
 export function isKawMedGuestShellRequest({ mode, hostname, pathname, search }: { mode: string; hostname: string; pathname: string; search: string }) {
   const params = new URLSearchParams(search), optIn = params.get('kawvo_med_shell')
-  return mode === 'preview' && hostname === 'app.preview.intaprd.com' && Boolean(kawMedGuestRoute(pathname))
+  return isKawvoReleaseAppHost(mode,hostname) && Boolean(kawMedGuestRoute(pathname))
     && params.get('legacy') !== '1' && !params.has('scope') && (optIn === null || optIn === '1')
 }
 export function canUseKawMedDelegateShell(context: Parameters<typeof isKawMedGuestShellRequest>[0] & {

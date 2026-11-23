@@ -1,3 +1,4 @@
+import {isKawvoReleaseAppHost} from '../kawvo-release-host'
 import type {MutableRefObject, ReactNode} from 'react'
 import {getKawMedShellReturn,kawMedContextUrl,KAWMED_AGENDA_SECTIONS,type KawMedShellReturn,type KawMedAgendaSection} from './KawMedShellReturn'
 import type {KawMedShellTab} from './kawmed-shell-navigation'
@@ -11,7 +12,7 @@ const id=(v:unknown):v is string=>typeof v==='string'&&/^[a-zA-Z0-9_-]{1,160}$/.
 export function isKawMedMasterReturnContext(context:KawMedShellReturn):context is KawMedMasterReturn{return 'sponsor'in context&&id(context.sponsor)}
 export function isKawMedMasterShellRequest({mode,hostname,pathname,search}:{mode:string;hostname:string;pathname:string;search:string}){
  const p=new URLSearchParams(search),flag=p.get('kawvo_med_shell')
- return mode==='preview'&&hostname==='app.preview.intaprd.com'&&['/admin/sponsor/kawmed','/admin/medical/agenda','/admin/accounts'].includes(pathname)
+ return isKawvoReleaseAppHost(mode,hostname)&&['/admin/sponsor/kawmed','/admin/medical/agenda','/admin/accounts'].includes(pathname)
   &&p.get('legacy')!=='1'&&(pathname==='/admin/sponsor/kawmed'?(flag===null||flag==='1'):flag==='1')&&(pathname==='/admin/sponsor/kawmed'?!p.has('scope')||p.get('scope')==='sponsor_master':p.get('scope')==='sponsor_master')
 }
 export function isKawMedMasterIdentity({sponsorId,currentSponsorId,role,active}:{sponsorId:unknown;currentSponsorId:unknown;role:unknown;active:any}){

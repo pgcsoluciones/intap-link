@@ -77,5 +77,5 @@ export async function sponsorInventoryPage(c:any){
 }
 
 export function registerSponsorInventoryPage(app:any,requireUser:any){
- app.get('/api/v1/sponsor/artifacts/page',async(c:any,next:any)=>String(c.env.ENVIRONMENT||'').toLowerCase()==='preview'?next():c.json({ok:false,error:'Not found'},404),requireUser,sponsorInventoryPage)
+ app.get('/api/v1/sponsor/artifacts/page',async(c:any,next:any)=>['preview','production'].includes(String(c.env.ENVIRONMENT||'').toLowerCase())?next():c.json({ok:false,error:'Not found'},404),requireUser,sponsorInventoryPage)
 }

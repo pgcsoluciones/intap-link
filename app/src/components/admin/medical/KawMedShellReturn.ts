@@ -1,3 +1,4 @@
+import { isKawvoReleaseAppHost } from '../kawvo-release-host'
 import { KAWMED_PROFILE_SECTIONS, KAWMED_SHELL_TABS, type KawMedProfileSection, type KawMedShellTab } from './kawmed-shell-navigation'
 
 /** UI hints only, following Free's bounded, account-bound return context.
@@ -12,7 +13,7 @@ export const KAWMED_AGENDA_SECTIONS: readonly KawMedAgendaSection[] = ['requests
 const section = (value: string | null): value is KawMedProfileSection => KAWMED_PROFILE_SECTIONS.some(item => item.id === value)
 const accountId = (value: string) => /^[a-zA-Z0-9_-]{1,160}$/.test(value)
 export function isKawMedContextHost(mode = import.meta.env.MODE, hostname = window.location.hostname) {
-  return mode === 'preview' && hostname === 'app.preview.intaprd.com'
+  return isKawvoReleaseAppHost(mode,hostname)
 }
 export function getKawMedShellReturn(search: string, pathname = window.location.pathname, eligible = isKawMedContextHost()): KawMedShellReturn | null {
   const params = new URLSearchParams(search), account = params.get('med_account') || '', tab = params.get('med_tab') || 'home'

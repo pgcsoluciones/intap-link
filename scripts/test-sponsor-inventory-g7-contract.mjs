@@ -22,8 +22,10 @@ export async function inventoryFixture(count=1001){
  const alter=(sql,args=[])=>JSON.parse(execFileSync('python3',[bridge,path,'fixture',JSON.stringify([sql,args])],{encoding:'utf8'}))
  async function request(search='',{actor='normal',kind='sponsor',tenant=TENANT_A,token='a'.repeat(32),presented=token,environment='preview',authenticated=true}={}){
   const raw='fixture-'+actor,hash=createHash('sha256').update(raw).digest('hex').slice(0,24)
-  const cookie=authenticated?'intap_preview_session_id='+raw+(actor==='operator'?'; kawvo_intap_active_account_v1='+encodeURIComponent(kind+':'+tenant+':'+hash+':'+token):''):''
-  const response=await app.fetch(new Request('https://app.preview.intaprd.com/api/v1/sponsor/artifacts/page'+search,{headers:{Cookie:cookie,'X-Intap-Account-Tab':presented}}),{ENVIRONMENT:environment,DB,APP_URL:'https://app.preview.intaprd.com',WEB_URL:'https://preview.intaprd.com'}, {waitUntil(){throw Error('Unexpected asynchronous side effect')}})
+  const cookie=authenticated?(environment==='production'?'session_id=':'intap_preview_session_id=')+raw+(actor==='operator'?'; kawvo_intap_active_account_v1='+encodeURIComponent(kind+':'+tenant+':'+hash+':'+token):''):''
+  const appOrigin=environment==='production'?'https://app.intaprd.com':'https://app.preview.intaprd.com'
+  const webOrigin=environment==='production'?'https://intaprd.com':'https://preview.intaprd.com'
+  const response=await app.fetch(new Request(appOrigin+'/api/v1/sponsor/artifacts/page'+search,{headers:{Cookie:cookie,'X-Intap-Account-Tab':presented}}),{ENVIRONMENT:environment,DB,APP_URL:appOrigin,WEB_URL:webOrigin}, {waitUntil(){throw Error('Unexpected asynchronous side effect')}})
   const json=await response.json();return{status:response.status,json,cache:response.headers.get('cache-control')}
  }
  return{dir,path,queries,request,alter,get writeAttempts(){return writeAttempts}}

@@ -1,3 +1,5 @@
+import {isKawvoReleaseAppHost} from '../kawvo-release-host'
+
 type GateContext = {
   mode: string
   hostname: string
@@ -12,8 +14,7 @@ export function shouldShowSponsoredShell(context: GateContext): boolean {
   const params = new URLSearchParams(context.search)
   const requestedProfile = (params.get('profile_id') || '').trim()
   const actualProfile = String(context.profileId || '').trim()
-  return !params.get('scope') && !context.isMaster && !context.legacyPanel && context.mode === 'preview'
-    && context.hostname === 'app.preview.intaprd.com'
+  return !params.get('scope') && !context.isMaster && !context.legacyPanel && isKawvoReleaseAppHost(context.mode,context.hostname)
     && params.get('kawvo_sponsored_shell') === '1'
     && Boolean(actualProfile)
     && (!requestedProfile || requestedProfile === actualProfile)
@@ -35,7 +36,7 @@ export function sponsoredAgendaReturn(search: string, mode: string, hostname: st
   if (master && !profile) return '/admin/sponsor'
   const params = new URLSearchParams()
   if (profile) params.set('profile_id', profile)
-  if (!master && mode === 'preview' && hostname === 'app.preview.intaprd.com' && source.get('kawvo_sponsored_shell') === '1') {
+  if (!master && isKawvoReleaseAppHost(mode,hostname) && source.get('kawvo_sponsored_shell') === '1') {
     params.set('kawvo_sponsored_shell', '1')
   }
   const query = params.toString()
@@ -51,7 +52,7 @@ const modules = ['identity','contact','location','schedule','gallery','appearanc
 const sections = ['requests','confirmed','availability','blocks','settings'] as const
 export function isSponsoredShellRequest(mode: string, hostname: string, search: string): boolean {
   const p = new URLSearchParams(search)
-  return mode === 'preview' && hostname === 'app.preview.intaprd.com' && p.get('kawvo_sponsored_shell') === '1' && !p.get('scope')
+  return isKawvoReleaseAppHost(mode,hostname) && p.get('kawvo_sponsored_shell') === '1' && !p.get('scope')
 }
 export function sponsoredSurface(search: string): SponsoredSurface {
   const p = new URLSearchParams(search), tab = p.get('sp_tab') as SponsoredTab
@@ -81,12 +82,12 @@ export function sponsoredAccountSelectionUrl(context: {
 }): string | null {
   const {profileId,selection,mode,hostname,search,returnSearch=''} = context
   const route = String(selection.route || '/admin/accounts')
-  if(mode !== 'preview' || hostname !== 'app.preview.intaprd.com') return route
+  if(!isKawvoReleaseAppHost(mode,hostname)) return route
   if(!profileId || selection.kind !== 'sponsored' || String(selection.id || '') !== profileId) return null
   // Accept only the canonical beneficiary destination, never an external URL,
   // Master scope, another profile or a route reconstructed from UI hints.
   if(route !== '/admin/sponsored' && !route.startsWith('/admin/sponsored?')) return null
-  const url = new URL(route,'https://app.preview.intaprd.com')
+  const url = new URL(route,'https://'+hostname)
   if(url.pathname !== '/admin/sponsored' || url.hash || url.searchParams.has('scope')
     || url.searchParams.getAll('profile_id').some(id=>id !== profileId)) return null
   const source = new URLSearchParams(search), previous = new URLSearchParams(returnSearch)
@@ -99,8 +100,8 @@ export function sponsoredAccountSelectionUrl(context: {
 export function sponsoredEntryUrl(target: string, search: string, mode: string, hostname: string): string {
   if(!isSponsoredShellRequest(mode,hostname,search)) return target
   try {
-    const url = new URL(target,'https://app.preview.intaprd.com')
-    if(url.origin!=='https://app.preview.intaprd.com'||url.username||url.password||!/^\/admin\/sponsored(?:\/|$)/.test(url.pathname))return target
+    const url = new URL(target,'https://'+hostname)
+    if(url.origin!=='https://'+hostname||url.username||url.password||!/^\/admin\/sponsored(?:\/|$)/.test(url.pathname))return target
     url.searchParams.set('kawvo_sponsored_shell','1')
     return url.pathname + url.search
   } catch { return target }
