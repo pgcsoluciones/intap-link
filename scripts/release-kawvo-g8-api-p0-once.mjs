@@ -112,7 +112,7 @@ function test(){
  check(versions({items:[{id:PREVIOUS_LATEST}]})[0].id===PREVIOUS_LATEST,'versions items shape')
  check(safeErrors({errors:[{code:10057,source:{pointer:'/bindings/0/version_id'},message:'do not print'}]},400).codes[0]==='10057','sanitize API error')
  check(same({x:1,y:2},{y:2,x:1}),'canonical compare')
- console.log('PASS SELF-TEST: API schema/pinned inheritance/receipt guard/error sanitizer; zero remote writes')
+ console.log('PASS SELF-TEST: API schema/pinned inheritance/error sanitizer; zero remote writes')
 }
 async function main(){
  check(process.argv.length===3&&['--self-test','--stage'].includes(process.argv[2]),'use --self-test or --stage')
@@ -207,6 +207,8 @@ async function main(){
  for(const k of ['limits','cache_options','usage_model'])check(same(fresh[k]??null,old[k]??null),'runtime drift: '+k)
  const placement=v=>v?.placement?.mode==='off'||!v?.placement?null:v.placement
  check(same(placement(fresh),placement(old)),'Worker placement drift')
+ const exportsShape=v=>Object.fromEntries(Object.entries(v?.exports||{}).map(([name,e])=>[name,{type:e?.type,cache:e?.cache||null}]))
+ check(same(exportsShape(fresh),exportsShape(old)),'Worker exports drift')
  await active()
  r.status='PASS_STAGED_INACTIVE_VERIFIED'
  writeFileSync(RECEIPT,JSON.stringify(r,null,2)+'\n',{mode:0o600})
