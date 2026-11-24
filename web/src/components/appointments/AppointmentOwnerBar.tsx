@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { FaBars, FaBell, FaCalendarAlt, FaTimes } from 'react-icons/fa'
-import { kawMedOwnerShellLinks } from './kawmedOwnerShellLinks'
+import { kawMedOwnerShellLinks, otherOwnerShellLinks } from './kawmedOwnerShellLinks'
 
 type Palette={accent:string;accentSoft:string;text:string}
 type Pending={
@@ -112,7 +112,8 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   if(!context)return null
   const origin=manageOrigin.replace(/\/$/,'')
   const shellLinks=kawMedOwnerShellLinks({mode:import.meta.env.MODE,hostname:window.location.hostname,origin,profileId:medicalProfileId,context})
-  const manageUrl=shellLinks?.agenda||origin+String(context.manage_url||'/admin/sponsored/agenda')
+  const otherLinks=otherOwnerShellLinks({mode:import.meta.env.MODE,hostname:window.location.hostname,origin,context,ownerApiBase,username})
+  const manageUrl=shellLinks?.agenda||otherLinks?.agenda||origin+String(context.manage_url||'/admin/sponsored/agenda')
   // Free Multicuenta: return to the verified active account's profile tab,
   // never to a generic account directory or a profile selected by query string.
   // public-context has already checked owner identity and active Free selection.
@@ -121,7 +122,7 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
     && /^[a-zA-Z0-9_-]{1,160}$/.test(username)
   const settingsUrl=freeMulti
     ? origin+'/admin/free/shell-preview?'+new URLSearchParams({kawvo_shell:'1',resume:'profile',slug:username}).toString()
-    : shellLinks?.settings||origin+String(context.settings_url||settingsPath)
+    : shellLinks?.settings||otherLinks?.settings||origin+String(context.settings_url||settingsPath)
   const resourceUrl=String(context.resource_url||'').trim()
   const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
   const contactUrl=String(context.contact_url||'').trim()
