@@ -165,10 +165,11 @@ export default function KawvoFreeShellPreview(){
     if(routeById.has('identity'))navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})
     else setTab('profile')
   }
-  // Published profiles must open their real public URL. The private preview-token
-  // redirect is only for unpublished profiles; using it for published ones can
-  // bounce between the App and Web preview domains when temporary preview state fails.
-  const previewHref=accountSlug?(published&&publicUrl?publicUrl:isFreeDemoDelegationActive()&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/${encodeURIComponent(accountSlug)}?full=1#kawvo_shell=1&tab=profile&slug=${encodeURIComponent(accountSlug)}`):''
+  // Match the established Production Free preview contract: authenticated
+  // App document request -> Web ?preview=1 with the browser-only return fragment.
+  // Even published profiles use preview mode for "Volver a edición".
+  // Actual published link sharing remains the separate publicUrl path.
+  const previewHref=accountSlug?(isFreeDemoDelegationActive()&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/${encodeURIComponent(accountSlug)}?full=1#kawvo_shell=1&tab=profile&slug=${encodeURIComponent(accountSlug)}`):''
   const sharePublicUrl=async()=>{
     if(!published||!publicUrl)return
     setShareMessage('')
