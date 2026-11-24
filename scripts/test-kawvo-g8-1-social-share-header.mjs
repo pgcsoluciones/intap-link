@@ -32,3 +32,6 @@ for (const marker of ['og:title', 'og:image', 'og:description', "url.searchParam
   assert.ok(social.includes(marker), 'Missing existing social card marker: ' + marker)
 }
 console.log('PASS_G8_1_STATIC_NAV_WHATSAPP_SOCIAL_CONTRACT')
+
+// Verify this isolated Free release also on the required GitHub quality workflow.
+await import('./test-kawvo-g82-free-isolated-production.mjs')
