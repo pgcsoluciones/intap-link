@@ -21,7 +21,10 @@ for(const [file,kind] of [
  assert.ok(s.includes('manageOrigin={appOrigin()}'))
 }
 const free=read('web/src/components/free-profile/IntapLinkGratisProfile.tsx')
-assert.ok(free.includes("ownerApiBase={freeOwnerApiOrigin()+'/api/v1/me/free/appointments'}"))
+// The active Preview baseline predates the Production-only Free origin fix.
+assert.ok(free.includes("ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'}"))
+assert.ok(read('api/src/preview-frontdoor-entry.ts').includes("kawvo_free_preview_session_v2"))
+assert.ok(read('api/src/free-profile-preview.ts').includes("kawvo_free_preview_session_v2"))
 const bar=read('web/src/components/appointments/AppointmentOwnerBar.tsx')
 assert.match(bar,/credentials:'include'/)
 assert.match(bar,/json\.data\?\.is_owner/)
