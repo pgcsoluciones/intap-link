@@ -30,6 +30,7 @@ jobs:
       - run: npx esbuild api/src/preview-free-entry.ts --bundle --platform=node --format=esm --target=node20 --external:cloudflare:* --outfile=/tmp/kawvo-ai-api.mjs
       - run: node scripts/test-ai-profile-assistant-integration.mjs
       - run: node --check scripts/promote-kawvo-g8-1-official-preview.mjs
+      - run: node --check scripts/recover-kawvo-g8-1-official-preview.mjs
       - run: node scripts/test-kawvo-g8-1-social-share-header.mjs
       - run: npm run build -w web
       - run: npm run build:preview -w web
