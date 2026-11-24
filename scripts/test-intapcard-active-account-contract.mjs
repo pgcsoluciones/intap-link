@@ -87,7 +87,7 @@ assert.match(ownerBar,/context.allow_direct_actions!==false/,'Public profile mus
 const freePanel=read('app/src/components/admin/free/FreeDashboard.tsx')
 const freeEditor=read('app/src/components/admin/free/FreeVisualEditor.tsx')
 const freePreview=read('api/src/free-profile-preview.ts')
-assert.match(freePanel,/href=\\{\\(me\\?\\.is_published\\|\\|delegatedDemo\\)\\&\\&publicUrl\\?publicUrl:`\\/api\\/v1\\/me\\/free\\/profile-preview\\//,'Published Free profiles use public URL, drafts stay on the authenticated navigation endpoint')
+assert.ok(freePanel.includes("href={(me?.is_published||delegatedDemo)&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/"),'Published Free profiles use public URL, drafts stay on the authenticated navigation endpoint')
 assert.match(freeEditor,/\/api\/v1\/me\/free\/profile-preview\//,'Free visual editor iframe uses the same preview endpoint')
 assert.match(worker,/c\.req\.method==='GET'&&path\.startsWith\(freePreviewPrefix\)/,'Only GET navigation may omit tab header')
 assert.match(worker,/const owned=await c\.env\.DB\.prepare\('SELECT id FROM profiles WHERE id=\? AND lower\(slug\)=lower\(\?\) LIMIT 1'\)/,'Preview slug must match the exactly selected profile ID')
