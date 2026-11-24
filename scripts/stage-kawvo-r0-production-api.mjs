@@ -1,0 +1,146 @@
+// R0 inactive stage only. Adapted from verified #191 JSON uploader; no activation path.
+import {execFileSync} from 'node:child_process'
+import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs'
+import {homedir,tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {createHash} from 'node:crypto'
+
+const SHA='77883918a4500320e562a7aa923c2f25bb62952c'
+const ACTIVE='68103746-efb9-4f45-b4fa-d58388ed32b1'
+const ACTIVE_MODULE_SHA='8cee714c6ac0eccec981b01813f022dd74d4737ce6e856b46e545d692faafb6a'
+const NEW_MODULE_SHA=process.env.KAWVO_R0_API_SHA256||''
+const OLD_APP='https://630cb1f0.intap-web2.pages.dev'
+const NEW_APP='https://630cb1f0.intap-web2.pages.dev'
+const WEB='https://acd10d69.intap-link.pages.dev'
+const OLD_BUNDLE='/assets/index-CIkuPLAY.js'
+const OLD_BUNDLE_SHA='5380bf2b09e75f52f570f7dc7a90ffaeb5e1edac775308c58bb1cd3a6429972d'
+const NEW_BUNDLE='/assets/index-CIkuPLAY.js'
+const NEW_BUNDLE_SHA='5380bf2b09e75f52f570f7dc7a90ffaeb5e1edac775308c58bb1cd3a6429972d'
+const ACCOUNT='adf4d5ebb625fed2c32e38cef57a6319', WORKER='intap-api'
+const BASE='https://api.cloudflare.com/client/v4/accounts/'+ACCOUNT
+const DIR=join(homedir(),'intap-release-logs','kawvo-r0-production-stage-'+SHA.slice(0,12))
+const MODULE_PATH=join(homedir(),'intap-release-logs','r0-production-api-bundle-'+SHA,'preview-free-entry.js')
+const MODE=process.argv[2]
+const TAG='KAWVO-R0-PROD-'+SHA.slice(0,12)
+const assert=(ok,msg)=>{if(!ok)throw new Error('BLOCKED: '+msg)}
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex')
+const hashB64=base64=>hash(Buffer.from(base64,'base64'))
+const equal=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null)
+function writeOnce(name,value){writeFileSync(join(DIR,name),JSON.stringify(value,null,2),{flag:'wx',mode:0o600})}
+function auth(){
+  if(process.env.CLOUDFLARE_API_TOKEN)return 'Bearer '+process.env.CLOUDFLARE_API_TOKEN
+  execFileSync('npx',['--yes','--package=wrangler@4.166.0','--','wrangler','whoami'],{cwd:tmpdir(),stdio:'pipe'})
+  const paths=['Library/Preferences/.wrangler/config/default.toml','.wrangler/config/default.toml','.config/.wrangler/config/default.toml'].map(p=>join(homedir(),p)).filter(existsSync)
+  assert(paths.length===1,'Wrangler OAuth source missing or ambiguous')
+  const token=readFileSync(paths[0],'utf8').match(/^oauth_token\s*=\s*"([^"\r\n]+)"/m)?.[1]
+  assert(token,'Wrangler OAuth token missing')
+  return 'Bearer '+token
+}
+async function request(method,path,token,payload){
+  const headers={Authorization:token}
+  if(payload!==undefined)headers['Content-Type']='application/json'
+  const res=await fetch(BASE+path,{method,headers,body:payload===undefined?undefined:JSON.stringify(payload),redirect:'error',signal:AbortSignal.timeout(method==='GET'?30000:120000)})
+  const body=await res.json().catch(()=>null)
+  return {ok:res.ok&&body?.success===true,http:res.status,result:body?.result||null,codes:(body?.errors||[]).map(x=>x.code).slice(0,4)}
+}
+async function get(path,token){
+  const r=await request('GET',path,token)
+  assert(r.ok,'GET '+path+' HTTP '+r.http+' codes '+r.codes.join(','))
+  return r.result
+}
+async function snapshot(token){
+  const d=await get('/workers/scripts/'+WORKER+'/deployments',token)
+  const active=d.deployments?.[0]?.versions
+  assert(active?.length===1&&active[0].version_id===ACTIVE&&Number(active[0].percentage)===100,'active production Worker changed')
+  const v=await get('/workers/workers/'+WORKER+'/versions/'+ACTIVE+'?include=modules',token)
+  assert(v.id===ACTIVE&&v.bindings?.length===32&&v.modules?.length===1,'Worker structure changed')
+  assert(new Set(v.bindings.map(b=>b.name)).size===32,'binding names duplicate')
+  assert(v.main_module==='preview-free-entry.js'&&v.modules[0].name===v.main_module,'main module mismatch')
+  assert(v.modules[0].content_type==='application/javascript+module','module MIME mismatch')
+  assert(hashB64(v.modules[0].content_base64)===ACTIVE_MODULE_SHA,'active Worker module SHA changed')
+  assert(v.compatibility_date==='2024-02-08'&&equal(v.compatibility_flags||[],[]),'runtime compatibility changed')
+  const b=name=>v.bindings.find(x=>x.name===name)
+  assert(b('ENVIRONMENT')?.text==='production'&&b('DB')?.type==='d1'&&b('BUCKET')?.type==='r2_bucket','environment/data binding changed')
+  assert(b('APP_URL')?.text==='https://app.intaprd.com'&&b('WEB_URL')?.text==='https://intaprd.com'&&(b('DB')?.id||b('DB')?.database_id)==='3a2d724d-5938-4777-a63e-423bb41862c0'&&b('BUCKET')?.bucket_name==='intap-r2','production resources changed')
+  return v
+}
+async function bundle(url){
+  const r=await fetch(url+'/admin/login',{cache:'no-store',signal:AbortSignal.timeout(30000)})
+  assert(r.ok,'HTML '+url+' HTTP '+r.status)
+  const file=(await r.text()).match(new RegExp(String.raw`/assets/index-[A-Za-z0-9_-]+\.js`))?.[0]
+  assert(file,'bundle missing '+url)
+  const js=await fetch(url+file,{cache:'no-store',signal:AbortSignal.timeout(30000)})
+  assert(js.ok,'JS '+url+' HTTP '+js.status)
+  return {file,sha:hash(Buffer.from(await js.arrayBuffer()))}
+}
+async function versionList(token){
+  const result=await get('/workers/workers/'+WORKER+'/versions',token)
+  const rows=Array.isArray(result)?result:result?.items||result?.versions
+  assert(Array.isArray(rows)&&rows.length,'version list missing')
+  return rows
+}
+function checkLocal(){
+  assert(existsSync(MODULE_PATH),'production compiled module missing')
+  const code=readFileSync(MODULE_PATH)
+  assert(/^[a-f0-9]{64}$/.test(NEW_MODULE_SHA),'missing pinned compiled module SHA256')
+  assert(hash(code)===NEW_MODULE_SHA,'candidate API SHA differs')
+  assert(NEW_MODULE_SHA!==ACTIVE_MODULE_SHA,'new module must differ from active API')
+  const text=code.toString('utf8')
+  for(const marker of ['public-context','medical_sponsor_master_profiles','kawvo_preview_session'])
+    assert(text.includes(marker),'candidate missing '+marker)
+  return {bytes:code.length,b64:code.toString('base64')}
+}
+function validateNew(oldV,newV){
+  assert(newV.modules?.length===1&&newV.modules[0].name===oldV.main_module,'uploaded main module differs')
+  assert(hashB64(newV.modules[0].content_base64)===NEW_MODULE_SHA,'uploaded API SHA differs')
+  assert(newV.bindings?.length===32&&new Set(newV.bindings.map(x=>x.name)).size===32,'uploaded binding count differs')
+  for(const key of ['main_module','compatibility_date','compatibility_flags','limits','placement','cache_options','usage_model','exports'])
+    assert(equal(newV[key],oldV[key]),'runtime drift '+key)
+  for(const old of oldV.bindings){
+    const next=newV.bindings.find(x=>x.name===old.name)
+    assert(next,'binding removed: '+old.name)
+    assert(equal(next,old),'binding drift '+old.name)
+  }
+}
+async function main(){
+  assert(MODE==='--stage'&&process.argv.length===3,'use --stage only')
+  assert(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()===SHA,'checkout SHA mismatch')
+  assert(execFileSync('git',['rev-parse','HEAD^{tree}'],{encoding:'utf8'}).trim()===execFileSync('git',['rev-parse','df36677ce7c8988673bd79dd713273a0612950ec^{tree}'],{encoding:'utf8'}).trim(),'tree mismatch')
+  const local=checkLocal()
+  const token=auth(),old=await snapshot(token)
+  const preview=await get('/workers/scripts/intap-api-preview/deployments',token)
+  assert(preview.deployments?.[0]?.versions?.length===1&&preview.deployments[0].versions[0].version_id==='8f12558b-dc0b-40c5-a741-8f0d5a1bcb79'&&Number(preview.deployments[0].versions[0].percentage)===100,'Preview baseline drift')
+  const [history,live,stage]=await Promise.all([versionList(token),bundle('https://app.intaprd.com'),bundle(NEW_APP)])
+  assert(live.file===OLD_BUNDLE&&live.sha===OLD_BUNDLE_SHA,'official App bundle changed')
+  assert(stage.file===NEW_BUNDLE&&stage.sha===NEW_BUNDLE_SHA,'existing G8.2 App bundle changed')
+  const candidates=history.filter(x=>x.annotations?.['workers/tag']===TAG)
+  assert(candidates.length===0,'forensic candidate already in version history; do not upload again')
+  const marker=join(DIR,'upload-attempt.json')
+  const hasAttempt=existsSync(marker)||existsSync(join(DIR,'upload-result.json'))||existsSync(join(DIR,'inactive-receipt.json'))
+  const safe=!hasAttempt
+  assert(safe,'prior upload attempt exists; never retry')
+  mkdirSync(DIR,{recursive:true,mode:0o700})
+  const newModule={...old.modules[0],content_base64:local.b64}
+  const metadata={
+    main_module:old.main_module,
+    modules:[newModule],
+    bindings:old.bindings.map(b=>({name:b.name,type:'inherit',version_id:ACTIVE})),
+    annotations:{'workers/tag':TAG,'workers/message':'R0 inactive API stage; bindings unchanged; baseline '+ACTIVE}
+  }
+  for(const key of ['compatibility_date','compatibility_flags','limits','placement','cache_options','usage_model','exports'])
+    if(old[key]!==undefined&&old[key]!==null)metadata[key]=old[key]
+  writeOnce('upload-attempt.json',{productSHA:SHA,oldVersion:ACTIVE,oldOrigin:OLD_APP,newOrigin:NEW_APP,webOrigin:WEB,oldModule:ACTIVE_MODULE_SHA,newModule:NEW_MODULE_SHA,tag:TAG,versionHistoryIds:history.map(x=>x.id),started:new Date().toISOString()})
+  const uploaded=await request('POST','/workers/workers/'+WORKER+'/versions?deploy=false',token,metadata)
+  writeOnce('upload-result.json',{success:uploaded.ok,http:uploaded.http,codes:uploaded.codes,newVersion:uploaded.result?.id||null})
+  assert(uploaded.ok&&/^[a-f0-9-]{36}$/i.test(uploaded.result?.id||''),'upload failed or ambiguous; do not retry')
+  const newId=uploaded.result.id
+  const newV=await get('/workers/workers/'+WORKER+'/versions/'+newId+'?include=modules',token)
+  validateNew(old,newV)
+  await snapshot(token) // STILL old version at 100%
+  assert(equal(await get('/workers/scripts/intap-api-preview/deployments',token),preview),'Preview changed')
+  const official=await bundle('https://app.intaprd.com')
+  assert(equal(official,live),'official production App changed unexpectedly')
+  writeOnce('inactive-receipt.json',{result:'PASS_R0_API_INACTIVE',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,bindings:32,trafficChanged:false,productionVersionUploaded:true})
+  console.log(JSON.stringify({result:'PASS_R0_API_INACTIVE',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,bindings:32,trafficChanged:false},null,2))
+}
+main().catch(e=>{console.error(String(e?.message||e).startsWith('BLOCKED:')?String(e.message):'BLOCKED: '+String(e?.message||e));process.exitCode=1})
