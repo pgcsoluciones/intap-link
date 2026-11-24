@@ -1,7 +1,7 @@
 // G8.2 App+Web official Preview, dual-origin adaptation of proven G7.1/G8.1 JSON recovery.
 // --check read-only; --resume one shot, with markers before remote writes.
 import {execFileSync} from 'node:child_process';
-import {existsSync,readFileSync,writeFileSync} from 'node:fs';
+import {existsSync,readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {homedir,tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -114,6 +114,7 @@ async function main(){
   return;
  }
  check(old.safe,'remote state differs from approved G8.2 preflight; DO NOT POST');
+ mkdirSync(DIR,{recursive:true,mode:0o700});
  const inherited=old.current.bindings.map(b=>{
   const origin=newOriginFor(b.name);
   return origin?{name:b.name,type:'plain_text',text:origin}:{name:b.name,type:'inherit',version_id:ACTIVE};
