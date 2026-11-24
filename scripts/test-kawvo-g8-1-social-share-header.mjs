@@ -35,6 +35,21 @@ assert.match(frontdoor, /status:403/)
 assert.match(frontdoor, /return renewPreviewRedirect\(slug,embedded\)/)
 assert.match(privatePreview, /target\.searchParams\.set\('preview_retry', '1'\)/)
 assert.match(privatePreview, /previewSessionCookie\(rawToken, PREVIEW_SESSION_TTL_SECONDS, environment\)/)
+// Forensic regression: Production's .intaprd.com cookie also reaches
+// preview.intaprd.com; the two environments must never parse the same name.
+assert.match(privatePreview, /const PRODUCTION_PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'/)
+assert.match(privatePreview, /const PREVIEW_SESSION_COOKIE = 'kawvo_free_preview_session_v2'/)
+assert.match(privatePreview, /const name = isProduction \? PRODUCTION_PREVIEW_SESSION_COOKIE : PREVIEW_SESSION_COOKIE/)
+assert.match(frontdoor, /const PREVIEW_SESSION_COOKIE = 'kawvo_free_preview_session_v2'/)
+assert.doesNotMatch(frontdoor, /const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'/)
+assert.match(privatePreview, /isProduction \? '\\.intaprd\\.com' : '\\.preview\\.intaprd\\.com'/)
+// Simulate an older Production cookie arriving before the Preview cookie.
+// The server must read only the namespaced Preview session, without trusting
+// browser cookie ordering, nor using a Production token as Preview auth.
+const mixedCookies='kawvo_preview_session=old-production-token; kawvo_free_preview_session_v2=valid-preview-token'
+const selected=mixedCookies.split(';').map(x=>x.trim()).find(x=>x.startsWith('kawvo_free_preview_session_v2='))
+assert.equal(selected,'kawvo_free_preview_session_v2=valid-preview-token')
+
 assert.match(frontdoor, /validatePreviewSession\(request,env,slug\)/)
 
 assert.match(shell, /\/api\/v1\/me\/free\/profile-preview\/\$\{encodeURIComponent\(accountSlug\)\}/)
