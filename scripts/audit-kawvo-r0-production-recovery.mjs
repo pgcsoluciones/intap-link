@@ -64,7 +64,7 @@ function save(name,obj){
 async function main(){
  process.umask(0o077)
  assert(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim()===SHA,'candidate mismatch')
- assert(!existsSync(DIR),'capture exists; preserve evidence')
+ assert(existsSync(DIR),'original partial capture missing; stop')
  const t=auth()
  await traffic('intap-api',ACTIVE,t)
  await traffic('intap-api-preview','8f12558b-dc0b-40c5-a741-8f0d5a1bcb79',t)
@@ -73,11 +73,11 @@ async function main(){
  assert(v.bindings?.length&&new Set(v.bindings.map(b=>b.name)).size===v.bindings.length,'binding identity invalid')
  const b=n=>v.bindings.find(x=>x.name===n)
  assert(b('ENVIRONMENT')?.text==='production'&&b('DB')?.type==='d1'&&b('BUCKET')?.bucket_name==='intap-r2','wrong environment')
- mkdirSync(DIR,{recursive:true,mode:0o700})
+ // Reuse and verify the original partial capture; never overwrite it.
  const clean=structuredClone(v)
  for(const b of clean.bindings)if(b.type.includes('secret'))for(const k of Object.keys(b))if(!['name','type'].includes(k))delete b[k]
- save('api-version.private.json',clean)
- const modules=v.modules.map((m,i)=>{const raw=Buffer.from(m.content_base64,'base64');assert(raw.length,'empty module');save('module-'+i+'.bin',raw);return {name:m.name,sha256:hash(raw)}})
+ assert(JSON.stringify(JSON.parse(readFileSync(join(DIR,'api-version.private.json'),'utf8')))===JSON.stringify(clean),'original captured API version differs')
+ const modules=v.modules.map((m,i)=>{const raw=Buffer.from(m.content_base64,'base64');assert(raw.length,'empty module');assert(hash(readFileSync(join(DIR,'module-'+i+'.bin')))===hash(raw),'captured module mismatch');return {name:m.name,sha256:hash(raw)}})
  const app=await pages('intap-web2','https://app.intaprd.com','/admin/login','630cb1f0',t)
  const web=await pages('intap-link','https://intaprd.com','/','acd10d69-8b6f-4554-b2d5-2485e0ab583b',t)
  assert(web.commit==='6c469c1db47065c46b72b949944aef97de1f7c1a','Web commit drift')
@@ -86,6 +86,11 @@ async function main(){
  const profiles=[]
  for(const p of inventory.profiles){
   const url='https://intaprd.com/'+p.slug
+  if(p.slug==='juan'){
+   const api=await fetch('https://intaprd.com/api/v1/public/profiles/juan',{redirect:'error',signal:AbortSignal.timeout(30000)})
+   assert(api.status===404&&!sitemap.includes(url),'juan public state changed; stop')
+   profiles.push({slug:p.slug,status:'OWNER_ACCEPTED_EXISTING_UNAVAILABLE',apiStatus:404,inSitemap:false});continue
+  }
   const r=await fetch(url,{headers:{'User-Agent':'Twitterbot/1.0'},redirect:'error',signal:AbortSignal.timeout(30000)})
   assert(r.ok,'profile HTTP '+p.slug)
   const html=await r.text()
@@ -97,7 +102,7 @@ async function main(){
  }
  await traffic('intap-api',ACTIVE,t)
  await traffic('intap-api-preview','8f12558b-dc0b-40c5-a741-8f0d5a1bcb79',t)
- const receipt={result:'PASS_R0_RECOVERY_PREFLIGHT',candidate:SHA,api:ACTIVE,modules,bindings:v.bindings.length,app,web,profiles,files:[...files],restoreRehearsed:false,remoteWrites:0}
+ const receipt={result:'PASS_R0_RECOVERY_PREFLIGHT',candidate:SHA,api:ACTIVE,modules,bindings:v.bindings.length,app,web,profiles,files:['api-version.private.json',...modules.map((_,i)=>'module-'+i+'.bin')].map(name=>{const b=readFileSync(join(DIR,name));return {name,bytes:b.length,sha256:hash(b)}}),restoreRehearsed:false,remoteWrites:0}
  for(const f of files)assert(hash(readFileSync(join(DIR,f.name)))===f.sha256,'capture integrity failure')
  save('receipt.json',receipt)
  console.log(JSON.stringify({...receipt,profiles:profiles.length,files:undefined,evidence:DIR},null,2))
