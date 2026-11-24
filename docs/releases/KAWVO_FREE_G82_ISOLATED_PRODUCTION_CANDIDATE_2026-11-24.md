@@ -8,7 +8,7 @@
 - QA real aportada por propietario 2026-11-24: `https://preview.intaprd.com/intap3?preview=1#kawvo_shell=1&tab=profile&slug=intap3` renderizó y mostró barra y retorno. No acredita clic del retorno ni barra en URL pública sin `preview=1`.
 
 ## Delta runtime exacto
-1. `app/src/components/admin/free/KawvoFreeShellPreview.tsx` — WhatsApp en ventana separada sin abandonar el editor, cabecera móvil y botones legibles; el `previewHref` autenticado sigue **idéntico** al de `main`.
+1. `app/src/components/admin/free/KawvoFreeShellPreview.tsx` — **solo** WhatsApp en ventana separada sin abandonar el editor y botones móviles legibles. Se conserva exactamente la cabecera productiva con `FreeNotificationBell`, accesos Perfil/Agenda, y el `previewHref` autenticado de `main`. Se descartó la sustitución completa del componente tras CI FAIL por pérdida de la campana.
 2. `web/src/components/appointments/AppointmentOwnerBar.tsx` — retorno Free Multicuenta a `/admin/free/shell-preview?kawvo_shell=1&resume=profile&slug=...` **solo** cuando `public-context` ha verificado `allow_direct_actions===false` y `settings_url==='/admin/free'`; sin modificar servidor ni otras barras.
 3. `web/src/components/free-profile/IntapLinkGratisProfile.tsx` — barra Free visible cuando `showOwnerBar && !editMode`, sin depender del campo `profile.experience`; comparte enlace limpio por WhatsApp.
 
