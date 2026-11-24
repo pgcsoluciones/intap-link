@@ -113,7 +113,15 @@ export default function AppointmentOwnerBar({username,ownerApiBase,manageOrigin,
   const origin=manageOrigin.replace(/\/$/,'')
   const shellLinks=kawMedOwnerShellLinks({mode:import.meta.env.MODE,hostname:window.location.hostname,origin,profileId:medicalProfileId,context})
   const manageUrl=shellLinks?.agenda||origin+String(context.manage_url||'/admin/sponsored/agenda')
-  const settingsUrl=shellLinks?.settings||origin+String(context.settings_url||settingsPath)
+  // Free Multicuenta: return to the verified active account's profile tab,
+  // never to a generic account directory or a profile selected by query string.
+  // public-context has already checked owner identity and active Free selection.
+  const freeMulti=ownerApiBase.endsWith('/api/v1/me/free/appointments')
+    && context.allow_direct_actions===false && context.settings_url==='/admin/free'
+    && /^[a-zA-Z0-9_-]{1,160}$/.test(username)
+  const settingsUrl=freeMulti
+    ? origin+'/admin/free/shell-preview?'+new URLSearchParams({kawvo_shell:'1',resume:'profile',slug:username}).toString()
+    : shellLinks?.settings||origin+String(context.settings_url||settingsPath)
   const resourceUrl=String(context.resource_url||'').trim()
   const resourceLabel=String(context.resource_label||'Ver recurso').trim()||'Ver recurso'
   const contactUrl=String(context.contact_url||'').trim()

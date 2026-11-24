@@ -94,8 +94,11 @@ async function proxyInvitationWithMeta(request: Request, env: PreviewEnv) {
 }
 
 function renewPreviewRedirect(slug: string, embedded: boolean) {
-  const mode = embedded ? '' : '?full=1'
-  return new Response(null,{status:302,headers:{Location:`https://app.preview.intaprd.com/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}${mode}`,'Cache-Control':'no-store'}})
+  // A single authenticated renewal is allowed. The App endpoint returns
+  // preview_retry=1 to Web; any later rejection must stop, never loop.
+  const params = new URLSearchParams({ preview_retry: '1' })
+  if (!embedded) params.set('full', '1')
+  return new Response(null,{status:302,headers:{Location:`https://app.preview.intaprd.com/api/v1/me/free/profile-preview/${encodeURIComponent(slug)}?${params}`,'Cache-Control':'no-store'}})
 }
 
 export default {
@@ -105,7 +108,11 @@ export default {
     if (url.hostname === 'preview.intaprd.com' && !url.pathname.startsWith('/api/') && isDraftPreviewRequest) {
       const slug=slugFromPath(url.pathname),embedded=url.searchParams.get('embedded')==='1'
       const valid=await validatePreviewSession(request,env,slug)
-      if(!valid && slug)return renewPreviewRedirect(slug,embedded)
+      if(!valid && slug){
+        if(url.searchParams.get('preview_retry')==='1')
+          return new Response('No se pudo validar la vista previa. Regresa a tu panel e inténtalo de nuevo.',{status:403,headers:{'Cache-Control':'no-store','Content-Type':'text/plain; charset=utf-8'}})
+        return renewPreviewRedirect(slug,embedded)
+      }
       if(embedded)return proxyPagesPreview(request,env.WEB_PAGES_ORIGIN,'web-custom-domain',true)
     }
     if(url.pathname.startsWith('/api/v1/public/profiles/') && isDraftPreviewRequest){
