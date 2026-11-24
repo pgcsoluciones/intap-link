@@ -21,10 +21,12 @@ assert.match(legacy, /encodeURIComponent\('Conoce mi presentación digital: ' \+
 assert.match(shell, /https:\/\/wa\.me\/\?text=/)
 assert.match(legacy, /https:\/\/wa\.me\/\?text=/)
 assert.match(shell, /const publicUrl=publicRoute\?webUrl\+publicRoute/)
-// Publicly published Free profiles never enter the private preview redirect cycle.
-assert.match(shell, /published&&publicUrl\?publicUrl/)
+// Free preview must keep the established authenticated Production document route
+// and browser return fragment; the public URL remains reserved for sharing.
+assert.match(shell, /const previewHref=accountSlug\?\(isFreeDemoDelegationActive\(\)\&\&publicUrl\?publicUrl:/)
+assert.match(shell, /full=1#kawvo_shell=1&tab=profile&slug=/)
 // Free navigation must be consistent for published vs. unpublished profiles.
-assert.match(legacy, /\(me\?\.is_published\|\|delegatedDemo\)\&\&publicUrl\?publicUrl/g)
+assert.match(legacy, /href=\{delegatedDemo&&publicUrl\?publicUrl:`\/api\/v1\/me\/free\/profile-preview\//)
 assert.match(clickFallback, /window\.location\.hostname === 'app\.preview\.intaprd\.com'\) return/)
 assert.doesNotMatch(clickFallback, /get\('kawvo_shell'\) === '1'/)
 // Bounded private preview renewal; auth and token verification stay mandatory.
