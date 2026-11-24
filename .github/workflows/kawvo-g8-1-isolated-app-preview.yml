@@ -1,9 +1,7 @@
 name: G8.1 App Pages isolated Preview stage
 
 on:
-  push:
-    branches:
-      - hotfix/kawvo-g8-1-social-share-header-2026-11-23
+  workflow_dispatch:
 
 permissions:
   contents: read
