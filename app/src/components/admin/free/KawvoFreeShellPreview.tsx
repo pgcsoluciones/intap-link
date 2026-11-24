@@ -5,6 +5,7 @@ import KawvoPagedList, { type KawvoListItem } from '../shared/KawvoPagedList'
 import { isFreeDemoDelegationActive } from '../../../lib/freeDemoDelegation'
 import FreeShellSessionExit from './FreeShellSessionExit'
 import FreePublicationActions from './FreePublicationActions'
+import FreeNotificationBell from './FreeNotificationBell'
 import FreeAgendaSummary from './FreeAgendaSummary'
 import KawvoProfileIdentity from '../shared/KawvoProfileIdentity'
 import KawvoReadyToPublish from '../shared/KawvoReadyToPublish'
@@ -165,10 +166,6 @@ export default function KawvoFreeShellPreview(){
     if(routeById.has('identity'))navigate('/admin/free/onboarding/identity?from=panel',{state:shellReturnState})
     else setTab('profile')
   }
-  // Match the established Production Free preview contract: authenticated
-  // App document request -> Web ?preview=1 with the browser-only return fragment.
-  // Even published profiles use preview mode for "Volver a edición".
-  // Actual published link sharing remains the separate publicUrl path.
   const previewHref=accountSlug?(isFreeDemoDelegationActive()&&publicUrl?publicUrl:`/api/v1/me/free/profile-preview/${encodeURIComponent(accountSlug)}?full=1#kawvo_shell=1&tab=profile&slug=${encodeURIComponent(accountSlug)}`):''
   const sharePublicUrl=async()=>{
     if(!published||!publicUrl)return
@@ -195,7 +192,7 @@ export default function KawvoFreeShellPreview(){
       </div>
     </aside>
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div>{hasSuperAdminAccess&&<button type="button" onClick={()=>navigate('/superadmin')} className="min-h-11 shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-3 text-sm font-bold text-white">Super Admin</button>}</div>
+      <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-2"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-xl font-black text-white">K</div><div className="min-w-0 flex-1"><strong className="block text-base">Kawvo Link</strong><span className="text-xs text-slate-500">Mi espacio · Free</span></div><button type="button" onClick={()=>setTab("profile")} className="min-h-11 rounded-xl border border-slate-200 px-3 text-xs font-bold">Perfil</button>{agendaRoute&&<button type="button" onClick={()=>setTab("agenda")} className="min-h-11 rounded-xl border border-slate-200 px-3 text-xs font-bold">Agenda</button>}{hasSuperAdminAccess&&<button type="button" onClick={()=>navigate('/superadmin')} className="min-h-11 shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-3 text-xs font-bold text-white">Super Admin</button>}<FreeNotificationBell returnState={shellReturnState}/></div>
     </header>
     <section className="mx-auto w-full max-w-3xl space-y-4 px-4 pt-5">
       <div aria-label="Presentación que estás administrando" className="rounded-2xl border border-slate-200 bg-white px-4 py-3"><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Cuenta activa · Kawlink Free</p><p className="mt-1 truncate text-sm font-black text-slate-900">{accountName}</p>{accountSlug&&<p className="mt-1 truncate text-xs text-slate-500">{accountSlug}</p>}</div>{allowAccountSwitch&&<button type="button" onClick={()=>navigate('/admin/accounts')} className="min-h-11 rounded-xl border border-cyan-200 bg-cyan-50 px-3 text-sm font-bold text-cyan-900">Cambiar cuenta</button>}</div></div>
