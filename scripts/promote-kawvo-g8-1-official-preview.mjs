@@ -4,7 +4,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { homedir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 
 const ACCOUNT = 'adf4d5ebb625fed2c32e38cef57a6319'
@@ -24,7 +24,7 @@ const sha256 = b64 => createHash('sha256').update(Buffer.from(b64, 'base64')).di
 
 function auth() {
   if (process.env.CLOUDFLARE_API_TOKEN) return 'Bearer ' + process.env.CLOUDFLARE_API_TOKEN
-  execFileSync('npx', ['--yes', '--package=wrangler@4.166.0', '--', 'wrangler', 'whoami'], { stdio: 'pipe' })
+  execFileSync('npx', ['--yes', '--package=wrangler@4.166.0', '--', 'wrangler', 'whoami'], { stdio: 'pipe', cwd: tmpdir() })
   const paths = [
     'Library/Preferences/.wrangler/config/default.toml',
     '.wrangler/config/default.toml',
