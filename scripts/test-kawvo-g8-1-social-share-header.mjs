@@ -14,9 +14,9 @@ assert.match(legacy, /encodeURIComponent\('Conoce mi presentación digital: ' \+
 assert.match(shell, /https:\/\/wa\.me\/\?text=/)
 assert.match(legacy, /https:\/\/wa\.me\/\?text=/)
 assert.match(shell, /const publicUrl=publicRoute\?webUrl\+publicRoute/)
-assert.match(shell, /<FreeNotificationBell returnState=\{shellReturnState\}/)
-assert.match(shell, /setTab\("profile"\)/)
-assert.match(shell, /setTab\("agenda"\)/)
+assert.doesNotMatch(shell, /<FreeNotificationBell returnState=\{shellReturnState\}/)
+assert.doesNotMatch(shell, /onClick=\{\(\)=>setTab\("profile"\)\} className="min-h-11 rounded-xl border/)
+assert.doesNotMatch(shell, /onClick=\{\(\)=>setTab\("agenda"\)\} className="min-h-11 rounded-xl border/)
 assert.match(shell, /grid-cols-2 gap-2/)
 assert.match(shell, /<FreeShellSessionExit\/>/)
 assert.match(master, /presentation\.agenda&&<button/)
@@ -32,3 +32,7 @@ for (const marker of ['og:title', 'og:image', 'og:description', "url.searchParam
   assert.ok(social.includes(marker), 'Missing existing social card marker: ' + marker)
 }
 console.log('PASS_G8_1_STATIC_NAV_WHATSAPP_SOCIAL_CONTRACT')
+
+// G8.2 approved UI supersedes G8.1: controls move to owner bar.
+// Verify this isolated Free release also on the required GitHub quality workflow.
+await import('./test-kawvo-g82-free-isolated-production.mjs')
