@@ -364,8 +364,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
   async function shareProfile() {
     onTrackEvent?.('share','Compartir perfil')
     try {
-      if (navigator.share) await navigator.share({ title: `${profile.name} | Kawvo Link`, text: `Conoce el perfil de ${profile.name}`, url: socialShareProfileUrl() })
-      else await copyProfileLink()
+      window.open(`https://wa.me/?text=${encodeURIComponent(`Conoce el perfil de ${profile.name} en Kawvo Link:\\n${socialShareProfileUrl()}`)}`, '_blank', 'noopener,noreferrer')
     } catch { /* cancelar compartir no es error */ }
   }
 
@@ -373,7 +372,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   return (
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
-      {showOwnerBar && profile.experience && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
+      {showOwnerBar && !editMode && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
       {topContent}
       <div className="ilx-shell">
         <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
