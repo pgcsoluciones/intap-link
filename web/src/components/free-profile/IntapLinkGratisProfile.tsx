@@ -363,9 +363,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   async function shareProfile() {
     onTrackEvent?.('share','Compartir perfil')
-    try {
-      window.open(`https://wa.me/?text=${encodeURIComponent(`Conoce el perfil de ${profile.name} en Kawvo Link:\\n${socialShareProfileUrl()}`)}`, '_blank', 'noopener,noreferrer')
-    } catch { /* cancelar compartir no es error */ }
+    shareProfileQrWhatsApp()
   }
 
   const hasWhatsapp = Boolean(profile.whatsapp)
