@@ -3,6 +3,7 @@ import { sendWebPushToUser } from './pwa-push'
 import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership, resolveOwnedMedicalContext, sponsoredMultiProfileAccess } from './sponsored-multiprofile-access'
 import { liveGuestBySlug } from './kawmed-live-guest'
+import { readIntapSelection } from './intap-active-account'
 import {
   availableAppointmentSlots,
   changeAppointmentRequestStatus,
@@ -304,28 +305,46 @@ app.post('/api/v1/me/medical-profile/appointments/requests/:id/:action',requireU
 app.get('/api/v1/me/medical-profile/appointments/public-context',requireUser,async(c:any)=>{
   const userId=String(c.get('userId')||''),slug=cleanSlug(c.req.query('username'))
   if(!slug)return c.json({ok:false,error:'Perfil inválido.'},400)
-  let resolved=await ownedSubject(c)
-  let profile=resolved&&String((resolved.profile as any).slug||'').toLowerCase()===slug?resolved.profile:null
-  if(!profile){
-    const sponsorProfile=await sponsorMasterMedicalProfile(c,userId)
-    if(sponsorProfile&&String((sponsorProfile as any).slug||'').toLowerCase()===slug)profile=sponsorProfile
+  // Public URLs do not carry an authoritative admin scope. For Multicuenta,
+  // select exactly one resolver from the session-bound selection, not ?scope.
+  const multi=await sponsoredMultiProfileAccess(c,userId)
+  const active=multi?await readIntapSelection(c):null
+  let profile:any=null
+  let guestGrant:any=null
+  if(multi){
+    if(!active||!['medical','medical_master'].includes(active.kind))
+      return c.json({ok:false,error:'Not owner'},403)
+    profile=active.kind==='medical'
+      ?await resolveOwnedMedicalContext(c,userId)
+      :await sponsorMasterMedicalProfile(c,userId)
+    if(!profile||String(profile.slug||'').toLowerCase()!==slug
+      ||(active.kind==='medical'&&String(profile.id||'')!==active.id))
+      return c.json({ok:false,error:'Not owner'},403)
+  }else{
+    const resolved=await ownedSubject(c)
+    profile=resolved&&String((resolved.profile as any).slug||'').toLowerCase()===slug?resolved.profile:null
+    if(!profile){
+      const sponsorProfile=await sponsorMasterMedicalProfile(c,userId)
+      if(sponsorProfile&&String((sponsorProfile as any).slug||'').toLowerCase()===slug)profile=sponsorProfile
+    }
+    guestGrant=!profile?await liveGuestBySlug(c,userId,slug):null
+    if(guestGrant)profile=guestGrant
   }
-  const guestGrant:any=!profile?await liveGuestBySlug(c,userId,slug):null
-  if(guestGrant)profile=guestGrant
   if(!profile)return c.json({ok:false,error:'Not owner'},403)
   const subjectId=String((profile as any).id||'')
+  // Verify actual role before any appointment initialization or private reads.
+  const isMaster=Boolean(await c.env.DB.prepare('SELECT 1 FROM medical_sponsor_master_profiles WHERE medical_profile_id=? LIMIT 1').bind(subjectId).first())
+  if(multi&&isMaster!==(active?.kind==='medical_master'))
+    return c.json({ok:false,error:'Not owner'},403)
   await ensureMedicalAppointmentDefaults(c.env.DB,subjectId)
   const settings=await getAppointmentSettings(c.env.DB,'medical',subjectId)
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
   const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM appointment_requests WHERE subject_type='medical' AND subject_id=? AND status='pending'").bind(subjectId).first()
   const sponsor=await medicalSponsorContext(c,subjectId)
-  // The public profile does not carry an admin scope in its URL. Derive the
-  // actual owner type from the verified profile, never from ?scope or a stale
-  // previously-selected doctor.
-  const isMaster=Boolean(await c.env.DB.prepare('SELECT 1 FROM medical_sponsor_master_profiles WHERE medical_profile_id=? LIMIT 1').bind(subjectId).first())
+
   return c.json({ok:true,data:{
     is_owner:true,
-    allow_direct_actions:!guestGrant&&!(await sponsoredMultiProfileAccess(c,userId)),
+    allow_direct_actions:!guestGrant&&!multi,
     enabled:settings.enabled,
     pending_count:Number((count as any)?.n||0),
     pending:rows.results||[],
