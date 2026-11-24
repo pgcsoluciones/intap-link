@@ -2,6 +2,8 @@
 // Governing contract: docs/releases/KAWVO_FREE_G82_ISOLATED_PRODUCTION_CANDIDATE_2026-11-24.md
 // Reuses the Wrangler whoami/OAuth refresh method of the successful G8.2 Preview runner.
 // No deployment, Git mutation, Worker query, D1, R2, rollback or credential output.
+// Web baseline reconciled: GitHub compare c846d0e...d93f78c shows no Web/Functions/shared/dependency delta.
+// --web-only preserves the operator's prior successful App and API receipts; it does not certify QA.
 import {execFileSync} from 'node:child_process'
 import {existsSync,readFileSync,mkdtempSync} from 'node:fs'
 import {homedir,tmpdir} from 'node:os'
@@ -13,8 +15,8 @@ const ACCOUNT='adf4d5ebb625fed2c32e38cef57a6319'
 const SHA='d93f78c46e2d8593e82dfacdfb6e2b1266adaa7a'
 const CANDIDATE='7f90382216d7c239915eb54d87be97ca33e2c23d'
 const PROJECTS=[
- {name:'intap-web2',id:'60c0aaa5-7f2a-4457-a144-b324ab77a58c',domain:'https://app.intaprd.com',route:'/admin/login'},
- {name:'intap-link',id:'676bbd25-c84c-40fb-9f35-7c7d08b62384',domain:'https://intaprd.com',route:'/'}
+ {commit:SHA,name:'intap-web2',id:'60c0aaa5-7f2a-4457-a144-b324ab77a58c',domain:'https://app.intaprd.com',route:'/admin/login'},
+ {commit:'c846d0e5e1b9dec310f5a037bf91a400791b7267',name:'intap-link',id:'ebd884a2-405a-489b-a6ae-91151ca1ea93',domain:'https://intaprd.com',route:'/'}
 ]
 const BASE='https://api.cloudflare.com/client/v4/accounts/'+ACCOUNT+'/pages/projects/'
 const need=(ok,msg)=>{if(!ok)throw Error('BLOCKED: '+msg)}
@@ -50,7 +52,7 @@ function identity(target,p,d){
   origin:origin.origin}
  const checks={project:p?.name===target.name,canonical:result.canonicalId===target.id&&result.id===target.id,
   production:result.environment==='production'&&result.productionBranch==='main'&&result.branch==='main',
-  commit:result.commit===SHA,success:result.status==='success',functions:result.usesFunctions!==null,
+  commit:result.commit===target.commit,success:result.status==='success',functions:result.usesFunctions===true,
   origin:origin.protocol==='https:'&&!origin.username&&!origin.password&&!origin.search&&!origin.hash&&origin.pathname==='/'&&origin.hostname===target.id.slice(0,8)+'.'+target.name+'.pages.dev'}
  return {...result,checks,metadataPass:Object.values(checks).every(Boolean)}
 }
@@ -69,10 +71,10 @@ async function fingerprint(origin,route){
  for(const path of paths)assets[path]=hash(await bytes(path))
  return {htmlSha256:hash(html),entryAssets:assets}
 }
-async function main(){
+async function main(webOnly=false){
  const authorization=auth()
  const rows=[]
- for(const target of PROJECTS){
+ for(const target of PROJECTS.filter(t=>!webOnly||t.name==='intap-link')){
   const p=await get(target.name,authorization)
   const id=p?.canonical_deployment?.id
   need(uuid(id),'canonical deployment unavailable '+target.name)
@@ -86,14 +88,14 @@ async function main(){
   rows.push({...row,publicMatch})
  }
  need(rows.every(r=>r.metadataPass&&r.publicMatch),'Pages metadata or served entry fingerprint differs; do not publish')
- console.log(JSON.stringify({result:'PASS_G82_PAGES_PRODUCTION_BASELINE',baseline:SHA,candidate:CANDIDATE,
+ console.log(JSON.stringify({result:webOnly?'PASS_G82_WEB_PRODUCTION_BASELINE':'PASS_G82_PAGES_PRODUCTION_BASELINE',baseline:SHA,candidate:CANDIDATE,
   pages:rows.map(r=>({project:r.project,id:r.id,usesFunctions:r.usesFunctions})),
   remoteWrites:0,scope:'Current Pages identity, retained successful canonical target and public entry fingerprints only; not full artifact or authenticated QA.'},null,2))
 }
 function selfTest(){
  for(const t of PROJECTS){
   const p={name:t.name,production_branch:'main',canonical_deployment:{id:t.id}}
-  const d={id:t.id,environment:'production',url:'https://'+t.id.slice(0,8)+'.'+t.name+'.pages.dev',deployment_trigger:{metadata:{branch:'main',commit_hash:SHA}},latest_stage:{status:'success'},uses_functions:false}
+  const d={id:t.id,environment:'production',url:'https://'+t.id.slice(0,8)+'.'+t.name+'.pages.dev',deployment_trigger:{metadata:{branch:'main',commit_hash:t.commit}},latest_stage:{status:'success'},uses_functions:true}
   assert.equal(identity(t,p,d).metadataPass,true)
   assert.equal(identity(t,p,{...d,uses_functions:null}).metadataPass,false)
   assert.equal(identity(t,p,{...d,latest_stage:{status:'idle'}}).metadataPass,false)
@@ -105,5 +107,5 @@ function selfTest(){
 }
 try{
  if(process.argv[2]==='--self-test')selfTest()
- else {need(process.argv[2]==='--read-only','explicit --read-only required');await main()}
+ else {need(['--read-only','--web-only'].includes(process.argv[2]),'explicit --read-only or --web-only required');await main(process.argv[2]==='--web-only')}
 }catch(e){console.error(e?.message?.startsWith('BLOCKED:')?e.message:'BLOCKED: local/remote readback failed; raw details withheld');process.exitCode=1}
