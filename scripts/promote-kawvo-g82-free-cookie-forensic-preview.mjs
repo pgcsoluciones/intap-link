@@ -2,9 +2,8 @@
 // Production .intaprd.com domain cookie. No App/Web changes or bindings changed.
 // SINGLE USE: one upload with deploy=false, readback, then one Preview activation.
 // This script NEVER runs against Production and never runs D1/R2 migrations.
-// G8.2 Free — INACTIVE API Preview stage, proven G7.1 JSON Workers versions API.
-// --check is read-only. --upload creates ONE deploy=false version and verifies
-// bytes/bindings, but NEVER changes traffic. No production, D1 or R2 writes.
+// One-shot --promote: guarded preflight, inactive upload, readback, activation,
+// and verification. If any remote POST is ambiguous, stop; NEVER rerun.
 import {execFileSync} from 'node:child_process'
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {homedir,tmpdir} from 'node:os'
@@ -120,10 +119,6 @@ async function main(){
   const marker=join(DIR,'upload-attempt.json')
   const hasAttempt=existsSync(marker)||existsSync(join(DIR,'upload-result.json'))||existsSync(join(DIR,'inactive-receipt.json'))
   const safe=!hasAttempt
-  if(false){
-    console.log(JSON.stringify({result:safe?'PASS_G82_FREE_COOKIE_API_INACTIVE_PREFLIGHT':'BLOCKED',operation:'READ_ONLY',productSHA:SHA,activeVersion:ACTIVE,bindings:old.bindings.length,modules:old.modules.length,currentOrigin:OLD_APP,webOrigin:WEB,stagedOrigin:NEW_APP,stagedAppBundle:stage,apiModuleSHA:NEW_MODULE_SHA,apiModuleBytes:local.bytes,candidateVersions:candidates.length,attemptExists:hasAttempt,ready:safe},null,2))
-    return
-  }
   assert(safe,'prior upload attempt exists; never retry')
   mkdirSync(DIR,{recursive:true,mode:0o700})
   const newModule={...old.modules[0],content_base64:local.b64}
@@ -145,11 +140,7 @@ async function main(){
   await snapshot(token) // STILL old version at 100%
   const official=await bundle('https://app.preview.intaprd.com')
   assert(equal(official,live),'official Preview changed unexpectedly')
-  writeOnce('inactive-receipt.json',{result:'PASS_G82_FREE_API_INACTIVE',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,bindings:35,trafficChanged:false,productionTouched:false})
-  if(false){
-    console.log(JSON.stringify({result:'PASS_G82_FREE_API_INACTIVE',newVersion:newId,oldVersion:ACTIVE,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,activeTrafficUnchanged:true,productionUntouched:true},null,2))
-    return
-  }
+  writeOnce('inactive-receipt.json',{result:'PASS_G82_FREE_COOKIE_API_INACTIVE',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,bindings:35,trafficChanged:false,productionTouched:false})
   // --promote: this is the only authorized activation path. The single
   // deployment write occurs only after the inactive version passes readback.
   const justBefore=await snapshot(token)
@@ -173,6 +164,6 @@ async function main(){
   const appLive=await bundle('https://app.preview.intaprd.com')
   assert(appLive.file===NEW_BUNDLE&&appLive.sha===NEW_BUNDLE_SHA,'official App bundle mismatch; do not repeat promotion')
   writeOnce('promotion-receipt.json',{result:'PASS_G82_FREE_COOKIE_FORENSIC_PREVIEW',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,appOrigin:NEW_APP,webOrigin:WEB,apiSHA256:NEW_MODULE_SHA,appBundle:appLive,productionTouched:false})
-  console.log(JSON.stringify({result:'PASS_G82_FREE_OFFICIAL_PREVIEW',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiSHA256:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,appBundle:appLive,productionUntouched:true,qaAuthenticatedPending:true},null,2))
+  console.log(JSON.stringify({result:'PASS_G82_FREE_COOKIE_FORENSIC_PREVIEW',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiSHA256:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,appBundle:appLive,productionUntouched:true,qaAuthenticatedPending:true},null,2))
 }
 main().catch(e=>{console.error(String(e?.message||e).startsWith('BLOCKED:')?String(e.message):'BLOCKED: '+String(e?.message||e));process.exitCode=1})
