@@ -42,7 +42,7 @@ assert.match(privatePreview, /const PREVIEW_SESSION_COOKIE = 'kawvo_free_preview
 assert.match(privatePreview, /const name = isProduction \? PRODUCTION_PREVIEW_SESSION_COOKIE : PREVIEW_SESSION_COOKIE/)
 assert.match(frontdoor, /const PREVIEW_SESSION_COOKIE = 'kawvo_free_preview_session_v2'/)
 assert.doesNotMatch(frontdoor, /const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'/)
-assert.match(privatePreview, /isProduction \? '\\.intaprd\\.com' : '\\.preview\\.intaprd\\.com'/)
+assert.ok(privatePreview.includes("isProduction ? '.intaprd.com' : '.preview.intaprd.com'"))
 // Simulate an older Production cookie arriving before the Preview cookie.
 // The server must read only the namespaced Preview session, without trusting
 // browser cookie ordering, nor using a Production token as Preview auth.
