@@ -8,7 +8,7 @@
 - QA real aportada por propietario 2026-11-24: `https://preview.intaprd.com/intap3?preview=1#kawvo_shell=1&tab=profile&slug=intap3` renderizó y mostró barra y retorno. No acredita clic del retorno ni barra en URL pública sin `preview=1`.
 
 ## Delta runtime exacto
-1. `app/src/components/admin/free/KawvoFreeShellPreview.tsx` — **solo** WhatsApp en ventana separada sin abandonar el editor y botones móviles legibles. Se conserva exactamente la cabecera productiva con `FreeNotificationBell`, accesos Perfil/Agenda, y el `previewHref` autenticado de `main`. Se descartó la sustitución completa del componente tras CI FAIL por pérdida de la campana.
+1. `app/src/components/admin/free/KawvoFreeShellPreview.tsx` — **archivo exacto del G8.2 aprobado**, incluyendo WhatsApp en ventana separada, botones móviles legibles y eliminación INTENCIONAL de accesos Perfil/Agenda/campana ubicados incorrectamente en la cabecera G8.1; acceso de dueño debe estar en barra pública con `public-context`. `previewHref` autenticado idéntico a `main`. CI inicial falló por aserciones **obsoletas** de G8.1, no por una regresión funcional; se sustituyeron por aserciones negativas de G8.2, sin debilitar seguridad.
 2. `web/src/components/appointments/AppointmentOwnerBar.tsx` — retorno Free Multicuenta a `/admin/free/shell-preview?kawvo_shell=1&resume=profile&slug=...` **solo** cuando `public-context` ha verificado `allow_direct_actions===false` y `settings_url==='/admin/free'`; sin modificar servidor ni otras barras.
 3. `web/src/components/free-profile/IntapLinkGratisProfile.tsx` — barra Free visible cuando `showOwnerBar && !editMode`, sin depender del campo `profile.experience`; comparte enlace limpio por WhatsApp.
 
@@ -23,5 +23,8 @@
 - `CONTRACT_PRODUCTION_PROFILES.md` exige: PR → QA → aprobación explícita de SHA exacto → merge autorizado a `main` → deploy **desde main** → QA productiva. El aprobado SHA debe coincidir con el commit de merge y con el guard. No aplicar `production_approval_guard.py` con variables inventadas.
 - G8 integrado continúa **NO-GO** según `docs/releases/KAWVO_G8_FINAL_EXECUTIVE_2026-11-23.md`; este lote no lo desbloquea, no publica sus interfaces G3/G4/G5 ni la API G7.1.
 
+## Hallazgo posterior: Producción G8 ya activada, baseline a reconciliar
+El operador aportó el 24/11/2026 salida Wrangler `deployments list --name intap-api`: **última activación productiva G8** de `2026-11-23T21:38:40.525Z`, versión `68103746-efb9-4f45-b4fa-d58388ed32b1` al 100 %, mensaje `Kawvo G8 aprobado - activacion API`. Por tanto el `NO-GO` histórico fechado antes del corte productivo **no describe por sí solo el runtime actual**. El origen y Functions efectivos Pages Production `intap-web2` y `intap-link` NO aparecen en el output disponible (el listado sin filtro solo mostró 25 despliegues Preview por proyecto). Obtener ambos con `wrangler pages deployment list --environment production --project-name ... --json`; no sustituir por alias Preview.
+
 ## Resultado provisional
-Código candidato aislado en rama de release. NO hay autorización de Producción ni correspondencia de los tres targets activos validada para este SHA. No desplegar por urgencia saltando los gates; reunir evidencia sin repetir QA ya aceptada.
+Código candidato aislado en rama de release; pendiente CI del SHA final. NO hay autorización por SHA final ni correspondencia acreditada de App/Web productivos activos, ni rollback para este lote. Mantener PR Draft, cero merge/publicación hasta los gates. No repetir QA G8 ya cerrada ni citar el informe viejo `NO-GO` como si anulara la activación real del 23/11.
