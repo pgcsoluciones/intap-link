@@ -76,7 +76,14 @@ export default function SponsoredDashboard({mode='beneficiary',masterShell}:{mod
   const[viewMode,setViewMode]=useState<'edit'|'preview'>('edit')
   const[galleryBatchProgress,setGalleryBatchProgress]=useState('');const[agendaEnabled,setAgendaEnabled]=useState(false)
   const[isIntapMulticuenta,setIsIntapMulticuenta]=useState(false)
-  useEffect(()=>{apiGet('/me/intapcard/active-account').then((r:any)=>setIsIntapMulticuenta(Boolean((!isMaster&&selectedProfileId)||(r?.ok&&r.data?.active?.kind===(isMaster?'sponsor':'sponsored'))))).catch(()=>setIsIntapMulticuenta(Boolean(!isMaster&&selectedProfileId)))},[isMaster,selectedProfileId])
+  useEffect(()=>{
+    let alive=true
+    setIsIntapMulticuenta(false)
+    apiGet('/me/intapcard/active-account').then((r:any)=>{
+      if(alive)setIsIntapMulticuenta(Boolean(r?.ok&&r.data?.active?.kind===(isMaster?'sponsor':'sponsored')&&(isMaster||!selectedProfileId||r.data.active.id===selectedProfileId)))
+    }).catch(()=>{if(alive)setIsIntapMulticuenta(false)})
+    return()=>{alive=false}
+  },[isMaster,selectedProfileId])
   useEffect(()=>{if(isMaster)return;apiGet(`/me/sponsored-profile/commercial-links${profileScopeQuery}`).then((r:any)=>{if(r?.ok)setCommercialLinks(r.data)}).catch(()=>undefined)},[isMaster,profileScopeQuery])
   const[form,setForm]=useState<any>({username:'',business_name:'',specialization:'',what_we_do:'',avatar_url:'',hero_url:'',map_url:'',show_avatar:true,phone:'',whatsapp:'',email:'',instagram:'',address:'',schedule:emptySchedule,gallery:[],gallery_title:'Catálogo',palette_id:'blue',quote_button_visible:true,appointment_button_visible:false})
 
