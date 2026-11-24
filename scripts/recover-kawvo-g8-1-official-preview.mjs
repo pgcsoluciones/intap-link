@@ -5,7 +5,7 @@ import {existsSync,readFileSync,writeFileSync} from 'node:fs';
 import {homedir,tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
-const CANDIDATE='G8.1-APP-612b7245';
+const CANDIDATE='53445950418291f07c7d858d04404b53af188c2f';
 const ACTIVE='9c63a559-49be-4617-bf69-2acd6d035589';
 const OLD_ORIGIN='https://457b0c1b.intap-web2.pages.dev';
 const NEW_ORIGIN='https://612b7245.intap-web2.pages.dev';
@@ -81,7 +81,7 @@ async function main(){
  check(existsSync(join(ROOT,'.git')),'run from repository root');
  const origin=stage(),token=auth(),current=await snapshot(token),history=await versions(token);
  const live=await bundle('https://app.preview.intaprd.com'),pages=await bundle(origin);
- const candidate=history.filter(x=>x.annotations?.['workers/tag']===CANDIDATE);
+ const candidate=history.filter(x=>[CANDIDATE,'G8.1-APP-612b7245'].includes(x.annotations?.['workers/tag']));
  const safe=current.id===ACTIVE&&current.bindings.find(x=>x.name==='APP_PAGES_ORIGIN')?.text===OLD_ORIGIN&&live===OLD_BUNDLE&&pages===NEW_BUNDLE&&history[0].id===ACTIVE&&candidate.length===0;
  if(mode==='--check'){console.log(JSON.stringify({operation:'READ ONLY',ready:safe,active:current.id,origin,pagesBundle:pages,sharedBundle:live,candidateVersions:candidate.map(x=>x.id),previousUploadAttempt:true,method:'PROVEN_G7_1_JSON_RECOVERY'},null,2));return;}
  check(safe,'remote state is not safe for a one-shot recovery');
