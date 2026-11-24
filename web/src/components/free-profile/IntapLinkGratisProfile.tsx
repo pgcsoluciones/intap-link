@@ -134,6 +134,16 @@ function appOrigin() {
   return 'https://app.intaprd.com'
 }
 
+// Production account selection is written by App's VITE_API_URL (api.intaprd.com).
+// Its HttpOnly active-account cookie is host-only. Reading owner context on
+// app.intaprd.com loses that selection. Keep navigation on App and preserve
+// Preview's established host/session contract.
+function freeOwnerApiOrigin() {
+  return appOrigin() === 'https://app.intaprd.com'
+    ? 'https://api.intaprd.com'
+    : appOrigin()
+}
+
 function loginUrl() {
   if (typeof window === 'undefined') return 'https://app.intaprd.com/admin/login'
   const host = window.location.hostname
@@ -370,7 +380,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
   return (
     <main className={`ilx-page ilx-layout-${layout}`} style={variables}>
-      {showOwnerBar && !editMode && <AppointmentOwnerBar username={profile.slug} ownerApiBase={appOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
+      {showOwnerBar && !editMode && <AppointmentOwnerBar username={profile.slug} ownerApiBase={freeOwnerApiOrigin()+'/api/v1/me/free/appointments'} manageOrigin={appOrigin()} settingsPath="/admin/free/account" palette={{accent:action,accentSoft:softPrimary,text}} onToast={setOwnerToast} />}
       {topContent}
       <div className="ilx-shell">
         <Identity profile={profile} layout={layout} onEdit={editMode ? onEditSection : undefined} />
