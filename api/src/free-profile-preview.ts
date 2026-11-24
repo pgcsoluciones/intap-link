@@ -2,7 +2,11 @@ import app from './preview-entry'
 import { cookieNames } from './lib/cookies'
 import { applyFreeDemoDelegation, freeDemoDelegationError } from './lib/free-demo-delegation'
 
-const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'
+// Production historically uses the broad .intaprd.com cookie. A cookie with
+// that scope is also sent to preview.intaprd.com. The Preview-only name must
+// differ to prevent first-match parsing of a Production token against Preview D1.
+const PRODUCTION_PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'
+const PREVIEW_SESSION_COOKIE = 'kawvo_free_preview_session_v2'
 const PREVIEW_SESSION_TTL_SECONDS = 2 * 60 * 60
 
 async function sha256Hex(input: string): Promise<string> {
@@ -45,7 +49,8 @@ async function requireProfileOwner(c: any, next: any) {
 function previewSessionCookie(value: string, maxAge: number, environment?: string) {
   const isProduction = String(environment || '').toLowerCase() === 'production'
   const domain = isProduction ? '.intaprd.com' : '.preview.intaprd.com'
-  return `${PREVIEW_SESSION_COOKIE}=${encodeURIComponent(value)}; Domain=${domain}; Path=/; Max-Age=${maxAge}; Secure; HttpOnly; SameSite=Lax`
+  const name = isProduction ? PRODUCTION_PREVIEW_SESSION_COOKIE : PREVIEW_SESSION_COOKIE
+  return `${name}=${encodeURIComponent(value)}; Domain=${domain}; Path=/; Max-Age=${maxAge}; Secure; HttpOnly; SameSite=Lax`
 }
 
 app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: any) => {

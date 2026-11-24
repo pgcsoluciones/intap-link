@@ -11,7 +11,10 @@ type PreviewEnv = {
   INSTAGRAM_TOKEN_ENCRYPTION_KEY?: string
 }
 
-const PREVIEW_SESSION_COOKIE = 'kawvo_preview_session'
+// Must match the Preview-only cookie emitted by free-profile-preview.ts.
+// Never read the historical Production name: its .intaprd.com Domain also
+// matches preview.intaprd.com and can shadow a newly issued Preview token.
+const PREVIEW_SESSION_COOKIE = 'kawvo_free_preview_session_v2'
 
 async function sha256Hex(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
