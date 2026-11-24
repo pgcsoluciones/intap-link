@@ -9,6 +9,10 @@ const social = read('functions/_middleware.ts')
 const publicProfile = read('web/src/components/free-profile/IntapLinkGratisProfile.tsx')
 const ownerBar = read('web/src/components/appointments/AppointmentOwnerBar.tsx')
 const ownerApi = read('api/src/free-appointments.ts')
+const frontdoor = read('api/src/preview-frontdoor-entry.ts')
+const privatePreview = read('api/src/free-profile-preview.ts')
+const clickFallback = read('app/src/free-preview-link-fallback.ts')
+
 
 // Share the SAME public profile URL via WhatsApp. Never replace with an
 // internal editor URL, tracking redirect or bank-account URL.
@@ -19,6 +23,18 @@ assert.match(legacy, /https:\/\/wa\.me\/\?text=/)
 assert.match(shell, /const publicUrl=publicRoute\?webUrl\+publicRoute/)
 // Publicly published Free profiles never enter the private preview redirect cycle.
 assert.match(shell, /published&&publicUrl\?publicUrl/)
+// Free navigation must be consistent for published vs. unpublished profiles.
+assert.match(legacy, /\(me\?\.is_published\|\|delegatedDemo\)\&\&publicUrl\?publicUrl/g)
+assert.match(clickFallback, /window\.location\.hostname === 'app\.preview\.intaprd\.com'\) return/)
+assert.doesNotMatch(clickFallback, /get\('kawvo_shell'\) === '1'/)
+// Bounded private preview renewal; auth and token verification stay mandatory.
+assert.match(frontdoor, /if\(url\.searchParams\.get\('preview_retry'\)==='1'\)/)
+assert.match(frontdoor, /status:403/)
+assert.match(frontdoor, /return renewPreviewRedirect\(slug,embedded\)/)
+assert.match(privatePreview, /target\.searchParams\.set\('preview_retry', '1'\)/)
+assert.match(privatePreview, /previewSessionCookie\(rawToken, PREVIEW_SESSION_TTL_SECONDS, environment\)/)
+assert.match(frontdoor, /validatePreviewSession\(request,env,slug\)/)
+
 assert.match(shell, /\/api\/v1\/me\/free\/profile-preview\/\$\{encodeURIComponent\(accountSlug\)\}/)
 assert.doesNotMatch(shell, /<FreeNotificationBell returnState=\{shellReturnState\}/)
 assert.doesNotMatch(shell, /onClick=\{\(\)=>setTab\("profile"\)\} className="min-h-11 rounded-xl border/)
