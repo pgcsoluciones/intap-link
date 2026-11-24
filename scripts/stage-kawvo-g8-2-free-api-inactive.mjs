@@ -34,7 +34,7 @@ function auth(){
   execFileSync('npx',['--yes','--package=wrangler@4.166.0','--','wrangler','whoami'],{cwd:tmpdir(),stdio:'pipe'})
   const paths=['Library/Preferences/.wrangler/config/default.toml','.wrangler/config/default.toml','.config/.wrangler/config/default.toml'].map(p=>join(homedir(),p)).filter(existsSync)
   assert(paths.length===1,'Wrangler OAuth source missing or ambiguous')
-  const token=readFileSync(paths[0],'utf8').match(/^oauth_token\\s*=\\s*"([^"\\r\\n]+)"/m)?.[1]
+  const token=readFileSync(paths[0],'utf8').match(/^oauth_token\s*=\s*"([^"\r\n]+)"/m)?.[1]
   assert(token,'Wrangler OAuth token missing')
   return 'Bearer '+token
 }
@@ -69,7 +69,7 @@ async function snapshot(token){
 async function bundle(url){
   const r=await fetch(url+'/admin/login',{cache:'no-store',signal:AbortSignal.timeout(30000)})
   assert(r.ok,'HTML '+url+' HTTP '+r.status)
-  const file=(await r.text()).match(/\\/assets\\/index-[A-Za-z0-9_-]+\\.js/)?.[0]
+  const file=(await r.text()).match(new RegExp(String.raw`/assets/index-[A-Za-z0-9_-]+\.js`))?.[0]
   assert(file,'bundle missing '+url)
   const js=await fetch(url+file,{cache:'no-store',signal:AbortSignal.timeout(30000)})
   assert(js.ok,'JS '+url+' HTTP '+js.status)
