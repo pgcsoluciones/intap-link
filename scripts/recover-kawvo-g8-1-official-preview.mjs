@@ -64,7 +64,7 @@ function stage(){
  check(aa.oldBundle===OLD_BUNDLE&&aa.newOrigin===NEW_ORIGIN&&aa.newBundle===NEW_BUNDLE,'original attempt bundle mismatch');
  check(uu.oldVersion===ACTIVE&&uu.newOrigin===NEW_ORIGIN,'original rejected upload evidence mismatch');
  const url=new URL(NEW_ORIGIN);
- check(url.protocol==='https:'&&/^[a-f0-9]{8}\\.intap-web2\\.pages\\.dev$/.test(url.hostname)&&url.pathname==='/'&&!url.search&&!url.hash,'staged Pages origin invalid');
+ check(url.protocol==='https:'&&/^[a-f0-9]{8}\.intap-web2\.pages\.dev$/.test(url.hostname)&&url.pathname==='/'&&!url.search&&!url.hash,'staged Pages origin invalid');
  check(!existsSync(join(DIR,'activation-attempt.json'))&&!existsSync(join(DIR,'receipt.json'))&&!existsSync(join(DIR,'new-version.json')),'prior activation/version receipt exists');
  return NEW_ORIGIN;
 }
