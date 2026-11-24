@@ -17,6 +17,9 @@ assert.match(legacy, /encodeURIComponent\('Conoce mi presentación digital: ' \+
 assert.match(shell, /https:\/\/wa\.me\/\?text=/)
 assert.match(legacy, /https:\/\/wa\.me\/\?text=/)
 assert.match(shell, /const publicUrl=publicRoute\?webUrl\+publicRoute/)
+// Publicly published Free profiles never enter the private preview redirect cycle.
+assert.match(shell, /published&&publicUrl\?publicUrl/)
+assert.match(shell, /\/api\/v1\/me\/free\/profile-preview\/\$\{encodeURIComponent\(accountSlug\)\}/)
 assert.doesNotMatch(shell, /<FreeNotificationBell returnState=\{shellReturnState\}/)
 assert.doesNotMatch(shell, /onClick=\{\(\)=>setTab\("profile"\)\} className="min-h-11 rounded-xl border/)
 assert.doesNotMatch(shell, /onClick=\{\(\)=>setTab\("agenda"\)\} className="min-h-11 rounded-xl border/)
