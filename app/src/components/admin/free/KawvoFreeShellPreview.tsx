@@ -107,7 +107,10 @@ export default function KawvoFreeShellPreview(){
     }
     // Public Web Preview hint stays account-bound and does not select an account.
     const resume=new URLSearchParams(location.search)
-    if(resume.get('resume')==='profile'&&resume.get('slug')===navigationSlug)setTab('profile')
+    if(resume.get('slug')===navigationSlug){
+      if(resume.get('resume')==='profile')setTab('profile')
+      if(resume.get('resume')==='agenda'&&typeof home?.agenda_route==='string'&&home.agenda_route.startsWith('/admin/free/agenda'))setTab('agenda')
+    }
   },[enabled,busy,navigationAccount,navigationSlug,home?.agenda_route,location.key,location.search,location.state])
   if(!enabled)return <Navigate to="/admin/free" replace/>
   if(busy)return <main role="status" className="min-h-screen bg-slate-50 p-8 text-center text-sm">Cargando espacio Kawvo…</main>
