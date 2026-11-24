@@ -19,7 +19,7 @@
 
 **Reproducción determinista sin credenciales:** header `kawvo_preview_session=production-old; kawvo_preview_session=preview-new`. El parser first-match selecciona `production-old` y falla la validación del hash de `preview-new`. Con header `kawvo_preview_session=production-old; kawvo_free_preview_session_v2=preview-new`, el lector aislado obtiene `preview-new`.
 
-**Fuente normativa:** RFC 6265 §5.4 advierte que el servidor no debe depender del orden cuando existen cookies con el mismo nombre y distinto Domain/Path; MDN documenta la coexistencia.
+**Precedente interno en el mismo repositorio:** `api/src/lib/cookies.ts` ya separa `intap_preview_scan_activation_v2` porque, según su propio comentario, las cookies antiguas host/domain-scoped podían *shadow* la activación de Preview. Es el mismo patrón de fallo reconocido antes por el proyecto.\n\n**Fuente normativa:** RFC 6265 §5.4 advierte que el servidor no debe depender del orden cuando existen cookies con el mismo nombre y distinto Domain/Path; MDN documenta la coexistencia.
 
 ## Historia y bitácoras
 
