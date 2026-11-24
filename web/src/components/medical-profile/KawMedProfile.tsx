@@ -18,6 +18,7 @@ import { FaHospital, FaQrcode, FaTimes, FaWhatsapp } from 'react-icons/fa'
 import { apiGet } from '../../lib/api'
 import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
 import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
+import { ownerApiOrigin } from '../appointments/ownerApiOrigin'
 import KawMedModal from './KawMedModal'
 import type { KawMedCenter, KawMedProfileData, KawMedSchedule } from './types'
 import './KawMedProfile.css'
@@ -312,7 +313,7 @@ export default function KawMedProfile() {
         username={profile.slug}
         medicalProfileId={profile.id}
         mobileMenu
-        ownerApiBase={appOrigin()+'/api/v1/me/medical-profile/appointments'}
+        ownerApiBase={ownerApiOrigin(appOrigin())+'/api/v1/me/medical-profile/appointments'}
         manageOrigin={appOrigin()}
         settingsPath="/admin/medical"
         settingsLabel="Editar mi perfil"
