@@ -99,12 +99,15 @@ app.get('/api/v1/me/free/profile-preview/:slug', requireProfileOwner, async (c: 
   const environment = String(c.env.ENVIRONMENT || '').toLowerCase()
   const full = c.req.query('full') === '1'
   const embeddedParam = environment === 'production' ? 'embed=1' : 'embedded=1'
-  const target = full
-    ? `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1`
-    : `${publicWebOrigin}/${encodeURIComponent(slug)}?preview=1&${embeddedParam}`
+  const target = new URL(`${publicWebOrigin}/${encodeURIComponent(slug)}`)
+  target.searchParams.set('preview', '1')
+  if (!full) target.searchParams.set(embeddedParam.split('=')[0], '1')
+  // Only preserve the existing frontdoor renewal marker; do not accept
+  // arbitrary redirect destinations or grant access from query parameters.
+  if (c.req.query('preview_retry') === '1') target.searchParams.set('preview_retry', '1')
 
   const headers = new Headers()
-  headers.set('Location', target)
+  headers.set('Location', target.toString())
   headers.set('Cache-Control', 'no-store')
   headers.set('Set-Cookie', previewSessionCookie(rawToken, PREVIEW_SESSION_TTL_SECONDS, environment))
 
