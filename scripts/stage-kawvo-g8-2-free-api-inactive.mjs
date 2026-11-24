@@ -104,7 +104,7 @@ function validateNew(oldV,newV){
   }
 }
 async function main(){
-  assert(['--check','--upload'].includes(MODE)&&process.argv.length===3,'use --check or --upload')
+  assert(['--check','--upload','--promote'].includes(MODE)&&process.argv.length===3,'use --check, --upload or --promote')
   const local=checkLocal()
   const token=auth(),old=await snapshot(token)
   const [history,live,stage]=await Promise.all([versionList(token),bundle('https://app.preview.intaprd.com'),bundle(NEW_APP)])
@@ -141,6 +141,33 @@ async function main(){
   const official=await bundle('https://app.preview.intaprd.com')
   assert(equal(official,live),'official Preview changed unexpectedly')
   writeOnce('inactive-receipt.json',{result:'PASS_G82_FREE_API_INACTIVE',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,bindings:35,trafficChanged:false,productionTouched:false})
-  console.log(JSON.stringify({result:'PASS_G82_FREE_API_INACTIVE',newVersion:newId,oldVersion:ACTIVE,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,activeTrafficUnchanged:true,productionUntouched:true},null,2))
+  if(MODE==='--upload'){
+    console.log(JSON.stringify({result:'PASS_G82_FREE_API_INACTIVE',newVersion:newId,oldVersion:ACTIVE,apiModuleSHA:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,activeTrafficUnchanged:true,productionUntouched:true},null,2))
+    return
+  }
+  // --promote: this is the only authorized activation path. The single
+  // deployment write occurs only after the inactive version passes readback.
+  const justBefore=await snapshot(token)
+  assert(justBefore.id===ACTIVE,'Preview baseline moved before activation')
+  const beforeTraffic=await bundle('https://app.preview.intaprd.com')
+  assert(equal(beforeTraffic,live),'official App changed before activation')
+  assert(!existsSync(join(DIR,'activation-attempt.json')),'activation already attempted')
+  writeOnce('activation-attempt.json',{productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,started:new Date().toISOString()})
+  const activation=await request('POST','/workers/scripts/'+WORKER+'/deployments',token,{
+    strategy:'percentage',
+    versions:[{version_id:newId,percentage:100}],
+    annotations:{'workers/message':'G8.2 Free Preview QA; rollback to '+ACTIVE}
+  })
+  writeOnce('activation-result.json',{success:activation.ok,http:activation.http,codes:activation.codes})
+  assert(activation.ok,'activation failed or ambiguous; do not retry; inspect deployment read-only')
+  const deployed=await get('/workers/scripts/'+WORKER+'/deployments',token)
+  const actual=deployed.deployments?.[0]?.versions
+  assert(actual?.length===1&&actual[0].version_id===newId&&Number(actual[0].percentage)===100,'deployment readback mismatch; do not retry')
+  const promoted=await get('/workers/workers/'+WORKER+'/versions/'+newId+'?include=modules',token)
+  validateNew(old,promoted)
+  const appLive=await bundle('https://app.preview.intaprd.com')
+  assert(appLive.file===NEW_BUNDLE&&appLive.sha===NEW_BUNDLE_SHA,'official App bundle mismatch; do not repeat promotion')
+  writeOnce('promotion-receipt.json',{result:'PASS_G82_FREE_OFFICIAL_PREVIEW',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,appOrigin:NEW_APP,webOrigin:WEB,apiSHA256:NEW_MODULE_SHA,appBundle:appLive,productionTouched:false})
+  console.log(JSON.stringify({result:'PASS_G82_FREE_OFFICIAL_PREVIEW',productSHA:SHA,oldVersion:ACTIVE,newVersion:newId,apiSHA256:NEW_MODULE_SHA,appOrigin:NEW_APP,webOrigin:WEB,appBundle:appLive,productionUntouched:true,qaAuthenticatedPending:true},null,2))
 }
 main().catch(e=>{console.error(String(e?.message||e).startsWith('BLOCKED:')?String(e.message):'BLOCKED: '+String(e?.message||e));process.exitCode=1})
