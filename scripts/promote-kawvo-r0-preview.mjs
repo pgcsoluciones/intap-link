@@ -120,9 +120,15 @@ async function checkWeb(origin){
 async function checkPages(token){
  const p=await get('/pages/projects/intap-link',token)
  assert(p.name==='intap-link'&&p.production_branch!==WEB_BRANCH,'Pages project/branch mismatch')
- const list=await get('/pages/projects/intap-link/deployments?env=preview&per_page=100',token)
- const rows=Array.isArray(list)?list:list?.items
- const d=rows?.find(x=>x.url===NEW_WEB)
+ // Use bounded read-only pagination instead of the rejected per_page=100.
+ let d
+ for(let page=1;page<=10;page++){
+  const list=await get('/pages/projects/intap-link/deployments?env=preview&per_page=10&page='+page,token)
+  const rows=Array.isArray(list)?list:list?.items
+  assert(Array.isArray(rows),'Pages list response invalid')
+  d=rows.find(x=>x.url===NEW_WEB)
+  if(d||rows.length<10)break
+ }
  assert(d?.id&&d.environment==='preview'&&d.deployment_trigger?.metadata?.branch===WEB_BRANCH&&d.deployment_trigger?.metadata?.commit_hash===SHA,'Pages immutable deployment identity mismatch')
  assert(d.latest_stage?.status==='success','Pages deployment not successful')
  return d.id
