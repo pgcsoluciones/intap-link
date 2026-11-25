@@ -16,9 +16,12 @@ const selectProfile=`SELECT p.id,p.name,p.slug,p.user_id,p.plan_id,p.is_active,p
 async function eligible(c:any,p:LinkProfile):Promise<boolean>{
   if(Number(p.is_active)!==1||!p.slug||!genericTemplates.has(p.template_id||''))return false
   const db=c.env.DB as D1Database
+  // Empty auto-created Team workspace is not an actual Team for R4.
   const [catalog,team,demo,limits]=await Promise.all([
     db.prepare('SELECT effects_json FROM modules WHERE code=? AND is_active=1').bind(moduleCode).first<{effects_json:string}>(),
-    db.prepare(`SELECT 1 FROM team_workspaces WHERE master_profile_id=? AND status='active'
+    db.prepare(`SELECT 1 FROM team_workspaces tw WHERE tw.master_profile_id=? AND tw.status='active'
+      AND (EXISTS(SELECT 1 FROM team_members tm WHERE tm.team_id=tw.id)
+        OR EXISTS(SELECT 1 FROM team_link_codes tc WHERE tc.team_id=tw.id))
       UNION ALL SELECT 1 FROM team_members tm JOIN team_workspaces tw ON tw.id=tm.team_id
       WHERE tm.profile_id=? AND tm.status='active' AND tw.status='active' LIMIT 1`).bind(p.id,p.id).first(),
     db.prepare("SELECT 1 FROM free_demo_v2_profiles WHERE profile_id=? AND status!='claimed' LIMIT 1").bind(p.id).first(),
@@ -92,7 +95,7 @@ export function registerLinkReviewRoutes(app:any,me:any){
       try{
         const reader=c.req.raw.body?.getReader()
         if(!reader)throw Error('body')
-        const decoder=new TextDecoder('utf-8',{fatal:true})
+        const decoder=new TextDecoder('utf-8')
         let size=0,body=''
         while(true){
           const part=await reader.read()
@@ -102,6 +105,8 @@ export function registerLinkReviewRoutes(app:any,me:any){
           body+=decoder.decode(part.value,{stream:true})
         }
         body+=decoder.decode()
+        // Workers types do not support the fatal constructor option. Reject replacement characters instead.
+        if(body.includes('\uFFFD'))throw Error('invalid utf8')
         raw=JSON.parse(body)
       }catch{return error('GOOGLE_SEARCH_INPUT','Datos de búsqueda no válidos.',400)}
       const input=parseGoogleSearchInput(raw)
