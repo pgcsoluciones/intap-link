@@ -1,0 +1,16 @@
+# KAW-R1-001 — Iconografía administrativa unificada
+Base exacta: 1751bb55a2aae1f0f390708c526241bc6a17de5d. R0 certificado por propietario 2026-11-25 01:12 AST, PR #200. Referencias: #194 KAW-POST-G8-001 §4, #150 C01–C07, #156 G0–G8, AGENTS.md, CLAUDE.md, contrato productivo. Autorización del propietario: iniciar R1, auditar, establecer contrato e implementar en rama independiente. No autoriza merge/deploy.
+
+## Auditoría inicial y lotes
+- Free: KawvoFreeShellPreview, menú Unicode, tarjetas Inicio Unicode, KawvoPagedList sin icono en 13 módulos, configuración Agenda y retorno FreePanelUi. R1.1 piloto.
+- Kawmed profesional e invitado: KawMedUnifiedShellFrame usa Unicode, KawvoPagedList compartida (5 secciones). R1.2, incluyendo Agenda, acciones, More y detalle de módulos.
+- Beneficiario Link: SponsoredUnifiedShell, ocho módulos y cinco entradas Agenda con chevrons tipográficos, navegación Unicode. R1.3.
+- Master Link y Med: SponsorDashboard, SponsorKawMed, tabs sponsorship y módulos de inventario/asignaciones/recursos; R1.4. No mezclar gestión patrocinio y presentación.
+- Free subsecciones/acciones de editores, publicación, cuenta, Team y notificaciones requieren inventario detallado y QA posterior R1.1b. SuperAdmin y legado no son shells unificados; inventariar por separado, no migrar ni rediseñar sin decisión de alcance. Pago G6 excluido. Auditoría inicial no equivale a inventario exhaustivo de cada botón ni QA visual.
+
+## Norma
+Familia Feather existente react-icons/fi (react-icons ya presente en lockfile y usado por App; no dependencia nueva). Icono decorativo aria-hidden, focusable=false, 20px; fila 40px soporte suave slate/cyan; etiqueta visible, chevron separado; no emojis ni caracteres como icono para los elementos migrados. Misma semántica para home/profile/agenda/more, identidad/contacto/acciones/ubicación/enlaces/portafolio/servicios/banco/diseño/cuenta/credenciales/avisos/IA. Icon-only requiere nombre accesible; no cambiar botones deshabilitados, acciones o permisos. No duplicar etiqueta en accesibilidad. Mínimo táctil 44px, móvil 320/360/390/430, texto legible, sin scroll horizontal. R2 avatares y desktop no se adelantan.
+
+## R1.1 piloto
+Rama feat/kawvo-r1-free-iconography-2026-11-25. Allowlist: este documento, shared/KawvoAdminIcon.tsx, shared/KawvoPagedList.tsx, free/KawvoFreeShellPreview.tsx, free/FreePanelUi.tsx, prueba scripts/test-kawvo-r1-free-icons.mjs. Lista compartida acepta icono explícito opcional, sin efecto sobre otros consumidores hasta su lote. Mantener filtros, ids, callbacks, rutas, focus, estados y guardas. No API/endpoints/tablas/migraciones/entitlements/Worker/Functions/Web pública/dependencias/SEO/Graph Cards/datos. 
+Aceptación: 13 módulos Free con icono, nav desktop/móvil, acciones Inicio y configuración Agenda, retorno; permisos Team, borrador/publicado, agenda disponible/no disponible, multicuenta, salida/retorno, sin cambio de links ni callbacks. Contrato estático y builds App, CI exacto, QA autenticada Preview antes de siguiente lote. Rollback por deployment App anterior; Preview oficial requiere promoción autorizada de origen App (sin cambio de código Worker ni origen Web). Auto-deploy producción previamente deshabilitado según cierre R0, revalidar antes de release. Sin merge/despliegue en este encargo.
