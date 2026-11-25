@@ -20,3 +20,6 @@ Se conserva template_data intacto: sus escrituras existentes reemplazan objetos 
 
 ## Preflight remoto Preview 25/11
 Recibo del propietario: D1 intap_db_preview e9f46214-623f-48da-af13-74198e12b222, tres consultas exitosas, changes=0, rows_written=0, changed_db=false. Catálogo agency, basic, free, pro, starter; no ID plus. Tablas requeridas presentes; profile_review_settings y módulo reviews_google ausentes. modules.is_active INTEGER NOT NULL DEFAULT 1 confirmado; adaptador debe exigir is_active=1 y probar apagado. No autoriza migración. Producción no inspeccionada en este recibo.
+
+## Resolución de Plus
+La función planLabel de app/src/components/admin/free/FreeAccount.tsx identifica `basic` como `PLUS` y `pro` como `PRO`. El catálogo remoto Preview confirma basic/Básico. Seed candidato limitado a free/basic; no incluye starter, pro ni agency. Prueba positiva basic, negativa pro. La decisión resuelve la incertidumbre anterior del seed, no habilita otros tipos de perfil ni sustituye autorización de migración.
