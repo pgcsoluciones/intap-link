@@ -107,8 +107,8 @@ function context(){
  return files
 }
 function checkSource(){
- const tree=git('ls-tree','-r',CANDIDATE,'--','app','web','functions','shared','package.json','package-lock.json').split('\n')
- for(const line of tree){const m=line.match(/^100(?:644|755) blob ([a-f0-9]{40})\t(.+)$/);check(m,'entrada Git inesperada');const b=readFileSync(join(SOURCE,m[2]));check(createHash('sha1').update('blob '+b.length+'\0').update(b).digest('hex')===m[1],'fuente distinta: '+m[2])}
+ const tree=git('ls-tree','-rz',CANDIDATE,'--','app','web','functions','shared','package.json','package-lock.json').split('\0').filter(Boolean)
+ for(const line of tree){const m=line.match(/^100(?:644|755) blob ([a-f0-9]{40})\t([\s\S]+)$/);check(m,'entrada Git inesperada');const b=readFileSync(join(SOURCE,m[2]));check(createHash('sha1').update('blob '+b.length+'\0').update(b).digest('hex')===m[1],'fuente distinta: '+m[2])}
 }
 async function bytes(url){
  const r=await fetch(url,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(30000)})
@@ -187,9 +187,11 @@ async function main(){
  check(git('status','--porcelain')==='','checkout local sucio')
  git('diff','--exit-code','HEAD',CANDIDATE,'--','package.json','package-lock.json','app/package.json','web/package.json')
  mkdirSync(DIR,{recursive:true,mode:0o700})
+ console.log('Preflight: verificando Worker y Pages activos, sin escrituras.')
  const token=auth(),baseline=await live(token)
  check(equal(baseline,read(join(API_DIR,'baseline.private.json'))),'baseline cambió tras Stage API')
  await verifyApi(token,baseline);await verifyOfficial(baseline.proof)
+ console.log('PASS: baseline y Stage API verificados; Preview oficial intacto.')
  if(!existsSync(SOURCE)){
   mkdirSync(SOURCE,{mode:0o700})
   execFileSync('tar',['-x','-C',SOURCE],{input:execFileSync('git',['archive',CANDIDATE],{cwd:ROOT,maxBuffer:256*1024*1024}),stdio:['pipe','pipe','pipe']})
@@ -198,10 +200,12 @@ async function main(){
  }
  check(read(join(DIR,'source-ready.json')).candidate===CANDIDATE&&equal(read(join(DIR,'source-ready.json')).context,context()),'contexto fuente cambió')
  checkSource()
+ console.log('PASS: fuentes Git verificadas, incluidos nombres UTF-8.')
  const receipts=[]
  for(const s of surfaces){
   const pass=join(DIR,s.folder+'-stage-pass.json'),attempt=join(DIR,s.folder+'-stage-attempt.json')
   check(!existsSync(attempt)||existsSync(pass),'intento anterior sin recibo '+s.folder+'; no repetir')
+  console.log('Preparación '+s.folder+'; intento previo='+existsSync(attempt)+'; recibo previo='+existsSync(pass))
   const p=prepare(s)
   if(existsSync(pass)){
    const r=read(pass);check(r.candidate===CANDIDATE&&r.project===s.project,'recibo Stage distinto')
@@ -214,6 +218,7 @@ async function main(){
   const rows=Array.isArray(list)?list:list?.items
   check(Array.isArray(rows)&&!rows.some(d=>d.deployment_trigger?.metadata?.branch===BRANCH),'rama Stage ya usada; no repetir')
   check(equal(await live(token),baseline),'baseline cambió antes de Stage')
+  console.log('PASS: artefacto '+s.folder+' preparado; iniciando único upload autorizado.')
   save(s.folder+'-stage-attempt.json',{candidate:CANDIDATE,project:s.project,branch:BRANCH,prepared:p})
   const output=wrangler(['pages','deploy',s.folder+'/dist','--project-name',s.project,'--branch',BRANCH,'--commit-hash',CANDIDATE,'--commit-dirty=false'],s.folder+'-deploy.private.log')
   check(/Uploading Functions bundle/i.test(output),'Functions no acreditadas; no repetir')
@@ -229,4 +234,10 @@ async function main(){
  await verifyApi(token,baseline);check(equal(await live(token),baseline),'baseline final cambió')
  console.log(JSON.stringify({result:'R4_STAGE_PAGES_PASS',candidate:CANDIDATE,apiStage:STAGE_API,pages:receipts,previewActive:false,authenticatedQA:'PENDING',evidence:DIR},null,2))
 }
-main().catch(e=>{console.error(String(e?.message||'').startsWith('BLOCKED:')?e.message:'BLOCKED: fallo local/Pages; conservar evidencia, no repetir upload ambiguo');process.exitCode=1})
+main().catch(e=>{
+ const msg=String(e?.message||'error desconocido')
+ try{if(existsSync(DIR))writeFileSync(join(DIR,'error-'+Date.now()+'.private.txt'),String(e?.stack||msg),{mode:0o600,flag:'wx'})}catch{}
+ console.error(msg.startsWith('BLOCKED:')?msg:'BLOCKED: '+(e?.code||e?.name||'Error')+'; revisar diagnóstico privado; no repetir upload ambiguo')
+ console.error(JSON.stringify({evidence:DIR,sourceReady:existsSync(join(DIR,'source-ready.json')),appPrepared:existsSync(join(DIR,'app-prepared.json')),appAttempt:existsSync(join(DIR,'app-stage-attempt.json')),appPass:existsSync(join(DIR,'app-stage-pass.json')),webPrepared:existsSync(join(DIR,'web-prepared.json')),webAttempt:existsSync(join(DIR,'web-stage-attempt.json')),webPass:existsSync(join(DIR,'web-stage-pass.json')),localPath:typeof e?.path==='string'&&e.path.startsWith(DIR)?e.path.slice(DIR.length):undefined},null,2))
+ process.exitCode=1
+})
