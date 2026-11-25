@@ -267,7 +267,7 @@ export default function KawMedProfile() {
   const shareProfile = useCallback(() => {
     if (!profile) return
     const url = `${publicOrigin()}/m/${profile.slug}`
-    window.open('https://wa.me/?text='+encodeURIComponent(`Perfil profesional de ${profile.display_name}: ${url}`),'_blank','noopener,noreferrer')
+    window.open('https://wa.me/?text='+encodeURIComponent(`Conoce el perfil de ${profile.display_name} en Kawmed:\n${url}?share=perfil&card=3`),'_blank','noopener,noreferrer')
   }, [profile])
 
   if (loading) {
