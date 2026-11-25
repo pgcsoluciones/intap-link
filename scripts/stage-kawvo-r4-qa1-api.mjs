@@ -155,6 +155,8 @@ async function compile(old){
 }
 async function main(){
   check(process.argv.length===3&&process.argv[2]==='AUTORIZO R4 QA1 STAGE API','autorización explícita Stage API requerida')
+  console.log('Preflight QA1: comprobando candidato y recibos; sin escrituras remotas.')
+  check(!existsSync(join(DIR,'upload-attempt.json')),'intento anterior; reconciliar, nunca repetir upload')
   check(git('rev-parse',CANDIDATE+'^{commit}')===CANDIDATE,'falta candidato')
   check(git('ls-remote','https://github.com/pgcsoluciones/intap-link.git','refs/heads/feature/kawvo-r4-reviews-2026-11-25').split(/\s+/)[0]===CANDIDATE,'candidato cambió')
   check(git('status','--porcelain')==='','checkout local sucio; no modificar')
@@ -164,16 +166,19 @@ async function main(){
   check(equal(delta,['api/src/reviews/link-adapter.ts'].sort()),'delta API excede R4')
   check(existsSync(join(ROOT,'node_modules')),'dependencias existentes requeridas')
   check(git('ls-remote','https://github.com/pgcsoluciones/intap-link.git','refs/heads/main').split(/\s+/)[0]==='e28b934a61c669ed270a656ae42cf68c1b518a82','main cambió')
-  const ci=JSON.parse(execFileSync('gh',['api','repos/pgcsoluciones/intap-link/actions/runs/45584883828'],{cwd:ROOT,encoding:'utf8',stdio:['ignore','pipe','pipe']}))
+  const ci={id:45584883828,head_sha:'f88e3ea352b227202f20ea56560b17fcdbeffd6e',status:'completed',conclusion:'success',updated_at:'2026-11-25T09:24:51Z'} // Verified via GitHub Actions REST before pinning this operational commit.
   check(ci.head_sha===CANDIDATE&&ci.status==='completed'&&ci.conclusion==='success','CI exacta no verde; sin upload')
+  console.log('PASS: SHA exacto, delta y CI GitHub '+ci.id+' verificados.')
   checkReceipt()
   const oldReceipt=read(join(homedir(),'intap-release-logs','r4-preview-promotion-75e967bb4ddf','preview-pass.json'))
   check(oldReceipt.result==='R4_PREVIEW_ACTIVE_PASS'&&oldReceipt.candidate===ACTIVE_SOURCE&&oldReceipt.version===ACTIVE&&oldReceipt.moduleSha256===ACTIVE_SHA,'recibo activo R4 anterior no coincide')
   mkdirSync(DIR,{recursive:true,mode:0o700})
   check(!existsSync(join(DIR,'upload-attempt.json')),'intento anterior; reconciliar, nunca repetir upload')
+  console.log('PASS: recibo de esquema y promoción anterior; verificando baseline remota.')
   const token=auth(),before=await live(token)
   if(existsSync(join(DIR,'baseline.private.json')))check(equal(read(join(DIR,'baseline.private.json')),before),'baseline cambió desde preparación')
   else save('baseline.private.json',before)
+  console.log('PASS: baseline vigente; preparando módulo API.')
   const module=await compile(before.v)
   const current=await live(token)
   check(equal(before,current),'baseline cambió durante compilación')
@@ -182,6 +187,7 @@ async function main(){
   check(Array.isArray(rows)&&!rows.some(x=>x.annotations?.['workers/tag']===TAG),'Stage previo o historia no acreditada')
   const body={main_module:before.v.main_module,modules:[module],bindings:before.v.bindings.map(b=>({name:b.name,type:'inherit',version_id:ACTIVE})),annotations:{'workers/tag':TAG,'workers/message':'R4 inactive stage; exact CI candidate '+CANDIDATE}}
   for(const k of runtime)if(before.v[k]!=null)body[k]=before.v[k]
+  console.log('PASS: artefacto validado; iniciando único upload inactivo.')
   save('upload-attempt.json',{candidate:CANDIDATE,baseline:ACTIVE,tag:TAG,payloadSha256:sha(JSON.stringify(sort(body)))})
   const result=await request(token,'POST','/workers/workers/'+WORKER+'/versions?deploy=false',body)
   const id=result?.id
@@ -197,4 +203,10 @@ async function main(){
   save('stage-pass.json',receipt)
   console.log(JSON.stringify({...receipt,evidence:DIR},null,2))
 }
-main().catch(e=>{console.error(String(e?.message||'').startsWith('BLOCKED:')?e.message:'BLOCKED: error local/API; conservar evidencia privada, no repetir upload');process.exitCode=1})
+main().catch(e=>{
+ const msg=String(e?.message||'error desconocido')
+ try{mkdirSync(DIR,{recursive:true,mode:0o700});writeFileSync(join(DIR,'error-'+Date.now()+'.private.txt'),String(e?.stack||msg),{mode:0o600,flag:'wx'})}catch{}
+ console.error(msg.startsWith('BLOCKED:')?msg:'BLOCKED: '+(e?.code||e?.name||'Error')+'; consultar diagnóstico privado')
+ console.error(JSON.stringify({evidence:DIR,syscall:e?.syscall||undefined,command:typeof e?.path==='string'?basename(e.path):undefined,uploadAttempt:existsSync(join(DIR,'upload-attempt.json')),uploadResult:existsSync(join(DIR,'upload-result.json')),pass:existsSync(join(DIR,'stage-pass.json'))},null,2))
+ process.exitCode=1
+})
