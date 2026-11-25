@@ -1,4 +1,4 @@
-import KawvoAdminIcon, { type KawvoAdminIconName } from '../shared/KawvoAdminIcon'
+import KawvoAdminIcon, { KawvoActionContent, type KawvoAdminIconName } from '../shared/KawvoAdminIcon'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
@@ -153,7 +153,7 @@ export default function KawvoFreeShellPreview(){
   const publicRoute=typeof home?.public_route==='string'&&home.public_route.startsWith('/')&&!home.public_route.startsWith('//')?home.public_route:''
   // Match the existing FreeDashboard public-link fallback when home-route is temporarily unavailable.
   const publicUrl=publicRoute?webUrl+publicRoute:accountSlug?`${webUrl}/${encodeURIComponent(accountSlug)}`:''
-  const button='min-h-12 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800'
+  const button='flex min-w-0 items-center gap-3 min-h-16 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-bold text-slate-800'
   const accountIdentity=String(profile.profile_id||profile.slug||'')
   const verifiedReturn=incomingReturn?.kawvoShellAccount===accountIdentity?incomingReturn:null
   const shellReturnState:KawvoShellReturn={kawvoShellReturn:true,kawvoShellTab:tab,kawvoShellAccount:accountIdentity}
@@ -222,17 +222,17 @@ export default function KawvoFreeShellPreview(){
             onIncomplete={readiness=>setProfile(current=>current&&String(current.profile_id||current.slug||'')===accountIdentity?{...current,freeReadiness:readiness}:current)}
           />}</div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={()=>setTab('profile')} className={button}><KawvoAdminIcon name="edit" className="mb-2 h-5 w-5"/>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y contenido</span></button>
-          {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><KawvoAdminIcon name="preview" className="mb-2 h-5 w-5"/>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Abrir la vista previa de tu presentación</span></a>:<button type="button" disabled className={button+" opacity-50"}><KawvoAdminIcon name="preview" className="mb-2 h-5 w-5"/>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Completa tu usuario primero</span></button>}
-          {agendaRoute&&<button type="button" onClick={()=>setTab('agenda')} className={button}><KawvoAdminIcon name="agenda" className="mb-2 h-5 w-5"/>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>}
-          {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><KawvoAdminIcon name="account" className="mb-2 h-5 w-5"/>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Configuración</span></button>}
-          <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><KawvoAdminIcon name="share" className="mb-2 h-5 w-5"/>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">{published&&publicUrl?'Compartir por WhatsApp':'Disponible al publicar tu perfil'}</span></button>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button onClick={()=>setTab('profile')} className={button}><KawvoActionContent name="edit" title="Editar perfil" detail="Información y contenido"/></button>
+          {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><KawvoActionContent name="preview" title="Vista previa" detail="Abrir la vista previa de tu presentación"/></a>:<button type="button" disabled className={button+" opacity-50"}><KawvoActionContent name="preview" title="Vista previa" detail="Completa tu usuario primero"/></button>}
+          {agendaRoute&&<button type="button" onClick={()=>setTab('agenda')} className={button}><KawvoActionContent name="agenda" title="Agenda" detail="Solicitudes y disponibilidad"/></button>}
+          {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><KawvoActionContent name="account" title="Mi cuenta" detail="Configuración"/></button>}
+          <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><KawvoActionContent name="share" title="Compartir" detail={published&&publicUrl?'Compartir por WhatsApp':'Disponible al publicar tu perfil'}/></button>
         </div>
         {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
       {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
-      {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<><button type="button" onClick={openAgenda} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-3 text-left text-sm font-bold text-cyan-900"><KawvoAdminIcon name="agenda"/><span className="min-w-0 flex-1">Configurar agenda<span className="mt-1 block text-xs font-normal text-slate-600">Horarios, disponibilidad y motivos</span></span><KawvoAdminIcon name="chevron"/></button><FreeAgendaSummary key={verifiedProfileId||accountIdentity} profileId={verifiedProfileId} onViewAll={()=>navigate('/admin/free/agenda?section=requests',{state:shellReturnState})}/></>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
+      {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<><button type="button" onClick={openAgenda} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-3 text-left text-sm font-bold text-cyan-900"><KawvoActionContent name="agenda" title="Configurar agenda" detail="Horarios, disponibilidad y motivos"/></button><FreeAgendaSummary key={verifiedProfileId||accountIdentity} profileId={verifiedProfileId} onViewAll={()=>navigate('/admin/free/agenda?section=requests',{state:shellReturnState})}/></>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
       {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/><div className="md:hidden"><FreeShellSessionExit/></div></>}
       {tab==='more'&&<button type="button" onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Abrir panel anterior</button>}
     </section>
