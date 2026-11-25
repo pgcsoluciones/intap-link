@@ -1,4 +1,4 @@
-import KawvoAdminIcon, { KawvoActionContent, type KawvoAdminIconName } from '../shared/KawvoAdminIcon'
+import KawvoAdminIcon, { KawvoActionContent, KawvoIconTile, type KawvoAdminIconName } from '../shared/KawvoAdminIcon'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
@@ -192,7 +192,7 @@ export default function KawvoFreeShellPreview(){
       <div className="flex h-full flex-col overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-4">
         <div className="mb-8 flex items-center gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#123241] text-lg font-black text-white">K</div><div className="min-w-0"><strong className="block text-base">Kawvo</strong><span className="text-xs text-slate-500">Una experiencia</span></div></div>
         <nav aria-label="Secciones de Kawvo" className="flex flex-col gap-2">
-          {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><KawvoAdminIcon name={icon}/>{label}</button>)}
+          {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><KawvoIconTile name={icon}/>{label}</button>)}
         </nav>
         <div className="mt-auto pt-6">{tab!=='home'&&<FreeShellSessionExit/>}</div>
         <p className="pt-3 text-xs leading-5 text-slate-500">Tu presentación digital.</p>
@@ -237,7 +237,7 @@ export default function KawvoFreeShellPreview(){
       {tab==='more'&&<button type="button" onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Abrir panel anterior</button>}
     </section>
     <nav aria-label="Navegación Kawvo" className={"fixed inset-x-0 bottom-0 z-20 grid gap-1 border-t border-slate-200 bg-white px-2 pb-[calc(7px+env(safe-area-inset-bottom))] pt-2 md:hidden "+(agendaRoute?"grid-cols-4":"grid-cols-3")}>
-      {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold '+(tab===key?'bg-cyan-50 text-cyan-900':'text-slate-600')}><KawvoAdminIcon name={icon}/>{label}</button>)}
+      {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold '+(tab===key?'bg-cyan-50 text-cyan-900':'text-slate-600')}><KawvoIconTile name={icon}/>{label}</button>)}
     </nav>
   </main>
 }
