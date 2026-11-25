@@ -1,3 +1,4 @@
+import { KawvoActionContent, type KawvoAdminIconName } from '../shared/KawvoAdminIcon'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import KawvoPagedList from '../shared/KawvoPagedList'
@@ -502,18 +503,18 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     {shellEnabled&&shellNotice&&<p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{shellNotice}</p>}
     {shellEnabled&&shellTab==='profile'&&<section className="space-y-3" aria-labelledby="kawmed-profile-title">
       <h1 id="kawmed-profile-title" className="text-2xl font-black">Mi perfil</h1>
-      {shellModuleOpen?<button type="button" onClick={backToProfileSections} className="min-h-11 min-w-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-cyan-900">← Volver al perfil médico</button>:<KawvoPagedList items={KAWMED_PROFILE_SECTIONS.map(section=>({...section,group:'Perfil médico'}))} paginated={false} title="Secciones del perfil médico" initialState={shellList} focusItemId={shellFocus} onOpen={(id,listState)=>openShellModule(id as Exclude<Tab,'public'>,listState)}/>}
+      {shellModuleOpen?<button type="button" onClick={backToProfileSections} className="min-h-11 min-w-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-cyan-900">← Volver al perfil médico</button>:<KawvoPagedList items={KAWMED_PROFILE_SECTIONS.map(section=>({...section,icon:section.id as KawvoAdminIconName,group:'Perfil médico'}))} paginated={false} title="Secciones del perfil médico" initialState={shellList} focusItemId={shellFocus} onOpen={(id,listState)=>openShellModule(id as Exclude<Tab,'public'>,listState)}/>}
     </section>}
     {shellEnabled&&shellTab==='agenda'&&(!isDelegate||guestAgendaAllowed)&&(!isMaster||masterAgendaAllowed)&&<KawMedAgendaOverview query={isMaster?'scope=sponsor_master':''} profileId={profile.id} onOpen={openShellAgenda}/>}
     {shellEnabled&&shellTab==='more'&&<section className={card} aria-labelledby="kawmed-more-title">
       <h1 id="kawmed-more-title" className="text-2xl font-black">Más opciones</h1><p className="mt-2 text-sm text-slate-600">Herramientas de tu cuenta médica.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {isMaster&&masterShell?.moreTools}
-        {(!isDelegate||guestAgendaAllowed)&&(!isMaster||masterAgendaAllowed)&&<a href={isDelegate||isMaster?contextUrl(shellReturn(),{section:'requests'}):kawMedContextUrl('/admin/medical/notifications',shellReturn())} onClick={event=>{event.preventDefault();openShellRequests()}} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-cyan-900">Solicitudes de citas médicas{unread>0?' · '+unread:''}</a>}
-        {isDelegate&&<button type="button" onClick={()=>setTab('public')} className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Vista publicada del perfil asignado</button>}
-        {isDelegate&&<button type="button" onClick={()=>setPreviewOpen(true)} className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">Vista previa del perfil asignado</button>}
-        <button type="button" onClick={()=>void installPwa()} disabled={pwaInstalled} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">{pwaInstalled?'App instalada':'Instalar app Kawvo'}</button>
-        <button type="button" onClick={requestLogout} disabled={signingOut} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold">{signingOut?'Saliendo…':'Cerrar sesión'}</button>
+        {(!isDelegate||guestAgendaAllowed)&&(!isMaster||masterAgendaAllowed)&&<a href={isDelegate||isMaster?contextUrl(shellReturn(),{section:'requests'}):kawMedContextUrl('/admin/medical/notifications',shellReturn())} onClick={event=>{event.preventDefault();openShellRequests()}} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-cyan-900 flex min-w-0 items-center gap-3 bg-white"><KawvoActionContent name="requests" title={<>Solicitudes de citas médicas{unread>0?' · '+unread:''}</>}/></a>}
+        {isDelegate&&<button type="button" onClick={()=>setTab('public')} className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold flex min-w-0 items-center gap-3 bg-white"><KawvoActionContent name="preview" title="Vista publicada del perfil asignado"/></button>}
+        {isDelegate&&<button type="button" onClick={()=>setPreviewOpen(true)} className="min-h-11 rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold flex min-w-0 items-center gap-3 bg-white"><KawvoActionContent name="preview" title="Vista previa del perfil asignado"/></button>}
+        <button type="button" onClick={()=>void installPwa()} disabled={pwaInstalled} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold flex min-w-0 items-center gap-3 bg-white"><KawvoActionContent name="install" title={pwaInstalled?'App instalada':'Instalar app Kawvo'}/></button>
+        <button type="button" onClick={requestLogout} disabled={signingOut} className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-bold flex min-w-0 items-center gap-3 bg-white"><KawvoActionContent name="logout" title={signingOut?'Saliendo…':'Cerrar sesión'}/></button>
       </div>
     </section>}
     <div hidden={shellEnabled&&shellTab!=='home'}>
@@ -587,11 +588,11 @@ export default function MedicalDashboard({scope='doctor',embedded=false,onOpenAg
     </section>
 
     {shellEnabled&&shellTab==='home'&&<section aria-labelledby="kawmed-actions-title"><h2 id="kawmed-actions-title" className="mb-3 text-sm font-bold">Accesos principales</h2>
-      <div className="grid grid-cols-2 gap-3">
-        <button type="button" onClick={()=>openShellModule('profile')} className={card+' text-left text-sm font-bold'}>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y especialidades</span></button>
-        <button type="button" onClick={()=>setPreviewOpen(true)} className={card+' text-left text-sm font-bold'}>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Datos guardados, sin publicar</span></button>
-        {(!isDelegate||guestAgendaAllowed)&&(!isMaster||masterAgendaAllowed)&&<button type="button" onClick={()=>selectShellTab('agenda')} className={card+' text-left text-sm font-bold'}>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>}
-        <button type="button" onClick={()=>selectShellTab('more')} className={card+' text-left text-sm font-bold'}>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Avisos, app y administración</span></button>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button type="button" onClick={()=>openShellModule('profile')} className={card+' flex min-w-0 items-center gap-3 text-left text-sm font-bold'}><KawvoActionContent name="edit" title="Editar perfil" detail="Información y especialidades"/></button>
+        <button type="button" onClick={()=>setPreviewOpen(true)} className={card+' flex min-w-0 items-center gap-3 text-left text-sm font-bold'}><KawvoActionContent name="preview" title="Vista previa" detail="Datos guardados, sin publicar"/></button>
+        {(!isDelegate||guestAgendaAllowed)&&(!isMaster||masterAgendaAllowed)&&<button type="button" onClick={()=>selectShellTab('agenda')} className={card+' flex min-w-0 items-center gap-3 text-left text-sm font-bold'}><KawvoActionContent name="agenda" title="Agenda" detail="Solicitudes y disponibilidad"/></button>}
+        <button type="button" onClick={()=>selectShellTab('more')} className={card+' flex min-w-0 items-center gap-3 text-left text-sm font-bold'}><KawvoActionContent name="account" title="Mi cuenta" detail="Avisos, app y administración"/></button>
       </div>
     </section>}
 
