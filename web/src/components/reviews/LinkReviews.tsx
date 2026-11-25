@@ -11,7 +11,10 @@ export default function LinkReviews({slug,accent,preview=false}:{slug:string;acc
     let live=true
     setConfig(null);visit.current=crypto.randomUUID();sent.current.clear()
     fetch(base,{cache:'no-store',credentials:'omit'}).then(r=>r.json()).then(r=>{
-      if(live&&r?.ok&&typeof r.data?.googleReviewUrl==='string')setConfig({slug,url:r.data.googleReviewUrl})
+      if(live&&r?.ok&&typeof r.data?.googleReviewUrl==='string'){
+        setConfig({slug,url:r.data.googleReviewUrl})
+        if(new URLSearchParams(window.location.search).get('src')==='reviews-qr')track('review_qr')
+      }
     }).catch(()=>undefined)
     return()=>{live=false}
   },[base,slug])
@@ -21,5 +24,5 @@ export default function LinkReviews({slug,accent,preview=false}:{slug:string;acc
     fetch(base+'/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({eventType,visitId:visit.current}),keepalive:true,credentials:'omit'}).catch(()=>undefined)
   }
   if(!config||config.slug!==slug)return null
-  return <GoogleReviewSection url={config.url} accent={accent} onImpression={()=>{track('review_view');if(new URLSearchParams(window.location.search).get('src')==='reviews-qr')track('review_qr')}} onClick={()=>{track('review_view');if(new URLSearchParams(window.location.search).get('src')==='reviews-qr')track('review_qr');track('review_click')}}/>
+  return <GoogleReviewSection url={config.url} accent={accent} onImpression={()=>track('review_view')} onClick={()=>track('review_click')}/>
 }
