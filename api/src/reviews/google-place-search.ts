@@ -27,7 +27,7 @@ export function googleSearchCapability(env:GoogleSearchEnv):{available:boolean;e
  return {available:true,embedKey:embed}
 }
 export class GoogleSearchError extends Error {
- constructor(public readonly code:'GOOGLE_SEARCH_UNAVAILABLE'|'GOOGLE_SEARCH_TIMEOUT'|'GOOGLE_SEARCH_LIMIT',public readonly status:503|504|429){super(code)}
+ constructor(public readonly code:'GOOGLE_SEARCH_UNAVAILABLE'|'GOOGLE_SEARCH_TIMEOUT'|'GOOGLE_SEARCH_LIMIT'|'GOOGLE_SEARCH_BILLING'|'GOOGLE_SEARCH_PROVIDER_DENIED',public readonly status:503|504|429){super(code)}
 }
 export async function searchGooglePlaces(input:SearchInput,env:GoogleSearchEnv,request:typeof fetch=fetch){
  if(!googleSearchCapability(env).available)throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)
@@ -38,7 +38,18 @@ export async function searchGooglePlaces(input:SearchInput,env:GoogleSearchEnv,r
   response=await request(GOOGLE_PLACES_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':env.GOOGLE_PLACES_API_KEY!,'X-Goog-FieldMask':GOOGLE_PLACES_FIELD_MASK},body:JSON.stringify({textQuery:[input.businessName,input.address,input.city,country].filter(Boolean).join(', '),languageCode:input.language,regionCode:input.countryCode,pageSize:5}),redirect:'error',signal:AbortSignal.timeout(8000)})
  }catch(e){if(e instanceof Error&&['TimeoutError','AbortError'].includes(e.name))throw new GoogleSearchError('GOOGLE_SEARCH_TIMEOUT',504);throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)}
  if(response.status===429)throw new GoogleSearchError('GOOGLE_SEARCH_LIMIT',429)
- if(!response.ok)throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)
+ if(!response.ok){
+  // Classify only bounded provider error fields. Never return or log provider text, request, or key.
+  if([400,402,403].includes(response.status)){
+   const error=await response.json().catch(()=>null) as any
+   const reasons=Array.isArray(error?.error?.details)?error.error.details.map((d:any)=>d?.reason):[]
+   const message=typeof error?.error?.message==='string'?error.error.message.slice(0,2000):''
+   const billing=reasons.some((r:unknown)=>typeof r==='string'&&['BILLING_DISABLED','BILLING_NOT_ENABLED','BILLING_ACCOUNT_DISABLED','PROJECT_BILLING_DISABLED'].includes(r))||/billing (?:must be enabled|has not been enabled|is not enabled|is disabled)|enable billing on (?:the|your) (?:google cloud )?project|billing account.*(?:not active|disabled|not enabled)/i.test(message)
+   if(billing)throw new GoogleSearchError('GOOGLE_SEARCH_BILLING',503)
+   throw new GoogleSearchError('GOOGLE_SEARCH_PROVIDER_DENIED',503)
+  }
+  throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)
+ }
  let body:unknown
  try{body=await response.json()}catch{throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)}
  if(!body||typeof body!=='object'||Array.isArray(body))throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)

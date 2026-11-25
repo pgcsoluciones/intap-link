@@ -117,7 +117,7 @@ export function registerLinkReviewRoutes(app:any,me:any){
     }catch(e){
       if(e instanceof GoogleSearchError){
         if(e.status===429)c.header('Retry-After','60')
-        return error(e.code,e.status===429?'Alcanzaste el límite de búsquedas. Intenta más tarde o introduce tu enlace manualmente.':'No pudimos buscar tu negocio. Intenta nuevamente o introduce tu enlace manualmente.',e.status)
+        return error(e.code,e.code==='GOOGLE_SEARCH_BILLING'?'Google rechazó la búsqueda porque la facturación no está habilitada. Puedes continuar manualmente.':e.code==='GOOGLE_SEARCH_PROVIDER_DENIED'?'Google rechazó la consulta. Comprueba las restricciones y la habilitación de Places API (New).':e.status===429?'Alcanzaste el límite de búsquedas. Intenta más tarde o introduce tu enlace manualmente.':'No pudimos buscar tu negocio. Intenta nuevamente o introduce tu enlace manualmente.',e.status)
       }
       return error('GOOGLE_SEARCH_UNAVAILABLE','No pudimos buscar tu negocio. Introduce tu enlace manualmente.',503)
     }
