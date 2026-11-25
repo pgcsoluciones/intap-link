@@ -241,7 +241,8 @@ export default function KawvoFreeShellPreview(){
           />}</div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button onClick={()=>setTab('profile')} className={button}><KawvoActionContent name="edit" title="Editar perfil" detail="Información y contenido"/></button>
+          <button onClick={()=>{setReviewsProfileId('');setTab('profile')}} className={button}><KawvoActionContent name="edit" title="Editar perfil" detail="Información y contenido"/></button>
+          {reviewsAvailable&&<button type="button" onClick={()=>{setReviewsProfileId(verifiedProfileId);setTab('profile')}} className={button}><KawvoActionContent name="reviews" title="Reseñas" detail="Google, QR y estadísticas"/></button>}
           {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><KawvoActionContent name="preview" title="Vista previa" detail="Abrir la vista previa de tu presentación"/></a>:<button type="button" disabled className={button+" opacity-50"}><KawvoActionContent name="preview" title="Vista previa" detail="Completa tu usuario primero"/></button>}
           {agendaRoute&&<button type="button" onClick={()=>setTab('agenda')} className={button}><KawvoActionContent name="agenda" title="Agenda" detail="Solicitudes y disponibilidad"/></button>}
           {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><KawvoActionContent name="account" title="Mi cuenta" detail="Configuración"/></button>}
