@@ -11,16 +11,19 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   const [enabled,setEnabled]=useState(false)
   const [url,setUrl]=useState('')
   const [message,setMessage]=useState('')
+  const [loadError,setLoadError]=useState(false)
   const [busy,setBusy]=useState(false)
   useEffect(()=>{
     let live=true
-    setData(null);setMessage('')
+    setData(null);setMessage('');setLoadError(false)
     apiGet(path+'?days='+days).then(r=>{
-      if(!live||!r?.ok)return
+      if(!live)return
+      if(!r?.ok){if(r?.error==='Reseñas no disponible temporalmente.')setLoadError(true);return}
       setData(r.data);setEnabled(r.data.enabled);setUrl(r.data.googleReviewUrl)
-    }).catch(()=>undefined)
+    }).catch(()=>{if(live)setLoadError(true)})
     return()=>{live=false}
   },[path,days])
+  if(loadError)return <p role="status" className="text-sm text-slate-600">Reseñas no está disponible temporalmente.</p>
   if(!data)return null
   const shareUrl=data.publicUrl+'#resenas'
   const qrUrl=data.publicUrl+'?src=reviews-qr#resenas'
