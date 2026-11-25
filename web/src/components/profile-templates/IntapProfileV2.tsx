@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import './IntapProfileV2.css'
 import { FaEnvelope, FaFacebookF, FaGlobeAmericas, FaInstagram, FaMapMarkerAlt, FaPhoneAlt, FaWhatsapp } from 'react-icons/fa'
@@ -159,7 +160,7 @@ function loadJakartaFont() {
   document.head.appendChild(link)
 }
 
-export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Profile }) {
+export default function IntapProfileV2({ profile, beforeFooterContent }: { profile?: IntapProfileV2Profile; beforeFooterContent?: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [activeSlide, setActiveSlide] = useState(0)
   const [projectsModalOpen, setProjectsModalOpen] = useState(false)
@@ -898,6 +899,7 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
 
 
 
+      {beforeFooterContent}
       <footer className="s-footer">
         <p className="footer-credit">Developed by: <strong>Intap</strong></p>
       </footer>
