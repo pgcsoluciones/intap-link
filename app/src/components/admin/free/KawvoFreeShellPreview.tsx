@@ -82,6 +82,17 @@ export default function KawvoFreeShellPreview(){
   // Reuse the original SuperAdmin authorization check. Failure hides the
   // shortcut without delaying the ordinary Free panel. A demo is never probed.
   const verifiedProfileId=String(profile?.profile_id||'')
+  const [reviewsAllowedProfileId,setReviewsAllowedProfileId]=useState('')
+  useEffect(()=>{
+    setReviewsAllowedProfileId('')
+    if(!enabled||!verifiedProfileId||isFreeDemoDelegationActive())return
+    let active=true
+    // Team context is user-scoped; only the review endpoint authorizes this exact profile.
+    apiGet('/me/profile/reviews/'+encodeURIComponent(verifiedProfileId)).then(result=>{
+      if(active&&result?.ok===true)setReviewsAllowedProfileId(verifiedProfileId)
+    }).catch(()=>undefined)
+    return()=>{active=false}
+  },[enabled,verifiedProfileId])
   useEffect(()=>{
     setSuperAdminProfileId('')
     if(!enabled||!verifiedProfileId||isFreeDemoDelegationActive())return
@@ -122,7 +133,8 @@ export default function KawvoFreeShellPreview(){
   if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
   const teamMember=team.role==='member'
   const delegatedDemo=isFreeDemoDelegationActive()
-  const reviewsOpen=Boolean(verifiedProfileId)&&reviewsProfileId===verifiedProfileId&&team.role==='none'&&!delegatedDemo
+  const reviewsAvailable=Boolean(verifiedProfileId)&&reviewsAllowedProfileId===verifiedProfileId&&!delegatedDemo
+  const reviewsOpen=reviewsAvailable&&reviewsProfileId===verifiedProfileId
   const hasSuperAdminAccess=!delegatedDemo&&Boolean(verifiedProfileId)&&superAdminProfileId===verifiedProfileId
   const accountName=String(profile.name||'').trim()||'Mi presentación Free'
   const accountSlug=String(profile.slug||'').trim()
@@ -134,8 +146,8 @@ export default function KawvoFreeShellPreview(){
   const isRealAsset=(value:unknown)=>Boolean(value)&&!String(value).includes('/assets/free-starter/')
   const baseReady=delegatedDemo||Boolean(identityConfirmed&&name&&name.toLowerCase()!=='tu nombre o negocio'&&String(profile.templateData?.role||'').trim()&&profile.freeReadiness?.steps?.identifier&&isRealAsset(profile.avatar_url)&&isRealAsset(profile.hero_url))
   // This shell is a navigation aid, never the source of authorization. Exact existing route guards still apply.
-  const modules=allModules.filter(item=>item.id!=='reviews'||(team.role==='none'&&!delegatedDemo&&Boolean(verifiedProfileId))).filter(item=>!item.ownerOnly||!teamMember).filter(item=>!item.excludeDemo||!delegatedDemo).filter(item=>{
-    if(!teamMember)return true
+  const modules=allModules.filter(item=>item.id!=='reviews'||reviewsAvailable).filter(item=>item.id==='reviews'||!item.ownerOnly||!teamMember).filter(item=>!item.excludeDemo||!delegatedDemo).filter(item=>{
+    if(item.id==='reviews'||!teamMember)return true
     if(item.id==='identity')return ['name','role','photo'].some(key=>permissions.has(key))
     // Services previously lived inside the guarded visual editor; preserve both permissions for Team.
     if(item.id==='services'&&!permissions.has('design'))return false
