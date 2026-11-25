@@ -2,13 +2,14 @@ import { normalizeGoogleReviewUrl, parseExternalReviewSettings, publicExternalRe
 import { readIntapSelection, matchesActiveIntapTab } from '../intap-active-account'
 import { getEntitlements } from '../engine/entitlements'
 import { isPreviewEnvironment } from '../lib/cookies'
+import { googleSearchCapability,parseGoogleSearchInput,reserveGoogleSearch,searchGooglePlaces,GoogleSearchError } from './google-place-search'
 
-type LinkProfile = {id:string; slug:string; user_id:string; plan_id:string; is_active:number; is_published:number; template_id:string|null; email:string}
+type LinkProfile = {id:string; name:string|null; slug:string; user_id:string; plan_id:string; is_active:number; is_published:number; template_id:string|null; email:string}
 type ReviewSettingsRow = {enabled:number; google_review_url:string}
 const moduleCode='reviews_google'
 // Base IDs used by the generic renderer; registered special templates remain excluded.
 const genericTemplates=new Set(['','intap_profile_v2','intap-v2','restaurante','servicios','eventos'])
-const selectProfile=`SELECT p.id,p.slug,p.user_id,p.plan_id,p.is_active,p.is_published,p.template_id,u.email
+const selectProfile=`SELECT p.id,p.name,p.slug,p.user_id,p.plan_id,p.is_active,p.is_published,p.template_id,u.email
  FROM profiles p JOIN users u ON u.id=p.user_id`
 
 /** Link-specific adapter; other product adapters must implement their own authority. */
@@ -71,8 +72,50 @@ export function registerLinkReviewRoutes(app:any,me:any){
         AND created_at>=datetime('now',?) GROUP BY event_type`).bind(p.id,'-'+days+' days').all<{event_type:string;n:number}>()
       const count=(type:string)=>Number(rows.results.find(r=>r.event_type===type)?.n||0)
       const views=count('review_view'),clicks=count('review_click')
-      return c.json({ok:true,data:{...config,published:Number(p.is_published)===1,publicUrl:publicUrl(c,p),stats:{days,views,qr:count('review_qr'),clicks,clickRate:views?Math.round(clicks/views*1000)/10:null}}})
+      const search=googleSearchCapability(c.env)
+      const contact=search.available?await (c.env.DB as D1Database).prepare('SELECT address FROM profile_contact WHERE profile_id=? LIMIT 1').bind(p.id).first<{address:string|null}>().catch(()=>null):null
+      const googleSearch=search.available?{...search,businessName:String(p.name||'').slice(0,120),address:String(contact?.address||'').slice(0,180)}:search
+      return c.json({ok:true,data:{...config,googleSearch,published:Number(p.is_published)===1,publicUrl:publicUrl(c,p),stats:{days,views,qr:count('review_qr'),clicks,clickRate:views?Math.round(clicks/views*1000)/10:null}}})
     }catch{return failed(c)}
+  })
+  me.post('/profile/reviews/:profileId/google-search',async(c:any)=>{
+    noCache(c)
+    const error=(code:string,message:string,status:number)=>c.json({ok:false,code,error:message},status)
+    try{
+      // Explicit administrative browser origin + existing session/active-tab authority.
+      const origin=isPreviewEnvironment(c.env)?'https://app.preview.intaprd.com':'https://app.intaprd.com'
+      if(c.req.header('Origin')!==origin)return error('GOOGLE_SEARCH_ORIGIN','Origen no autorizado.',403)
+      const p=await ownedProfile(c);if(!p)return unavailable(c)
+      if(!googleSearchCapability(c.env).available)return error('GOOGLE_SEARCH_UNAVAILABLE','La búsqueda no está disponible. Puedes introducir tu enlace manualmente.',503)
+      if(String(c.req.header('Content-Type')||'').split(';')[0].trim().toLowerCase()!=='application/json')return error('GOOGLE_SEARCH_INPUT','Datos de búsqueda no válidos.',400)
+      let raw:unknown
+      try{
+        const reader=c.req.raw.body?.getReader()
+        if(!reader)throw Error('body')
+        const decoder=new TextDecoder('utf-8',{fatal:true})
+        let size=0,body=''
+        while(true){
+          const part=await reader.read()
+          if(part.done)break
+          size+=part.value.byteLength
+          if(size>2048){await reader.cancel();throw Error('body limit')}
+          body+=decoder.decode(part.value,{stream:true})
+        }
+        body+=decoder.decode()
+        raw=JSON.parse(body)
+      }catch{return error('GOOGLE_SEARCH_INPUT','Datos de búsqueda no válidos.',400)}
+      const input=parseGoogleSearchInput(raw)
+      if(!input)return error('GOOGLE_SEARCH_INPUT','Comprueba el nombre, país y localidad.',400)
+      await reserveGoogleSearch(c.env,String(c.get('userId')),p.id,String(c.req.header('CF-Connecting-IP')||''))
+      const results=await searchGooglePlaces(input,c.env)
+      return c.json({ok:true,results})
+    }catch(e){
+      if(e instanceof GoogleSearchError){
+        if(e.status===429)c.header('Retry-After','60')
+        return error(e.code,e.status===429?'Alcanzaste el límite de búsquedas. Intenta más tarde o introduce tu enlace manualmente.':'No pudimos buscar tu negocio. Intenta nuevamente o introduce tu enlace manualmente.',e.status)
+      }
+      return error('GOOGLE_SEARCH_UNAVAILABLE','No pudimos buscar tu negocio. Introduce tu enlace manualmente.',503)
+    }
   })
   me.put('/profile/reviews/:profileId',async(c:any)=>{
     noCache(c)
