@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { apiGet, apiPut } from '../../../lib/api'
 import { FiStar } from 'react-icons/fi'
 import { KawvoActionContent } from './KawvoAdminIcon'
+import GoogleReviewLinkEditor, {type GoogleSearchCapability} from './GoogleReviewLinkEditor'
 
-type Settings={enabled:boolean;googleReviewUrl:string;published:boolean;publicUrl:string;stats:{days:number;views:number;qr:number;clicks:number;clickRate:number|null}}
+type Settings={googleSearch?:GoogleSearchCapability;enabled:boolean;googleReviewUrl:string;published:boolean;publicUrl:string;stats:{days:number;views:number;qr:number;clicks:number;clickRate:number|null}}
 /** Reusable UI; endpoint and identity are supplied by an authorized product adapter. */
 export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false,homeShortcut=false}:{profileId:string;endpoint?:string;showAccessStatus?:boolean;homeShortcut?:boolean}){
   const path=endpoint+'/'+encodeURIComponent(profileId)
@@ -55,8 +56,8 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 text-slate-900">
     {homeShortcut&&<button type="button" onClick={()=>setExpanded(false)} className="mb-3 min-h-11 text-sm font-bold text-cyan-800">Volver a Inicio</button>}
     <div className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-cyan-800"><FiStar className="h-5 w-5" aria-hidden="true"/></span><div className="min-w-0"><h2 className="text-base font-bold">Reseñas</h2><p className="text-xs text-slate-600">Invita a tus clientes a opinar en Google.</p></div></div>
+    <div className="mt-4"><GoogleReviewLinkEditor key={path} path={path} value={url} onChange={setUrl} capability={data.googleSearch} disabled={busy}/></div>
     <form className="mt-4 space-y-3" onSubmit={e=>{e.preventDefault();void save()}}>
-      <label className="block text-sm font-semibold">Enlace oficial de Google<input value={url} onChange={e=>setUrl(e.target.value)} type="url" maxLength={2048} placeholder="https://g.page/r/…/review" className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-slate-300 p-3 text-sm" disabled={busy}/></label>
       <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={enabled} onChange={e=>setEnabled(e.target.checked)} disabled={busy}/> Mostrar sección de reseñas</label>
       <button disabled={busy} className="min-h-11 w-full rounded-xl bg-slate-900 px-3 font-bold text-white disabled:opacity-50">{busy?'Guardando…':'Guardar'}</button>
     </form>
