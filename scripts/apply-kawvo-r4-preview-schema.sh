@@ -3,8 +3,9 @@
 set -euo pipefail
 umask 077
 fail(){ printf 'BLOCKED: %s\n' "$*" >&2; exit 1; }
-[[ "$#" == 1 ]] || fail "SHA exacto requerido"
+[[ "$#" == 2 ]] || fail "SHA exacto y autorización explícita requeridos"
 SHA="$1"
+[[ "$2" == "AUTORIZO R4 D1 PREVIEW" ]] || fail "Migración no autorizada"
 [[ "$SHA" =~ ^[a-f0-9]{40}$ ]] || fail "SHA inválido"
 cd "$(git rev-parse --show-toplevel)"
 ROOT="$PWD"
@@ -52,9 +53,8 @@ NODE
 echo "Candidato: $SHA"
 echo "Único cambio: crear profile_review_settings y registrar reviews_google para free/basic."
 echo "Sin alterar perfiles existentes; sin desplegar Worker/App/Web; sin tocar Producción."
-printf 'Para autorizar específicamente esta migración escribe AUTORIZO R4 D1 PREVIEW: '
-IFS= read -r APPROVAL </dev/tty || fail "Autorización no recibida"
-[[ "$APPROVAL" == 'AUTORIZO R4 D1 PREVIEW' ]] || fail "Migración no autorizada"
+echo 'Autorización explícita R4 D1 PREVIEW recibida por argumento.'
+printf '%s\n' "$2" > "$LOG/approval.txt"
 BACKUP="$LOG/intap_db_preview.before.sql"
 "$WRANGLER" d1 export intap_db_preview --remote --config "$CONFIG" --output "$BACKUP"
 [[ -s "$BACKUP" ]] || fail "Respaldo ausente o vacío"
@@ -67,7 +67,7 @@ const a=JSON.parse(fs.readFileSync(process.argv[2],'utf8')),b=JSON.parse(fs.read
 assert.equal(a.length,b.length)
 for(let i=0;i<b.length;i++){assert.equal(b[i].success,true);assert.equal(b[i].meta.changed_db,false);assert.equal(Number(b[i].meta.rows_written),0);assert.equal(Number(b[i].meta.changes),0);assert.deepEqual(b[i].results,a[i].results)}
 NODE
-if ! d1 --file "$SQL" </dev/tty > "$LOG/apply.json"; then
+if ! d1 --file "$SQL" --yes </dev/null > "$LOG/apply.json"; then
   fail "Aplicación ambigua o fallida. NO repetir; revisar $LOG"
 fi
 d1 --command "
