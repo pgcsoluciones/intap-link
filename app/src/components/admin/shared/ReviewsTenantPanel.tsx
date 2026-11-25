@@ -4,7 +4,7 @@ import { FiStar } from 'react-icons/fi'
 
 type Settings={enabled:boolean;googleReviewUrl:string;published:boolean;publicUrl:string;stats:{days:number;views:number;qr:number;clicks:number;clickRate:number|null}}
 /** Reusable UI; endpoint and identity are supplied by an authorized product adapter. */
-export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews'}:{profileId:string;endpoint?:string}){
+export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false}:{profileId:string;endpoint?:string;showAccessStatus?:boolean}){
   const path=endpoint+'/'+encodeURIComponent(profileId)
   const [data,setData]=useState<Settings|null>(null)
   const [days,setDays]=useState(30)
@@ -12,19 +12,20 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   const [url,setUrl]=useState('')
   const [message,setMessage]=useState('')
   const [loadError,setLoadError]=useState(false)
+  const [unavailable,setUnavailable]=useState(false)
   const [busy,setBusy]=useState(false)
   useEffect(()=>{
     let live=true
-    setData(null);setMessage('');setLoadError(false)
+    setData(null);setMessage('');setLoadError(false);setUnavailable(false)
     apiGet(path+'?days='+days).then(r=>{
       if(!live)return
-      if(!r?.ok){if(r?.error==='Reseñas no disponible temporalmente.')setLoadError(true);return}
+      if(!r?.ok){if(r?.error==='Reseñas no disponible temporalmente.')setLoadError(true);else setUnavailable(true);return}
       setData(r.data);setEnabled(r.data.enabled);setUrl(r.data.googleReviewUrl)
     }).catch(()=>{if(live)setLoadError(true)})
     return()=>{live=false}
   },[path,days])
   if(loadError)return <p role="status" className="text-sm text-slate-600">Reseñas no está disponible temporalmente.</p>
-  if(!data)return null
+  if(!data)return showAccessStatus?<p role="status" className="rounded-xl border bg-white p-4 text-sm text-slate-600">{unavailable?'Reseñas no está disponible para esta cuenta.':'Cargando configuración de reseñas…'}</p>:null
   const shareUrl=data.publicUrl+'#resenas'
   const qrUrl=data.publicUrl+'?src=reviews-qr#resenas'
   const canShare=data.enabled&&data.published&&Boolean(data.googleReviewUrl)
