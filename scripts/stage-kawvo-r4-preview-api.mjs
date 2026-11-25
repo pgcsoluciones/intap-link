@@ -10,6 +10,8 @@ process.umask(0o077)
 const CANDIDATE='75e967bb4ddf1eabee2f3dbef0f8ba972126d690'
 const WORKER='intap-api-preview'
 const ACTIVE='9775e192-cc7e-4a12-b2e6-67f341aa31e7'
+const ACTIVE_SHA='1af792712416e349ba4ac0c91f5be94ff781fb5dc3237be9596006ad63c4ada1'
+const ACTIVE_SOURCE='e886746db8a1c5386d41420baa49104e5a5105d5'
 const PROD='766e8d93-260c-4fb7-841c-a833515bf9d6'
 const DB='e9f46214-623f-48da-af13-74198e12b222'
 const ACCOUNT='adf4d5ebb625fed2c32e38cef57a6319'
@@ -54,7 +56,7 @@ async function live(token){
   const v=await get('/workers/workers/'+WORKER+'/versions/'+ACTIVE+'?include=modules')
   check(v.id===ACTIVE&&v.bindings?.length===35&&new Set(v.bindings.map(b=>b.name)).size===35,'inventario de bindings distinto')
   check(v.modules?.length===1&&v.main_module===v.modules[0].name&&v.main_module==='preview-frontdoor-entry.js','entrypoint original distinto')
-  check(v.modules[0].content_type==='application/javascript+module','MIME original distinto')
+  check(v.modules[0].content_type==='application/javascript+module'&&sha(Buffer.from(v.modules[0].content_base64,'base64'))===ACTIVE_SHA,'MIME o SHA original distinto')
   check(v.compatibility_date==='2024-02-08'&&equal(v.compatibility_flags||[],[]),'runtime no esperado')
   check(!Object.keys(v.assets||{}).length&&!v.containers?.length&&!Object.keys(v.migrations||{}).length,'assets/containers/migraciones fuera de alcance')
   check(Object.entries(v.exports||{}).every(([name,x])=>name==='default'&&x.type==='worker'&&(!x.state||x.state==='created')),'exports fuera de alcance')
@@ -117,6 +119,9 @@ async function main(){
   check(git('ls-remote','https://github.com/pgcsoluciones/intap-link.git','refs/heads/feature/kawvo-r4-reviews-2026-11-25').split(/\s+/)[0]===CANDIDATE,'candidato cambió')
   check(git('status','--porcelain')==='','checkout local sucio; no modificar')
   git('diff','--exit-code','HEAD',CANDIDATE,'--','package.json','package-lock.json','api/package.json')
+  git('merge-base','--is-ancestor',ACTIVE_SOURCE,CANDIDATE)
+  const delta=git('diff','--name-only',ACTIVE_SOURCE,CANDIDATE,'--','api','shared','package.json','package-lock.json').split('\n').sort()
+  check(equal(delta,['api/src/index.ts','api/src/reviews/external-google.ts','api/src/reviews/link-adapter.ts'].sort()),'delta API excede R4')
   check(existsSync(join(ROOT,'node_modules')),'dependencias existentes requeridas')
   checkReceipt()
   mkdirSync(DIR,{recursive:true,mode:0o700})
@@ -138,7 +143,7 @@ async function main(){
   check(/^[a-f0-9-]{36}$/i.test(id||'')&&id!==ACTIVE,'respuesta ambigua; NO repetir')
   save('upload-result.json',{id})
   const v=await request(token,'GET','/workers/workers/'+WORKER+'/versions/'+id+'?include=modules')
-  check(v.id===id&&v.annotations?.['workers/tag']===TAG&&v.main_module===before.v.main_module&&v.modules?.length===1&&equal(v.modules[0],module),'bytes o metadatos Stage distintos')
+  check(v.id===id&&v.annotations?.['workers/tag']===TAG&&v.main_module===before.v.main_module&&v.modules?.length===1&&v.modules[0].name===module.name&&v.modules[0].content_type===module.content_type&&sha(Buffer.from(v.modules[0].content_base64,'base64'))===sha(Buffer.from(module.content_base64,'base64')),'bytes o metadatos Stage distintos')
   check(v.bindings?.length===35&&equal([...v.bindings].sort((a,b)=>a.name.localeCompare(b.name)),[...before.v.bindings].sort((a,b)=>a.name.localeCompare(b.name))),'bindings Stage distintos')
   for(const k of runtime)check(equal(k==='compatibility_flags'?(v[k]||[]):v[k],k==='compatibility_flags'?(before.v[k]||[]):before.v[k]),'runtime distinto: '+k)
   const after=await live(token)
