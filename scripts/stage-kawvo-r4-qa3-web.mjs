@@ -40,10 +40,22 @@ function auth(){
   check(token,'sesión sin token legible después de whoami')
   return 'Bearer '+token
 }
+// The build can outlive a Wrangler OAuth access token. Refresh GET only; never replay an upload.
+let refreshedAuthorization=null
+let authRefreshCount=0
 async function request(token,method,path,payload){
   check(method==='GET'&&!payload,'solo lectura Cloudflare API; Stage Web por Wrangler')
-  const res=await fetch(BASE+path,{method,headers:{Authorization:token,...(payload?{'Content-Type':'application/json'}:{})},body:payload?JSON.stringify(payload):undefined,redirect:'error',signal:AbortSignal.timeout(method==='GET'?30000:120000)})
+  const get=authorization=>fetch(BASE+path,{method:'GET',headers:{Authorization:authorization},redirect:'error',signal:AbortSignal.timeout(30000)})
+  let res=await get(refreshedAuthorization||token)
+  if(res.status===401&&!process.env.CLOUDFLARE_API_TOKEN&&authRefreshCount<1){
+    authRefreshCount++
+    console.log('HTTP 401 en consulta GET; renovando sesión Wrangler una sola vez.')
+    await res.arrayBuffer()
+    refreshedAuthorization=auth()
+    res=await get(refreshedAuthorization)
+  }
   const j=await res.json().catch(()=>null)
+  check(res.status!==401,'Cloudflare rechazó la autenticación; renovar sesión local, no repetir subida si existe marcador')
   check(res.ok&&j?.success===true,method+' '+path+' HTTP '+res.status+' codes '+(j?.errors||[]).map(e=>e.code).join(','))
   return j.result
 }
