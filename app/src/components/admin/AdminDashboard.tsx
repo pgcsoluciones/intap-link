@@ -417,7 +417,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {me?.profile_id && <div className="mb-6"><ReviewsTenantPanel key={me.profile_id} profileId={me.profile_id}/></div>}
+        {me?.profile_id && <ReviewsTenantPanel key={me.profile_id} profileId={me.profile_id}/>}
 
         {/* Retention panel — trial/downgrade notices + selector.
             Passa os dados de /me como props iniciais para render imediato
