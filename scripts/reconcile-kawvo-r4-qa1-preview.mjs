@@ -233,8 +233,8 @@ async function smoke(){
  return {publicAbsent:response.status,privateAnonymous:privateResponse.status}
 }
 
-async function inspect(url,expected,asset){
- const r=await fetch(url,{method:'GET',cache:'no-store',redirect:'manual',headers:{'Cache-Control':'no-cache','Pragma':'no-cache','Accept-Encoding':'identity'},signal:AbortSignal.timeout(30000)})
+async function inspect(url,expected,asset,diagnostic=false){
+ const r=await fetch(url,{method:'GET',...(diagnostic?{cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache','Accept-Encoding':'identity'}}:{}),redirect:'manual',signal:AbortSignal.timeout(30000)})
  const b=Buffer.from(await r.arrayBuffer())
  const type=r.headers.get('content-type')||''
  const mimeOK=asset.endsWith('.js')?/javascript|ecmascript/i.test(type):/text\/css/i.test(type)
@@ -254,7 +254,7 @@ async function inspectCanonical(proofs){
     const relative='/'+name.split('/').map(encodeURIComponent).join('/')
     const canonical=await inspect(s.official+relative,expected,name)
     if(canonical.match)return {name,expected,canonical}
-    const [immutable,bypass]=await Promise.all([inspect(origin+relative,expected,name),inspect(s.official+relative+'?r4_reconcile='+nonce,expected,name)])
+    const [immutable,bypass]=await Promise.all([inspect(origin+relative,expected,name),inspect(s.official+relative+'?r4_reconcile='+nonce,expected,name,true)])
     return {name,expected,canonical,immutable,bypass}
    }))
    rows.push(...group)
@@ -292,6 +292,8 @@ async function main(){
  save('reconcile-'+Date.now()+'.json',{...report,results})
  console.log(JSON.stringify(report,null,2))
  if(mismatches.length)throw Error('BLOCKED: discrepancias canónicas; no purgar caché ni activar otra versión sin diagnóstico')
+ await retryRead(()=>official(proofs))
+ await active(token,id);await protectedProduction(token,baseline)
  // Exact canonical asset integrity + existing promotion receipts; no new deployment.
  if(!existsSync(join(DIR,'preview-pass.json')))save('preview-pass.json',{result:'R4_PREVIEW_ACTIVE_PASS',...info,version:id,traffic:100,checks,productionUnchanged:true,functionsRemoteBinaryEquality:false,authenticatedQA:'PENDING',reconciled:true})
  else {
