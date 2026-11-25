@@ -39,7 +39,7 @@ export type IntapLinkGratisProfileProps = {
   layout: FreeProfileLayoutId
   colors: FreeProfileAppearanceColors
   topContent?: ReactNode
-  afterBankAccountsContent?: ReactNode
+  beforeBankAccountsContent?: ReactNode
   beforeShareContent?: ReactNode
   footerSecondaryLabel?: string
   footerSecondaryHref?: string
@@ -206,7 +206,7 @@ function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layou
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, afterBankAccountsContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent, showOwnerBar=true }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeBankAccountsContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent, showOwnerBar=true }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -419,8 +419,8 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
             </section>
           )}
 
+          {beforeBankAccountsContent}
           <div id="ilx-bank-slot" />
-          {afterBankAccountsContent}
 
           {customLinks.length > 0 && (
             <section className="ilx-section ilx-links ilx-live-editable">
