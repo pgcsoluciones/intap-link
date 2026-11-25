@@ -1,3 +1,4 @@
+import { KawvoNavIcon } from '../shared/KawvoAdminIcon'
 import type { ReactNode } from 'react'
 import { KAWMED_SHELL_TABS, type KawMedShellTab } from './kawmed-shell-navigation'
 
@@ -25,7 +26,7 @@ export default function KawMedUnifiedShellFrame<T extends string = KawMedShellTa
     aria-current={tab === item.id ? 'page' : undefined}
     onClick={() => onNavigate(item.id)}
     className={'flex min-h-11 min-w-11 items-center rounded-xl px-3 py-3 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-700 ' + (mobile ? 'flex-col justify-center gap-1 text-xs ' : 'w-full gap-3 text-left ') + (tab === item.id ? 'bg-cyan-50 text-cyan-900' : 'text-slate-600 hover:bg-slate-50')}
-  ><span aria-hidden="true" className="text-xl">{item.icon}</span><span>{item.label}</span></button>)
+  ><KawvoNavIcon id={item.id}/><span>{item.label}</span></button>)
 
   return <Root data-kawmed-shell={enabled && !contentOnly ? variant : undefined} className={enabled && !contentOnly
     ? "min-h-[100dvh] min-w-0 bg-[#f1f5f7] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter',sans-serif] text-slate-950 md:pl-[244px] md:pb-0 [&_[hidden]]:!hidden [&_button]:min-h-11 [&_button]:min-w-11 [&_a]:min-h-11 [&_a]:inline-flex [&_a]:items-center [&_input]:min-w-0 [&_input]:min-h-11 [&_select]:min-w-0 [&_select]:min-h-11 [&_input[type=checkbox]]:h-11 [&_input[type=checkbox]]:w-11 [&_input[type=checkbox]]:shrink-0 [&_h1]:break-words [&_p]:break-words [&_a]:break-words [&_button:focus-visible]:outline [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-2 [&_button:focus-visible]:outline-cyan-700 [&_a:focus-visible]:outline [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-cyan-700"
