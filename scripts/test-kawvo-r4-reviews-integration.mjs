@@ -42,7 +42,7 @@ CREATE TABLE plan_limits(plan_id TEXT PRIMARY KEY,max_links INTEGER,max_photos I
 CREATE TABLE modules(code TEXT PRIMARY KEY,name TEXT,effects_json TEXT,is_active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE profile_modules(profile_id TEXT,module_code TEXT,expires_at TEXT);
 CREATE TABLE profile_plan_overrides(profile_id TEXT,trial_plan_id TEXT,trial_ends_at TEXT);
-CREATE TABLE team_workspaces(id TEXT PRIMARY KEY,master_profile_id TEXT,status TEXT);
+CREATE TABLE team_workspaces(id TEXT PRIMARY KEY,master_profile_id TEXT,status TEXT,owner_user_id TEXT DEFAULT 'owner');
 CREATE TABLE team_members(profile_id TEXT,team_id TEXT,status TEXT);
 CREATE TABLE team_link_codes(id TEXT PRIMARY KEY,team_id TEXT,status TEXT);
 CREATE TABLE free_demo_v2_profiles(profile_id TEXT,status TEXT);
@@ -89,14 +89,14 @@ try{
  assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
  // QA2: normal Free, NULL template, empty active workspace, exact selection.
  run("UPDATE profiles SET template_id=NULL WHERE id=?", [activeId])
- run("INSERT INTO team_workspaces VALUES ('operator-empty',?,'active')",[activeId])
+ run("INSERT INTO team_workspaces VALUES ('operator-empty',?,'active','operator')",[activeId])
  assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
  assert.equal((await call('PUT',ownerPath,{id:activeId,user:'operator',headers,body:config})).status,200)
  assert.deepEqual((await call('GET',publicPath,{slug:'operator-profile'})).data.data,{googleReviewUrl:url})
  run("INSERT INTO team_link_codes VALUES ('reserved','operator-empty','active')")
- assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,403)
- assert.equal((await call('PUT',ownerPath,{id:activeId,user:'operator',headers,body:config})).status,403)
- assert.equal((await call('GET',publicPath,{slug:'operator-profile'})).data.data,null)
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
+ assert.equal((await call('PUT',ownerPath,{id:activeId,user:'operator',headers,body:config})).status,200)
+ assert.deepEqual((await call('GET',publicPath,{slug:'operator-profile'})).data.data,{googleReviewUrl:url})
  run("DELETE FROM team_link_codes WHERE id='reserved'")
  run("DELETE FROM profile_review_settings WHERE profile_id=?",[activeId])
 
@@ -137,9 +137,13 @@ try{
   assert.equal((await callSearch({id:otherId,user:'operator',headers:{...browserHeaders,...headers}})).status,403)
   assert.equal((await callSearch({id:activeId,user:'operator',headers:{...browserHeaders,...headers,'X-Intap-Account-Tab':'b'.repeat(32)}})).status,403)
   assert.equal(googleCalls,0)
-  run("INSERT INTO team_workspaces VALUES ('search-team','p1','active')")
+  run("INSERT INTO team_workspaces VALUES ('search-team','p1','active','owner')")
   run("INSERT INTO team_link_codes VALUES ('search-code','search-team','active')")
-  assert.equal((await callSearch()).status,403)
+  assert.equal((await call('GET',ownerPath)).status,200)
+  // A member cannot use search even with the authenticated owner's session.
+  run("INSERT INTO team_members VALUES ('p2','search-team','active')")
+  assert.equal((await callSearch({id:'p2',user:'other'})).status,403)
+  run("DELETE FROM team_members WHERE team_id='search-team'")
   run("DELETE FROM team_link_codes WHERE id='search-code'")
   // Preserve empty workspace for subsequent positive searches.
 
@@ -165,6 +169,7 @@ try{
   assert.equal(googleCalls,6)
   assert.equal((await call('GET',ownerPath)).status,200)
  }finally{globalThis.fetch=realFetch}
+ run("DELETE FROM team_workspaces WHERE id='search-team'")
 
  assert.equal((await call('PUT',ownerPath,{delegated:true,body:config})).status,403)
  assert.equal((await call('PUT',ownerPath,{headers:{'X-KawMed-Delegate':'guest'},body:config})).status,403)
@@ -190,21 +195,37 @@ try{
  assert.equal((await call('GET',publicPath)).data.data,null)
  assert.equal((await call('POST',publicPath+'/track',{body:{eventType:'review_click',visitId:crypto.randomUUID()}})).status,404)
  run("UPDATE profiles SET is_published=1 WHERE id='p1'")
- run("INSERT INTO team_workspaces VALUES ('t1','p1','active')")
+ run("INSERT INTO team_workspaces VALUES ('t1','p1','active','owner')")
  assert.equal((await call('GET',ownerPath)).status,200)
  assert.deepEqual((await call('GET',publicPath)).data.data,{googleReviewUrl:url})
  for(const status of ['active','disabled','expired','used']){
   run("INSERT INTO team_link_codes VALUES ('code','t1',?)",[status])
-  assert.equal((await call('GET',ownerPath)).status,403)
-  assert.equal((await call('PUT',ownerPath,{body:config})).status,403)
-  assert.equal((await call('GET',publicPath)).data.data,null)
+  assert.equal((await call('GET',ownerPath)).status,200)
+  assert.equal((await call('PUT',ownerPath,{body:config})).status,200)
+  assert.deepEqual((await call('GET',publicPath)).data.data,{googleReviewUrl:url})
   run("DELETE FROM team_link_codes WHERE id='code'")
  }
  for(const status of ['active','inactive']){
   run("INSERT INTO team_members VALUES ('p2','t1',?)",[status])
-  assert.equal((await call('GET',ownerPath)).status,403)
-  assert.equal((await call('GET',publicPath)).data.data,null)
-  if(status==='active')assert.equal((await call('GET',ownerPath,{id:'p2',user:'other'})).status,403)
+  assert.equal((await call('GET',ownerPath)).status,200)
+  assert.deepEqual((await call('GET',publicPath)).data.data,{googleReviewUrl:url})
+  assert.equal((await call('GET',ownerPath,{id:'p2',user:'other'})).status,403)
+  assert.equal((await call('PUT',ownerPath,{id:'p2',user:'other',body:config})).status,403)
+  assert.deepEqual((await call('GET',publicPath,{slug:'other-profile'})).data.data,status==='active'?{googleReviewUrl:url}:null)
+  if(status==='active'){
+   run("UPDATE team_workspaces SET status='disabled' WHERE id='t1'")
+   assert.equal((await call('GET',publicPath,{slug:'other-profile'})).data.data,null)
+   run("UPDATE team_workspaces SET status='active' WHERE id='t1'")
+   run("UPDATE profiles SET is_published=0 WHERE id='p1'")
+   assert.equal((await call('GET',publicPath,{slug:'other-profile'})).data.data,null)
+   run("UPDATE profiles SET is_published=1 WHERE id='p1'")
+   run("UPDATE team_workspaces SET owner_user_id='other' WHERE id='t1'")
+   assert.equal((await call('GET',publicPath,{slug:'other-profile'})).data.data,null)
+   run("UPDATE team_workspaces SET owner_user_id='owner' WHERE id='t1'")
+   assert.equal((await call('POST',publicPath+'/track',{slug:'other-profile',body:{eventType:'review_click',visitId:crypto.randomUUID()}})).status,200)
+   assert.equal(query("SELECT count(*) AS n FROM analytics WHERE profile_id='p2'")[0].n,2)
+   run("DELETE FROM analytics WHERE profile_id='p2'")
+  }
   run("DELETE FROM team_members WHERE team_id='t1'")
  }
  run("DELETE FROM team_workspaces WHERE id='t1'")

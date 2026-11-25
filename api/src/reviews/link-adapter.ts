@@ -16,22 +16,23 @@ const selectProfile=`SELECT p.id,p.name,p.slug,p.user_id,p.plan_id,p.is_active,p
 async function eligible(c:any,p:LinkProfile):Promise<boolean>{
   if(Number(p.is_active)!==1||!p.slug||!genericTemplates.has(p.template_id||''))return false
   const db=c.env.DB as D1Database
-  // Empty auto-created Team workspace is not an actual Team for R4.
-  const [catalog,team,demo,limits]=await Promise.all([
+  // A Team Master owns its own profile; members never edit corporate reviews.
+  const [catalog,demo,limits]=await Promise.all([
     db.prepare('SELECT effects_json FROM modules WHERE code=? AND is_active=1').bind(moduleCode).first<{effects_json:string}>(),
-    db.prepare(`SELECT 1 FROM team_workspaces tw WHERE tw.master_profile_id=? AND tw.status='active'
-      AND (EXISTS(SELECT 1 FROM team_members tm WHERE tm.team_id=tw.id)
-        OR EXISTS(SELECT 1 FROM team_link_codes tc WHERE tc.team_id=tw.id))
-      UNION ALL SELECT 1 FROM team_members tm JOIN team_workspaces tw ON tw.id=tm.team_id
-      WHERE tm.profile_id=? AND tm.status='active' AND tw.status='active' LIMIT 1`).bind(p.id,p.id).first(),
     db.prepare("SELECT 1 FROM free_demo_v2_profiles WHERE profile_id=? AND status!='claimed' LIMIT 1").bind(p.id).first(),
     getEntitlements(c,p.id)
   ])
-  if(team||demo||!catalog||!limits)return false
+  if(demo||!catalog||!limits)return false
   try{
     const effects=JSON.parse(catalog.effects_json)
     return Array.isArray(effects.includedPlans)&&effects.includedPlans.includes(p.plan_id)
   }catch{return false}
+}
+// Read-only Team authority. Any member relation is checked, including inactive ones.
+async function teamMembership(c:any,profileId:string){
+  return (c.env.DB as D1Database).prepare(`SELECT tm.status member_status,tw.status team_status,tw.master_profile_id,tw.owner_user_id
+    FROM team_members tm JOIN team_workspaces tw ON tw.id=tm.team_id
+    WHERE tm.profile_id=? LIMIT 1`).bind(profileId).first<{member_status:string;team_status:string;master_profile_id:string;owner_user_id:string}>()
 }
 async function ownedProfile(c:any):Promise<LinkProfile|null>{
   if(c.get('freeDemoDelegated')||c.req.header('X-Kawvo-Free-Demo-Id')||c.req.header('X-KawMed-Delegate'))return null
@@ -43,11 +44,22 @@ async function ownedProfile(c:any):Promise<LinkProfile|null>{
     const active=await readIntapSelection(c)
     if(!active||active.id!==p.id||active.kind!==(p.plan_id==='free'?'free':'paid')||!matchesActiveIntapTab(c,active))return null
   }
+  if(await teamMembership(c,p.id))return null
   return await eligible(c,p)?p:null
 }
 async function publishedProfile(c:any,slug:string):Promise<LinkProfile|null>{
   const p=await (c.env.DB as D1Database).prepare(selectProfile+' WHERE p.slug=? AND p.is_active=1 AND p.is_published=1 LIMIT 1').bind(slug).first<LinkProfile>()
   return p&&await eligible(c,p)?p:null
+}
+// Team members display the Master's published corporate review destination.
+// No copy into the member's settings and no member or delegate write grant.
+async function publicReviewSource(c:any,p:LinkProfile):Promise<string|null>{
+  const relation=await teamMembership(c,p.id)
+  if(!relation)return p.id
+  if(relation.member_status!=='active'||relation.team_status!=='active'||relation.master_profile_id===p.id)return null
+  const master=await (c.env.DB as D1Database).prepare(selectProfile+' WHERE p.id=? AND p.user_id=? AND p.is_active=1 AND p.is_published=1 LIMIT 1').bind(relation.master_profile_id,relation.owner_user_id).first<LinkProfile>()
+  if(!master||!await eligible(c,master)||await teamMembership(c,master.id))return null
+  return master.id
 }
 async function settings(c:any,id:string){
   const row=await (c.env.DB as D1Database).prepare('SELECT enabled,google_review_url FROM profile_review_settings WHERE profile_id=?').bind(id).first<ReviewSettingsRow>()
@@ -141,7 +153,8 @@ export function registerLinkReviewRoutes(app:any,me:any){
     noCache(c)
     try{
       const p=await publishedProfile(c,c.req.param('slug'));if(!p)return c.json({ok:true,data:null})
-      return c.json({ok:true,data:publicExternalReviews(await settings(c,p.id),true,true)})
+      const source=await publicReviewSource(c,p);if(!source)return c.json({ok:true,data:null})
+      return c.json({ok:true,data:publicExternalReviews(await settings(c,source),true,true)})
     }catch{return failed(c)}
   })
   app.post('/api/v1/public/profiles/:slug/reviews/track',async(c:any)=>{
@@ -150,7 +163,8 @@ export function registerLinkReviewRoutes(app:any,me:any){
       const body=await c.req.json().catch(()=>null)
       if(!body||!validEvents.has(body.eventType)||typeof body.visitId!=='string'||!/^[a-f0-9-]{36}$/i.test(body.visitId))return c.json({ok:false,error:'Evento no válido.'},400)
       const p=await publishedProfile(c,c.req.param('slug'));if(!p)return c.json({ok:false},404)
-      const config=await settings(c,p.id);if(!config.enabled||!normalizeGoogleReviewUrl(config.googleReviewUrl))return c.json({ok:false},404)
+      const source=await publicReviewSource(c,p);if(!source)return c.json({ok:false},404)
+      const config=await settings(c,source);if(!config.enabled||!normalizeGoogleReviewUrl(config.googleReviewUrl))return c.json({ok:false},404)
       const event=String(body.eventType),target='reviews:'+body.visitId
       const db=c.env.DB as D1Database
       const insert=(type:string)=>db.prepare(`INSERT INTO analytics(id,profile_id,event_type,target_id)
