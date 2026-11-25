@@ -21,7 +21,7 @@ const ROOT=process.cwd()
 const DIR=join(homedir(),'intap-release-logs','r4-api-stage-'+CANDIDATE.slice(0,12))
 const SCHEMA=join(homedir(),'intap-release-logs','kawvo-r4-preview-schema-6kyPtiFO')
 const PROD_PAGES={'intap-web2':'166657db-e27e-4a5b-9396-1232aa4d0fd0','intap-link':'f4c4990d-98ed-42a3-a989-cd082a7168f4'}
-const PREVIEW_PAGES={'intap-web2':'a637094e-970d-475d-90c7-d937c71f2469','intap-link':'3f53675a-d135-4bf1-9007-b36da0dd1462'}
+const PREVIEW_PAGES={'intap-web2':'92350326-be77-4f6c-bf18-0b73a38001f1','intap-link':'3f53675a-d135-4bf1-9007-b36da0dd1462'}
 const runtime=['compatibility_date','compatibility_flags','limits','placement','cache_options','usage_model','exports']
 const check=(ok,msg)=>{if(!ok)throw Error('BLOCKED: '+msg)}
 const sha=x=>createHash('sha256').update(x).digest('hex')
@@ -65,7 +65,7 @@ async function live(token){
   const pages={}
   for(const [project,field] of [['intap-web2','APP_PAGES_ORIGIN'],['intap-link','WEB_PAGES_ORIGIN']]){
     const p=await get('/pages/projects/'+project)
-    check(p.canonical_deployment?.id===PROD_PAGES[project]&&p.canonical_deployment?.environment==='production','Pages Producción cambió: '+project)
+    check(p.source?.config?.production_deployments_enabled===false&&p.canonical_deployment?.id===PROD_PAGES[project]&&p.canonical_deployment?.environment==='production','Pages Producción cambió: '+project)
     const d=await get('/pages/projects/'+project+'/deployments/'+PREVIEW_PAGES[project])
     check(d.id===PREVIEW_PAGES[project]&&d.environment==='preview'&&d.latest_stage?.status==='success','rollback Preview no acreditado: '+project)
     check([d.url,...(d.aliases||[])].includes(binding(field)?.text),'origen Preview no coincide: '+project)
@@ -164,6 +164,8 @@ async function main(){
   check(equal(delta,['api/src/reviews/link-adapter.ts'].sort()),'delta API excede R4')
   check(existsSync(join(ROOT,'node_modules')),'dependencias existentes requeridas')
   check(git('ls-remote','https://github.com/pgcsoluciones/intap-link.git','refs/heads/main').split(/\s+/)[0]==='e28b934a61c669ed270a656ae42cf68c1b518a82','main cambió')
+  const ci=JSON.parse(execFileSync('gh',['api','repos/pgcsoluciones/intap-link/actions/runs/45584883828'],{cwd:ROOT,encoding:'utf8',stdio:['ignore','pipe','pipe']}))
+  check(ci.head_sha===CANDIDATE&&ci.status==='completed'&&ci.conclusion==='success','CI exacta no verde; sin upload')
   checkReceipt()
   const oldReceipt=read(join(homedir(),'intap-release-logs','r4-preview-promotion-75e967bb4ddf','preview-pass.json'))
   check(oldReceipt.result==='R4_PREVIEW_ACTIVE_PASS'&&oldReceipt.candidate===ACTIVE_SOURCE&&oldReceipt.version===ACTIVE&&oldReceipt.moduleSha256===ACTIVE_SHA,'recibo activo R4 anterior no coincide')
