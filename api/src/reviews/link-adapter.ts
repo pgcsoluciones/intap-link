@@ -6,13 +6,13 @@ import { isPreviewEnvironment } from '../lib/cookies'
 type LinkProfile = {id:string; slug:string; user_id:string; plan_id:string; is_active:number; is_published:number; template_id:string|null; email:string}
 type ReviewSettingsRow = {enabled:number; google_review_url:string}
 const moduleCode='reviews_google'
-const specialTemplates=new Set(['real_estate_novi_v4','automotive_jason_v3','events_1a_v1','car_rental_rentao_v1','industrial_aycdom_v1','personal_brand_adonisg_v1'])
+const genericTemplates=new Set(['','restaurante','servicios','eventos'])
 const selectProfile=`SELECT p.id,p.slug,p.user_id,p.plan_id,p.is_active,p.is_published,p.template_id,u.email
  FROM profiles p JOIN users u ON u.id=p.user_id`
 
 /** Link-specific adapter; other product adapters must implement their own authority. */
 async function eligible(c:any,p:LinkProfile):Promise<boolean>{
-  if(Number(p.is_active)!==1||!p.slug||specialTemplates.has(p.template_id||''))return false
+  if(Number(p.is_active)!==1||!p.slug||!genericTemplates.has(p.template_id||''))return false
   const db=c.env.DB as D1Database
   const [catalog,team,demo,limits]=await Promise.all([
     db.prepare('SELECT effects_json FROM modules WHERE code=?').bind(moduleCode).first<{effects_json:string}>(),
@@ -80,9 +80,11 @@ export function registerLinkReviewRoutes(app:any,me:any){
       let raw:unknown;try{raw=await c.req.json()}catch{return c.json({ok:false,error:'JSON no válido.'},400)}
       const config=parseExternalReviewSettings(raw);if(!config)return c.json({ok:false,error:'Introduce un enlace oficial de reseñas de Google válido.'},400)
       // Independent row; no template_data writes or link slots.
-      await (c.env.DB as D1Database).prepare(`INSERT INTO profile_review_settings(profile_id,enabled,google_review_url)
-        VALUES(?,?,?) ON CONFLICT(profile_id) DO UPDATE SET enabled=excluded.enabled,google_review_url=excluded.google_review_url,updated_at=datetime('now')`)
-        .bind(p.id,config.enabled?1:0,config.googleReviewUrl).run()
+      const result=await (c.env.DB as D1Database).prepare(`INSERT INTO profile_review_settings(profile_id,enabled,google_review_url)
+        SELECT id,?,? FROM profiles WHERE id=? AND user_id=? AND is_active=1
+        ON CONFLICT(profile_id) DO UPDATE SET enabled=excluded.enabled,google_review_url=excluded.google_review_url,updated_at=datetime('now')`)
+        .bind(config.enabled?1:0,config.googleReviewUrl,p.id,p.user_id).run()
+      if(!result.meta.changes)return unavailable(c)
       return c.json({ok:true,data:config})
     }catch{return failed(c)}
   })
@@ -101,9 +103,14 @@ export function registerLinkReviewRoutes(app:any,me:any){
       const p=await publishedProfile(c,c.req.param('slug'));if(!p)return c.json({ok:false},404)
       const config=await settings(c,p.id);if(!config.enabled||!normalizeGoogleReviewUrl(config.googleReviewUrl))return c.json({ok:false},404)
       const event=String(body.eventType),target='reviews:'+body.visitId
-      await (c.env.DB as D1Database).prepare(`INSERT INTO analytics(id,profile_id,event_type,target_id)
+      const db=c.env.DB as D1Database
+      const insert=(type:string)=>db.prepare(`INSERT INTO analytics(id,profile_id,event_type,target_id)
         SELECT ?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM analytics WHERE profile_id=? AND event_type=? AND target_id=?)`)
-        .bind(crypto.randomUUID(),p.id,event,target,p.id,event,target).run()
+        .bind(crypto.randomUUID(),p.id,type,target,p.id,type,target)
+      // A click is itself evidence that the section was seen. Atomic pair keeps
+      // the numerator inside the denominator even if a browser view POST fails.
+      if(event==='review_click')await db.batch([insert('review_view'),insert(event)])
+      else await insert(event).run()
       return c.json({ok:true})
     }catch{return failed(c)}
   })
