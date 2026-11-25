@@ -1,3 +1,4 @@
+import { KawvoActionContent } from '../shared/KawvoAdminIcon'
 import { useEffect, useState } from 'react'
 import { apiGet } from '../../../lib/api'
 import { newestPendingAgenda, type AgendaSummaryItem } from '../free/freeAgendaSummaryData'
@@ -26,7 +27,7 @@ export default function KawMedAgendaOverview({ profileId, onOpen, query='' }: { 
   }, [profileId, attempt, query])
   return <section aria-labelledby="kawmed-agenda-title" className="space-y-4">
     <div><h1 id="kawmed-agenda-title" className="text-2xl font-black">Agenda</h1><p className="mt-2 text-sm text-slate-600">Solicitudes, citas y disponibilidad de tu cuenta médica.</p><p className="mt-2 text-sm text-slate-600">Los horarios públicos por centro se editan en Perfil; son distintos de la disponibilidad de citas.</p></div>
-    <div className="divide-y divide-slate-100 rounded-3xl border border-slate-200 bg-white">{entries.map(entry => <button key={entry.section} type="button" onClick={() => onOpen(entry.section)} className="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700"><span className="min-w-0"><strong className="block text-sm">{entry.title}</strong><span className="mt-1 block text-xs text-slate-600">{entry.detail}</span></span><span aria-hidden="true">›</span></button>)}</div>
+    <div className="divide-y divide-slate-100 rounded-3xl border border-slate-200 bg-white">{entries.map(entry => <button key={entry.section} type="button" onClick={() => onOpen(entry.section)} className="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-700"><KawvoActionContent name={entry.section} title={entry.title} detail={entry.detail}/></button>)}</div>
     <section aria-label="Resumen de solicitudes de citas médicas" className="rounded-3xl border border-slate-200 bg-white p-4">
       <h2 className="text-base font-black">Últimas solicitudes pendientes</h2><p className="mt-1 text-sm text-slate-600">Hasta cinco solicitudes verificadas de tu perfil.</p>
       {state.status === 'loading' && <p role="status" className="mt-4 text-sm">Cargando solicitudes…</p>}
