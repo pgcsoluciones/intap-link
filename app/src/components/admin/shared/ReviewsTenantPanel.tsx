@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { apiGet, apiPut } from '../../../lib/api'
 import { FiStar } from 'react-icons/fi'
+import { KawvoActionContent } from './KawvoAdminIcon'
 
 type Settings={enabled:boolean;googleReviewUrl:string;published:boolean;publicUrl:string;stats:{days:number;views:number;qr:number;clicks:number;clickRate:number|null}}
 /** Reusable UI; endpoint and identity are supplied by an authorized product adapter. */
-export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false}:{profileId:string;endpoint?:string;showAccessStatus?:boolean}){
+export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false,homeShortcut=false}:{profileId:string;endpoint?:string;showAccessStatus?:boolean;homeShortcut?:boolean}){
   const path=endpoint+'/'+encodeURIComponent(profileId)
   const [data,setData]=useState<Settings|null>(null)
   const [days,setDays]=useState(30)
@@ -14,6 +15,7 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   const [loadError,setLoadError]=useState(false)
   const [unavailable,setUnavailable]=useState(false)
   const [busy,setBusy]=useState(false)
+  const [expanded,setExpanded]=useState(!homeShortcut)
   useEffect(()=>{
     let live=true
     setData(null);setMessage('');setLoadError(false);setUnavailable(false)
@@ -26,6 +28,7 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   },[path,days])
   if(loadError)return <p role="status" className="text-sm text-slate-600">Reseñas no está disponible temporalmente.</p>
   if(!data)return showAccessStatus?<p role="status" className="rounded-xl border bg-white p-4 text-sm text-slate-600">{unavailable?'Reseñas no está disponible para esta cuenta.':'Cargando configuración de reseñas…'}</p>:null
+  if(homeShortcut&&!expanded)return <button type="button" onClick={()=>setExpanded(true)} className="flex min-h-16 w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-800"><KawvoActionContent name="reviews" title="Reseñas" detail="Google, QR y estadísticas"/></button>
   const shareUrl=data.publicUrl+'#resenas'
   const qrUrl=data.publicUrl+'?src=reviews-qr#resenas'
   const canShare=data.enabled&&data.published&&Boolean(data.googleReviewUrl)
@@ -50,6 +53,7 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
     try{await navigator.clipboard.writeText(shareUrl);setMessage('Enlace copiado.')}catch{setMessage('No pudimos copiar. Selecciona el enlace.')}
   }
   return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 text-slate-900">
+    {homeShortcut&&<button type="button" onClick={()=>setExpanded(false)} className="mb-3 min-h-11 text-sm font-bold text-cyan-800">Volver a Inicio</button>}
     <div className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-cyan-800"><FiStar className="h-5 w-5" aria-hidden="true"/></span><div className="min-w-0"><h2 className="text-base font-bold">Reseñas</h2><p className="text-xs text-slate-600">Invita a tus clientes a opinar en Google.</p></div></div>
     <form className="mt-4 space-y-3" onSubmit={e=>{e.preventDefault();void save()}}>
       <label className="block text-sm font-semibold">Enlace oficial de Google<input value={url} onChange={e=>setUrl(e.target.value)} type="url" maxLength={2048} placeholder="https://g.page/r/…/review" className="mt-1 min-h-11 w-full min-w-0 rounded-xl border border-slate-300 p-3 text-sm" disabled={busy}/></label>
