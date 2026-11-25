@@ -132,6 +132,11 @@ async function verifyApi(token,baseline){
  check(equal([...v.bindings].sort((a,b)=>a.name.localeCompare(b.name)),[...baseline.v.bindings].sort((a,b)=>a.name.localeCompare(b.name))),'bindings Stage API cambiaron')
  for(const k of runtime)check(equal(k==='compatibility_flags'?(v[k]||[]):v[k],k==='compatibility_flags'?(baseline.v[k]||[]):baseline.v[k]),'runtime Stage API cambió: '+k)
 }
+async function retryRead(fn){
+ let error
+ for(let i=0;i<4;i++){try{return await fn()}catch(e){error=e;if(i<3)await new Promise(resolve=>setTimeout(resolve,3000*(i+1)))}}
+ throw error
+}
 async function getStage(token,s,url){
  const get=p=>request(token,'GET',p)
  const project=await get('/pages/projects/'+s.project)
@@ -178,6 +183,7 @@ async function main(){
  check(process.argv.length===3&&process.argv[2]==='AUTORIZO R4 STAGE APP WEB','autorización explícita Stage App/Web requerida')
  check(git('rev-parse',CANDIDATE+'^{commit}')===CANDIDATE,'falta candidato exacto')
  check(git('ls-remote','https://github.com/pgcsoluciones/intap-link.git','refs/heads/feature/kawvo-r4-reviews-2026-11-25').split(/\s+/)[0]===CANDIDATE,'candidato cambió')
+ check(git('ls-remote','https://github.com/pgcsoluciones/intap-link.git','refs/heads/main').split(/\s+/)[0]==='e28b934a61c669ed270a656ae42cf68c1b518a82','main cambió; revisar candidato')
  check(git('status','--porcelain')==='','checkout local sucio')
  git('diff','--exit-code','HEAD',CANDIDATE,'--','package.json','package-lock.json','app/package.json','web/package.json')
  mkdirSync(DIR,{recursive:true,mode:0o700})
@@ -213,7 +219,7 @@ async function main(){
   check(/Uploading Functions bundle/i.test(output),'Functions no acreditadas; no repetir')
   const urls=[...new Set((output.match(/https:\/\/[a-f0-9]{8,}\.[a-z0-9-]+\.pages\.dev/g)||[]).filter(u=>u.endsWith('.'+s.project+'.pages.dev')))]
   check(urls.length===1,'URL inmutable ambigua; no repetir')
-  const d=await getStage(token,s,urls[0]),verified=await verifyAssets(s,d,p)
+  const d=await retryRead(()=>getStage(token,s,urls[0])),verified=await retryRead(()=>verifyAssets(s,d,p))
   check(equal(manifest(join(SOURCE,s.folder,'dist')),p.files)&&equal(context(),p.context),'artefacto/contexto cambió durante Stage')
   check(equal(await live(token),baseline),'baseline protegida cambió después de Stage')
   await verifyOfficial(baseline.proof)
