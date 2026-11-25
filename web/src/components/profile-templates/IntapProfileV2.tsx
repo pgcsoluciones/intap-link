@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import './IntapProfileV2.css'
 import { FaEnvelope, FaFacebookF, FaGlobeAmericas, FaInstagram, FaMapMarkerAlt, FaPhoneAlt, FaWhatsapp } from 'react-icons/fa'
@@ -808,7 +808,7 @@ export default function IntapProfileV2({ profile, beforeContactLinksContent, sho
         </>
       )}
 
-      {showBankSlot&&<div id="ilx-bank-slot" />}
+      {showBankSlot&&<div id="ilx-bank-slot" style={{paddingInline:16,'--ilx-border':'#e2e8f0','--ilx-primary':accent,'--ilx-text':'#0f172a','--ilx-muted':'#475569','--ilx-soft-primary':'#f8fafc','--ilx-surface':'#ffffff','--ilx-action':'#0f172a','--ilx-on-action':'#ffffff'} as CSSProperties} />}
       {beforeContactLinksContent}
       <div className="divider" />
       <section className="s-company-contact">
