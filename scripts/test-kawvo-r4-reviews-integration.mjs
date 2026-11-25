@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {execFileSync} from 'node:child_process'
 import {build} from 'esbuild'
-import {webcrypto} from 'node:crypto'
+import {webcrypto,createHash} from 'node:crypto'
 
 if(!globalThis.crypto)globalThis.crypto=webcrypto
 const dir=mkdtempSync(join(tmpdir(),'kawvo-r4-test-'))
@@ -49,7 +49,7 @@ CREATE TABLE analytics(id TEXT PRIMARY KEY,profile_id TEXT,event_type TEXT,targe
 INSERT INTO users VALUES ('owner','owner@example.test'),('other','other@example.test'),('operator','intapcard@gmail.com');
 INSERT INTO plans VALUES ('free','Free'),('pro','Pro'),('basic','Básico');
 INSERT INTO plan_limits VALUES ('free',3,10,0,0,0,1),('pro',10,10,10,10,10,1),('basic',5,5,3,3,1,1);
-INSERT INTO profiles VALUES ('p1','owner','test-profile','free',1,1,NULL,'{"unrelated":true}'),('p2','other','other-profile','free',1,1,NULL,'{}'),('p3','operator','operator-profile','free',1,1,NULL,'{}'),('p4','owner','paid-profile','pro',1,1,NULL,'{}'),('p5','owner','plus-profile','basic',1,1,NULL,'{}');
+INSERT INTO profiles VALUES ('p1','owner','test-profile','free',1,1,NULL,'{"unrelated":true}'),('p2','other','other-profile','free',1,1,NULL,'{}'),('11111111-1111-4111-8111-111111111111','operator','operator-profile','free',1,1,'intap_profile_v2','{}'),('p4','owner','paid-profile','pro',1,1,NULL,'{}'),('p5','owner','plus-profile','basic',1,1,'intap-v2','{}'),('22222222-2222-4222-8222-222222222222','operator','other-operator-profile','free',1,1,'intap_profile_v2','{}');
 `
 try{
  execute([{script:fixture},{script:readFileSync(new URL('../docs/releases/kawvo-r4-proposed-migrations/review-settings.sql',import.meta.url),'utf8')}])
@@ -76,7 +76,17 @@ try{
  assert.equal((await call('GET',publicPath)).data.data,null)
  assert.equal((await call('GET',ownerPath)).data.data.enabled,false)
  assert.equal((await call('GET',ownerPath,{id:'p2'})).status,403)
- assert.equal((await call('GET',ownerPath,{id:'p3',user:'operator'})).status,403)
+ const activeId='11111111-1111-4111-8111-111111111111',otherId='22222222-2222-4222-8222-222222222222'
+ const token='a'.repeat(32),session='r4-test-session'
+ const fingerprint=createHash('sha256').update(session).digest('hex').slice(0,24)
+ const headers={Cookie:'intap_preview_session_id='+session+'; kawvo_intap_active_account_v1='+encodeURIComponent('free:'+activeId+':'+fingerprint+':'+token),'X-Intap-Account-Tab':token}
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator'})).status,403)
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
+ assert.equal((await call('GET',ownerPath,{id:otherId,user:'operator',headers})).status,403)
+ assert.equal((await call('PUT',ownerPath,{id:otherId,user:'operator',headers,body:config})).status,403)
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers:{...headers,'X-Intap-Account-Tab':'b'.repeat(32)}})).status,403)
+ run("UPDATE profiles SET template_id='intap_profile_v2' WHERE id='p1'")
+ assert.equal((await call('GET',ownerPath)).status,200)
  assert.equal((await call('GET',ownerPath,{id:'p4'})).status,403)
  assert.equal((await call('GET',ownerPath,{id:'p5'})).status,200)
  assert.equal((await call('GET',publicPath,{slug:'plus-profile'})).data.data,null)
