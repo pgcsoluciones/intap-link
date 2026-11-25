@@ -92,7 +92,6 @@ export default function KawMedProfile() {
   const [error, setError] = useState('')
   const [modal, setModal] = useState<ModalName>(null)
   const [appointmentOpen, setAppointmentOpen] = useState(false)
-  const [shareNotice, setShareNotice] = useState('')
   const [toast, setToast] = useState('')
   const [qrOpen, setQrOpen] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -265,24 +264,10 @@ export default function KawMedProfile() {
     link.remove()
   }, [profile, qrDataUrl])
 
-  const shareProfile = useCallback(async () => {
+  const shareProfile = useCallback(() => {
     if (!profile) return
     const url = `${publicOrigin()}/m/${profile.slug}`
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `${profile.display_name} · ${profile.specialty}`,
-          text: `Perfil profesional de ${profile.display_name}`,
-          url,
-        })
-        return
-      }
-      await navigator.clipboard.writeText(url)
-      setShareNotice('Enlace copiado')
-      window.setTimeout(() => setShareNotice(''), 2200)
-    } catch {
-      // Cancelar el share nativo no debe mostrar error.
-    }
+    window.open('https://wa.me/?text='+encodeURIComponent(`Conoce el perfil de ${profile.display_name} en Kawmed:\n${url}?share=perfil&card=3`),'_blank','noopener,noreferrer')
   }, [profile])
 
   if (loading) {
@@ -416,7 +401,7 @@ export default function KawMedProfile() {
         </section>
 
         <section className="kawmed-public-actions" aria-label="Acciones del perfil">
-          <button type="button" onClick={shareProfile}><FiShare2 />{shareNotice || 'Compartir perfil'}</button>
+          <button type="button" onClick={shareProfile}><FiShare2 />Compartir perfil</button>
           <button type="button" onClick={() => void openQr()}><FaQrcode />Código QR</button>
           <a href={loginUrl()}>Iniciar sesión</a>
         </section>

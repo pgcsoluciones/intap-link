@@ -43,8 +43,7 @@ export default function SponsorDashboard(){
   const[commercialAssignments,setCommercialAssignments]=useState<any[]>([])
   const[commercialSellers,setCommercialSellers]=useState<any[]>([])
   const[assignmentsLoading,setAssignmentsLoading]=useState(false),[assignmentsReady,setAssignmentsReady]=useState(false)
-  const[isIntapMulticuenta,setIsIntapMulticuenta]=useState(false)
-  useEffect(()=>{apiGet('/me/intapcard/active-account').then((r:any)=>setIsIntapMulticuenta(Boolean(r?.ok&&r.data?.active?.kind==='sponsor'))).catch(()=>undefined)},[])
+  const isIntapMulticuenta=Boolean(activeSelection?.kind==='sponsor'&&activeSelection.id===tenant?.id)
   async function load({savedBrand}:{savedBrand?:{tenantId:string;form:any}}={}){
     const serial=++loadSerial.current
     const existing=host&&tenant?.id,baseline={...brandBaseline.current}
