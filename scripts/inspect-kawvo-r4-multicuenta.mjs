@@ -21,11 +21,13 @@ function auth(){
 
 const queries={
  catalog:"SELECT code,is_active,effects_json FROM modules WHERE code='reviews_google'",
- schema:"SELECT m.name AS table_name,p.name AS column_name,p.type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table' AND m.name IN ('profiles','profile_review_settings','analytics','plan_limits','profile_modules','team_workspaces','team_members','free_demo_v2_profiles') ORDER BY m.name,p.cid",
+ schema:"SELECT m.name AS table_name,p.name AS column_name,p.type FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table' AND m.name IN ('profiles','profile_review_settings','analytics','plan_limits','profile_modules','team_workspaces','team_members','team_link_codes','free_demo_v2_profiles') ORDER BY m.name,p.cid",
  profiles:`SELECT p.slug,p.plan_id,p.template_id,p.is_active,p.is_published,
  EXISTS(SELECT 1 FROM plan_limits pl WHERE pl.plan_id=p.plan_id) AS has_plan_limits,
  EXISTS(SELECT 1 FROM team_workspaces tw WHERE tw.master_profile_id=p.id AND tw.status='active') AS active_team_master,
  EXISTS(SELECT 1 FROM team_members tm JOIN team_workspaces tw ON tw.id=tm.team_id WHERE tm.profile_id=p.id AND tm.status='active' AND tw.status='active') AS active_team_member,
+ (SELECT COUNT(*) FROM team_members tm JOIN team_workspaces tw ON tw.id=tm.team_id WHERE tw.master_profile_id=p.id) AS team_member_count,
+ (SELECT COUNT(*) FROM team_link_codes tc JOIN team_workspaces tw ON tw.id=tc.team_id WHERE tw.master_profile_id=p.id) AS team_code_count,
  EXISTS(SELECT 1 FROM free_demo_v2_profiles d WHERE d.profile_id=p.id AND d.status!='claimed') AS unclaimed_demo,
  EXISTS(SELECT 1 FROM profile_review_settings r WHERE r.profile_id=p.id) AS has_review_settings
  FROM profiles p JOIN users u ON u.id=p.user_id
