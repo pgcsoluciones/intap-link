@@ -15,9 +15,13 @@ const selectProfile=`SELECT p.id,p.slug,p.user_id,p.plan_id,p.is_active,p.is_pub
 async function eligible(c:any,p:LinkProfile):Promise<boolean>{
   if(Number(p.is_active)!==1||!p.slug||!genericTemplates.has(p.template_id||''))return false
   const db=c.env.DB as D1Database
+  // GET /me/team can auto-create an empty workspace for independent Free.
+  // Exclude masters with actual member/code records, not an empty workspace.
   const [catalog,team,demo,limits]=await Promise.all([
     db.prepare('SELECT effects_json FROM modules WHERE code=? AND is_active=1').bind(moduleCode).first<{effects_json:string}>(),
-    db.prepare(`SELECT 1 FROM team_workspaces WHERE master_profile_id=? AND status='active'
+    db.prepare(`SELECT 1 FROM team_workspaces tw WHERE tw.master_profile_id=? AND tw.status='active'
+      AND (EXISTS(SELECT 1 FROM team_members tm WHERE tm.team_id=tw.id)
+        OR EXISTS(SELECT 1 FROM team_link_codes tc WHERE tc.team_id=tw.id))
       UNION ALL SELECT 1 FROM team_members tm JOIN team_workspaces tw ON tw.id=tm.team_id
       WHERE tm.profile_id=? AND tm.status='active' AND tw.status='active' LIMIT 1`).bind(p.id,p.id).first(),
     db.prepare("SELECT 1 FROM free_demo_v2_profiles WHERE profile_id=? AND status!='claimed' LIMIT 1").bind(p.id).first(),

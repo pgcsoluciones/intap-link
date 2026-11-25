@@ -44,6 +44,7 @@ CREATE TABLE profile_modules(profile_id TEXT,module_code TEXT,expires_at TEXT);
 CREATE TABLE profile_plan_overrides(profile_id TEXT,trial_plan_id TEXT,trial_ends_at TEXT);
 CREATE TABLE team_workspaces(id TEXT PRIMARY KEY,master_profile_id TEXT,status TEXT);
 CREATE TABLE team_members(profile_id TEXT,team_id TEXT,status TEXT);
+CREATE TABLE team_link_codes(id TEXT PRIMARY KEY,team_id TEXT,status TEXT);
 CREATE TABLE free_demo_v2_profiles(profile_id TEXT,status TEXT);
 CREATE TABLE analytics(id TEXT PRIMARY KEY,profile_id TEXT,event_type TEXT,target_id TEXT,created_at TEXT DEFAULT (datetime('now')),FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
 INSERT INTO users VALUES ('owner','owner@example.test'),('other','other@example.test'),('operator','intapcard@gmail.com');
@@ -82,6 +83,19 @@ try{
  const headers={Cookie:'intap_preview_session_id='+session+'; kawvo_intap_active_account_v1='+encodeURIComponent('free:'+activeId+':'+fingerprint+':'+token),'X-Intap-Account-Tab':token}
  assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator'})).status,403)
  assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
+ // QA2: normal Free, NULL template, empty active workspace, exact selection.
+ run("UPDATE profiles SET template_id=NULL WHERE id=?", [activeId])
+ run("INSERT INTO team_workspaces VALUES ('operator-empty',?,'active')",[activeId])
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
+ assert.equal((await call('PUT',ownerPath,{id:activeId,user:'operator',headers,body:config})).status,200)
+ assert.deepEqual((await call('GET',publicPath,{slug:'operator-profile'})).data.data,{googleReviewUrl:url})
+ run("INSERT INTO team_link_codes VALUES ('reserved','operator-empty','active')")
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,403)
+ assert.equal((await call('PUT',ownerPath,{id:activeId,user:'operator',headers,body:config})).status,403)
+ assert.equal((await call('GET',publicPath,{slug:'operator-profile'})).data.data,null)
+ run("DELETE FROM team_link_codes WHERE id='reserved'")
+ run("DELETE FROM profile_review_settings WHERE profile_id=?",[activeId])
+
  assert.equal((await call('GET',ownerPath,{id:otherId,user:'operator',headers})).status,403)
  assert.equal((await call('PUT',ownerPath,{id:otherId,user:'operator',headers,body:config})).status,403)
  assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers:{...headers,'X-Intap-Account-Tab':'b'.repeat(32)}})).status,403)
@@ -115,8 +129,22 @@ try{
  assert.equal((await call('POST',publicPath+'/track',{body:{eventType:'review_click',visitId:crypto.randomUUID()}})).status,404)
  run("UPDATE profiles SET is_published=1 WHERE id='p1'")
  run("INSERT INTO team_workspaces VALUES ('t1','p1','active')")
- assert.equal((await call('GET',ownerPath)).status,403)
- assert.equal((await call('GET',publicPath)).data.data,null)
+ assert.equal((await call('GET',ownerPath)).status,200)
+ assert.deepEqual((await call('GET',publicPath)).data.data,{googleReviewUrl:url})
+ for(const status of ['active','disabled','expired','used']){
+  run("INSERT INTO team_link_codes VALUES ('code','t1',?)",[status])
+  assert.equal((await call('GET',ownerPath)).status,403)
+  assert.equal((await call('PUT',ownerPath,{body:config})).status,403)
+  assert.equal((await call('GET',publicPath)).data.data,null)
+  run("DELETE FROM team_link_codes WHERE id='code'")
+ }
+ for(const status of ['active','inactive']){
+  run("INSERT INTO team_members VALUES ('p2','t1',?)",[status])
+  assert.equal((await call('GET',ownerPath)).status,403)
+  assert.equal((await call('GET',publicPath)).data.data,null)
+  if(status==='active')assert.equal((await call('GET',ownerPath,{id:'p2',user:'other'})).status,403)
+  run("DELETE FROM team_members WHERE team_id='t1'")
+ }
  run("DELETE FROM team_workspaces WHERE id='t1'")
  run("INSERT INTO free_demo_v2_profiles VALUES ('p1','published')")
  assert.equal((await call('GET',ownerPath)).status,403)
