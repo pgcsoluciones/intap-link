@@ -1,18 +1,31 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { transform } from 'esbuild'
+import { build } from 'esbuild'
 
-const source = await readFile('app/src/components/admin/sponsored/sponsored-shell-gate.ts', 'utf8')
-const compiled = await transform(source, { loader: 'ts', format: 'esm' })
-const { shouldShowSponsoredShell: gate, shouldReplaceSponsoredDraft: replaceDraft, requestSponsoredExit, sponsoredAgendaReturn, sponsoredAccountSelectionUrl: selectionUrl } = await import(`data:text/javascript;base64,${Buffer.from(compiled.code).toString('base64')}`)
+const compiled = await build({entryPoints:['app/src/components/admin/sponsored/sponsored-shell-gate.ts'],bundle:true,write:false,format:'esm',platform:'node'})
+const { shouldShowSponsoredShell: gate, shouldReplaceSponsoredDraft: replaceDraft, requestSponsoredExit, sponsoredAgendaReturn, sponsoredAccountSelectionUrl: selectionUrl, isSponsoredShellRequest, sponsoredShellUrl, sponsoredEntryUrl } = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`)
 const allowed = { mode: 'preview', hostname: 'app.preview.intaprd.com', search: '?profile_id=abc&kawvo_sponsored_shell=1', isMaster: false, legacyPanel: false, profileId: 'abc' }
 assert.equal(gate(allowed), true)
 for (const change of [
   { mode: 'production' }, { hostname: 'app.intaprd.com' }, { hostname: 'x.pages.dev' },
-  { search: '?profile_id=abc' }, { search: '?profile_id=other&kawvo_sponsored_shell=1' },
+  { search: '?profile_id=other&kawvo_sponsored_shell=1' }, {search:'?kawvo_sponsored_shell=0'}, {search:'?sp_legacy=1'}, {search:'?scope=master'}, {search:'?kawvo_sponsored_shell=1&kawvo_sponsored_shell=0'},
   { isMaster: true }, { legacyPanel: true }, { profileId: null },
 ]) assert.equal(gate({ ...allowed, ...change }), false, JSON.stringify(change))
 assert.equal(gate({ ...allowed, search: '?kawvo_sponsored_shell=1' }), true)
+assert.equal(gate({...allowed,search:''}),true,'direct authenticated beneficiary defaults to new panel in Preview')
+assert.equal(gate({...allowed,search:'?profile_id=abc'}),true)
+assert.equal(gate({...allowed,mode:'production',hostname:'app.intaprd.com',search:''}),false,'no automatic production change')
+assert.equal(isSponsoredShellRequest('preview','app.preview.intaprd.com',''),true)
+assert.equal(isSponsoredShellRequest('preview','app.preview.intaprd.com','?sp_legacy=1'),false)
+assert.equal(sponsoredShellUrl('',{tab:'profile',module:'identity'}),'/admin/sponsored?kawvo_sponsored_shell=1&sp_tab=profile&sp_module=identity')
+assert.equal(sponsoredEntryUrl('/admin/sponsored?scope=master','','preview','app.preview.intaprd.com'),'/admin/sponsored?scope=master')
+assert.equal(sponsoredAgendaReturn('?sp_legacy=1','preview','app.preview.intaprd.com'),'/admin/sponsored?kawvo_sponsored_shell=0')
+const dashboard=await readFile('app/src/components/admin/sponsored/SponsoredDashboard.tsx','utf8')
+assert.ok(dashboard.includes('sponsoredShellUrl(selectedProfileId,{tab,module,query:surface.query})'))
+assert.ok(dashboard.includes('sponsoredShellUrl(selectedProfileId,{tab:\'profile\',query})'))
+assert.ok(dashboard.includes('sponsoredShellUrl(selectedProfileId,{tab:\'agenda\',section,query:surface.query})'))
+assert.ok(!dashboard.includes("sessionStorage.getItem('kawvo_sponsored_shell_v1:'"))
+assert.ok(dashboard.includes("if(canExit())navigate(sponsoredShellUrl(selectedProfileId,surface)+'&sp_legacy=1')"))
 assert.equal(replaceDraft(false, 1, 1), true)
 assert.equal(replaceDraft(false, 2, 1), false)
 assert.equal(replaceDraft(true, 1, 1), false)
