@@ -1,0 +1,161 @@
+import assert from 'node:assert/strict'
+import {mkdtempSync,rmSync,readFileSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {execFileSync} from 'node:child_process'
+import {build} from 'esbuild'
+import {webcrypto,createHash} from 'node:crypto'
+
+if(!globalThis.crypto)globalThis.crypto=webcrypto
+const dir=mkdtempSync(join(tmpdir(),'kawvo-r4-test-'))
+const database=join(dir,'test.sqlite')
+const python=`import sqlite3,sys,json
+db=sqlite3.connect(sys.argv[1])
+db.row_factory=sqlite3.Row
+db.execute("PRAGMA foreign_keys=ON")
+request=json.load(sys.stdin)
+out=[]
+with db:
+ for x in request:
+  if x.get("script"):
+   db.executescript(x["script"])
+   out.append(None)
+   continue
+  c=db.execute(x["sql"],x.get("args",[]))
+  if x["mode"]=="run":
+   out.append({"success":True,"meta":{"changes":c.rowcount}})
+  elif x["mode"]=="first":
+   row=c.fetchone()
+   out.append(dict(row) if row else None)
+  else:
+   out.append({"results":[dict(row) for row in c.fetchall()]})
+print(json.dumps(out))
+`
+const execute=(requests)=>JSON.parse(execFileSync('python3',['-c',python,database],{input:JSON.stringify(requests),encoding:'utf8'}))
+const run=(sql,args=[])=>execute([{sql,args,mode:'run'}])[0]
+const query=(sql,args=[])=>execute([{sql,args,mode:'all'}])[0].results
+const fixture=`
+CREATE TABLE users(id TEXT PRIMARY KEY,email TEXT);
+CREATE TABLE plans(id TEXT PRIMARY KEY,name TEXT);
+CREATE TABLE profiles(id TEXT PRIMARY KEY,user_id TEXT,slug TEXT UNIQUE,plan_id TEXT,is_active INTEGER,is_published INTEGER,template_id TEXT,template_data TEXT,FOREIGN KEY(user_id) REFERENCES users(id));
+CREATE TABLE plan_limits(plan_id TEXT PRIMARY KEY,max_links INTEGER,max_photos INTEGER,max_faqs INTEGER,max_products INTEGER,max_videos INTEGER,can_use_vcard INTEGER);
+CREATE TABLE modules(code TEXT PRIMARY KEY,name TEXT,effects_json TEXT,is_active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE profile_modules(profile_id TEXT,module_code TEXT,expires_at TEXT);
+CREATE TABLE profile_plan_overrides(profile_id TEXT,trial_plan_id TEXT,trial_ends_at TEXT);
+CREATE TABLE team_workspaces(id TEXT PRIMARY KEY,master_profile_id TEXT,status TEXT);
+CREATE TABLE team_members(profile_id TEXT,team_id TEXT,status TEXT);
+CREATE TABLE team_link_codes(id TEXT PRIMARY KEY,team_id TEXT,status TEXT);
+CREATE TABLE free_demo_v2_profiles(profile_id TEXT,status TEXT);
+CREATE TABLE analytics(id TEXT PRIMARY KEY,profile_id TEXT,event_type TEXT,target_id TEXT,created_at TEXT DEFAULT (datetime('now')),FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
+INSERT INTO users VALUES ('owner','owner@example.test'),('other','other@example.test'),('operator','intapcard@gmail.com');
+INSERT INTO plans VALUES ('free','Free'),('pro','Pro'),('basic','Básico');
+INSERT INTO plan_limits VALUES ('free',3,10,0,0,0,1),('pro',10,10,10,10,10,1),('basic',5,5,3,3,1,1);
+INSERT INTO profiles VALUES ('p1','owner','test-profile','free',1,1,NULL,'{"unrelated":true}'),('p2','other','other-profile','free',1,1,NULL,'{}'),('11111111-1111-4111-8111-111111111111','operator','operator-profile','free',1,1,'intap_profile_v2','{}'),('p4','owner','paid-profile','pro',1,1,NULL,'{}'),('p5','owner','plus-profile','basic',1,1,'intap-v2','{}'),('22222222-2222-4222-8222-222222222222','operator','other-operator-profile','free',1,1,'intap_profile_v2','{}');
+`
+try{
+ execute([{script:fixture},{script:readFileSync(new URL('../docs/releases/kawvo-r4-proposed-migrations/review-settings.sql',import.meta.url),'utf8')}])
+ const bundled=await build({entryPoints:['api/src/reviews/link-adapter.ts'],bundle:true,format:'esm',platform:'node',target:'node20',write:false})
+ const {registerLinkReviewRoutes}=await import('data:text/javascript;base64,'+Buffer.from(bundled.outputFiles[0].text).toString('base64'))
+ class Statement{
+  constructor(sql,args=[]){this.sql=sql;this.args=args}
+  bind(...args){return new Statement(this.sql,args)}
+  async first(){return execute([{sql:this.sql,args:this.args,mode:'first'}])[0]}
+  async all(){return execute([{sql:this.sql,args:this.args,mode:'all'}])[0]}
+  async run(){return execute([{sql:this.sql,args:this.args,mode:'run'}])[0]}
+ }
+ const db={prepare:sql=>new Statement(sql),batch:async statements=>execute(statements.map(s=>({sql:s.sql,args:s.args,mode:'run'})))}
+ const handlers=new Map()
+ const router={get:(p,h)=>handlers.set('GET '+p,h),put:(p,h)=>handlers.set('PUT '+p,h),post:(p,h)=>handlers.set('POST '+p,h)}
+ registerLinkReviewRoutes(router,router)
+ const ownerPath='/profile/reviews/:profileId',publicPath='/api/v1/public/profiles/:slug/reviews'
+ const call=(method,path,{id='p1',slug='test-profile',user='owner',body,headers={},days,delegated=false}={})=>{
+  const h=handlers.get(method+' '+path);assert.ok(h)
+  return h({env:{DB:db,ENVIRONMENT:'preview'},get:k=>k==='userId'?user:k==='freeDemoDelegated'?delegated:undefined,req:{param:k=>k==='profileId'?id:slug,query:k=>k==='days'?days:undefined,header:k=>headers[k],json:async()=>body},header:()=>{},json:(data,status=200)=>({status,data})})
+ }
+ const url='https://g.page/r/Cabc123/review'
+ const config={enabled:true,googleReviewUrl:url}
+ assert.equal((await call('GET',publicPath)).data.data,null)
+ assert.equal((await call('GET',ownerPath)).data.data.enabled,false)
+ assert.equal((await call('GET',ownerPath,{id:'p2'})).status,403)
+ const activeId='11111111-1111-4111-8111-111111111111',otherId='22222222-2222-4222-8222-222222222222'
+ const token='a'.repeat(32),session='r4-test-session'
+ const fingerprint=createHash('sha256').update(session).digest('hex').slice(0,24)
+ const headers={Cookie:'intap_preview_session_id='+session+'; kawvo_intap_active_account_v1='+encodeURIComponent('free:'+activeId+':'+fingerprint+':'+token),'X-Intap-Account-Tab':token}
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator'})).status,403)
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
+ // QA2: normal Free, NULL template, empty active workspace, exact selection.
+ run("UPDATE profiles SET template_id=NULL WHERE id=?", [activeId])
+ run("INSERT INTO team_workspaces VALUES ('operator-empty',?,'active')",[activeId])
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,200)
+ assert.equal((await call('PUT',ownerPath,{id:activeId,user:'operator',headers,body:config})).status,200)
+ assert.deepEqual((await call('GET',publicPath,{slug:'operator-profile'})).data.data,{googleReviewUrl:url})
+ run("INSERT INTO team_link_codes VALUES ('reserved','operator-empty','active')")
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers})).status,403)
+ assert.equal((await call('PUT',ownerPath,{id:activeId,user:'operator',headers,body:config})).status,403)
+ assert.equal((await call('GET',publicPath,{slug:'operator-profile'})).data.data,null)
+ run("DELETE FROM team_link_codes WHERE id='reserved'")
+ run("DELETE FROM profile_review_settings WHERE profile_id=?",[activeId])
+
+ assert.equal((await call('GET',ownerPath,{id:otherId,user:'operator',headers})).status,403)
+ assert.equal((await call('PUT',ownerPath,{id:otherId,user:'operator',headers,body:config})).status,403)
+ assert.equal((await call('GET',ownerPath,{id:activeId,user:'operator',headers:{...headers,'X-Intap-Account-Tab':'b'.repeat(32)}})).status,403)
+ run("UPDATE profiles SET template_id='intap_profile_v2' WHERE id='p1'")
+ assert.equal((await call('GET',ownerPath)).status,200)
+ assert.equal((await call('GET',ownerPath,{id:'p4'})).status,403)
+ assert.equal((await call('GET',ownerPath,{id:'p5'})).status,200)
+ assert.equal((await call('GET',publicPath,{slug:'plus-profile'})).data.data,null)
+ assert.equal((await call('PUT',ownerPath,{delegated:true,body:config})).status,403)
+ assert.equal((await call('PUT',ownerPath,{headers:{'X-KawMed-Delegate':'guest'},body:config})).status,403)
+ assert.equal((await call('PUT',ownerPath,{body:{enabled:true,googleReviewUrl:'https://evil.test/'}})).status,400)
+ assert.equal((await call('PUT',ownerPath,{id:'p2',body:config})).status,403)
+ assert.equal((await call('PUT',ownerPath,{body:config})).status,200)
+ assert.deepEqual((await call('GET',publicPath)).data.data,{googleReviewUrl:url})
+ run("UPDATE modules SET is_active=0 WHERE code='reviews_google'")
+ assert.equal((await call('GET',ownerPath)).status,403)
+ assert.equal((await call('GET',publicPath)).data.data,null)
+ run("UPDATE modules SET is_active=1 WHERE code='reviews_google'")
+ assert.equal(query("SELECT template_data FROM profiles WHERE id='p1'")[0].template_data,'{"unrelated":true}')
+ assert.equal(query('SELECT * FROM profile_review_settings').length,1)
+ const visitId=crypto.randomUUID()
+ for(const eventType of ['review_click','review_click','review_view','review_qr','review_qr']){
+  assert.equal((await call('POST',publicPath+'/track',{body:{eventType,visitId}})).status,200)
+ }
+ const stats=(await call('GET',ownerPath,{days:'7'})).data.data
+ assert.equal(stats.publicUrl,'https://preview.intaprd.com/test-profile')
+ assert.deepEqual(stats.stats,{days:7,views:1,qr:1,clicks:1,clickRate:100})
+ assert.equal((await call('GET',ownerPath,{days:'999'})).status,400)
+ run("UPDATE profiles SET is_published=0 WHERE id='p1'")
+ assert.equal((await call('GET',publicPath)).data.data,null)
+ assert.equal((await call('POST',publicPath+'/track',{body:{eventType:'review_click',visitId:crypto.randomUUID()}})).status,404)
+ run("UPDATE profiles SET is_published=1 WHERE id='p1'")
+ run("INSERT INTO team_workspaces VALUES ('t1','p1','active')")
+ assert.equal((await call('GET',ownerPath)).status,200)
+ assert.deepEqual((await call('GET',publicPath)).data.data,{googleReviewUrl:url})
+ for(const status of ['active','disabled','expired','used']){
+  run("INSERT INTO team_link_codes VALUES ('code','t1',?)",[status])
+  assert.equal((await call('GET',ownerPath)).status,403)
+  assert.equal((await call('PUT',ownerPath,{body:config})).status,403)
+  assert.equal((await call('GET',publicPath)).data.data,null)
+  run("DELETE FROM team_link_codes WHERE id='code'")
+ }
+ for(const status of ['active','inactive']){
+  run("INSERT INTO team_members VALUES ('p2','t1',?)",[status])
+  assert.equal((await call('GET',ownerPath)).status,403)
+  assert.equal((await call('GET',publicPath)).data.data,null)
+  if(status==='active')assert.equal((await call('GET',ownerPath,{id:'p2',user:'other'})).status,403)
+  run("DELETE FROM team_members WHERE team_id='t1'")
+ }
+ run("DELETE FROM team_workspaces WHERE id='t1'")
+ run("INSERT INTO free_demo_v2_profiles VALUES ('p1','published')")
+ assert.equal((await call('GET',ownerPath)).status,403)
+ run("DELETE FROM free_demo_v2_profiles")
+ run("UPDATE profiles SET template_id='real_estate_novi_v4' WHERE id='p1'")
+ assert.equal((await call('GET',publicPath)).data.data,null)
+ run("UPDATE profiles SET template_id=NULL WHERE id='p1'")
+ assert.equal((await call('PUT',ownerPath,{body:{enabled:false,googleReviewUrl:url}})).status,200)
+ assert.equal((await call('GET',publicPath)).data.data,null)
+ run("DELETE FROM profiles WHERE id='p1'")
+ assert.equal(query('SELECT * FROM profile_review_settings').length,0)
+ assert.equal(query('SELECT * FROM analytics').length,0)
+ console.log('PASS R4 isolated SQLite adapter: configuration, owner, Team/demo, plan, visibility, analytics and deletion')
+}finally{rmSync(dir,{recursive:true,force:true})}

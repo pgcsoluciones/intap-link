@@ -1,4 +1,5 @@
 import { readIntapSelection, matchesActiveIntapTab } from './intap-active-account'
+import { registerLinkReviewRoutes } from './reviews/link-adapter'
 import { registerMedicalProfileRoutes } from './routes/medical-profile'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -2990,6 +2991,7 @@ me.put('/gallery/:id', async (c) => {
   return c.json({ ok: true })
 })
 
+registerLinkReviewRoutes(app,me)
 app.route('/api/v1/me', me)
 
 // ─── GET /api/v1/entitlements ─────────────────────────────────────────────────
