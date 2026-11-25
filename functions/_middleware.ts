@@ -871,6 +871,27 @@ ${seoHeadHtml}
       ? customProfileSlug
       : url.pathname.replace(/^\/+|\/+$/g, '');
 
+  // Share-specific card only when the same public reviews endpoint confirms visibility.
+  if (url.searchParams.get('share') === 'reviews' && isHtmlNavigation() && /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) {
+    try {
+      const [profile, response] = await Promise.all([
+        fetchPublicProfileForShare(slug),
+        fetch(`${discoveryRuntime.apiBase}/profiles/${encodeURIComponent(slug)}/reviews`, {headers:{Accept:'application/json'},cf:{cacheTtl:0,cacheEverything:false}} as RequestInit),
+      ]);
+      const reviews = response.ok ? await response.json() as any : null;
+      if (profile && reviews?.ok === true && typeof reviews?.data?.googleReviewUrl === 'string') {
+        const name = String(profile.name || profile.display_name || profile.company_name || slug).trim().slice(0,120);
+        const pageUrl = `${url.origin}/${encodeURIComponent(slug)}?share=reviews`;
+        return injectSimpleSocialCard({
+          title: `${name} | Reseñas en Google`,
+          description: 'Tu opinión es de suma importancia para nosotros.',
+          image: `${url.origin}/assets/og/google-reviews.png`,
+          canonicalUrl: pageUrl, noIndex: true,
+        });
+      }
+    } catch { /* Fall through to normal public profile SEO. */ }
+  }
+
   // share=bancos: social card bancaria aprobada para WhatsApp y redes.
   if (url.searchParams.get('share') === 'bancos' && /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(slug)) {
     const [bankMeta, profile, teamPolicy] = await Promise.all([
