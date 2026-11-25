@@ -20,6 +20,7 @@ import AppointmentRequestModal from '../appointments/AppointmentRequestModal'
 import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
 import { ownerApiOrigin } from '../appointments/ownerApiOrigin'
 import KawMedModal from './KawMedModal'
+import KawMedEvaluationDesign from './KawMedEvaluationDesign'
 import type { KawMedCenter, KawMedProfileData, KawMedSchedule } from './types'
 import './KawMedProfile.css'
 
@@ -87,6 +88,8 @@ export default function KawMedProfile() {
   const params = new URLSearchParams(window.location.search)
   const previewTemplate = params.get('kawmed_preview')
   const previewPalette = params.get('kawmed_palette')
+  // Explicit visual-only R6 preview; never expose an unconnected evaluation form to real patients.
+  const evaluationsDesign=import.meta.env.MODE==='preview'&&window.location.hostname==='preview.intaprd.com'&&params.get('kawmed_evaluations_preview')==='1'
   const [profile, setProfile] = useState<KawMedProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -398,6 +401,7 @@ export default function KawMedProfile() {
               </span>
               <span className="kawmed-panel__illustration" aria-hidden="true"><FiShield /></span><FiChevronRight className="kawmed-panel__chevron" />
           </button>
+          {evaluationsDesign&&<KawMedEvaluationDesign key={profile.slug}/>}
         </section>
 
         <section className="kawmed-public-actions" aria-label="Acciones del perfil">
