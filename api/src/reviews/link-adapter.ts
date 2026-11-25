@@ -6,7 +6,8 @@ import { isPreviewEnvironment } from '../lib/cookies'
 type LinkProfile = {id:string; slug:string; user_id:string; plan_id:string; is_active:number; is_published:number; template_id:string|null; email:string}
 type ReviewSettingsRow = {enabled:number; google_review_url:string}
 const moduleCode='reviews_google'
-const genericTemplates=new Set(['','restaurante','servicios','eventos'])
+// Base IDs used by the generic renderer; registered special templates remain excluded.
+const genericTemplates=new Set(['','intap_profile_v2','intap-v2','restaurante','servicios','eventos'])
 const selectProfile=`SELECT p.id,p.slug,p.user_id,p.plan_id,p.is_active,p.is_published,p.template_id,u.email
  FROM profiles p JOIN users u ON u.id=p.user_id`
 
