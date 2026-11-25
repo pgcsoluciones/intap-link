@@ -2135,7 +2135,7 @@ function StandardPublicProfile() {
         profile={freeProfile.profile}
         layout={freeProfile.layout}
         colors={freeProfile.colors}
-        afterBankAccountsContent={<LinkReviews key={data.profileId} slug={data.slug} accent={freeProfile.colors.button} preview={isPreview}/>}
+        beforeBankAccountsContent={<LinkReviews key={data.profileId} slug={data.slug} profileName={data.name||data.slug} accent={freeProfile.colors.button} preview={isPreview}/>}
       />
     )
   }
@@ -2153,7 +2153,7 @@ function StandardPublicProfile() {
     >
       <IntapProfileV2
         profile={publicProfileV2}
-        beforeContactLinksContent={data.planId==='basic'?<LinkReviews key={data.profileId} slug={data.slug} accent={data.accentColor} preview={isPreview}/>:undefined}
+        beforeContactLinksContent={data.planId==='basic'?<LinkReviews key={data.profileId} slug={data.slug} profileName={data.name||data.slug} accent={data.accentColor} preview={isPreview}/>:undefined}
         showBankSlot={data.planId==='basic'}
       />
     </Suspense>

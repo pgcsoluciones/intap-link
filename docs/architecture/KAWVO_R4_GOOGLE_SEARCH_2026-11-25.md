@@ -18,3 +18,6 @@ app/public/_headers únicamente configura cache-control; functions/_middleware.t
 
 ## 25/11 08:37 AST — diagnóstico y ajuste
 D1 Preview confirma intap3 Free con workspace activo vacío, 0 miembros y 0 códigos, catálogo y tablas correctos. S1 incorpora la misma regla R4 QA2 de #202 (master activo solo excluido si existen registros miembro/código; demás guards intactos). CI anterior 45592098266 falló por tipo TextDecoderConstructorOptions (fatal no declarado por Workers). Se elimina esa opción y se rechaza U+FFFD tras decodificar el cuerpo acotado; sin supresión de TypeScript. Revalidar nueva CI; S1 aún no autorizado para Preview, requiere QA2 aceptado, migración propuesta y credenciales, facturación real.
+
+## QA4 aceptado — 25/11 11:02 AST
+S1 incorpora íntegramente QA4. La distribución Tenant conserva share=reviews#resenas y el copy aprobado. Web/Functions son idénticos al QA4 aceptado; no re-stage Web. Operación Preview aislada: esquema cuota, Stage API inactivo, Stage App, configuración de las dos claves y flag en una versión inactiva, verificación y activación. No secretos en chat ni Git. No producción. Se mantiene limitación de R4 a Free/Plus autorizados. Las claves del navegador para Maps Embed son visibles por diseño, restricción HTTP referrer obligatoria.
