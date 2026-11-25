@@ -1,3 +1,4 @@
+import ReviewsTenantPanel from './shared/ReviewsTenantPanel'
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { API_BASE, apiGet, apiPost, apiPut, apiUpload } from '../../lib/api'
@@ -415,6 +416,8 @@ export default function AdminDashboard() {
             <p className="text-xs font-black mt-1 text-intap-mint capitalize">{me?.plan_id ?? 'free'}</p>
           </div>
         </div>
+
+        {me?.profile_id && <div className="mb-6"><ReviewsTenantPanel key={me.profile_id} profileId={me.profile_id}/></div>}
 
         {/* Retention panel — trial/downgrade notices + selector.
             Passa os dados de /me como props iniciais para render imediato
