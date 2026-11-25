@@ -15,7 +15,7 @@ async function eligible(c:any,p:LinkProfile):Promise<boolean>{
   if(Number(p.is_active)!==1||!p.slug||!genericTemplates.has(p.template_id||''))return false
   const db=c.env.DB as D1Database
   const [catalog,team,demo,limits]=await Promise.all([
-    db.prepare('SELECT effects_json FROM modules WHERE code=?').bind(moduleCode).first<{effects_json:string}>(),
+    db.prepare('SELECT effects_json FROM modules WHERE code=? AND is_active=1').bind(moduleCode).first<{effects_json:string}>(),
     db.prepare(`SELECT 1 FROM team_workspaces WHERE master_profile_id=? AND status='active'
       UNION ALL SELECT 1 FROM team_members tm JOIN team_workspaces tw ON tw.id=tm.team_id
       WHERE tm.profile_id=? AND tm.status='active' AND tw.status='active' LIMIT 1`).bind(p.id,p.id).first(),
