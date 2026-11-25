@@ -1,11 +1,12 @@
-import {useEffect,useId,useState,type CSSProperties} from 'react'
+import {useEffect,useId,useRef,useState,type CSSProperties} from 'react'
 import {FaAddressCard,FaQrcode,FaTimes,FaWhatsapp} from 'react-icons/fa'
 import '../free-profile/IntapLinkGratisRebuilt.css'
 
 type Props={targetUrl:string;shareText:string;profileName:string;filename:string;subtitle?:string;kicker?:string;accent?:string;onClose:()=>void;onTrack?:(event:string,label:string)=>void}
 export default function ProfileQrModal({targetUrl,shareText,profileName,filename,subtitle='Escanea para abrir este perfil.',kicker='KAWVO LINK',accent,onClose,onTrack}:Props){
  const [png,setPng]=useState(''),[error,setError]=useState('')
- const title=useId()
+ const title=useId(),closeRef=useRef(onClose)
+ closeRef.current=onClose
  useEffect(()=>{
   let live=true
   setPng('');setError('')
@@ -15,10 +16,10 @@ export default function ProfileQrModal({targetUrl,shareText,profileName,filename
  useEffect(()=>{
   const previous=document.body.style.overflow
   document.body.style.overflow='hidden'
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()}
+  const key=(e:KeyboardEvent)=>{if(e.key==='Escape')closeRef.current()}
   window.addEventListener('keydown',key)
   return()=>{document.body.style.overflow=previous;window.removeEventListener('keydown',key)}
- },[onClose])
+ },[])
  function download(){
   if(!png)return
   onTrack?.('qr_download','Descargar QR PNG')

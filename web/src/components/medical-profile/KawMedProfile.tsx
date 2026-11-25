@@ -401,7 +401,7 @@ export default function KawMedProfile() {
               </span>
               <span className="kawmed-panel__illustration" aria-hidden="true"><FiShield /></span><FiChevronRight className="kawmed-panel__chevron" />
           </button>
-          {evaluationsDesign&&<KawMedEvaluationDesign key={profile.slug}/>}
+          {evaluationsDesign&&<KawMedEvaluationDesign key={profile.slug} slug={profile.slug} profileName={profile.display_name} origin={publicOrigin()}/>}
         </section>
 
         <section className="kawmed-public-actions" aria-label="Acciones del perfil">
