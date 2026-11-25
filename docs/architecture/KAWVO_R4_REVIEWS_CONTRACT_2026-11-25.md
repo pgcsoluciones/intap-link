@@ -1,0 +1,9 @@
+# KAW-R4-001 — Reseñas Google
+Base: e28b934a61c669ed270a656ae42cf68c1b518a82.
+## Alcance aprobado
+Kawlink Gratis y Plus como objetivo inicial, sujeto a identificación de planes y autorización efectiva del servidor. No habilitar implícitamente Team, Trial, patrocinados, Kawmed o delegaciones.
+Módulo independiente, sin consumir slots de enlaces. Configuración de URL oficial Google y visibilidad. Perfil público canónico + #resenas, sin redirección automática. CTA "Deja tu reseña en Google", texto "Tu opinión es importante. Comparte tu experiencia con nosotros." Cintillo compacto móvil primero, distintivo Google y cinco estrellas doradas exclusivamente decorativas, sin promedio ni cantidad. QR independiente, copiar, compartir y descargar, reutilizando generador existente. Preservar QR principal, NFC, Graph Cards, permisos y perfiles protegidos.
+## R4.1
+Validar URL HTTPS en servidor mediante lista explícita de hosts y rutas oficiales de reseñas; rechazar credenciales, puertos no estándar y esquemas peligrosos. No resolver redirects ni consultar URL externamente. Autorización por perfil seleccionado, owner y entitlement efectivo, no por query ni por UI. Persistencia pendiente de decisión tras revisión de escrituras concurrentes, modelo de planes y ciclo de vida; no introducir migración sin gate. Desactivado por defecto; no mostrar sección sin configuración válida y permiso efectivo. No modificar datos ajenos.
+## R4.2–R4.4
+Sección pública accesible tras cargar datos, scroll al ancla, sin login del visitante. QR de alta resolución y URL canónica del tipo elegible; cambio de slug requiere política explícita. Contratos positivos/negativos, aislamiento, slots, navegación, publicación/borrador, móvil y escritorio. CI, Stage, Preview, QA autenticada y aprobación del SHA exacto antes de producción. R5 métricas Google y R6 valoraciones internas excluidos. No cambios de dependencias, bindings, R2 o D1 por rutina.
