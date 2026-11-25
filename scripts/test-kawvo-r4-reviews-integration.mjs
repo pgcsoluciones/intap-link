@@ -47,9 +47,9 @@ CREATE TABLE team_members(profile_id TEXT,team_id TEXT,status TEXT);
 CREATE TABLE free_demo_v2_profiles(profile_id TEXT,status TEXT);
 CREATE TABLE analytics(id TEXT PRIMARY KEY,profile_id TEXT,event_type TEXT,target_id TEXT,created_at TEXT DEFAULT (datetime('now')),FOREIGN KEY(profile_id) REFERENCES profiles(id) ON DELETE CASCADE);
 INSERT INTO users VALUES ('owner','owner@example.test'),('other','other@example.test'),('operator','intapcard@gmail.com');
-INSERT INTO plans VALUES ('free','Free'),('pro','Pro');
-INSERT INTO plan_limits VALUES ('free',3,10,0,0,0,1),('pro',10,10,10,10,10,1);
-INSERT INTO profiles VALUES ('p1','owner','test-profile','free',1,1,NULL,'{"unrelated":true}'),('p2','other','other-profile','free',1,1,NULL,'{}'),('p3','operator','operator-profile','free',1,1,NULL,'{}'),('p4','owner','paid-profile','pro',1,1,NULL,'{}');
+INSERT INTO plans VALUES ('free','Free'),('pro','Pro'),('basic','Básico');
+INSERT INTO plan_limits VALUES ('free',3,10,0,0,0,1),('pro',10,10,10,10,10,1),('basic',5,5,3,3,1,1);
+INSERT INTO profiles VALUES ('p1','owner','test-profile','free',1,1,NULL,'{"unrelated":true}'),('p2','other','other-profile','free',1,1,NULL,'{}'),('p3','operator','operator-profile','free',1,1,NULL,'{}'),('p4','owner','paid-profile','pro',1,1,NULL,'{}'),('p5','owner','plus-profile','basic',1,1,NULL,'{}');
 `
 try{
  execute([{script:fixture},{script:readFileSync(new URL('../docs/releases/kawvo-r4-proposed-migrations/review-settings.sql',import.meta.url),'utf8')}])
@@ -78,6 +78,8 @@ try{
  assert.equal((await call('GET',ownerPath,{id:'p2'})).status,403)
  assert.equal((await call('GET',ownerPath,{id:'p3',user:'operator'})).status,403)
  assert.equal((await call('GET',ownerPath,{id:'p4'})).status,403)
+ assert.equal((await call('GET',ownerPath,{id:'p5'})).status,200)
+ assert.equal((await call('GET',publicPath,{slug:'plus-profile'})).data.data,null)
  assert.equal((await call('PUT',ownerPath,{delegated:true,body:config})).status,403)
  assert.equal((await call('PUT',ownerPath,{headers:{'X-KawMed-Delegate':'guest'},body:config})).status,403)
  assert.equal((await call('PUT',ownerPath,{body:{enabled:true,googleReviewUrl:'https://evil.test/'}})).status,400)
