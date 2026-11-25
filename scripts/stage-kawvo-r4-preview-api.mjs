@@ -3,7 +3,7 @@
 import {execFileSync} from 'node:child_process'
 import {existsSync,mkdirSync,readFileSync,writeFileSync,symlinkSync} from 'node:fs'
 import {homedir,tmpdir} from 'node:os'
-import {join} from 'node:path'
+import {join,basename} from 'node:path'
 import {createHash} from 'node:crypto'
 
 process.umask(0o077)
@@ -90,27 +90,67 @@ async function compile(old){
     check(p.candidate===CANDIDATE&&p.baseline===ACTIVE&&p.moduleSha===sha(Buffer.from(m.content_base64,'base64')),'paquete preparado cambió')
     return m
   }
-  check(!existsSync(src),'preparación incompleta: conservar evidencia; no repetir a ciegas')
-  mkdirSync(src,{mode:0o700})
-  execFileSync('tar',['-x','-C',src],{input:execFileSync('git',['archive',CANDIDATE,'api/src','api/tsconfig.json','api/package.json','shared'],{cwd:ROOT,maxBuffer:128*1024*1024}),stdio:['pipe','pipe','pipe']})
-  for(const rel of ['node_modules','api/node_modules'])if(existsSync(join(ROOT,rel)))symlinkSync(join(ROOT,rel),join(src,rel),'dir')
   const config=join(DIR,'build-only.json'),form=join(DIR,'compiled-form.private.bin')
-  save('build-only.json',{name:WORKER,main:join(src,'api/src/preview-frontdoor-entry.ts'),compatibility_date:old.compatibility_date,compatibility_flags:old.compatibility_flags||[]})
-  const env={...process.env,WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:join(DIR,'wrangler.private.log')}
-  try{
-    const output=execFileSync('npx',['--yes','--package=wrangler@4.166.0','--','wrangler','versions','upload','--dry-run','--config',config,'--outdir',join(DIR,'bundle'),'--outfile',form],{cwd:src,encoding:'utf8',stdio:['ignore','pipe','pipe'],env,maxBuffer:32*1024*1024})
-    writeFileSync(join(DIR,'build.private.log'),output,{mode:0o600})
-  }catch(e){writeFileSync(join(DIR,'build.private.log'),String(e.stdout||'')+String(e.stderr||''),{mode:0o600});throw Error('BLOCKED: compilación local falló; revisar build.private.log; sin upload')}
+  const expectedConfig={name:WORKER,main:join(src,'api/src/preview-frontdoor-entry.ts'),compatibility_date:old.compatibility_date,compatibility_flags:old.compatibility_flags||[]}
+  if(!existsSync(src)){
+    mkdirSync(src,{mode:0o700})
+    execFileSync('tar',['-x','-C',src],{input:execFileSync('git',['archive',CANDIDATE,'api/src','api/tsconfig.json','api/package.json','shared'],{cwd:ROOT,maxBuffer:128*1024*1024}),stdio:['pipe','pipe','pipe']})
+    for(const rel of ['node_modules','api/node_modules'])if(existsSync(join(ROOT,rel)))symlinkSync(join(ROOT,rel),join(src,rel),'dir')
+    save('build-only.json',expectedConfig)
+    const env={...process.env,WRANGLER_SEND_METRICS:'false',WRANGLER_LOG_PATH:join(DIR,'wrangler.private.log')}
+    try{
+      const output=execFileSync('npx',['--yes','--package=wrangler@4.166.0','--','wrangler','versions','upload','--dry-run','--config',config,'--outdir',join(DIR,'bundle'),'--outfile',form],{cwd:src,encoding:'utf8',stdio:['ignore','pipe','pipe'],env,maxBuffer:32*1024*1024})
+      writeFileSync(join(DIR,'build.private.log'),output,{mode:0o600})
+    }catch(e){writeFileSync(join(DIR,'build.private.log'),String(e.stdout||'')+String(e.stderr||''),{mode:0o600});throw Error('BLOCKED: compilación local falló; revisar build.private.log; sin upload')}
+  }else{
+    check(existsSync(config)&&existsSync(form)&&existsSync(join(DIR,'build.private.log')),'preparación incompleta; conservar evidencia')
+    console.log('Recuperando compilación existente; no recompilar ni repetir D1.')
+  }
+  check(equal(read(config),expectedConfig),'configuración de compilación cambió')
+  const tree=git('ls-tree','-r',CANDIDATE,'--','api/src','api/tsconfig.json','api/package.json','shared').split('\n')
+  for(const line of tree){
+    const match=line.match(/^100(?:644|755) blob ([a-f0-9]{40})\t(.+)$/)
+    check(match,'entrada inesperada en árbol Git')
+    const data=readFileSync(join(src,match[2]))
+    const hash=createHash('sha1').update('blob '+data.length+'\0').update(data).digest('hex')
+    check(hash===match[1],'fuente extraída cambió: '+match[2])
+  }
   const bytes=readFileSync(form),boundary=bytes.subarray(0,bytes.indexOf('\r\n')).toString().slice(2)
   check(boundary.length>0,'multipart de compilación inválido')
   const parts=await new Response(bytes,{headers:{'content-type':'multipart/form-data; boundary='+boundary}}).formData()
-  const meta=JSON.parse(String(parts.get('metadata'))),modules=[]
-  for(const [name,f] of parts)if(name!=='metadata'){check(typeof f!=='string','parte de módulo no binaria');modules.push({name,content_type:f.type,content_base64:Buffer.from(await f.arrayBuffer()).toString('base64')})}
-  check(modules.length===1&&meta.main_module===old.main_module&&modules[0].name===old.main_module&&modules[0].content_type===old.modules[0].content_type,'compilación no preserva formato del Worker')
-  const m=modules[0],code=Buffer.from(m.content_base64,'base64')
+  const rawMeta=parts.get('metadata')
+  const meta=JSON.parse(typeof rawMeta==='string'?rawMeta:await rawMeta.text())
+  const modules=[]
+  for(const [name,f] of parts)if(name!=='metadata'){
+    check(typeof f!=='string','parte de módulo no binaria: '+name)
+    modules.push({name,filename:f.name,content_type:f.type,bytes:Buffer.from(await f.arrayBuffer())})
+  }
+  const shape={main:meta.main_module,bodyPart:meta.body_part||null,parts:modules.map(m=>({name:m.name,filename:m.filename,mime:m.content_type,bytes:m.bytes.length,sha256:sha(m.bytes)}))}
+  console.log('Formato local: '+JSON.stringify(shape))
+  check(!meta.body_part&&typeof meta.main_module==='string','no es un paquete ES Modules')
+  // Only one executable entry, matching the exact dry-run artifact and active entrypoint.
+  // Some compiler versions attach a .map or use application/javascript instead of
+  // application/javascript+module. A source map is not a Worker runtime module.
+  const entry=modules.filter(m=>m.name===meta.main_module)
+  check(entry.length===1,'no hay un entrypoint único identificado por metadata')
+  const main=entry[0],name=basename(meta.main_module)
+  check(name===old.main_module&&[name,'./'+name].includes(meta.main_module),'nombre de entrypoint distinto: '+JSON.stringify(shape))
+  check(['application/javascript+module','application/javascript','text/javascript'].includes(main.content_type),'MIME de entrypoint no admitido')
+  const extras=modules.filter(m=>m!==main)
+  for(const extra of extras){
+    check([name+'.map','./'+name+'.map'].includes(extra.name)&&['application/json','application/source-map','application/octet-stream','text/plain',''].includes(extra.content_type),'módulo adicional no admitido: '+extra.name)
+    const map=JSON.parse(extra.bytes.toString('utf8'))
+    check(map.version===3&&Array.isArray(map.sources)&&typeof map.mappings==='string','source map inválido')
+  }
+  check(extras.length<=1,'más de un mapa de fuentes')
+  const disk=join(DIR,'bundle',name)
+  check(existsSync(disk)&&readFileSync(disk).equals(main.bytes),'bytes del entrypoint no coinciden con salida dry-run')
+  const code=main.bytes
+  execFileSync(process.execPath,['--input-type=module','--check'],{input:code,stdio:['pipe','pipe','pipe']})
+  const m={name:old.main_module,content_type:old.modules[0].content_type,content_base64:code.toString('base64')}
   for(const marker of ['profile_review_settings','reviews_google','review_click','profile_preview_sessions','kawvo_preview_session'])check(code.includes(marker),'bundle sin marcador '+marker)
   check(sha(code)!==sha(Buffer.from(old.modules[0].content_base64,'base64')),'candidato idéntico a activa')
-  save('module.private.json',m);save('prepared.json',{candidate:CANDIDATE,baseline:ACTIVE,moduleSha:sha(code),compiler:'Wrangler 4.166.0 dry-run'})
+  save('module.private.json',m);save('prepared.json',{candidate:CANDIDATE,baseline:ACTIVE,moduleSha:sha(code),formSha:sha(bytes),format:shape,compiler:'Wrangler 4.166.0 dry-run'})
   return m
 }
 async function main(){
