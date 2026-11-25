@@ -160,7 +160,7 @@ function loadJakartaFont() {
   document.head.appendChild(link)
 }
 
-export default function IntapProfileV2({ profile, beforeFooterContent }: { profile?: IntapProfileV2Profile; beforeFooterContent?: ReactNode }) {
+export default function IntapProfileV2({ profile, beforeContactLinksContent, showBankSlot=false }: { profile?: IntapProfileV2Profile; beforeContactLinksContent?: ReactNode; showBankSlot?: boolean }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [activeSlide, setActiveSlide] = useState(0)
   const [projectsModalOpen, setProjectsModalOpen] = useState(false)
@@ -808,6 +808,8 @@ export default function IntapProfileV2({ profile, beforeFooterContent }: { profi
         </>
       )}
 
+      {showBankSlot&&<div id="ilx-bank-slot" />}
+      {beforeContactLinksContent}
       <div className="divider" />
       <section className="s-company-contact">
         <div className="company-contact-header">¡Conecta con {companyName}!</div>
@@ -899,7 +901,6 @@ export default function IntapProfileV2({ profile, beforeFooterContent }: { profi
 
 
 
-      {beforeFooterContent}
       <footer className="s-footer">
         <p className="footer-credit">Developed by: <strong>Intap</strong></p>
       </footer>
