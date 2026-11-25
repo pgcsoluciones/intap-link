@@ -715,8 +715,8 @@ ${seoHeadHtml}
     const slug = medicalShareMatch[1].toLowerCase();
     try {
       const response = await fetch(`${discoveryRuntime.apiBase}/medical-profiles/${encodeURIComponent(slug)}`, {
-        headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } as RequestInit,
-      });
+        headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false },
+      } as RequestInit);
       if (response.ok) {
         const payload = await response.json() as any;
         const profile = payload?.ok === true ? payload.data : null;
