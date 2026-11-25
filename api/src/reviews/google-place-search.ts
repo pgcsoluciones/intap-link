@@ -29,14 +29,16 @@ export function googleSearchCapability(env:GoogleSearchEnv):{available:boolean;e
 export class GoogleSearchError extends Error {
  constructor(public readonly code:'GOOGLE_SEARCH_UNAVAILABLE'|'GOOGLE_SEARCH_TIMEOUT'|'GOOGLE_SEARCH_LIMIT'|'GOOGLE_SEARCH_BILLING'|'GOOGLE_SEARCH_PROVIDER_DENIED',public readonly status:503|504|429){super(code)}
 }
-export async function searchGooglePlaces(input:SearchInput,env:GoogleSearchEnv,request:typeof fetch=fetch){
+export async function searchGooglePlaces(input:SearchInput,env:GoogleSearchEnv,request:typeof fetch=(url,init)=>globalThis.fetch(url,init)){
  if(!googleSearchCapability(env).available)throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)
  const country=countryName(input.countryCode,input.language)
  if(!country)throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)
  let response:Response
  try{
-  response=await request(GOOGLE_PLACES_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':env.GOOGLE_PLACES_API_KEY!,'X-Goog-FieldMask':GOOGLE_PLACES_FIELD_MASK},body:JSON.stringify({textQuery:[input.businessName,input.address,input.city,country].filter(Boolean).join(', '),languageCode:input.language,regionCode:input.countryCode,pageSize:5}),redirect:'error',signal:AbortSignal.timeout(8000)})
+  response=await request(GOOGLE_PLACES_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':env.GOOGLE_PLACES_API_KEY!,'X-Goog-FieldMask':GOOGLE_PLACES_FIELD_MASK},body:JSON.stringify({textQuery:[input.businessName,input.address,input.city,country].filter(Boolean).join(', '),languageCode:input.language,regionCode:input.countryCode,pageSize:5}),redirect:'manual',signal:AbortSignal.timeout(8000)})
  }catch(e){if(e instanceof Error&&['TimeoutError','AbortError'].includes(e.name))throw new GoogleSearchError('GOOGLE_SEARCH_TIMEOUT',504);throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)}
+ // Workers rejects redirect:'error' before sending. Manual never forwards the API key.
+ if(response.status>=300&&response.status<400)throw new GoogleSearchError('GOOGLE_SEARCH_UNAVAILABLE',503)
  if(response.status===429)throw new GoogleSearchError('GOOGLE_SEARCH_LIMIT',429)
  if(!response.ok){
   // Classify only bounded provider error fields. Never return or log provider text, request, or key.

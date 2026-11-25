@@ -25,7 +25,7 @@ const provider=(body,status=200)=>async(url,init)=>{
  calls++
  assert.equal(url,GOOGLE_PLACES_ENDPOINT)
  assert.equal(init.method,'POST')
- assert.equal(init.redirect,'error')
+ assert.equal(init.redirect,'manual')
  assert.equal(init.headers['X-Goog-FieldMask'],'places.id')
  assert.equal(init.headers['X-Goog-Api-Key'],env.GOOGLE_PLACES_API_KEY)
  assert.deepEqual(JSON.parse(init.body),{textQuery:'Decology by Beato, Santo Domingo, República Dominicana',languageCode:'es',regionCode:'DO',pageSize:5})
@@ -43,6 +43,27 @@ await assert.rejects(()=>searchGooglePlaces(parsed,env,provider({error:{message:
 await assert.rejects(()=>searchGooglePlaces(parsed,env,provider({error:{details:[{reason:'API_KEY_SERVICE_BLOCKED'}]}},403)),e=>e.code==='GOOGLE_SEARCH_PROVIDER_DENIED')
 await assert.rejects(()=>searchGooglePlaces(parsed,env,async()=>{throw Object.assign(Error('timeout'),{name:'TimeoutError'})}),e=>e.status===504)
 await assert.rejects(()=>searchGooglePlaces(parsed,env,async()=>new Response('not JSON')),e=>e.status===503)
+// Exercise the default transport, not only an injected Node fetch mock.
+const originalFetch=globalThis.fetch
+let transportCalls=0
+try{
+ globalThis.fetch=async function(url,init){
+  assert.equal(this,globalThis)
+  assert.equal(init.redirect,'manual')
+  transportCalls++
+  return provider({places:[{id:'real-shape-id'}]})(url,init)
+ }
+ assert.deepEqual(await searchGooglePlaces(parsed,env),[{placeId:'real-shape-id'}])
+ assert.equal(transportCalls,1)
+ globalThis.fetch=async function(url,init){
+  assert.equal(this,globalThis)
+  assert.equal(init.redirect,'manual')
+  transportCalls++
+  return new Response(null,{status:302,headers:{Location:'https://example.invalid/'}})
+ }
+ await assert.rejects(()=>searchGooglePlaces(parsed,env),e=>e.code==='GOOGLE_SEARCH_UNAVAILABLE')
+ assert.equal(transportCalls,2,'redirect must never be followed')
+}finally{globalThis.fetch=originalFetch}
 const before=calls
 await assert.rejects(()=>searchGooglePlaces(parsed,{},provider({})),e=>e.status===503)
 assert.equal(calls,before)
