@@ -1,3 +1,4 @@
+import KawvoAdminIcon, { type KawvoAdminIconName } from '../shared/KawvoAdminIcon'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { apiGet } from '../../../lib/api'
@@ -15,19 +16,19 @@ type Profile={profile_id?:string|number|null;name?:string|null;slug?:string|null
 type Home={kind?:string;route?:string;public_route?:string|null;agenda_route?:string|null;multiple_profiles?:boolean}
 type Team={role?:'none'|'master'|'member';member?:{permissions?:string[]}}
 const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boolean;excludeDemo?:boolean;requiresIdentity?:boolean})[]=[
-  {id:'identity',title:'Identidad y presentación',detail:'Nombre, cargo, foto y portada',group:'Perfil',path:'/admin/free/onboarding/identity?from=panel'},
-  {id:'contact',title:'Contacto',detail:'WhatsApp, teléfono y correo',group:'Perfil',path:'/admin/free/onboarding/contact',permission:'contact',requiresIdentity:true},
-  {id:'quick',title:'Botones de contacto',detail:'Tus acciones principales',group:'Perfil',path:'/admin/free/quick-actions',permission:'quick_actions',requiresIdentity:true},
-  {id:'location',title:'Ubicación',detail:'Dirección y mapa',group:'Perfil',path:'/admin/free/location',permission:'location',requiresIdentity:true},
-  {id:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links',requiresIdentity:true},
-  {id:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio',requiresIdentity:true},
-  {id:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true,requiresIdentity:true},
-  {id:'bank',title:'Cuentas bancarias',detail:'Gestiona tus cuentas o consulta la disponibilidad según tu plan',group:'Perfil',path:'/admin/free/bank-accounts',ownerOnly:true,requiresIdentity:true},
-  {id:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design',requiresIdentity:true},
-  {id:'account',title:'Mi cuenta',detail:'Configuración de cuenta y acceso',group:'Cuenta',path:'/admin/free/account'},
-  {id:'credentials',title:'Credenciales',detail:'Administrar mi acceso',group:'Cuenta',path:'/admin/free/credentials',ownerOnly:true,excludeDemo:true},
-  {id:'notifications',title:'Notificaciones',detail:'Avisos relacionados con tu perfil',group:'Cuenta',path:'/admin/free/notifications'},
-  {id:'ai',title:'Optimizar con IA',detail:'Asistencia cuando esté habilitada',group:'Herramientas',path:'/admin/free/ai-profile',ownerOnly:true,permission:'ai',excludeDemo:true,requiresIdentity:true}
+  {id:'identity',icon:'identity',title:'Identidad y presentación',detail:'Nombre, cargo, foto y portada',group:'Perfil',path:'/admin/free/onboarding/identity?from=panel'},
+  {id:'contact',icon:'contact',title:'Contacto',detail:'WhatsApp, teléfono y correo',group:'Perfil',path:'/admin/free/onboarding/contact',permission:'contact',requiresIdentity:true},
+  {id:'quick',icon:'quick',title:'Botones de contacto',detail:'Tus acciones principales',group:'Perfil',path:'/admin/free/quick-actions',permission:'quick_actions',requiresIdentity:true},
+  {id:'location',icon:'location',title:'Ubicación',detail:'Dirección y mapa',group:'Perfil',path:'/admin/free/location',permission:'location',requiresIdentity:true},
+  {id:'links',icon:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links',requiresIdentity:true},
+  {id:'portfolio',icon:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio',requiresIdentity:true},
+  {id:'services',icon:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true,requiresIdentity:true},
+  {id:'bank',icon:'bank',title:'Cuentas bancarias',detail:'Gestiona tus cuentas o consulta la disponibilidad según tu plan',group:'Perfil',path:'/admin/free/bank-accounts',ownerOnly:true,requiresIdentity:true},
+  {id:'design',icon:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design',requiresIdentity:true},
+  {id:'account',icon:'account',title:'Mi cuenta',detail:'Configuración de cuenta y acceso',group:'Cuenta',path:'/admin/free/account'},
+  {id:'credentials',icon:'credentials',title:'Credenciales',detail:'Administrar mi acceso',group:'Cuenta',path:'/admin/free/credentials',ownerOnly:true,excludeDemo:true},
+  {id:'notifications',icon:'notifications',title:'Notificaciones',detail:'Avisos relacionados con tu perfil',group:'Cuenta',path:'/admin/free/notifications'},
+  {id:'ai',icon:'ai',title:'Optimizar con IA',detail:'Asistencia cuando esté habilitada',group:'Herramientas',path:'/admin/free/ai-profile',ownerOnly:true,permission:'ai',excludeDemo:true,requiresIdentity:true}
 ]
 
 /** Free shell on the exact supported App host/build pairs. Navigation grants no permissions. */
@@ -184,14 +185,14 @@ export default function KawvoFreeShellPreview(){
       if((error as {name?:string}|null)?.name!=='AbortError')setShareMessage('No pudimos abrir el menú para compartir.')
     }
   }
-  const menu:[Tab,string,string][]=[['home','⌂','Inicio'],['profile','◉','Perfil'],['agenda','▦','Agenda'],['more','☷','Más']].filter(([key])=>key!=='agenda'||Boolean(agendaRoute)) as [Tab,string,string][]
+  const menu:[Tab,KawvoAdminIconName,string][]=[['home','home','Inicio'],['profile','profile','Perfil'],['agenda','agenda','Agenda'],['more','more','Más']].filter(([key])=>key!=='agenda'||Boolean(agendaRoute)) as [Tab,KawvoAdminIconName,string][]
   return <main className="min-h-[100dvh] bg-[#f1f5f7] pb-[calc(94px+env(safe-area-inset-bottom))] font-['Inter',sans-serif] text-slate-950 md:pl-[244px] md:pb-0 [&_button]:min-h-11 [&_button]:min-w-11">
     {/* Desktop navigation follows the approved demo; mobile retains the bottom navigation. */}
     <aside aria-label="Menú lateral Kawvo" className="fixed inset-y-0 left-0 hidden w-[244px] flex-col bg-[#f1f5f7] px-4 py-4 md:flex">
       <div className="flex h-full flex-col overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-4">
         <div className="mb-8 flex items-center gap-3"><div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#123241] text-lg font-black text-white">K</div><div className="min-w-0"><strong className="block text-base">Kawvo</strong><span className="text-xs text-slate-500">Una experiencia</span></div></div>
         <nav aria-label="Secciones de Kawvo" className="flex flex-col gap-2">
-          {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><span aria-hidden="true" className="w-5 text-lg">{icon}</span>{label}</button>)}
+          {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-bold '+(tab===key?'bg-[#e8f4f6] text-[#08758b]':'text-slate-600 hover:bg-slate-50')}><KawvoAdminIcon name={icon}/>{label}</button>)}
         </nav>
         <div className="mt-auto pt-6">{tab!=='home'&&<FreeShellSessionExit/>}</div>
         <p className="pt-3 text-xs leading-5 text-slate-500">Tu presentación digital.</p>
@@ -222,21 +223,21 @@ export default function KawvoFreeShellPreview(){
           />}</div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={()=>setTab('profile')} className={button}><span className="mb-2 block text-xl">✎</span>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y contenido</span></button>
-          {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><span className="mb-2 block text-xl">◉</span>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Abrir la vista previa de tu presentación</span></a>:<button type="button" disabled className={button+" opacity-50"}><span className="mb-2 block text-xl">◉</span>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Completa tu usuario primero</span></button>}
-          {agendaRoute&&<button type="button" onClick={()=>setTab('agenda')} className={button}><span className="mb-2 block text-xl">▦</span>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>}
-          {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><span className="mb-2 block text-xl">⚙</span>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Configuración</span></button>}
-          <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><span className="mb-2 block text-xl">↗</span>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">{published&&publicUrl?'Compartir por WhatsApp':'Disponible al publicar tu perfil'}</span></button>
+          <button onClick={()=>setTab('profile')} className={button}><KawvoAdminIcon name="edit" className="mb-2 h-5 w-5"/>Editar perfil<span className="mt-1 block text-xs font-normal text-slate-500">Información y contenido</span></button>
+          {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><KawvoAdminIcon name="preview" className="mb-2 h-5 w-5"/>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Abrir la vista previa de tu presentación</span></a>:<button type="button" disabled className={button+" opacity-50"}><KawvoAdminIcon name="preview" className="mb-2 h-5 w-5"/>Vista previa<span className="mt-1 block text-xs font-normal text-slate-500">Completa tu usuario primero</span></button>}
+          {agendaRoute&&<button type="button" onClick={()=>setTab('agenda')} className={button}><KawvoAdminIcon name="agenda" className="mb-2 h-5 w-5"/>Agenda<span className="mt-1 block text-xs font-normal text-slate-500">Solicitudes y disponibilidad</span></button>}
+          {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><KawvoAdminIcon name="account" className="mb-2 h-5 w-5"/>Mi cuenta<span className="mt-1 block text-xs font-normal text-slate-500">Configuración</span></button>}
+          <button type="button" disabled={!published||!publicUrl} onClick={()=>void sharePublicUrl()} className={button+" disabled:opacity-50"}><KawvoAdminIcon name="share" className="mb-2 h-5 w-5"/>Compartir<span className="mt-1 block text-xs font-normal text-slate-500">{published&&publicUrl?'Compartir por WhatsApp':'Disponible al publicar tu perfil'}</span></button>
         </div>
         {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
       {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
-      {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<><button type="button" onClick={openAgenda} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-3 text-left text-sm font-bold text-cyan-900"><span>Configurar agenda<span className="mt-1 block text-xs font-normal text-slate-600">Horarios, disponibilidad y motivos</span></span><span aria-hidden="true">›</span></button><FreeAgendaSummary key={verifiedProfileId||accountIdentity} profileId={verifiedProfileId} onViewAll={()=>navigate('/admin/free/agenda?section=requests',{state:shellReturnState})}/></>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
+      {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<><button type="button" onClick={openAgenda} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-3 text-left text-sm font-bold text-cyan-900"><KawvoAdminIcon name="agenda"/><span className="min-w-0 flex-1">Configurar agenda<span className="mt-1 block text-xs font-normal text-slate-600">Horarios, disponibilidad y motivos</span></span><KawvoAdminIcon name="chevron"/></button><FreeAgendaSummary key={verifiedProfileId||accountIdentity} profileId={verifiedProfileId} onViewAll={()=>navigate('/admin/free/agenda?section=requests',{state:shellReturnState})}/></>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
       {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/><div className="md:hidden"><FreeShellSessionExit/></div></>}
       {tab==='more'&&<button type="button" onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Abrir panel anterior</button>}
     </section>
     <nav aria-label="Navegación Kawvo" className={"fixed inset-x-0 bottom-0 z-20 grid gap-1 border-t border-slate-200 bg-white px-2 pb-[calc(7px+env(safe-area-inset-bottom))] pt-2 md:hidden "+(agendaRoute?"grid-cols-4":"grid-cols-3")}>
-      {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold '+(tab===key?'bg-cyan-50 text-cyan-900':'text-slate-600')}><span aria-hidden="true" className="text-lg">{icon}</span>{label}</button>)}
+      {menu.map(([key,icon,label])=><button type="button" key={key} aria-current={tab===key?'page':undefined} onClick={()=>setTab(key)} className={'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs font-semibold '+(tab===key?'bg-cyan-50 text-cyan-900':'text-slate-600')}><KawvoAdminIcon name={icon}/>{label}</button>)}
     </nav>
   </main>
 }
