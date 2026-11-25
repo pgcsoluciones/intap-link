@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict'
-import {readFileSync} from 'node:fs'
-import ts from 'typescript'
-const source=readFileSync(new URL('../api/src/reviews/external-google.ts',import.meta.url),'utf8')
-const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText
+import {build} from 'esbuild'
+const bundled=await build({entryPoints:['api/src/reviews/external-google.ts'],bundle:true,format:'esm',platform:'node',target:'node20',write:false})
+const js=bundled.outputFiles[0].text
 const {normalizeGoogleReviewUrl:normalize,parseExternalReviewSettings:parse,publicExternalReviews:visible}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'))
 const good=['https://g.page/r/Cabc123/review','https://search.google.com/local/writereview?placeid=ChIJ_abc-123']
 for(const url of good)assert.equal(normalize(url),url)
