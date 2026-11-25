@@ -1,3 +1,4 @@
+import KawvoAdminIcon from '../shared/KawvoAdminIcon'
 import type { MouseEventHandler } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getKawvoShellReturn, isKawvoShellPreviewHost, KAWVO_SHELL_PREVIEW_ROUTE } from './KawvoShellReturn'
@@ -69,7 +70,7 @@ export function FreeBackButton({
       onClick={handleClick}
       className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-cyan-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50"
     >
-      <span aria-hidden="true">←</span>
+      <KawvoAdminIcon name="back"/>
       <span>{returnContext?.kawvoShellViaEditor ? 'Regresar a edición' : returnToShell ? 'Volver a mi espacio Kawvo' : returnToEditor ? 'Regresar a edición' : 'Volver a mi panel'}</span>
     </button>
   )

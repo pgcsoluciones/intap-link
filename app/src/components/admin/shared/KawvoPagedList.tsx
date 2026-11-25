@@ -1,3 +1,4 @@
+import KawvoAdminIcon, { KawvoIconTile, type KawvoAdminIconName } from './KawvoAdminIcon'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KawvoShellListState } from '../free/KawvoShellReturn'
 
@@ -5,7 +6,7 @@ import type { KawvoShellListState } from '../free/KawvoShellReturn'
  * Reusable client-side navigation list for small, already-bounded sets only.
  * Large API-backed collections MUST paginate/filter on the server before rendering.
  */
-export type KawvoListItem = { id:string; title:string; detail?:string; group?:string; keywords?:string; disabled?:boolean }
+export type KawvoListItem = { id:string; title:string; detail?:string; group?:string; keywords?:string; disabled?:boolean; icon?:KawvoAdminIconName }
 type Props = {
   items:KawvoListItem[]
   pageSize?:number
@@ -47,7 +48,7 @@ export default function KawvoPagedList({items,pageSize=6,onOpen,title='Opciones 
     </div>
     <p className="text-xs text-slate-500" role="status" aria-live="polite">{filtered.length} resultado{filtered.length===1?'':'s'}{paginated?` · página ${safePage} de ${pages}`:''}</p>
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      {visible.length?visible.map(item=><button type="button" key={item.id} id={'kawvo-menu-item-'+item.id} disabled={item.disabled} onClick={()=>onOpen(item.id,{query,group})} className="flex min-h-16 w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50 disabled:opacity-50"><span className="min-w-0 flex-1"><strong className="block text-sm text-slate-900">{item.title}</strong>{item.detail&&<span className="mt-1 block text-xs text-slate-600">{item.detail}</span>}</span><span aria-hidden="true" className="text-slate-400">›</span></button>):<div className="p-5 text-sm text-slate-600">No encontramos resultados. Prueba otra búsqueda o selecciona «Todos».</div>}
+      {visible.length?visible.map(item=><button type="button" key={item.id} id={'kawvo-menu-item-'+item.id} disabled={item.disabled} onClick={()=>onOpen(item.id,{query,group})} className="flex min-h-16 w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-slate-50 disabled:opacity-50">{item.icon&&<KawvoIconTile name={item.icon}/>}<span className="min-w-0 flex-1 break-words"><strong className="block text-sm text-slate-900">{item.title}</strong>{item.detail&&<span className="mt-1 block text-xs text-slate-600">{item.detail}</span>}</span><span aria-hidden="true" className="text-slate-400">{item.icon?<KawvoAdminIcon name="chevron"/>:"›"}</span></button>):<div className="p-5 text-sm text-slate-600">No encontramos resultados. Prueba otra búsqueda o selecciona «Todos».</div>}
     </div>
     {paginated&&pages>1&&<nav aria-label="Paginación de funciones" className="flex items-center justify-between gap-3">
       <button type="button" disabled={safePage===1} onClick={()=>setPage(safePage-1)} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold disabled:opacity-40">Anterior</button>
