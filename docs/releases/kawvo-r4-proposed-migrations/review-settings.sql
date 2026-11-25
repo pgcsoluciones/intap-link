@@ -6,6 +6,6 @@ CREATE TABLE profile_review_settings (
   google_review_url TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
--- Free is the only verified catalog ID. Confirm Plus mapping before extending.
+-- Free and Plus: FreeAccount.planLabel maps basic to PLUS; verified in Preview catalog.
 INSERT INTO modules(code,name,effects_json)
-VALUES ('reviews_google','Reseñas Google','{"includedPlans":["free"]}');
+VALUES ('reviews_google','Reseñas Google','{"includedPlans":["free","basic"]}');
