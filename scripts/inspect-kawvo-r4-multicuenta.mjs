@@ -33,7 +33,7 @@ const queries={
  analytics:`SELECT count(*) AS review_events FROM analytics WHERE event_type IN ('review_view','review_qr','review_click') AND created_at>=datetime('now','-30 days')`
 }
 async function req(token,method,url,body){
- check((method==='GET'&&!body&&['/workers/scripts/'+WORKER+'/deployments','/workers/workers/'+WORKER+'/versions/'+ACTIVE].includes(url))||(method==='POST'&&url==='/d1/database/'+DB+'/query'&&Object.values(queries).includes(body?.sql)),'operación no autorizada')
+ check((method==='GET'&&!body&&['/workers/scripts/'+WORKER+'/deployments','/workers/workers/'+WORKER+'/versions/'+ACTIVE+'?include=modules'].includes(url))||(method==='POST'&&url==='/d1/database/'+DB+'/query'&&Object.values(queries).includes(body?.sql)),'operación no autorizada')
  const r=await fetch(BASE+url,{method,headers:{Authorization:token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,redirect:'error',signal:AbortSignal.timeout(30000)})
  const j=await r.json().catch(()=>null)
  if(!r.ok||!j?.success)throw Error('HTTP '+r.status+' códigos '+(j?.errors||[]).map(x=>x.code).join(','))
@@ -43,7 +43,7 @@ async function main(){
  const token=auth()
  const d=await req(token,'GET','/workers/scripts/'+WORKER+'/deployments')
  check(d.deployments?.[0]?.versions?.length===1&&d.deployments[0].versions[0].version_id===ACTIVE&&Number(d.deployments[0].versions[0].percentage)===100,'Preview cambió desde el recibo QA1')
- const v=await req(token,'GET','/workers/workers/'+WORKER+'/versions/'+ACTIVE)
+ const v=await req(token,'GET','/workers/workers/'+WORKER+'/versions/'+ACTIVE+'?include=modules')
  const db=v.bindings?.find(b=>b.name==='DB')
  check(db?.type==='d1'&&(db.id||db.database_id)===DB&&v.bindings?.find(b=>b.name==='ENVIRONMENT')?.text==='preview','D1 Preview no acreditada')
  const out={result:'R4_QA2_READONLY',worker:ACTIVE,database:DB,checks:{}}
@@ -52,7 +52,7 @@ async function main(){
    const result=await req(token,'POST','/d1/database/'+DB+'/query',{sql})
    const x=result?.[0],meta=x?.meta
    check(result.length===1&&x.success===true&&meta?.changed_db===false&&Number(meta.rows_written||0)===0&&Number(meta.changes||0)===0,'respuesta D1 no acreditada como lectura')
-   out.checks[name]={status:'PASS',rows:name==='schema'?x.results.filter(r=>r.table_name==='analytics'||r.table_name==='profile_review_settings'):x.results}
+   out.checks[name]={status:'PASS',rows:name==='schema'?Object.fromEntries([...new Set(x.results.map(r=>r.table_name))].map(t=>[t,x.results.filter(r=>r.table_name===t).map(r=>r.column_name)])):x.results}
   }catch(e){if(String(e.message).includes('respuesta D1 no acreditada'))throw e;out.checks[name]={status:'BLOCKED',error:e.message}}
  }
  console.log(JSON.stringify(out,null,2))
