@@ -24,6 +24,7 @@ const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boole
   {id:'links',icon:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links',requiresIdentity:true},
   {id:'portfolio',icon:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio',requiresIdentity:true},
   {id:'services',icon:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true,requiresIdentity:true},
+  {id:'reviews',icon:'reviews',title:'Reseñas',detail:'Google, QR y estadísticas',group:'Contenido',path:'',ownerOnly:true,excludeDemo:true},
   {id:'bank',icon:'bank',title:'Cuentas bancarias',detail:'Gestiona tus cuentas o consulta la disponibilidad según tu plan',group:'Perfil',path:'/admin/free/bank-accounts',ownerOnly:true,requiresIdentity:true},
   {id:'design',icon:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design',requiresIdentity:true},
   {id:'account',icon:'account',title:'Mi cuenta',detail:'Configuración de cuenta y acceso',group:'Cuenta',path:'/admin/free/account'},
@@ -38,6 +39,8 @@ export default function KawvoFreeShellPreview(){
   const location=useLocation()
   const incomingReturn=getKawvoShellReturn(location.state)
   const [tab,setTab]=useState<Tab>('home')
+  const [reviewsProfileId,setReviewsProfileId]=useState('')
+  useEffect(()=>{if(tab!=='profile')setReviewsProfileId('')},[tab])
   const [profile,setProfile]=useState<Profile|null>(null)
   const [home,setHome]=useState<Home|null>(null)
   const [team,setTeam]=useState<Team|null>(null)
@@ -130,7 +133,7 @@ export default function KawvoFreeShellPreview(){
   const isRealAsset=(value:unknown)=>Boolean(value)&&!String(value).includes('/assets/free-starter/')
   const baseReady=delegatedDemo||Boolean(identityConfirmed&&name&&name.toLowerCase()!=='tu nombre o negocio'&&String(profile.templateData?.role||'').trim()&&profile.freeReadiness?.steps?.identifier&&isRealAsset(profile.avatar_url)&&isRealAsset(profile.hero_url))
   // This shell is a navigation aid, never the source of authorization. Exact existing route guards still apply.
-  const modules=allModules.filter(item=>!item.ownerOnly||!teamMember).filter(item=>!item.excludeDemo||!delegatedDemo).filter(item=>{
+  const modules=allModules.filter(item=>item.id!=='reviews'||(team.role==='none'&&!delegatedDemo&&Boolean(verifiedProfileId))).filter(item=>!item.ownerOnly||!teamMember).filter(item=>!item.excludeDemo||!delegatedDemo).filter(item=>{
     if(!teamMember)return true
     if(item.id==='identity')return ['name','role','photo'].some(key=>permissions.has(key))
     // Services previously lived inside the guarded visual editor; preserve both permissions for Team.
@@ -159,6 +162,7 @@ export default function KawvoFreeShellPreview(){
   const verifiedReturn=incomingReturn?.kawvoShellAccount===accountIdentity?incomingReturn:null
   const shellReturnState:KawvoShellReturn={kawvoShellReturn:true,kawvoShellTab:tab,kawvoShellAccount:accountIdentity}
   const go=(id:string,listState?:KawvoShellListState)=>{
+    if(id==='reviews'&&routeById.has(id)){setReviewsProfileId(verifiedProfileId);return}
     const path=routeById.get(id)
     if(path)navigate(path,{state:{...shellReturnState,kawvoShellList:listState,kawvoShellItem:id}})
   }
@@ -232,7 +236,8 @@ export default function KawvoFreeShellPreview(){
         </div>
         {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
-      {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/>{team.role==='none'&&!delegatedDemo&&verifiedProfileId&&<ReviewsTenantPanel key={verifiedProfileId} profileId={verifiedProfileId}/>}</>}
+      {tab==='profile'&&reviewsProfileId===verifiedProfileId&&Boolean(verifiedProfileId)&&team.role==='none'&&!delegatedDemo&&<><button type="button" className={button} onClick={()=>setReviewsProfileId('')}><KawvoAdminIcon name="back"/> Volver a Mi perfil</button><ReviewsTenantPanel key={verifiedProfileId} profileId={verifiedProfileId} showAccessStatus/></>}
+      {tab==='profile'&&reviewsProfileId!==verifiedProfileId&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>
       {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<><button type="button" onClick={openAgenda} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-3 text-left text-sm font-bold text-cyan-900"><KawvoActionContent name="agenda" title="Configurar agenda" detail="Horarios, disponibilidad y motivos"/></button><FreeAgendaSummary key={verifiedProfileId||accountIdentity} profileId={verifiedProfileId} onViewAll={()=>navigate('/admin/free/agenda?section=requests',{state:shellReturnState})}/></>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
       {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/><div className="md:hidden"><FreeShellSessionExit/></div></>}
       {tab==='more'&&<button type="button" onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Abrir panel anterior</button>}
