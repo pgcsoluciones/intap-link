@@ -39,7 +39,7 @@ CREATE TABLE users(id TEXT PRIMARY KEY,email TEXT);
 CREATE TABLE plans(id TEXT PRIMARY KEY,name TEXT);
 CREATE TABLE profiles(id TEXT PRIMARY KEY,user_id TEXT,slug TEXT UNIQUE,plan_id TEXT,is_active INTEGER,is_published INTEGER,template_id TEXT,template_data TEXT,FOREIGN KEY(user_id) REFERENCES users(id));
 CREATE TABLE plan_limits(plan_id TEXT PRIMARY KEY,max_links INTEGER,max_photos INTEGER,max_faqs INTEGER,max_products INTEGER,max_videos INTEGER,can_use_vcard INTEGER);
-CREATE TABLE modules(code TEXT PRIMARY KEY,name TEXT,effects_json TEXT);
+CREATE TABLE modules(code TEXT PRIMARY KEY,name TEXT,effects_json TEXT,is_active INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE profile_modules(profile_id TEXT,module_code TEXT,expires_at TEXT);
 CREATE TABLE profile_plan_overrides(profile_id TEXT,trial_plan_id TEXT,trial_ends_at TEXT);
 CREATE TABLE team_workspaces(id TEXT PRIMARY KEY,master_profile_id TEXT,status TEXT);
@@ -84,6 +84,10 @@ try{
  assert.equal((await call('PUT',ownerPath,{id:'p2',body:config})).status,403)
  assert.equal((await call('PUT',ownerPath,{body:config})).status,200)
  assert.deepEqual((await call('GET',publicPath)).data.data,{googleReviewUrl:url})
+ run("UPDATE modules SET is_active=0 WHERE code='reviews_google'")
+ assert.equal((await call('GET',ownerPath)).status,403)
+ assert.equal((await call('GET',publicPath)).data.data,null)
+ run("UPDATE modules SET is_active=1 WHERE code='reviews_google'")
  assert.equal(query("SELECT template_data FROM profiles WHERE id='p1'")[0].template_data,'{"unrelated":true}')
  assert.equal(query('SELECT * FROM profile_review_settings').length,1)
  const visitId=crypto.randomUUID()
