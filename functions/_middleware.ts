@@ -646,6 +646,7 @@ ${seoHeadHtml}
     image: string;
     canonicalUrl?: string;
     noIndex?: boolean;
+    siteName?: string;
   }): Promise<Response> => {
     const response = await fetchSpaShell();
     const contentType = response.headers.get('content-type') || '';
@@ -657,7 +658,7 @@ ${seoHeadHtml}
       description: metadata.description,
       url: metadata.canonicalUrl || url.toString(),
       image: metadata.image,
-      siteName: 'Kawvo Link',
+      siteName: metadata.siteName || 'Kawvo Link',
       imageType: imageTypeFor(metadata.image),
       ogType: 'website',
       twitterCard: 'summary_large_image',
@@ -708,6 +709,33 @@ ${seoHeadHtml}
     }));
   }
 
+  // Explicit social share only: retain the existing canonical medical SEO path.
+  const medicalShareMatch = url.pathname.match(/^\/m\/([a-z0-9][a-z0-9-]{1,59})\/?$/i);
+  if (medicalShareMatch && url.searchParams.get('share') === 'perfil' && isHtmlNavigation()) {
+    const slug = medicalShareMatch[1].toLowerCase();
+    try {
+      const response = await fetch(`${discoveryRuntime.apiBase}/medical-profiles/${encodeURIComponent(slug)}`, {
+        headers: { Accept: 'application/json' }, cf: { cacheTtl: 0, cacheEverything: false } as RequestInit,
+      });
+      if (response.ok) {
+        const payload = await response.json() as any;
+        const profile = payload?.ok === true ? payload.data : null;
+        if (profile && profile.slug === slug) {
+          const compact = (v: unknown, max: number) => typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0,max) : '';
+          const name = compact(profile.display_name, 90) || slug;
+          const specialty = compact(profile.specialty, 120);
+          return injectSimpleSocialCard({
+            title: specialty ? `${name} | ${specialty}` : `${name} | Kawmed`,
+            description: specialty ? `${specialty} · Perfil profesional en Kawmed` : `Perfil profesional de ${name} en Kawmed`,
+            image: normalizeSocialImage(profile.avatar_url) || normalizeSocialImage(profile.cover_url) || `${url.origin}/assets/og/kawvo-link-og.png`,
+            canonicalUrl: `${url.origin}/m/${encodeURIComponent(slug)}`,
+            siteName: 'Kawmed',
+          });
+        }
+      }
+    } catch { /* Preserve existing SPA behavior when public data is unavailable. */ }
+  }
+
   // Card social server-side para perfiles patrocinados.
   // Usa EXCLUSIVAMENTE datos e imágenes del propio perfil compartido.
   // Nunca usa logo, banner, nombre ni contenido del patrocinador para un beneficiario.
@@ -727,7 +755,7 @@ ${seoHeadHtml}
           ? `Te comparto el formulario de cotización / información de ${businessName}. Completa tu solicitud y envíala directamente por WhatsApp o correo.`
           : (whatWeDo || (specialization ? `${specialization} · Presentación digital de ${businessName}` : `Presentación digital de ${businessName}`));
         const hero = normalizeSocialImage(profile.hero_url);
-        const image = hero || `${url.origin}/assets/og/kawvo-link-og.png`;
+        const image = (!isQuoteLink && url.searchParams.get('share') === 'perfil' && profile.show_avatar !== false ? normalizeSocialImage(profile.avatar_url) : '') || hero || `${url.origin}/assets/og/kawvo-link-og.png`;
         return injectSimpleSocialCard({
           title: isQuoteLink ? `Solicita una cotización con ${businessName} | Kawvo Link` : `${businessName} | Kawvo Link`,
           description,
