@@ -50,9 +50,13 @@ INSERT INTO users VALUES ('owner','owner@example.test'),('other','other@example.
 INSERT INTO plans VALUES ('free','Free'),('pro','Pro'),('basic','Básico');
 INSERT INTO plan_limits VALUES ('free',3,10,0,0,0,1),('pro',10,10,10,10,10,1),('basic',5,5,3,3,1,1);
 INSERT INTO profiles VALUES ('p1','owner','test-profile','free',1,1,NULL,'{"unrelated":true}'),('p2','other','other-profile','free',1,1,NULL,'{}'),('11111111-1111-4111-8111-111111111111','operator','operator-profile','free',1,1,'intap_profile_v2','{}'),('p4','owner','paid-profile','pro',1,1,NULL,'{}'),('p5','owner','plus-profile','basic',1,1,'intap-v2','{}'),('22222222-2222-4222-8222-222222222222','operator','other-operator-profile','free',1,1,'intap_profile_v2','{}');
+ALTER TABLE profiles ADD COLUMN name TEXT;
+UPDATE profiles SET name='Negocio de prueba';
+CREATE TABLE profile_contact(profile_id TEXT PRIMARY KEY,address TEXT);
+INSERT INTO profile_contact VALUES('p1','Dirección de prueba');
 `
 try{
- execute([{script:fixture},{script:readFileSync(new URL('../docs/releases/kawvo-r4-proposed-migrations/review-settings.sql',import.meta.url),'utf8')}])
+ execute([{script:fixture},{script:readFileSync(new URL('../docs/releases/kawvo-r4-proposed-migrations/review-settings.sql',import.meta.url),'utf8')},{script:readFileSync(new URL('../docs/releases/kawvo-r4-proposed-migrations/google-search-usage.sql',import.meta.url),'utf8')}])
  const bundled=await build({entryPoints:['api/src/reviews/link-adapter.ts'],bundle:true,format:'esm',platform:'node',target:'node20',write:false})
  const {registerLinkReviewRoutes}=await import('data:text/javascript;base64,'+Buffer.from(bundled.outputFiles[0].text).toString('base64'))
  class Statement{
@@ -67,9 +71,9 @@ try{
  const router={get:(p,h)=>handlers.set('GET '+p,h),put:(p,h)=>handlers.set('PUT '+p,h),post:(p,h)=>handlers.set('POST '+p,h)}
  registerLinkReviewRoutes(router,router)
  const ownerPath='/profile/reviews/:profileId',publicPath='/api/v1/public/profiles/:slug/reviews'
- const call=(method,path,{id='p1',slug='test-profile',user='owner',body,headers={},days,delegated=false}={})=>{
+ const call=(method,path,{id='p1',slug='test-profile',user='owner',body,headers={},days,delegated=false,env={}}={})=>{
   const h=handlers.get(method+' '+path);assert.ok(h)
-  return h({env:{DB:db,ENVIRONMENT:'preview'},get:k=>k==='userId'?user:k==='freeDemoDelegated'?delegated:undefined,req:{param:k=>k==='profileId'?id:slug,query:k=>k==='days'?days:undefined,header:k=>headers[k],json:async()=>body},header:()=>{},json:(data,status=200)=>({status,data})})
+  return h({env:{DB:db,ENVIRONMENT:'preview',...env},get:k=>k==='userId'?user:k==='freeDemoDelegated'?delegated:undefined,req:{param:k=>k==='profileId'?id:slug,query:k=>k==='days'?days:undefined,header:k=>headers[k],raw:body===undefined?new Request('https://app.preview.intaprd.com/test'):new Request('https://app.preview.intaprd.com/test',{method:'POST',body:JSON.stringify(body)}),json:async()=>body},header:()=>{},json:(data,status=200)=>({status,data})})
  }
  const url='https://g.page/r/Cabc123/review'
  const config={enabled:true,googleReviewUrl:url}
@@ -90,6 +94,60 @@ try{
  assert.equal((await call('GET',ownerPath,{id:'p4'})).status,403)
  assert.equal((await call('GET',ownerPath,{id:'p5'})).status,200)
  assert.equal((await call('GET',publicPath,{slug:'plus-profile'})).data.data,null)
+ const searchPath=ownerPath+'/google-search'
+ const searchInput={businessName:'Negocio de prueba',city:'Santo Domingo',countryCode:'DO'}
+ const browserHeaders={Origin:'https://app.preview.intaprd.com','Content-Type':'application/json','CF-Connecting-IP':'192.0.2.20'}
+ const searchEnv={GOOGLE_REVIEWS_SEARCH_ENABLED:'1',GOOGLE_PLACES_API_KEY:'test-only-backend-key-123456789',GOOGLE_MAPS_EMBED_KEY:'test-only-embed-key-123456789'}
+ const disabled=(await call('GET',ownerPath)).data.data.googleSearch
+ assert.deepEqual(disabled,{available:false})
+ const cap=(await call('GET',ownerPath,{env:searchEnv})).data.data.googleSearch
+ assert.deepEqual(cap,{available:true,embedKey:searchEnv.GOOGLE_MAPS_EMBED_KEY,businessName:'Negocio de prueba',address:'Dirección de prueba'})
+ assert.ok(!JSON.stringify(cap).includes(searchEnv.GOOGLE_PLACES_API_KEY))
+ const realFetch=globalThis.fetch
+ let googleCalls=0
+ globalThis.fetch=async(url,init)=>{
+  googleCalls++
+  assert.equal(url,'https://places.googleapis.com/v1/places:searchText')
+  assert.equal(init.headers['X-Goog-FieldMask'],'places.id')
+  return new Response(JSON.stringify({places:[{id:'place_1'},{id:'place_2'}]}))
+ }
+ try{
+  const callSearch=(options={})=>call('POST',searchPath,{body:searchInput,headers:browserHeaders,env:searchEnv,...options})
+  assert.equal((await callSearch({env:{}})).status,503)
+  assert.equal((await callSearch({headers:{...browserHeaders,Origin:'https://evil.test'}})).status,403)
+  assert.equal((await callSearch({id:'p2'})).status,403)
+  assert.equal((await callSearch({id:'p4'})).status,403)
+  assert.equal((await callSearch({delegated:true})).status,403)
+  assert.equal((await callSearch({body:{...searchInput,fieldMask:'*'}})).status,400)
+  assert.equal((await callSearch({id:otherId,user:'operator',headers:{...browserHeaders,...headers}})).status,403)
+  assert.equal((await callSearch({id:activeId,user:'operator',headers:{...browserHeaders,...headers,'X-Intap-Account-Tab':'b'.repeat(32)}})).status,403)
+  assert.equal(googleCalls,0)
+  run("INSERT INTO team_workspaces VALUES ('search-team','p1','active')")
+  assert.equal((await callSearch()).status,403)
+  run("DELETE FROM team_workspaces WHERE id='search-team'")
+  assert.equal(googleCalls,0)
+  assert.deepEqual((await callSearch({id:activeId,user:'operator',headers:{...browserHeaders,...headers}})).data,{ok:true,results:[{placeId:'place_1'},{placeId:'place_2'}]})
+  for(let i=0;i<5;i++)assert.equal((await callSearch()).status,200)
+  assert.equal((await callSearch({id:'p5'})).status,429)
+  assert.equal(googleCalls,6)
+  assert.equal(query('SELECT count(*) AS n FROM profile_review_settings')[0].n,0)
+  assert.equal(query("SELECT count(*) AS n FROM review_google_search_usage")[0].n,6)
+  assert.ok(query('SELECT ip_hash FROM review_google_search_usage').every(r=>/^[a-f0-9]{64}$/.test(r.ip_hash)))
+  const generated='https://search.google.com/local/writereview?placeid=place_2'
+  assert.equal((await call('PUT',ownerPath,{body:{enabled:true,googleReviewUrl:generated}})).status,200)
+  assert.equal((await call('GET',ownerPath)).data.data.googleReviewUrl,generated)
+  assert.equal((await call('GET',publicPath)).data.data.googleReviewUrl,generated)
+  assert.equal((await call('PUT',ownerPath,{body:{enabled:false,googleReviewUrl:generated}})).status,200)
+  assert.equal((await call('GET',ownerPath)).data.data.googleReviewUrl,generated)
+  assert.equal((await call('GET',publicPath)).data.data,null)
+  run("DELETE FROM profile_review_settings WHERE profile_id='p1'")
+  // Missing quota table must stop before any provider call; manual unaffected.
+  run("DROP TABLE review_google_search_usage")
+  assert.equal((await callSearch({user:'other',id:'p2'})).status,503)
+  assert.equal(googleCalls,6)
+  assert.equal((await call('GET',ownerPath)).status,200)
+ }finally{globalThis.fetch=realFetch}
+
  assert.equal((await call('PUT',ownerPath,{delegated:true,body:config})).status,403)
  assert.equal((await call('PUT',ownerPath,{headers:{'X-KawMed-Delegate':'guest'},body:config})).status,403)
  assert.equal((await call('PUT',ownerPath,{body:{enabled:true,googleReviewUrl:'https://evil.test/'}})).status,400)
