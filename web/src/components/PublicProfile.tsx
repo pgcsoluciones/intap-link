@@ -24,6 +24,7 @@ const IntapProfileV2 = lazy(
     ),
 )
 import IntapLinkGratisProfile from './free-profile/IntapLinkGratisProfile'
+import LinkReviews from './reviews/LinkReviews'
 import { adaptPublicProfileApiResponse } from './free-profile/IntapLinkGratis.adapter'
 import { renderRegisteredProfileTemplate } from './profile-templates/registry'
 import SponsoredQuoteMediaViewer from './sponsored/SponsoredQuoteMediaViewer'
@@ -2134,6 +2135,7 @@ function StandardPublicProfile() {
         profile={freeProfile.profile}
         layout={freeProfile.layout}
         colors={freeProfile.colors}
+        beforeShareContent={<LinkReviews key={data.profileId} slug={data.slug} accent={freeProfile.colors.button} preview={isPreview}/>}
       />
     )
   }
@@ -2151,6 +2153,7 @@ function StandardPublicProfile() {
     >
       <IntapProfileV2
         profile={publicProfileV2}
+        beforeFooterContent={<LinkReviews key={data.profileId} slug={data.slug} accent={data.accentColor} preview={isPreview}/>}
       />
     </Suspense>
   )
