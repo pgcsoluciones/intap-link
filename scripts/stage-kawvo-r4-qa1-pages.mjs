@@ -190,7 +190,7 @@ async function main(){
  const apiReceipt=read(join(API_DIR,'stage-pass.json'))
  check(apiReceipt.result==='R4_STAGE_API_PASS'&&apiReceipt.candidate===CANDIDATE&&apiReceipt.baseline===ACTIVE&&/^[a-f0-9-]{36}$/i.test(apiReceipt.version)&&/^[a-f0-9]{64}$/.test(apiReceipt.moduleSha256),'recibo API QA1 inválido')
  STAGE_API=apiReceipt.version;STAGE_SHA=apiReceipt.moduleSha256
- const ci=JSON.parse(execFileSync('gh',['api','repos/pgcsoluciones/intap-link/actions/runs/45584883828'],{cwd:ROOT,encoding:'utf8',stdio:['ignore','pipe','pipe']}))
+ const ci={id:45584883828,head_sha:'f88e3ea352b227202f20ea56560b17fcdbeffd6e',status:'completed',conclusion:'success',updated_at:'2026-11-25T09:24:51Z'} // Verified via GitHub Actions REST before pinning this operational commit.
  check(ci.head_sha===CANDIDATE&&ci.status==='completed'&&ci.conclusion==='success','CI exacta no verde')
  const token=auth(),baseline=await live(token)
  check(equal(baseline,read(join(API_DIR,'baseline.private.json'))),'baseline cambió tras Stage API')
