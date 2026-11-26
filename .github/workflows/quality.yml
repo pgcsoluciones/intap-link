@@ -17,6 +17,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm audit --omit=dev --audit-level=critical
+      - run: node scripts/test-kawvo-r4-reviews-core.mjs
+      - run: node scripts/test-kawvo-r4-google-search.mjs
+      - run: node scripts/test-kawvo-r4-reviews-integration.mjs
+      - run: node scripts/test-kawvo-r4-sponsored-reviews.mjs
+      - run: node scripts/test-kawvo-r4-review-placement.mjs
+      - run: node scripts/test-sponsored-g4-shell-gate.mjs
+      - run: bash -n scripts/apply-kawvo-r4-preview-schema.sh
       - run: node scripts/test-kawmed-isolation-contract.mjs
       - run: node scripts/test-kawmed-web-preview-route-contract.mjs
       - run: node scripts/test-kawmed-code-accordion-contract.mjs

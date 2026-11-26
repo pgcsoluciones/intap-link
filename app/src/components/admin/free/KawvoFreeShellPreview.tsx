@@ -1,3 +1,4 @@
+import ReviewsTenantPanel from '../shared/ReviewsTenantPanel'
 import KawvoAdminIcon, { KawvoActionContent, KawvoIconTile, type KawvoAdminIconName } from '../shared/KawvoAdminIcon'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
@@ -23,6 +24,7 @@ const allModules:(KawvoListItem&{path:string;permission?:string;ownerOnly?:boole
   {id:'links',icon:'links',title:'Enlaces',detail:'Tus enlaces importantes',group:'Contenido',path:'/admin/free/links',permission:'links',requiresIdentity:true},
   {id:'portfolio',icon:'portfolio',title:'Portafolio',detail:'Trabajos y fotografías',group:'Contenido',path:'/admin/free/portfolio',permission:'portfolio',requiresIdentity:true},
   {id:'services',icon:'services',title:'Servicios',detail:'Servicios, descripciones e imágenes',group:'Contenido',path:'/admin/free/services',permission:'services',excludeDemo:true,requiresIdentity:true},
+  {id:'reviews',icon:'reviews',title:'Reseñas',detail:'Google, QR y estadísticas',group:'Contenido',path:'',ownerOnly:true,excludeDemo:true},
   {id:'bank',icon:'bank',title:'Cuentas bancarias',detail:'Gestiona tus cuentas o consulta la disponibilidad según tu plan',group:'Perfil',path:'/admin/free/bank-accounts',ownerOnly:true,requiresIdentity:true},
   {id:'design',icon:'design',title:'Diseño',detail:'Plantilla, portada y colores',group:'Apariencia',path:'/admin/free/editor',permission:'design',requiresIdentity:true},
   {id:'account',icon:'account',title:'Mi cuenta',detail:'Configuración de cuenta y acceso',group:'Cuenta',path:'/admin/free/account'},
@@ -37,6 +39,8 @@ export default function KawvoFreeShellPreview(){
   const location=useLocation()
   const incomingReturn=getKawvoShellReturn(location.state)
   const [tab,setTab]=useState<Tab>('home')
+  const [reviewsProfileId,setReviewsProfileId]=useState('')
+  useEffect(()=>{if(tab!=='profile')setReviewsProfileId('')},[tab])
   const [profile,setProfile]=useState<Profile|null>(null)
   const [home,setHome]=useState<Home|null>(null)
   const [team,setTeam]=useState<Team|null>(null)
@@ -78,6 +82,17 @@ export default function KawvoFreeShellPreview(){
   // Reuse the original SuperAdmin authorization check. Failure hides the
   // shortcut without delaying the ordinary Free panel. A demo is never probed.
   const verifiedProfileId=String(profile?.profile_id||'')
+  const [reviewsAllowedProfileId,setReviewsAllowedProfileId]=useState('')
+  useEffect(()=>{
+    setReviewsAllowedProfileId('')
+    if(!enabled||!verifiedProfileId||isFreeDemoDelegationActive())return
+    let active=true
+    // Team context is user-scoped; only the review endpoint authorizes this exact profile.
+    apiGet('/me/profile/reviews/'+encodeURIComponent(verifiedProfileId)).then(result=>{
+      if(active&&result?.ok===true)setReviewsAllowedProfileId(verifiedProfileId)
+    }).catch(()=>undefined)
+    return()=>{active=false}
+  },[enabled,verifiedProfileId])
   useEffect(()=>{
     setSuperAdminProfileId('')
     if(!enabled||!verifiedProfileId||isFreeDemoDelegationActive())return
@@ -118,6 +133,8 @@ export default function KawvoFreeShellPreview(){
   if(error||!profile||!team)return <main className="min-h-screen bg-slate-50 p-5"><div role="alert" className="mx-auto max-w-md rounded-2xl bg-white p-5"><h1 className="text-xl font-bold">No se pudo abrir esta vista</h1><p className="mt-3 text-sm">{error||'No se verificaron los permisos de la cuenta.'}</p><button onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="mt-4 min-h-11 rounded-xl bg-slate-900 px-4 text-sm text-white">Volver al panel actual</button></div></main>
   const teamMember=team.role==='member'
   const delegatedDemo=isFreeDemoDelegationActive()
+  const reviewsAvailable=Boolean(verifiedProfileId)&&reviewsAllowedProfileId===verifiedProfileId&&!delegatedDemo
+  const reviewsOpen=reviewsAvailable&&reviewsProfileId===verifiedProfileId
   const hasSuperAdminAccess=!delegatedDemo&&Boolean(verifiedProfileId)&&superAdminProfileId===verifiedProfileId
   const accountName=String(profile.name||'').trim()||'Mi presentación Free'
   const accountSlug=String(profile.slug||'').trim()
@@ -129,8 +146,8 @@ export default function KawvoFreeShellPreview(){
   const isRealAsset=(value:unknown)=>Boolean(value)&&!String(value).includes('/assets/free-starter/')
   const baseReady=delegatedDemo||Boolean(identityConfirmed&&name&&name.toLowerCase()!=='tu nombre o negocio'&&String(profile.templateData?.role||'').trim()&&profile.freeReadiness?.steps?.identifier&&isRealAsset(profile.avatar_url)&&isRealAsset(profile.hero_url))
   // This shell is a navigation aid, never the source of authorization. Exact existing route guards still apply.
-  const modules=allModules.filter(item=>!item.ownerOnly||!teamMember).filter(item=>!item.excludeDemo||!delegatedDemo).filter(item=>{
-    if(!teamMember)return true
+  const modules=allModules.filter(item=>item.id!=='reviews'||reviewsAvailable).filter(item=>item.id==='reviews'||!item.ownerOnly||!teamMember).filter(item=>!item.excludeDemo||!delegatedDemo).filter(item=>{
+    if(item.id==='reviews'||!teamMember)return true
     if(item.id==='identity')return ['name','role','photo'].some(key=>permissions.has(key))
     // Services previously lived inside the guarded visual editor; preserve both permissions for Team.
     if(item.id==='services'&&!permissions.has('design'))return false
@@ -158,6 +175,7 @@ export default function KawvoFreeShellPreview(){
   const verifiedReturn=incomingReturn?.kawvoShellAccount===accountIdentity?incomingReturn:null
   const shellReturnState:KawvoShellReturn={kawvoShellReturn:true,kawvoShellTab:tab,kawvoShellAccount:accountIdentity}
   const go=(id:string,listState?:KawvoShellListState)=>{
+    if(id==='reviews'&&routeById.has(id)){setReviewsProfileId(verifiedProfileId);return}
     const path=routeById.get(id)
     if(path)navigate(path,{state:{...shellReturnState,kawvoShellList:listState,kawvoShellItem:id}})
   }
@@ -223,7 +241,8 @@ export default function KawvoFreeShellPreview(){
           />}</div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button onClick={()=>setTab('profile')} className={button}><KawvoActionContent name="edit" title="Editar perfil" detail="Información y contenido"/></button>
+          <button onClick={()=>{setReviewsProfileId('');setTab('profile')}} className={button}><KawvoActionContent name="edit" title="Editar perfil" detail="Información y contenido"/></button>
+          {reviewsAvailable&&<button type="button" onClick={()=>{setReviewsProfileId(verifiedProfileId);setTab('profile')}} className={button}><KawvoActionContent name="reviews" title="Reseñas" detail="Google, QR y estadísticas"/></button>}
           {previewHref?<a href={previewHref} target="_blank" rel="noopener noreferrer" className={button}><KawvoActionContent name="preview" title="Vista previa" detail="Abrir la vista previa de tu presentación"/></a>:<button type="button" disabled className={button+" opacity-50"}><KawvoActionContent name="preview" title="Vista previa" detail="Completa tu usuario primero"/></button>}
           {agendaRoute&&<button type="button" onClick={()=>setTab('agenda')} className={button}><KawvoActionContent name="agenda" title="Agenda" detail="Solicitudes y disponibilidad"/></button>}
           {routeById.has('account')&&<button type="button" onClick={()=>go('account')} className={button}><KawvoActionContent name="account" title="Mi cuenta" detail="Configuración"/></button>}
@@ -231,7 +250,8 @@ export default function KawvoFreeShellPreview(){
         </div>
         {shareMessage&&<p role="status" aria-live="polite" className="rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-950">{shareMessage}</p>}
       </>}
-      {tab==='profile'&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
+      {tab==='profile'&&reviewsOpen&&<><button type="button" className={button} onClick={()=>setReviewsProfileId('')}><KawvoAdminIcon name="back"/> Volver a Mi perfil</button><ReviewsTenantPanel key={verifiedProfileId} profileId={verifiedProfileId} showAccessStatus/></>}
+      {tab==='profile'&&!reviewsOpen&&<><h1 className="text-2xl font-black">Mi perfil</h1><p className="text-sm text-slate-600">Encuentra un módulo sin recorrer toda la pantalla.</p><KawvoPagedList items={modules.filter(item=>!['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} paginated={false} initialState={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='profile'?verifiedReturn.kawvoShellItem:undefined} title="Secciones del perfil"/></>}
       {tab==='agenda'&&<><h1 className="text-2xl font-black">Agenda</h1>{agendaRoute?<><button type="button" onClick={openAgenda} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-white px-4 py-3 text-left text-sm font-bold text-cyan-900"><KawvoActionContent name="agenda" title="Configurar agenda" detail="Horarios, disponibilidad y motivos"/></button><FreeAgendaSummary key={verifiedProfileId||accountIdentity} profileId={verifiedProfileId} onViewAll={()=>navigate('/admin/free/agenda?section=requests',{state:shellReturnState})}/></>:<p className="rounded-2xl border bg-white p-4 text-sm text-slate-600">La Agenda no está habilitada para esta cuenta.</p>}</>}
       {tab==='more'&&<><h1 className="text-2xl font-black">Más opciones</h1><KawvoPagedList items={modules.filter(item=>['Cuenta','Herramientas'].includes(item.group||''))} onOpen={go} pageSize={5} initialState={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellList:undefined} focusItemId={verifiedReturn?.kawvoShellTab==='more'?verifiedReturn.kawvoShellItem:undefined} title="Cuenta y herramientas"/><div className="md:hidden"><FreeShellSessionExit/></div></>}
       {tab==='more'&&<button type="button" onClick={()=>navigate(KAWVO_FREE_LEGACY_ROUTE)} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600">Abrir panel anterior</button>}

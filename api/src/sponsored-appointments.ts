@@ -92,8 +92,7 @@ async function appointmentManageUrl(c:any,profile:any){
   const profileId=String((profile as any).id||'')
   const userId=String((profile as any).user_id||'')
   if(String((profile as any).profile_role||'')==='sponsor_owner')return'/admin/sponsored/agenda?scope=master'
-  const count=await c.env.DB.prepare("SELECT COUNT(*) AS n FROM sponsored_profiles WHERE user_id=? AND COALESCE(profile_role,'beneficiary')='beneficiary'").bind(userId).first().catch(()=>null)
-  return Number((count as any)?.n||0)>1?'/admin/sponsored/agenda?profile_id='+encodeURIComponent(profileId):'/admin/sponsored/agenda'
+  return await sponsoredMultiProfileAccess(c,userId)?'/admin/sponsored/agenda?profile_id='+encodeURIComponent(profileId):'/admin/sponsored/agenda'
 }
 
 async function addAppointmentNotification(c:any,request:any,profile:any){
@@ -228,7 +227,8 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
   const subjectId=String((profile as any).id||'')
   const role=String((profile as any).profile_role||'beneficiary')
   const isMaster=role==='sponsor_owner'
-  if(await sponsoredMultiProfileAccess(c,userId)){
+  const multi=await sponsoredMultiProfileAccess(c,userId)
+  if(multi){
     // Distinguish missing selection, wrong account category and wrong account ID
     // without exposing IDs, tokens or private appointment data. Never auto-select.
     const active=await readIntapSelection(c)
@@ -238,6 +238,11 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
     if(active.kind!==requiredKind)return c.json({ok:false,error:ownerSelectionError,code:'owner_account_category_mismatch'},403)
     const requiredId=isMaster?String((profile as any).sponsor_id||''):subjectId
     if(active.id!==requiredId)return c.json({ok:false,error:ownerSelectionError,code:'owner_account_identity_mismatch'},403)
+  }else if(!isMaster){
+    // Ordinary accounts have one implicit editable context. Never advertise an
+    // editor for another owned presentation if the existing resolver selects a different one.
+    const owned=await resolveOwnedSponsoredProfile(c,userId,'beneficiary')
+    if(String((owned as any)?.id||'')!==subjectId)return c.json({ok:false,error:'Este perfil no corresponde a tu cuenta activa.'},403)
   }
   const settings=await getAppointmentSettings(c.env.DB,'sponsored',subjectId)
   const rows=await c.env.DB.prepare("SELECT id,customer_name,customer_phone,customer_email,appointment_date,start_time,end_time,timezone,reason_label,details,status,created_at FROM appointment_requests WHERE subject_type='sponsored' AND subject_id=? AND status='pending' ORDER BY created_at DESC LIMIT 12").bind(subjectId).all()
@@ -251,8 +256,8 @@ app.get('/api/v1/me/sponsored-profile/appointments/public-context',requireUser,a
     console.error('[sponsored-owner-commercial-links] unable to resolve optional links')
     return {...EMPTY_SPONSORED_COMMERCIAL_LINKS}
   })
-  return c.json({ok:true,data:{is_owner:true,allow_direct_actions:!(await sponsoredMultiProfileAccess(c,userId)),enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending,
-    manage_url:manageUrl,settings_url:isMaster?'/admin/sponsor':'/admin/sponsored?profile_id='+encodeURIComponent(subjectId),
+  return c.json({ok:true,data:{is_owner:true,allow_direct_actions:!multi,enabled:settings.enabled,pending_count:Number((count as any)?.n||0),pending,
+    manage_url:manageUrl,settings_url:isMaster?'/admin/sponsor':multi?'/admin/sponsored?profile_id='+encodeURIComponent(subjectId):'/admin/sponsored',
     action_scope:isMaster?'master':null,...commercial}})
 })
 

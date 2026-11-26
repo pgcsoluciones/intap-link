@@ -14,8 +14,7 @@ export function shouldShowSponsoredShell(context: GateContext): boolean {
   const params = new URLSearchParams(context.search)
   const requestedProfile = (params.get('profile_id') || '').trim()
   const actualProfile = String(context.profileId || '').trim()
-  return !params.get('scope') && !context.isMaster && !context.legacyPanel && isKawvoReleaseAppHost(context.mode,context.hostname)
-    && params.get('kawvo_sponsored_shell') === '1'
+  return !context.isMaster && !context.legacyPanel && isSponsoredShellRequest(context.mode,context.hostname,context.search)
     && Boolean(actualProfile)
     && (!requestedProfile || requestedProfile === actualProfile)
 }
@@ -36,23 +35,28 @@ export function sponsoredAgendaReturn(search: string, mode: string, hostname: st
   if (master && !profile) return '/admin/sponsor'
   const params = new URLSearchParams()
   if (profile) params.set('profile_id', profile)
-  if (!master && isKawvoReleaseAppHost(mode,hostname) && source.get('kawvo_sponsored_shell') === '1') {
-    params.set('kawvo_sponsored_shell', '1')
+  if (!master && isKawvoReleaseAppHost(mode,hostname)) {
+    if(source.get('sp_legacy')==='1'||source.get('kawvo_sponsored_shell')==='0')params.set('kawvo_sponsored_shell','0')
+    else if(isSponsoredShellRequest(mode,hostname,search))params.set('kawvo_sponsored_shell','1')
   }
   const query = params.toString()
   return `/admin/sponsored${query ? `?${query}` : ''}`
 }
 
 export type SponsoredTab = 'home' | 'profile' | 'agenda' | 'more'
-export type SponsoredModule = 'identity' | 'contact' | 'location' | 'schedule' | 'gallery' | 'appearance' | 'actions' | 'banks'
+export type SponsoredModule = 'identity' | 'contact' | 'location' | 'schedule' | 'gallery' | 'appearance' | 'actions' | 'banks' | 'reviews'
 export type SponsoredAgendaSection = 'requests' | 'confirmed' | 'availability' | 'blocks' | 'settings'
 export type SponsoredSurface = {tab: SponsoredTab; module?: SponsoredModule; section?: SponsoredAgendaSection; request?: string; query: string}
 const tabs = ['home','profile','agenda','more'] as const
-const modules = ['identity','contact','location','schedule','gallery','appearance','actions','banks'] as const
+const modules = ['identity','contact','location','schedule','gallery','appearance','actions','banks','reviews'] as const
 const sections = ['requests','confirmed','availability','blocks','settings'] as const
 export function isSponsoredShellRequest(mode: string, hostname: string, search: string): boolean {
   const p = new URLSearchParams(search)
-  return isKawvoReleaseAppHost(mode,hostname) && p.get('kawvo_sponsored_shell') === '1' && !p.get('scope')
+  if(!isKawvoReleaseAppHost(mode,hostname)||p.has('scope')||p.get('sp_legacy')==='1')return false
+  const flags=p.getAll('kawvo_sponsored_shell')
+  if(flags.length)return flags.length===1&&flags[0]==='1'
+  // Ordinary beneficiaries enter the approved shell by default in official Preview only.
+  return mode==='preview'&&hostname.toLowerCase()==='app.preview.intaprd.com'
 }
 export function sponsoredSurface(search: string): SponsoredSurface {
   const p = new URLSearchParams(search), tab = p.get('sp_tab') as SponsoredTab
@@ -102,6 +106,7 @@ export function sponsoredEntryUrl(target: string, search: string, mode: string, 
   try {
     const url = new URL(target,'https://'+hostname)
     if(url.origin!=='https://'+hostname||url.username||url.password||!/^\/admin\/sponsored(?:\/|$)/.test(url.pathname))return target
+    if(url.searchParams.has('scope')||url.searchParams.get('sp_legacy')==='1'||url.searchParams.get('kawvo_sponsored_shell')==='0')return target
     url.searchParams.set('kawvo_sponsored_shell','1')
     return url.pathname + url.search
   } catch { return target }
