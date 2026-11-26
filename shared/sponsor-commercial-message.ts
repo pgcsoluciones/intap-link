@@ -1,6 +1,6 @@
 // Private commercial contact only. Never reuse the public banner template.
 export const SPONSOR_MESSAGE_LIMIT=400
-export const DEFAULT_SPONSOR_MESSAGE='Hola {vendedor}, soy {patrocinado}. Te contacto desde mi panel Kawlink y necesito información de {patrocinador}.'
+export const DEFAULT_SPONSOR_MESSAGE='Hola {vendedor}, soy {patrocinado}. Me gustaría recibir información de {patrocinador}.'
 export const SPONSOR_MESSAGE_VARIABLES=['vendedor','visitador','patrocinado','negocio','patrocinador'] as const
 export function validSponsorMessage(value:unknown):value is string{
  if(typeof value!=='string'||!value.trim()||value.length>SPONSOR_MESSAGE_LIMIT)return false

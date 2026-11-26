@@ -72,7 +72,7 @@ try{
  const url=async s=>new URL((await resolveSponsoredCommercialLinks(db,s)).contact_url)
  const initial=await url(subject)
  assert.equal(initial.pathname,'/18095550100')
- assert.match(initial.searchParams.get('text'),/Carlos Pérez.*Mi Negocio.*Ferretería A/)
+ assert.equal(initial.searchParams.get('text'),'Hola Carlos Pérez, soy Mi Negocio. Me gustaría recibir información de Ferretería A.')
  assert.equal((await request('GET',null)).status,403)
  const template='Hola {vendedor}, soy {negocio}. ¿Me ayudas con {patrocinador}?'
  assert.equal((await request('PATCH',null,{sponsor_id:'a',message_template:template})).status,403)
