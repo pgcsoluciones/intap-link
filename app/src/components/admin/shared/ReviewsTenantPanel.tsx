@@ -6,7 +6,7 @@ import GoogleReviewLinkEditor, {type GoogleSearchCapability} from './GoogleRevie
 
 type Settings={googleSearch?:GoogleSearchCapability;enabled:boolean;googleReviewUrl:string;published:boolean;publicUrl:string;stats:{days:number;views:number;qr:number;clicks:number;clickRate:number|null}}
 /** Reusable UI; endpoint and identity are supplied by an authorized product adapter. */
-export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false,homeShortcut=false,scopeQuery='',onPendingChange}:{profileId:string;endpoint?:string;showAccessStatus?:boolean;homeShortcut?:boolean;scopeQuery?:string;onPendingChange?:(dirty:boolean,busy:boolean)=>void}){
+export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false,homeShortcut=false,scopeQuery='',publication,onPendingChange}:{profileId:string;endpoint?:string;showAccessStatus?:boolean;homeShortcut?:boolean;scopeQuery?:string;publication?:{published:boolean;publicUrl:string};onPendingChange?:(dirty:boolean,busy:boolean)=>void}){
   const path=endpoint+'/'+encodeURIComponent(profileId)
   const requestPath=path+(scopeQuery?'?'+scopeQuery:'')
   const [data,setData]=useState<Settings|null>(null)
@@ -37,9 +37,10 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   if(loadError)return <p role="status" className="text-sm text-slate-600">Reseñas no está disponible temporalmente.</p>
   if(!data)return showAccessStatus?<p role="status" className="rounded-xl border bg-white p-4 text-sm text-slate-600">{unavailable?'Reseñas no está disponible para esta cuenta.':'Cargando configuración de reseñas…'}</p>:null
   if(homeShortcut&&!expanded)return <button type="button" onClick={()=>setExpanded(true)} className="flex min-h-16 w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-800"><KawvoActionContent name="reviews" title="Reseñas" detail="Google, QR y estadísticas"/></button>
-  const shareUrl=data.publicUrl+'?share=reviews#resenas'
-  const qrUrl=data.publicUrl+'?src=reviews-qr#resenas'
-  const canShare=data.enabled&&data.published&&Boolean(data.publicUrl&&data.googleReviewUrl)
+  const shareUrl=publication?publication.publicUrl+'?share=reviews#resenas':data.publicUrl+'?share=reviews#resenas'
+  const qrUrl=publication?publication.publicUrl+'?src=reviews-qr#resenas':data.publicUrl+'?src=reviews-qr#resenas'
+  const published=publication?.published??data.published
+  const canShare=data.enabled&&published&&Boolean((publication?.publicUrl??data.publicUrl)&&data.googleReviewUrl)
   const effectiveUrl=searchDraft===null?url:searchDraft
   const canSave=searchDraft===null||Boolean(searchDraft)
   const save=async()=>{
@@ -73,7 +74,7 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
       <button disabled={busy||!canSave} className="min-h-11 w-full rounded-xl bg-slate-900 px-3 font-bold text-white disabled:opacity-50">{busy?'Guardando…':'Guardar'}</button>
     </form>
     {canShare&&<div className="mt-4 space-y-2"><label className="block text-sm">Enlace de reseñas<input readOnly value={shareUrl} className="mt-1 w-full min-w-0 rounded-xl border p-3 text-sm"/></label><div className="grid grid-cols-1 gap-2 sm:grid-cols-3"><button type="button" className="min-h-11 rounded-xl border p-2 text-sm font-bold" onClick={()=>void copy()}>Copiar</button><a href={'https://wa.me/?text='+encodeURIComponent('Tu opinión es de suma importancia para nosotros.\n'+shareUrl)} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center justify-center rounded-xl border p-2 text-sm font-bold">Compartir</a><button type="button" className="min-h-11 rounded-xl border p-2 text-sm font-bold" onClick={()=>void download()}>Descargar QR</button></div></div>}
-    {!data.published&&<p className="mt-3 text-xs text-slate-600">El enlace y QR estarán disponibles al publicar tu presentación.</p>}
+    {!published&&<p className="mt-3 text-xs text-slate-600">El enlace y QR estarán disponibles al publicar tu presentación.</p>}
     {message&&<p role="status" className="mt-3 break-words text-sm text-slate-700">{message}</p>}
     <div className="mt-5 border-t pt-4"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">Estadísticas de reseñas</h3><label className="text-sm">Período <select value={days} disabled={busy||enabled!==data.enabled||effectiveUrl!==data.googleReviewUrl||searchDraft!==null} onChange={e=>setDays(Number(e.target.value))} className="min-h-11 rounded-lg border p-2"><option value={7}>7 días</option><option value={30}>30 días</option><option value={90}>90 días</option></select></label></div>
       <div className="mt-3 grid grid-cols-2 gap-2">{[['Visitas',data.stats.views],['Accesos atribuidos al QR',data.stats.qr],['Clics en Google',data.stats.clicks],['Tasa de clics',data.stats.clickRate===null?'—':data.stats.clickRate+'%']].map(([label,value])=><div key={label} className="min-w-0 rounded-xl bg-slate-50 p-3"><p className="text-xs text-slate-600">{label}</p><strong className="text-xl">{value}</strong></div>)}</div>

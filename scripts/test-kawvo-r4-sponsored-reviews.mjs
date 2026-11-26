@@ -108,6 +108,38 @@ try{
  assert.equal((await call('PUT',privatePath,{id:other,user:'operator',headers,body:a})).status,403)
  assert.equal((await call('GET',privatePath,{id,user:'operator',headers:{...headers,'X-Intap-Account-Tab':'b'.repeat(32)}})).status,403)
  assert.equal((await call('POST',privatePath+'/google-search',{id,user:'operator',headers:{...headers,Origin:'https://evil.test'},body:{}})).status,403)
+ // Test a valid sponsored search and share the global user/IP budget with Link.
+ const searchEnv={GOOGLE_REVIEWS_SEARCH_ENABLED:'1',GOOGLE_PLACES_API_KEY:'places-test-secret-12345',GOOGLE_MAPS_EMBED_KEY:'embed-test-public-12345'}
+ const browserHeaders={Origin:'https://app.preview.intaprd.com','Content-Type':'application/json','CF-Connecting-IP':'192.0.2.1'}
+ const savedFetch=globalThis.fetch
+ let googleCalls=0
+ try{
+  globalThis.fetch=async(input,init)=>{
+   googleCalls++;assert.equal(String(input),'https://places.googleapis.com/v1/places:searchText')
+   assert.equal(init.headers['X-Goog-FieldMask'],'places.id')
+   return new Response(JSON.stringify({places:[{id:'sponsored_place'}]}),{status:200})
+  }
+  const input={businessName:'Beneficiary',city:'Santo Domingo',countryCode:'DO'}
+  assert.equal((await call('POST',privatePath+'/google-search',{id:'m',body:input,headers:browserHeaders,env:searchEnv})).status,403)
+  assert.equal(googleCalls,0)
+  assert.deepEqual((await call('POST',privatePath+'/google-search',{body:input,headers:browserHeaders,env:searchEnv})).data,{ok:true,results:[{placeId:'sponsored_place'}]})
+  assert.equal(googleCalls,1)
+  assert.equal(query("SELECT profile_id FROM review_google_search_usage")[0].profile_id,'sponsored:b')
+ }finally{globalThis.fetch=savedFetch}
+ // Multicuenta Master: context sponsor ID, actual presentation ID and owner are distinct.
+ const sponsorId='33333333-3333-4333-8333-333333333333',masterId='44444444-4444-4444-8444-444444444444'
+ run("INSERT INTO sponsor_tenants VALUES(?,'Other Sponsor','other-sponsor','merchant','',1)",[sponsorId])
+ run("INSERT INTO sponsor_members(sponsor_id,user_id,role,status) VALUES(?,'operator','owner','active')",[sponsorId])
+ run("INSERT INTO sponsor_user_context VALUES('operator',?)",[sponsorId])
+ run("INSERT INTO sponsored_profiles(id,sponsor_id,user_id,username,business_name,status,profile_role) VALUES(?,?,'operator','operator-master','Operator Master','published','sponsor_owner')",[masterId,sponsorId])
+ const masterHeaders={Cookie:'intap_preview_session_id='+session+'; kawvo_intap_active_account_v1='+encodeURIComponent('sponsor:'+sponsorId+':'+fingerprint+':'+token),'X-Intap-Account-Tab':token}
+ const selection={id:masterId,user:'operator',scope:'master',headers:masterHeaders}
+ assert.equal((await call('GET',privatePath,selection)).status,200)
+ assert.equal((await call('PUT',privatePath,{...selection,id,body:a})).status,403)
+ assert.equal((await call('GET',privatePath,{...selection,headers})).status,403)
+ assert.equal((await call('GET',privatePath,{...selection,headers:{...masterHeaders,'X-Intap-Account-Tab':'b'.repeat(32)}})).status,403)
+ run("UPDATE sponsor_user_context SET sponsor_id='s' WHERE user_id='operator'")
+ assert.equal((await call('GET',privatePath,selection)).status,403)
  assert.equal(query('SELECT count(*) n FROM sponsored_review_settings')[0].n,2)
  const src=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8')
  const web=src('web/src/components/sponsored/SponsoredProfile.tsx')
