@@ -30,7 +30,11 @@ assert.equal(replaceDraft(false, 1, 1), true)
 assert.equal(replaceDraft(false, 2, 1), false)
 assert.equal(replaceDraft(true, 1, 1), false)
 assert.equal(sponsoredAgendaReturn('?profile_id=abc&kawvo_sponsored_shell=1','preview','app.preview.intaprd.com'),'/admin/sponsored?profile_id=abc&kawvo_sponsored_shell=1')
-assert.equal(sponsoredAgendaReturn('?profile_id=abc&kawvo_sponsored_shell=1','production','app.intaprd.com'),'/admin/sponsored?profile_id=abc')
+// The existing G8 release host contract permits explicit opt-in on the canonical production host.
+assert.equal(sponsoredAgendaReturn('?profile_id=abc&kawvo_sponsored_shell=1','production','app.intaprd.com'),'/admin/sponsored?profile_id=abc&kawvo_sponsored_shell=1')
+assert.equal(sponsoredAgendaReturn('?profile_id=abc','production','app.intaprd.com'),'/admin/sponsored?profile_id=abc','P0 does not default to the new shell in production')
+assert.equal(gate({...allowed,mode:'production',hostname:'app.intaprd.com'}),true,'preserve pre-existing explicit production opt-in')
+assert.equal(isSponsoredShellRequest('production','app.intaprd.com',''),false)
 assert.equal(sponsoredAgendaReturn('?scope=master&kawvo_sponsored_shell=1','preview','app.preview.intaprd.com'),'/admin/sponsor')
 assert.equal(sponsoredAgendaReturn('?scope=master&profile_id=abc&kawvo_sponsored_shell=1','preview','app.preview.intaprd.com'),'/admin/sponsored?profile_id=abc')
 const selected = {profileId:'abc',selection:{kind:'sponsored',id:'abc',route:'/admin/sponsored'},mode:'preview',hostname:'app.preview.intaprd.com',search:''}
