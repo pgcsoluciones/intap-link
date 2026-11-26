@@ -1,16 +1,16 @@
 import {useEffect,useRef,useState} from 'react'
 import GoogleReviewSection from './GoogleReviewSection'
-import {reviewSectionLinks} from './review-section-links'
+import {reviewSectionLinks,feedbackSectionLinks} from './review-section-links'
 import ProfileQrModal from '../shared/ProfileQrModal'
 import {FiShare2,FiDownload} from 'react-icons/fi'
 
 /** Link adapter. No account credentials are used by this public component. */
-export default function LinkReviews({slug,profileName,accent,preview=false}:{slug:string;profileName:string;accent?:string;preview?:boolean}){
+export default function LinkReviews({slug,profileName,accent,preview=false,sponsored=false}:{slug:string;profileName:string;accent?:string;preview?:boolean;sponsored?:boolean}){
   const [config,setConfig]=useState<{slug:string;url:string}|null>(null)
   const [qrOpen,setQrOpen]=useState(false)
   const visit=useRef('')
   const sent=useRef(new Set<string>())
-  const base=(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')+'/api/v1/public/profiles/'+encodeURIComponent(slug)+'/reviews'
+  const base=(import.meta.env.VITE_API_URL||'').replace(/\/$/,'')+(sponsored?'/api/v1/public/sponsored/':'/api/v1/public/profiles/')+encodeURIComponent(slug)+'/reviews'
   useEffect(()=>{
     let live=true
     setConfig(null);setQrOpen(false);visit.current=crypto.randomUUID();sent.current.clear()
@@ -29,7 +29,7 @@ export default function LinkReviews({slug,profileName,accent,preview=false}:{slu
   }
   if(!config||config.slug!==slug)return null
   const origin=import.meta.env.MODE==='preview'?'https://preview.intaprd.com':import.meta.env.PROD?'https://intaprd.com':window.location.origin
-  const {qrUrl,shareText}=reviewSectionLinks(origin,slug)
+  const {qrUrl,shareText}=sponsored?feedbackSectionLinks(origin,slug,'sponsored'):reviewSectionLinks(origin,slug)
   const share=()=>window.open('https://wa.me/?text='+encodeURIComponent(shareText),'_blank','noopener,noreferrer')
   return <GoogleReviewSection url={config.url} accent={accent} onImpression={()=>track('review_view')} onClick={()=>track('review_click')} sectionActions={<>
     <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'4px 20px',color:accent||'var(--ilx-primary, #1d4ed8)'}}>

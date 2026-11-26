@@ -751,6 +751,20 @@ ${seoHeadHtml}
         const specialization = compact(profile.specialization, 100);
         const whatWeDo = compact(profile.what_we_do, 220);
         const isQuoteLink = url.searchParams.get('cotizar') === '1';
+        if (!isQuoteLink && url.searchParams.get('share') === 'reviews' && isHtmlNavigation()) {
+          try {
+            const response = await fetch(`${discoveryRuntime.apiBase}/sponsored/${encodeURIComponent(username)}/reviews`, {headers:{Accept:'application/json'},cf:{cacheTtl:0,cacheEverything:false}} as RequestInit);
+            const reviews = response.ok ? await response.json() as any : null;
+            if (reviews?.ok === true && typeof reviews?.data?.googleReviewUrl === 'string') {
+              return injectSimpleSocialCard({
+                title: `${businessName} | Reseñas en Google`,
+                description: 'Tu opinión es de suma importancia para nosotros.',
+                image: `${url.origin}/assets/og/google-reviews.png`,
+                canonicalUrl: `${url.origin}/p/${encodeURIComponent(username)}?share=reviews`, noIndex:true,
+              });
+            }
+          } catch { /* Preserve normal sponsored social card. */ }
+        }
         const description = isQuoteLink
           ? `Te comparto el formulario de cotización / información de ${businessName}. Completa tu solicitud y envíala directamente por WhatsApp o correo.`
           : (whatWeDo || (specialization ? `${specialization} · Presentación digital de ${businessName}` : `Presentación digital de ${businessName}`));

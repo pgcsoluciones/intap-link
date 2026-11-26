@@ -44,11 +44,11 @@ export function sponsoredAgendaReturn(search: string, mode: string, hostname: st
 }
 
 export type SponsoredTab = 'home' | 'profile' | 'agenda' | 'more'
-export type SponsoredModule = 'identity' | 'contact' | 'location' | 'schedule' | 'gallery' | 'appearance' | 'actions' | 'banks'
+export type SponsoredModule = 'identity' | 'contact' | 'location' | 'schedule' | 'gallery' | 'appearance' | 'actions' | 'banks' | 'reviews'
 export type SponsoredAgendaSection = 'requests' | 'confirmed' | 'availability' | 'blocks' | 'settings'
 export type SponsoredSurface = {tab: SponsoredTab; module?: SponsoredModule; section?: SponsoredAgendaSection; request?: string; query: string}
 const tabs = ['home','profile','agenda','more'] as const
-const modules = ['identity','contact','location','schedule','gallery','appearance','actions','banks'] as const
+const modules = ['identity','contact','location','schedule','gallery','appearance','actions','banks','reviews'] as const
 const sections = ['requests','confirmed','availability','blocks','settings'] as const
 export function isSponsoredShellRequest(mode: string, hostname: string, search: string): boolean {
   const p = new URLSearchParams(search)

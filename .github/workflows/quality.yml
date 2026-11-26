@@ -20,6 +20,7 @@ jobs:
       - run: node scripts/test-kawvo-r4-reviews-core.mjs
       - run: node scripts/test-kawvo-r4-google-search.mjs
       - run: node scripts/test-kawvo-r4-reviews-integration.mjs
+      - run: node scripts/test-kawvo-r4-sponsored-reviews.mjs
       - run: node scripts/test-kawvo-r4-review-placement.mjs
       - run: node scripts/test-sponsored-g4-shell-gate.mjs
       - run: bash -n scripts/apply-kawvo-r4-preview-schema.sh

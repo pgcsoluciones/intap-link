@@ -6,10 +6,12 @@ import GoogleReviewLinkEditor, {type GoogleSearchCapability} from './GoogleRevie
 
 type Settings={googleSearch?:GoogleSearchCapability;enabled:boolean;googleReviewUrl:string;published:boolean;publicUrl:string;stats:{days:number;views:number;qr:number;clicks:number;clickRate:number|null}}
 /** Reusable UI; endpoint and identity are supplied by an authorized product adapter. */
-export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false,homeShortcut=false}:{profileId:string;endpoint?:string;showAccessStatus?:boolean;homeShortcut?:boolean}){
+export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/reviews',showAccessStatus=false,homeShortcut=false,scopeQuery='',onPendingChange}:{profileId:string;endpoint?:string;showAccessStatus?:boolean;homeShortcut?:boolean;scopeQuery?:string;onPendingChange?:(dirty:boolean,busy:boolean)=>void}){
   const path=endpoint+'/'+encodeURIComponent(profileId)
+  const requestPath=path+(scopeQuery?'?'+scopeQuery:'')
   const [data,setData]=useState<Settings|null>(null)
   const [days,setDays]=useState(30)
+  const readPath=requestPath+(scopeQuery?'&':'?')+'days='+days
   const [enabled,setEnabled]=useState(false)
   const [url,setUrl]=useState('')
   // null = manual; empty = search with no verified selection.
@@ -22,28 +24,31 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   useEffect(()=>{
     let live=true
     setData(null);setSearchDraft(null);setMessage('');setLoadError(false);setUnavailable(false)
-    apiGet(path+'?days='+days).then(r=>{
+    apiGet(readPath).then(r=>{
       if(!live)return
       if(!r?.ok){if(r?.error==='Reseñas no disponible temporalmente.')setLoadError(true);else setUnavailable(true);return}
       setData(r.data);setEnabled(r.data.enabled);setUrl(r.data.googleReviewUrl)
     }).catch(()=>{if(live)setLoadError(true)})
     return()=>{live=false}
-  },[path,days])
+  },[readPath])
+  const dirty=Boolean(data&&(enabled!==data.enabled||(searchDraft===null?url:searchDraft)!==data.googleReviewUrl||searchDraft!==null))
+  useEffect(()=>{onPendingChange?.(dirty,busy)},[dirty,busy,onPendingChange])
+  useEffect(()=>()=>onPendingChange?.(false,false),[onPendingChange])
   if(loadError)return <p role="status" className="text-sm text-slate-600">Reseñas no está disponible temporalmente.</p>
   if(!data)return showAccessStatus?<p role="status" className="rounded-xl border bg-white p-4 text-sm text-slate-600">{unavailable?'Reseñas no está disponible para esta cuenta.':'Cargando configuración de reseñas…'}</p>:null
   if(homeShortcut&&!expanded)return <button type="button" onClick={()=>setExpanded(true)} className="flex min-h-16 w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-800"><KawvoActionContent name="reviews" title="Reseñas" detail="Google, QR y estadísticas"/></button>
   const shareUrl=data.publicUrl+'?share=reviews#resenas'
   const qrUrl=data.publicUrl+'?src=reviews-qr#resenas'
-  const canShare=data.enabled&&data.published&&Boolean(data.googleReviewUrl)
+  const canShare=data.enabled&&data.published&&Boolean(data.publicUrl&&data.googleReviewUrl)
   const effectiveUrl=searchDraft===null?url:searchDraft
   const canSave=searchDraft===null||Boolean(searchDraft)
   const save=async()=>{
     if(!canSave||busy)return
     setBusy(true);setMessage('')
     try{
-      const r=await apiPut(path,{enabled,googleReviewUrl:effectiveUrl.trim()})
+      const r=await apiPut(requestPath,{enabled,googleReviewUrl:effectiveUrl.trim()})
       if(!r?.ok){setMessage(r?.error||'No se pudo guardar.');return}
-      const next=await apiGet(path+'?days='+days)
+      const next=await apiGet(readPath)
       if(!next?.ok){setMessage('Guardado; vuelve a abrir el módulo para comprobarlo.');return}
       setData(next.data);setEnabled(next.data.enabled);setUrl(next.data.googleReviewUrl);setSearchDraft(null);setMessage('Configuración guardada.')
     }catch{setMessage('No pudimos comprobar el guardado.')}finally{setBusy(false)}
@@ -61,7 +66,7 @@ export default function ReviewsTenantPanel({profileId,endpoint='/me/profile/revi
   return <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 text-slate-900">
     {homeShortcut&&<button type="button" onClick={()=>setExpanded(false)} className="mb-3 min-h-11 text-sm font-bold text-cyan-800">Volver a Inicio</button>}
     <div className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-cyan-800"><FiStar className="h-5 w-5" aria-hidden="true"/></span><div className="min-w-0"><h2 className="text-base font-bold">Reseñas</h2><p className="text-xs text-slate-600">Invita a tus clientes a opinar en Google.</p></div></div>
-    <div className="mt-4"><GoogleReviewLinkEditor key={path+'|'+data.googleReviewUrl} path={path} value={url} onChange={setUrl} searchDraft={searchDraft} onSearchDraftChange={setSearchDraft} capability={data.googleSearch} disabled={busy}/></div>
+    <div className="mt-4"><GoogleReviewLinkEditor key={requestPath+'|'+data.googleReviewUrl} path={path} scopeQuery={scopeQuery} value={url} onChange={setUrl} searchDraft={searchDraft} onSearchDraftChange={setSearchDraft} capability={data.googleSearch} disabled={busy}/></div>
     <form className="mt-4 space-y-3" onSubmit={e=>{e.preventDefault();void save()}}>
       <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={enabled} onChange={e=>setEnabled(e.target.checked)} disabled={busy}/> Mostrar sección de reseñas</label>
       {!canSave&&<p role="status" className="text-sm text-slate-600">Selecciona un establecimiento real para guardar o vuelve al modo manual. Tu enlace guardado no se ha modificado.</p>}

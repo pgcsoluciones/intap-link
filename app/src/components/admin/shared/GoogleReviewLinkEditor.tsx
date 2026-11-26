@@ -3,7 +3,7 @@ import {apiPost} from '../../../lib/api'
 import {buildGoogleReviewUrl,normalizeGoogleReviewUrl,validGooglePlaceId,COUNTRY_CODES,countryName} from '../../../../../shared/google-review-link'
 
 export type GoogleSearchCapability={available:boolean;embedKey?:string;businessName?:string;address?:string}
-type Props={path:string;value:string;onChange:(value:string)=>void;searchDraft:string|null;onSearchDraftChange:(value:string|null)=>void;capability?:GoogleSearchCapability;disabled:boolean}
+type Props={path:string;scopeQuery?:string;value:string;onChange:(value:string)=>void;searchDraft:string|null;onSearchDraftChange:(value:string|null)=>void;capability?:GoogleSearchCapability;disabled:boolean}
 const inputClass='mt-1 min-h-11 w-full min-w-0 rounded-xl border border-slate-300 p-3 text-sm'
 const secondary='min-h-11 min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 disabled:opacity-50'
 const countries=COUNTRY_CODES.map(code=>({code,name:countryName(code)||code})).sort((a,b)=>a.name.localeCompare(b.name,'es'))
@@ -20,7 +20,7 @@ function mapsUrl(placeId:string,query:string){
 }
 
 /** App only. No searches until explicit submission; no Google calls from public profiles. */
-export default function GoogleReviewLinkEditor({path,value,onChange,searchDraft,onSearchDraftChange,capability,disabled}:Props){
+export default function GoogleReviewLinkEditor({path,scopeQuery='',value,onChange,searchDraft,onSearchDraftChange,capability,disabled}:Props){
  const available=capability?.available===true&&Boolean(capability.embedKey)
  const mode=searchDraft===null?'manual':'search'
  const [billingBlocked,setBillingBlocked]=useState(false)
@@ -59,7 +59,7 @@ export default function GoogleReviewLinkEditor({path,value,onChange,searchDraft,
   setBusy(true)
   const query=businessName.trim()+', '+city.trim()+', '+(countryName(countryCode)||countryCode)
   try{
-   const r=await apiPost(path+'/google-search',{businessName:businessName.trim(),city:city.trim(),address:address.trim(),countryCode,language:'es'})
+   const r=await apiPost(path+'/google-search'+(scopeQuery?'?'+scopeQuery:''),{businessName:businessName.trim(),city:city.trim(),address:address.trim(),countryCode,language:'es'})
    if(token!==generation.current)return
    if(r?.ok!==true||!Array.isArray(r.results)){setBillingBlocked(r?.code==='GOOGLE_SEARCH_BILLING');setMessage(typeof r?.error==='string'?r.error:'No pudimos buscar. Introduce el enlace manualmente.');return}
    const ids=r.results.map((p:unknown)=>p&&typeof p==='object'&&'placeId' in p?p.placeId:null)
