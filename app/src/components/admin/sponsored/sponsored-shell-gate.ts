@@ -55,8 +55,9 @@ export function isSponsoredShellRequest(mode: string, hostname: string, search: 
   if(!isKawvoReleaseAppHost(mode,hostname)||p.has('scope')||p.get('sp_legacy')==='1')return false
   const flags=p.getAll('kawvo_sponsored_shell')
   if(flags.length)return flags.length===1&&flags[0]==='1'
-  // Ordinary beneficiaries enter the approved shell by default in official Preview only.
-  return mode==='preview'&&hostname.toLowerCase()==='app.preview.intaprd.com'
+  // The owner approved the same default on both canonical release hosts (2026-11-26).
+  // Host/build, scope and explicit legacy/opt-out checks above remain mandatory.
+  return true
 }
 export function sponsoredSurface(search: string): SponsoredSurface {
   const p = new URLSearchParams(search), tab = p.get('sp_tab') as SponsoredTab
