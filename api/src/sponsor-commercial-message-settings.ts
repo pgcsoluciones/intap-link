@@ -2,7 +2,8 @@ import {DEFAULT_SPONSOR_MESSAGE,validSponsorMessage} from '../../shared/sponsor-
 type SponsorContext={userId:string;sponsorId:string}
 export async function readSponsorContactTemplate(db:D1Database,sponsorId:string){
  const row=await db.prepare('SELECT message_template FROM sponsor_commercial_contact_settings WHERE sponsor_id=?').bind(sponsorId).first<{message_template:string}>()
- return validSponsorMessage(row?.message_template)?row.message_template:DEFAULT_SPONSOR_MESSAGE
+ const value=row?.message_template
+ return validSponsorMessage(value)?value:DEFAULT_SPONSOR_MESSAGE
 }
 /** Authorized owner/admin with existing commercial grant; no public route. */
 export function registerSponsorMessageSettings(app:any,authorized:(c:any)=>Promise<SponsorContext|null>){
