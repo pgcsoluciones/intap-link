@@ -61,10 +61,24 @@ try{
  const source=git('show',CANDIDATE+':scripts/audit_production_profiles.py')
  // Reuse original contract checks, redirect only local output paths (no checkout writes).
  check(source.includes('"/tmp/intap-production-profiles.json"')&&source.includes('"contracts/protected-profiles.production.json"'),'auditor original cambió')
- const local=source.replace('"/tmp/intap-production-profiles.json"',JSON.stringify(input)).replace('"contracts/protected-profiles.production.json"',JSON.stringify(out))
- const py=spawnSync('python3',['-c',local],{cwd:dir,encoding:'utf8',maxBuffer:8*1024*1024})
+ const helper=join(dir,'http-transport.cjs')
+ writeFileSync(helper,"const url=process.argv[1],follow=process.argv[2]==='1',agent=process.argv[3];\n(async()=>{\n let target=new URL(url);\n for(let n=0;n<=8;n++){\n  if(target.protocol!=='https:'||target.username||target.password)throw Error('HTTPS public URL required');\n  const r=await fetch(target,{headers:{'User-Agent':agent,'Cache-Control':'no-cache',Accept:'*/*'},redirect:'manual',signal:AbortSignal.timeout(40000)});\n  if(follow&&[301,302,303,307,308].includes(r.status)&&r.headers.get('location')){\n   await r.body?.cancel();target=new URL(r.headers.get('location'),target);continue\n  }\n  const chunks=[];let total=0;\n  for await(const c of r.body||[]){total+=c.length;if(total>24*1024*1024)throw Error('response exceeds 24 MiB');chunks.push(Buffer.from(c))}\n  process.stdout.write(JSON.stringify({status:r.status,url:r.url,headers:Object.fromEntries(r.headers),body:Buffer.concat(chunks).toString('base64')}));return\n }\n throw Error('redirect limit')\n})().catch(e=>{process.stderr.write(String(e.cause?.code||e.code||e.name||'HTTP transport error'));process.exitCode=1})\n",{mode:0o600})
+ const start=source.indexOf('def request('),end=source.indexOf('\ndef text(',start)
+ check(start>=0&&end>start,'transporte original no reconocido')
+ const local=(source.slice(0,start)+"def request(url, follow=True, agent=None):\n    import base64\n    import subprocess\n    import os\n\n    try:\n        p = subprocess.run(\n            [os.environ[\"KAWVO_AUDIT_NODE\"], os.environ[\"KAWVO_AUDIT_HTTP_HELPER\"], url,\n             \"1\" if follow else \"0\", agent or \"INTAP-Production-Audit/1.0\"],\n            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=420\n        )\n        if p.returncode != 0:\n            raise RuntimeError(\"HTTP transport: \" + p.stderr.decode(\"utf-8\", errors=\"replace\")[:120])\n        result = json.loads(p.stdout)\n        result[\"body\"] = base64.b64decode(result[\"body\"], validate=True)\n        return result\n    except Exception as e:\n        # A transport failure is not evidence of missing SEO fields. Stop the\n        # audit rather than generating dozens of derivative false positives.\n        raise RuntimeError(\"Audit transport blocked: \" + str(e)[:200]) from e\n\n"+source.slice(end)).replace('"/tmp/intap-production-profiles.json"',JSON.stringify(input)).replace('"contracts/protected-profiles.production.json"',JSON.stringify(out))
+ const env={...process.env,KAWVO_AUDIT_NODE:process.execPath,KAWVO_AUDIT_HTTP_HELPER:helper}
+ // Fail fast on the same transport the full auditor will use, with normal TLS verification.
+ check(!process.env.NODE_TLS_REJECT_UNAUTHORIZED||process.env.NODE_TLS_REJECT_UNAUTHORIZED!=='0','TLS verification disabled')
+ for(const url of ['https://intaprd.com/robots.txt','https://intaprd.com/novi','https://intaprd.com/api/v1/public/profiles/novi','https://link.avanxy.com/novi?ref=contract-test']){
+  const probe=spawnSync(process.execPath,[helper,url,'0','Twitterbot/1.0'],{cwd:dir,encoding:'utf8',maxBuffer:40*1024*1024,timeout:45000,env})
+  check(probe.status===0,'transporte Node no disponible: '+String(probe.stderr||'').slice(0,120))
+  const r=JSON.parse(probe.stdout),alias=url.startsWith('https://link.avanxy.com/')
+  check(alias?r.status===301&&r.headers.location==='https://intaprd.com/novi?ref=contract-test':r.status===200,'HTTP piloto '+r.status+' '+url)
+ }
+ console.log('PASS: transporte Node validado, TLS activo; auditor original conserva todas sus comprobaciones.')
+ const py=spawnSync('python3',['-c',local],{cwd:dir,encoding:'utf8',maxBuffer:8*1024*1024,env})
  writeFileSync(join(dir,'audit.private.log'),(py.stdout||'')+'\n'+(py.stderr||''),{mode:0o600})
- check([0,2].includes(py.status)&&existsSync(out),'auditor no completó')
+ check([0,2].includes(py.status)&&existsSync(out),'auditor no completó; revisar audit.private.log, no contabilizar fallos de transporte como SEO')
  const result=JSON.parse(readFileSync(out,'utf8'))
  check(result.profiles?.length===inventory[0].results.length,'auditoría incompleta')
  const checks=[]
@@ -87,7 +101,7 @@ try{
   checks.push(one)
  }
  await baseline()
- const report={result:result.audit?.passed&&checks.every(x=>!x.errors.length)?'PROD_DISCOVERY_BASELINE_PASS':'PROD_DISCOVERY_BASELINE_REVIEW_REQUIRED',candidate:CANDIDATE,linkProfiles:result.profiles.length,sponsoredProfiles:checks.length,linkIncidents:result.audit?.error_count,linkIssues:result.profiles.filter(p=>p.errors.length).map(p=>({slug:p.slug,errors:p.errors})),sponsoredIssues:checks.filter(x=>x.errors.length).map(x=>({slug:x.slug,errors:x.errors})),redirects:result.legacy_redirects.map(r=>({status:r.status,source:r.source})),globals:result.globals,freeKiB:Number(execFileSync('df',['-Pk',homedir()],{encoding:'utf8'}).trim().split('\n').pop().trim().split(/\s+/)[3]),evidence:dir,noRemoteWrites:true}
+ const report={result:result.audit?.passed&&checks.every(x=>!x.errors.length)?'PROD_DISCOVERY_BASELINE_PASS':'PROD_DISCOVERY_BASELINE_REVIEW_REQUIRED',candidate:CANDIDATE,transport:'NODE_HTTPS_VERIFIED',linkProfiles:result.profiles.length,sponsoredProfiles:checks.length,linkIncidents:result.audit?.error_count,linkIssues:result.profiles.filter(p=>p.errors.length).map(p=>({slug:p.slug,errors:p.errors})),sponsoredIssues:checks.filter(x=>x.errors.length).map(x=>({slug:x.slug,errors:x.errors})),redirects:result.legacy_redirects.map(r=>({status:r.status,source:r.source})),globals:result.globals,freeKiB:Number(execFileSync('df',['-Pk',homedir()],{encoding:'utf8'}).trim().split('\n').pop().trim().split(/\s+/)[3]),evidence:dir,noRemoteWrites:true}
  writeFileSync(join(dir,'sponsored.private.json'),JSON.stringify(checks,null,2),{mode:0o600});writeFileSync(join(dir,'report.json'),JSON.stringify(report,null,2),{mode:0o600})
  console.log(JSON.stringify(report,null,2))
  if(report.result!=='PROD_DISCOVERY_BASELINE_PASS')process.exitCode=2
