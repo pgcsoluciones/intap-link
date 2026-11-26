@@ -7,7 +7,7 @@ import {join,basename} from 'node:path'
 import {createHash} from 'node:crypto'
 
 process.umask(0o077)
-const CANDIDATE='3aeff6fd5c7829bab791d06c52910a1d5520c68d'
+const CANDIDATE='311b5fe6cc104a7007174f6f2fba730802cc392b'
 const WORKER='intap-api-preview'
 const ACTIVE='2e274769-0ee6-4c74-9699-3381ac3d733a'
 const ACTIVE_SHA='70e7e22b923751318bd9e718e97bd51c00b168c92338b94f237956a7d734652f'
