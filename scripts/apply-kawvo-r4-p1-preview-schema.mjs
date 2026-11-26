@@ -1,4 +1,4 @@
-// S1: additive quota schema only. No deploy, Google calls or production mutations.
+// P1: additive sponsored review schema only. No deploy, Google calls or production mutations.
 import {execFileSync} from 'node:child_process'
 import {existsSync,readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {homedir,tmpdir} from 'node:os'
@@ -88,9 +88,10 @@ async function verifySchema(token){
  const x=await inspect(token),settings=await query(token,'settings'),events=await query(token,'events'),settingsFk=await query(token,'settingsFk'),eventsFk=await query(token,'eventsFk'),indices=await query(token,'indices'),counts=await query(token,'counts'),violations=await query(token,'violations')
  check(eq(settings.map(r=>r.name),['sponsored_profile_id','enabled','google_review_url','updated_at'])&&settings[0].pk===1,'config P1 distinta')
  check(eq(events.map(r=>r.name),['id','sponsored_profile_id','event_type','target_id','created_at'])&&events[0].pk===1,'eventos P1 distintos')
- const expectedFk=[{table:'sponsored_profiles',from:'sponsored_profile_id',to:'id',on_delete:'CASCADE'}]
- check(eq(settingsFk,expectedFk)&&eq(eventsFk,expectedFk),'FK P1 distinta')
- check(x.objects.length===3&&indices.some(i=>i.name==='idx_sponsored_review_events_period')&&indices.some(i=>i.origin==='u'&&i.unique===1)&&violations.length===0&&counts[0]?.settings===0&&counts[0]?.events===0,'índices, integridad o filas P1 inesperados')
+ const expectedFk=[['sponsored_profiles','sponsored_profile_id','id','CASCADE']]
+ const fkShape=rows=>rows.map(r=>[r.table,r.from,r.to,r.on_delete])
+ check(eq(fkShape(settingsFk),expectedFk)&&eq(fkShape(eventsFk),expectedFk),'FK P1 distinta')
+ check(x.objects.length===3&&indices.some(i=>i.name==='idx_sponsored_review_events_period')&&indices.some(i=>i.origin==='u'&&Number(i.unique)===1)&&violations.length===0&&counts[0]?.settings===0&&counts[0]?.events===0,'índices, integridad o filas P1 inesperados')
  return {...x,settings,events,settingsFk,eventsFk,indices,counts}
 }
 async function main(){
@@ -106,7 +107,7 @@ async function main(){
  const ci=await ciRes.json()
  check(ci.id===45749207769&&ci.head_sha===CANDIDATE&&ci.status==='completed'&&ci.conclusion==='success','CI S1 no certificada')
  const previous=read(join(homedir(),'intap-release-logs','r4-preview-promotion-311b5fe6cc10','preview-pass.json'))
- check(previous.result==='R4_PREVIEW_ACTIVE_PASS'&&previous.version===ACTIVE&&previous.moduleSha256===ACTIVE_SHA&&previous.productionUnchanged===true,'recibo QA4 no acreditado')
+ check(previous.result==='R4_PREVIEW_ACTIVE_PASS'&&previous.candidate==='311b5fe6cc104a7007174f6f2fba730802cc392b'&&previous.version===ACTIVE&&previous.moduleSha256===ACTIVE_SHA&&previous.app==='1be92438-d83f-4ce8-9d0a-75dcae4a23c1'&&previous.web==='baf8fa51-1cd6-4fa4-815f-24472c72f6e2'&&previous.bindings===39&&previous.productionUnchanged===true,'recibo QA4 no acreditado')
  let token=auth()
  await live(token)
  const before=await inspect(token)
@@ -121,6 +122,9 @@ async function main(){
   console.log(JSON.stringify({...receipt,resumed:true,evidence:DIR},null,2));return
  }
  check(!existsSync(DIR)&&before.objects.length===0,'esquema o intento previo existente; reconciliar, nunca repetir')
+ const free=Number(execFileSync('df',['-Pk',homedir()],{encoding:'utf8'}).trim().split('\n').pop().trim().split(/\s+/)[3])
+ check(Number.isFinite(free)&&free>=2*1024*1024,'espacio libre inferior a 2 GiB; liberar antes de respaldo y Stage')
+ check(existsSync(join(ROOT,'node_modules','.bin','wrangler')),'Wrangler local no disponible')
  mkdirSync(DIR,{recursive:true,mode:0o700})
  const sql=git('show',CANDIDATE+':'+SQL_PATH)+'\n'
  const expected="-- Proposed additive schema. Apply only to exact D1 after backup and authorization.\nCREATE TABLE sponsored_review_settings (\n sponsored_profile_id TEXT PRIMARY KEY REFERENCES sponsored_profiles(id) ON DELETE CASCADE,\n enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),\n google_review_url TEXT NOT NULL DEFAULT '',\n updated_at TEXT NOT NULL DEFAULT (datetime('now'))\n);\nCREATE TABLE sponsored_review_events (\n id TEXT PRIMARY KEY,\n sponsored_profile_id TEXT NOT NULL REFERENCES sponsored_profiles(id) ON DELETE CASCADE,\n event_type TEXT NOT NULL CHECK(event_type IN ('review_view','review_qr','review_click')),\n target_id TEXT NOT NULL,\n created_at TEXT NOT NULL DEFAULT (datetime('now')),\n UNIQUE(sponsored_profile_id,event_type,target_id)\n);\nCREATE INDEX idx_sponsored_review_events_period ON sponsored_review_events(sponsored_profile_id,created_at,event_type);\n"
@@ -129,7 +133,7 @@ async function main(){
  writeFileSync(file,sql,{flag:'wx',mode:0o600});save('before.json',before)
  const wrangler=join(ROOT,'node_modules','.bin','wrangler')
  check(existsSync(wrangler),'Wrangler local no disponible')
- const env={...process.env,WRANGLER_SEND_METRICS:'false'}
+ const env={...process.env,CLOUDFLARE_ACCOUNT_ID:ACCOUNT,WRANGLER_SEND_METRICS:'false'}
  const run=(args,log)=>{
   try{const out=execFileSync(wrangler,args,{cwd:ROOT,env,stdio:['ignore','pipe','pipe'],maxBuffer:32*1024*1024});writeFileSync(join(DIR,log),out,{flag:'wx',mode:0o600})}
   catch(e){writeFileSync(join(DIR,log),String(e.stdout||'')+'\n'+String(e.stderr||''),{flag:'wx',mode:0o600});throw Error('BLOCKED: operación local/Cloudflare; revisar recibo privado, no repetir')}
