@@ -12,6 +12,7 @@ export const SPONSORED_MODULES: readonly {id:SponsoredModule;title:string;detail
   {id:'gallery',title:'Galería',detail:'Catálogo e imágenes existentes'},
   {id:'appearance',title:'Apariencia',detail:'Paleta de colores'},
   {id:'actions',title:'Acciones públicas',detail:'Cotizar / información y Agendar'},
+  {id:'reviews',title:'Reseñas',detail:'Google, QR y estadísticas'},
   {id:'banks',title:'Cuentas bancarias',detail:'Sólo si tu perfil tiene acceso autorizado'},
 ]
 export function SponsoredProfileIndex({query,onQuery,onOpen,bankAllowed,title='Mi perfil',summary}: {summary?:ReactNode;title?:string;bankAllowed:boolean;query:string;onQuery:(value:string)=>void;onOpen:(id:SponsoredModule)=>void}) {

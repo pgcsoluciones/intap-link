@@ -3,6 +3,7 @@ import { cookieNames } from './lib/cookies'
 import { resolveSponsorMembership } from './sponsored-multiprofile-access'
 import { resolveOwnedSponsoredProfile } from './sponsored-profile-scope'
 import { resolveSponsoredCommercialLinks } from './sponsored-commercial-links-core'
+import {registerSponsorMessageSettings} from './sponsor-commercial-message-settings'
 
 async function digest(input:string){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}
 function cookie(header:string,name:string){const esc=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const match=header.match(new RegExp('(?:^|;\\s*)'+esc+'=([^;]*)'));return match?decodeURIComponent(match[1]):''}
@@ -19,6 +20,7 @@ async function authorized(c:any){
  if(!flag)return null
  return {userId,sponsorId}
 }
+registerSponsorMessageSettings(app,authorized)
 const trim=(x:unknown,n=120)=>String(x??'').trim().slice(0,n)
 app.get('/api/v1/sponsor/commercial/sellers',async(c:any)=>{
  const ctx=await authorized(c);if(!ctx)return c.json({ok:false,error:'Acceso comercial no habilitado para esta empresa.'},403)
