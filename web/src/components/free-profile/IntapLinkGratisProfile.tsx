@@ -23,6 +23,7 @@ import {
 import './IntapLinkGratisRebuilt.css'
 import './IntapLinkGratisPublicEnhancements.css'
 import FreeContactActions from './FreeContactActions'
+import ProfileQrModal from '../shared/ProfileQrModal'
 import AppointmentOwnerBar from '../appointments/AppointmentOwnerBar'
 
 import {
@@ -39,6 +40,7 @@ export type IntapLinkGratisProfileProps = {
   layout: FreeProfileLayoutId
   colors: FreeProfileAppearanceColors
   topContent?: ReactNode
+  beforeBankAccountsContent?: ReactNode
   beforeShareContent?: ReactNode
   footerSecondaryLabel?: string
   footerSecondaryHref?: string
@@ -205,10 +207,9 @@ function Identity({ profile, layout, onEdit }: { profile: FreeProfileData; layou
   )
 }
 
-export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent, showOwnerBar=true }: IntapLinkGratisProfileProps) {
+export default function IntapLinkGratisProfile({ profile, layout, colors, topContent, beforeBankAccountsContent, beforeShareContent, footerSecondaryLabel, footerSecondaryHref, editMode=false, onEditSection, onTrackEvent, showOwnerBar=true }: IntapLinkGratisProfileProps) {
   const [copied, setCopied] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
-  const [qrDataUrl, setQrDataUrl] = useState('')
   const [linksOpen, setLinksOpen] = useState(false)
   const [modal, setModal] = useState<DetailModal>(null)
   const [ownerToast, setOwnerToast] = useState('')
@@ -220,15 +221,15 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     return () => window.clearTimeout(timer)
   }, [ownerToast])
   useEffect(() => {
-    if (!modal && !qrOpen) return
+    if (!modal) return
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { setModal(null); setQrOpen(false) }
+      if (event.key === 'Escape') setModal(null)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => { document.body.style.overflow = previousOverflow; window.removeEventListener('keydown', onKeyDown) }
-  }, [modal, qrOpen])
+  }, [modal])
 
   const portfolio = profile.portfolio.slice(0, FREE_PROFILE_LIMITS.maxPortfolioImages)
   const customLinks = profile.customLinks.slice(0, FREE_PROFILE_LIMITS.maxCustomLinks)
@@ -321,49 +322,9 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
     } catch { setCopied(false) }
   }
 
-  async function openQrModal() {
+  function openQrModal() {
     onTrackEvent?.('qr_open','Código QR')
-    try {
-      const QRCode = await import('qrcode')
-      setQrDataUrl(await QRCode.toDataURL(canonicalProfileUrl(), { width: 1200, margin: 3, errorCorrectionLevel: 'H', color: { dark: '#111111', light: '#FFFFFF' } }))
-      setQrOpen(true)
-    } catch (error) { console.error('No se pudo generar el QR', error) }
-  }
-
-  function downloadProfileQr() {
-    if (!qrDataUrl) return
-    onTrackEvent?.('qr_download','Descargar QR PNG')
-    const link = document.createElement('a')
-    link.href = qrDataUrl
-    link.download = `${profile.slug || 'kawvo-link'}-qr.png`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-  }
-
-  async function saveProfileQrToPhotos() {
-    if (!qrDataUrl) return
-    onTrackEvent?.('qr_save_photo','Guardar QR en fotos')
-    try {
-      const response = await fetch(qrDataUrl)
-      const blob = await response.blob()
-      const file = new File([blob], `${profile.slug || 'kawvo-link'}-qr.png`, { type: 'image/png' })
-      const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean }
-      if (navigator.share && nav.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Código QR de ${profile.name}` })
-        return
-      }
-    } catch { /* fallback below */ }
-    const imageWindow = window.open(qrDataUrl, '_blank', 'noopener,noreferrer')
-    if (!imageWindow) {
-      const link = document.createElement('a')
-      link.href = qrDataUrl
-      link.target = '_blank'
-      link.rel = 'noopener noreferrer'
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-    }
+    setQrOpen(true)
   }
 
   function shareProfileQrWhatsApp() {
@@ -418,6 +379,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
             </section>
           )}
 
+          {beforeBankAccountsContent}
           <div id="ilx-bank-slot" />
 
           {customLinks.length > 0 && (
@@ -444,14 +406,7 @@ export default function IntapLinkGratisProfile({ profile, layout, colors, topCon
 
       {ownerToast && <div style={{position:'fixed',left:'50%',bottom:24,transform:'translateX(-50%)',background:'#0f172a',color:'#fff',padding:'10px 14px',borderRadius:999,fontSize:13,zIndex:120}}>{ownerToast}</div>}
 
-      {qrOpen && (
-        <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setQrOpen(false) }}>
-          <article className="ilx-qr-modal" role="dialog" aria-modal="true" aria-labelledby="ilx-qr-title">
-            <button type="button" className="ilx-modal-close" onClick={() => setQrOpen(false)} aria-label="Cerrar"><FaTimes /></button>
-            <div className="ilx-qr-modal-body"><span className="ilx-qr-kicker">KAWVO LINK</span><h2 id="ilx-qr-title">Código QR</h2><p>Escanea para abrir este perfil.</p>{qrDataUrl && <div className="ilx-qr-image"><img src={qrDataUrl} alt={`Código QR de ${profile.name}`} /></div>}<strong className="ilx-qr-profile-name">{profile.name}</strong><div className="ilx-qr-actions"><button type="button" onClick={downloadProfileQr}><FaQrcode /><span>Descargar PNG</span></button><button type="button" onClick={saveProfileQrToPhotos}><FaAddressCard /><span>Guardar en Fotos</span></button><button type="button" className="ilx-qr-whatsapp" onClick={shareProfileQrWhatsApp}><FaWhatsapp /><span>Compartir por WhatsApp</span></button></div></div>
-          </article>
-        </div>
-      )}
+      {qrOpen && <ProfileQrModal targetUrl={canonicalProfileUrl()} shareText={'Conoce el perfil de '+profile.name+' en Kawvo Link:\n'+socialShareProfileUrl()} profileName={profile.name} filename={(profile.slug||'kawvo-link')+'-qr.png'} onClose={()=>setQrOpen(false)} onTrack={onTrackEvent}/>}
 
       {modal && (
         <div className="ilx-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(null) }}>

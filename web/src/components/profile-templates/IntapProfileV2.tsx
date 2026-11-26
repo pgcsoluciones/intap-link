@@ -1,3 +1,4 @@
+import type { ReactNode, CSSProperties } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import './IntapProfileV2.css'
 import { FaEnvelope, FaFacebookF, FaGlobeAmericas, FaInstagram, FaMapMarkerAlt, FaPhoneAlt, FaWhatsapp } from 'react-icons/fa'
@@ -159,7 +160,7 @@ function loadJakartaFont() {
   document.head.appendChild(link)
 }
 
-export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Profile }) {
+export default function IntapProfileV2({ profile, beforeContactLinksContent, showBankSlot=false }: { profile?: IntapProfileV2Profile; beforeContactLinksContent?: ReactNode; showBankSlot?: boolean }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [activeSlide, setActiveSlide] = useState(0)
   const [projectsModalOpen, setProjectsModalOpen] = useState(false)
@@ -807,6 +808,8 @@ export default function IntapProfileV2({ profile }: { profile?: IntapProfileV2Pr
         </>
       )}
 
+      {beforeContactLinksContent&&<div style={{paddingInline:16}}>{beforeContactLinksContent}</div>}
+      {showBankSlot&&<div id="ilx-bank-slot" style={{paddingInline:16,'--ilx-border':'#e2e8f0','--ilx-primary':accent,'--ilx-text':'#0f172a','--ilx-muted':'#475569','--ilx-soft-primary':'#f8fafc','--ilx-surface':'#ffffff','--ilx-action':'#0f172a','--ilx-on-action':'#ffffff'} as CSSProperties} />}
       <div className="divider" />
       <section className="s-company-contact">
         <div className="company-contact-header">¡Conecta con {companyName}!</div>
