@@ -31,7 +31,7 @@ export default function LinkReviews({slug,profileName,accent,preview=false,spons
   const origin=import.meta.env.MODE==='preview'?'https://preview.intaprd.com':import.meta.env.PROD?'https://intaprd.com':window.location.origin
   const {qrUrl,shareText}=sponsored?feedbackSectionLinks(origin,slug,'sponsored'):reviewSectionLinks(origin,slug)
   const share=()=>window.open('https://wa.me/?text='+encodeURIComponent(shareText),'_blank','noopener,noreferrer')
-  return <GoogleReviewSection url={config.url} accent={accent} onImpression={()=>track('review_view')} onClick={()=>track('review_click')} sectionActions={<>
+  return <GoogleReviewSection horizontalInset={sponsored?22:0} url={config.url} accent={accent} onImpression={()=>track('review_view')} onClick={()=>track('review_click')} sectionActions={<>
     <div style={{display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'4px 20px',color:accent||'var(--ilx-primary, #1d4ed8)'}}>
       <button type="button" onClick={share} style={{display:'inline-flex',alignItems:'center',gap:7,minHeight:44,padding:'8px 0',fontSize:14,fontWeight:700,textDecoration:'underline',textUnderlineOffset:4,background:'transparent',border:0,color:'inherit',cursor:'pointer'}}><FiShare2 aria-hidden="true"/>Compartir reseña</button>
       <button type="button" onClick={()=>setQrOpen(true)} style={{display:'inline-flex',alignItems:'center',gap:7,minHeight:44,padding:'8px 0',fontSize:14,fontWeight:700,textDecoration:'underline',textUnderlineOffset:4,background:'transparent',border:0,color:'inherit',cursor:'pointer'}}><FiDownload aria-hidden="true"/>Descargar QR</button>

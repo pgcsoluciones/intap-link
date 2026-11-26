@@ -148,5 +148,27 @@ try{
  const links=await build({entryPoints:['web/src/components/reviews/review-section-links.ts'],bundle:true,format:'esm',platform:'node',write:false})
  const {feedbackSectionLinks}=await import('data:text/javascript;base64,'+Buffer.from(links.outputFiles[0].text).toString('base64'))
  assert.equal(feedbackSectionLinks('https://preview.intaprd.com','benef-shop','sponsored').qrUrl,'https://preview.intaprd.com/p/benef-shop?src=reviews-qr#resenas')
- console.log('PASS R4-P1 sponsored default, scope, isolation, visibility, statistics and QR')
+ // P1-QA1: real owner-bar destinations, never add an ordinary account selector.
+ const ownerLinksBundle=await build({entryPoints:['web/src/components/appointments/kawmedOwnerShellLinks.ts'],bundle:true,format:'esm',platform:'node',write:false})
+ const {otherOwnerShellLinks}=await import('data:text/javascript;base64,'+Buffer.from(ownerLinksBundle.outputFiles[0].text).toString('base64'))
+ const ownerContext={mode:'preview',hostname:'preview.intaprd.com',origin:'https://app.preview.intaprd.com',ownerApiBase:'https://app.preview.intaprd.com/api/v1/me/sponsored-profile/appointments',username:'benef-shop'}
+ const ordinary={is_owner:true,allow_direct_actions:true,settings_url:'/admin/sponsored',manage_url:'/admin/sponsored/agenda'}
+ const plain=otherOwnerShellLinks({...ownerContext,context:ordinary})
+ assert.equal(plain.settings,'https://app.preview.intaprd.com/admin/sponsored?kawvo_sponsored_shell=1&sp_tab=profile')
+ assert.equal(plain.agenda,'https://app.preview.intaprd.com/admin/sponsored?kawvo_sponsored_shell=1&sp_tab=agenda')
+ assert.deepEqual(otherOwnerShellLinks({...ownerContext,context:{...ordinary,settings_url:'/admin/sponsored?profile_id='+id,manage_url:'/admin/sponsored/agenda?profile_id='+id}}),plain)
+ const multi={...ordinary,allow_direct_actions:false,settings_url:'/admin/sponsored?profile_id='+id,manage_url:'/admin/sponsored/agenda?profile_id='+id}
+ const scoped=otherOwnerShellLinks({...ownerContext,context:multi})
+ assert.equal(new URL(scoped.settings).searchParams.get('profile_id'),id)
+ assert.equal(new URL(scoped.agenda).searchParams.get('profile_id'),id)
+ assert.equal(otherOwnerShellLinks({...ownerContext,context:{...multi,manage_url:'/admin/sponsored/agenda?profile_id='+other}}),null)
+ assert.equal(otherOwnerShellLinks({...ownerContext,context:{...ordinary,is_owner:false}}),null)
+ assert.equal(otherOwnerShellLinks({...ownerContext,context:{...ordinary,action_scope:'master',settings_url:'/admin/sponsor'}}),null)
+ const appointments=src('api/src/sponsored-appointments.ts')
+ assert.ok(appointments.includes("settings_url:isMaster?'/admin/sponsor':multi?'/admin/sponsored?profile_id='+encodeURIComponent(subjectId):'/admin/sponsored'"))
+ assert.ok(appointments.includes("resolveOwnedSponsoredProfile(c,userId,'beneficiary')"))
+ assert.ok(appointments.includes("return await sponsoredMultiProfileAccess(c,userId)?'/admin/sponsored/agenda?profile_id='"))
+ assert.ok(src('web/src/components/reviews/LinkReviews.tsx').includes('horizontalInset={sponsored?22:0}'))
+ assert.ok(src('web/src/components/reviews/ReviewSection.tsx').includes('horizontalInset=0'))
+ console.log('PASS R4-P1 sponsored default, scope, isolation, visibility, statistics, QR and owner navigation')
 }finally{rmSync(dir,{recursive:true,force:true})}

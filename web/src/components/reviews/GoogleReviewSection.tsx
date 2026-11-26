@@ -1,8 +1,8 @@
 import ReviewSection from './ReviewSection'
 import type {ReactNode} from 'react'
 
-export default function GoogleReviewSection({url,onImpression,onClick,accent,sectionActions}:{url:string;onImpression?:()=>void;onClick?:()=>void;accent?:string;sectionActions?:ReactNode}) {
-  return <ReviewSection accent={accent} onImpression={onImpression} sectionActions={sectionActions} action={
+export default function GoogleReviewSection({url,onImpression,onClick,accent,sectionActions,horizontalInset}:{url:string;onImpression?:()=>void;onClick?:()=>void;accent?:string;sectionActions?:ReactNode;horizontalInset?:number}) {
+  return <ReviewSection horizontalInset={horizontalInset} accent={accent} onImpression={onImpression} sectionActions={sectionActions} action={
     <a href={url} target="_blank" rel="noopener noreferrer" onClick={onClick} style={{display:'flex',alignItems:'center',justifyContent:'center',flexWrap:'wrap',gap:10,minHeight:44,padding:'10px 14px',boxSizing:'border-box',border:'1px solid #cbd5e1',borderRadius:10,color:'inherit',fontWeight:700,fontSize:15,textDecoration:'none'}}>
       <svg width="23" height="23" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
         <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.8 6.1-14.9z"/>

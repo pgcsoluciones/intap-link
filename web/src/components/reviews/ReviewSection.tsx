@@ -7,10 +7,11 @@ export type ReviewSectionProps = {
   anchor?: string
   decorativeStars?: boolean
   sectionActions?: ReactNode
+  horizontalInset?: number
 }
 
 /** Shared presentation only. The product adapter supplies authorized content/actions. */
-export default function ReviewSection({action, accent, onImpression, anchor='resenas',decorativeStars=true,sectionActions}: ReviewSectionProps) {
+export default function ReviewSection({action, accent, onImpression, anchor='resenas',decorativeStars=true,sectionActions,horizontalInset=0}: ReviewSectionProps) {
   const section = useRef<HTMLElement>(null)
   const outer = useRef<HTMLElement>(null)
   const impression = useRef(false)
@@ -47,7 +48,7 @@ export default function ReviewSection({action, accent, onImpression, anchor='res
     </div>
   </section>
   if(!sectionActions)return card
-  return <section id={anchor} ref={outer} aria-labelledby={anchor+'-section-title'} style={{scrollMarginTop:96,borderTop:'1px solid var(--ilx-border,#e2e8f0)',borderBottom:'1px solid var(--ilx-border,#e2e8f0)',padding:'18px 0 12px',marginTop:22,minWidth:0,boxSizing:'border-box'}}>
+  return <section id={anchor} ref={outer} aria-labelledby={anchor+'-section-title'} style={{scrollMarginTop:96,borderTop:'1px solid var(--ilx-border,#e2e8f0)',borderBottom:'1px solid var(--ilx-border,#e2e8f0)',padding:`18px ${horizontalInset}px 12px`,marginTop:22,minWidth:0,boxSizing:'border-box'}}>
     <h2 id={anchor+'-section-title'} className="text-xl font-black tracking-[-0.03em]" style={{color:'var(--ilx-text,#0f172a)',textAlign:'left',margin:0}}>Reseñas</h2>
     {card}
     {sectionActions}
