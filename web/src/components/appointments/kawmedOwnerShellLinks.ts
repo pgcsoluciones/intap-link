@@ -1,5 +1,5 @@
 type OwnerContext = {
-  is_owner?: boolean; is_master?: boolean; is_guest_editor?: boolean
+  is_owner?: boolean; is_master?: boolean; is_guest_editor?: boolean; allow_direct_actions?: boolean
   action_scope?: string | null; settings_url?: string; manage_url?: string
 }
 
@@ -30,8 +30,13 @@ export function otherOwnerShellLinks({mode,hostname,origin,context,ownerApiBase,
   const settings=context.settings_url||'',agenda=context.manage_url||''
   if(ownerApiBase.endsWith('/api/v1/me/sponsored-profile/appointments')&&!context.action_scope){
     const match=settings.match(/^\/admin\/sponsored\?profile_id=([a-zA-Z0-9_-]{1,160})$/)
-    if(!match||!(agenda==='/admin/sponsored/agenda'||agenda==='/admin/sponsored/agenda?profile_id='+match[1]))return null
-    const target=(tab:string)=>origin+'/admin/sponsored?'+new URLSearchParams({profile_id:match[1],kawvo_sponsored_shell:'1',sp_tab:tab})
+    // Only the authorized Multicuenta context can retain an explicit selector.
+    // Ordinary owners (including legacy server responses containing an ID) use
+    // the implicit owner context; never turn a returned ID into authority.
+    const multi=context.allow_direct_actions===false
+    if(multi&&(!match||!(agenda==='/admin/sponsored/agenda'||agenda==='/admin/sponsored/agenda?profile_id='+match[1])))return null
+    if(!multi&&(!(settings==='/admin/sponsored'||match)||!(agenda==='/admin/sponsored/agenda'||(match&&agenda==='/admin/sponsored/agenda?profile_id='+match[1]))))return null
+    const target=(tab:string)=>origin+'/admin/sponsored?'+new URLSearchParams({...multi&&match?{profile_id:match[1]}:{},kawvo_sponsored_shell:'1',sp_tab:tab})
     return {settings:target('profile'),agenda:target('agenda')}
   }
   if(ownerApiBase.endsWith('/api/v1/me/medical-profile/appointments')){

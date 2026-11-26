@@ -1,3 +1,5 @@
+import {commercialWhatsAppNumber,DEFAULT_SPONSOR_MESSAGE,renderSponsorMessage} from '../../shared/sponsor-commercial-message'
+import {readSponsorContactTemplate} from './sponsor-commercial-message-settings'
 /**
  * Private owner-only commercial links for a sponsored profile.
  * The CALLER must verify session, D1 ownership and, for Multicuenta, exact active
@@ -10,6 +12,7 @@ export type SponsoredCommercialOwner={
   sponsor_id?:unknown
   artifact_id?:unknown
   profile_role?:unknown
+  business_name?:unknown
 }
 export type SponsoredCommercialLinks={
   contact_label:string
@@ -45,10 +48,18 @@ export async function resolveSponsoredCommercialLinks(db:D1Database,profile:Spon
   let representative:any=null
   const artifactId=String(profile?.artifact_id||'').trim()
   if(!master&&artifactId&&(active.has('commercial_seller')||active.has('commercial_visitor'))){
-    representative=await db.prepare("SELECT r.whatsapp FROM sponsor_sales_assignments a JOIN sponsor_sales_representatives r ON r.id=a.representative_id AND r.sponsor_id=a.sponsor_id AND r.active=1 JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id AND sa.sponsor_id=a.sponsor_id WHERE a.sponsor_id=? AND sa.artifact_id=? AND a.active=1 ORDER BY a.assigned_at DESC LIMIT 1").bind(sponsorId,artifactId).first()
+    representative=await db.prepare("SELECT r.whatsapp,r.first_name,r.last_name,st.name AS sponsor_name FROM sponsor_sales_assignments a JOIN sponsor_sales_representatives r ON r.id=a.representative_id AND r.sponsor_id=a.sponsor_id AND r.active=1 JOIN sponsor_tenants st ON st.id=a.sponsor_id JOIN sponsor_artifacts sa ON sa.artifact_id=a.artifact_id AND sa.sponsor_id=a.sponsor_id WHERE a.sponsor_id=? AND sa.artifact_id=? AND a.active=1 ORDER BY a.assigned_at DESC LIMIT 1").bind(sponsorId,artifactId).first()
   }
-  const digits=String(representative?.whatsapp||'').replace(/[^0-9]/g,'')
-  const contact_url=digits.length>=7&&digits.length<=15?'https://wa.me/'+digits:''
+  const digits=commercialWhatsAppNumber(representative?.whatsapp)
+  // Existing owner-only links remain usable if the optional template read fails.
+  // The settings editor itself does not claim persistence on a read/write failure.
+  const template=digits?await readSponsorContactTemplate(db,sponsorId).catch(()=>DEFAULT_SPONSOR_MESSAGE):DEFAULT_SPONSOR_MESSAGE
+  const message=renderSponsorMessage(template,{
+    representative:[representative?.first_name,representative?.last_name].map(x=>String(x||'').trim()).filter(Boolean).join(' ')||(active.has('commercial_visitor')?'mi visitador':'mi vendedor'),
+    beneficiary:String(profile.business_name||'').trim()||'un negocio patrocinado',
+    sponsor:String(representative?.sponsor_name||'').trim()||'mi patrocinador'
+  })
+  const contact_url=digits?'https://wa.me/'+digits+'?text='+encodeURIComponent(message):''
   return{
     contact_label:contact_url?(active.has('commercial_visitor')?'Mi visitador':'Mi vendedor'):'',
     contact_url,
